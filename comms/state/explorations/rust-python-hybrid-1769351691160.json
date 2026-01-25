@@ -1,0 +1,15 @@
+{
+  "exploration_id": "rust-python-hybrid-1769351691160",
+  "results_folder": "rust-python-hybrid",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-01-25T14:34:51.160901",
+  "updated_at": "2026-01-25T14:34:51.160901",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/rust-python-hybrid/prompt.md",
+  "outbox_path": "comms/outbox/exploration/rust-python-hybrid"
+}
