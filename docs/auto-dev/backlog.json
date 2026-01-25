@@ -1,12 +1,12 @@
 {
   "next_id": 4,
-  "updated_at": "2026-01-25T14:30:30.773235",
+  "updated_at": "2026-01-25T22:28:39.017459",
   "items": [
     {
       "id": "BL-001",
       "title": "EXP-001: PyO3/maturin hybrid build workflow investigation",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-01-25T14:30:12.374239",
       "completed_at": null,
@@ -35,7 +35,7 @@
           "done": false
         }
       ],
-      "notes": null,
+      "notes": "Exploration complete. Results in comms/outbox/exploration/rust-python-hybrid/",
       "use_case": "This feature addresses: EXP-001: PyO3/maturin hybrid build workflow investigation. It improves the system by resolving the described requirement.",
       "implemented_in_version": null,
       "implemented_in_theme": null
@@ -44,7 +44,7 @@
       "id": "BL-002",
       "title": "EXP-002: Recording fake pattern for FFmpeg executor",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-01-25T14:30:20.472748",
       "completed_at": null,
@@ -73,7 +73,7 @@
           "done": false
         }
       ],
-      "notes": null,
+      "notes": "Exploration complete. Results in comms/outbox/exploration/recording-fake-pattern/",
       "use_case": "This feature addresses: EXP-002: Recording fake pattern for FFmpeg executor. It improves the system by resolving the described requirement.",
       "implemented_in_version": null,
       "implemented_in_theme": null

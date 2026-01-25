@@ -23,8 +23,8 @@ Track explorations that must complete before version design.
 
 | ID | Question | Informs | Status | Results |
 |----|----------|---------|--------|---------|
-| EXP-001 | PyO3/maturin hybrid build workflow — dev experience, CI setup, stub generation | v001 | pending | - |
-| EXP-002 | Recording fake pattern — concrete implementation for RecordingFFmpegExecutor | v001, v004 | pending | - |
+| EXP-001 | PyO3/maturin hybrid build workflow — dev experience, CI setup, stub generation | v001 | complete | [rust-python-hybrid](../../comms/outbox/exploration/rust-python-hybrid/) |
+| EXP-002 | Recording fake pattern — concrete implementation for RecordingFFmpegExecutor | v001, v004 | complete | [recording-fake-pattern](../../comms/outbox/exploration/recording-fake-pattern/) |
 | EXP-003 | FastAPI static file serving — GUI deployment from API server | v005 | pending | - |
 
 ## Scoping Decisions
@@ -97,3 +97,5 @@ Work that surfaces during planning or execution but doesn't fit current scope:
 | Date | Change | Rationale |
 |------|--------|-----------|
 | 2025-01-25 | Initial plan created | Project bootstrap, mapping Phase 1-2 milestones to versions |
+| 2025-01-25 | EXP-001, EXP-002 complete | Investigations for v001 prerequisites |
+| 2025-01-25 | v001 design complete | 3 themes, 10 features designed |
