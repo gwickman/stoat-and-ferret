@@ -26,18 +26,18 @@ class TestTimelineTypes:
         rate = FrameRate(24, 1)
         assert rate.py_numerator == 24
         assert rate.py_denominator == 1
-        assert rate.py_as_float() == 24.0
+        assert rate.fps == 24.0
 
     def test_framerate_presets(self) -> None:
         """Test FrameRate preset methods."""
         from stoat_ferret_core import FrameRate
 
-        assert FrameRate.fps_24().py_as_float() == 24.0
-        assert FrameRate.fps_25().py_as_float() == 25.0
-        assert FrameRate.fps_30().py_as_float() == 30.0
-        assert FrameRate.fps_60().py_as_float() == 60.0
-        assert abs(FrameRate.ntsc_30().py_as_float() - 29.97) < 0.01
-        assert abs(FrameRate.ntsc_60().py_as_float() - 59.94) < 0.01
+        assert FrameRate.fps_24().fps == 24.0
+        assert FrameRate.fps_25().fps == 25.0
+        assert FrameRate.fps_30().fps == 30.0
+        assert FrameRate.fps_60().fps == 60.0
+        assert abs(FrameRate.fps_29_97().fps - 29.97) < 0.01
+        assert abs(FrameRate.fps_59_94().fps - 59.94) < 0.01
 
     def test_framerate_invalid_denominator(self) -> None:
         """Test FrameRate rejects zero denominator."""
