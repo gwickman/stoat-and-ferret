@@ -79,14 +79,7 @@ mod tests {
 
         assert_eq!(
             args,
-            vec![
-                "-y",
-                "-i",
-                "input.mp4",
-                "-c:v",
-                "libx264",
-                "output.mp4"
-            ]
+            vec!["-y", "-i", "input.mp4", "-c:v", "libx264", "output.mp4"]
         );
     }
 
@@ -163,13 +156,7 @@ mod tests {
 
         assert_eq!(
             args,
-            vec![
-                "-i",
-                "video.mp4",
-                "-i",
-                "audio.wav",
-                "combined.mp4"
-            ]
+            vec!["-i", "video.mp4", "-i", "audio.wav", "combined.mp4"]
         );
     }
 
@@ -184,13 +171,7 @@ mod tests {
 
         assert_eq!(
             args,
-            vec![
-                "-stream_loop",
-                "3",
-                "-i",
-                "short.mp4",
-                "looped.mp4"
-            ]
+            vec!["-stream_loop", "3", "-i", "short.mp4", "looped.mp4"]
         );
     }
 
@@ -226,20 +207,14 @@ mod tests {
 
     #[test]
     fn test_validation_empty_input_path() {
-        let result = FFmpegCommand::new()
-            .input("")
-            .output("output.mp4")
-            .build();
+        let result = FFmpegCommand::new().input("").output("output.mp4").build();
 
         assert_eq!(result, Err(CommandError::EmptyPath));
     }
 
     #[test]
     fn test_validation_empty_output_path() {
-        let result = FFmpegCommand::new()
-            .input("input.mp4")
-            .output("")
-            .build();
+        let result = FFmpegCommand::new().input("input.mp4").output("").build();
 
         assert_eq!(result, Err(CommandError::EmptyPath));
     }

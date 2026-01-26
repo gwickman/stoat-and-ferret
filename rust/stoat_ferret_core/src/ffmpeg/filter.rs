@@ -459,9 +459,7 @@ mod tests {
 
     #[test]
     fn test_filter_multiple_params() {
-        let filter = Filter::new("scale")
-            .param("w", 1920)
-            .param("h", 1080);
+        let filter = Filter::new("scale").param("w", 1920).param("h", 1080);
         assert_eq!(filter.to_string(), "scale=w=1920:h=1080");
     }
 
@@ -555,17 +553,13 @@ mod tests {
 
     #[test]
     fn test_filter_chain_with_input() {
-        let chain = FilterChain::new()
-            .input("0:v")
-            .filter(scale(1280, 720));
+        let chain = FilterChain::new().input("0:v").filter(scale(1280, 720));
         assert_eq!(chain.to_string(), "[0:v]scale=w=1280:h=720");
     }
 
     #[test]
     fn test_filter_chain_with_output() {
-        let chain = FilterChain::new()
-            .filter(scale(1280, 720))
-            .output("scaled");
+        let chain = FilterChain::new().filter(scale(1280, 720)).output("scaled");
         assert_eq!(chain.to_string(), "scale=w=1280:h=720[scaled]");
     }
 

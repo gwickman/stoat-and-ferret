@@ -603,7 +603,10 @@ mod tests {
     fn test_validate_path_null_byte() {
         assert_eq!(validate_path("file\0.mp4"), Err(PathError::ContainsNull));
         assert_eq!(validate_path("\0"), Err(PathError::ContainsNull));
-        assert_eq!(validate_path("path/to\0/file"), Err(PathError::ContainsNull));
+        assert_eq!(
+            validate_path("path/to\0/file"),
+            Err(PathError::ContainsNull)
+        );
     }
 
     #[test]
