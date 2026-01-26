@@ -18,6 +18,11 @@ pub mod ffmpeg;
 pub mod sanitize;
 pub mod timeline;
 
+// Define custom Python exceptions for domain errors
+pyo3::create_exception!(stoat_ferret_core, ValidationError, pyo3::exceptions::PyException);
+pyo3::create_exception!(stoat_ferret_core, CommandError, pyo3::exceptions::PyException);
+pyo3::create_exception!(stoat_ferret_core, SanitizationError, pyo3::exceptions::PyException);
+
 /// Performs a health check to verify the Rust module is loaded correctly.
 ///
 /// Returns a status string indicating the module is operational.
@@ -57,6 +62,11 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sanitize::py_validate_video_codec, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_audio_codec, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_preset, m)?)?;
+
+    // Register custom exception types
+    m.add("ValidationError", m.py().get_type::<ValidationError>())?;
+    m.add("CommandError", m.py().get_type::<CommandError>())?;
+    m.add("SanitizationError", m.py().get_type::<SanitizationError>())?;
 
     Ok(())
 }

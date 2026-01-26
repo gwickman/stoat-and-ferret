@@ -30,6 +30,10 @@ from stoat_ferret_core._core import (
     validate_video_codec as validate_video_codec,
     validate_audio_codec as validate_audio_codec,
     validate_preset as validate_preset,
+    # Exceptions
+    ValidationError as ValidationError,
+    CommandError as CommandError,
+    SanitizationError as SanitizationError,
 )
 
 __all__ = [
@@ -57,4 +61,8 @@ __all__ = [
     "validate_video_codec",
     "validate_audio_codec",
     "validate_preset",
+    # Exceptions
+    "ValidationError",
+    "CommandError",
+    "SanitizationError",
 ]
