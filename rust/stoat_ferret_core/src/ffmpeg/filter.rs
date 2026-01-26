@@ -138,7 +138,7 @@ impl Filter {
 
     /// Returns a debug representation of the filter.
     fn __repr__(&self) -> String {
-        format!("Filter({})", self.to_string())
+        format!("Filter({self})")
     }
 
     /// Creates a scale filter for resizing video.
