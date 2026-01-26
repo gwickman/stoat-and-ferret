@@ -28,6 +28,8 @@
 //! );
 //! ```
 
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 use std::fmt;
 
 /// A single FFmpeg filter with optional parameters.
@@ -46,6 +48,8 @@ use std::fmt;
 ///
 /// assert_eq!(filter.to_string(), "scale=w=1920:h=1080");
 /// ```
+#[gen_stub_pyclass]
+#[pyclass]
 #[derive(Debug, Clone)]
 pub struct Filter {
     name: String,
@@ -106,6 +110,85 @@ impl fmt::Display for Filter {
             write!(f, "{}", params.join(":"))?;
         }
         Ok(())
+    }
+}
+
+#[pymethods]
+impl Filter {
+    /// Creates a new filter with the given name.
+    #[new]
+    fn py_new(name: String) -> Self {
+        Self::new(name)
+    }
+
+    /// Adds a parameter to the filter.
+    ///
+    /// Parameters are rendered as `key=value` pairs separated by colons.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "param")]
+    fn py_param(mut slf: PyRefMut<'_, Self>, key: String, value: String) -> PyRefMut<'_, Self> {
+        slf.params.push((key, value));
+        slf
+    }
+
+    /// Returns a string representation of the filter.
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    /// Returns a debug representation of the filter.
+    fn __repr__(&self) -> String {
+        format!("Filter({})", self.to_string())
+    }
+
+    /// Creates a scale filter for resizing video.
+    ///
+    /// Use -1 for either dimension to auto-calculate while preserving aspect ratio.
+    #[staticmethod]
+    fn scale(width: i32, height: i32) -> Self {
+        scale(width, height)
+    }
+
+    /// Creates a scale filter that maintains aspect ratio.
+    ///
+    /// Uses `force_original_aspect_ratio=decrease` to fit within the target dimensions.
+    #[staticmethod]
+    fn scale_fit(width: i32, height: i32) -> Self {
+        scale_fit(width, height)
+    }
+
+    /// Creates a concat filter for concatenating multiple inputs.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - Number of input segments
+    /// * `v` - Number of video streams per segment (0 or 1)
+    /// * `a` - Number of audio streams per segment (0 or 1)
+    #[staticmethod]
+    fn concat(n: usize, v: usize, a: usize) -> Self {
+        concat(n, v, a)
+    }
+
+    /// Creates a pad filter to add borders and center content.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` - Target width after padding
+    /// * `height` - Target height after padding
+    /// * `color` - Color for the padding (e.g., "black", "#FF0000")
+    #[staticmethod]
+    fn pad(width: i32, height: i32, color: String) -> Self {
+        pad(width, height, &color)
+    }
+
+    /// Creates a format filter for pixel format conversion.
+    ///
+    /// # Arguments
+    ///
+    /// * `pix_fmt` - Target pixel format (e.g., "yuv420p", "rgb24")
+    #[staticmethod]
+    fn format(pix_fmt: String) -> Self {
+        format(&pix_fmt)
     }
 }
 
@@ -259,6 +342,8 @@ pub fn format(pix_fmt: &str) -> Filter {
 ///     "[0:v]scale=w=1280:h=720,format=pix_fmts=yuv420p[scaled]"
 /// );
 /// ```
+#[gen_stub_pyclass]
+#[pyclass]
 #[derive(Debug, Clone, Default)]
 pub struct FilterChain {
     inputs: Vec<String>,
@@ -358,6 +443,62 @@ impl fmt::Display for FilterChain {
     }
 }
 
+#[pymethods]
+impl FilterChain {
+    /// Creates a new empty filter chain.
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    /// Adds an input label to the chain.
+    ///
+    /// Input labels reference streams from inputs or outputs of other chains.
+    /// The label will be wrapped in brackets automatically.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "input")]
+    fn py_input(mut slf: PyRefMut<'_, Self>, label: String) -> PyRefMut<'_, Self> {
+        slf.inputs.push(format!("[{}]", label));
+        slf
+    }
+
+    /// Adds a filter to the chain.
+    ///
+    /// Filters are applied in the order they are added.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "filter")]
+    fn py_filter(mut slf: PyRefMut<'_, Self>, f: Filter) -> PyRefMut<'_, Self> {
+        slf.filters.push(f);
+        slf
+    }
+
+    /// Adds an output label to the chain.
+    ///
+    /// Output labels can be referenced by other chains or used in `-map` arguments.
+    /// The label will be wrapped in brackets automatically.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "output")]
+    fn py_output(mut slf: PyRefMut<'_, Self>, label: String) -> PyRefMut<'_, Self> {
+        slf.outputs.push(format!("[{}]", label));
+        slf
+    }
+
+    /// Returns a string representation of the filter chain.
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    /// Returns a debug representation of the filter chain.
+    fn __repr__(&self) -> String {
+        format!(
+            "FilterChain(inputs={}, filters={}, outputs={})",
+            self.inputs.len(),
+            self.filters.len(),
+            self.outputs.len()
+        )
+    }
+}
+
 /// A complete filter graph composed of multiple filter chains.
 ///
 /// Filter graphs are used with FFmpeg's `-filter_complex` argument. Multiple
@@ -393,6 +534,8 @@ impl fmt::Display for FilterChain {
 /// let expected = "[0:v]scale=w=1280:h=720[v0];[1:v]scale=w=1280:h=720[v1];[v0][v1]concat=n=2:v=1:a=0[outv]";
 /// assert_eq!(graph.to_string(), expected);
 /// ```
+#[gen_stub_pyclass]
+#[pyclass]
 #[derive(Debug, Clone, Default)]
 pub struct FilterGraph {
     chains: Vec<FilterChain>,
@@ -439,6 +582,51 @@ impl fmt::Display for FilterGraph {
         let chains: Vec<String> = self.chains.iter().map(|c| c.to_string()).collect();
         write!(f, "{}", chains.join(";"))
     }
+}
+
+#[pymethods]
+impl FilterGraph {
+    /// Creates a new empty filter graph.
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    /// Adds a filter chain to the graph.
+    ///
+    /// Chains are rendered in the order they are added, separated by semicolons.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "chain")]
+    fn py_chain(mut slf: PyRefMut<'_, Self>, chain: FilterChain) -> PyRefMut<'_, Self> {
+        slf.chains.push(chain);
+        slf
+    }
+
+    /// Returns a string representation of the filter graph.
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    /// Returns a debug representation of the filter graph.
+    fn __repr__(&self) -> String {
+        format!("FilterGraph(chains={})", self.chains.len())
+    }
+}
+
+/// Python-exposed scale filter function.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "scale_filter")]
+pub fn py_scale_filter(width: i32, height: i32) -> Filter {
+    scale(width, height)
+}
+
+/// Python-exposed concat filter function.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "concat_filter")]
+pub fn py_concat_filter(n: usize, v: usize, a: usize) -> Filter {
+    concat(n, v, a)
 }
 
 #[cfg(test)]

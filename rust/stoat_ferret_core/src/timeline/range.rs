@@ -4,6 +4,9 @@
 //! on a timeline as a half-open interval [start, end), along with operations for
 //! overlap detection, gap calculation, and set operations.
 
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
 use super::{Duration, Position};
 
 /// Error type for time range operations.
@@ -45,6 +48,8 @@ impl std::error::Error for RangeError {}
 /// assert_eq!(range.end().frames(), 20);
 /// assert_eq!(range.duration().frames(), 10);
 /// ```
+#[gen_stub_pyclass]
+#[pyclass]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TimeRange {
     start: Position,
@@ -313,6 +318,92 @@ impl TimeRange {
             }
         }
         result
+    }
+}
+
+#[pymethods]
+impl TimeRange {
+    /// Creates a new time range from start and end positions.
+    ///
+    /// # Arguments
+    ///
+    /// * `start` - The start position (inclusive)
+    /// * `end` - The end position (exclusive)
+    ///
+    /// # Raises
+    ///
+    /// ValueError: If end <= start
+    #[new]
+    fn py_new(start: Position, end: Position) -> PyResult<Self> {
+        Self::new(start, end)
+            .map_err(|_| pyo3::exceptions::PyValueError::new_err("end must be greater than start"))
+    }
+
+    /// Returns the start position of the range.
+    #[getter]
+    fn py_start(&self) -> Position {
+        self.start()
+    }
+
+    /// Returns the end position of the range.
+    #[getter]
+    fn py_end(&self) -> Position {
+        self.end()
+    }
+
+    /// Returns the duration of the range.
+    #[getter]
+    fn py_duration(&self) -> Duration {
+        self.duration()
+    }
+
+    /// Checks if this range overlaps with another range.
+    fn py_overlaps(&self, other: &TimeRange) -> bool {
+        self.overlaps(other)
+    }
+
+    /// Checks if this range is adjacent to another range.
+    fn py_adjacent(&self, other: &TimeRange) -> bool {
+        self.adjacent(other)
+    }
+
+    /// Returns the overlap region between this range and another, if any.
+    fn py_overlap(&self, other: &TimeRange) -> Option<TimeRange> {
+        self.overlap(other)
+    }
+
+    /// Returns the gap between this range and another, if any.
+    fn py_gap(&self, other: &TimeRange) -> Option<TimeRange> {
+        self.gap(other)
+    }
+
+    /// Returns the intersection of this range and another.
+    fn py_intersection(&self, other: &TimeRange) -> Option<TimeRange> {
+        self.intersection(other)
+    }
+
+    /// Returns the union of this range and another, if they are contiguous.
+    fn py_union(&self, other: &TimeRange) -> Option<TimeRange> {
+        self.union(other)
+    }
+
+    /// Returns the difference of this range minus another.
+    fn py_difference(&self, other: &TimeRange) -> Vec<TimeRange> {
+        self.difference(other)
+    }
+
+    /// Returns a string representation of the time range.
+    fn __repr__(&self) -> String {
+        format!(
+            "TimeRange(start={}, end={})",
+            self.start.frames(),
+            self.end.frames()
+        )
+    }
+
+    /// Compares two time ranges for equality.
+    fn __eq__(&self, other: &Self) -> bool {
+        self.start == other.start && self.end == other.end
     }
 }
 

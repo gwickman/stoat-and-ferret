@@ -52,6 +52,8 @@
 //! assert!(validate_preset("fast").is_ok());
 //! ```
 
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use std::fmt;
 
 /// Errors that can occur when validating a file path.
@@ -501,6 +503,169 @@ pub fn validate_preset(preset: &str) -> Result<&str, BoundsError> {
             allowed: PRESETS.iter().map(|s| (*s).to_string()).collect(),
         })
     }
+}
+
+// ========== Python-exposed functions ==========
+
+/// Escapes special characters in text for use in FFmpeg filter parameters.
+///
+/// FFmpeg filter syntax uses several characters with special meaning.
+/// This function escapes them so they are treated as literal characters.
+///
+/// # Arguments
+///
+/// * `input` - The text to escape
+///
+/// # Returns
+///
+/// The escaped text safe for use in FFmpeg filter parameters.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "escape_filter_text")]
+pub fn py_escape_filter_text(input: &str) -> String {
+    escape_filter_text(input)
+}
+
+/// Validates that a file path is safe to use.
+///
+/// # Arguments
+///
+/// * `path` - The path to validate
+///
+/// # Raises
+///
+/// ValueError: If the path is empty or contains null bytes.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_path")]
+pub fn py_validate_path(path: &str) -> PyResult<()> {
+    validate_path(path).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+}
+
+/// Validates a CRF (Constant Rate Factor) value.
+///
+/// # Arguments
+///
+/// * `crf` - The CRF value to validate (0-51)
+///
+/// # Returns
+///
+/// The validated CRF value.
+///
+/// # Raises
+///
+/// ValueError: If the value is out of range.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_crf")]
+pub fn py_validate_crf(crf: u8) -> PyResult<u8> {
+    validate_crf(crf).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+}
+
+/// Validates a speed multiplier for video playback.
+///
+/// # Arguments
+///
+/// * `speed` - The speed multiplier to validate (0.25-4.0)
+///
+/// # Returns
+///
+/// The validated speed value.
+///
+/// # Raises
+///
+/// ValueError: If the value is out of range.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_speed")]
+pub fn py_validate_speed(speed: f64) -> PyResult<f64> {
+    validate_speed(speed).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+}
+
+/// Validates an audio volume multiplier.
+///
+/// # Arguments
+///
+/// * `volume` - The volume multiplier to validate (0.0-10.0)
+///
+/// # Returns
+///
+/// The validated volume value.
+///
+/// # Raises
+///
+/// ValueError: If the value is out of range.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_volume")]
+pub fn py_validate_volume(volume: f64) -> PyResult<f64> {
+    validate_volume(volume).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+}
+
+/// Validates a video codec name.
+///
+/// # Arguments
+///
+/// * `codec` - The codec name to validate
+///
+/// # Returns
+///
+/// The validated codec name.
+///
+/// # Raises
+///
+/// ValueError: If the codec is not in the allowed list.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_video_codec")]
+pub fn py_validate_video_codec(codec: &str) -> PyResult<String> {
+    validate_video_codec(codec)
+        .map(|s| s.to_string())
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+}
+
+/// Validates an audio codec name.
+///
+/// # Arguments
+///
+/// * `codec` - The codec name to validate
+///
+/// # Returns
+///
+/// The validated codec name.
+///
+/// # Raises
+///
+/// ValueError: If the codec is not in the allowed list.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_audio_codec")]
+pub fn py_validate_audio_codec(codec: &str) -> PyResult<String> {
+    validate_audio_codec(codec)
+        .map(|s| s.to_string())
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+}
+
+/// Validates an encoding preset name.
+///
+/// # Arguments
+///
+/// * `preset` - The preset name to validate
+///
+/// # Returns
+///
+/// The validated preset name.
+///
+/// # Raises
+///
+/// ValueError: If the preset is not in the allowed list.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "validate_preset")]
+pub fn py_validate_preset(preset: &str) -> PyResult<String> {
+    validate_preset(preset)
+        .map(|s| s.to_string())
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
 #[cfg(test)]
