@@ -85,13 +85,20 @@ Successfully implemented PyO3 bindings for all command builder types, enabling P
 | Gate | Status | Details |
 |------|--------|---------|
 | ruff check | PASS | All checks passed |
-| mypy | PASS | No issues in 5 source files |
-| cargo test | PASS | 201 tests passed, 83 doc-tests passed |
-| pytest | PENDING | Requires `maturin develop` in active venv |
+| ruff format | PASS | All files formatted |
+| mypy | PASS | No issues in source files |
+| cargo clippy | PASS | No warnings |
+| cargo test | PASS | All tests passed, all doc-tests passed |
+| pytest | PASS | All 49 tests passed on all platforms |
+
+## CI Results
+
+All 9 CI jobs passed (Ubuntu/macOS/Windows × Python 3.10/3.11/3.12):
+- PR #19: https://github.com/gwickman/stoat-and-ferret/pull/19
 
 ## Notes
 
-1. **Maturin Build**: The Python tests require running `maturin develop` to build the native extension. The shell environment doesn't have Rust in PATH by default.
+1. **Test API Names**: The Python bindings use `py_` prefixes for methods (e.g., `py_frames`, `py_overlaps`) and different method names in some cases (e.g., `fps` property instead of `as_float()`).
 
 2. **Method Chaining**: Implemented using `PyRefMut<'_, Self>` pattern which allows methods to return a mutable reference to self, enabling fluent API:
    ```python
