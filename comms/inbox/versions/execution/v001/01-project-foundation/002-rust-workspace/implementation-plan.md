@@ -3,11 +3,10 @@
 ## Step 1: Create Rust Crate Structure
 ```bash
 mkdir -p rust/stoat_ferret_core/src/bin
-touch rust/stoat_ferret_core/Cargo.toml
-touch rust/stoat_ferret_core/src/lib.rs
 ```
 
-## Step 2: Configure Cargo.toml
+## Step 2: Create Cargo.toml
+`rust/stoat_ferret_core/Cargo.toml`:
 ```toml
 [package]
 name = "stoat_ferret_core"
@@ -26,7 +25,8 @@ pyo3-stub-gen = "0.17"
 proptest = "1.0"
 ```
 
-## Step 3: Create lib.rs with PyO3 Module
+## Step 3: Create lib.rs
+`rust/stoat_ferret_core/src/lib.rs`:
 ```rust
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
@@ -47,7 +47,16 @@ define_stub_info_gatherer!(stub_info);
 ```
 
 ## Step 4: Create Stub Generator Binary
-Create `src/bin/stub_gen.rs` to generate .pyi files.
+`rust/stoat_ferret_core/src/bin/stub_gen.rs`:
+```rust
+use pyo3_stub_gen::Result;
+
+fn main() -> Result<()> {
+    let stub = stoat_ferret_core::stub_info()?;
+    stub.generate()?;
+    Ok(())
+}
+```
 
 ## Step 5: Update pyproject.toml
 Add maturin configuration:
@@ -56,27 +65,50 @@ Add maturin configuration:
 python-source = "src"
 module-name = "stoat_ferret_core._core"
 features = ["pyo3/extension-module"]
+manifest-path = "rust/stoat_ferret_core/Cargo.toml"
 ```
 
 ## Step 6: Create Python Wrapper
-Create `src/stoat_ferret_core/__init__.py` that imports from `._core`.
+`src/stoat_ferret_core/__init__.py`:
+```python
+"""stoat_ferret_core - Rust-powered video editing primitives."""
+from stoat_ferret_core._core import health_check
 
-## Step 7: Create stubs Directory
-```bash
-mkdir -p stubs
-cargo run --bin stub_gen
+__all__ = ["health_check"]
 ```
 
-## Step 8: Verify Build
+## Step 7: Create rustfmt.toml
+`rust/stoat_ferret_core/rustfmt.toml`:
+```toml
+edition = "2021"
+max_width = 100
+```
+
+## Step 8: Generate Stubs
+```bash
+mkdir -p stubs/stoat_ferret_core
+cd rust/stoat_ferret_core
+cargo run --bin stub_gen
+mv stoat_ferret_core.pyi ../../stubs/stoat_ferret_core/__init__.pyi
+```
+
+## Step 9: Configure mypy to Use Stubs
+Add to `pyproject.toml`:
+```toml
+[tool.mypy]
+mypy_path = "stubs"
+```
+
+## Step 10: Verify Build
 ```bash
 maturin develop
 python -c "from stoat_ferret_core import health_check; print(health_check())"
-cargo test
-cargo clippy -- -D warnings
+cargo test --manifest-path rust/stoat_ferret_core/Cargo.toml
+cargo clippy --manifest-path rust/stoat_ferret_core/Cargo.toml -- -D warnings
 ```
 
 ## Verification
 - Python import succeeds
-- health_check() returns expected string
+- health_check() returns "stoat_ferret_core OK"
 - Rust tests pass
 - Clippy clean

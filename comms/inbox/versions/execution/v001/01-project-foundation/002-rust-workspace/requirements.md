@@ -8,11 +8,11 @@ Initialize Rust workspace with maturin and PyO3 for building Python bindings.
 ### FR-001: Rust Project Structure
 - Create `rust/stoat_ferret_core/` crate directory
 - Configure as library crate with `cdylib` and `rlib` targets
-- Set minimum Rust edition to 2021
+- Set Rust edition to 2021
 
 ### FR-002: PyO3 Integration
-- Add PyO3 dependency with `abi3-py310` feature
-- Add pyo3-stub-gen for type stub generation
+- Add PyO3 0.23 dependency with `abi3-py310` feature
+- Add pyo3-stub-gen 0.17 for type stub generation
 - Create basic `#[pymodule]` with health check function
 
 ### FR-003: Maturin Configuration
@@ -23,16 +23,16 @@ Initialize Rust workspace with maturin and PyO3 for building Python bindings.
 ### FR-004: Type Stubs
 - Set up pyo3-stub-gen with `define_stub_info_gatherer!`
 - Create stub generator binary in `src/bin/stub_gen.rs`
-- Generate initial `stoat_ferret_core.pyi`
+- Generate initial stubs to `stubs/stoat_ferret_core/`
 
 ### FR-005: Rust Quality Gates
 - Configure clippy with `-D warnings`
-- Add rustfmt.toml with project style
+- Add rustfmt.toml with project style (edition=2021, max_width=100)
 - Set up cargo test infrastructure
 
 ## Acceptance Criteria
 - [ ] `maturin develop` builds and installs module
-- [ ] `from stoat_ferret_core import _core` works in Python
+- [ ] `from stoat_ferret_core import health_check` works in Python
 - [ ] `cargo test` runs Rust unit tests
 - [ ] `cargo clippy -- -D warnings` passes
 - [ ] Type stubs generated in `stubs/` directory

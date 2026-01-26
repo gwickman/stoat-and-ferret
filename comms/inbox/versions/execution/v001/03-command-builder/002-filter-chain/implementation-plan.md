@@ -1,10 +1,8 @@
 # Implementation Plan: Filter Chain
 
 ## Step 1: Define Filter Types
-Create `rust/stoat_ferret_core/src/ffmpeg/filter.rs`:
-
+`rust/stoat_ferret_core/src/ffmpeg/filter.rs`:
 ```rust
-/// A single filter with parameters
 #[derive(Debug, Clone)]
 pub struct Filter {
     name: String,
@@ -12,32 +10,36 @@ pub struct Filter {
 }
 
 impl Filter {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             params: Vec::new(),
         }
     }
 
-    pub fn param(mut self, key: &str, value: impl ToString) -> Self {
-        self.params.push((key.to_string(), value.to_string()));
+    pub fn param(mut self, key: impl Into<String>, value: impl ToString) -> Self {
+        self.params.push((key.into(), value.to_string()));
         self
     }
+}
 
-    pub fn to_string(&self) -> String {
-        if self.params.is_empty() {
-            self.name.clone()
-        } else {
-            let params: Vec<String> = self.params.iter()
+impl std::fmt::Display for Filter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)?;
+        if !self.params.is_empty() {
+            write!(f, "=")?;
+            let params: Vec<String> = self.params
+                .iter()
                 .map(|(k, v)| format!("{}={}", k, v))
                 .collect();
-            format!("{}={}", self.name, params.join(":"))
+            write!(f, "{}", params.join(":"))?;
         }
+        Ok(())
     }
 }
 ```
 
-## Step 2: Implement Common Filters
+## Step 2: Common Filter Constructors
 ```rust
 pub fn concat(n: usize, v: usize, a: usize) -> Filter {
     Filter::new("concat")
@@ -52,19 +54,19 @@ pub fn scale(width: i32, height: i32) -> Filter {
         .param("h", height)
 }
 
-pub fn scale_preserve_aspect(width: i32, height: i32) -> Filter {
+pub fn scale_fit(width: i32, height: i32) -> Filter {
     Filter::new("scale")
         .param("w", width)
         .param("h", height)
         .param("force_original_aspect_ratio", "decrease")
 }
 
-pub fn pad(width: i32, height: i32, x: &str, y: &str, color: &str) -> Filter {
+pub fn pad(width: i32, height: i32, color: &str) -> Filter {
     Filter::new("pad")
         .param("w", width)
         .param("h", height)
-        .param("x", x)
-        .param("y", y)
+        .param("x", "(ow-iw)/2")
+        .param("y", "(oh-ih)/2")
         .param("color", color)
 }
 
@@ -74,86 +76,76 @@ pub fn format(pix_fmt: &str) -> Filter {
 }
 ```
 
-## Step 3: Implement Filter Chain
+## Step 3: FilterChain
 ```rust
-/// A chain of filters with input/output labels
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FilterChain {
-    inputs: Vec<String>,   // e.g., ["[0:v]", "[1:v]"]
+    inputs: Vec<String>,
     filters: Vec<Filter>,
-    outputs: Vec<String>,  // e.g., ["[outv]"]
+    outputs: Vec<String>,
 }
 
 impl FilterChain {
-    pub fn new() -> Self { ... }
-    
-    pub fn input(mut self, label: &str) -> Self {
-        self.inputs.push(format!("[{}]", label));
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn input(mut self, label: impl Into<String>) -> Self {
+        self.inputs.push(format!("[{}]", label.into()));
         self
     }
-    
+
     pub fn filter(mut self, f: Filter) -> Self {
         self.filters.push(f);
         self
     }
-    
-    pub fn output(mut self, label: &str) -> Self {
-        self.outputs.push(format!("[{}]", label));
+
+    pub fn output(mut self, label: impl Into<String>) -> Self {
+        self.outputs.push(format!("[{}]", label.into()));
         self
     }
-    
-    pub fn to_string(&self) -> String {
-        let inputs = self.inputs.join("");
-        let filters: Vec<String> = self.filters.iter()
-            .map(|f| f.to_string())
-            .collect();
-        let outputs = self.outputs.join("");
-        format!("{}{}{}", inputs, filters.join(","), outputs)
+}
+
+impl std::fmt::Display for FilterChain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inputs.join(""))?;
+        let filters: Vec<String> = self.filters.iter().map(|x| x.to_string()).collect();
+        write!(f, "{}", filters.join(","))?;
+        write!(f, "{}", self.outputs.join(""))?;
+        Ok(())
     }
 }
 ```
 
-## Step 4: Implement FilterGraph
+## Step 4: FilterGraph
 ```rust
-/// Multiple filter chains combined
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FilterGraph {
     chains: Vec<FilterChain>,
 }
 
 impl FilterGraph {
     pub fn new() -> Self {
-        Self { chains: Vec::new() }
+        Self::default()
     }
-    
+
     pub fn chain(mut self, chain: FilterChain) -> Self {
         self.chains.push(chain);
         self
     }
-    
-    pub fn to_string(&self) -> String {
-        self.chains.iter()
-            .map(|c| c.to_string())
-            .collect::<Vec<_>>()
-            .join(";")
+}
+
+impl std::fmt::Display for FilterGraph {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let chains: Vec<String> = self.chains.iter().map(|c| c.to_string()).collect();
+        write!(f, "{}", chains.join(";"))
     }
 }
 ```
 
-## Step 5: Integrate with FFmpegCommand
-```rust
-impl FFmpegCommand {
-    pub fn filter_complex(mut self, graph: FilterGraph) -> Self {
-        self.filter_complex = Some(graph);
-        self
-    }
-}
-```
-
-## Step 6: Unit Tests
-Test filter string generation matches FFmpeg syntax.
+## Step 5: Unit Tests
+Test filter string generation.
 
 ## Verification
-- Filter strings are valid
-- Complex filter graphs generate correctly
-- Concat with multiple inputs works
+- Filter strings are valid FFmpeg syntax
+- Complex graphs generate correctly

@@ -13,8 +13,8 @@ Implement type-safe FFmpeg command builder that generates argument arrays for su
 
 ### FR-002: Input Options
 - `-i` input file path
-- `-ss` seek to position
-- `-t` duration limit
+- `-ss` seek to position (seconds)
+- `-t` duration limit (seconds)
 - `-stream_loop` for looping inputs
 
 ### FR-003: Output Options
@@ -29,12 +29,10 @@ Implement type-safe FFmpeg command builder that generates argument arrays for su
 FFmpegCommand::new()
     .overwrite(true)
     .input("input.mp4")
-        .seek(Position::from_seconds(10.0))
-        .done()
+    .seek(10.0)
     .output("output.mp4")
-        .video_codec("libx264")
-        .preset("fast")
-        .done()
+    .video_codec("libx264")
+    .preset("fast")
     .build()?
 ```
 

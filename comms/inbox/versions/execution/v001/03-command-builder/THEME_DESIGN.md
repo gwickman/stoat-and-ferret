@@ -1,1 +1,46 @@
-# Theme 3: Command Builder\n\n## Overview\nImplement type-safe FFmpeg command construction with input sanitization. This module generates FFmpeg argument arrays (never shell strings) with security built in.\n\n## Context\nBased on EXP-002 (recording-fake-pattern) exploration:\n- Python orchestration will use an FFmpegExecutor protocol\n- Rust builds the commands, Python executes via subprocess\n- Recording/replay happens at the Python boundary\n\nThis theme implements the Rust command builder that generates safe, validated commands.\n\n## Architecture Decisions\n\n### AD-001: Argument Arrays\nGenerate `Vec<String>` argument arrays, never shell strings:\n- Avoids shell injection entirely\n- Python uses `subprocess.run(args)` without shell=True\n- Each argument properly isolated\n\n### AD-002: Sanitization at Build Time\nAll user-provided text is sanitized when building the command:\n- Text for filters escaped before filter string generation\n- Paths validated against allowed directories\n- Parameters bounds-checked\n\n### AD-003: Builder Pattern\nFluent builder API for command construction:\n- Type-safe, catches errors at compile time\n- Validation on `build()` call\n- Immutable intermediate states\n\n## Dependencies\n- Theme 1 (project-foundation) - build infrastructure\n- Theme 2 (timeline-math) - Position/Duration types for clip references\n\n## Risks\n- FFmpeg syntax complexity\n- Filter graph escaping edge cases\n\n## Success Criteria\n- Generated commands execute correctly with FFmpeg\n- All user input sanitized\n- Type stubs enable IDE completion\n- Mypy passes with generated stubs"
+# Theme 3: command-builder
+
+## Overview
+Implement type-safe FFmpeg command construction with input sanitization. This module generates FFmpeg argument arrays (never shell strings) with security built in.
+
+## Context
+Based on EXP-002 (recording-fake-pattern) exploration:
+- Python orchestration will use an FFmpegExecutor protocol
+- Rust builds the commands, Python executes via subprocess
+- Recording/replay happens at the Python boundary
+
+This theme implements the Rust command builder that generates safe, validated commands.
+
+## Architecture Decisions
+
+### AD-001: Argument Arrays
+Generate `Vec<String>` argument arrays, never shell strings:
+- Avoids shell injection entirely
+- Python uses `subprocess.run(args)` without shell=True
+- Each argument properly isolated
+
+### AD-002: Sanitization at Build Time
+All user-provided text is sanitized when building the command:
+- Text for filters escaped before filter string generation
+- Paths validated against traversal
+- Parameters bounds-checked
+
+### AD-003: Builder Pattern
+Fluent builder API for command construction:
+- Type-safe, catches errors at compile time
+- Validation on `build()` call
+- Mutable builder for ergonomics
+
+## Dependencies
+- Theme 1 (project-foundation) — build infrastructure
+- Theme 2 (timeline-math) — Position/Duration types for clip references
+
+## Risks
+- FFmpeg syntax complexity
+- Filter graph escaping edge cases
+
+## Success Criteria
+- Generated commands execute correctly with FFmpeg
+- All user input sanitized
+- Type stubs enable IDE completion
+- Mypy passes with generated stubs

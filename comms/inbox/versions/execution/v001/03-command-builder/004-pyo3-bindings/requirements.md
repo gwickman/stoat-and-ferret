@@ -12,13 +12,13 @@ Expose Rust command builder to Python via PyO3 with generated type stubs for IDE
 
 ### FR-002: Command Builder Exposure
 - Expose FFmpegCommand builder
-- Expose Filter and FilterChain builders
-- Pythonic API (method chaining works)
+- Expose Filter, FilterChain, FilterGraph builders
+- Method chaining works in Python
 
 ### FR-003: Type Stubs
 - Generate .pyi files with pyo3-stub-gen
 - All public functions have type hints
-- Complex types properly annotated
+- CI verifies stubs match implementation
 
 ### FR-004: Error Handling
 - Rust errors converted to Python exceptions
@@ -28,7 +28,7 @@ Expose Rust command builder to Python via PyO3 with generated type stubs for IDE
 ### FR-005: Python Wrapper Module
 - `src/stoat_ferret_core/__init__.py` exports public API
 - Re-export from `_core` with clean names
-- Type hints in wrapper for additional safety
+- Type hints in wrapper
 
 ## Acceptance Criteria
 - [ ] All Rust types importable from Python

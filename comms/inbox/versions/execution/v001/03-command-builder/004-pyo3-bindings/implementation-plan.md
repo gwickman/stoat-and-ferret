@@ -1,166 +1,107 @@
 # Implementation Plan: PyO3 Bindings
 
-## Step 1: Update lib.rs with PyO3 Annotations
-```rust
-use pyo3::prelude::*;
-use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
+## Step 1: Add PyO3 Annotations to Timeline Types
+Add `#[gen_stub_pyclass]`, `#[gen_stub_pymethods]` to Position, Duration, FrameRate, TimeRange.
 
-mod timeline;
-mod ffmpeg;
-mod sanitize;
-mod clip;
+## Step 2: Add PyO3 Annotations to FFmpeg Types
+Add annotations to FFmpegCommand, Filter, FilterChain, FilterGraph.
 
-// Export timeline types
-#[gen_stub_pyclass]
-#[pyclass]
-#[derive(Debug, Clone)]
-pub struct PyPosition {
-    inner: timeline::Position,
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyPosition {
-    #[new]
-    fn new(frames: u64) -> Self {
-        Self { inner: timeline::Position::from_frames(frames) }
-    }
-
-    #[staticmethod]
-    fn from_seconds(seconds: f64, fps: &PyFrameRate) -> Self {
-        Self { inner: timeline::Position::from_seconds(seconds, fps.inner) }
-    }
-
-    fn to_seconds(&self, fps: &PyFrameRate) -> f64 {
-        self.inner.to_seconds(fps.inner)
-    }
-
-    #[getter]
-    fn frames(&self) -> u64 {
-        self.inner.frames()
-    }
-}
-```
-
-## Step 2: Expose FrameRate Constants
-```rust
-#[gen_stub_pyclass]
-#[pyclass]
-pub struct PyFrameRate {
-    inner: timeline::FrameRate,
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyFrameRate {
-    #[staticmethod]
-    fn fps_24() -> Self {
-        Self { inner: timeline::FrameRate::FPS_24 }
-    }
-
-    #[staticmethod]
-    fn fps_30() -> Self {
-        Self { inner: timeline::FrameRate::FPS_30 }
-    }
-
-    // etc.
-}
-```
-
-## Step 3: Expose Command Builder
-```rust
-#[gen_stub_pyclass]
-#[pyclass]
-pub struct PyFFmpegCommand {
-    inner: ffmpeg::FFmpegCommand,
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyFFmpegCommand {
-    #[new]
-    fn new() -> Self {
-        Self { inner: ffmpeg::FFmpegCommand::new() }
-    }
-
-    fn overwrite(&mut self, yes: bool) {
-        self.inner = self.inner.clone().overwrite(yes);
-    }
-
-    fn input(&mut self, path: &str) -> PyInputBuilder {
-        // Return builder for chaining
-        ...
-    }
-
-    fn build(&self) -> PyResult<Vec<String>> {
-        self.inner.build().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string())
-        })
-    }
-}
-```
-
-## Step 4: Define Python Exceptions
+## Step 3: Define Python Exceptions
 ```rust
 use pyo3::create_exception;
 
 create_exception!(stoat_ferret_core, ValidationError, pyo3::exceptions::PyException);
 create_exception!(stoat_ferret_core, CommandError, pyo3::exceptions::PyException);
 create_exception!(stoat_ferret_core, SanitizationError, pyo3::exceptions::PyException);
+```
 
+## Step 4: Update Module Registration
+```rust
 #[pymodule]
 fn _core(m: &Bound<PyModule>) -> PyResult<()> {
-    m.add_class::<PyPosition>()?;
-    m.add_class::<PyFrameRate>()?;
-    m.add_class::<PyFFmpegCommand>()?;
+    // Timeline
+    m.add_class::<Position>()?;
+    m.add_class::<Duration>()?;
+    m.add_class::<FrameRate>()?;
+    m.add_class::<TimeRange>()?;
+    
+    // FFmpeg
+    m.add_class::<FFmpegCommand>()?;
+    m.add_class::<Filter>()?;
+    m.add_class::<FilterChain>()?;
+    m.add_class::<FilterGraph>()?;
+    
+    // Exceptions
     m.add("ValidationError", m.py().get_type::<ValidationError>())?;
     m.add("CommandError", m.py().get_type::<CommandError>())?;
+    m.add("SanitizationError", m.py().get_type::<SanitizationError>())?;
+    
+    // Sanitization functions
+    m.add_function(wrap_pyfunction!(escape_filter_text, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_path, m)?)?;
+    
     Ok(())
 }
 ```
 
-## Step 5: Create Python Wrapper
-Create `src/stoat_ferret_core/__init__.py`:
-
+## Step 5: Update Python Wrapper
+`src/stoat_ferret_core/__init__.py`:
 ```python
 """stoat_ferret_core - Rust-powered video editing primitives."""
-from __future__ import annotations
-
 from stoat_ferret_core._core import (
-    PyPosition as Position,
-    PyFrameRate as FrameRate,
-    PyFFmpegCommand as FFmpegCommand,
+    # Timeline
+    Position,
+    Duration,
+    FrameRate,
+    TimeRange,
+    # FFmpeg
+    FFmpegCommand,
+    Filter,
+    FilterChain,
+    FilterGraph,
+    # Exceptions
     ValidationError,
     CommandError,
+    SanitizationError,
+    # Functions
+    escape_filter_text,
+    validate_path,
+    health_check,
 )
 
 __all__ = [
     "Position",
+    "Duration",
     "FrameRate",
+    "TimeRange",
     "FFmpegCommand",
+    "Filter",
+    "FilterChain",
+    "FilterGraph",
     "ValidationError",
     "CommandError",
+    "SanitizationError",
+    "escape_filter_text",
+    "validate_path",
+    "health_check",
 ]
 ```
 
-## Step 6: Generate Type Stubs
+## Step 6: Regenerate Stubs
 ```bash
+cd rust/stoat_ferret_core
 cargo run --bin stub_gen
-# Move generated stubs to stubs/ directory
-mv stoat_ferret_core.pyi stubs/stoat_ferret_core/__init__.pyi
+cp stoat_ferret_core.pyi ../../stubs/stoat_ferret_core/__init__.pyi
 ```
 
-## Step 7: Configure mypy to Use Stubs
-In `pyproject.toml`:
-```toml
-[tool.mypy]
-mypy_path = "stubs"
-```
-
-## Step 8: Write Integration Tests
+## Step 7: Integration Tests
 ```python
 # tests/test_core_integration.py
-from stoat_ferret_core import Position, FrameRate, FFmpegCommand
+from stoat_ferret_core import (
+    Position, Duration, FrameRate, TimeRange,
+    FFmpegCommand, Filter, FilterChain, FilterGraph,
+    escape_filter_text, validate_path,
+)
 
 def test_position_roundtrip():
     fps = FrameRate.fps_24()
@@ -170,16 +111,26 @@ def test_position_roundtrip():
 
 def test_command_builder():
     cmd = FFmpegCommand()
-    cmd.overwrite(True)
-    cmd.input("input.mp4")
-    cmd.output("output.mp4")
+    cmd = cmd.overwrite(True).input("in.mp4").output("out.mp4")
     args = cmd.build()
     assert "-y" in args
     assert "-i" in args
+    assert "in.mp4" in args
+    assert "out.mp4" in args
+
+def test_filter_chain():
+    chain = FilterChain().input("0:v").filter(Filter.scale(1920, 1080)).output("v")
+    result = str(chain)
+    assert "[0:v]" in result
+    assert "scale" in result
+    assert "[v]" in result
+
+def test_escape():
+    assert escape_filter_text("hello:world") == "hello\\:world"
 ```
 
 ## Verification
-- `python -c "from stoat_ferret_core import Position"` works
-- `uv run mypy src/` passes with stubs
+- Python imports succeed
+- Method chaining works
+- mypy passes
 - Integration tests pass
-- IDE shows autocomplete for imported types

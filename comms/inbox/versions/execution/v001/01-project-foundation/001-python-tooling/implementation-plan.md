@@ -11,12 +11,12 @@ touch tests/__init__.py
 
 ## Step 2: Create pyproject.toml
 Create with:
-- `[project]` section with name, version, requires-python
+- `[project]` section: name="stoat-ferret", version="0.1.0", requires-python=">=3.10"
 - `[build-system]` with maturin backend
-- `[dependency-groups]` for dev dependencies
-- `[tool.ruff]` configuration
-- `[tool.mypy]` configuration
-- `[tool.pytest.ini_options]` configuration
+- `[dependency-groups]` for dev dependencies (pytest, pytest-cov, ruff, mypy, maturin)
+- `[tool.ruff]` configuration (line-length=100, select=["E","F","I","UP","B","SIM"])
+- `[tool.mypy]` configuration (strict=true, disallow_untyped_defs=true)
+- `[tool.pytest.ini_options]` configuration (testpaths=["tests"], addopts="--cov=src")
 
 ## Step 3: Initialize uv
 ```bash
@@ -24,7 +24,12 @@ uv sync
 ```
 
 ## Step 4: Create Initial Test
-Create `tests/test_smoke.py` with a passing smoke test to verify pytest works.
+Create `tests/test_smoke.py`:
+```python
+def test_smoke():
+    """Verify pytest runs."""
+    assert True
+```
 
 ## Step 5: Verify Quality Gates
 ```bash

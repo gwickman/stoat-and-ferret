@@ -24,7 +24,12 @@ GitHub Actions workflow for hybrid Python/Rust builds with quality gates on ever
 - Run maturin develop to verify build works
 - Import module in Python to verify bindings
 
-### FR-005: Caching
+### FR-005: Stub Verification
+- Regenerate stubs in CI
+- Compare against committed stubs
+- Fail if stubs differ (prevents manual drift)
+
+### FR-006: Caching
 - Cache Rust compilation artifacts
 - Cache uv/pip dependencies
 
@@ -32,4 +37,5 @@ GitHub Actions workflow for hybrid Python/Rust builds with quality gates on ever
 - [ ] Workflow runs on PR creation
 - [ ] All quality gates enforced
 - [ ] Build succeeds on all 3 platforms
+- [ ] Stub verification fails if stubs outdated
 - [ ] Reasonable CI time (<10 min)

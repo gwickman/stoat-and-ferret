@@ -1,1 +1,49 @@
-# Theme 1: Project Foundation\n\n## Overview\nEstablish the hybrid Python/Rust project structure that will serve as the foundation for all subsequent development. This theme sets up modern tooling, quality gates, and CI pipeline.\n\n## Context\nBased on EXP-001 (rust-python-hybrid) exploration findings:\n- Use maturin with PyO3 for Python/Rust integration\n- Dual crate-type `[\"cdylib\", \"rlib\"]` for both bindings and tests\n- pyo3-stub-gen for type stub generation\n- Mixed layout with `python-source` configuration\n\n## Architecture Decisions\n\n### AD-001: Project Layout\nUse mixed Rust/Python layout:\n```\nstoat-and-ferret/\n├── src/stoat_ferret/          # Python package (orchestration)\n├── src/stoat_ferret_core/     # Python wrapper for Rust\n├── rust/stoat_ferret_core/    # Rust crate\n├── stubs/                     # Generated .pyi files\n└── tests/                     # Python tests\n```\n\n### AD-002: Module Naming\n- Rust crate: `stoat_ferret_core`\n- PyO3 module: `stoat_ferret_core._core`\n- Python import: `from stoat_ferret_core import function`\n\n### AD-003: Quality Gates\n- Python: ruff (lint+format), mypy (types), pytest (tests, 80% coverage)\n- Rust: clippy (-D warnings), rustfmt, cargo test\n\n## Dependencies\n- None (first theme)\n\n## Risks\n- PyO3/maturin version compatibility\n- Cross-platform build differences\n\n## Success Criteria\n- All quality gates pass locally and in CI\n- Python can import Rust module\n- CI runs on all platforms in <10 minutes"
+# Theme 1: project-foundation
+
+## Overview
+Establish the hybrid Python/Rust project structure that will serve as the foundation for all subsequent development. This theme sets up modern tooling, quality gates, and CI pipeline.
+
+## Context
+Based on EXP-001 (rust-python-hybrid) exploration findings:
+- Use maturin with PyO3 for Python/Rust integration
+- Dual crate-type `["cdylib", "rlib"]` for both bindings and tests
+- pyo3-stub-gen for type stub generation
+- Mixed layout with `python-source` configuration
+
+## Architecture Decisions
+
+### AD-001: Project Layout
+Use mixed Rust/Python layout:
+```
+stoat-and-ferret/
+├── src/stoat_ferret/          # Python package (orchestration)
+├── src/stoat_ferret_core/     # Python wrapper for Rust
+├── rust/stoat_ferret_core/    # Rust crate
+├── stubs/                     # Generated .pyi files
+└── tests/                     # Python tests
+```
+
+### AD-002: Module Naming
+- Rust crate: `stoat_ferret_core`
+- PyO3 module: `stoat_ferret_core._core`
+- Python import: `from stoat_ferret_core import function`
+
+### AD-003: Quality Gates
+- Python: ruff (lint+format), mypy (types), pytest (tests, 80% coverage)
+- Rust: clippy (-D warnings), rustfmt, cargo test
+
+### AD-004: CI Stub Verification
+CI regenerates stubs and fails if they differ from committed stubs. No manual stub management.
+
+## Dependencies
+None (first theme)
+
+## Risks
+- PyO3/maturin version compatibility
+- Cross-platform build differences (especially Windows path handling)
+
+## Success Criteria
+- All quality gates pass locally and in CI
+- Python can import Rust module
+- CI runs on all 3 platforms
+- Stub verification enforced in CI

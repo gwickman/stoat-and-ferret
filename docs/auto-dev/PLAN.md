@@ -77,6 +77,21 @@ Track explorations that must complete before version design.
 
 **Rationale:** GUI milestones are tightly coupled — shell provides frame for browser and manager.
 
+## Deferred Items
+
+Items explicitly deferred during version design, with target versions.
+
+| Item | From | To | Rationale |
+|------|------|----|-----------|
+| Structured logging with correlation ID | M1.1 | v003 | Requires API layer for request context |
+| Prometheus metrics (/metrics endpoint) | M1.1 | v003 | Requires API layer |
+| Health check endpoints (/health/*) | M1.1 | v003 | Requires API layer |
+| Externalized settings (pydantic-settings) | M1.1 | v003 | Requires API layer for configuration |
+| Project duration calculations | M1.2 | v003 | Requires Clip model |
+| Encoding preset builder | M1.3 | v002 | Needed for FFmpeg executor integration |
+| Contract tests with real FFmpeg | M1.3 | v004 | Part of testing infrastructure version |
+| Drop-frame timecode support | M1.2 | TBD | Complex; start with non-drop-frame only |
+
 ## Completed Versions
 
 *None yet*

@@ -3,7 +3,7 @@
   "version": "v001",
   "description": "Foundation version establishing hybrid Python/Rust architecture. Sets up project structure, build tooling, CI pipeline, and implements core Rust modules for timeline math and FFmpeg command building with PyO3 bindings.",
   "status": "pending",
-  "started_at": "2026-01-25T22:21:47.297172Z",
+  "started_at": "2026-01-26T07:44:18.354957Z",
   "completed_at": null,
   "themes": [
     {

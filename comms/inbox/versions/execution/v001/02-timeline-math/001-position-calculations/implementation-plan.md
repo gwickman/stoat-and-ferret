@@ -1,99 +1,150 @@
 # Implementation Plan: Position Calculations
 
-## Step 1: Define Core Types
-Create `rust/stoat_ferret_core/src/timeline/mod.rs`:
-
-```rust
-pub mod position;
-pub mod framerate;
+## Step 1: Create Module Structure
+```
+rust/stoat_ferret_core/src/
+├── lib.rs
+└── timeline/
+    ├── mod.rs
+    ├── framerate.rs
+    ├── position.rs
+    └── duration.rs
 ```
 
-Create `framerate.rs`:
+## Step 2: Implement FrameRate
+`timeline/framerate.rs`:
 ```rust
 /// Rational frame rate representation
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FrameRate {
     numerator: u32,
     denominator: u32,
 }
 
 impl FrameRate {
-    pub const FPS_24: Self = Self { numerator: 24, denominator: 1 };
     pub const FPS_23_976: Self = Self { numerator: 24000, denominator: 1001 };
+    pub const FPS_24: Self = Self { numerator: 24, denominator: 1 };
     pub const FPS_25: Self = Self { numerator: 25, denominator: 1 };
     pub const FPS_29_97: Self = Self { numerator: 30000, denominator: 1001 };
     pub const FPS_30: Self = Self { numerator: 30, denominator: 1 };
-    // etc.
+    pub const FPS_50: Self = Self { numerator: 50, denominator: 1 };
+    pub const FPS_59_94: Self = Self { numerator: 60000, denominator: 1001 };
+    pub const FPS_60: Self = Self { numerator: 60, denominator: 1 };
+
+    pub fn new(numerator: u32, denominator: u32) -> Option<Self> {
+        if denominator == 0 { return None; }
+        Some(Self { numerator, denominator })
+    }
+
+    pub fn frames_per_second(&self) -> f64 {
+        self.numerator as f64 / self.denominator as f64
+    }
 }
 ```
 
-## Step 2: Implement Position Type
-Create `position.rs`:
+## Step 3: Implement Position
+`timeline/position.rs`:
 ```rust
+use super::FrameRate;
+
 /// Timeline position in frames (frame-accurate)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Position(u64);
 
 impl Position {
-    pub fn from_frames(frames: u64) -> Self { Self(frames) }
-    pub fn from_seconds(seconds: f64, fps: FrameRate) -> Self { ... }
-    pub fn to_seconds(&self, fps: FrameRate) -> f64 { ... }
-    pub fn frames(&self) -> u64 { self.0 }
+    pub const ZERO: Self = Self(0);
+
+    pub fn from_frames(frames: u64) -> Self {
+        Self(frames)
+    }
+
+    pub fn from_seconds(seconds: f64, fps: FrameRate) -> Self {
+        let frames = (seconds * fps.numerator as f64 / fps.denominator as f64).round() as u64;
+        Self(frames)
+    }
+
+    pub fn frames(&self) -> u64 {
+        self.0
+    }
+
+    pub fn to_seconds(&self, fps: FrameRate) -> f64 {
+        self.0 as f64 * fps.denominator as f64 / fps.numerator as f64
+    }
 }
 ```
 
-## Step 3: Implement Duration Type
+## Step 4: Implement Duration
+`timeline/duration.rs`:
 ```rust
+use super::{FrameRate, Position};
+
 /// Duration in frames
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Duration(u64);
 
 impl Duration {
-    pub fn between(start: Position, end: Position) -> Option<Self> { ... }
-    pub fn from_frames(frames: u64) -> Self { ... }
-    pub fn from_seconds(seconds: f64, fps: FrameRate) -> Self { ... }
+    pub const ZERO: Self = Self(0);
+
+    pub fn from_frames(frames: u64) -> Self {
+        Self(frames)
+    }
+
+    pub fn from_seconds(seconds: f64, fps: FrameRate) -> Self {
+        let frames = (seconds * fps.numerator as f64 / fps.denominator as f64).round() as u64;
+        Self(frames)
+    }
+
+    pub fn between(start: Position, end: Position) -> Option<Self> {
+        if end.frames() >= start.frames() {
+            Some(Self(end.frames() - start.frames()))
+        } else {
+            None
+        }
+    }
+
+    pub fn frames(&self) -> u64 {
+        self.0
+    }
+
+    pub fn to_seconds(&self, fps: FrameRate) -> f64 {
+        self.0 as f64 * fps.denominator as f64 / fps.numerator as f64
+    }
 }
 ```
 
-## Step 4: Implement SMPTE Timecode
-```rust
-/// SMPTE timecode (HH:MM:SS:FF)
-pub struct Timecode {
-    hours: u8,
-    minutes: u8,
-    seconds: u8,
-    frames: u8,
-}
-
-impl Timecode {
-    pub fn from_position(pos: Position, fps: FrameRate) -> Self { ... }
-    pub fn to_position(&self, fps: FrameRate) -> Position { ... }
-    pub fn parse(s: &str) -> Result<Self, TimecodeError> { ... }
-}
-```
-
-## Step 5: Property-Based Tests
+## Step 5: Property Tests
 ```rust
 #[cfg(test)]
 mod tests {
+    use super::*;
     use proptest::prelude::*;
 
     proptest! {
         #[test]
-        fn round_trip_frames_seconds(frames in 0u64..1_000_000) {
+        fn round_trip_position(frames in 0u64..1_000_000_000) {
             let pos = Position::from_frames(frames);
-            let seconds = pos.to_seconds(FrameRate::FPS_24);
-            let back = Position::from_seconds(seconds, FrameRate::FPS_24);
+            let fps = FrameRate::FPS_24;
+            let seconds = pos.to_seconds(fps);
+            let back = Position::from_seconds(seconds, fps);
             prop_assert_eq!(pos, back);
+        }
+
+        #[test]
+        fn duration_between_valid(start in 0u64..1_000_000, len in 0u64..1_000_000) {
+            let s = Position::from_frames(start);
+            let e = Position::from_frames(start + len);
+            let dur = Duration::between(s, e);
+            prop_assert!(dur.is_some());
+            prop_assert_eq!(dur.unwrap().frames(), len);
         }
     }
 }
 ```
 
 ## Step 6: Export from lib.rs
-Add module to `lib.rs` and ensure it compiles.
+Update `lib.rs` to include timeline module.
 
 ## Verification
 - `cargo test` passes all property tests
 - No floating-point in Position/Duration internals
-- Timecode round-trips correctly
+- All frame rate constants work correctly
