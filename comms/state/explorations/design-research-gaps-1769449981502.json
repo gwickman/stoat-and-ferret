@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-research-gaps-1769449981502",
   "results_folder": "design-research-gaps",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 16768,
   "started_at": "2026-01-26T17:53:01.502332",
-  "updated_at": "2026-01-26T17:53:01.502332",
+  "updated_at": "2026-01-26T17:53:03.454633",
   "completed_at": null,
   "error": null,
   "documents": [],
