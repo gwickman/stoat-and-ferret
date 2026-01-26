@@ -69,7 +69,7 @@ try:
         validate_video_codec,
         validate_volume,
     )
-except ImportError:
+except ImportError:  # pragma: no cover
     # Rust extension not built - provide stubs for development/testing
 
     def _not_built(*args, **kwargs):  # type: ignore[no-untyped-def]
