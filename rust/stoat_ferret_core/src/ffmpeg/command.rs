@@ -1,5 +1,7 @@
 //! FFmpeg command builder implementation.
 
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 use std::fmt;
 
 /// A type-safe builder for constructing FFmpeg command arguments.
@@ -33,6 +35,8 @@ use std::fmt;
 /// - At least one output is required
 /// - Paths must be non-empty
 /// - CRF must be in range 0-51
+#[gen_stub_pyclass]
+#[pyclass]
 #[derive(Debug, Clone, Default)]
 pub struct FFmpegCommand {
     overwrite: bool,
@@ -582,6 +586,212 @@ impl FFmpegCommand {
             }
         }
         Ok(())
+    }
+}
+
+#[pymethods]
+impl FFmpegCommand {
+    /// Creates a new empty FFmpeg command builder.
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    /// Sets the overwrite flag (`-y`).
+    ///
+    /// When true, FFmpeg will overwrite output files without prompting.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "overwrite")]
+    fn py_overwrite(mut slf: PyRefMut<'_, Self>, yes: bool) -> PyRefMut<'_, Self> {
+        slf.overwrite = yes;
+        slf
+    }
+
+    /// Sets the log level (`-loglevel`).
+    ///
+    /// Common values: "quiet", "panic", "fatal", "error", "warning", "info", "verbose", "debug".
+    /// Returns self to support method chaining.
+    #[pyo3(name = "loglevel")]
+    fn py_loglevel(mut slf: PyRefMut<'_, Self>, level: String) -> PyRefMut<'_, Self> {
+        slf.loglevel = Some(level);
+        slf
+    }
+
+    /// Adds an input file (`-i`).
+    ///
+    /// Input options like `seek()` and `duration()` apply to the most recently added input.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "input")]
+    fn py_input(mut slf: PyRefMut<'_, Self>, path: String) -> PyRefMut<'_, Self> {
+        slf.inputs.push(InputSpec {
+            path,
+            seek: None,
+            duration: None,
+            stream_loop: None,
+        });
+        slf
+    }
+
+    /// Sets the seek position (`-ss`) for the most recent input.
+    ///
+    /// Seeks to the specified position in seconds before decoding.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "seek")]
+    fn py_seek(mut slf: PyRefMut<'_, Self>, seconds: f64) -> PyRefMut<'_, Self> {
+        if let Some(input) = slf.inputs.last_mut() {
+            input.seek = Some(seconds);
+        }
+        slf
+    }
+
+    /// Sets the duration limit (`-t`) for the most recent input.
+    ///
+    /// Limits the duration of data read from the input.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "duration")]
+    fn py_duration(mut slf: PyRefMut<'_, Self>, seconds: f64) -> PyRefMut<'_, Self> {
+        if let Some(input) = slf.inputs.last_mut() {
+            input.duration = Some(seconds);
+        }
+        slf
+    }
+
+    /// Sets the stream loop count (`-stream_loop`) for the most recent input.
+    ///
+    /// Loops the input stream the specified number of times.
+    /// Use -1 for infinite looping.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "stream_loop")]
+    fn py_stream_loop(mut slf: PyRefMut<'_, Self>, count: i32) -> PyRefMut<'_, Self> {
+        if let Some(input) = slf.inputs.last_mut() {
+            input.stream_loop = Some(count);
+        }
+        slf
+    }
+
+    /// Adds an output file.
+    ///
+    /// Output options like `video_codec()`, `preset()`, etc. apply to the most recently added output.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "output")]
+    fn py_output(mut slf: PyRefMut<'_, Self>, path: String) -> PyRefMut<'_, Self> {
+        slf.outputs.push(OutputSpec {
+            path,
+            video_codec: None,
+            audio_codec: None,
+            preset: None,
+            crf: None,
+            format: None,
+            maps: Vec::new(),
+        });
+        slf
+    }
+
+    /// Sets the video codec (`-c:v`) for the most recent output.
+    ///
+    /// Common values: "libx264", "libx265", "copy", "vp9", "av1".
+    /// Returns self to support method chaining.
+    #[pyo3(name = "video_codec")]
+    fn py_video_codec(mut slf: PyRefMut<'_, Self>, codec: String) -> PyRefMut<'_, Self> {
+        if let Some(output) = slf.outputs.last_mut() {
+            output.video_codec = Some(codec);
+        }
+        slf
+    }
+
+    /// Sets the audio codec (`-c:a`) for the most recent output.
+    ///
+    /// Common values: "aac", "libmp3lame", "copy", "flac", "opus".
+    /// Returns self to support method chaining.
+    #[pyo3(name = "audio_codec")]
+    fn py_audio_codec(mut slf: PyRefMut<'_, Self>, codec: String) -> PyRefMut<'_, Self> {
+        if let Some(output) = slf.outputs.last_mut() {
+            output.audio_codec = Some(codec);
+        }
+        slf
+    }
+
+    /// Sets the encoding preset (`-preset`) for the most recent output.
+    ///
+    /// Common values: "ultrafast", "superfast", "veryfast", "faster", "fast",
+    /// "medium", "slow", "slower", "veryslow".
+    /// Returns self to support method chaining.
+    #[pyo3(name = "preset")]
+    fn py_preset(mut slf: PyRefMut<'_, Self>, preset: String) -> PyRefMut<'_, Self> {
+        if let Some(output) = slf.outputs.last_mut() {
+            output.preset = Some(preset);
+        }
+        slf
+    }
+
+    /// Sets the CRF quality level (`-crf`) for the most recent output.
+    ///
+    /// Valid range: 0-51. Lower values mean higher quality.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "crf")]
+    fn py_crf(mut slf: PyRefMut<'_, Self>, crf: u8) -> PyRefMut<'_, Self> {
+        if let Some(output) = slf.outputs.last_mut() {
+            output.crf = Some(crf);
+        }
+        slf
+    }
+
+    /// Sets the output format (`-f`) for the most recent output.
+    ///
+    /// Common values: "mp4", "matroska", "webm", "avi", "mov".
+    /// Returns self to support method chaining.
+    #[pyo3(name = "format")]
+    fn py_format(mut slf: PyRefMut<'_, Self>, format: String) -> PyRefMut<'_, Self> {
+        if let Some(output) = slf.outputs.last_mut() {
+            output.format = Some(format);
+        }
+        slf
+    }
+
+    /// Sets a complex filtergraph (`-filter_complex`).
+    ///
+    /// This is used for complex filter graphs that involve multiple inputs or outputs.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "filter_complex")]
+    fn py_filter_complex(mut slf: PyRefMut<'_, Self>, filter: String) -> PyRefMut<'_, Self> {
+        slf.filter_complex = Some(filter);
+        slf
+    }
+
+    /// Adds a stream mapping (`-map`) for the most recent output.
+    ///
+    /// Used to select which streams from the inputs go to the output.
+    /// Returns self to support method chaining.
+    #[pyo3(name = "map")]
+    fn py_map(mut slf: PyRefMut<'_, Self>, stream: String) -> PyRefMut<'_, Self> {
+        if let Some(output) = slf.outputs.last_mut() {
+            output.maps.push(stream);
+        }
+        slf
+    }
+
+    /// Builds the FFmpeg command arguments.
+    ///
+    /// Returns a list of strings suitable for passing to subprocess.
+    /// Does not include the "ffmpeg" executable itself.
+    ///
+    /// # Raises
+    ///
+    /// ValueError: If validation fails (no inputs, no outputs, empty paths, invalid CRF)
+    #[pyo3(name = "build")]
+    fn py_build(&self) -> PyResult<Vec<String>> {
+        self.build().map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(e.to_string())
+        })
+    }
+
+    /// Returns a string representation of the command builder.
+    fn __repr__(&self) -> String {
+        format!(
+            "FFmpegCommand(inputs={}, outputs={})",
+            self.inputs.len(),
+            self.outputs.len()
+        )
     }
 }
 
