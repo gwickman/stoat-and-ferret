@@ -5,6 +5,7 @@
 //! - [`FrameRate`] - Rational representation of frame rates (e.g., 24000/1001 for 23.976 fps)
 //! - [`Position`] - A point in time represented as a frame count
 //! - [`Duration`] - A span of time represented as a frame count
+//! - [`TimeRange`] - A contiguous time range with overlap detection and set operations
 //!
 //! All types use integer frame counts internally to ensure frame-accurate
 //! calculations without floating-point precision issues.
@@ -36,10 +37,12 @@
 mod duration;
 mod framerate;
 mod position;
+mod range;
 
 pub use duration::Duration;
 pub use framerate::FrameRate;
 pub use position::Position;
+pub use range::{find_gaps, merge_ranges, total_coverage, RangeError, TimeRange};
 
 #[cfg(test)]
 mod tests {
