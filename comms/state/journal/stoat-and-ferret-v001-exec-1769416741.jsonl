@@ -1,0 +1,2 @@
+{"schema_version":"1.0","event_type":"state_transition","execution_id":"stoat-and-ferret-v001-exec-1769416741","timestamp":"2026-01-26T08:39:01.075679+00:00","from_status":"pending","to_status":"theme_running","reason":"Starting theme: project-foundation"}
+{"schema_version":"1.0","event_type":"state_transition","execution_id":"stoat-and-ferret-v001-exec-1769416741","timestamp":"2026-01-26T08:39:01.079451+00:00","from_status":"theme_running","to_status":"feature_running","reason":"Starting feature: python-tooling"}

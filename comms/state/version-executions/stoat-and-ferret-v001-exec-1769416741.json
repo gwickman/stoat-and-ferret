@@ -1,0 +1,20 @@
+{
+  "schema_version": "2.0",
+  "execution_id": "stoat-and-ferret-v001-exec-1769416741",
+  "project": "stoat-and-ferret",
+  "version": "v001",
+  "status": "failed",
+  "phase": "development",
+  "post_dev_step": null,
+  "post_dev_progress": null,
+  "started_at": "2026-01-26T08:39:01.071229Z",
+  "updated_at": "2026-01-26T08:39:01.577179Z",
+  "completed_at": "2026-01-26T08:39:01.577155Z",
+  "halt_reason": "Feature python-tooling failed: Template error: Prompt template not found: C:\\Users\\grant\\Documents\\projects\\stoat-and-ferret\\docs\\auto-dev\\PROMPTS\\feature-implementation.md",
+  "pause_requested": false,
+  "c4_regenerated": null,
+  "pause_reason": null,
+  "pause_message": null,
+  "crashed_predecessor": null,
+  "crashed_successor": null
+}
