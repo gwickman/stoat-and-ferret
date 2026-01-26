@@ -360,7 +360,10 @@ mod tests {
     #[test]
     fn test_validation_error_display_with_values() {
         let err = ValidationError::with_values("field", "message", "10", ">20");
-        assert_eq!(format!("{}", err), "field: message (got: 10, expected: >20)");
+        assert_eq!(
+            format!("{}", err),
+            "field: message (got: 10, expected: >20)"
+        );
     }
 
     #[test]
