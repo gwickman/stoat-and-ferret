@@ -11,8 +11,8 @@
       "name": "project-foundation",
       "status": "in_progress",
       "features_total": 3,
-      "features_complete": 1,
-      "started_at": "2026-01-26T08:46:52.194387Z",
+      "features_complete": 3,
+      "started_at": "2026-01-26T11:08:29.476039Z",
       "completed_at": null,
       "skip_reason": null
     },
@@ -38,5 +38,5 @@
     }
   ],
   "current_theme": 1,
-  "current_feature": 2
+  "current_feature": 3
 }
