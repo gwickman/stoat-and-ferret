@@ -780,9 +780,8 @@ impl FFmpegCommand {
     /// ValueError: If validation fails (no inputs, no outputs, empty paths, invalid CRF)
     #[pyo3(name = "build")]
     fn py_build(&self) -> PyResult<Vec<String>> {
-        self.build().map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(e.to_string())
-        })
+        self.build()
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
     /// Returns a string representation of the command builder.

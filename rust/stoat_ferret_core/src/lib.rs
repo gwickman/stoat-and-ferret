@@ -19,9 +19,21 @@ pub mod sanitize;
 pub mod timeline;
 
 // Define custom Python exceptions for domain errors
-pyo3::create_exception!(stoat_ferret_core, ValidationError, pyo3::exceptions::PyException);
-pyo3::create_exception!(stoat_ferret_core, CommandError, pyo3::exceptions::PyException);
-pyo3::create_exception!(stoat_ferret_core, SanitizationError, pyo3::exceptions::PyException);
+pyo3::create_exception!(
+    stoat_ferret_core,
+    ValidationError,
+    pyo3::exceptions::PyException
+);
+pyo3::create_exception!(
+    stoat_ferret_core,
+    CommandError,
+    pyo3::exceptions::PyException
+);
+pyo3::create_exception!(
+    stoat_ferret_core,
+    SanitizationError,
+    pyo3::exceptions::PyException
+);
 
 /// Performs a health check to verify the Rust module is loaded correctly.
 ///
