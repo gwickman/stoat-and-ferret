@@ -7,11 +7,13 @@
 //!
 //! - [`timeline`] - Frame-accurate timeline position and duration calculations
 //! - [`clip`] - Video clip representation and validation
+//! - [`ffmpeg`] - FFmpeg command building and argument construction
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
 
 pub mod clip;
+pub mod ffmpeg;
 pub mod timeline;
 
 /// Performs a health check to verify the Rust module is loaded correctly.
