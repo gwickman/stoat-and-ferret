@@ -1,0 +1,15 @@
+[package]
+name = "stoat_ferret_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "stoat_ferret_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.26", features = ["abi3-py310"] }
+pyo3-stub-gen = "0.17"
+
+[dev-dependencies]
+proptest = "1.0"
