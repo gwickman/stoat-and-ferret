@@ -15,6 +15,23 @@ stoat-and-ferret/
 └── comms/                  # MCP communication folders
 ```
 
+## Commands
+
+```bash
+# Development
+uv sync                      # Install dependencies
+uv run ruff check .          # Lint
+uv run ruff format .         # Format
+uv run mypy src/             # Type check
+uv run pytest                # Test
+
+# Rust
+cd rust/stoat_ferret_core
+cargo clippy -- -D warnings  # Lint
+cargo test                   # Test
+maturin develop              # Build Python extension
+```
+
 ## Quality Gates
 
 ### Python (ruff, mypy, pytest)
@@ -32,7 +49,6 @@ uv run pytest tests/ --cov=src --cov-fail-under=80
 cd rust/stoat_ferret_core
 cargo clippy -- -D warnings
 cargo test
-cargo llvm-cov --fail-under-lines 90
 ```
 
 ### Coverage Thresholds
@@ -56,12 +72,100 @@ cargo llvm-cov --fail-under-lines 90
 - Prefer returning `Result<T, E>` over panicking
 - PyO3 bindings should have Python-friendly error messages
 
+## Code Quality Principles
+
+Default to KISS + YAGNI for new code. Refactor to DRY and SOLID (SRP/DIP/ISP baseline, LSP via substitutability tests) after duplication or change is demonstrated. Introduce OCP extension points when there's an evidenced extension requirement.
+
+---
+
 ## PR Workflow
 
-1. Create feature branch from `main`
-2. All quality gates must pass before merge
-3. Squash merge to maintain clean history
-4. Delete branch after merge
+After completing code changes, follow this workflow:
+
+### 1. Verify locally
+```bash
+uv run ruff check src/ tests/
+uv run ruff format --check src/ tests/
+uv run mypy src/
+uv run pytest
+cd rust/stoat_ferret_core && cargo clippy -- -D warnings && cargo test
+```
+
+Fix any failures before proceeding.
+
+### 2. Commit and push
+```bash
+git add -A
+git commit -m "feat: <description>"
+git push -u origin HEAD
+```
+
+### 3. Create PR
+```bash
+gh pr create --fill --base main
+```
+
+### 4. Wait for CI and handle failures
+```bash
+gh pr checks --watch
+```
+
+**If CI fails:**
+1. View the failure: `gh run view --log-failed`
+2. Fix the issues locally
+3. Run local verification again (step 1)
+4. Commit and push the fix
+5. Wait for CI again
+
+**Iteration limit:** Repeat the fix cycle up to **3 times maximum**. If CI still fails after 3 fix attempts:
+- Document the persistent issue in your completion report
+- Set status to "partial" or "failed"
+- Do NOT loop indefinitely
+- Return/complete the task
+
+### 5. Merge when CI passes
+```bash
+gh pr merge --squash --delete-branch
+```
+
+### 6. Verify merge
+```bash
+git checkout main
+git pull
+```
+
+---
+
+## When Called by MCP Server
+
+When the MCP server invokes you to implement a feature:
+
+1. **Read the prompt carefully** — It specifies which documents to read
+2. **Read ALL referenced documents** before starting implementation
+3. **Follow process docs** referenced in the prompt
+4. **Handle the full PR lifecycle:**
+   - Implement the feature
+   - Create PR
+   - Wait for CI
+   - Fix failures (up to 3 attempts)
+   - Merge when passing
+5. **Create all output documents** specified (completion-report.md, quality-gaps.md, handoff-to-next.md)
+6. **Return only when:**
+   - PR is merged and output docs exist, OR
+   - You've documented why completion wasn't possible (status: partial/failed)
+
+**Do not return without either merging or documenting failure.**
+
+---
+
+## Exploration Tasks
+
+For `explore_project` tasks called by the MCP server:
+- The server handles git commit/push automatically
+- Focus on creating the requested analysis documents
+- Write outputs to the specified outbox path
+
+---
 
 ## Key Architecture Decisions
 
@@ -70,12 +174,6 @@ cargo llvm-cov --fail-under-lines 90
 - **Python for orchestration**: HTTP layer, API routing, AI discoverability
 - **PyO3 bindings**: `from stoat_ferret_core import StoatFerretCore`
 - **Transparency**: API responses include generated FFmpeg filter strings
-
-## When Called by auto-dev-mcp
-
-Follow instructions in `comms/inbox/` for version/theme/feature execution.
-Write completion reports to `comms/outbox/`.
-Reference `docs/auto-dev/PROCESS/` for workflow guidance.
 
 ## Design Documents
 

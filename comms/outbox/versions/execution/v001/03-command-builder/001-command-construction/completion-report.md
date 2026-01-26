@@ -67,17 +67,17 @@ All errors implement `Display` and `std::error::Error`.
 
 ## Test Coverage
 
-- 19 unit tests in `ffmpeg::command::tests`
-- 19 integration tests in `ffmpeg::tests`
-- 38 doc tests for all public API
-- All 131+ existing tests continue to pass
+- Unit tests in `ffmpeg::command::tests` module
+- Integration tests in `ffmpeg::tests` module
+- Doc tests for all public API methods
+- All 161 Rust tests pass
 
 ## Quality Gates
 
 | Gate | Status | Details |
 |------|--------|---------|
 | cargo clippy | PASS | No warnings with -D warnings |
-| cargo test | PASS | 131 unit tests, 53 doc tests |
+| cargo test | PASS | 161 unit tests, 71 doc tests |
 | ruff check | PASS | All checks passed |
 | ruff format | PASS | 4 files already formatted |
 | mypy | PASS | No issues in 2 source files |
