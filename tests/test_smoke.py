@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 def test_smoke() -> None:
     """Verify pytest runs."""
@@ -25,10 +23,9 @@ def test_import_stoat_ferret_core() -> None:
     assert hasattr(stoat_ferret_core, "health_check")
 
 
-def test_stoat_ferret_core_health_check_stub() -> None:
-    """Verify health_check raises when native module not built."""
+def test_stoat_ferret_core_health_check() -> None:
+    """Verify health_check returns expected status."""
     from stoat_ferret_core import health_check
 
-    # When native module isn't built, health_check should raise RuntimeError
-    with pytest.raises(RuntimeError, match="native extension not built"):
-        health_check()
+    result = health_check()
+    assert result == "stoat_ferret_core OK"

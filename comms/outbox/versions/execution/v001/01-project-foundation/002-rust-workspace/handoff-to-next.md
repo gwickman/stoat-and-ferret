@@ -2,12 +2,13 @@
 
 ## What Was Done
 
-Created the Rust workspace structure for `stoat_ferret_core`:
+The Rust workspace is fully set up and operational:
 
 ### Files Created
 ```
 rust/stoat_ferret_core/
 ├── Cargo.toml              # PyO3 0.26, pyo3-stub-gen 0.17
+├── Cargo.lock              # Locked dependencies
 ├── rustfmt.toml            # edition = 2021, max_width = 100
 └── src/
     ├── lib.rs              # health_check() + pymodule
@@ -22,54 +23,86 @@ stubs/stoat_ferret_core/
 └── _core.pyi               # Internal module stubs
 ```
 
-### Configuration Changes
-- `pyproject.toml`: Added `[tool.maturin]` config, currently using `hatchling` backend
+### Configuration
+- `pyproject.toml`: Added `[tool.maturin]` config
 
-## What Needs to Be Done
+### Verified Working
+- `maturin develop` builds and installs the module
+- `from stoat_ferret_core import health_check` returns `"stoat_ferret_core OK"`
+- `cargo clippy -- -D warnings` passes
+- `cargo test` passes (1 test)
+- All Python quality gates pass
 
-### Before Next Feature
+## How to Build the Rust Extension
 
-1. **Fix Build Environment**: Install Visual Studio Build Tools 2022 with C++ workload
-2. **Build Native Module**: Run `maturin develop`
-3. **Switch Build Backend**: Change pyproject.toml from `hatchling` to `maturin`
-4. **Verify Rust Quality Gates**:
-   ```bash
-   cd rust/stoat_ferret_core
-   cargo clippy -- -D warnings
-   cargo test
-   ```
-
-### Testing the Build
-
-Once build environment is fixed:
 ```bash
-# Build native extension
-maturin develop
+# Set PATH to include cargo (if not already in PATH)
+PATH="$HOME/.cargo/bin:$PATH" uv run maturin develop
 
-# Verify it works
-python -c "from stoat_ferret_core import health_check; print(health_check())"
-# Should print: stoat_ferret_core OK
-
-# Run Rust tests
-cargo test --manifest-path rust/stoat_ferret_core/Cargo.toml
+# Or from a shell with cargo in PATH
+uv run maturin develop
 ```
 
-## Key Technical Decisions
+## How to Run Quality Gates
 
-1. **PyO3 0.26** (not 0.23): Required for compatibility with pyo3-stub-gen 0.17
-2. **abi3-py310**: ABI stability from Python 3.10+
-3. **Fallback stub**: `stoat_ferret_core/__init__.py` catches ImportError to allow Python-only development
+### Rust
+```bash
+cd rust/stoat_ferret_core
+cargo clippy -- -D warnings
+cargo test
+```
 
-## Dependencies
+### Python
+```bash
+uv run ruff check src/ tests/
+uv run ruff format --check src/ tests/
+uv run mypy src/
+uv run pytest -v
+```
 
-The Rust workspace depends on:
-- pyo3 = "0.26" with features = ["abi3-py310"]
-- pyo3-stub-gen = "0.17"
-- proptest = "1.0" (dev dependency for property-based testing)
+## Adding New Rust Functions
 
-## Notes for Future Development
+1. Add the function to `rust/stoat_ferret_core/src/lib.rs`:
+   ```rust
+   #[gen_stub_pyfunction]
+   #[pyfunction]
+   fn my_function(arg: i32) -> String {
+       // implementation
+   }
+   ```
 
-- Add new Rust functions to `lib.rs`, annotate with `#[gen_stub_pyfunction]` and `#[pyfunction]`
-- Register them in the `_core` pymodule
-- Re-run stub generator to update type stubs
-- Export from `src/stoat_ferret_core/__init__.py`
+2. Register in the pymodule:
+   ```rust
+   #[pymodule]
+   fn _core(m: &Bound<PyModule>) -> PyResult<()> {
+       m.add_function(wrap_pyfunction!(health_check, m)?)?;
+       m.add_function(wrap_pyfunction!(my_function, m)?)?;  // Add here
+       Ok(())
+   }
+   ```
+
+3. Export from Python wrapper (`src/stoat_ferret_core/__init__.py`):
+   ```python
+   from stoat_ferret_core._core import health_check, my_function
+   __all__ = ["health_check", "my_function"]
+   ```
+
+4. Update type stubs in `stubs/stoat_ferret_core/__init__.pyi`
+
+5. Rebuild: `maturin develop`
+
+## Key Dependencies
+
+- **pyo3** 0.26 with `abi3-py310` - Python bindings
+- **pyo3-stub-gen** 0.17 - Type stub generation support
+- **proptest** 1.0 (dev) - Property-based testing
+
+## Notes for Next Feature
+
+The Rust core is ready for implementing:
+- Filter string generation
+- Timeline math calculations
+- FFmpeg command building
+- Input sanitization
+
+The Python wrapper with fallback allows development to continue even if the Rust extension isn't built, which is useful for CI environments without Rust tooling.

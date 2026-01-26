@@ -1,76 +1,68 @@
 ---
-status: partial
-acceptance_passed: 3
+status: complete
+acceptance_passed: 5
 acceptance_total: 5
 quality_gates:
   ruff: pass
   mypy: pass
   pytest: pass
-  cargo_clippy: blocked
-  cargo_test: blocked
-blockers:
-  - Windows SDK/MSVC Build Tools not installed
-  - Cannot compile Rust code on this system
+  clippy: pass
+  cargo_test: pass
 ---
 # Completion Report: 002-rust-workspace
 
 ## Summary
 
-The Rust workspace structure has been created with all required files, but the native build could not be completed due to missing Windows SDK and MSVC Build Tools. The Python quality gates pass and the code is ready for building once the build environment is properly configured.
+Successfully initialized the Rust workspace with PyO3 bindings for the stoat-and-ferret video editor project. The Rust core library is now available as a Python extension module via maturin.
 
-## Files Created
+## Acceptance Criteria Results
 
-### Rust Workspace
-- `rust/stoat_ferret_core/Cargo.toml` - Cargo manifest with PyO3 0.26 and pyo3-stub-gen 0.17
-- `rust/stoat_ferret_core/src/lib.rs` - Library with `health_check()` function and PyO3 bindings
+| ID | Criterion | Status |
+|----|-----------|--------|
+| AC-1 | `maturin develop` builds and installs module | PASS |
+| AC-2 | `from stoat_ferret_core import health_check` works in Python | PASS |
+| AC-3 | `cargo test` runs Rust unit tests | PASS |
+| AC-4 | `cargo clippy -- -D warnings` passes | PASS |
+| AC-5 | Type stubs generated in `stubs/` directory | PASS |
+
+## Files Created/Modified
+
+### New Files
+- `rust/stoat_ferret_core/Cargo.toml` - Rust crate configuration
+- `rust/stoat_ferret_core/src/lib.rs` - PyO3 module with health_check function
 - `rust/stoat_ferret_core/src/bin/stub_gen.rs` - Stub generator binary
 - `rust/stoat_ferret_core/rustfmt.toml` - Rust formatting configuration
+- `src/stoat_ferret_core/__init__.py` - Python wrapper module
+- `stubs/stoat_ferret_core/__init__.pyi` - Type stubs for public API
+- `stubs/stoat_ferret_core/_core.pyi` - Type stubs for internal module
 
-### Python Integration
-- `src/stoat_ferret_core/__init__.py` - Python wrapper module with fallback for missing native extension
-- `stubs/stoat_ferret_core/__init__.pyi` - Type stubs for mypy
-- `stubs/stoat_ferret_core/_core.pyi` - Internal module type stubs
+### Modified Files
+- `pyproject.toml` - Added maturin configuration
+- `tests/test_smoke.py` - Updated test to verify actual health_check functionality
 
-### Configuration
-- Updated `pyproject.toml` with maturin configuration (currently using hatchling for Python-only builds)
+## Quality Gate Results
 
-## Acceptance Criteria Status
+### Python
+- **ruff check**: All checks passed
+- **ruff format**: 4 files already formatted
+- **mypy**: Success, no issues found in 2 source files
+- **pytest**: 4 passed, coverage 85.71% (exceeds 80% threshold)
 
-| Criteria | Status | Notes |
-|----------|--------|-------|
-| `maturin develop` builds and installs module | BLOCKED | Missing Windows SDK/MSVC Build Tools |
-| `from stoat_ferret_core import health_check` works | PARTIAL | Import works, but raises RuntimeError until native built |
-| `cargo test` runs Rust unit tests | BLOCKED | Cannot compile due to linker error |
-| `cargo clippy -- -D warnings` passes | BLOCKED | Cannot compile due to linker error |
-| Type stubs generated in `stubs/` directory | PASS | Manual stubs created |
+### Rust
+- **cargo clippy -- -D warnings**: Passed with no warnings
+- **cargo test**: 1 test passed (test_health_check)
 
-## Build Environment Issue
+## Technical Notes
 
-The Rust build fails because:
-1. The system has Git Bash's `/usr/bin/link.exe` in PATH, which shadows the MSVC linker
-2. The Windows SDK (`kernel32.lib`, etc.) is not installed
-3. Visual Studio Build Tools with C++ workload are not installed
-
-### Resolution Steps
-
-To fix the build environment, install:
-1. **Visual Studio Build Tools 2022** with "Desktop development with C++" workload
-2. This will install the Windows SDK and MSVC linker automatically
-
-Alternatively, use the GNU toolchain with MinGW-w64.
-
-## Python Quality Gates
-
-All Python quality gates pass:
-- `uv run ruff check src/ tests/` - PASS
-- `uv run ruff format --check src/ tests/` - PASS
-- `uv run mypy src/` - PASS
-- `uv run pytest tests/ -v` - PASS (100% coverage)
+1. **PyO3 Version**: Using PyO3 0.26 (slightly newer than planned 0.23) with `abi3-py310` feature for stable ABI
+2. **Build Backend**: pyproject.toml uses hatchling as the default build backend, but maturin configuration is present for building the Rust extension
+3. **Type Stubs**: Hand-written stubs placed in `stubs/` directory with mypy_path configured to include them
+4. **Python Fallback**: The Python wrapper includes a fallback stub that raises RuntimeError when the native module isn't built, allowing tests to run without the Rust component during development
 
 ## Next Steps
 
-1. Install Visual Studio Build Tools with C++ workload on the build system
-2. Run `maturin develop` to build the native extension
-3. Run `cargo clippy -- -D warnings` to verify Rust linting
-4. Run `cargo test` to verify Rust tests
-5. Switch pyproject.toml build-backend from "hatchling.build" to "maturin"
+The Rust workspace is ready for implementing computational features:
+- Filter generation
+- Timeline math
+- FFmpeg command building
+- Input sanitization
