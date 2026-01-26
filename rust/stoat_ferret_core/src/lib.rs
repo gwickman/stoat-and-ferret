@@ -2,9 +2,15 @@
 //!
 //! This crate provides the computational core for the stoat-and-ferret video editor,
 //! exposing functions to Python via PyO3 bindings.
+//!
+//! # Modules
+//!
+//! - [`timeline`] - Frame-accurate timeline position and duration calculations
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
+
+pub mod timeline;
 
 /// Performs a health check to verify the Rust module is loaded correctly.
 ///
@@ -19,6 +25,12 @@ fn health_check() -> String {
 #[pymodule]
 fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(health_check, m)?)?;
+
+    // Register timeline types
+    m.add_class::<timeline::FrameRate>()?;
+    m.add_class::<timeline::Position>()?;
+    m.add_class::<timeline::Duration>()?;
+
     Ok(())
 }
 
