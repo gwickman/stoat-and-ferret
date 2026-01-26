@@ -185,4 +185,3 @@ mod tests {
         assert!(clip.source_duration.is_none());
     }
 }
-
