@@ -251,12 +251,7 @@ class TestFilter:
         """Test FilterChain construction and string output."""
         from stoat_ferret_core import Filter, FilterChain
 
-        chain = (
-            FilterChain()
-            .input("0:v")
-            .filter(Filter.scale(1280, 720))
-            .output("scaled")
-        )
+        chain = FilterChain().input("0:v").filter(Filter.scale(1280, 720)).output("scaled")
         result = str(chain)
         assert "[0:v]" in result
         assert "scale" in result
@@ -266,22 +261,13 @@ class TestFilter:
         """Test FilterGraph construction and string output."""
         from stoat_ferret_core import Filter, FilterChain, FilterGraph
 
-        graph = FilterGraph().chain(
-            FilterChain()
-            .input("0:v")
-            .filter(Filter.scale(1280, 720))
-            .output("v0")
-        ).chain(
-            FilterChain()
-            .input("1:v")
-            .filter(Filter.scale(1280, 720))
-            .output("v1")
-        ).chain(
-            FilterChain()
-            .input("v0")
-            .input("v1")
-            .filter(Filter.concat(2, 1, 0))
-            .output("outv")
+        graph = (
+            FilterGraph()
+            .chain(FilterChain().input("0:v").filter(Filter.scale(1280, 720)).output("v0"))
+            .chain(FilterChain().input("1:v").filter(Filter.scale(1280, 720)).output("v1"))
+            .chain(
+                FilterChain().input("v0").input("v1").filter(Filter.concat(2, 1, 0)).output("outv")
+            )
         )
         result = str(graph)
         assert "[0:v]" in result
@@ -448,7 +434,32 @@ class TestModuleExports:
             "validate_video_codec",
             "validate_audio_codec",
             "validate_preset",
+            "ValidationError",
+            "CommandError",
+            "SanitizationError",
         ]
         for name in expected:
             assert name in stoat_ferret_core.__all__
             assert hasattr(stoat_ferret_core, name)
+
+
+class TestExceptions:
+    """Tests for custom exception types."""
+
+    def test_validation_error_is_exception(self) -> None:
+        """Test ValidationError is an exception type."""
+        from stoat_ferret_core import ValidationError
+
+        assert issubclass(ValidationError, Exception)
+
+    def test_command_error_is_exception(self) -> None:
+        """Test CommandError is an exception type."""
+        from stoat_ferret_core import CommandError
+
+        assert issubclass(CommandError, Exception)
+
+    def test_sanitization_error_is_exception(self) -> None:
+        """Test SanitizationError is an exception type."""
+        from stoat_ferret_core import SanitizationError
+
+        assert issubclass(SanitizationError, Exception)

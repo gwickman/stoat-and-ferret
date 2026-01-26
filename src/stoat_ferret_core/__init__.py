@@ -28,12 +28,20 @@ Sanitization Functions
 - validate_video_codec: Validate video codec names
 - validate_audio_codec: Validate audio codec names
 - validate_preset: Validate encoding preset names
+
+Exceptions
+----------
+- ValidationError: Raised when input validation fails
+- CommandError: Raised when FFmpeg command building fails
+- SanitizationError: Raised when input sanitization fails
 """
 
 from __future__ import annotations
 
 try:
     from stoat_ferret_core._core import (
+        # Exceptions
+        CommandError,
         Duration,
         # FFmpeg command building
         FFmpegCommand,
@@ -43,7 +51,9 @@ try:
         # Timeline types
         FrameRate,
         Position,
+        SanitizationError,
         TimeRange,
+        ValidationError,
         concat_filter,
         # Sanitization functions
         escape_filter_text,
@@ -88,6 +98,9 @@ except ImportError:
     validate_video_codec = _not_built
     validate_audio_codec = _not_built
     validate_preset = _not_built
+    ValidationError = RuntimeError  # type: ignore[misc,assignment]
+    CommandError = RuntimeError  # type: ignore[misc,assignment]
+    SanitizationError = RuntimeError  # type: ignore[misc,assignment]
 
 
 __all__ = [
@@ -115,4 +128,8 @@ __all__ = [
     "validate_video_codec",
     "validate_audio_codec",
     "validate_preset",
+    # Exceptions
+    "ValidationError",
+    "CommandError",
+    "SanitizationError",
 ]

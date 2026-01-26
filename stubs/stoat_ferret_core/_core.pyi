@@ -5,6 +5,45 @@ This module contains the actual PyO3 bindings from Rust.
 
 from typing import Optional
 
+# ========== Custom Exception Types ==========
+
+
+class ValidationError(Exception):
+    """Raised when validation of input parameters fails.
+
+    This exception is raised when:
+    - Timeline parameters are invalid (e.g., end before start)
+    - Frame rate has zero denominator
+    - Timecode components are out of range
+    """
+
+    ...
+
+
+class CommandError(Exception):
+    """Raised when FFmpeg command building fails.
+
+    This exception is raised when:
+    - No inputs are provided to the command
+    - No outputs are provided to the command
+    - Required parameters are missing
+    """
+
+    ...
+
+
+class SanitizationError(Exception):
+    """Raised when input sanitization fails.
+
+    This exception is raised when:
+    - Path validation fails (empty or contains null bytes)
+    - Numeric bounds validation fails (CRF, speed, volume out of range)
+    - Codec/preset validation fails (not in allowed list)
+    """
+
+    ...
+
+
 # ========== Utility Functions ==========
 
 def health_check() -> str:

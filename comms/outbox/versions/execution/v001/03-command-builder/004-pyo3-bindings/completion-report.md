@@ -41,7 +41,9 @@ Successfully implemented PyO3 bindings for all command builder types, enabling P
 - All public functions have proper type hints
 
 ### FR-004: Error Handling
-- Rust validation errors converted to Python `ValueError`
+- Custom Python exceptions defined: `ValidationError`, `CommandError`, `SanitizationError`
+- Exceptions registered in PyO3 module using `pyo3::create_exception!` macro
+- Rust validation errors converted to Python `ValueError` for existing functions
 - Error messages preserved in Python exceptions
 - Used `map_err` pattern to convert Rust errors to PyO3 exceptions
 
@@ -68,7 +70,7 @@ Successfully implemented PyO3 bindings for all command builder types, enabling P
 - `rust/stoat_ferret_core/src/ffmpeg/command.rs` - Added PyO3 bindings to FFmpegCommand
 - `rust/stoat_ferret_core/src/ffmpeg/filter.rs` - Added PyO3 bindings to Filter, FilterChain, FilterGraph
 - `rust/stoat_ferret_core/src/sanitize/mod.rs` - Added Python-exposed functions
-- `rust/stoat_ferret_core/src/lib.rs` - Updated module registration
+- `rust/stoat_ferret_core/src/lib.rs` - Updated module registration, added custom exception definitions
 
 ### Python Files
 - `src/stoat_ferret_core/__init__.py` - Updated exports
