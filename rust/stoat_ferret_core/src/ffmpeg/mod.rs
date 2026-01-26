@@ -5,6 +5,7 @@
 //!
 //! - [`FFmpegCommand`] - Builder for constructing FFmpeg argument arrays
 //! - [`CommandError`] - Errors that can occur during command building
+//! - [`filter`] - Filter chain builder for `-filter_complex` arguments
 //!
 //! # Design
 //!
@@ -32,8 +33,33 @@
 //! assert!(args.contains(&"-y".to_string()));
 //! assert!(args.contains(&"-ss".to_string()));
 //! ```
+//!
+//! # Filter Chains
+//!
+//! Use the [`filter`] module to build complex filter graphs:
+//!
+//! ```
+//! use stoat_ferret_core::ffmpeg::{FFmpegCommand, filter::{FilterGraph, FilterChain, scale}};
+//!
+//! let graph = FilterGraph::new()
+//!     .chain(
+//!         FilterChain::new()
+//!             .input("0:v")
+//!             .filter(scale(1280, 720))
+//!             .output("scaled")
+//!     );
+//!
+//! let args = FFmpegCommand::new()
+//!     .input("input.mp4")
+//!     .filter_complex(graph.to_string())
+//!     .output("output.mp4")
+//!     .map("[scaled]")
+//!     .build()
+//!     .expect("Valid command");
+//! ```
 
 mod command;
+pub mod filter;
 
 pub use command::{CommandError, FFmpegCommand};
 
