@@ -29,14 +29,14 @@
     {
       "number": 3,
       "name": "command-builder",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 4,
       "features_complete": 4,
       "started_at": "2026-01-26T13:42:15.951235Z",
-      "completed_at": null,
+      "completed_at": "2026-01-26T15:09:08.700722Z",
       "skip_reason": null
     }
   ],
-  "current_theme": 3,
-  "current_feature": 4
+  "current_theme": 4,
+  "current_feature": 1
 }
