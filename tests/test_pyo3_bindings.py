@@ -10,27 +10,34 @@ import pytest
 
 
 class TestTimelineTypes:
-    """Tests for timeline types (FrameRate, Position, Duration, TimeRange)."""
+    """Tests for timeline types (FrameRate, Position, Duration, TimeRange).
+
+    Note: These tests use the actual PyO3 binding API, which differs slightly
+    from the Rust API. For example:
+    - Position(100) instead of Position.from_frames(100)
+    - pos.py_frames (property) instead of pos.frames()
+    - Position.from_secs() instead of Position.from_seconds()
+    """
 
     def test_framerate_construction(self) -> None:
         """Test FrameRate construction and properties."""
         from stoat_ferret_core import FrameRate
 
         rate = FrameRate(24, 1)
-        assert rate.numerator == 24
-        assert rate.denominator == 1
-        assert rate.as_float() == 24.0
+        assert rate.py_numerator == 24
+        assert rate.py_denominator == 1
+        assert rate.py_as_float() == 24.0
 
     def test_framerate_presets(self) -> None:
         """Test FrameRate preset methods."""
         from stoat_ferret_core import FrameRate
 
-        assert FrameRate.fps_24().as_float() == 24.0
-        assert FrameRate.fps_25().as_float() == 25.0
-        assert FrameRate.fps_30().as_float() == 30.0
-        assert FrameRate.fps_60().as_float() == 60.0
-        assert abs(FrameRate.ntsc_30().as_float() - 29.97) < 0.01
-        assert abs(FrameRate.ntsc_60().as_float() - 59.94) < 0.01
+        assert FrameRate.fps_24().py_as_float() == 24.0
+        assert FrameRate.fps_25().py_as_float() == 25.0
+        assert FrameRate.fps_30().py_as_float() == 30.0
+        assert FrameRate.fps_60().py_as_float() == 60.0
+        assert abs(FrameRate.ntsc_30().py_as_float() - 29.97) < 0.01
+        assert abs(FrameRate.ntsc_60().py_as_float() - 59.94) < 0.01
 
     def test_framerate_invalid_denominator(self) -> None:
         """Test FrameRate rejects zero denominator."""
@@ -43,32 +50,32 @@ class TestTimelineTypes:
         """Test Position construction from frames."""
         from stoat_ferret_core import Position
 
-        pos = Position.from_frames(100)
-        assert pos.frames() == 100
+        pos = Position(100)
+        assert pos.py_frames == 100
 
     def test_position_from_seconds(self) -> None:
         """Test Position construction from seconds."""
         from stoat_ferret_core import FrameRate, Position
 
         fps = FrameRate.fps_24()
-        pos = Position.from_seconds(1.0, fps)
-        assert pos.frames() == 24
+        pos = Position.from_secs(1.0, fps)
+        assert pos.py_frames == 24
 
     def test_position_to_seconds(self) -> None:
         """Test Position conversion to seconds."""
         from stoat_ferret_core import FrameRate, Position
 
         fps = FrameRate.fps_24()
-        pos = Position.from_frames(48)
-        assert pos.to_seconds(fps) == 2.0
+        pos = Position(48)
+        assert pos.as_secs(fps) == 2.0
 
     def test_position_comparison(self) -> None:
         """Test Position comparison operators."""
         from stoat_ferret_core import Position
 
-        pos1 = Position.from_frames(10)
-        pos2 = Position.from_frames(20)
-        pos3 = Position.from_frames(10)
+        pos1 = Position(10)
+        pos2 = Position(20)
+        pos3 = Position(10)
 
         assert pos1 == pos3
         assert pos1 != pos2
@@ -81,77 +88,78 @@ class TestTimelineTypes:
         """Test Duration construction from frames."""
         from stoat_ferret_core import Duration
 
-        dur = Duration.from_frames(100)
-        assert dur.frames() == 100
+        dur = Duration(100)
+        assert dur.py_frames == 100
 
     def test_duration_between(self) -> None:
-        """Test Duration.between for calculating duration between positions."""
+        """Test Duration.between_positions for calculating duration between positions."""
         from stoat_ferret_core import Duration, Position
 
-        start = Position.from_frames(10)
-        end = Position.from_frames(30)
-        dur = Duration.between(start, end)
-        assert dur.frames() == 20
+        start = Position(10)
+        end = Position(30)
+        dur = Duration.between_positions(start, end)
+        assert dur.py_frames == 20
 
     def test_duration_between_invalid(self) -> None:
-        """Test Duration.between rejects end before start."""
+        """Test Duration.between_positions rejects end before start."""
         from stoat_ferret_core import Duration, Position
 
-        start = Position.from_frames(30)
-        end = Position.from_frames(10)
+        start = Position(30)
+        end = Position(10)
         with pytest.raises(ValueError):
-            Duration.between(start, end)
+            Duration.between_positions(start, end)
 
     def test_position_add_duration(self) -> None:
-        """Test adding Duration to Position."""
+        """Test calculating end position from position + duration."""
         from stoat_ferret_core import Duration, Position
 
-        pos = Position.from_frames(10)
-        dur = Duration.from_frames(5)
-        result = pos + dur
-        assert result.frames() == 15
+        pos = Position(10)
+        dur = Duration(5)
+        # Use Duration.end_pos method since Position doesn't have __add__
+        result = dur.end_pos(pos)
+        assert result.py_frames == 15
 
     def test_timerange_construction(self) -> None:
         """Test TimeRange construction and properties."""
         from stoat_ferret_core import Position, TimeRange
 
-        start = Position.from_frames(10)
-        end = Position.from_frames(20)
+        start = Position(10)
+        end = Position(20)
         range_ = TimeRange(start, end)
-        assert range_.start.frames() == 10
-        assert range_.end.frames() == 20
-        assert range_.duration.frames() == 10
+        assert range_.py_start.py_frames == 10
+        assert range_.py_end.py_frames == 20
+        assert range_.py_duration.py_frames == 10
 
     def test_timerange_invalid(self) -> None:
         """Test TimeRange rejects end <= start."""
         from stoat_ferret_core import Position, TimeRange
 
-        start = Position.from_frames(20)
-        end = Position.from_frames(10)
+        start = Position(20)
+        end = Position(10)
         with pytest.raises(ValueError):
             TimeRange(start, end)
 
     def test_timerange_overlaps(self) -> None:
-        """Test TimeRange.overlaps method."""
+        """Test TimeRange.py_overlaps method."""
         from stoat_ferret_core import Position, TimeRange
 
-        a = TimeRange(Position.from_frames(0), Position.from_frames(10))
-        b = TimeRange(Position.from_frames(5), Position.from_frames(15))
-        c = TimeRange(Position.from_frames(10), Position.from_frames(20))
+        a = TimeRange(Position(0), Position(10))
+        b = TimeRange(Position(5), Position(15))
+        c = TimeRange(Position(10), Position(20))
 
-        assert a.overlaps(b)
-        assert not a.overlaps(c)  # Adjacent, not overlapping
+        assert a.py_overlaps(b)
+        assert not a.py_overlaps(c)  # Adjacent, not overlapping
 
     def test_timerange_union(self) -> None:
-        """Test TimeRange.union method."""
+        """Test TimeRange.py_union method."""
         from stoat_ferret_core import Position, TimeRange
 
-        a = TimeRange(Position.from_frames(0), Position.from_frames(10))
-        b = TimeRange(Position.from_frames(10), Position.from_frames(20))
-        union = a.union(b)
+        a = TimeRange(Position(0), Position(10))
+        b = TimeRange(Position(10), Position(20))
+        union = a.py_union(b)
         assert union is not None
-        assert union.start.frames() == 0
-        assert union.end.frames() == 20
+        assert union.py_start.py_frames == 0
+        assert union.py_end.py_frames == 20
 
 
 class TestFFmpegCommand:
