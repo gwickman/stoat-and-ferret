@@ -195,7 +195,62 @@ class FFmpegCommand:
     - CRF must be in range 0-51
     """
 
-    ...
+    def __new__(cls) -> FFmpegCommand:
+        """Creates a new empty FFmpeg command builder."""
+        ...
+    def overwrite(self, yes: builtins.bool) -> FFmpegCommand:
+        """Sets the overwrite flag (-y)."""
+        ...
+    def loglevel(self, level: builtins.str) -> FFmpegCommand:
+        """Sets the log level (-loglevel)."""
+        ...
+    def input(self, path: builtins.str) -> FFmpegCommand:
+        """Adds an input file (-i)."""
+        ...
+    def seek(self, seconds: builtins.float) -> FFmpegCommand:
+        """Sets the seek position (-ss) for the most recent input."""
+        ...
+    def duration(self, seconds: builtins.float) -> FFmpegCommand:
+        """Sets the duration limit (-t) for the most recent input."""
+        ...
+    def stream_loop(self, count: builtins.int) -> FFmpegCommand:
+        """Sets the stream loop count (-stream_loop) for the most recent input."""
+        ...
+    def output(self, path: builtins.str) -> FFmpegCommand:
+        """Adds an output file."""
+        ...
+    def video_codec(self, codec: builtins.str) -> FFmpegCommand:
+        """Sets the video codec (-c:v) for the most recent output."""
+        ...
+    def audio_codec(self, codec: builtins.str) -> FFmpegCommand:
+        """Sets the audio codec (-c:a) for the most recent output."""
+        ...
+    def preset(self, preset: builtins.str) -> FFmpegCommand:
+        """Sets the encoding preset (-preset) for the most recent output."""
+        ...
+    def crf(self, crf: builtins.int) -> FFmpegCommand:
+        """Sets the CRF quality level (-crf) for the most recent output."""
+        ...
+    def format(self, format: builtins.str) -> FFmpegCommand:
+        """Sets the output format (-f) for the most recent output."""
+        ...
+    def filter_complex(self, filter: builtins.str) -> FFmpegCommand:
+        """Sets a complex filtergraph (-filter_complex)."""
+        ...
+    def map(self, stream: builtins.str) -> FFmpegCommand:
+        """Adds a stream mapping (-map) for the most recent output."""
+        ...
+    def build(self) -> builtins.list[builtins.str]:
+        """Builds the FFmpeg command arguments.
+
+        Returns:
+            A list of strings suitable for passing to subprocess.
+
+        Raises:
+            ValueError: If validation fails (no inputs, no outputs, empty paths, invalid CRF).
+        """
+        ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class Filter:

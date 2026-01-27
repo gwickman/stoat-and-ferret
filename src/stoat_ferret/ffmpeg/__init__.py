@@ -7,9 +7,11 @@ from stoat_ferret.ffmpeg.executor import (
     RealFFmpegExecutor,
     RecordingFFmpegExecutor,
 )
+from stoat_ferret.ffmpeg.integration import CommandExecutionError, execute_command
 from stoat_ferret.ffmpeg.probe import FFprobeError, VideoMetadata, ffprobe_video
 
 __all__ = [
+    "CommandExecutionError",
     "ExecutionResult",
     "FakeFFmpegExecutor",
     "FFmpegExecutor",
@@ -17,5 +19,6 @@ __all__ = [
     "RealFFmpegExecutor",
     "RecordingFFmpegExecutor",
     "VideoMetadata",
+    "execute_command",
     "ffprobe_video",
 ]
