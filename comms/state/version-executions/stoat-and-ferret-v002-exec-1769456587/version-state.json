@@ -1,0 +1,52 @@
+{
+  "schema_version": "2.0",
+  "version": "v002",
+  "description": "Database & FFmpeg Integration with Python Bindings Completion. Addresses roadmap M1.4-1.5. Fixes stub drift, completes Python bindings for v001 Rust types, establishes database foundation with repository pattern, and integrates FFmpeg executor with Rust command builder.",
+  "status": "failed",
+  "started_at": "2026-01-26T18:30:41.983205Z",
+  "completed_at": null,
+  "themes": [
+    {
+      "number": 1,
+      "name": "rust-python-bindings",
+      "status": "in_progress",
+      "features_total": 4,
+      "features_complete": 0,
+      "started_at": "2026-01-26T19:43:07.444818Z",
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 2,
+      "name": "tooling-process",
+      "status": "pending",
+      "features_total": 1,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 3,
+      "name": "database-foundation",
+      "status": "pending",
+      "features_total": 4,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 4,
+      "name": "ffmpeg-integration",
+      "status": "pending",
+      "features_total": 4,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    }
+  ],
+  "current_theme": 1,
+  "current_feature": 1
+}

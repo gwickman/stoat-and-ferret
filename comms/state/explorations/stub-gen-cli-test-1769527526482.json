@@ -1,0 +1,15 @@
+{
+  "exploration_id": "stub-gen-cli-test-1769527526482",
+  "results_folder": "stub-gen-cli-test",
+  "status": "running",
+  "pid": 16768,
+  "started_at": "2026-01-27T15:25:26.482438",
+  "updated_at": "2026-01-27T15:25:29.164519",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/stub-gen-cli-test/prompt.md",
+  "outbox_path": "comms/outbox/exploration/stub-gen-cli-test"
+}

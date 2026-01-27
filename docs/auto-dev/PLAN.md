@@ -102,13 +102,13 @@ Items explicitly deferred during version design, with target versions.
 
 Backlog items planned for inclusion in v002:
 
-| ID | Title | Priority | Theme |
-|----|-------|----------|-------|
-| BL-004 | Expose Clip and ValidationError types to Python | P1 | 01-python-bindings |
-| BL-005 | Expose TimeRange and list operations to Python | P1 | 01-python-bindings |
-| BL-006 | Update AGENTS.md with PyO3 bindings guidance | P1 | 02-tooling-process |
-| BL-007 | Automate type stub generation in CI | P2 | 02-tooling-process |
-| BL-008 | Clean up Python API naming inconsistencies | P2 | 01-python-bindings |
+| ID | Title | Priority | Theme | Feature | Notes |
+|----|-------|----------|-------|---------|-------|
+| BL-007 | Automate type stub generation in CI | P1 (elevated) | 01-rust-python-bindings | 001-stub-regeneration | Must fix drift FIRST |
+| BL-004 | Expose Clip and ValidationError types to Python | P1 | 01-rust-python-bindings | 002-clip-bindings | Rust struct, not exception |
+| BL-005 | Expose TimeRange and list operations to Python | P1 | 01-rust-python-bindings | 003-range-list-ops | find_gaps, merge_ranges, total_coverage |
+| BL-008 | Clean up Python API naming inconsistencies | P2 | 01-rust-python-bindings | 004-api-naming-cleanup | Includes test updates; do LAST |
+| BL-006 | Update AGENTS.md with PyO3 bindings guidance | P1 | 02-tooling-process | 001-agents-pyo3-guidance | Process improvement |
 
 ## Backlog Integration
 

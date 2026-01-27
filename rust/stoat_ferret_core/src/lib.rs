@@ -11,7 +11,7 @@
 //! - [`sanitize`] - Input sanitization and validation for FFmpeg commands
 
 use pyo3::prelude::*;
-use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub mod clip;
 pub mod ffmpeg;
@@ -83,7 +83,21 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-define_stub_info_gatherer!(stub_info);
+/// Gather stub information from the project root pyproject.toml.
+///
+/// This replaces the `define_stub_info_gatherer!` macro because the macro
+/// looks for pyproject.toml at CARGO_MANIFEST_DIR (rust/stoat_ferret_core/),
+/// but our pyproject.toml is at the project root.
+pub fn stub_info() -> pyo3_stub_gen::Result<pyo3_stub_gen::StubInfo> {
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    // Navigate: rust/stoat_ferret_core/ -> rust/ -> project_root/
+    let project_root = manifest_dir
+        .parent()
+        .expect("Failed to get rust/ directory")
+        .parent()
+        .expect("Failed to get project root");
+    pyo3_stub_gen::StubInfo::from_pyproject_toml(project_root.join("pyproject.toml"))
+}
 
 #[cfg(test)]
 mod tests {

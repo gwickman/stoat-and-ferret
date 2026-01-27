@@ -58,6 +58,9 @@ jobs:
           test -f stubs/stoat_ferret_core/_core.pyi
         shell: bash
 
+      - name: Verify stub completeness
+        run: uv run python scripts/verify_stubs.py
+
       - name: Python lint
         run: |
           uv run ruff check src/ tests/
