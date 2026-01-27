@@ -55,6 +55,14 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<timeline::Duration>()?;
     m.add_class::<timeline::TimeRange>()?;
 
+    // Register clip types
+    m.add_class::<clip::Clip>()?;
+    m.add_class::<clip::validation::ValidationError>()?;
+
+    // Register clip validation functions
+    m.add_function(wrap_pyfunction!(clip::validation::py_validate_clip, m)?)?;
+    m.add_function(wrap_pyfunction!(clip::validation::py_validate_clips, m)?)?;
+
     // Register FFmpeg command builder types
     m.add_class::<ffmpeg::FFmpegCommand>()?;
     m.add_class::<ffmpeg::filter::Filter>()?;
@@ -76,6 +84,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sanitize::py_validate_preset, m)?)?;
 
     // Register custom exception types
+    // Note: ValidationError (exception) is distinct from ClipValidationError (struct)
     m.add("ValidationError", m.py().get_type::<ValidationError>())?;
     m.add("CommandError", m.py().get_type::<CommandError>())?;
     m.add("SanitizationError", m.py().get_type::<SanitizationError>())?;

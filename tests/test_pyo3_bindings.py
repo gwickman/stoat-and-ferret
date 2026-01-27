@@ -415,6 +415,149 @@ class TestSanitization:
             validate_preset("unknown")
 
 
+class TestClip:
+    """Tests for Clip type."""
+
+    def test_clip_construction(self) -> None:
+        """Test Clip construction and properties."""
+        from stoat_ferret_core import Clip, Position
+
+        clip = Clip("video.mp4", Position(0), Position(100), None)
+        assert clip.source_path == "video.mp4"
+        assert clip.in_point.py_frames == 0
+        assert clip.out_point.py_frames == 100
+        assert clip.source_duration is None
+
+    def test_clip_with_source_duration(self) -> None:
+        """Test Clip with source duration."""
+        from stoat_ferret_core import Clip, Duration, Position
+
+        clip = Clip("video.mp4", Position(10), Position(50), Duration(200))
+        assert clip.source_path == "video.mp4"
+        assert clip.in_point.py_frames == 10
+        assert clip.out_point.py_frames == 50
+        assert clip.source_duration is not None
+        assert clip.source_duration.py_frames == 200
+
+    def test_clip_duration(self) -> None:
+        """Test Clip.duration() method."""
+        from stoat_ferret_core import Clip, Position
+
+        clip = Clip("video.mp4", Position(10), Position(50), None)
+        dur = clip.duration()
+        assert dur is not None
+        assert dur.py_frames == 40
+
+    def test_clip_duration_invalid(self) -> None:
+        """Test Clip.duration() returns None for invalid clips."""
+        from stoat_ferret_core import Clip, Position
+
+        clip = Clip("video.mp4", Position(100), Position(50), None)
+        dur = clip.duration()
+        assert dur is None
+
+    def test_clip_repr(self) -> None:
+        """Test Clip string representation."""
+        from stoat_ferret_core import Clip, Position
+
+        clip = Clip("video.mp4", Position(0), Position(100), None)
+        repr_str = repr(clip)
+        assert "Clip" in repr_str
+        assert "video.mp4" in repr_str
+
+
+class TestClipValidationError:
+    """Tests for ClipValidationError struct (not the exception)."""
+
+    def test_validation_error_basic(self) -> None:
+        """Test ClipValidationError construction with field and message only."""
+        from stoat_ferret_core import ClipValidationError
+
+        err = ClipValidationError("in_point", "must be non-negative")
+        assert err.field == "in_point"
+        assert err.message == "must be non-negative"
+        assert err.actual is None
+        assert err.expected is None
+
+    def test_validation_error_with_values(self) -> None:
+        """Test ClipValidationError.with_values_py static method."""
+        from stoat_ferret_core import ClipValidationError
+
+        err = ClipValidationError.with_values_py(
+            "in_point", "must be before out_point", "100", "< 50"
+        )
+        assert err.field == "in_point"
+        assert err.message == "must be before out_point"
+        assert err.actual == "100"
+        assert err.expected == "< 50"
+
+    def test_validation_error_str(self) -> None:
+        """Test ClipValidationError string representation."""
+        from stoat_ferret_core import ClipValidationError
+
+        err = ClipValidationError("field", "message")
+        assert "field" in str(err)
+        assert "message" in str(err)
+
+
+class TestClipValidation:
+    """Tests for clip validation functions."""
+
+    def test_validate_clip_valid(self) -> None:
+        """Test py_validate_clip returns empty list for valid clip."""
+        from stoat_ferret_core import Clip, Position, py_validate_clip
+
+        clip = Clip("video.mp4", Position(0), Position(100), None)
+        errors = py_validate_clip(clip)
+        assert len(errors) == 0
+
+    def test_validate_clip_empty_path(self) -> None:
+        """Test py_validate_clip catches empty source path."""
+        from stoat_ferret_core import Clip, Position, py_validate_clip
+
+        clip = Clip("", Position(0), Position(100), None)
+        errors = py_validate_clip(clip)
+        assert len(errors) == 1
+        assert errors[0].field == "source_path"
+        assert "empty" in errors[0].message.lower()
+
+    def test_validate_clip_out_before_in(self) -> None:
+        """Test py_validate_clip catches out_point <= in_point."""
+        from stoat_ferret_core import Clip, Position, py_validate_clip
+
+        clip = Clip("video.mp4", Position(100), Position(50), None)
+        errors = py_validate_clip(clip)
+        assert len(errors) == 1
+        assert errors[0].field == "out_point"
+        assert errors[0].actual == "50"
+        assert errors[0].expected == ">100"
+
+    def test_validate_clip_exceeds_duration(self) -> None:
+        """Test py_validate_clip catches points exceeding source duration."""
+        from stoat_ferret_core import Clip, Duration, Position, py_validate_clip
+
+        clip = Clip("video.mp4", Position(50), Position(150), Duration(100))
+        errors = py_validate_clip(clip)
+        assert len(errors) == 1
+        assert errors[0].field == "out_point"
+
+    def test_validate_clips_batch(self) -> None:
+        """Test py_validate_clips validates multiple clips."""
+        from stoat_ferret_core import Clip, Position, py_validate_clips
+
+        clips = [
+            Clip("good.mp4", Position(0), Position(100), None),  # Valid
+            Clip("", Position(0), Position(100), None),  # Invalid: empty path
+            Clip("bad.mp4", Position(100), Position(50), None),  # Invalid: out < in
+        ]
+        errors = py_validate_clips(clips)
+        # Should have errors for clips at index 1 and 2
+        indices = [err[0] for err in errors]
+        assert 1 in indices
+        assert 2 in indices
+        assert 0 not in indices
+
+
 class TestModuleExports:
     """Tests verifying module exports are correct."""
 
@@ -424,6 +567,12 @@ class TestModuleExports:
 
         expected = [
             "health_check",
+            # Clip types
+            "Clip",
+            "ClipValidationError",
+            "py_validate_clip",
+            "py_validate_clips",
+            # Timeline types
             "FrameRate",
             "Position",
             "Duration",

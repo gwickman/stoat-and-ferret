@@ -54,6 +54,164 @@ def health_check() -> str:
     """
     ...
 
+
+# ========== Clip Types ==========
+
+
+class Clip:
+    """A video clip representing a segment of a source media file.
+
+    A clip defines a portion of a source video through in and out points,
+    and optionally includes the source file's total duration for bounds validation.
+    """
+
+    @property
+    def source_path(self) -> str:
+        """Path to the source media file."""
+        ...
+
+    @property
+    def in_point(self) -> "Position":
+        """Start position within the source file (inclusive)."""
+        ...
+
+    @property
+    def out_point(self) -> "Position":
+        """End position within the source file (exclusive)."""
+        ...
+
+    @property
+    def source_duration(self) -> Optional["Duration"]:
+        """Total duration of the source file (optional, used for bounds validation)."""
+        ...
+
+    def __new__(
+        cls,
+        source_path: str,
+        in_point: "Position",
+        out_point: "Position",
+        source_duration: Optional["Duration"] = None,
+    ) -> "Clip":
+        """Creates a new clip.
+
+        Args:
+            source_path: Path to the source media file.
+            in_point: Start position within the source file.
+            out_point: End position within the source file.
+            source_duration: Total duration of the source file (optional).
+
+        Returns:
+            A new Clip instance.
+        """
+        ...
+
+    def duration(self) -> Optional["Duration"]:
+        """Calculates the duration of this clip.
+
+        Returns:
+            The duration between in_point and out_point, or None if out_point <= in_point.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
+class ClipValidationError:
+    """A validation error with detailed information about what went wrong.
+
+    Each error includes the field name, a human-readable message, and optionally
+    the actual and expected values to help users understand and fix the problem.
+
+    Note: This is distinct from the ValidationError exception type.
+    This class provides detailed validation failure information as data.
+    """
+
+    @property
+    def field(self) -> str:
+        """The name of the field that failed validation."""
+        ...
+
+    @property
+    def message(self) -> str:
+        """A human-readable message explaining the validation failure."""
+        ...
+
+    @property
+    def actual(self) -> Optional[str]:
+        """The actual value that failed validation (optional)."""
+        ...
+
+    @property
+    def expected(self) -> Optional[str]:
+        """The expected value or constraint (optional)."""
+        ...
+
+    def __new__(cls, field: str, message: str) -> "ClipValidationError":
+        """Creates a new validation error with just a field and message.
+
+        Args:
+            field: The name of the field that failed validation.
+            message: A human-readable explanation of the error.
+
+        Returns:
+            A new ClipValidationError instance.
+        """
+        ...
+
+    @staticmethod
+    def with_values_py(
+        field: str, message: str, actual: str, expected: str
+    ) -> "ClipValidationError":
+        """Creates a validation error with actual and expected values.
+
+        Args:
+            field: The name of the field that failed validation.
+            message: A human-readable explanation of the error.
+            actual: The actual value that was provided.
+            expected: The expected value or constraint.
+
+        Returns:
+            A new ClipValidationError instance.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+
+def py_validate_clip(clip: Clip) -> list[ClipValidationError]:
+    """Validates a single clip and returns all validation errors.
+
+    This function checks:
+    - Source path is non-empty
+    - Out point is greater than in point
+    - In point is within source duration (if source duration is known)
+    - Out point is within source duration (if source duration is known)
+
+    Args:
+        clip: The clip to validate.
+
+    Returns:
+        A list of validation errors. Empty if the clip is valid.
+    """
+    ...
+
+
+def py_validate_clips(clips: list[Clip]) -> list[tuple[int, ClipValidationError]]:
+    """Validates a list of clips and returns all validation errors.
+
+    Unlike single-clip validation, this function collects errors from all clips
+    and reports which clip index each error belongs to.
+
+    Args:
+        clips: A list of clips to validate.
+
+    Returns:
+        A list of tuples containing (clip_index, validation_error) for each error found.
+    """
+    ...
+
+
 # ========== Timeline Types ==========
 
 class FrameRate:

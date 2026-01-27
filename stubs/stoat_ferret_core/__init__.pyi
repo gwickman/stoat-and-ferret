@@ -8,6 +8,11 @@ These stubs are generated from the Rust code using pyo3-stub-gen.
 from stoat_ferret_core._core import (
     # Utility
     health_check as health_check,
+    # Clip types
+    Clip as Clip,
+    ClipValidationError as ClipValidationError,
+    py_validate_clip as py_validate_clip,
+    py_validate_clips as py_validate_clips,
     # Timeline types
     FrameRate as FrameRate,
     Position as Position,
@@ -39,6 +44,11 @@ from stoat_ferret_core._core import (
 __all__ = [
     # Utility
     "health_check",
+    # Clip types
+    "Clip",
+    "ClipValidationError",
+    "py_validate_clip",
+    "py_validate_clips",
     # Timeline types
     "FrameRate",
     "Position",
