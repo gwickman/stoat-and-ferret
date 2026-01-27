@@ -4,6 +4,13 @@ This module provides the Python interface to the stoat_ferret_core Rust library,
 which handles computationally intensive operations like filter generation,
 timeline math, and FFmpeg command building.
 
+Clip Types
+----------
+- Clip: Video clip representing a segment of a source media file
+- ClipValidationError: Validation error with detailed information
+- py_validate_clip: Validate a single clip
+- py_validate_clips: Validate multiple clips
+
 Timeline Types
 --------------
 - FrameRate: Frame rate representation with common presets
@@ -40,6 +47,9 @@ from __future__ import annotations
 
 try:
     from stoat_ferret_core._core import (
+        # Clip types
+        Clip,
+        ClipValidationError,
         # Exceptions
         CommandError,
         Duration,
@@ -59,6 +69,9 @@ try:
         escape_filter_text,
         # Utility function
         health_check,
+        # Clip validation functions
+        py_validate_clip,
+        py_validate_clips,
         # Filter helper functions
         scale_filter,
         validate_audio_codec,
@@ -80,6 +93,10 @@ except ImportError:  # pragma: no cover
         )
 
     health_check = _not_built
+    Clip = _not_built  # type: ignore[misc,assignment]
+    ClipValidationError = _not_built  # type: ignore[misc,assignment]
+    py_validate_clip = _not_built
+    py_validate_clips = _not_built
     FrameRate = _not_built  # type: ignore[misc,assignment]
     Position = _not_built  # type: ignore[misc,assignment]
     Duration = _not_built  # type: ignore[misc,assignment]
@@ -106,6 +123,11 @@ except ImportError:  # pragma: no cover
 __all__ = [
     # Utility
     "health_check",
+    # Clip types
+    "Clip",
+    "ClipValidationError",
+    "py_validate_clip",
+    "py_validate_clips",
     # Timeline types
     "FrameRate",
     "Position",

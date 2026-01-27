@@ -27,6 +27,8 @@
 pub mod validation;
 
 use crate::timeline::{Duration, Position};
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 /// A video clip representing a segment of a source media file.
 ///
@@ -55,15 +57,21 @@ use crate::timeline::{Duration, Position};
 ///
 /// assert_eq!(clip.duration().unwrap().frames(), 48);
 /// ```
+#[gen_stub_pyclass]
+#[pyclass]
 #[derive(Debug, Clone)]
 pub struct Clip {
     /// Path to the source media file.
+    #[pyo3(get)]
     pub source_path: String,
     /// Start position within the source file (inclusive).
+    #[pyo3(get)]
     pub in_point: Position,
     /// End position within the source file (exclusive).
+    #[pyo3(get)]
     pub out_point: Position,
     /// Total duration of the source file (optional, used for bounds validation).
+    #[pyo3(get)]
     pub source_duration: Option<Duration>,
 }
 
@@ -127,6 +135,46 @@ impl Clip {
     #[must_use]
     pub fn duration(&self) -> Option<Duration> {
         Duration::between(self.in_point, self.out_point)
+    }
+}
+
+#[pymethods]
+impl Clip {
+    /// Creates a new clip from Python.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_path` - Path to the source media file
+    /// * `in_point` - Start position within the source file
+    /// * `out_point` - End position within the source file
+    /// * `source_duration` - Total duration of the source file (optional)
+    #[new]
+    fn py_new(
+        source_path: String,
+        in_point: Position,
+        out_point: Position,
+        source_duration: Option<Duration>,
+    ) -> Self {
+        Self::new(source_path, in_point, out_point, source_duration)
+    }
+
+    /// Calculates the duration of this clip.
+    ///
+    /// Returns `None` if out_point is not greater than in_point.
+    #[pyo3(name = "duration")]
+    fn py_duration(&self) -> Option<Duration> {
+        self.duration()
+    }
+
+    /// Returns a string representation of the clip.
+    fn __repr__(&self) -> String {
+        format!(
+            "Clip(source_path={:?}, in_point={}, out_point={}, source_duration={:?})",
+            self.source_path,
+            self.in_point.frames(),
+            self.out_point.frames(),
+            self.source_duration.map(|d| d.frames())
+        )
     }
 }
 

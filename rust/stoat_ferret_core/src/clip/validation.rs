@@ -34,11 +34,16 @@
 //! ```
 
 use super::Clip;
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 /// A validation error with detailed information about what went wrong.
 ///
 /// Each error includes the field name, a human-readable message, and optionally
 /// the actual and expected values to help users understand and fix the problem.
+///
+/// Note: This is distinct from the `ValidationError` exception type in the module root.
+/// This struct provides detailed validation failure information as data.
 ///
 /// # Examples
 ///
@@ -60,15 +65,21 @@ use super::Clip;
 /// assert_eq!(err.actual, Some("50".to_string()));
 /// assert_eq!(err.expected, Some(">100".to_string()));
 /// ```
+#[gen_stub_pyclass]
+#[pyclass(name = "ClipValidationError")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidationError {
     /// The name of the field that failed validation.
+    #[pyo3(get)]
     pub field: String,
     /// A human-readable message explaining the validation failure.
+    #[pyo3(get)]
     pub message: String,
     /// The actual value that failed validation (optional).
+    #[pyo3(get)]
     pub actual: Option<String>,
     /// The expected value or constraint (optional).
+    #[pyo3(get)]
     pub expected: Option<String>,
 }
 
@@ -136,6 +147,43 @@ impl ValidationError {
             actual: Some(actual.into()),
             expected: Some(expected.into()),
         }
+    }
+}
+
+#[pymethods]
+impl ValidationError {
+    /// Creates a new validation error from Python.
+    ///
+    /// # Arguments
+    ///
+    /// * `field` - The name of the field that failed validation
+    /// * `message` - A human-readable explanation of the error
+    #[new]
+    fn py_new(field: String, message: String) -> Self {
+        Self::new(field, message)
+    }
+
+    /// Creates a validation error with actual and expected values.
+    ///
+    /// # Arguments
+    ///
+    /// * `field` - The name of the field that failed validation
+    /// * `message` - A human-readable explanation of the error
+    /// * `actual` - The actual value that was provided
+    /// * `expected` - The expected value or constraint
+    #[staticmethod]
+    fn with_values_py(field: String, message: String, actual: String, expected: String) -> Self {
+        Self::with_values(field, message, actual, expected)
+    }
+
+    /// Returns a string representation of the validation error.
+    fn __repr__(&self) -> String {
+        format!("{}", self)
+    }
+
+    /// Returns a string representation of the validation error.
+    fn __str__(&self) -> String {
+        format!("{}", self)
     }
 }
 
@@ -320,6 +368,55 @@ pub fn validate_clips(clips: &[Clip]) -> Vec<ClipValidationError> {
                     errors,
                 })
             }
+        })
+        .collect()
+}
+
+/// Validates a single clip and returns all validation errors (Python wrapper).
+///
+/// This function checks:
+/// - Source path is non-empty
+/// - Out point is greater than in point
+/// - In point is within source duration (if source duration is known)
+/// - Out point is within source duration (if source duration is known)
+///
+/// # Arguments
+///
+/// * `clip` - The clip to validate
+///
+/// # Returns
+///
+/// A list of validation errors. Empty if the clip is valid.
+#[gen_stub_pyfunction]
+#[pyfunction]
+pub fn py_validate_clip(clip: &Clip) -> Vec<ValidationError> {
+    validate_clip(clip)
+}
+
+/// Validates a list of clips and returns all validation errors (Python wrapper).
+///
+/// Unlike single-clip validation, this function collects errors from all clips
+/// and reports which clip index each error belongs to.
+///
+/// # Arguments
+///
+/// * `clips` - A list of clips to validate
+///
+/// # Returns
+///
+/// A list of tuples containing (clip_index, validation_error) for each error found.
+#[gen_stub_pyfunction]
+#[pyfunction]
+pub fn py_validate_clips(clips: Vec<Clip>) -> Vec<(usize, ValidationError)> {
+    let results = validate_clips(&clips);
+    // Flatten to (index, error) tuples for easier Python consumption
+    results
+        .into_iter()
+        .flat_map(|result| {
+            result
+                .errors
+                .into_iter()
+                .map(move |err| (result.clip_index, err))
         })
         .collect()
 }
