@@ -30,7 +30,37 @@ cd rust/stoat_ferret_core
 cargo clippy -- -D warnings  # Lint
 cargo test                   # Test
 maturin develop              # Build Python extension
+
+# Type Stubs
+cd rust/stoat_ferret_core
+cargo run --bin stub_gen     # Generate baseline stubs to .generated-stubs/
+# Then verify: uv run python scripts/verify_stubs.py
 ```
+
+## Type Stubs
+
+Python type stubs for the Rust PyO3 bindings are maintained in `stubs/stoat_ferret_core/`.
+
+**Manual vs Generated Stubs**: The stubs are manually maintained because `pyo3-stub-gen` generates incomplete stubs (class docstrings only, no method signatures). The generated stubs serve as a baseline for detecting new types added to Rust.
+
+### Workflow After Modifying Rust API
+
+1. Run stub generation:
+   ```bash
+   cd rust/stoat_ferret_core
+   cargo run --bin stub_gen
+   ```
+
+2. Verify stubs are complete:
+   ```bash
+   uv run python scripts/verify_stubs.py
+   ```
+
+3. If verification fails, update `stubs/stoat_ferret_core/_core.pyi` to include the missing types with proper method signatures.
+
+4. Commit both the Rust changes and updated stubs.
+
+**CI Enforcement**: The CI workflow runs `scripts/verify_stubs.py` to ensure manual stubs include all types from the generated stubs.
 
 ## Quality Gates
 
