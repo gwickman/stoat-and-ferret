@@ -6,56 +6,51 @@ import typing
 
 # ========== Custom Exception Types ==========
 
-
 class ValidationError(Exception):
     """Raised when validation of input parameters fails."""
 
     ...
-
 
 class CommandError(Exception):
     """Raised when FFmpeg command building fails."""
 
     ...
 
-
 class SanitizationError(Exception):
     """Raised when input sanitization fails."""
 
     ...
 
-
 # ========== Types ==========
-
 
 @typing.final
 class Clip:
     r"""
     A video clip representing a segment of a source media file.
-    
+
     A clip defines a portion of a source video through in and out points,
     and optionally includes the source file's total duration for bounds validation.
-    
+
     # Fields
-    
+
     - `source_path` - Path to the source media file
     - `in_point` - Start position within the source file (inclusive)
     - `out_point` - End position within the source file (exclusive)
     - `source_duration` - Total duration of the source file (optional, for validation)
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::clip::Clip;
     use stoat_ferret_core::timeline::{Position, Duration};
-    
+
     let clip = Clip::new(
         "/path/to/video.mp4".to_string(),
         Position::from_frames(24),   // Start at frame 24
         Position::from_frames(72),   // End at frame 72
         Some(Duration::from_frames(100)),  // Source is 100 frames long
     );
-    
+
     assert_eq!(clip.duration().unwrap().frames(), 48);
     ```
     """
@@ -84,23 +79,23 @@ class Clip:
 class ClipValidationError:
     r"""
     A validation error with detailed information about what went wrong.
-    
+
     Each error includes the field name, a human-readable message, and optionally
     the actual and expected values to help users understand and fix the problem.
-    
+
     Note: This is distinct from the `ValidationError` exception type in the module root.
     This struct provides detailed validation failure information as data.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::clip::validation::ValidationError;
-    
+
     // Error with just a message
     let err = ValidationError::new("source_path", "Source path cannot be empty");
     assert_eq!(err.field, "source_path");
     assert!(err.actual.is_none());
-    
+
     // Error with actual and expected values
     let err = ValidationError::with_values(
         "out_point",
@@ -137,23 +132,23 @@ class ClipValidationError:
 class Duration:
     r"""
     A duration on the timeline represented as a frame count.
-    
+
     Using frame counts as the internal representation ensures frame-accurate
     durations without floating-point precision issues. Conversions to/from
     seconds are available when needed for display or user input.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::{Duration, Position, FrameRate};
-    
+
     let fps = FrameRate::FPS_24;
-    
+
     // Create duration from frames
     let dur = Duration::from_frames(48);
     assert_eq!(dur.frames(), 48);
     assert_eq!(dur.to_seconds(fps), 2.0);
-    
+
     // Calculate duration between two positions
     let start = Position::from_frames(10);
     let end = Position::from_frames(34);
@@ -161,24 +156,25 @@ class Duration:
     assert_eq!(dur.frames(), 24);
     ```
     """
+
     ...
 
 @typing.final
 class FFmpegCommand:
     r"""
     A type-safe builder for constructing FFmpeg command arguments.
-    
+
     This builder creates argument arrays suitable for passing to `std::process::Command`
     without requiring shell escaping.
-    
+
     # Builder Pattern
-    
+
     Input and output specifications are added sequentially, with options applying
     to the most recently added input or output:
-    
+
     ```
     use stoat_ferret_core::ffmpeg::FFmpegCommand;
-    
+
     let args = FFmpegCommand::new()
         .input("first.mp4")
         .seek(5.0)          // applies to first.mp4
@@ -189,79 +185,82 @@ class FFmpegCommand:
         .build()
         .expect("Valid command");
     ```
-    
+
     # Validation
-    
+
     The builder validates commands on `build()`:
     - At least one input is required
     - At least one output is required
     - Paths must be non-empty
     - CRF must be in range 0-51
     """
+
     ...
 
 @typing.final
 class Filter:
     r"""
     A single FFmpeg filter with optional parameters.
-    
+
     Filters are the building blocks of FFmpeg filtergraphs. Each filter has a name
     and zero or more key-value parameters.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::filter::Filter;
-    
+
     let filter = Filter::new("scale")
         .param("w", 1920)
         .param("h", 1080);
-    
+
     assert_eq!(filter.to_string(), "scale=w=1920:h=1080");
     ```
     """
+
     ...
 
 @typing.final
 class FilterChain:
     r"""
     A chain of filters connected in sequence.
-    
+
     Filter chains have optional input labels, one or more filters, and optional
     output labels. Within a chain, filters are connected with commas.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::filter::{FilterChain, scale, format};
-    
+
     let chain = FilterChain::new()
         .input("0:v")
         .filter(scale(1280, 720))
         .filter(format("yuv420p"))
         .output("scaled");
-    
+
     assert_eq!(
         chain.to_string(),
         "[0:v]scale=w=1280:h=720,format=pix_fmts=yuv420p[scaled]"
     );
     ```
     """
+
     ...
 
 @typing.final
 class FilterGraph:
     r"""
     A complete filter graph composed of multiple filter chains.
-    
+
     Filter graphs are used with FFmpeg's `-filter_complex` argument. Multiple
     chains are separated by semicolons.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::filter::{FilterGraph, FilterChain, scale, concat};
-    
+
     // Scale two inputs and concatenate them
     let graph = FilterGraph::new()
         .chain(
@@ -283,90 +282,94 @@ class FilterGraph:
                 .filter(concat(2, 1, 0))
                 .output("outv")
         );
-    
+
     let expected = "[0:v]scale=w=1280:h=720[v0];[1:v]scale=w=1280:h=720[v1];[v0][v1]concat=n=2:v=1:a=0[outv]";
     assert_eq!(graph.to_string(), expected);
     ```
     """
+
     ...
 
 @typing.final
 class FrameRate:
     r"""
     A frame rate represented as a rational number (numerator/denominator).
-    
+
     Using rational representation allows for exact arithmetic without
     floating-point precision loss. Common frame rates like 23.976 and 29.97
     are represented exactly as 24000/1001 and 30000/1001 respectively.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::FrameRate;
-    
+
     // Use predefined constants for common rates
     let fps_24 = FrameRate::FPS_24;
     assert_eq!(fps_24.frames_per_second(), 24.0);
-    
+
     // Create custom frame rates
     let custom = FrameRate::new(48, 1).unwrap();
     assert_eq!(custom.frames_per_second(), 48.0);
     ```
     """
+
     ...
 
 @typing.final
 class Position:
     r"""
     A position on the timeline represented as a frame count.
-    
+
     Using frame counts as the internal representation ensures frame-accurate
     positioning without floating-point precision issues. Conversions to/from
     seconds are available when needed for display or user input.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::{Position, FrameRate};
-    
+
     let fps = FrameRate::FPS_24;
-    
+
     // Create position from frames
     let pos = Position::from_frames(48);
     assert_eq!(pos.frames(), 48);
     assert_eq!(pos.to_seconds(fps), 2.0);
-    
+
     // Create position from seconds
     let pos = Position::from_seconds(2.0, fps);
     assert_eq!(pos.frames(), 48);
     ```
     """
+
     ...
 
 @typing.final
 class TimeRange:
     r"""
     A contiguous time range represented as a half-open interval [start, end).
-    
+
     The range includes the start position but excludes the end position.
     This representation is standard for video editing as it allows ranges
     to be concatenated without overlap or gaps.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::{TimeRange, Position};
-    
+
     // Create a range from frame 10 to frame 20
     let start = Position::from_frames(10);
     let end = Position::from_frames(20);
     let range = TimeRange::new(start, end).unwrap();
-    
+
     assert_eq!(range.start().frames(), 10);
     assert_eq!(range.end().frames(), 20);
     assert_eq!(range.duration().frames(), 10);
     ```
     """
+
     ...
 
 def concat_filter(n: builtins.int, v: builtins.int, a: builtins.int) -> Filter:
@@ -377,29 +380,29 @@ def concat_filter(n: builtins.int, v: builtins.int, a: builtins.int) -> Filter:
 def escape_filter_text(input: builtins.str) -> builtins.str:
     r"""
     Escapes special characters in text for use in FFmpeg filter parameters.
-    
+
     FFmpeg filter syntax uses several characters with special meaning.
     This function escapes them so they are treated as literal characters.
-    
+
     # Arguments
-    
+
     * `input` - The text to escape
-    
+
     # Returns
-    
+
     The escaped text safe for use in FFmpeg filter parameters.
     """
 
 def find_gaps(ranges: typing.Sequence[TimeRange]) -> builtins.list[TimeRange]:
     r"""
     Finds gaps between non-overlapping portions of the given ranges.
-    
+
     The ranges are sorted by start position and merged, then gaps
     between merged ranges are returned.
-    
+
     Args:
         ranges: List of TimeRange objects to find gaps between.
-    
+
     Returns:
         List of TimeRange objects representing the gaps between input ranges.
     """
@@ -407,20 +410,20 @@ def find_gaps(ranges: typing.Sequence[TimeRange]) -> builtins.list[TimeRange]:
 def health_check() -> builtins.str:
     r"""
     Performs a health check to verify the Rust module is loaded correctly.
-    
+
     Returns a status string indicating the module is operational.
     """
 
 def merge_ranges(ranges: typing.Sequence[TimeRange]) -> builtins.list[TimeRange]:
     r"""
     Merges overlapping and adjacent ranges into non-overlapping ranges.
-    
+
     The result is a minimal set of non-overlapping, non-adjacent ranges
     that cover the same time as the input ranges.
-    
+
     Args:
         ranges: List of TimeRange objects to merge.
-    
+
     Returns:
         List of merged TimeRange objects with no overlaps or adjacencies.
     """
@@ -444,7 +447,9 @@ def validate_clip(clip: Clip) -> builtins.list[ClipValidationError]:
     A list of validation errors. Empty if the clip is valid.
     """
 
-def validate_clips(clips: typing.Sequence[Clip]) -> builtins.list[tuple[builtins.int, ClipValidationError]]:
+def validate_clips(
+    clips: typing.Sequence[Clip],
+) -> builtins.list[tuple[builtins.int, ClipValidationError]]:
     r"""
     Validates a list of clips and returns all validation errors (Python wrapper).
 
@@ -468,13 +473,13 @@ def scale_filter(width: builtins.int, height: builtins.int) -> Filter:
 def total_coverage(ranges: typing.Sequence[TimeRange]) -> Duration:
     r"""
     Calculates the total duration covered by the given ranges.
-    
+
     Overlapping ranges are merged before calculating the total,
     so overlapping portions are only counted once.
-    
+
     Args:
         ranges: List of TimeRange objects to calculate coverage for.
-    
+
     Returns:
         Duration representing the total time covered by all ranges.
     """
@@ -482,115 +487,114 @@ def total_coverage(ranges: typing.Sequence[TimeRange]) -> Duration:
 def validate_audio_codec(codec: builtins.str) -> builtins.str:
     r"""
     Validates an audio codec name.
-    
+
     # Arguments
-    
+
     * `codec` - The codec name to validate
-    
+
     # Returns
-    
+
     The validated codec name.
-    
+
     # Raises
-    
+
     ValueError: If the codec is not in the allowed list.
     """
 
 def validate_crf(crf: builtins.int) -> builtins.int:
     r"""
     Validates a CRF (Constant Rate Factor) value.
-    
+
     # Arguments
-    
+
     * `crf` - The CRF value to validate (0-51)
-    
+
     # Returns
-    
+
     The validated CRF value.
-    
+
     # Raises
-    
+
     ValueError: If the value is out of range.
     """
 
 def validate_path(path: builtins.str) -> None:
     r"""
     Validates that a file path is safe to use.
-    
+
     # Arguments
-    
+
     * `path` - The path to validate
-    
+
     # Raises
-    
+
     ValueError: If the path is empty or contains null bytes.
     """
 
 def validate_preset(preset: builtins.str) -> builtins.str:
     r"""
     Validates an encoding preset name.
-    
+
     # Arguments
-    
+
     * `preset` - The preset name to validate
-    
+
     # Returns
-    
+
     The validated preset name.
-    
+
     # Raises
-    
+
     ValueError: If the preset is not in the allowed list.
     """
 
 def validate_speed(speed: builtins.float) -> builtins.float:
     r"""
     Validates a speed multiplier for video playback.
-    
+
     # Arguments
-    
+
     * `speed` - The speed multiplier to validate (0.25-4.0)
-    
+
     # Returns
-    
+
     The validated speed value.
-    
+
     # Raises
-    
+
     ValueError: If the value is out of range.
     """
 
 def validate_video_codec(codec: builtins.str) -> builtins.str:
     r"""
     Validates a video codec name.
-    
+
     # Arguments
-    
+
     * `codec` - The codec name to validate
-    
+
     # Returns
-    
+
     The validated codec name.
-    
+
     # Raises
-    
+
     ValueError: If the codec is not in the allowed list.
     """
 
 def validate_volume(volume: builtins.float) -> builtins.float:
     r"""
     Validates an audio volume multiplier.
-    
+
     # Arguments
-    
+
     * `volume` - The volume multiplier to validate (0.0-10.0)
-    
+
     # Returns
-    
+
     The validated volume value.
-    
+
     # Raises
-    
+
     ValueError: If the value is out of range.
     """
-
