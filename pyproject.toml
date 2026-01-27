@@ -5,6 +5,9 @@ description = "AI-driven video editor with hybrid Python/Rust architecture"
 requires-python = ">=3.10"
 readme = "README.md"
 license = { text = "MIT" }
+dependencies = [
+    "alembic>=1.13",
+]
 
 # Build system: Use maturin when building with Rust component
 # Requires: Visual Studio Build Tools with C++ workload + Windows SDK
