@@ -162,12 +162,14 @@ impl FrameRate {
 
     /// Returns the numerator of the frame rate ratio.
     #[getter]
+    #[pyo3(name = "numerator")]
     fn py_numerator(&self) -> u32 {
         self.numerator
     }
 
     /// Returns the denominator of the frame rate ratio.
     #[getter]
+    #[pyo3(name = "denominator")]
     fn py_denominator(&self) -> u32 {
         self.denominator
     }

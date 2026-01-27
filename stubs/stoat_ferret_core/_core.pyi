@@ -3,7 +3,6 @@
 This module contains the actual PyO3 bindings from Rust.
 """
 
-from typing import Optional
 
 # ========== Custom Exception Types ==========
 
@@ -71,27 +70,27 @@ class Clip:
         ...
 
     @property
-    def in_point(self) -> "Position":
+    def in_point(self) -> Position:
         """Start position within the source file (inclusive)."""
         ...
 
     @property
-    def out_point(self) -> "Position":
+    def out_point(self) -> Position:
         """End position within the source file (exclusive)."""
         ...
 
     @property
-    def source_duration(self) -> Optional["Duration"]:
+    def source_duration(self) -> Duration | None:
         """Total duration of the source file (optional, used for bounds validation)."""
         ...
 
     def __new__(
         cls,
         source_path: str,
-        in_point: "Position",
-        out_point: "Position",
-        source_duration: Optional["Duration"] = None,
-    ) -> "Clip":
+        in_point: Position,
+        out_point: Position,
+        source_duration: Duration | None = None,
+    ) -> Clip:
         """Creates a new clip.
 
         Args:
@@ -105,7 +104,7 @@ class Clip:
         """
         ...
 
-    def duration(self) -> Optional["Duration"]:
+    def duration(self) -> Duration | None:
         """Calculates the duration of this clip.
 
         Returns:
@@ -137,16 +136,16 @@ class ClipValidationError:
         ...
 
     @property
-    def actual(self) -> Optional[str]:
+    def actual(self) -> str | None:
         """The actual value that failed validation (optional)."""
         ...
 
     @property
-    def expected(self) -> Optional[str]:
+    def expected(self) -> str | None:
         """The expected value or constraint (optional)."""
         ...
 
-    def __new__(cls, field: str, message: str) -> "ClipValidationError":
+    def __new__(cls, field: str, message: str) -> ClipValidationError:
         """Creates a new validation error with just a field and message.
 
         Args:
@@ -161,7 +160,7 @@ class ClipValidationError:
     @staticmethod
     def with_values_py(
         field: str, message: str, actual: str, expected: str
-    ) -> "ClipValidationError":
+    ) -> ClipValidationError:
         """Creates a validation error with actual and expected values.
 
         Args:
@@ -179,7 +178,7 @@ class ClipValidationError:
     def __str__(self) -> str: ...
 
 
-def py_validate_clip(clip: Clip) -> list[ClipValidationError]:
+def validate_clip(clip: Clip) -> list[ClipValidationError]:
     """Validates a single clip and returns all validation errors.
 
     This function checks:
@@ -197,7 +196,7 @@ def py_validate_clip(clip: Clip) -> list[ClipValidationError]:
     ...
 
 
-def py_validate_clips(clips: list[Clip]) -> list[tuple[int, ClipValidationError]]:
+def validate_clips(clips: list[Clip]) -> list[tuple[int, ClipValidationError]]:
     """Validates a list of clips and returns all validation errors.
 
     Unlike single-clip validation, this function collects errors from all clips
@@ -217,7 +216,7 @@ def py_validate_clips(clips: list[Clip]) -> list[tuple[int, ClipValidationError]
 class FrameRate:
     """A frame rate represented as a rational number (numerator/denominator)."""
 
-    def __new__(cls, numerator: int, denominator: int) -> "FrameRate":
+    def __new__(cls, numerator: int, denominator: int) -> FrameRate:
         """Creates a new frame rate from numerator and denominator.
 
         Args:
@@ -233,32 +232,32 @@ class FrameRate:
         ...
 
     @staticmethod
-    def fps_24() -> "FrameRate":
+    def fps_24() -> FrameRate:
         """Returns a 24 fps frame rate (film standard)."""
         ...
 
     @staticmethod
-    def fps_25() -> "FrameRate":
+    def fps_25() -> FrameRate:
         """Returns a 25 fps frame rate (PAL/SECAM standard)."""
         ...
 
     @staticmethod
-    def fps_30() -> "FrameRate":
+    def fps_30() -> FrameRate:
         """Returns a 30 fps frame rate (NTSC compatible integer rate)."""
         ...
 
     @staticmethod
-    def fps_60() -> "FrameRate":
+    def fps_60() -> FrameRate:
         """Returns a 60 fps frame rate (high frame rate video)."""
         ...
 
     @staticmethod
-    def ntsc_30() -> "FrameRate":
+    def ntsc_30() -> FrameRate:
         """Returns a 29.97 fps frame rate (NTSC broadcast standard)."""
         ...
 
     @staticmethod
-    def ntsc_60() -> "FrameRate":
+    def ntsc_60() -> FrameRate:
         """Returns a 59.94 fps frame rate (NTSC high frame rate)."""
         ...
 
@@ -284,7 +283,7 @@ class Position:
     """A position on a timeline represented as a frame count."""
 
     @staticmethod
-    def from_frames(frames: int) -> "Position":
+    def from_frames(frames: int) -> Position:
         """Creates a position from a frame count.
 
         Args:
@@ -296,7 +295,7 @@ class Position:
         ...
 
     @staticmethod
-    def from_seconds(seconds: float, frame_rate: FrameRate) -> "Position":
+    def from_seconds(seconds: float, frame_rate: FrameRate) -> Position:
         """Creates a position from a time in seconds.
 
         Args:
@@ -311,7 +310,7 @@ class Position:
     @staticmethod
     def from_timecode(
         hours: int, minutes: int, seconds: int, frames: int, frame_rate: FrameRate
-    ) -> "Position":
+    ) -> Position:
         """Creates a position from a timecode.
 
         Args:
@@ -346,19 +345,19 @@ class Position:
 
     def __repr__(self) -> str: ...
     def __eq__(self, other: object) -> bool: ...
-    def __lt__(self, other: "Position") -> bool: ...
-    def __le__(self, other: "Position") -> bool: ...
-    def __gt__(self, other: "Position") -> bool: ...
-    def __ge__(self, other: "Position") -> bool: ...
-    def __add__(self, other: "Duration") -> "Position": ...
-    def __sub__(self, other: "Duration") -> "Position": ...
+    def __lt__(self, other: Position) -> bool: ...
+    def __le__(self, other: Position) -> bool: ...
+    def __gt__(self, other: Position) -> bool: ...
+    def __ge__(self, other: Position) -> bool: ...
+    def __add__(self, other: Duration) -> Position: ...
+    def __sub__(self, other: Duration) -> Position: ...
 
 
 class Duration:
     """A duration on a timeline represented as a frame count."""
 
     @staticmethod
-    def from_frames(frames: int) -> "Duration":
+    def from_frames(frames: int) -> Duration:
         """Creates a duration from a frame count.
 
         Args:
@@ -370,7 +369,7 @@ class Duration:
         ...
 
     @staticmethod
-    def from_seconds(seconds: float, frame_rate: FrameRate) -> "Duration":
+    def from_seconds(seconds: float, frame_rate: FrameRate) -> Duration:
         """Creates a duration from a time in seconds.
 
         Args:
@@ -383,7 +382,7 @@ class Duration:
         ...
 
     @staticmethod
-    def between(start: Position, end: Position) -> "Duration":
+    def between(start: Position, end: Position) -> Duration:
         """Creates a duration as the difference between two positions.
 
         Args:
@@ -415,17 +414,17 @@ class Duration:
 
     def __repr__(self) -> str: ...
     def __eq__(self, other: object) -> bool: ...
-    def __lt__(self, other: "Duration") -> bool: ...
-    def __le__(self, other: "Duration") -> bool: ...
-    def __gt__(self, other: "Duration") -> bool: ...
-    def __ge__(self, other: "Duration") -> bool: ...
-    def __add__(self, other: "Duration") -> "Duration": ...
+    def __lt__(self, other: Duration) -> bool: ...
+    def __le__(self, other: Duration) -> bool: ...
+    def __gt__(self, other: Duration) -> bool: ...
+    def __ge__(self, other: Duration) -> bool: ...
+    def __add__(self, other: Duration) -> Duration: ...
 
 
 class TimeRange:
     """A contiguous time range represented as a half-open interval [start, end)."""
 
-    def __new__(cls, start: Position, end: Position) -> "TimeRange":
+    def __new__(cls, start: Position, end: Position) -> TimeRange:
         """Creates a new time range from start and end positions.
 
         Args:
@@ -455,31 +454,31 @@ class TimeRange:
         """The duration of the range."""
         ...
 
-    def overlaps(self, other: "TimeRange") -> bool:
+    def overlaps(self, other: TimeRange) -> bool:
         """Checks if this range overlaps with another range."""
         ...
 
-    def adjacent(self, other: "TimeRange") -> bool:
+    def adjacent(self, other: TimeRange) -> bool:
         """Checks if this range is adjacent to another range."""
         ...
 
-    def overlap(self, other: "TimeRange") -> Optional["TimeRange"]:
+    def overlap(self, other: TimeRange) -> TimeRange | None:
         """Returns the overlap region between this range and another, if any."""
         ...
 
-    def gap(self, other: "TimeRange") -> Optional["TimeRange"]:
+    def gap(self, other: TimeRange) -> TimeRange | None:
         """Returns the gap between this range and another, if any."""
         ...
 
-    def intersection(self, other: "TimeRange") -> Optional["TimeRange"]:
+    def intersection(self, other: TimeRange) -> TimeRange | None:
         """Returns the intersection of this range and another."""
         ...
 
-    def union(self, other: "TimeRange") -> Optional["TimeRange"]:
+    def union(self, other: TimeRange) -> TimeRange | None:
         """Returns the union of this range and another, if they are contiguous."""
         ...
 
-    def difference(self, other: "TimeRange") -> list["TimeRange"]:
+    def difference(self, other: TimeRange) -> list[TimeRange]:
         """Returns the difference of this range minus another."""
         ...
 
@@ -540,63 +539,63 @@ def total_coverage(ranges: list[TimeRange]) -> Duration:
 class FFmpegCommand:
     """A type-safe builder for constructing FFmpeg command arguments."""
 
-    def __new__(cls) -> "FFmpegCommand":
+    def __new__(cls) -> FFmpegCommand:
         """Creates a new empty FFmpeg command builder."""
         ...
 
-    def overwrite(self, yes: bool) -> "FFmpegCommand":
+    def overwrite(self, yes: bool) -> FFmpegCommand:
         """Sets the overwrite flag (-y)."""
         ...
 
-    def loglevel(self, level: str) -> "FFmpegCommand":
+    def loglevel(self, level: str) -> FFmpegCommand:
         """Sets the log level (-loglevel)."""
         ...
 
-    def input(self, path: str) -> "FFmpegCommand":
+    def input(self, path: str) -> FFmpegCommand:
         """Adds an input file (-i)."""
         ...
 
-    def seek(self, seconds: float) -> "FFmpegCommand":
+    def seek(self, seconds: float) -> FFmpegCommand:
         """Sets the seek position (-ss) for the most recent input."""
         ...
 
-    def duration(self, seconds: float) -> "FFmpegCommand":
+    def duration(self, seconds: float) -> FFmpegCommand:
         """Sets the duration limit (-t) for the most recent input."""
         ...
 
-    def stream_loop(self, count: int) -> "FFmpegCommand":
+    def stream_loop(self, count: int) -> FFmpegCommand:
         """Sets the stream loop count (-stream_loop) for the most recent input."""
         ...
 
-    def output(self, path: str) -> "FFmpegCommand":
+    def output(self, path: str) -> FFmpegCommand:
         """Adds an output file."""
         ...
 
-    def video_codec(self, codec: str) -> "FFmpegCommand":
+    def video_codec(self, codec: str) -> FFmpegCommand:
         """Sets the video codec (-c:v) for the most recent output."""
         ...
 
-    def audio_codec(self, codec: str) -> "FFmpegCommand":
+    def audio_codec(self, codec: str) -> FFmpegCommand:
         """Sets the audio codec (-c:a) for the most recent output."""
         ...
 
-    def preset(self, preset: str) -> "FFmpegCommand":
+    def preset(self, preset: str) -> FFmpegCommand:
         """Sets the encoding preset (-preset) for the most recent output."""
         ...
 
-    def crf(self, crf: int) -> "FFmpegCommand":
+    def crf(self, crf: int) -> FFmpegCommand:
         """Sets the CRF quality level (-crf) for the most recent output."""
         ...
 
-    def format(self, format: str) -> "FFmpegCommand":
+    def format(self, format: str) -> FFmpegCommand:
         """Sets the output format (-f) for the most recent output."""
         ...
 
-    def filter_complex(self, filter: str) -> "FFmpegCommand":
+    def filter_complex(self, filter: str) -> FFmpegCommand:
         """Sets a complex filtergraph (-filter_complex)."""
         ...
 
-    def map(self, stream: str) -> "FFmpegCommand":
+    def map(self, stream: str) -> FFmpegCommand:
         """Adds a stream mapping (-map) for the most recent output."""
         ...
 
@@ -617,36 +616,36 @@ class FFmpegCommand:
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 
-    def __new__(cls, name: str) -> "Filter":
+    def __new__(cls, name: str) -> Filter:
         """Creates a new filter with the given name."""
         ...
 
-    def param(self, key: str, value: str) -> "Filter":
+    def param(self, key: str, value: str) -> Filter:
         """Adds a parameter to the filter."""
         ...
 
     @staticmethod
-    def scale(width: int, height: int) -> "Filter":
+    def scale(width: int, height: int) -> Filter:
         """Creates a scale filter for resizing video."""
         ...
 
     @staticmethod
-    def scale_fit(width: int, height: int) -> "Filter":
+    def scale_fit(width: int, height: int) -> Filter:
         """Creates a scale filter that maintains aspect ratio."""
         ...
 
     @staticmethod
-    def concat(n: int, v: int, a: int) -> "Filter":
+    def concat(n: int, v: int, a: int) -> Filter:
         """Creates a concat filter for concatenating multiple inputs."""
         ...
 
     @staticmethod
-    def pad(width: int, height: int, color: str) -> "Filter":
+    def pad(width: int, height: int, color: str) -> Filter:
         """Creates a pad filter to add borders and center content."""
         ...
 
     @staticmethod
-    def format(pix_fmt: str) -> "Filter":
+    def format(pix_fmt: str) -> Filter:
         """Creates a format filter for pixel format conversion."""
         ...
 
@@ -657,19 +656,19 @@ class Filter:
 class FilterChain:
     """A chain of filters connected in sequence."""
 
-    def __new__(cls) -> "FilterChain":
+    def __new__(cls) -> FilterChain:
         """Creates a new empty filter chain."""
         ...
 
-    def input(self, label: str) -> "FilterChain":
+    def input(self, label: str) -> FilterChain:
         """Adds an input label to the chain."""
         ...
 
-    def filter(self, f: Filter) -> "FilterChain":
+    def filter(self, f: Filter) -> FilterChain:
         """Adds a filter to the chain."""
         ...
 
-    def output(self, label: str) -> "FilterChain":
+    def output(self, label: str) -> FilterChain:
         """Adds an output label to the chain."""
         ...
 
@@ -680,11 +679,11 @@ class FilterChain:
 class FilterGraph:
     """A complete filter graph composed of multiple filter chains."""
 
-    def __new__(cls) -> "FilterGraph":
+    def __new__(cls) -> FilterGraph:
         """Creates a new empty filter graph."""
         ...
 
-    def chain(self, chain: FilterChain) -> "FilterGraph":
+    def chain(self, chain: FilterChain) -> FilterGraph:
         """Adds a filter chain to the graph."""
         ...
 

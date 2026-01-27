@@ -341,53 +341,63 @@ impl TimeRange {
 
     /// Returns the start position of the range.
     #[getter]
+    #[pyo3(name = "start")]
     fn py_start(&self) -> Position {
         self.start()
     }
 
     /// Returns the end position of the range.
     #[getter]
+    #[pyo3(name = "end")]
     fn py_end(&self) -> Position {
         self.end()
     }
 
     /// Returns the duration of the range.
     #[getter]
+    #[pyo3(name = "duration")]
     fn py_duration(&self) -> Duration {
         self.duration()
     }
 
     /// Checks if this range overlaps with another range.
+    #[pyo3(name = "overlaps")]
     fn py_overlaps(&self, other: &TimeRange) -> bool {
         self.overlaps(other)
     }
 
     /// Checks if this range is adjacent to another range.
+    #[pyo3(name = "adjacent")]
     fn py_adjacent(&self, other: &TimeRange) -> bool {
         self.adjacent(other)
     }
 
     /// Returns the overlap region between this range and another, if any.
+    #[pyo3(name = "overlap")]
     fn py_overlap(&self, other: &TimeRange) -> Option<TimeRange> {
         self.overlap(other)
     }
 
     /// Returns the gap between this range and another, if any.
+    #[pyo3(name = "gap")]
     fn py_gap(&self, other: &TimeRange) -> Option<TimeRange> {
         self.gap(other)
     }
 
     /// Returns the intersection of this range and another.
+    #[pyo3(name = "intersection")]
     fn py_intersection(&self, other: &TimeRange) -> Option<TimeRange> {
         self.intersection(other)
     }
 
     /// Returns the union of this range and another, if they are contiguous.
+    #[pyo3(name = "union")]
     fn py_union(&self, other: &TimeRange) -> Option<TimeRange> {
         self.union(other)
     }
 
     /// Returns the difference of this range minus another.
+    #[pyo3(name = "difference")]
     fn py_difference(&self, other: &TimeRange) -> Vec<TimeRange> {
         self.difference(other)
     }

@@ -6,43 +6,99 @@ These stubs are generated from the Rust code using pyo3-stub-gen.
 
 # Re-export all types from _core
 from stoat_ferret_core._core import (
-    # Utility
-    health_check as health_check,
     # Clip types
     Clip as Clip,
+)
+from stoat_ferret_core._core import (
     ClipValidationError as ClipValidationError,
-    py_validate_clip as py_validate_clip,
-    py_validate_clips as py_validate_clips,
-    # Timeline types
-    FrameRate as FrameRate,
-    Position as Position,
+)
+from stoat_ferret_core._core import (
+    CommandError as CommandError,
+)
+from stoat_ferret_core._core import (
     Duration as Duration,
-    TimeRange as TimeRange,
-    # TimeRange list operations
-    find_gaps as find_gaps,
-    merge_ranges as merge_ranges,
-    total_coverage as total_coverage,
+)
+from stoat_ferret_core._core import (
     # FFmpeg command building
     FFmpegCommand as FFmpegCommand,
+)
+from stoat_ferret_core._core import (
     Filter as Filter,
+)
+from stoat_ferret_core._core import (
     FilterChain as FilterChain,
+)
+from stoat_ferret_core._core import (
     FilterGraph as FilterGraph,
-    # Filter helpers
-    scale_filter as scale_filter,
-    concat_filter as concat_filter,
-    # Sanitization functions
-    escape_filter_text as escape_filter_text,
-    validate_path as validate_path,
-    validate_crf as validate_crf,
-    validate_speed as validate_speed,
-    validate_volume as validate_volume,
-    validate_video_codec as validate_video_codec,
-    validate_audio_codec as validate_audio_codec,
-    validate_preset as validate_preset,
+)
+from stoat_ferret_core._core import (
+    # Timeline types
+    FrameRate as FrameRate,
+)
+from stoat_ferret_core._core import (
+    Position as Position,
+)
+from stoat_ferret_core._core import (
+    SanitizationError as SanitizationError,
+)
+from stoat_ferret_core._core import (
+    TimeRange as TimeRange,
+)
+from stoat_ferret_core._core import (
     # Exceptions
     ValidationError as ValidationError,
-    CommandError as CommandError,
-    SanitizationError as SanitizationError,
+)
+from stoat_ferret_core._core import (
+    concat_filter as concat_filter,
+)
+from stoat_ferret_core._core import (
+    # Sanitization functions
+    escape_filter_text as escape_filter_text,
+)
+from stoat_ferret_core._core import (
+    # TimeRange list operations
+    find_gaps as find_gaps,
+)
+from stoat_ferret_core._core import (
+    # Utility
+    health_check as health_check,
+)
+from stoat_ferret_core._core import (
+    merge_ranges as merge_ranges,
+)
+from stoat_ferret_core._core import (
+    # Filter helpers
+    scale_filter as scale_filter,
+)
+from stoat_ferret_core._core import (
+    total_coverage as total_coverage,
+)
+from stoat_ferret_core._core import (
+    validate_audio_codec as validate_audio_codec,
+)
+from stoat_ferret_core._core import (
+    validate_clip as validate_clip,
+)
+from stoat_ferret_core._core import (
+    validate_clips as validate_clips,
+)
+from stoat_ferret_core._core import (
+    validate_crf as validate_crf,
+)
+from stoat_ferret_core._core import (
+    validate_path as validate_path,
+)
+from stoat_ferret_core._core import (
+    validate_preset as validate_preset,
+)
+from stoat_ferret_core._core import (
+    validate_speed as validate_speed,
+)
+from stoat_ferret_core._core import (
+    validate_video_codec as validate_video_codec,
+)
+from stoat_ferret_core._core import (
+    validate_volume as validate_volume,
 )
 
 __all__ = [
@@ -51,8 +107,8 @@ __all__ = [
     # Clip types
     "Clip",
     "ClipValidationError",
-    "py_validate_clip",
-    "py_validate_clips",
+    "validate_clip",
+    "validate_clips",
     # Timeline types
     "FrameRate",
     "Position",

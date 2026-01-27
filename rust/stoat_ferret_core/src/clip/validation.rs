@@ -389,6 +389,7 @@ pub fn validate_clips(clips: &[Clip]) -> Vec<ClipValidationError> {
 /// A list of validation errors. Empty if the clip is valid.
 #[gen_stub_pyfunction]
 #[pyfunction]
+#[pyo3(name = "validate_clip")]
 pub fn py_validate_clip(clip: &Clip) -> Vec<ValidationError> {
     validate_clip(clip)
 }
@@ -407,6 +408,7 @@ pub fn py_validate_clip(clip: &Clip) -> Vec<ValidationError> {
 /// A list of tuples containing (clip_index, validation_error) for each error found.
 #[gen_stub_pyfunction]
 #[pyfunction]
+#[pyo3(name = "validate_clips")]
 pub fn py_validate_clips(clips: Vec<Clip>) -> Vec<(usize, ValidationError)> {
     let results = validate_clips(&clips);
     // Flatten to (index, error) tuples for easier Python consumption

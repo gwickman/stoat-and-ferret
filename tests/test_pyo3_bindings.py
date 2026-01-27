@@ -15,7 +15,7 @@ class TestTimelineTypes:
     Note: These tests use the actual PyO3 binding API, which differs slightly
     from the Rust API. For example:
     - Position(100) instead of Position.from_frames(100)
-    - pos.py_frames (property) instead of pos.frames()
+    - pos.frames (property) instead of pos.frames()
     - Position.from_secs() instead of Position.from_seconds()
     """
 
@@ -24,8 +24,8 @@ class TestTimelineTypes:
         from stoat_ferret_core import FrameRate
 
         rate = FrameRate(24, 1)
-        assert rate.py_numerator == 24
-        assert rate.py_denominator == 1
+        assert rate.numerator == 24
+        assert rate.denominator == 1
         assert rate.fps == 24.0
 
     def test_framerate_presets(self) -> None:
@@ -51,7 +51,7 @@ class TestTimelineTypes:
         from stoat_ferret_core import Position
 
         pos = Position(100)
-        assert pos.py_frames == 100
+        assert pos.frames == 100
 
     def test_position_from_seconds(self) -> None:
         """Test Position construction from seconds."""
@@ -59,7 +59,7 @@ class TestTimelineTypes:
 
         fps = FrameRate.fps_24()
         pos = Position.from_secs(1.0, fps)
-        assert pos.py_frames == 24
+        assert pos.frames == 24
 
     def test_position_to_seconds(self) -> None:
         """Test Position conversion to seconds."""
@@ -89,7 +89,7 @@ class TestTimelineTypes:
         from stoat_ferret_core import Duration
 
         dur = Duration(100)
-        assert dur.py_frames == 100
+        assert dur.frames == 100
 
     def test_duration_between(self) -> None:
         """Test Duration.between_positions for calculating duration between positions."""
@@ -98,7 +98,7 @@ class TestTimelineTypes:
         start = Position(10)
         end = Position(30)
         dur = Duration.between_positions(start, end)
-        assert dur.py_frames == 20
+        assert dur.frames == 20
 
     def test_duration_between_invalid(self) -> None:
         """Test Duration.between_positions rejects end before start."""
@@ -117,7 +117,7 @@ class TestTimelineTypes:
         dur = Duration(5)
         # Use Duration.end_pos method since Position doesn't have __add__
         result = dur.end_pos(pos)
-        assert result.py_frames == 15
+        assert result.frames == 15
 
     def test_timerange_construction(self) -> None:
         """Test TimeRange construction and properties."""
@@ -126,9 +126,9 @@ class TestTimelineTypes:
         start = Position(10)
         end = Position(20)
         range_ = TimeRange(start, end)
-        assert range_.py_start.py_frames == 10
-        assert range_.py_end.py_frames == 20
-        assert range_.py_duration.py_frames == 10
+        assert range_.start.frames == 10
+        assert range_.end.frames == 20
+        assert range_.duration.frames == 10
 
     def test_timerange_invalid(self) -> None:
         """Test TimeRange rejects end <= start."""
@@ -147,8 +147,8 @@ class TestTimelineTypes:
         b = TimeRange(Position(5), Position(15))
         c = TimeRange(Position(10), Position(20))
 
-        assert a.py_overlaps(b)
-        assert not a.py_overlaps(c)  # Adjacent, not overlapping
+        assert a.overlaps(b)
+        assert not a.overlaps(c)  # Adjacent, not overlapping
 
     def test_timerange_union(self) -> None:
         """Test TimeRange.py_union method."""
@@ -156,10 +156,10 @@ class TestTimelineTypes:
 
         a = TimeRange(Position(0), Position(10))
         b = TimeRange(Position(10), Position(20))
-        union = a.py_union(b)
+        union = a.union(b)
         assert union is not None
-        assert union.py_start.py_frames == 0
-        assert union.py_end.py_frames == 20
+        assert union.start.frames == 0
+        assert union.end.frames == 20
 
 
 class TestFFmpegCommand:
@@ -424,8 +424,8 @@ class TestClip:
 
         clip = Clip("video.mp4", Position(0), Position(100), None)
         assert clip.source_path == "video.mp4"
-        assert clip.in_point.py_frames == 0
-        assert clip.out_point.py_frames == 100
+        assert clip.in_point.frames == 0
+        assert clip.out_point.frames == 100
         assert clip.source_duration is None
 
     def test_clip_with_source_duration(self) -> None:
@@ -434,10 +434,10 @@ class TestClip:
 
         clip = Clip("video.mp4", Position(10), Position(50), Duration(200))
         assert clip.source_path == "video.mp4"
-        assert clip.in_point.py_frames == 10
-        assert clip.out_point.py_frames == 50
+        assert clip.in_point.frames == 10
+        assert clip.out_point.frames == 50
         assert clip.source_duration is not None
-        assert clip.source_duration.py_frames == 200
+        assert clip.source_duration.frames == 200
 
     def test_clip_duration(self) -> None:
         """Test Clip.duration() method."""
@@ -446,7 +446,7 @@ class TestClip:
         clip = Clip("video.mp4", Position(10), Position(50), None)
         dur = clip.duration()
         assert dur is not None
-        assert dur.py_frames == 40
+        assert dur.frames == 40
 
     def test_clip_duration_invalid(self) -> None:
         """Test Clip.duration() returns None for invalid clips."""
@@ -504,53 +504,53 @@ class TestClipValidation:
     """Tests for clip validation functions."""
 
     def test_validate_clip_valid(self) -> None:
-        """Test py_validate_clip returns empty list for valid clip."""
-        from stoat_ferret_core import Clip, Position, py_validate_clip
+        """Test validate_clip returns empty list for valid clip."""
+        from stoat_ferret_core import Clip, Position, validate_clip
 
         clip = Clip("video.mp4", Position(0), Position(100), None)
-        errors = py_validate_clip(clip)
+        errors = validate_clip(clip)
         assert len(errors) == 0
 
     def test_validate_clip_empty_path(self) -> None:
-        """Test py_validate_clip catches empty source path."""
-        from stoat_ferret_core import Clip, Position, py_validate_clip
+        """Test validate_clip catches empty source path."""
+        from stoat_ferret_core import Clip, Position, validate_clip
 
         clip = Clip("", Position(0), Position(100), None)
-        errors = py_validate_clip(clip)
+        errors = validate_clip(clip)
         assert len(errors) == 1
         assert errors[0].field == "source_path"
         assert "empty" in errors[0].message.lower()
 
     def test_validate_clip_out_before_in(self) -> None:
-        """Test py_validate_clip catches out_point <= in_point."""
-        from stoat_ferret_core import Clip, Position, py_validate_clip
+        """Test validate_clip catches out_point <= in_point."""
+        from stoat_ferret_core import Clip, Position, validate_clip
 
         clip = Clip("video.mp4", Position(100), Position(50), None)
-        errors = py_validate_clip(clip)
+        errors = validate_clip(clip)
         assert len(errors) == 1
         assert errors[0].field == "out_point"
         assert errors[0].actual == "50"
         assert errors[0].expected == ">100"
 
     def test_validate_clip_exceeds_duration(self) -> None:
-        """Test py_validate_clip catches points exceeding source duration."""
-        from stoat_ferret_core import Clip, Duration, Position, py_validate_clip
+        """Test validate_clip catches points exceeding source duration."""
+        from stoat_ferret_core import Clip, Duration, Position, validate_clip
 
         clip = Clip("video.mp4", Position(50), Position(150), Duration(100))
-        errors = py_validate_clip(clip)
+        errors = validate_clip(clip)
         assert len(errors) == 1
         assert errors[0].field == "out_point"
 
     def test_validate_clips_batch(self) -> None:
-        """Test py_validate_clips validates multiple clips."""
-        from stoat_ferret_core import Clip, Position, py_validate_clips
+        """Test validate_clips validates multiple clips."""
+        from stoat_ferret_core import Clip, Position, validate_clips
 
         clips = [
             Clip("good.mp4", Position(0), Position(100), None),  # Valid
             Clip("", Position(0), Position(100), None),  # Invalid: empty path
             Clip("bad.mp4", Position(100), Position(50), None),  # Invalid: out < in
         ]
-        errors = py_validate_clips(clips)
+        errors = validate_clips(clips)
         # Should have errors for clips at index 1 and 2
         indices = [err[0] for err in errors]
         assert 1 in indices
@@ -571,8 +571,8 @@ class TestRangeListOperations:
         ]
         gaps = find_gaps(ranges)
         assert len(gaps) == 1
-        assert gaps[0].py_start.py_frames == 10
-        assert gaps[0].py_end.py_frames == 20
+        assert gaps[0].start.frames == 10
+        assert gaps[0].end.frames == 20
 
     def test_find_gaps_empty(self) -> None:
         """Test find_gaps with empty list returns empty list."""
@@ -611,10 +611,10 @@ class TestRangeListOperations:
         ]
         gaps = find_gaps(ranges)
         assert len(gaps) == 2
-        assert gaps[0].py_start.py_frames == 10
-        assert gaps[0].py_end.py_frames == 20
-        assert gaps[1].py_start.py_frames == 30
-        assert gaps[1].py_end.py_frames == 50
+        assert gaps[0].start.frames == 10
+        assert gaps[0].end.frames == 20
+        assert gaps[1].start.frames == 30
+        assert gaps[1].end.frames == 50
 
     def test_merge_ranges_overlapping(self) -> None:
         """Test merge_ranges combines overlapping ranges."""
@@ -626,8 +626,8 @@ class TestRangeListOperations:
         ]
         merged = merge_ranges(ranges)
         assert len(merged) == 1
-        assert merged[0].py_start.py_frames == 0
-        assert merged[0].py_end.py_frames == 25
+        assert merged[0].start.frames == 0
+        assert merged[0].end.frames == 25
 
     def test_merge_ranges_adjacent(self) -> None:
         """Test merge_ranges combines adjacent ranges."""
@@ -639,8 +639,8 @@ class TestRangeListOperations:
         ]
         merged = merge_ranges(ranges)
         assert len(merged) == 1
-        assert merged[0].py_start.py_frames == 0
-        assert merged[0].py_end.py_frames == 20
+        assert merged[0].start.frames == 0
+        assert merged[0].end.frames == 20
 
     def test_merge_ranges_disjoint(self) -> None:
         """Test merge_ranges keeps disjoint ranges separate."""
@@ -671,10 +671,10 @@ class TestRangeListOperations:
         ]
         merged = merge_ranges(ranges)
         assert len(merged) == 2
-        assert merged[0].py_start.py_frames == 0
-        assert merged[0].py_end.py_frames == 15
-        assert merged[1].py_start.py_frames == 20
-        assert merged[1].py_end.py_frames == 30
+        assert merged[0].start.frames == 0
+        assert merged[0].end.frames == 15
+        assert merged[1].start.frames == 20
+        assert merged[1].end.frames == 30
 
     def test_total_coverage_with_overlap(self) -> None:
         """Test total_coverage counts overlapping regions once."""
@@ -685,14 +685,14 @@ class TestRangeListOperations:
             TimeRange(Position(5), Position(15)),  # overlaps by 5
         ]
         total = total_coverage(ranges)
-        assert total.py_frames == 15  # 0-15, not 20
+        assert total.frames == 15  # 0-15, not 20
 
     def test_total_coverage_empty(self) -> None:
         """Test total_coverage with empty list returns zero duration."""
         from stoat_ferret_core import total_coverage
 
         total = total_coverage([])
-        assert total.py_frames == 0
+        assert total.frames == 0
 
     def test_total_coverage_single_range(self) -> None:
         """Test total_coverage with single range."""
@@ -700,7 +700,7 @@ class TestRangeListOperations:
 
         ranges = [TimeRange(Position(0), Position(10))]
         total = total_coverage(ranges)
-        assert total.py_frames == 10
+        assert total.frames == 10
 
     def test_total_coverage_disjoint(self) -> None:
         """Test total_coverage sums disjoint ranges."""
@@ -711,7 +711,7 @@ class TestRangeListOperations:
             TimeRange(Position(20), Position(30)),
         ]
         total = total_coverage(ranges)
-        assert total.py_frames == 20  # 10 + 10
+        assert total.frames == 20  # 10 + 10
 
     def test_total_coverage_duplicate_ranges(self) -> None:
         """Test total_coverage doesn't double-count duplicate ranges."""
@@ -722,7 +722,7 @@ class TestRangeListOperations:
             TimeRange(Position(0), Position(10)),  # Same range twice
         ]
         total = total_coverage(ranges)
-        assert total.py_frames == 10
+        assert total.frames == 10
 
 
 class TestModuleExports:
@@ -737,8 +737,8 @@ class TestModuleExports:
             # Clip types
             "Clip",
             "ClipValidationError",
-            "py_validate_clip",
-            "py_validate_clips",
+            "validate_clip",
+            "validate_clips",
             # Timeline types
             "FrameRate",
             "Position",

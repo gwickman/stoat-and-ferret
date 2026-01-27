@@ -173,6 +173,7 @@ impl Duration {
 
     /// Returns the frame count.
     #[getter]
+    #[pyo3(name = "frames")]
     fn py_frames(&self) -> u64 {
         self.frames()
     }

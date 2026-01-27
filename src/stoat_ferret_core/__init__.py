@@ -8,8 +8,8 @@ Clip Types
 ----------
 - Clip: Video clip representing a segment of a source media file
 - ClipValidationError: Validation error with detailed information
-- py_validate_clip: Validate a single clip
-- py_validate_clips: Validate multiple clips
+- validate_clip: Validate a single clip
+- validate_clips: Validate multiple clips
 
 Timeline Types
 --------------
@@ -68,11 +68,11 @@ try:
         find_gaps,
         health_check,
         merge_ranges,
-        py_validate_clip,
-        py_validate_clips,
         scale_filter,
         total_coverage,
         validate_audio_codec,
+        validate_clip,
+        validate_clips,
         validate_crf,
         validate_path,
         validate_preset,
@@ -93,8 +93,8 @@ except ImportError:  # pragma: no cover
     health_check = _not_built
     Clip = _not_built  # type: ignore[misc,assignment]
     ClipValidationError = _not_built  # type: ignore[misc,assignment]
-    py_validate_clip = _not_built
-    py_validate_clips = _not_built
+    validate_clip = _not_built
+    validate_clips = _not_built
     FrameRate = _not_built  # type: ignore[misc,assignment]
     Position = _not_built  # type: ignore[misc,assignment]
     Duration = _not_built  # type: ignore[misc,assignment]
@@ -127,8 +127,8 @@ __all__ = [
     # Clip types
     "Clip",
     "ClipValidationError",
-    "py_validate_clip",
-    "py_validate_clips",
+    "validate_clip",
+    "validate_clips",
     # Timeline types
     "FrameRate",
     "Position",
