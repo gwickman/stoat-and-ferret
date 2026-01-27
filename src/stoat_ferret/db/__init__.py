@@ -1,6 +1,7 @@
 """Database package for stoat-ferret."""
 
-from stoat_ferret.db.models import Video
+from stoat_ferret.db.audit import AuditLogger
+from stoat_ferret.db.models import AuditEntry, Video
 from stoat_ferret.db.repository import (
     InMemoryVideoRepository,
     SQLiteVideoRepository,
@@ -9,6 +10,8 @@ from stoat_ferret.db.repository import (
 from stoat_ferret.db.schema import create_tables
 
 __all__ = [
+    "AuditEntry",
+    "AuditLogger",
     "Video",
     "VideoRepository",
     "SQLiteVideoRepository",

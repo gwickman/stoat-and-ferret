@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from stoat_ferret.db.models import Video
+
+if TYPE_CHECKING:
+    from stoat_ferret.db.audit import AuditLogger
 
 
 class VideoRepository(Protocol):
@@ -105,14 +108,20 @@ class VideoRepository(Protocol):
 class SQLiteVideoRepository:
     """SQLite implementation of the VideoRepository protocol."""
 
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    def __init__(
+        self,
+        conn: sqlite3.Connection,
+        audit_logger: AuditLogger | None = None,
+    ) -> None:
         """Initialize the repository with a database connection.
 
         Args:
             conn: SQLite database connection.
+            audit_logger: Optional audit logger for tracking changes.
         """
         self._conn = conn
         self._conn.row_factory = sqlite3.Row
+        self._audit = audit_logger
 
     def add(self, video: Video) -> Video:
         """Add a video to the repository."""
@@ -145,6 +154,8 @@ class SQLiteVideoRepository:
                 ),
             )
             self._conn.commit()
+            if self._audit:
+                self._audit.log_change("INSERT", "video", video.id)
         except sqlite3.IntegrityError as e:
             raise ValueError(f"Video already exists: {e}") from e
         return video
@@ -185,6 +196,7 @@ class SQLiteVideoRepository:
 
     def update(self, video: Video) -> Video:
         """Update an existing video."""
+        old = self.get(video.id) if self._audit else None
         cursor = self._conn.execute(
             """
             UPDATE videos SET
@@ -221,13 +233,42 @@ class SQLiteVideoRepository:
         self._conn.commit()
         if cursor.rowcount == 0:
             raise ValueError(f"Video {video.id} does not exist")
+        if self._audit and old:
+            changes = self._compute_diff(old, video)
+            self._audit.log_change("UPDATE", "video", video.id, changes)
         return video
+
+    def _compute_diff(self, old: Video, new: Video) -> dict[str, object]:
+        """Compute differences between old and new video states."""
+        changes: dict[str, object] = {}
+        fields = [
+            "path",
+            "filename",
+            "duration_frames",
+            "frame_rate_numerator",
+            "frame_rate_denominator",
+            "width",
+            "height",
+            "video_codec",
+            "audio_codec",
+            "file_size",
+            "thumbnail_path",
+        ]
+        for field in fields:
+            old_val = getattr(old, field)
+            new_val = getattr(new, field)
+            if old_val != new_val:
+                changes[field] = {"old": old_val, "new": new_val}
+        return changes
 
     def delete(self, id: str) -> bool:
         """Delete a video by its ID."""
         cursor = self._conn.execute("DELETE FROM videos WHERE id = ?", (id,))
         self._conn.commit()
-        return cursor.rowcount > 0
+        deleted = cursor.rowcount > 0
+        if deleted and self._audit:
+            self._audit.log_change("DELETE", "video", id)
+        return deleted
 
     def _row_to_video(self, row: sqlite3.Row) -> Video:
         """Convert a database row to a Video object."""

@@ -7,6 +7,7 @@ import sqlite3
 # Table names
 TABLE_VIDEOS = "videos"
 TABLE_VIDEOS_FTS = "videos_fts"
+TABLE_AUDIT_LOG = "audit_log"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -62,12 +63,29 @@ CREATE TRIGGER IF NOT EXISTS videos_fts_update AFTER UPDATE ON videos BEGIN
 END;
 """
 
+AUDIT_LOG_TABLE = """
+CREATE TABLE IF NOT EXISTS audit_log (
+    id TEXT PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    changes_json TEXT,
+    context TEXT
+);
+"""
+
+AUDIT_LOG_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_id, timestamp);
+"""
+
 
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
 
     Creates the videos table, path index, FTS5 virtual table,
-    and triggers to keep FTS in sync with the videos table.
+    triggers to keep FTS in sync with the videos table,
+    and the audit_log table for tracking data modifications.
 
     Args:
         conn: SQLite database connection.
@@ -79,4 +97,6 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(VIDEOS_FTS_INSERT_TRIGGER)
     cursor.execute(VIDEOS_FTS_DELETE_TRIGGER)
     cursor.execute(VIDEOS_FTS_UPDATE_TRIGGER)
+    cursor.execute(AUDIT_LOG_TABLE)
+    cursor.execute(AUDIT_LOG_INDEX)
     conn.commit()
