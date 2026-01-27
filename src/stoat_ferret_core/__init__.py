@@ -50,37 +50,28 @@ from __future__ import annotations
 
 try:
     from stoat_ferret_core._core import (
-        # Clip types
         Clip,
         ClipValidationError,
-        # Exceptions
         CommandError,
         Duration,
-        # FFmpeg command building
         FFmpegCommand,
         Filter,
         FilterChain,
         FilterGraph,
-        # Timeline types
         FrameRate,
         Position,
         SanitizationError,
         TimeRange,
         ValidationError,
-        # TimeRange list operations
-        find_gaps,
-        merge_ranges,
-        total_coverage,
         concat_filter,
-        # Sanitization functions
         escape_filter_text,
-        # Utility function
+        find_gaps,
         health_check,
-        # Clip validation functions
+        merge_ranges,
         py_validate_clip,
         py_validate_clips,
-        # Filter helper functions
         scale_filter,
+        total_coverage,
         validate_audio_codec,
         validate_crf,
         validate_path,
