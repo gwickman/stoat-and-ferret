@@ -108,6 +108,84 @@ Default to KISS + YAGNI for new code. Refactor to DRY and SOLID (SRP/DIP/ISP bas
 
 ---
 
+## PyO3 Bindings
+
+### Incremental Binding Rule
+
+When implementing new Rust types or functions, add PyO3 bindings in the SAME feature. Do not defer bindings to a later feature—this creates tech debt that accumulates.
+
+**Wrong:** Implement Rust type in feature 1, add bindings in feature 5.
+**Right:** Implement Rust type AND bindings together in feature 1.
+
+### Stub Regeneration
+
+After modifying any PyO3 bindings, regenerate type stubs:
+
+```bash
+cd rust/stoat_ferret_core
+cargo run --bin stub_gen
+```
+
+CI verifies stubs match the Rust API. Forgetting to regenerate will cause CI failure.
+
+### Naming Convention
+
+Use `py_` prefix for Rust method names, with `#[pyo3(name = "...")]` to expose clean names to Python:
+
+```rust
+#[pymethods]
+impl MyType {
+    #[pyo3(name = "calculate")]
+    fn py_calculate(&self, value: i32) -> i32 {
+        // Implementation here
+    }
+}
+```
+
+This allows:
+- Rust: `my_type.py_calculate(5)` (internal Rust call)
+- Python: `my_type.calculate(5)` (clean API, no py_ prefix visible)
+
+The `py_` prefix distinguishes PyO3 binding methods from pure Rust methods, making it clear which methods are part of the Python API.
+
+### Example: Complete Type with Bindings
+
+```rust
+use pyo3::prelude::*;
+use pyo3::exceptions::PyValueError;
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct Segment {
+    #[pyo3(get)]
+    pub start: u64,
+    #[pyo3(get)]
+    pub end: u64,
+}
+
+#[pymethods]
+impl Segment {
+    #[new]
+    fn py_new(start: u64, end: u64) -> PyResult<Self> {
+        if end <= start {
+            return Err(PyValueError::new_err("end must be > start"));
+        }
+        Ok(Self { start, end })
+    }
+
+    #[pyo3(name = "length")]
+    fn py_length(&self) -> u64 {
+        self.end - self.start
+    }
+}
+```
+
+Always regenerate stubs after adding or modifying bindings.
+
+---
+
 ## PR Workflow
 
 After completing code changes, follow this workflow:
