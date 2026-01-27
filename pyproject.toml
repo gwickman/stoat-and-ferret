@@ -7,6 +7,8 @@ readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
     "alembic>=1.13",
+    "structlog>=24.0",
+    "prometheus-client>=0.20",
 ]
 
 # Build system: Use maturin when building with Rust component
