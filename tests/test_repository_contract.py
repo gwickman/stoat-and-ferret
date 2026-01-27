@@ -9,7 +9,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Generator
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -20,7 +20,7 @@ from stoat_ferret.db.schema import create_tables
 
 def make_test_video(**kwargs: object) -> Video:
     """Create a test video with default values."""
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     defaults: dict[str, object] = {
         "id": Video.new_id(),
         "path": f"/videos/{Video.new_id()}.mp4",
@@ -149,7 +149,7 @@ class TestListVideos:
 
     def test_list_orders_by_created_at_descending(self, repository: RepositoryType) -> None:
         """Videos are returned newest first."""
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         old_video = make_test_video(created_at=now - timedelta(hours=1))
         new_video = make_test_video(created_at=now)
 
@@ -215,7 +215,7 @@ class TestUpdate:
         video = make_test_video(filename="original.mp4")
         repository.add(video)
 
-        updated = replace(video, filename="updated.mp4", updated_at=datetime.now(UTC))
+        updated = replace(video, filename="updated.mp4", updated_at=datetime.now(timezone.utc))
         repository.update(updated)
 
         retrieved = repository.get(video.id)
