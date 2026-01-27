@@ -487,6 +487,54 @@ class TimeRange:
     def __eq__(self, other: object) -> bool: ...
 
 
+# ========== TimeRange List Operations ==========
+
+
+def find_gaps(ranges: list[TimeRange]) -> list[TimeRange]:
+    """Finds gaps between non-overlapping portions of the given ranges.
+
+    The ranges are sorted by start position and merged, then gaps
+    between merged ranges are returned.
+
+    Args:
+        ranges: List of TimeRange objects to find gaps between.
+
+    Returns:
+        List of TimeRange objects representing the gaps between input ranges.
+    """
+    ...
+
+
+def merge_ranges(ranges: list[TimeRange]) -> list[TimeRange]:
+    """Merges overlapping and adjacent ranges into non-overlapping ranges.
+
+    The result is a minimal set of non-overlapping, non-adjacent ranges
+    that cover the same time as the input ranges.
+
+    Args:
+        ranges: List of TimeRange objects to merge.
+
+    Returns:
+        List of merged TimeRange objects with no overlaps or adjacencies.
+    """
+    ...
+
+
+def total_coverage(ranges: list[TimeRange]) -> Duration:
+    """Calculates the total duration covered by the given ranges.
+
+    Overlapping ranges are merged before calculating the total,
+    so overlapping portions are only counted once.
+
+    Args:
+        ranges: List of TimeRange objects to calculate coverage for.
+
+    Returns:
+        Duration representing the total time covered by all ranges.
+    """
+    ...
+
+
 # ========== FFmpeg Command Building ==========
 
 class FFmpegCommand:

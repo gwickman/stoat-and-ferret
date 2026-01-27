@@ -18,6 +18,10 @@ from stoat_ferret_core._core import (
     Position as Position,
     Duration as Duration,
     TimeRange as TimeRange,
+    # TimeRange list operations
+    find_gaps as find_gaps,
+    merge_ranges as merge_ranges,
+    total_coverage as total_coverage,
     # FFmpeg command building
     FFmpegCommand as FFmpegCommand,
     Filter as Filter,
@@ -54,6 +58,10 @@ __all__ = [
     "Position",
     "Duration",
     "TimeRange",
+    # TimeRange list operations
+    "find_gaps",
+    "merge_ranges",
+    "total_coverage",
     # FFmpeg command building
     "FFmpegCommand",
     "Filter",

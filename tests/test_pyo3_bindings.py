@@ -558,6 +558,173 @@ class TestClipValidation:
         assert 0 not in indices
 
 
+class TestRangeListOperations:
+    """Tests for TimeRange list operations (find_gaps, merge_ranges, total_coverage)."""
+
+    def test_find_gaps_basic(self) -> None:
+        """Test find_gaps returns gaps between non-overlapping ranges."""
+        from stoat_ferret_core import Position, TimeRange, find_gaps
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(20), Position(30)),
+        ]
+        gaps = find_gaps(ranges)
+        assert len(gaps) == 1
+        assert gaps[0].py_start.py_frames == 10
+        assert gaps[0].py_end.py_frames == 20
+
+    def test_find_gaps_empty(self) -> None:
+        """Test find_gaps with empty list returns empty list."""
+        from stoat_ferret_core import find_gaps
+
+        gaps = find_gaps([])
+        assert gaps == []
+
+    def test_find_gaps_single_range(self) -> None:
+        """Test find_gaps with single range returns empty list."""
+        from stoat_ferret_core import Position, TimeRange, find_gaps
+
+        ranges = [TimeRange(Position(0), Position(10))]
+        gaps = find_gaps(ranges)
+        assert gaps == []
+
+    def test_find_gaps_overlapping(self) -> None:
+        """Test find_gaps with overlapping ranges returns no gaps."""
+        from stoat_ferret_core import Position, TimeRange, find_gaps
+
+        ranges = [
+            TimeRange(Position(0), Position(15)),
+            TimeRange(Position(10), Position(20)),
+        ]
+        gaps = find_gaps(ranges)
+        assert gaps == []
+
+    def test_find_gaps_multiple(self) -> None:
+        """Test find_gaps with multiple gaps."""
+        from stoat_ferret_core import Position, TimeRange, find_gaps
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(20), Position(30)),
+            TimeRange(Position(50), Position(60)),
+        ]
+        gaps = find_gaps(ranges)
+        assert len(gaps) == 2
+        assert gaps[0].py_start.py_frames == 10
+        assert gaps[0].py_end.py_frames == 20
+        assert gaps[1].py_start.py_frames == 30
+        assert gaps[1].py_end.py_frames == 50
+
+    def test_merge_ranges_overlapping(self) -> None:
+        """Test merge_ranges combines overlapping ranges."""
+        from stoat_ferret_core import Position, TimeRange, merge_ranges
+
+        ranges = [
+            TimeRange(Position(0), Position(15)),
+            TimeRange(Position(10), Position(25)),
+        ]
+        merged = merge_ranges(ranges)
+        assert len(merged) == 1
+        assert merged[0].py_start.py_frames == 0
+        assert merged[0].py_end.py_frames == 25
+
+    def test_merge_ranges_adjacent(self) -> None:
+        """Test merge_ranges combines adjacent ranges."""
+        from stoat_ferret_core import Position, TimeRange, merge_ranges
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(10), Position(20)),
+        ]
+        merged = merge_ranges(ranges)
+        assert len(merged) == 1
+        assert merged[0].py_start.py_frames == 0
+        assert merged[0].py_end.py_frames == 20
+
+    def test_merge_ranges_disjoint(self) -> None:
+        """Test merge_ranges keeps disjoint ranges separate."""
+        from stoat_ferret_core import Position, TimeRange, merge_ranges
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(20), Position(30)),
+        ]
+        merged = merge_ranges(ranges)
+        assert len(merged) == 2
+
+    def test_merge_ranges_empty(self) -> None:
+        """Test merge_ranges with empty list returns empty list."""
+        from stoat_ferret_core import merge_ranges
+
+        merged = merge_ranges([])
+        assert merged == []
+
+    def test_merge_ranges_unsorted(self) -> None:
+        """Test merge_ranges handles unsorted input."""
+        from stoat_ferret_core import Position, TimeRange, merge_ranges
+
+        ranges = [
+            TimeRange(Position(20), Position(30)),
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(5), Position(15)),
+        ]
+        merged = merge_ranges(ranges)
+        assert len(merged) == 2
+        assert merged[0].py_start.py_frames == 0
+        assert merged[0].py_end.py_frames == 15
+        assert merged[1].py_start.py_frames == 20
+        assert merged[1].py_end.py_frames == 30
+
+    def test_total_coverage_with_overlap(self) -> None:
+        """Test total_coverage counts overlapping regions once."""
+        from stoat_ferret_core import Position, TimeRange, total_coverage
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(5), Position(15)),  # overlaps by 5
+        ]
+        total = total_coverage(ranges)
+        assert total.py_frames == 15  # 0-15, not 20
+
+    def test_total_coverage_empty(self) -> None:
+        """Test total_coverage with empty list returns zero duration."""
+        from stoat_ferret_core import total_coverage
+
+        total = total_coverage([])
+        assert total.py_frames == 0
+
+    def test_total_coverage_single_range(self) -> None:
+        """Test total_coverage with single range."""
+        from stoat_ferret_core import Position, TimeRange, total_coverage
+
+        ranges = [TimeRange(Position(0), Position(10))]
+        total = total_coverage(ranges)
+        assert total.py_frames == 10
+
+    def test_total_coverage_disjoint(self) -> None:
+        """Test total_coverage sums disjoint ranges."""
+        from stoat_ferret_core import Position, TimeRange, total_coverage
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(20), Position(30)),
+        ]
+        total = total_coverage(ranges)
+        assert total.py_frames == 20  # 10 + 10
+
+    def test_total_coverage_duplicate_ranges(self) -> None:
+        """Test total_coverage doesn't double-count duplicate ranges."""
+        from stoat_ferret_core import Position, TimeRange, total_coverage
+
+        ranges = [
+            TimeRange(Position(0), Position(10)),
+            TimeRange(Position(0), Position(10)),  # Same range twice
+        ]
+        total = total_coverage(ranges)
+        assert total.py_frames == 10
+
+
 class TestModuleExports:
     """Tests verifying module exports are correct."""
 
@@ -577,6 +744,11 @@ class TestModuleExports:
             "Position",
             "Duration",
             "TimeRange",
+            # TimeRange list operations
+            "find_gaps",
+            "merge_ranges",
+            "total_coverage",
+            # FFmpeg
             "FFmpegCommand",
             "Filter",
             "FilterChain",

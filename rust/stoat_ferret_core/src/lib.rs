@@ -55,6 +55,11 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<timeline::Duration>()?;
     m.add_class::<timeline::TimeRange>()?;
 
+    // Register timeline range list operations
+    m.add_function(wrap_pyfunction!(timeline::py_find_gaps, m)?)?;
+    m.add_function(wrap_pyfunction!(timeline::py_merge_ranges, m)?)?;
+    m.add_function(wrap_pyfunction!(timeline::py_total_coverage, m)?)?;
+
     // Register clip types
     m.add_class::<clip::Clip>()?;
     m.add_class::<clip::validation::ValidationError>()?;

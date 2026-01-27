@@ -42,7 +42,10 @@ mod range;
 pub use duration::Duration;
 pub use framerate::FrameRate;
 pub use position::Position;
-pub use range::{find_gaps, merge_ranges, total_coverage, RangeError, TimeRange};
+pub use range::{
+    find_gaps, merge_ranges, py_find_gaps, py_merge_ranges, py_total_coverage, total_coverage,
+    RangeError, TimeRange,
+};
 
 #[cfg(test)]
 mod tests {
