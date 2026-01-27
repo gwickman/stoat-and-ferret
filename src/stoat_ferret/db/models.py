@@ -8,6 +8,28 @@ from datetime import datetime
 
 
 @dataclass
+class AuditEntry:
+    """Audit log entry for tracking data modifications.
+
+    Records changes made to entities in the database, including
+    the operation type, affected entity, and any field changes.
+    """
+
+    id: str
+    timestamp: datetime
+    operation: str  # INSERT, UPDATE, DELETE
+    entity_type: str
+    entity_id: str
+    changes_json: str | None = None
+    context: str | None = None
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for an audit entry."""
+        return str(uuid.uuid4())
+
+
+@dataclass
 class Video:
     """Video metadata entity.
 
