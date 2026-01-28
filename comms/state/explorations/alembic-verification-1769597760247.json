@@ -1,10 +1,10 @@
 {
   "exploration_id": "alembic-verification-1769597760247",
   "results_folder": "alembic-verification",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 26292,
   "started_at": "2026-01-28T10:56:00.247521",
-  "updated_at": "2026-01-28T10:56:00.247521",
+  "updated_at": "2026-01-28T10:56:05.762985",
   "completed_at": null,
   "error": null,
   "documents": [],
