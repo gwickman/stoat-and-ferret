@@ -8,6 +8,7 @@ import sqlite3
 TABLE_VIDEOS = "videos"
 TABLE_VIDEOS_FTS = "videos_fts"
 TABLE_AUDIT_LOG = "audit_log"
+TABLE_PROJECTS = "projects"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -79,6 +80,18 @@ AUDIT_LOG_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_id, timestamp);
 """
 
+PROJECTS_TABLE = """
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    output_width INTEGER NOT NULL DEFAULT 1920,
+    output_height INTEGER NOT NULL DEFAULT 1080,
+    output_fps INTEGER NOT NULL DEFAULT 30,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+"""
+
 
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
@@ -99,4 +112,5 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(VIDEOS_FTS_UPDATE_TRIGGER)
     cursor.execute(AUDIT_LOG_TABLE)
     cursor.execute(AUDIT_LOG_INDEX)
+    cursor.execute(PROJECTS_TABLE)
     conn.commit()

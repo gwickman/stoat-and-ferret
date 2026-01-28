@@ -8,6 +8,27 @@ from datetime import datetime
 
 
 @dataclass
+class Project:
+    """Video editing project.
+
+    Represents a project that organizes clips and defines output settings.
+    """
+
+    id: str
+    name: str
+    output_width: int
+    output_height: int
+    output_fps: int
+    created_at: datetime
+    updated_at: datetime
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a project."""
+        return str(uuid.uuid4())
+
+
+@dataclass
 class AuditEntry:
     """Audit log entry for tracking data modifications.
 
