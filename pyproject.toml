@@ -10,6 +10,8 @@ dependencies = [
     "structlog>=24.0",
     "prometheus-client>=0.20",
     "aiosqlite>=0.19",
+    "fastapi>=0.109",
+    "uvicorn[standard]>=0.27",
 ]
 
 # Build system: Use maturin when building with Rust component
