@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 import aiosqlite
 from fastapi import FastAPI
 
+from stoat_ferret.api.routers import health
 from stoat_ferret.api.settings import get_settings
 
 
@@ -49,6 +50,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Routers will be added in subsequent features
+    app.include_router(health.router)
 
     return app
