@@ -1,14 +1,20 @@
 {
   "exploration_id": "fastapi-testing-patterns-1769597710479",
   "results_folder": "fastapi-testing-patterns",
-  "status": "running",
+  "status": "complete",
   "pid": 26292,
   "started_at": "2026-01-28T10:55:10.479591",
-  "updated_at": "2026-01-28T10:55:14.449545",
-  "completed_at": null,
+  "updated_at": "2026-01-28T11:02:38.442833",
+  "completed_at": "2026-01-28T11:02:38.442833",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "conftest-additions.md",
+    "dependency-injection.md",
+    "pytest-config.md",
+    "testclient-usage.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/fastapi-testing-patterns/prompt.md",
   "outbox_path": "comms/outbox/exploration/fastapi-testing-patterns"
