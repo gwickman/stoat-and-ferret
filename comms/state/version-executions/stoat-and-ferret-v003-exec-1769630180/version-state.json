@@ -19,20 +19,20 @@
     {
       "number": 2,
       "name": "api-foundation",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 4,
       "features_complete": 4,
       "started_at": "2026-01-28T20:23:15.198061Z",
-      "completed_at": null,
+      "completed_at": "2026-01-28T21:02:18.355529Z",
       "skip_reason": null
     },
     {
       "number": 3,
       "name": "library-api",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 4,
-      "features_complete": 0,
-      "started_at": null,
+      "features_complete": 4,
+      "started_at": "2026-01-28T21:02:18.356920Z",
       "completed_at": null,
       "skip_reason": null
     },
@@ -47,6 +47,6 @@
       "skip_reason": null
     }
   ],
-  "current_theme": 2,
+  "current_theme": 3,
   "current_feature": 4
 }
