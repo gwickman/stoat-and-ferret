@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
+import os
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from stoat_ferret.api.schemas.video import (
     ScanRequest,
@@ -146,3 +148,38 @@ async def scan_videos(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "INVALID_PATH", "message": str(e)},
         ) from None
+
+
+@router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_video(
+    video_id: str,
+    repo: RepoDep,
+    delete_file: Annotated[bool, Query(description="Also delete source file from disk")] = False,
+) -> Response:
+    """Delete video from library.
+
+    Args:
+        video_id: The unique video identifier.
+        repo: Video repository dependency.
+        delete_file: If True, also delete the source file from disk.
+
+    Returns:
+        Empty response with 204 status.
+
+    Raises:
+        HTTPException: 404 if video not found.
+    """
+    video = await repo.get(video_id)
+    if video is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Video {video_id} not found"},
+        )
+
+    await repo.delete(video_id)
+
+    if delete_file and os.path.exists(video.path):
+        with contextlib.suppress(OSError):
+            os.remove(video.path)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -413,3 +413,87 @@ def test_scan_returns_summary(client: TestClient, tmp_path: Path) -> None:
     assert "updated" in data
     assert "skipped" in data
     assert "errors" in data
+
+
+# --- Delete endpoint tests ---
+
+
+@pytest.mark.api
+async def test_delete_video(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Delete removes video from database."""
+    video = make_test_video()
+    await video_repository.add(video)
+
+    response = client.delete(f"/api/v1/videos/{video.id}")
+    assert response.status_code == 204
+
+    assert await video_repository.get(video.id) is None
+
+
+@pytest.mark.api
+def test_delete_video_not_found(client: TestClient) -> None:
+    """Delete returns 404 for unknown ID."""
+    response = client.delete("/api/v1/videos/nonexistent")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+    assert "nonexistent" in data["detail"]["message"]
+
+
+@pytest.mark.api
+async def test_delete_video_with_file_deletion(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+    tmp_path: Path,
+) -> None:
+    """Delete with delete_file=true removes file from disk."""
+    video_file = tmp_path / "test_video.mp4"
+    video_file.touch()
+    assert video_file.exists()
+
+    video = make_test_video(path=str(video_file.absolute()), filename="test_video.mp4")
+    await video_repository.add(video)
+
+    response = client.delete(f"/api/v1/videos/{video.id}?delete_file=true")
+    assert response.status_code == 204
+
+    assert await video_repository.get(video.id) is None
+    assert not video_file.exists()
+
+
+@pytest.mark.api
+async def test_delete_video_without_file_deletion(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+    tmp_path: Path,
+) -> None:
+    """Delete without delete_file leaves file on disk."""
+    video_file = tmp_path / "test_video.mp4"
+    video_file.touch()
+
+    video = make_test_video(path=str(video_file.absolute()), filename="test_video.mp4")
+    await video_repository.add(video)
+
+    response = client.delete(f"/api/v1/videos/{video.id}")
+    assert response.status_code == 204
+
+    assert await video_repository.get(video.id) is None
+    assert video_file.exists()
+
+
+@pytest.mark.api
+async def test_delete_video_file_already_missing(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Delete with delete_file=true succeeds even if file is already gone."""
+    video = make_test_video(path="/nonexistent/video.mp4")
+    await video_repository.add(video)
+
+    response = client.delete(f"/api/v1/videos/{video.id}?delete_file=true")
+    assert response.status_code == 204
+
+    assert await video_repository.get(video.id) is None
