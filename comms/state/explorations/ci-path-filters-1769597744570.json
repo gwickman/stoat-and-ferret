@@ -1,14 +1,20 @@
 {
   "exploration_id": "ci-path-filters-1769597744570",
   "results_folder": "ci-path-filters",
-  "status": "running",
+  "status": "complete",
   "pid": 26292,
   "started_at": "2026-01-28T10:55:44.570182",
-  "updated_at": "2026-01-28T10:55:48.997983",
-  "completed_at": null,
+  "updated_at": "2026-01-28T11:02:08.441206",
+  "completed_at": "2026-01-28T11:02:08.441206",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "ci-yml-changes.md",
+    "conditional-jobs.md",
+    "path-filter-syntax.md",
+    "safety-considerations.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/ci-path-filters/prompt.md",
   "outbox_path": "comms/outbox/exploration/ci-path-filters"
