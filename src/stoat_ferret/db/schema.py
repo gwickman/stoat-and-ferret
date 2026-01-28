@@ -9,6 +9,7 @@ TABLE_VIDEOS = "videos"
 TABLE_VIDEOS_FTS = "videos_fts"
 TABLE_AUDIT_LOG = "audit_log"
 TABLE_PROJECTS = "projects"
+TABLE_CLIPS = "clips"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -92,6 +93,27 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 """
 
+CLIPS_TABLE = """
+CREATE TABLE IF NOT EXISTS clips (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    source_video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE RESTRICT,
+    in_point INTEGER NOT NULL,
+    out_point INTEGER NOT NULL,
+    timeline_position INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+"""
+
+CLIPS_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_clips_project ON clips(project_id);
+"""
+
+CLIPS_TIMELINE_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_clips_timeline ON clips(project_id, timeline_position);
+"""
+
 
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
@@ -113,4 +135,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(AUDIT_LOG_TABLE)
     cursor.execute(AUDIT_LOG_INDEX)
     cursor.execute(PROJECTS_TABLE)
+    cursor.execute(CLIPS_TABLE)
+    cursor.execute(CLIPS_PROJECT_INDEX)
+    cursor.execute(CLIPS_TIMELINE_INDEX)
     conn.commit()
