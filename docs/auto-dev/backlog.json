@@ -1,6 +1,6 @@
 {
-  "next_id": 13,
-  "updated_at": "2026-01-28T07:46:17.287791",
+  "next_id": 17,
+  "updated_at": "2026-01-28T09:26:52.286502",
   "items": [
     {
       "id": "BL-001",
@@ -454,6 +454,146 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Fix coverage reporting gaps for ImportError fallback. It improves the system by resolving the described requirement.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null
+    },
+    {
+      "id": "BL-013",
+      "title": "Add async repository implementation for FastAPI (aiosqlite)",
+      "priority": "P2",
+      "status": "open",
+      "size": "m",
+      "added": "2026-01-28T09:26:37.042060",
+      "completed_at": null,
+      "tags": [
+        "database",
+        "async",
+        "v003",
+        "tech-debt"
+      ],
+      "description": "v002 retrospective identified that synchronous SQLite will need to be replaced with aiosqlite when FastAPI is introduced in v003. The repository pattern is already in place, so this is a straightforward implementation swap.",
+      "acceptance_criteria": [
+        {
+          "text": "AsyncVideoRepository protocol defined",
+          "done": false
+        },
+        {
+          "text": "aiosqlite implementation created",
+          "done": false
+        },
+        {
+          "text": "Existing sync repository kept for CLI/scripts",
+          "done": false
+        },
+        {
+          "text": "Integration tests verify async behavior",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "This feature addresses: Add async repository implementation for FastAPI (aiosqlite). It improves the system by resolving the described requirement.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null
+    },
+    {
+      "id": "BL-014",
+      "title": "Add Docker-based local testing option",
+      "priority": "P2",
+      "status": "open",
+      "size": "s",
+      "added": "2026-01-28T09:26:42.609453",
+      "completed_at": null,
+      "tags": [
+        "tooling",
+        "docker",
+        "process",
+        "developer-experience"
+      ],
+      "description": "v002 retrospective identified that Windows Application Control policies can block local Python testing. A Docker-based option would bypass these restrictions and provide consistent dev environments.",
+      "acceptance_criteria": [
+        {
+          "text": "docker-compose.yml with Python + Rust build environment",
+          "done": false
+        },
+        {
+          "text": "README documents Docker-based testing workflow",
+          "done": false
+        },
+        {
+          "text": "Tests can run inside container bypassing host restrictions",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "This feature addresses: Add Docker-based local testing option. It improves the system by resolving the described requirement.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null
+    },
+    {
+      "id": "BL-015",
+      "title": "Add migration verification to CI (upgrade/downgrade/upgrade)",
+      "priority": "P2",
+      "status": "open",
+      "size": "s",
+      "added": "2026-01-28T09:26:47.388756",
+      "completed_at": null,
+      "tags": [
+        "ci",
+        "database",
+        "migrations",
+        "quality"
+      ],
+      "description": "v002 retrospective suggested adding migration verification to CI to ensure all migrations are fully reversible. Run upgrade/downgrade/upgrade cycle to catch issues early.",
+      "acceptance_criteria": [
+        {
+          "text": "CI runs: alembic upgrade head && alembic downgrade base && alembic upgrade head",
+          "done": false
+        },
+        {
+          "text": "CI fails if any migration step fails",
+          "done": false
+        },
+        {
+          "text": "Documentation updated with migration testing requirements",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "This feature addresses: Add migration verification to CI (upgrade/downgrade/upgrade). It improves the system by resolving the described requirement.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null
+    },
+    {
+      "id": "BL-016",
+      "title": "Unify InMemory vs FTS5 search behavior",
+      "priority": "P3",
+      "status": "open",
+      "size": "s",
+      "added": "2026-01-28T09:26:52.286493",
+      "completed_at": null,
+      "tags": [
+        "database",
+        "cleanup",
+        "testing",
+        "consistency"
+      ],
+      "description": "v002 retrospective noted that InMemoryVideoRepository uses substring match while SQLiteVideoRepository uses FTS5 full-text search. Consider unifying search behavior for consistent testing.",
+      "acceptance_criteria": [
+        {
+          "text": "InMemoryVideoRepository uses same search semantics as SQLite FTS5",
+          "done": false
+        },
+        {
+          "text": "Tests verify consistent behavior across implementations",
+          "done": false
+        },
+        {
+          "text": "Documentation explains search behavior",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "This feature addresses: Unify InMemory vs FTS5 search behavior. It improves the system by resolving the described requirement.",
       "implemented_in_version": null,
       "implemented_in_theme": null
     }

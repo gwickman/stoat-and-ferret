@@ -10,7 +10,7 @@
 | Version | Roadmap Reference | Focus | Prerequisites | Status |
 |---------|-------------------|-------|---------------|--------|
 | v001 | Phase 1, M1.1-1.3 | Foundation + Rust core basics | EXP-001, EXP-002 | complete |
-| v002 | Phase 1, M1.4-1.5 | Database + FFmpeg integration | v001 | planned |
+| v002 | Phase 1, M1.4-1.5 | Database + FFmpeg integration | v001 | complete |
 | v003 | Phase 1, M1.6-1.7 | API layer + Clip model | v002 | planned |
 | v004 | Phase 1, M1.8-1.9 | Testing infrastructure + quality verification | v003 | planned |
 | v005 | Phase 1, M1.10-1.12 | GUI shell + library browser + project manager | v004 | planned |
@@ -97,18 +97,7 @@ Items explicitly deferred during version design, with target versions.
 | Version | Date | Summary |
 |---------|------|---------|  
 | v001 | 2026-01-26 | Foundation version: Python/Rust tooling, timeline math, FFmpeg command builder |
-
-## v002 Backlog Items
-
-Backlog items planned for inclusion in v002:
-
-| ID | Title | Priority | Theme | Feature | Notes |
-|----|-------|----------|-------|---------|-------|
-| BL-007 | Automate type stub generation in CI | P1 (elevated) | 01-rust-python-bindings | 001-stub-regeneration | Must fix drift FIRST |
-| BL-004 | Expose Clip and ValidationError types to Python | P1 | 01-rust-python-bindings | 002-clip-bindings | Rust struct, not exception |
-| BL-005 | Expose TimeRange and list operations to Python | P1 | 01-rust-python-bindings | 003-range-list-ops | find_gaps, merge_ranges, total_coverage |
-| BL-008 | Clean up Python API naming inconsistencies | P2 | 01-rust-python-bindings | 004-api-naming-cleanup | Includes test updates; do LAST |
-| BL-006 | Update AGENTS.md with PyO3 bindings guidance | P1 | 02-tooling-process | 001-agents-pyo3-guidance | Process improvement |
+| v002 | 2026-01-27 | Database & FFmpeg integration: Python bindings completion, SQLite with repository pattern, FFmpeg executor with observability |
 
 ## Backlog Integration
 
@@ -129,3 +118,4 @@ Work that surfaces during planning or execution but doesn't fit current scope:
 | 2025-01-25 | EXP-001, EXP-002 complete | Investigations for v001 prerequisites |
 | 2025-01-25 | v001 design complete | 3 themes, 10 features designed |
 | 2026-01-26 | v001 complete | Foundation version delivered |
+| 2026-01-27 | v002 complete | Database & FFmpeg integration delivered (4 themes, 13 features) |
