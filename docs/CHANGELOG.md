@@ -4,6 +4,50 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v003] - 2026-01-28
+
+API Layer + Clip Model (Roadmap M1.6-1.7). Establishes FastAPI REST API, async repository layer, video library endpoints, clip/project data models with Rust validation, and CI improvements.
+
+### Added
+
+- **Process Improvements**
+  - `AsyncVideoRepository` protocol with async SQLite and in-memory implementations
+  - CI migration verification step (upgrade → downgrade → upgrade)
+  - CI path filters using `dorny/paths-filter` to skip heavy tests for docs-only changes
+  - Three-job CI structure (changes → test → ci-status) for branch protection
+
+- **API Foundation**
+  - FastAPI application factory with lifespan context manager for database lifecycle
+  - Externalized configuration using pydantic-settings with environment variable support
+  - Health endpoints: `/health/live` (liveness) and `/health/ready` (readiness with dependency checks)
+  - Middleware stack with correlation ID (`X-Correlation-ID` header) and Prometheus metrics
+
+- **Library API**
+  - `GET /api/v1/videos` - List videos with pagination (offset/limit)
+  - `GET /api/v1/videos/{video_id}` - Get video details by ID
+  - `GET /api/v1/videos/search` - Full-text search with FTS5 integration
+  - `POST /api/v1/videos/scan` - Directory scanning with FFprobe metadata extraction
+  - `DELETE /api/v1/videos/{video_id}` - Delete video with optional file removal (`delete_file` flag)
+
+- **Clip Model**
+  - `Project` model for organizing clips with output settings (resolution, fps)
+  - `Clip` model with in/out points delegating validation to Rust core
+  - `AsyncProjectRepository` and `AsyncClipRepository` with SQLite and in-memory implementations
+  - `GET/POST /api/v1/projects` - List and create projects
+  - `GET/PUT/DELETE /api/v1/projects/{project_id}` - Project CRUD operations
+  - `GET/POST /api/v1/projects/{project_id}/clips` - List and create clips
+  - `GET/PUT/DELETE /api/v1/clips/{clip_id}` - Clip CRUD operations
+
+### Changed
+
+- Repository pattern now supports both sync (CLI) and async (API) access
+- CI workflow now conditionally runs tests based on changed paths
+- pytest-asyncio configured with `asyncio_mode = "auto"` for cleaner async tests
+
+### Fixed
+
+- CI migration reversibility now verified automatically on every push
+
 ## [v002] - 2026-01-27
 
 Database & FFmpeg Integration with Python Bindings Completion. Addresses roadmap M1.4-1.5.
