@@ -52,3 +52,37 @@ class VideoSearchResponse(BaseModel):
     videos: list[VideoResponse]
     total: int
     query: str
+
+
+class ScanRequest(BaseModel):
+    """Directory scan request.
+
+    Specifies the directory to scan and whether to recurse into subdirectories.
+    """
+
+    path: str
+    recursive: bool = True
+
+
+class ScanError(BaseModel):
+    """Scan error for an individual file.
+
+    Records the path and error message when a file fails to process.
+    """
+
+    path: str
+    error: str
+
+
+class ScanResponse(BaseModel):
+    """Scan results summary.
+
+    Contains counts of scanned, new, updated, and skipped files,
+    along with any errors encountered.
+    """
+
+    scanned: int
+    new: int
+    updated: int
+    skipped: int
+    errors: list[ScanError]
