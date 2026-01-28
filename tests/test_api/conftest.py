@@ -77,16 +77,27 @@ def video_repository() -> AsyncInMemoryVideoRepository:
 
 
 @pytest.fixture
-def client(app: FastAPI) -> Generator[TestClient, None, None]:
+def client(
+    app: FastAPI,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> Generator[TestClient, None, None]:
     """Create test client for API requests.
 
     The TestClient handles lifespan events automatically.
+    Overrides the video repository dependency with an in-memory implementation.
 
     Args:
         app: FastAPI application fixture.
+        video_repository: In-memory video repository for testing.
 
     Yields:
         Test client for making HTTP requests.
     """
+    from stoat_ferret.api.routers.videos import get_repository
+
+    app.dependency_overrides[get_repository] = lambda: video_repository
+
     with TestClient(app) as c:
         yield c
+
+    app.dependency_overrides.clear()
