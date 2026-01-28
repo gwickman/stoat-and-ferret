@@ -6,7 +6,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from stoat_ferret.api.schemas.video import VideoListResponse, VideoResponse
+from stoat_ferret.api.schemas.video import (
+    VideoListResponse,
+    VideoResponse,
+    VideoSearchResponse,
+)
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -54,6 +58,31 @@ async def list_videos(
         total=len(videos),
         limit=limit,
         offset=offset,
+    )
+
+
+@router.get("/search", response_model=VideoSearchResponse)
+async def search_videos(
+    repo: RepoDep,
+    q: Annotated[str, Query(min_length=1, description="Search query")],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> VideoSearchResponse:
+    """Search videos by filename or path.
+
+    Args:
+        repo: Video repository dependency.
+        q: Search query string.
+        limit: Maximum number of results to return (1-100, default 20).
+
+    Returns:
+        Search results with query echoed back.
+    """
+    videos = await repo.search(q, limit=limit)
+
+    return VideoSearchResponse(
+        videos=[VideoResponse.model_validate(v) for v in videos],
+        total=len(videos),
+        query=q,
     )
 
 

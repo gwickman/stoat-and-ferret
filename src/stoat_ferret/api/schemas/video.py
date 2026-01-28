@@ -41,3 +41,14 @@ class VideoListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class VideoSearchResponse(BaseModel):
+    """Search results response.
+
+    Contains search results along with the query that was executed.
+    """
+
+    videos: list[VideoResponse]
+    total: int
+    query: str

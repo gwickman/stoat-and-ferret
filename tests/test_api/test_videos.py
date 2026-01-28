@@ -116,3 +116,78 @@ async def test_get_video_found(
     assert data["width"] == video.width
     assert data["height"] == video.height
     assert data["video_codec"] == video.video_codec
+
+
+@pytest.mark.api
+async def test_search_finds_by_filename(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Search finds videos by filename."""
+    video = make_test_video(filename="vacation_beach.mp4")
+    await video_repository.add(video)
+
+    response = client.get("/api/v1/videos/search?q=beach")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["videos"]) == 1
+    assert data["videos"][0]["filename"] == "vacation_beach.mp4"
+    assert data["query"] == "beach"
+
+
+@pytest.mark.api
+async def test_search_finds_by_path(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Search finds videos by path."""
+    video = make_test_video(path="/videos/summer/clip.mp4", filename="clip.mp4")
+    await video_repository.add(video)
+
+    response = client.get("/api/v1/videos/search?q=summer")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["videos"]) == 1
+    assert data["videos"][0]["path"] == "/videos/summer/clip.mp4"
+    assert data["query"] == "summer"
+
+
+@pytest.mark.api
+def test_search_no_results(client: TestClient) -> None:
+    """Search returns empty for no matches."""
+    response = client.get("/api/v1/videos/search?q=nonexistent")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["videos"] == []
+    assert data["total"] == 0
+    assert data["query"] == "nonexistent"
+
+
+@pytest.mark.api
+def test_search_requires_query(client: TestClient) -> None:
+    """Search requires query parameter."""
+    response = client.get("/api/v1/videos/search")
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+def test_search_query_min_length(client: TestClient) -> None:
+    """Search query must be at least 1 character."""
+    response = client.get("/api/v1/videos/search?q=")
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+async def test_search_respects_limit(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Search respects limit parameter."""
+    for i in range(5):
+        await video_repository.add(make_test_video(filename=f"test_video_{i}.mp4"))
+
+    response = client.get("/api/v1/videos/search?q=test_video&limit=3")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["videos"]) == 3
+    assert data["total"] == 3
