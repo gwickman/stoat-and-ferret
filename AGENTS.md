@@ -275,6 +275,13 @@ For `explore_project` tasks called by the MCP server:
 
 ---
 
+## Branch Protection
+
+The `ci-status` job is the required check for branch protection.
+This allows docs-only PRs to merge without running the full test matrix.
+
+---
+
 ## Key Architecture Decisions
 
 - **Non-destructive editing**: Never modify source files
