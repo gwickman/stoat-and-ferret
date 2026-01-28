@@ -6,7 +6,12 @@ from stoat_ferret.db.async_repository import (
     AsyncVideoRepository,
 )
 from stoat_ferret.db.audit import AuditLogger
-from stoat_ferret.db.models import AuditEntry, Video
+from stoat_ferret.db.models import AuditEntry, Project, Video
+from stoat_ferret.db.project_repository import (
+    AsyncInMemoryProjectRepository,
+    AsyncProjectRepository,
+    AsyncSQLiteProjectRepository,
+)
 from stoat_ferret.db.repository import (
     InMemoryVideoRepository,
     SQLiteVideoRepository,
@@ -17,6 +22,7 @@ from stoat_ferret.db.schema import create_tables
 __all__ = [
     "AuditEntry",
     "AuditLogger",
+    "Project",
     "Video",
     "VideoRepository",
     "SQLiteVideoRepository",
@@ -24,5 +30,8 @@ __all__ = [
     "AsyncVideoRepository",
     "AsyncSQLiteVideoRepository",
     "AsyncInMemoryVideoRepository",
+    "AsyncProjectRepository",
+    "AsyncSQLiteProjectRepository",
+    "AsyncInMemoryProjectRepository",
     "create_tables",
 ]
