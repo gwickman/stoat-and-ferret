@@ -41,7 +41,7 @@ def test_settings(test_db_path: Path) -> Settings:
     return Settings(
         api_host="127.0.0.1",
         api_port=8000,
-        database_path=test_db_path,
+        database_path=str(test_db_path),
     )
 
 
