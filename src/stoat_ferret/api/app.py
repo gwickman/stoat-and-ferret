@@ -11,7 +11,7 @@ from prometheus_client import make_asgi_app
 
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
-from stoat_ferret.api.routers import health, videos
+from stoat_ferret.api.routers import health, projects, videos
 from stoat_ferret.api.settings import get_settings
 
 
@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(videos.router)
+    app.include_router(projects.router)
 
     # Add middleware (order matters - first added = outermost)
     app.add_middleware(MetricsMiddleware)
