@@ -6,6 +6,11 @@ from stoat_ferret.db.async_repository import (
     AsyncVideoRepository,
 )
 from stoat_ferret.db.audit import AuditLogger
+from stoat_ferret.db.clip_repository import (
+    AsyncClipRepository,
+    AsyncInMemoryClipRepository,
+    AsyncSQLiteClipRepository,
+)
 from stoat_ferret.db.models import AuditEntry, Clip, ClipValidationError, Project, Video
 from stoat_ferret.db.project_repository import (
     AsyncInMemoryProjectRepository,
@@ -22,6 +27,9 @@ from stoat_ferret.db.schema import create_tables
 __all__ = [
     "AuditEntry",
     "AuditLogger",
+    "AsyncClipRepository",
+    "AsyncInMemoryClipRepository",
+    "AsyncSQLiteClipRepository",
     "Clip",
     "ClipValidationError",
     "Project",
