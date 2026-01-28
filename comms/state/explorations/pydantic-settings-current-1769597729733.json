@@ -1,10 +1,10 @@
 {
   "exploration_id": "pydantic-settings-current-1769597729733",
   "results_folder": "pydantic-settings-current",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 26292,
   "started_at": "2026-01-28T10:55:29.733911",
-  "updated_at": "2026-01-28T10:55:29.733911",
+  "updated_at": "2026-01-28T10:55:35.184935",
   "completed_at": null,
   "error": null,
   "documents": [],

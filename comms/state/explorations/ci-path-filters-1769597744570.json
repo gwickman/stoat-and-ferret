@@ -1,0 +1,15 @@
+{
+  "exploration_id": "ci-path-filters-1769597744570",
+  "results_folder": "ci-path-filters",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-01-28T10:55:44.570182",
+  "updated_at": "2026-01-28T10:55:44.570182",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/ci-path-filters/prompt.md",
+  "outbox_path": "comms/outbox/exploration/ci-path-filters"
+}
