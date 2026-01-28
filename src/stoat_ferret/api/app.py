@@ -7,7 +7,10 @@ from contextlib import asynccontextmanager
 
 import aiosqlite
 from fastapi import FastAPI
+from prometheus_client import make_asgi_app
 
+from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
+from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import health
 from stoat_ferret.api.settings import get_settings
 
@@ -51,5 +54,13 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+
+    # Add middleware (order matters - first added = outermost)
+    app.add_middleware(MetricsMiddleware)
+    app.add_middleware(CorrelationIdMiddleware)
+
+    # Mount Prometheus metrics endpoint
+    metrics_app = make_asgi_app()
+    app.mount("/metrics", metrics_app)
 
     return app
