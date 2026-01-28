@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
+from stoat_ferret.ffmpeg.probe import VideoMetadata
 from tests.test_repository_contract import make_test_video
 
 
@@ -191,3 +195,221 @@ async def test_search_respects_limit(
     data = response.json()
     assert len(data["videos"]) == 3
     assert data["total"] == 3
+
+
+# --- Scan endpoint tests ---
+
+
+def _make_mock_metadata() -> VideoMetadata:
+    """Create mock video metadata for testing."""
+    return VideoMetadata(
+        duration_seconds=10.0,
+        width=1920,
+        height=1080,
+        frame_rate_numerator=24,
+        frame_rate_denominator=1,
+        video_codec="h264",
+        audio_codec="aac",
+        file_size=1000000,
+    )
+
+
+@pytest.mark.api
+def test_scan_invalid_path(client: TestClient) -> None:
+    """Scan returns 400 for invalid path."""
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": "/nonexistent/directory"},
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_PATH"
+
+
+@pytest.mark.api
+def test_scan_empty_directory(client: TestClient, tmp_path: Path) -> None:
+    """Scan of empty directory returns zeros."""
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": str(tmp_path)},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scanned"] == 0
+    assert data["new"] == 0
+    assert data["updated"] == 0
+    assert data["skipped"] == 0
+    assert data["errors"] == []
+
+
+@pytest.mark.api
+def test_scan_finds_video_files(client: TestClient, tmp_path: Path) -> None:
+    """Scan finds and adds video files."""
+    # Create test video files
+    (tmp_path / "video1.mp4").touch()
+    (tmp_path / "video2.mkv").touch()
+    (tmp_path / "not_video.txt").touch()
+
+    mock_metadata = _make_mock_metadata()
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        return_value=mock_metadata,
+    ):
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scanned"] == 2
+    assert data["new"] == 2
+    assert data["updated"] == 0
+    assert data["skipped"] == 0
+    assert data["errors"] == []
+
+
+@pytest.mark.api
+def test_scan_recursive(client: TestClient, tmp_path: Path) -> None:
+    """Scan recursively finds videos in subdirectories."""
+    subdir = tmp_path / "subdir"
+    subdir.mkdir()
+    (tmp_path / "video1.mp4").touch()
+    (subdir / "video2.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        return_value=mock_metadata,
+    ):
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path), "recursive": True},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scanned"] == 2
+    assert data["new"] == 2
+
+
+@pytest.mark.api
+def test_scan_non_recursive(client: TestClient, tmp_path: Path) -> None:
+    """Scan with recursive=False ignores subdirectories."""
+    subdir = tmp_path / "subdir"
+    subdir.mkdir()
+    (tmp_path / "video1.mp4").touch()
+    (subdir / "video2.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        return_value=mock_metadata,
+    ):
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path), "recursive": False},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scanned"] == 1
+    assert data["new"] == 1
+
+
+@pytest.mark.api
+async def test_scan_updates_existing_videos(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+    tmp_path: Path,
+) -> None:
+    """Scan updates existing videos in repository."""
+    video_path = tmp_path / "existing.mp4"
+    video_path.touch()
+
+    # Add existing video to repository
+    existing_video = make_test_video(
+        path=str(video_path.absolute()),
+        filename="existing.mp4",
+    )
+    await video_repository.add(existing_video)
+
+    mock_metadata = _make_mock_metadata()
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        return_value=mock_metadata,
+    ):
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scanned"] == 1
+    assert data["new"] == 0
+    assert data["updated"] == 1
+
+
+@pytest.mark.api
+def test_scan_handles_errors_gracefully(client: TestClient, tmp_path: Path) -> None:
+    """Scan continues even if individual files fail."""
+    (tmp_path / "good.mp4").touch()
+    (tmp_path / "bad.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+    call_count = 0
+
+    def mock_probe(path: str) -> VideoMetadata:
+        nonlocal call_count
+        call_count += 1
+        if "bad" in path:
+            raise ValueError("Probe failed")
+        return mock_metadata
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        side_effect=mock_probe,
+    ):
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scanned"] == 2
+    assert data["new"] == 1
+    assert len(data["errors"]) == 1
+    assert "bad.mp4" in data["errors"][0]["path"]
+    assert "Probe failed" in data["errors"][0]["error"]
+
+
+@pytest.mark.api
+def test_scan_returns_summary(client: TestClient, tmp_path: Path) -> None:
+    """Scan returns complete summary response."""
+    (tmp_path / "video.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        return_value=mock_metadata,
+    ):
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    # Verify all fields are present
+    assert "scanned" in data
+    assert "new" in data
+    assert "updated" in data
+    assert "skipped" in data
+    assert "errors" in data

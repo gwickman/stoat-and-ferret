@@ -7,10 +7,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from stoat_ferret.api.schemas.video import (
+    ScanRequest,
+    ScanResponse,
     VideoListResponse,
     VideoResponse,
     VideoSearchResponse,
 )
+from stoat_ferret.api.services.scan import scan_directory
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -110,3 +113,36 @@ async def get_video(
             detail={"code": "NOT_FOUND", "message": f"Video {video_id} not found"},
         )
     return VideoResponse.model_validate(video)
+
+
+@router.post("/scan", response_model=ScanResponse)
+async def scan_videos(
+    request: ScanRequest,
+    repo: RepoDep,
+) -> ScanResponse:
+    """Scan directory for video files.
+
+    Walks the specified directory, finds video files by extension,
+    extracts metadata using ffprobe, and adds/updates them in the database.
+
+    Args:
+        request: Scan request with directory path and recursion flag.
+        repo: Video repository dependency.
+
+    Returns:
+        Scan results summary with counts of scanned, new, updated, skipped files.
+
+    Raises:
+        HTTPException: 400 if path is not a valid directory.
+    """
+    try:
+        return await scan_directory(
+            path=request.path,
+            recursive=request.recursive,
+            repository=repo,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PATH", "message": str(e)},
+        ) from None
