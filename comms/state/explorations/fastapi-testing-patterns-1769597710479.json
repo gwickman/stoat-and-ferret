@@ -1,0 +1,15 @@
+{
+  "exploration_id": "fastapi-testing-patterns-1769597710479",
+  "results_folder": "fastapi-testing-patterns",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-01-28T10:55:10.479591",
+  "updated_at": "2026-01-28T10:55:10.479591",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/fastapi-testing-patterns/prompt.md",
+  "outbox_path": "comms/outbox/exploration/fastapi-testing-patterns"
+}
