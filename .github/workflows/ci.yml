@@ -40,6 +40,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Verify migrations reversible
+        run: |
+          uv run alembic -x sqlalchemy.url=sqlite:///:memory: upgrade head
+          uv run alembic -x sqlalchemy.url=sqlite:///:memory: downgrade base
+          uv run alembic -x sqlalchemy.url=sqlite:///:memory: upgrade head
+
       - name: Rust fmt
         run: cargo fmt --manifest-path rust/stoat_ferret_core/Cargo.toml -- --check
 
