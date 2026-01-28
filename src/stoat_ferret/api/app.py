@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
 
     # Startup: open database connection
-    app.state.db = await aiosqlite.connect(settings.database_path)
+    app.state.db = await aiosqlite.connect(settings.database_path_resolved)
     app.state.db.row_factory = aiosqlite.Row
 
     yield
