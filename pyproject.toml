@@ -9,6 +9,7 @@ dependencies = [
     "alembic>=1.13",
     "structlog>=24.0",
     "prometheus-client>=0.20",
+    "aiosqlite>=0.19",
 ]
 
 # Build system: Use maturin when building with Rust component
@@ -31,6 +32,8 @@ packages = ["src/stoat_ferret", "src/stoat_ferret_core"]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=4.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.26",
     "ruff>=0.4",
     "mypy>=1.10",
     "maturin>=1.0",
@@ -53,8 +56,11 @@ packages = ["stoat_ferret"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=src --cov-report=term-missing"
+asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "api: API endpoint tests",
+    "contract: Contract tests for protocol compliance",
 ]
 
 [tool.coverage.run]

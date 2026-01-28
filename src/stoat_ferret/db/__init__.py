@@ -1,5 +1,10 @@
 """Database package for stoat-ferret."""
 
+from stoat_ferret.db.async_repository import (
+    AsyncInMemoryVideoRepository,
+    AsyncSQLiteVideoRepository,
+    AsyncVideoRepository,
+)
 from stoat_ferret.db.audit import AuditLogger
 from stoat_ferret.db.models import AuditEntry, Video
 from stoat_ferret.db.repository import (
@@ -16,5 +21,8 @@ __all__ = [
     "VideoRepository",
     "SQLiteVideoRepository",
     "InMemoryVideoRepository",
+    "AsyncVideoRepository",
+    "AsyncSQLiteVideoRepository",
+    "AsyncInMemoryVideoRepository",
     "create_tables",
 ]
