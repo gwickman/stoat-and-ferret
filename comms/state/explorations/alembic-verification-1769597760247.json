@@ -1,14 +1,20 @@
 {
   "exploration_id": "alembic-verification-1769597760247",
   "results_folder": "alembic-verification",
-  "status": "running",
+  "status": "complete",
   "pid": 26292,
   "started_at": "2026-01-28T10:56:00.247521",
-  "updated_at": "2026-01-28T10:56:05.762985",
-  "completed_at": null,
+  "updated_at": "2026-01-28T10:59:49.736775",
+  "completed_at": "2026-01-28T10:59:49.735767",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "best-practices.md",
+    "ci-integration.md",
+    "current-state.md",
+    "verification-commands.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/alembic-verification/prompt.md",
   "outbox_path": "comms/outbox/exploration/alembic-verification"
