@@ -74,6 +74,8 @@ Verify `comms/outbox/vXXX/version-state.json`:
 
 ## Stage 2: Retrospective Generation
 
+**Note:** If the version retrospective already exists (e.g., generated during version execution), verify it contains all required sections below rather than generating a new one.
+
 Generate version retrospective at `comms/outbox/vXXX/retrospective.md`.
 
 ### Required Sections
