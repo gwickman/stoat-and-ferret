@@ -1,8 +1,8 @@
 # Project Backlog
 
-*Last updated: 2026-01-28 09:50*
+*Last updated: 2026-02-01 18:17*
 
-**Total completed:** 6 | **Cancelled:** 0
+**Total completed:** 9 | **Cancelled:** 0
 
 ## Priority Summary
 
@@ -10,7 +10,7 @@
 |----------|------|-------|
 | P0 | Critical | 0 |
 | P1 | High | 0 |
-| P2 | Medium | 6 |
+| P2 | Medium | 4 |
 | P3 | Low | 4 |
 
 ## Quick Reference
@@ -19,10 +19,8 @@
 |----|-----|------|-------|-------------|
 | <a id="bl-003-ref"></a>[BL-003](#bl-003) | P2 | m | EXP-003: FastAPI static file serving for GUI | Investigate serving the React/Svelte GUI from FastAPI: |
 | <a id="bl-009-ref"></a>[BL-009](#bl-009) | P2 | m | Add property test guidance to feature design template | v001 retrospective suggested writing proptest invariants ... |
-| <a id="bl-013-ref"></a>[BL-013](#bl-013) | P2 | m | Add async repository implementation for FastAPI (aiosqlite) | v002 retrospective identified that synchronous SQLite wil... |
 | <a id="bl-014-ref"></a>[BL-014](#bl-014) | P2 | s | Add Docker-based local testing option | v002 retrospective identified that Windows Application Co... |
-| <a id="bl-015-ref"></a>[BL-015](#bl-015) | P2 | s | Add migration verification to CI (upgrade/downgrade/upgrade) | v002 retrospective suggested adding migration verificatio... |
-| <a id="bl-017-ref"></a>[BL-017](#bl-017) | P2 | m | Optimize CI to skip heavy steps for docs-only commits | The CI workflow runs full build and test suite even for d... |
+| <a id="bl-018-ref"></a>[BL-018](#bl-018) | P2 | s | Create C4 architecture documentation | No C4 architecture documentation currently exists for the... |
 | <a id="bl-010-ref"></a>[BL-010](#bl-010) | P3 | m | Configure Rust code coverage with llvm-cov | v001 retrospective noted Rust code coverage is not tracke... |
 | <a id="bl-011-ref"></a>[BL-011](#bl-011) | P3 | m | Consolidate Python/Rust build backends | v001 uses hatchling for Python package management and mat... |
 | <a id="bl-012-ref"></a>[BL-012](#bl-012) | P3 | m | Fix coverage reporting gaps for ImportError fallback | v001 retrospective noted ImportError fallback code is exc... |
@@ -33,29 +31,26 @@
 | Tag | Count | Items |
 |-----|-------|-------|
 | testing | 4 | BL-009, BL-010, BL-012, BL-016 |
-| ci | 3 | BL-010, BL-015, BL-017 |
-| database | 3 | BL-013, BL-015, BL-016 |
 | process | 2 | BL-009, BL-014 |
 | coverage | 2 | BL-010, BL-012 |
 | tooling | 2 | BL-011, BL-014 |
 | cleanup | 2 | BL-012, BL-016 |
-| developer-experience | 2 | BL-014, BL-017 |
 | investigation | 1 | BL-003 |
 | v005-prerequisite | 1 | BL-003 |
 | gui | 1 | BL-003 |
 | fastapi | 1 | BL-003 |
 | proptest | 1 | BL-009 |
 | rust | 1 | BL-010 |
+| ci | 1 | BL-010 |
 | build | 1 | BL-011 |
 | complexity | 1 | BL-011 |
-| async | 1 | BL-013 |
-| v003 | 1 | BL-013 |
-| tech-debt | 1 | BL-013 |
 | docker | 1 | BL-014 |
-| migrations | 1 | BL-015 |
-| quality | 1 | BL-015 |
+| developer-experience | 1 | BL-014 |
+| database | 1 | BL-016 |
 | consistency | 1 | BL-016 |
-| optimization | 1 | BL-017 |
+| documentation | 1 | BL-018 |
+| architecture | 1 | BL-018 |
+| c4 | 1 | BL-018 |
 
 ## Item Details
 
@@ -102,23 +97,6 @@ v001 retrospective suggested writing proptest invariants before implementation a
 
 [↑ Back to list](#bl-009-ref)
 
-#### 📋 BL-013: Add async repository implementation for FastAPI (aiosqlite)
-
-**Status:** open
-**Tags:** database, async, v003, tech-debt
-
-v002 retrospective identified that synchronous SQLite will need to be replaced with aiosqlite when FastAPI is introduced in v003. The repository pattern is already in place, so this is a straightforward implementation swap.
-
-**Use Case:** This feature addresses: Add async repository implementation for FastAPI (aiosqlite). It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] AsyncVideoRepository protocol defined
-- [ ] aiosqlite implementation created
-- [ ] Existing sync repository kept for CLI/scripts
-- [ ] Integration tests verify async behavior
-
-[↑ Back to list](#bl-013-ref)
-
 #### 📋 BL-014: Add Docker-based local testing option
 
 **Status:** open
@@ -135,38 +113,16 @@ v002 retrospective identified that Windows Application Control policies can bloc
 
 [↑ Back to list](#bl-014-ref)
 
-#### 📋 BL-015: Add migration verification to CI (upgrade/downgrade/upgrade)
+#### 📋 BL-018: Create C4 architecture documentation
 
 **Status:** open
-**Tags:** ci, database, migrations, quality
+**Tags:** documentation, architecture, c4
 
-v002 retrospective suggested adding migration verification to CI to ensure all migrations are fully reversible. Run upgrade/downgrade/upgrade cycle to catch issues early.
+No C4 architecture documentation currently exists for the project. Establish documentation at appropriate levels (Context, Container, Component, Code) to document the system architecture.
 
-**Use Case:** This feature addresses: Add migration verification to CI (upgrade/downgrade/upgrade). It improves the system by resolving the described requirement.
+**Use Case:** This feature addresses: Create C4 architecture documentation. It improves the system by resolving the described requirement.
 
-**Acceptance Criteria:**
-- [ ] CI runs: alembic upgrade head && alembic downgrade base && alembic upgrade head
-- [ ] CI fails if any migration step fails
-- [ ] Documentation updated with migration testing requirements
-
-[↑ Back to list](#bl-015-ref)
-
-#### 📋 BL-017: Optimize CI to skip heavy steps for docs-only commits
-
-**Status:** open
-**Tags:** ci, optimization, developer-experience
-
-The CI workflow runs full build and test suite even for documentation-only or housekeeping commits (e.g., version closure, changelog updates, exploration archiving). This wastes CI minutes and slows down simple administrative tasks. Implement path-based filtering or commit message detection to skip heavy steps when only docs/config files change.
-
-**Use Case:** This feature addresses: Optimize CI to skip heavy steps for docs-only commits. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] CI workflow detects docs-only or housekeeping commits (e.g., chore:, docs: prefixes)
-- [ ] Docs-only commits skip Rust build, Python tests, and other heavy steps
-- [ ] Path filters implemented for src/, rust/, tests/ vs docs/, comms/
-- [ ] Full CI still runs on code changes and PR merges to main
-
-[↑ Back to list](#bl-017-ref)
+[↑ Back to list](#bl-018-ref)
 
 ### P3: Low
 

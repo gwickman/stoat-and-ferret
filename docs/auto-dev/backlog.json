@@ -1,6 +1,6 @@
 {
-  "next_id": 18,
-  "updated_at": "2026-02-01T00:00:00.000000",
+  "next_id": 19,
+  "updated_at": "2026-02-01T18:17:14.220428",
   "items": [
     {
       "id": "BL-001",
@@ -633,6 +633,26 @@
       "use_case": "This feature addresses: Optimize CI to skip heavy steps for docs-only commits. It improves the system by resolving the described requirement.",
       "implemented_in_version": "v003",
       "implemented_in_theme": "01-process-improvements"
+    },
+    {
+      "id": "BL-018",
+      "title": "Create C4 architecture documentation",
+      "priority": "P2",
+      "status": "open",
+      "size": "s",
+      "added": "2026-02-01T18:17:14.220413",
+      "completed_at": null,
+      "tags": [
+        "documentation",
+        "architecture",
+        "c4"
+      ],
+      "description": "No C4 architecture documentation currently exists for the project. Establish documentation at appropriate levels (Context, Container, Component, Code) to document the system architecture.",
+      "acceptance_criteria": [],
+      "notes": null,
+      "use_case": "This feature addresses: Create C4 architecture documentation. It improves the system by resolving the described requirement.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null
     }
   ],
   "completed_count": 9,

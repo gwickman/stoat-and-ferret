@@ -1,10 +1,10 @@
 {
   "exploration_id": "process-doc-amendment-1769969827193",
   "results_folder": "process-doc-amendment",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 12712,
   "started_at": "2026-02-01T18:17:07.193334",
-  "updated_at": "2026-02-01T18:17:07.193334",
+  "updated_at": "2026-02-01T18:17:09.015328",
   "completed_at": null,
   "error": null,
   "documents": [],
