@@ -1,14 +1,16 @@
 {
   "exploration_id": "process-doc-amendment-1769969827193",
   "results_folder": "process-doc-amendment",
-  "status": "running",
+  "status": "complete",
   "pid": 12712,
   "started_at": "2026-02-01T18:17:07.193334",
-  "updated_at": "2026-02-01T18:17:09.015328",
-  "completed_at": null,
+  "updated_at": "2026-02-01T18:17:59.313898",
+  "completed_at": "2026-02-01T18:17:59.313314",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/process-doc-amendment/prompt.md",
   "outbox_path": "comms/outbox/exploration/process-doc-amendment"
