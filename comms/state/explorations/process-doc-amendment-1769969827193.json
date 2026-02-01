@@ -1,0 +1,15 @@
+{
+  "exploration_id": "process-doc-amendment-1769969827193",
+  "results_folder": "process-doc-amendment",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-01T18:17:07.193334",
+  "updated_at": "2026-02-01T18:17:07.193334",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/process-doc-amendment/prompt.md",
+  "outbox_path": "comms/outbox/exploration/process-doc-amendment"
+}

@@ -1,14 +1,16 @@
 {
   "exploration_id": "post-version-retrospective-1769967509670",
   "results_folder": "post-version-retrospective",
-  "status": "running",
+  "status": "complete",
   "pid": 12712,
   "started_at": "2026-02-01T17:38:29.670910",
-  "updated_at": "2026-02-01T17:38:31.575959",
-  "completed_at": null,
+  "updated_at": "2026-02-01T17:43:10.739329",
+  "completed_at": "2026-02-01T17:43:10.739008",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/post-version-retrospective/prompt.md",
   "outbox_path": "comms/outbox/exploration/post-version-retrospective"
