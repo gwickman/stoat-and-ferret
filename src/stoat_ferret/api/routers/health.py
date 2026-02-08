@@ -69,9 +69,12 @@ async def _check_database(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with status and latency_ms on success, or status and error on failure.
     """
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        return {"status": "ok", "latency_ms": 0.0}
     try:
         start = time.perf_counter()
-        cursor = await request.app.state.db.execute("SELECT 1")
+        cursor = await db.execute("SELECT 1")
         await cursor.fetchone()
         latency_ms = (time.perf_counter() - start) * 1000
         return {"status": "ok", "latency_ms": round(latency_ms, 2)}

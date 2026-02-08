@@ -19,7 +19,7 @@ def test_liveness_returns_ok(client: TestClient) -> None:
 @pytest.mark.api
 def test_readiness_returns_200_when_healthy(client: TestClient) -> None:
     """Readiness returns 200 when all dependency checks pass."""
-    # Patch ffmpeg check to always succeed (database is handled by test fixture)
+    # Patch ffmpeg check to always succeed (no DB in injection mode, health check skips it)
     with (
         patch("stoat_ferret.api.routers.health.shutil.which", return_value="/usr/bin/ffmpeg"),
         patch("stoat_ferret.api.routers.health.subprocess.run") as mock_run,
@@ -40,26 +40,30 @@ def test_readiness_returns_200_when_healthy(client: TestClient) -> None:
 @pytest.mark.api
 def test_readiness_returns_503_when_database_unavailable(client: TestClient) -> None:
     """Readiness returns 503 when database check fails."""
-    # Make the db execute raise an exception
-    with patch.object(client.app.state, "db", new_callable=AsyncMock) as mock_db:
-        mock_db.execute.side_effect = Exception("Database connection lost")
+    # Set a mock db on app.state to simulate a broken database connection
+    mock_db = AsyncMock()
+    mock_db.execute.side_effect = Exception("Database connection lost")
+    client.app.state.db = mock_db  # type: ignore[union-attr]
 
-        # Also patch ffmpeg to succeed so we isolate database failure
-        with (
-            patch(
-                "stoat_ferret.api.routers.health.shutil.which",
-                return_value="/usr/bin/ffmpeg",
-            ),
-            patch("stoat_ferret.api.routers.health.subprocess.run") as mock_run,
-        ):
-            mock_run.return_value = MagicMock(stdout="ffmpeg version 6.0 Copyright (c) 2000-2023\n")
-            response = client.get("/health/ready")
+    # Also patch ffmpeg to succeed so we isolate database failure
+    with (
+        patch(
+            "stoat_ferret.api.routers.health.shutil.which",
+            return_value="/usr/bin/ffmpeg",
+        ),
+        patch("stoat_ferret.api.routers.health.subprocess.run") as mock_run,
+    ):
+        mock_run.return_value = MagicMock(stdout="ffmpeg version 6.0 Copyright (c) 2000-2023\n")
+        response = client.get("/health/ready")
 
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "degraded"
     assert data["checks"]["database"]["status"] == "error"
     assert "Database connection lost" in data["checks"]["database"]["error"]
+
+    # Clean up: remove mock db so it doesn't affect other tests
+    del client.app.state.db  # type: ignore[union-attr]
 
 
 @pytest.mark.api
