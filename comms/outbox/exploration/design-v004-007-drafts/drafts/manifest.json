@@ -1,0 +1,74 @@
+{
+  "version": "v004",
+  "description": "Testing Infrastructure & Quality Verification",
+  "backlog_ids": ["BL-020", "BL-021", "BL-022", "BL-023", "BL-024", "BL-025", "BL-026", "BL-027", "BL-009", "BL-010", "BL-012", "BL-014", "BL-016"],
+  "context": {
+    "rationale": "v004 builds comprehensive testing and quality verification infrastructure covering black box testing, recording test doubles, contract tests, and quality verification suite (milestones M1.8–M1.9). This is a prerequisite for v005 (black box tests validate GUI backend).",
+    "constraints": [
+      "v003 baseline: 395 tests, 93% Python coverage, no Rust coverage tracked",
+      "Python 80% coverage minimum, Rust 90% target per AGENTS.md",
+      "BL-020→BL-021→BL-022→BL-023 strict dependency chain",
+      "BL-027 async scan is an API breaking change (pre-v1.0, no external consumers)",
+      "Windows Application Control policies may block local Python testing (BL-014 Docker workaround)"
+    ],
+    "assumptions": [
+      "No external consumers of scan endpoint — breaking change is safe",
+      "Domain objects are flat scalar dataclasses — deepcopy overhead is negligible",
+      "FTS5 features beyond prefix match (AND/OR/NOT/NEAR/ranking) not used by app",
+      "Rust coverage baseline likely 75-90% based on ~160 existing tests"
+    ],
+    "deferred_items": []
+  },
+  "themes": [
+    {
+      "number": 1,
+      "slug": "test-foundation",
+      "goal": "Establish core testing infrastructure — test doubles, dependency injection, and fixture factories",
+      "features": [
+        {"number": 1, "slug": "inmemory-test-doubles", "goal": "Add deepcopy isolation and seed helpers to AsyncInMemoryProjectRepository; create InMemoryJobQueue"},
+        {"number": 2, "slug": "dependency-injection", "goal": "Add optional injectable parameters to create_app() replacing dependency_overrides pattern"},
+        {"number": 3, "slug": "fixture-factory", "goal": "Build builder-pattern fixture factory with build() and create_via_api() methods"}
+      ]
+    },
+    {
+      "number": 2,
+      "slug": "blackbox-contract",
+      "goal": "Implement end-to-end black box tests, verified fakes for FFmpeg executors, and unified search behavior",
+      "features": [
+        {"number": 1, "slug": "blackbox-test-catalog", "goal": "Core workflow and error handling tests through REST API using test doubles"},
+        {"number": 2, "slug": "ffmpeg-contract-tests", "goal": "Parametrized tests across Real, Recording, and Fake executors with args verification"},
+        {"number": 3, "slug": "search-unification", "goal": "Align InMemory search with FTS5 prefix-match semantics"}
+      ]
+    },
+    {
+      "number": 3,
+      "slug": "async-scan",
+      "goal": "Replace synchronous blocking scan with async job queue pattern",
+      "features": [
+        {"number": 1, "slug": "job-queue-infrastructure", "goal": "AsyncJobQueue protocol, asyncio.Queue implementation, lifespan integration"},
+        {"number": 2, "slug": "async-scan-endpoint", "goal": "Refactor scan endpoint to return job ID, add GET /jobs/{id} endpoint"},
+        {"number": 3, "slug": "scan-doc-updates", "goal": "Update API spec and design docs for async scan"}
+      ]
+    },
+    {
+      "number": 4,
+      "slug": "security-performance",
+      "goal": "Complete M1.9 quality verification — security audit and performance benchmarks",
+      "features": [
+        {"number": 1, "slug": "security-audit", "goal": "Audit Rust path validation, input sanitization, and escape_filter_text"},
+        {"number": 2, "slug": "performance-benchmark", "goal": "Benchmark Rust vs Python for 3+ operations with documented speedup ratios"}
+      ]
+    },
+    {
+      "number": 5,
+      "slug": "devex-coverage",
+      "goal": "Improve developer tooling, testing processes, and coverage infrastructure",
+      "features": [
+        {"number": 1, "slug": "property-test-guidance", "goal": "Add property test section to feature design templates with invariant-first guidance"},
+        {"number": 2, "slug": "rust-coverage", "goal": "Configure llvm-cov with CI integration and threshold enforcement"},
+        {"number": 3, "slug": "coverage-gap-fixes", "goal": "Review and fix coverage exclusions for ImportError fallback code"},
+        {"number": 4, "slug": "docker-testing", "goal": "Create Dockerfile and docker-compose.yml for containerized testing"}
+      ]
+    }
+  ]
+}
