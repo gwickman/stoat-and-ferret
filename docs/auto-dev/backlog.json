@@ -1,6 +1,6 @@
 {
-  "next_id": 19,
-  "updated_at": "2026-02-01T18:17:14.220428",
+  "next_id": 20,
+  "updated_at": "2026-02-06T20:37:40.867168",
   "items": [
     {
       "id": "BL-001",
@@ -651,6 +651,26 @@
       "acceptance_criteria": [],
       "notes": null,
       "use_case": "This feature addresses: Create C4 architecture documentation. It improves the system by resolving the described requirement.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null
+    },
+    {
+      "id": "BL-019",
+      "title": "Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore",
+      "priority": "P1",
+      "status": "open",
+      "size": "m",
+      "added": "2026-02-06T20:37:40.867158",
+      "completed_at": null,
+      "tags": [
+        "windows",
+        "agents-md",
+        "gitignore"
+      ],
+      "description": "Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore. In bash contexts on Windows: Always use `/dev/null` for output redirection (Git Bash correctly translates this to the Windows null device). Never use bare `nul` which gets interpreted as a literal filename in MSYS/Git Bash environments. Correct: `command > /dev/null 2>&1`. Wrong: `command > nul 2>&1`.",
+      "acceptance_criteria": [],
+      "notes": null,
+      "use_case": "This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.",
       "implemented_in_version": null,
       "implemented_in_theme": null
     }

@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-01 18:17*
+*Last updated: 2026-02-06 20:37*
 
 **Total completed:** 9 | **Cancelled:** 0
 
@@ -9,7 +9,7 @@
 | Priority | Name | Count |
 |----------|------|-------|
 | P0 | Critical | 0 |
-| P1 | High | 0 |
+| P1 | High | 1 |
 | P2 | Medium | 4 |
 | P3 | Low | 4 |
 
@@ -17,6 +17,7 @@
 
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
+| <a id="bl-019-ref"></a>[BL-019](#bl-019) | P1 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-003-ref"></a>[BL-003](#bl-003) | P2 | m | EXP-003: FastAPI static file serving for GUI | Investigate serving the React/Svelte GUI from FastAPI: |
 | <a id="bl-009-ref"></a>[BL-009](#bl-009) | P2 | m | Add property test guidance to feature design template | v001 retrospective suggested writing proptest invariants ... |
 | <a id="bl-014-ref"></a>[BL-014](#bl-014) | P2 | s | Add Docker-based local testing option | v002 retrospective identified that Windows Application Co... |
@@ -51,8 +52,24 @@
 | documentation | 1 | BL-018 |
 | architecture | 1 | BL-018 |
 | c4 | 1 | BL-018 |
+| windows | 1 | BL-019 |
+| agents-md | 1 | BL-019 |
+| gitignore | 1 | BL-019 |
 
 ## Item Details
+
+### P1: High
+
+#### 📋 BL-019: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore
+
+**Status:** open
+**Tags:** windows, agents-md, gitignore
+
+Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore. In bash contexts on Windows: Always use `/dev/null` for output redirection (Git Bash correctly translates this to the Windows null device). Never use bare `nul` which gets interpreted as a literal filename in MSYS/Git Bash environments. Correct: `command > /dev/null 2>&1`. Wrong: `command > nul 2>&1`.
+
+**Use Case:** This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.
+
+[↑ Back to list](#bl-019-ref)
 
 ### P2: Medium
 
