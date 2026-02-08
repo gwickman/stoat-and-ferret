@@ -1,14 +1,20 @@
 {
   "exploration_id": "design-v004-004-research-1770583739618",
   "results_folder": "design-v004-004-research",
-  "status": "running",
+  "status": "complete",
   "pid": 21224,
   "started_at": "2026-02-08T20:48:59.618795",
-  "updated_at": "2026-02-08T20:49:01.582890",
-  "completed_at": null,
+  "updated_at": "2026-02-08T20:56:54.608874",
+  "completed_at": "2026-02-08T20:56:54.608577",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "codebase-patterns.md",
+    "evidence-log.md",
+    "external-research.md",
+    "impact-analysis.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v004-004-research/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v004-004-research"
