@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.factories import ProjectFactory
+
 
 def _ffmpeg_available() -> bool:
     """Check if ffmpeg is available in PATH."""
@@ -113,3 +115,13 @@ def video_only_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
         pytest.skip(f"ffmpeg failed to generate test video: {result.stderr.decode()}")
 
     return video_path
+
+
+@pytest.fixture
+def project_factory() -> ProjectFactory:
+    """Provide a fresh ProjectFactory builder for test data construction.
+
+    Returns:
+        A new ProjectFactory instance ready for chaining.
+    """
+    return ProjectFactory()
