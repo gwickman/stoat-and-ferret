@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -176,7 +177,7 @@ class AsyncSQLiteClipRepository:
 class AsyncInMemoryClipRepository:
     """Async in-memory implementation for testing.
 
-    Useful for testing without a database.
+    Stores deepcopy-isolated objects so callers cannot mutate internal state.
     """
 
     def __init__(self) -> None:
@@ -187,24 +188,25 @@ class AsyncInMemoryClipRepository:
         """Add a clip to the repository."""
         if clip.id in self._clips:
             raise ValueError(f"Clip {clip.id} already exists")
-        self._clips[clip.id] = clip
-        return clip
+        self._clips[clip.id] = copy.deepcopy(clip)
+        return copy.deepcopy(clip)
 
     async def get(self, id: str) -> Clip | None:
         """Get a clip by its ID."""
-        return self._clips.get(id)
+        clip = self._clips.get(id)
+        return copy.deepcopy(clip) if clip is not None else None
 
     async def list_by_project(self, project_id: str) -> list[Clip]:
         """List clips in a project, ordered by timeline position."""
         clips = [c for c in self._clips.values() if c.project_id == project_id]
-        return sorted(clips, key=lambda c: c.timeline_position)
+        return [copy.deepcopy(c) for c in sorted(clips, key=lambda c: c.timeline_position)]
 
     async def update(self, clip: Clip) -> Clip:
         """Update an existing clip."""
         if clip.id not in self._clips:
             raise ValueError(f"Clip {clip.id} does not exist")
-        self._clips[clip.id] = clip
-        return clip
+        self._clips[clip.id] = copy.deepcopy(clip)
+        return copy.deepcopy(clip)
 
     async def delete(self, id: str) -> bool:
         """Delete a clip by its ID."""
@@ -212,3 +214,12 @@ class AsyncInMemoryClipRepository:
             return False
         del self._clips[id]
         return True
+
+    def seed(self, clips: list[Clip]) -> None:
+        """Populate the repository with initial test data.
+
+        Args:
+            clips: List of clips to seed. Stored as deepcopies.
+        """
+        for clip in clips:
+            self._clips[clip.id] = copy.deepcopy(clip)

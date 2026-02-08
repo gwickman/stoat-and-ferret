@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -184,7 +185,7 @@ class AsyncSQLiteProjectRepository:
 class AsyncInMemoryProjectRepository:
     """Async in-memory implementation for testing.
 
-    Useful for testing without a database.
+    Stores deepcopy-isolated objects so callers cannot mutate internal state.
     """
 
     def __init__(self) -> None:
@@ -195,24 +196,25 @@ class AsyncInMemoryProjectRepository:
         """Add a project to the repository."""
         if project.id in self._projects:
             raise ValueError(f"Project {project.id} already exists")
-        self._projects[project.id] = project
-        return project
+        self._projects[project.id] = copy.deepcopy(project)
+        return copy.deepcopy(project)
 
     async def get(self, id: str) -> Project | None:
         """Get a project by its ID."""
-        return self._projects.get(id)
+        project = self._projects.get(id)
+        return copy.deepcopy(project) if project is not None else None
 
     async def list_projects(self, limit: int = 100, offset: int = 0) -> list[Project]:
         """List projects with pagination."""
         sorted_projects = sorted(self._projects.values(), key=lambda p: p.created_at, reverse=True)
-        return sorted_projects[offset : offset + limit]
+        return [copy.deepcopy(p) for p in sorted_projects[offset : offset + limit]]
 
     async def update(self, project: Project) -> Project:
         """Update an existing project."""
         if project.id not in self._projects:
             raise ValueError(f"Project {project.id} does not exist")
-        self._projects[project.id] = project
-        return project
+        self._projects[project.id] = copy.deepcopy(project)
+        return copy.deepcopy(project)
 
     async def delete(self, id: str) -> bool:
         """Delete a project by its ID."""
@@ -220,3 +222,12 @@ class AsyncInMemoryProjectRepository:
             return False
         del self._projects[id]
         return True
+
+    def seed(self, projects: list[Project]) -> None:
+        """Populate the repository with initial test data.
+
+        Args:
+            projects: List of projects to seed. Stored as deepcopies.
+        """
+        for project in projects:
+            self._projects[project.id] = copy.deepcopy(project)
