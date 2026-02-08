@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v004-009-validation-1770588134200",
+  "results_folder": "design-v004-009-validation",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-08T22:02:14.200647",
+  "updated_at": "2026-02-08T22:02:14.200647",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v004-009-validation/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v004-009-validation"
+}
