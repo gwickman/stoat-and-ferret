@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import sqlite3
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol
@@ -266,7 +267,7 @@ class AsyncSQLiteVideoRepository:
 class AsyncInMemoryVideoRepository:
     """Async in-memory implementation for testing.
 
-    Useful for testing without a database.
+    Stores deepcopy-isolated objects so callers cannot mutate internal state.
     """
 
     def __init__(self) -> None:
@@ -280,23 +281,27 @@ class AsyncInMemoryVideoRepository:
             raise ValueError(f"Video {video.id} already exists")
         if video.path in self._by_path:
             raise ValueError(f"Video with path {video.path} already exists")
-        self._videos[video.id] = video
+        self._videos[video.id] = copy.deepcopy(video)
         self._by_path[video.path] = video.id
-        return video
+        return copy.deepcopy(video)
 
     async def get(self, id: str) -> Video | None:
         """Get a video by its ID."""
-        return self._videos.get(id)
+        video = self._videos.get(id)
+        return copy.deepcopy(video) if video is not None else None
 
     async def get_by_path(self, path: str) -> Video | None:
         """Get a video by its file path."""
         video_id = self._by_path.get(path)
-        return self._videos.get(video_id) if video_id else None
+        if video_id is None:
+            return None
+        video = self._videos.get(video_id)
+        return copy.deepcopy(video) if video is not None else None
 
     async def list_videos(self, limit: int = 100, offset: int = 0) -> list[Video]:
         """List videos with pagination."""
         sorted_videos = sorted(self._videos.values(), key=lambda v: v.created_at, reverse=True)
-        return sorted_videos[offset : offset + limit]
+        return [copy.deepcopy(v) for v in sorted_videos[offset : offset + limit]]
 
     async def search(self, query: str, limit: int = 100) -> list[Video]:
         """Search videos by filename or path."""
@@ -306,7 +311,7 @@ class AsyncInMemoryVideoRepository:
             for v in self._videos.values()
             if query_lower in v.filename.lower() or query_lower in v.path.lower()
         ]
-        return results[:limit]
+        return [copy.deepcopy(v) for v in results[:limit]]
 
     async def update(self, video: Video) -> Video:
         """Update an existing video."""
@@ -317,8 +322,8 @@ class AsyncInMemoryVideoRepository:
         if old_video.path != video.path:
             del self._by_path[old_video.path]
             self._by_path[video.path] = video.id
-        self._videos[video.id] = video
-        return video
+        self._videos[video.id] = copy.deepcopy(video)
+        return copy.deepcopy(video)
 
     async def delete(self, id: str) -> bool:
         """Delete a video by its ID."""
@@ -328,3 +333,13 @@ class AsyncInMemoryVideoRepository:
         del self._by_path[video.path]
         del self._videos[id]
         return True
+
+    def seed(self, videos: list[Video]) -> None:
+        """Populate the repository with initial test data.
+
+        Args:
+            videos: List of videos to seed. Stored as deepcopies.
+        """
+        for video in videos:
+            self._videos[video.id] = copy.deepcopy(video)
+            self._by_path[video.path] = video.id
