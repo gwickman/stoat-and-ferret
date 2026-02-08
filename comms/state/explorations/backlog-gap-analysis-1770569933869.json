@@ -1,10 +1,10 @@
 {
   "exploration_id": "backlog-gap-analysis-1770569933869",
   "results_folder": "backlog-gap-analysis",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 18944,
   "started_at": "2026-02-08T16:58:53.869103",
-  "updated_at": "2026-02-08T16:58:53.869103",
+  "updated_at": "2026-02-08T16:58:55.811035",
   "completed_at": null,
   "error": null,
   "documents": [],
