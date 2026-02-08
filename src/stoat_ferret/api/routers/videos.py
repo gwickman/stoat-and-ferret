@@ -27,12 +27,18 @@ router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
 async def get_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
 
+    Returns an injected repository if one was provided to create_app(),
+    otherwise constructs a SQLite repository from the database connection.
+
     Args:
         request: The FastAPI request object.
 
     Returns:
         Async video repository instance.
     """
+    repo: AsyncVideoRepository | None = getattr(request.app.state, "video_repository", None)
+    if repo is not None:
+        return repo
     return AsyncSQLiteVideoRepository(request.app.state.db)
 
 

@@ -55,8 +55,12 @@ def test_openapi_docs_available(client: TestClient) -> None:
 
 
 @pytest.mark.api
-def test_database_connection_in_state(client: TestClient) -> None:
-    """Database connection is stored in app.state after startup."""
-    # The client fixture uses our app fixture which sets up the test database
-    assert hasattr(client.app.state, "db")
-    assert client.app.state.db is not None
+def test_injected_repositories_in_state(client: TestClient) -> None:
+    """Injected repositories are stored in app.state after startup."""
+    # The client fixture uses create_app() with injected in-memory repositories
+    assert hasattr(client.app.state, "video_repository")
+    assert client.app.state.video_repository is not None
+    assert hasattr(client.app.state, "project_repository")
+    assert client.app.state.project_repository is not None
+    assert hasattr(client.app.state, "clip_repository")
+    assert client.app.state.clip_repository is not None

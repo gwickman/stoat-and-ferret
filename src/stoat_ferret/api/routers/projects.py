@@ -32,17 +32,26 @@ router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 async def get_project_repository(request: Request) -> AsyncProjectRepository:
     """Get project repository from app state.
 
+    Returns an injected repository if one was provided to create_app(),
+    otherwise constructs a SQLite repository from the database connection.
+
     Args:
         request: The FastAPI request object.
 
     Returns:
         Async project repository instance.
     """
+    repo: AsyncProjectRepository | None = getattr(request.app.state, "project_repository", None)
+    if repo is not None:
+        return repo
     return AsyncSQLiteProjectRepository(request.app.state.db)
 
 
 async def get_clip_repository(request: Request) -> AsyncClipRepository:
     """Get clip repository from app state.
+
+    Returns an injected repository if one was provided to create_app(),
+    otherwise constructs a SQLite repository from the database connection.
 
     Args:
         request: The FastAPI request object.
@@ -50,11 +59,17 @@ async def get_clip_repository(request: Request) -> AsyncClipRepository:
     Returns:
         Async clip repository instance.
     """
+    repo: AsyncClipRepository | None = getattr(request.app.state, "clip_repository", None)
+    if repo is not None:
+        return repo
     return AsyncSQLiteClipRepository(request.app.state.db)
 
 
 async def get_video_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
+
+    Returns an injected repository if one was provided to create_app(),
+    otherwise constructs a SQLite repository from the database connection.
 
     Args:
         request: The FastAPI request object.
@@ -62,6 +77,9 @@ async def get_video_repository(request: Request) -> AsyncVideoRepository:
     Returns:
         Async video repository instance.
     """
+    repo: AsyncVideoRepository | None = getattr(request.app.state, "video_repository", None)
+    if repo is not None:
+        return repo
     from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
 
     return AsyncSQLiteVideoRepository(request.app.state.db)
