@@ -12,15 +12,15 @@
 
 ## Roadmap → Version Mapping
 
-| Version | Focus | Status |
-|---------|-------|--------|
-| v007 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | 📋 planned |
-| v006 | Effects engine foundation: filter expression engine, graph validation, text overlay, speed control | 📋 planned |
-| v005 | GUI shell + library browser + project manager | 📋 planned |
-| v004 | Testing infrastructure + quality verification (M1.8–1.9) | 📋 planned |
-| v003 | API layer + Clip model (M1.6–1.7) | ✅ complete |
-| v002 | Database + FFmpeg integration (M1.4–1.5) | ✅ complete |
-| v001 | Foundation + Rust core basics (M1.1–1.3) | ✅ complete |
+| Version | Roadmap Reference | Focus | Status |
+|---------|-------------------|-------|--------|
+| v007 | Phase 2, M2.4–2.6, M2.8–2.9 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | 📋 planned |
+| v006 | Phase 2, M2.1–2.3 | Effects engine foundation: filter expression engine, graph validation, text overlay, speed control | 📋 planned |
+| v005 | Phase 1, M1.10–1.12 | GUI shell + library browser + project manager | 📋 planned |
+| v004 | Phase 1, M1.8–1.9 | Testing infrastructure + quality verification | 📋 planned |
+| v003 | Phase 1, M1.6–1.7 | API layer + Clip model | ✅ complete |
+| v002 | Phase 1, M1.4–1.5 | Database + FFmpeg integration | ✅ complete |
+| v001 | Phase 1, M1.1–1.3 | Foundation + Rust core basics | ✅ complete |
 
 ## Investigation Dependencies
 
