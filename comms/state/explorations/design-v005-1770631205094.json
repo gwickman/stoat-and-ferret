@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v005-1770631205094",
+  "results_folder": "design-v005",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-09T10:00:05.094326",
+  "updated_at": "2026-02-09T10:00:05.094326",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v005/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v005"
+}
