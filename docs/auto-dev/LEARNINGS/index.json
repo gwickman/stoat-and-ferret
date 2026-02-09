@@ -14,7 +14,8 @@
       "source_type": "manual",
       "related_backlog": null,
       "summary": "PyO3 Method Chaining with PyRefMut",
-      "content_path": "docs/auto-dev/LEARNINGS/LRN-001-pyo3-method-chaining-with-pyrefmut.md"
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-001-pyo3-method-chaining-with-pyrefmut.md",
+      "status": "active"
     },
     {
       "id": "LRN-002",
@@ -30,7 +31,8 @@
       "source_type": "manual",
       "related_backlog": null,
       "summary": "Frame-Accurate Timeline Math",
-      "content_path": "docs/auto-dev/LEARNINGS/LRN-002-frame-accurate-timeline-math.md"
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-002-frame-accurate-timeline-math.md",
+      "status": "active"
     },
     {
       "id": "LRN-003",
@@ -45,8 +47,130 @@
       "source_type": "manual",
       "related_backlog": null,
       "summary": "Security Validation Whitelist Pattern",
-      "content_path": "docs/auto-dev/LEARNINGS/LRN-003-security-validation-whitelist-pattern.md"
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-003-security-validation-whitelist-pattern.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-004",
+      "title": "Deepcopy Isolation for InMemory Test Doubles",
+      "tags": [
+        "testing",
+        "patterns",
+        "isolation",
+        "test-doubles"
+      ],
+      "created": "2026-02-09T06:32:54.305332Z",
+      "source": "v004/01-test-foundation/001-inmemory-test-doubles",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "InMemory test doubles must deepcopy on both read and write operations to prevent mutation leakage between tests.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-004-deepcopy-isolation-for-inmemory-test-doubles.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-005",
+      "title": "Constructor DI over dependency_overrides for FastAPI Testing",
+      "tags": [
+        "testing",
+        "fastapi",
+        "dependency-injection",
+        "patterns"
+      ],
+      "created": "2026-02-09T06:33:03.120095Z",
+      "source": "v004/01-test-foundation/002-dependency-injection",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Use create_app() constructor parameters instead of FastAPI dependency_overrides for cleaner, explicit test wiring without global mutable state.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-005-constructor-di-over-dependency-overrides-for-fasta.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-006",
+      "title": "Builder Pattern with Dual Output Modes for Test Fixtures",
+      "tags": [
+        "testing",
+        "patterns",
+        "builder",
+        "fixtures"
+      ],
+      "created": "2026-02-09T06:33:11.428278Z",
+      "source": "v004/01-test-foundation/003-fixture-factory",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Test fixture factories with dual output modes (build for unit tests, create_via_api for integration tests) provide flexibility without forcing a single testing style.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-006-builder-pattern-with-dual-output-modes-for-test-fi.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-007",
+      "title": "Parity Tests Prevent Test Double Drift",
+      "tags": [
+        "testing",
+        "patterns",
+        "parity",
+        "test-doubles",
+        "contracts"
+      ],
+      "created": "2026-02-09T06:33:20.272780Z",
+      "source": "v004/01-test-foundation, 02-blackbox-contract/003-search-unification",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Parity tests running identical operations against InMemory fakes and real implementations catch behavioral drift automatically.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-007-parity-tests-prevent-test-double-drift.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-008",
+      "title": "Record-Replay with Strict Mode for External Dependency Testing",
+      "tags": [
+        "testing",
+        "patterns",
+        "record-replay",
+        "external-dependencies",
+        "contracts"
+      ],
+      "created": "2026-02-09T06:33:29.168741Z",
+      "source": "v004/02-blackbox-contract/002-ffmpeg-contract-tests",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Three-tier executor pattern (Real/Recording/Fake) with strict argument verification enables reliable testing of external dependencies.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-008-record-replay-with-strict-mode-for-external-depend.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-009",
+      "title": "Handler Registration Pattern for Generic Job Queues",
+      "tags": [
+        "architecture",
+        "patterns",
+        "job-queue",
+        "dependency-injection"
+      ],
+      "created": "2026-02-09T06:33:43.143756Z",
+      "source": "v004/03-async-scan/001-job-queue-infrastructure",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Explicit handler registration with factory-based dependency injection provides clean, testable job routing without global state.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-009-handler-registration-pattern-for-generic-job-queue.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-010",
+      "title": "Prefer stdlib asyncio.Queue over External Queue Dependencies",
+      "tags": [
+        "architecture",
+        "asyncio",
+        "dependencies",
+        "simplicity"
+      ],
+      "created": "2026-02-09T06:33:52.433360Z",
+      "source": "v004/03-async-scan (cross-theme learning)",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "stdlib asyncio.Queue with producer-consumer pattern eliminates external queue dependencies while meeting single-worker requirements.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-010-prefer-stdlib-asyncio-queue-over-external-queue-de.md",
+      "status": "active"
     }
   ],
-  "next_id": 4
+  "next_id": 11
 }

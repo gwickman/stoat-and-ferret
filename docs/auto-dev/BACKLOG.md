@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-09 06:28*
+*Last updated: 2026-02-09 06:33*
 
 **Total completed:** 22 | **Cancelled:** 0
 
@@ -488,6 +488,8 @@ This informs v005 (GUI shell).
 No C4 architecture documentation currently exists for the project. Establish documentation at appropriate levels (Context, Container, Component, Code) to document the system architecture.
 
 **Use Case:** This feature addresses: Create C4 architecture documentation. It improves the system by resolving the described requirement.
+
+**Notes:** v004 retrospective architecture check (2026-02-09): The primary architecture doc (docs/design/02-architecture.md) was updated during v004 Theme 03 Feature 3 to reflect async scan, job queue, and updated data flows. No additional drift detected in the design docs. However, the v004 version retrospective explicitly notes that C4 documentation was skipped. v004 added: (1) AsyncioJobQueue with handler registration and background worker, (2) GET /api/v1/jobs/{job_id} status endpoint, (3) ALLOWED_SCAN_ROOTS security configuration with validate_scan_path(), (4) InMemory test doubles and create_app() DI pattern, (5) Docker multi-stage build infrastructure, (6) Rust coverage CI enforcement. These components should be captured when C4 documentation is created.
 
 [↑ Back to list](#bl-018-ref)
 
