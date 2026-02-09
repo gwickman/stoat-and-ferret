@@ -224,6 +224,11 @@ jobs:
         run: npx playwright install-deps chromium
         working-directory: gui
 
+      - name: Initialize database
+        run: |
+          mkdir -p data
+          uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
+
       - name: Run E2E tests
         run: npx playwright test
         working-directory: gui
