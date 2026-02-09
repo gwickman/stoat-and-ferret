@@ -5,12 +5,19 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+import structlog
 
 from stoat_ferret.api.schemas.video import ScanError, ScanResponse
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.models import Video
 from stoat_ferret.ffmpeg.probe import ffprobe_video
+
+if TYPE_CHECKING:
+    from stoat_ferret.api.services.thumbnail import ThumbnailService
+
+logger = structlog.get_logger(__name__)
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v"}
 
@@ -45,11 +52,13 @@ SCAN_JOB_TYPE = "scan"
 
 def make_scan_handler(
     repository: AsyncVideoRepository,
+    thumbnail_service: ThumbnailService | None = None,
 ) -> Callable[[str, dict[str, Any]], Awaitable[Any]]:
     """Create a scan job handler bound to a repository.
 
     Args:
         repository: Video repository for storing scan results.
+        thumbnail_service: Optional thumbnail service for generating thumbnails.
 
     Returns:
         Async handler function compatible with the job queue.
@@ -69,6 +78,7 @@ def make_scan_handler(
             path=payload["path"],
             recursive=payload.get("recursive", True),
             repository=repository,
+            thumbnail_service=thumbnail_service,
         )
         return result.model_dump()
 
@@ -79,17 +89,19 @@ async def scan_directory(
     path: str,
     recursive: bool,
     repository: AsyncVideoRepository,
+    thumbnail_service: ThumbnailService | None = None,
 ) -> ScanResponse:
     """Scan directory for video files.
 
     Walks the specified directory (optionally recursively), finds video files
     by extension, extracts metadata using ffprobe, and adds/updates them in
-    the repository.
+    the repository. Optionally generates thumbnails for each video.
 
     Args:
         path: Directory path to scan.
         recursive: Whether to scan subdirectories.
         repository: Video repository for storing results.
+        thumbnail_service: Optional thumbnail service for generating thumbnails.
 
     Returns:
         ScanResponse with counts of scanned, new, updated, skipped files and errors.
@@ -123,8 +135,15 @@ async def scan_directory(
             # Probe video metadata
             metadata = ffprobe_video(str_path)
 
+            video_id = existing.id if existing else Video.new_id()
+
+            # Generate thumbnail if service is available
+            thumbnail_path: str | None = None
+            if thumbnail_service is not None:
+                thumbnail_path = thumbnail_service.generate(str_path, video_id)
+
             video = Video(
-                id=existing.id if existing else Video.new_id(),
+                id=video_id,
                 path=str_path,
                 filename=file_path.name,
                 duration_frames=metadata.duration_frames,
@@ -135,7 +154,7 @@ async def scan_directory(
                 video_codec=metadata.video_codec,
                 audio_codec=metadata.audio_codec,
                 file_size=file_path.stat().st_size,
-                thumbnail_path=None,
+                thumbnail_path=thumbnail_path,
                 created_at=existing.created_at if existing else datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             )

@@ -19,6 +19,7 @@ from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import health, jobs, projects, videos
 from stoat_ferret.api.routers.ws import websocket_endpoint
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
+from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import (
@@ -27,6 +28,7 @@ from stoat_ferret.db.async_repository import (
 )
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
+from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
 
 logger = structlog.get_logger(__name__)
@@ -62,10 +64,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.db = await aiosqlite.connect(settings.database_path_resolved)
     app.state.db.row_factory = aiosqlite.Row
 
-    # Startup: create job queue, register handlers, and start worker
+    # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db)
-    job_queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(repo))
+    thumbnail_service = ThumbnailService(
+        executor=RealFFmpegExecutor(),
+        thumbnail_dir=settings.thumbnail_dir,
+    )
+    job_queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(repo, thumbnail_service))
     app.state.job_queue = job_queue
     worker_task = asyncio.create_task(job_queue.process_jobs())
     logger.info("job_worker_started")
