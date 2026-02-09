@@ -1,10 +1,10 @@
 {
   "exploration_id": "v005-retro-006-learnings-1770663130176",
   "results_folder": "v005-retro-006-learnings",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 22096,
   "started_at": "2026-02-09T18:52:10.176288",
-  "updated_at": "2026-02-09T18:52:10.176288",
+  "updated_at": "2026-02-09T18:52:35.966117",
   "completed_at": null,
   "error": null,
   "documents": [],
