@@ -170,7 +170,163 @@
       "summary": "stdlib asyncio.Queue with producer-consumer pattern eliminates external queue dependencies while meeting single-worker requirements.",
       "content_path": "docs/auto-dev/LEARNINGS/LRN-010-prefer-stdlib-asyncio-queue-over-external-queue-de.md",
       "status": "active"
+    },
+    {
+      "id": "LRN-011",
+      "title": "Python Business Logic, Rust Input Safety in Hybrid Architectures",
+      "tags": [
+        "architecture",
+        "rust",
+        "python",
+        "hybrid",
+        "security",
+        "boundaries"
+      ],
+      "created": "2026-02-09T06:34:03.991539Z",
+      "source": "v004/04-security-performance (cross-theme learning)",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "In hybrid Python/Rust architectures, Rust handles input sanitization and type safety while Python handles business policy and domain rules.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-011-python-business-logic-rust-input-safety-in-hybrid-.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-012",
+      "title": "PyO3 FFI Overhead Makes Rust Slower for Simple Operations",
+      "tags": [
+        "performance",
+        "rust",
+        "pyo3",
+        "ffi",
+        "benchmarking"
+      ],
+      "created": "2026-02-09T06:34:13.655405Z",
+      "source": "v004/04-security-performance/002-performance-benchmark",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "PyO3 FFI overhead makes Rust 7-10x slower than Python for simple operations; Rust wins only for string-heavy processing (1.9x faster).",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-012-pyo3-ffi-overhead-makes-rust-slower-for-simple-ope.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-013",
+      "title": "Progressive Coverage Thresholds for Bootstrapping Enforcement",
+      "tags": [
+        "ci",
+        "coverage",
+        "process",
+        "thresholds"
+      ],
+      "created": "2026-02-09T06:34:22.507319Z",
+      "source": "v004/05-devex-coverage/002-rust-coverage",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Start with conservative coverage thresholds and ratchet up after confirming baseline, avoiding false CI failures during initial enforcement.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-013-progressive-coverage-thresholds-for-bootstrapping-.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-014",
+      "title": "Template-Driven Process Improvements Over Standalone Documentation",
+      "tags": [
+        "process",
+        "templates",
+        "documentation",
+        "adoption"
+      ],
+      "created": "2026-02-09T06:34:37.018232Z",
+      "source": "v004/05-devex-coverage/001-property-test-guidance",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Embed process improvements directly into existing templates rather than standalone docs to ensure adoption in standard workflows.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-014-template-driven-process-improvements-over-standalo.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-015",
+      "title": "Single-Matrix CI Jobs for Expensive Operations",
+      "tags": [
+        "ci",
+        "performance",
+        "process",
+        "github-actions"
+      ],
+      "created": "2026-02-09T06:34:47.073555Z",
+      "source": "v004/05-devex-coverage/002-rust-coverage",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Run expensive CI operations on a single platform in separate jobs rather than across the full test matrix to keep CI fast.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-015-single-matrix-ci-jobs-for-expensive-operations.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-016",
+      "title": "Validate Acceptance Criteria Against Codebase During Design",
+      "tags": [
+        "process",
+        "design",
+        "requirements",
+        "validation"
+      ],
+      "created": "2026-02-09T06:34:56.481858Z",
+      "source": "v004/01-test-foundation/003-fixture-factory, version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Validate that acceptance criteria reference existing domain models and APIs during design phase to prevent unachievable requirements during execution.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-016-validate-acceptance-criteria-against-codebase-duri.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-017",
+      "title": "Empty Allowlist Means Unrestricted as Backwards-Compatible Default",
+      "tags": [
+        "security",
+        "configuration",
+        "backwards-compatibility",
+        "patterns"
+      ],
+      "created": "2026-02-09T06:35:04.869022Z",
+      "source": "v004/04-security-performance/001-security-audit",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Empty allowlist defaulting to unrestricted preserves backwards compatibility while letting production environments lock down access explicitly.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-017-empty-allowlist-means-unrestricted-as-backwards-co.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-018",
+      "title": "Audit-Then-Fix Is More Efficient Than Blanket Changes",
+      "tags": [
+        "process",
+        "code-quality",
+        "auditing",
+        "pragmatism"
+      ],
+      "created": "2026-02-09T06:35:14.543926Z",
+      "source": "v004/05-devex-coverage/003-coverage-gap-fixes",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Catalogue all suppressions first, evaluate justification, then fix only unjustified ones — prevents unnecessary churn from blanket changes.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-018-audit-then-fix-is-more-efficient-than-blanket-chan.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-019",
+      "title": "Build Infrastructure First in Sequential Version Planning",
+      "tags": [
+        "process",
+        "planning",
+        "architecture",
+        "sequencing"
+      ],
+      "created": "2026-02-09T06:35:28.304735Z",
+      "source": "v004 version retrospective (cross-theme learning)",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Sequence infrastructure themes before consumer themes in version planning; the upfront investment pays off when subsequent themes consume the infrastructure.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-019-build-infrastructure-first-in-sequential-version-p.md",
+      "status": "active"
     }
   ],
-  "next_id": 11
+  "next_id": 20
 }
