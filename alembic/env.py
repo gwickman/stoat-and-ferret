@@ -20,10 +20,11 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = None
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Support -x sqlalchemy.url=... override from CLI
+cmd_line_url = config.get_main_option("sqlalchemy.url")
+x_url = context.get_x_argument(as_dictionary=True).get("sqlalchemy.url")
+if x_url:
+    config.set_main_option("sqlalchemy.url", x_url)
 
 
 def run_migrations_offline() -> None:
