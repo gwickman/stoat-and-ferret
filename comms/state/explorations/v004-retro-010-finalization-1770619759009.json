@@ -1,14 +1,17 @@
 {
   "exploration_id": "v004-retro-010-finalization-1770619759009",
   "results_folder": "v004-retro-010-finalization",
-  "status": "running",
+  "status": "complete",
   "pid": 21620,
   "started_at": "2026-02-09T06:49:19.009260",
-  "updated_at": "2026-02-09T06:49:20.820123",
-  "completed_at": null,
+  "updated_at": "2026-02-09T06:51:37.623156",
+  "completed_at": "2026-02-09T06:51:37.622858",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "final-summary.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v004-retro-010-finalization/prompt.md",
   "outbox_path": "comms/outbox/exploration/v004-retro-010-finalization"
