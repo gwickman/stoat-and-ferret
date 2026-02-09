@@ -1,0 +1,159 @@
+Read AGENTS.md first and follow all instructions there.
+
+## Objective
+
+Perform READ-ONLY validation of all persisted design documents to ensure they are complete, consistent, and ready for autonomous execution for stoat-and-ferret version v005.
+
+## Context
+
+This is Phase 4 (Validation) for stoat-and-ferret version v005. All design documents have been persisted to `comms/inbox/versions/execution/v005/`. This task validates completeness without modifying anything.
+
+**CRITICAL:** This task is READ-ONLY. Do NOT modify any persisted documents. If validation fails, document the failure and STOP. Do not attempt to fix documents.
+
+**WARNING:** Do NOT modify any files in `comms/outbox/versions/design/v005/`. These are the reference artifacts.
+
+## Tasks
+
+### 1. Content Completeness Check
+
+Compare Task 007 drafts against persisted inbox documents:
+- Read `comms/outbox/exploration/design-v005-007-drafts/drafts/manifest.json`
+- Read individual draft files under `comms/outbox/exploration/design-v005-007-drafts/drafts/`
+- Read all documents in `comms/inbox/versions/execution/v005/`
+- Check for truncation or missing content
+- Document any discrepancies
+
+### 2. Reference Resolution
+
+For each document, verify:
+- All references to `comms/outbox/versions/design/v005/` resolve to existing files
+- No broken links to missing artifacts
+- Design artifact store is intact and complete
+
+### 3. Notes Propagation
+
+Verify migration notes and caveats made it into documents:
+- Check requirements.md for notes from backlog items
+- Check implementation-plan.md for risk mitigation notes
+- Verify nothing important was lost in transfer
+
+### 4. validate_version_design Tool
+
+Run `validate_version_design(project="stoat-and-ferret", version="v005")`:
+- Confirm 0 missing documents
+- Document the validation result
+- If validation fails, list missing documents
+
+### 5. Backlog Alignment (MANDATORY SCOPE)
+
+ALL backlog items from PLAN.md for this version are mandatory: BL-003, BL-028 through BL-036 (10 items total).
+
+For each feature:
+- Verify it references correct BL-XXX items
+- Check acceptance criteria match backlog
+
+Across all features:
+- Verify EVERY backlog item from PLAN.md is mapped to at least one feature
+- If any backlog item is missing, this is a BLOCKING FAILURE
+
+### 6. File Paths Exist
+
+Review implementation plans:
+- Verify referenced files actually exist (for modifications)
+- For new files, verify parent directories exist
+- Document any invalid file references
+
+### 7. Dependency Accuracy
+
+Review stated dependencies:
+- Verify theme dependencies are correct
+- Verify feature dependencies are correct
+- Check for circular dependencies
+- Document any issues
+
+### 8. Mitigation Strategy
+
+Document any workarounds needed during implementation.
+
+### 9. Design Docs Committed
+
+Verify all design documents are committed:
+- Check git status for uncommitted changes in `comms/inbox/versions/execution/v005/`
+- Verify design artifact store is committed
+
+### 10. Handover Document
+
+Verify STARTER_PROMPT.md exists and is complete:
+- Read `comms/inbox/versions/execution/v005/STARTER_PROMPT.md`
+- Check it includes project context
+- Verify it references all necessary documents
+
+### 11. Impact Analysis Completeness
+
+Review VERSION_DESIGN.md and THEME_DESIGN.md files:
+- Dependencies identified
+- Breaking changes documented
+- Test impact assessed
+
+### 12. Naming Convention Validation
+
+Verify all theme and feature folders match expected naming patterns:
+- Theme folders: `^\d{2}-[a-z][a-z0-9-]*[a-z0-9]$`
+- Feature folders: `^\d{3}-[a-z][a-z0-9-]*[a-z0-9]$`
+- THEME_INDEX feature lines: `^- \d{3}-[a-z][a-z0-9-]*[a-z0-9]: .+$`
+
+**CRITICAL:** Check for double-numbered prefixes (`\d{2,3}-\d{2,3}-`). Any match is a BLOCKING FAILURE.
+
+### 13. Cross-Reference Consistency
+
+Parse THEME_INDEX.md and compare against actual folder structure:
+- Every theme in the index must have a matching folder on disk
+- Every theme folder on disk must appear in the index
+- Every feature in the index must have a matching folder
+- Every feature folder must appear in the index
+- Names must match EXACTLY (case-sensitive)
+
+Any mismatch is a BLOCKING FAILURE.
+
+## Output Requirements
+
+Create in `comms/outbox/exploration/design-v005-009-validation/`:
+
+### README.md (required)
+
+First paragraph: Summary of validation result (PASS/FAIL) with confidence level.
+
+Then:
+- **Checklist Status**: X/13 items passed
+- **Blocking Issues**: Any failures requiring fix
+- **Warnings**: Non-blocking concerns
+- **Ready for Execution**: Yes/No with rationale
+
+### pre-execution-checklist.md
+
+Full checklist with PASS/FAIL status for all 13 items and detailed notes.
+
+### validation-details.md
+
+Detailed findings for each checklist item.
+
+### discrepancies.md
+
+Document any issues found. If none: "No discrepancies identified."
+
+## Allowed MCP Tools
+
+- `read_document`
+- `validate_version_design`
+- `git_read` (operation="status")
+
+## Guidelines
+
+- ALL backlog items from PLAN.md are MANDATORY — any missing item is a blocking failure
+- This task is READ-ONLY — do not modify any documents
+- Be thorough — this is the final check before execution
+- Document all findings, even minor issues
+- If validation fails, provide clear remediation steps
+- If validation passes, give strong confidence signal
+
+Do NOT commit or push — the calling prompt handles commits. Results folder: design-v005-009-validation.
