@@ -29,20 +29,20 @@
     {
       "number": 3,
       "name": "async-scan",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 3,
       "features_complete": 3,
       "started_at": "2026-02-09T00:39:34.181186Z",
-      "completed_at": null,
+      "completed_at": "2026-02-09T01:21:11.999301Z",
       "skip_reason": null
     },
     {
       "number": 4,
       "name": "security-performance",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 2,
-      "features_complete": 0,
-      "started_at": null,
+      "features_complete": 2,
+      "started_at": "2026-02-09T01:21:12.001386Z",
       "completed_at": null,
       "skip_reason": null
     },
@@ -57,7 +57,7 @@
       "skip_reason": null
     }
   ],
-  "current_theme": 3,
-  "current_feature": 3,
+  "current_theme": 4,
+  "current_feature": 2,
   "baseline_failures": []
 }
