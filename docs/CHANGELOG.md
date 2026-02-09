@@ -4,6 +4,53 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v005] - 2026-02-09
+
+GUI Shell, Library Browser & Project Manager. Builds the frontend from scratch: React/TypeScript/Vite project, WebSocket real-time events, backend thumbnail pipeline, four main GUI panels, and Playwright E2E testing. Completes Phase 1 (M1.10-M1.12).
+
+### Added
+
+- **Frontend Foundation**
+  - React/TypeScript/Vite project scaffolded in `gui/` with Tailwind CSS v4
+  - FastAPI StaticFiles mount at `/gui` with conditional directory check
+  - CI `frontend` job for build/lint/test in parallel with Python matrix
+  - WebSocket endpoint (`/ws`) with `ConnectionManager`, heartbeat, correlation IDs
+  - Lazy dead connection cleanup during broadcast with `asyncio.Lock`
+  - Settings fields: `thumbnail_dir`, `gui_static_path`, `ws_heartbeat_interval`
+
+- **Backend Services**
+  - `ThumbnailService` with FFmpeg executor pattern for video thumbnail extraction
+  - `GET /api/v1/videos/{id}/thumbnail` endpoint with placeholder fallback
+  - Scan-time automatic thumbnail generation
+  - `AsyncVideoRepository.count()` protocol method (SQLite and InMemory)
+  - Paginated list endpoint now returns true total count (not page length)
+
+- **GUI Components**
+  - Application shell with header/content/footer layout and tab navigation via React Router
+  - Health indicator polling `/health/ready` every 30s (green/yellow/red)
+  - WebSocket hook with auto-reconnect and exponential backoff (1s to 30s)
+  - Dashboard panel with health cards (Python API, Rust Core, FFmpeg) and real-time activity log
+  - Prometheus metrics cards parsing text format for request count/duration
+  - Library browser with responsive video grid, thumbnails, search (300ms debounce), sort controls, scan modal with progress, and pagination
+  - Project manager with list view, creation modal (resolution/fps/format validation), project details with timeline positions, and delete confirmation
+  - Three Zustand stores: activity, library, project
+
+- **E2E Testing**
+  - Playwright configuration with `webServer` auto-starting FastAPI
+  - CI `e2e` job on ubuntu-latest with Chromium browser caching
+  - Navigation, scan trigger, project creation, and WCAG AA accessibility E2E tests
+  - axe-core accessibility checks on all three main views
+
+### Changed
+
+- `create_app()` auto-loads `gui_static_path` from settings when not explicitly provided
+- Architecture, API, and AGENTS documentation updated for frontend and WebSocket
+
+### Fixed
+
+- SortControls WCAG 4.1.2 violation: added missing `aria-label` attribute
+- Pagination `total` field now returns true dataset count instead of page result count
+
 ## [v004] - 2026-02-09
 
 Testing Infrastructure & Quality Verification. Establishes test doubles, dependency injection, fixture factories, black box and contract tests, async scan infrastructure, security audit, performance benchmarks, and developer experience tooling.
