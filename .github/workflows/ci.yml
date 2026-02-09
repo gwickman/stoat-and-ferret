@@ -173,9 +173,72 @@ jobs:
         run: npx vitest run
         working-directory: gui
 
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.gui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install backend dependencies
+        run: uv sync
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: gui
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: gui
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(npm ls @playwright/test --json | python -c "import sys,json; print(json.load(sys.stdin)['dependencies']['@playwright/test']['version'])")" >> "$GITHUB_OUTPUT"
+        working-directory: gui
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.pw-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+        working-directory: gui
+
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+        working-directory: gui
+
+      - name: Run E2E tests
+        run: npx playwright test
+        working-directory: gui
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: gui/playwright-report/
+          retention-days: 7
+
   ci-status:
     runs-on: ubuntu-latest
-    needs: [changes, test, rust-coverage, frontend]
+    needs: [changes, test, rust-coverage, frontend, e2e]
     if: always()
     steps:
       - name: Check CI status
@@ -190,6 +253,10 @@ jobs:
           fi
           if [[ "${{ needs.frontend.result }}" == "failure" ]]; then
             echo "Frontend failed"
+            exit 1
+          fi
+          if [[ "${{ needs.e2e.result }}" == "failure" ]]; then
+            echo "E2E tests failed"
             exit 1
           fi
           echo "CI passed"

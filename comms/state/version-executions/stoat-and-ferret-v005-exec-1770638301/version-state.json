@@ -29,25 +29,25 @@
     {
       "number": 3,
       "name": "gui-components",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 4,
       "features_complete": 4,
       "started_at": "2026-02-09T13:05:16.815701Z",
-      "completed_at": null,
+      "completed_at": "2026-02-09T13:49:41.277203Z",
       "skip_reason": null
     },
     {
       "number": 4,
       "name": "e2e-testing",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 2,
       "features_complete": 0,
-      "started_at": null,
+      "started_at": "2026-02-09T13:49:41.280132Z",
       "completed_at": null,
       "skip_reason": null
     }
   ],
-  "current_theme": 3,
-  "current_feature": 4,
+  "current_theme": 4,
+  "current_feature": 1,
   "baseline_failures": []
 }

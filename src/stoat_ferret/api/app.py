@@ -150,8 +150,12 @@ def create_app(
     app.mount("/metrics", metrics_app)
 
     # Mount frontend static files (after all API routers)
-    if gui_static_path is not None:
-        gui_dir = Path(gui_static_path)
+    # Use settings default when gui_static_path is not explicitly provided
+    effective_gui_path = gui_static_path
+    if effective_gui_path is None and not has_injected:
+        effective_gui_path = get_settings().gui_static_path
+    if effective_gui_path is not None:
+        gui_dir = Path(effective_gui_path)
         if gui_dir.is_dir():
             app.mount("/gui", StaticFiles(directory=gui_dir, html=True), name="gui")
 

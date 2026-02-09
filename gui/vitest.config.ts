@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    exclude: ['e2e/**', 'node_modules/**'],
     alias: {
       '/vite.svg': new URL('./public/vite.svg', import.meta.url).pathname,
     },
