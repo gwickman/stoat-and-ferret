@@ -17,8 +17,10 @@ from prometheus_client import make_asgi_app
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import health, jobs, projects, videos
+from stoat_ferret.api.routers.ws import websocket_endpoint
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -45,6 +47,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None after startup completes.
     """
+    # Create ConnectionManager if not injected
+    if not getattr(app.state, "ws_manager", None):
+        app.state.ws_manager = ConnectionManager()
+
     # Skip DB and worker setup when dependencies are injected (test mode)
     if getattr(app.state, "_deps_injected", False):
         yield
@@ -81,6 +87,7 @@ def create_app(
     project_repository: AsyncProjectRepository | None = None,
     clip_repository: AsyncClipRepository | None = None,
     job_queue: AsyncioJobQueue | None = None,
+    ws_manager: ConnectionManager | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -94,6 +101,7 @@ def create_app(
         project_repository: Optional project repository for dependency injection.
         clip_repository: Optional clip repository for dependency injection.
         job_queue: Optional job queue for dependency injection.
+        ws_manager: Optional WebSocket connection manager for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -118,10 +126,14 @@ def create_app(
         app.state.clip_repository = clip_repository
         app.state.job_queue = job_queue
 
+    if ws_manager is not None:
+        app.state.ws_manager = ws_manager
+
     app.include_router(health.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
     app.include_router(jobs.router)
+    app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)
     app.add_middleware(MetricsMiddleware)
