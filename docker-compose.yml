@@ -1,0 +1,12 @@
+services:
+  test:
+    build: .
+    # Mount source for faster iteration — edits are reflected without rebuild.
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./stubs:/app/stubs:ro
+      - ./scripts:/app/scripts:ro
+    # Default command runs the full test suite.
+    # Override with: docker compose run test uv run pytest -k "test_name"
+    command: ["uv", "run", "pytest", "-v"]
