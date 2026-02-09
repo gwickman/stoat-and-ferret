@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import sqlite3
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol
@@ -264,6 +265,24 @@ class AsyncSQLiteVideoRepository:
         )
 
 
+def _any_token_startswith(text: str, prefix: str) -> bool:
+    """Check if any token in text starts with the given prefix.
+
+    Tokenizes text by splitting on non-alphanumeric characters,
+    then checks if any resulting token starts with the prefix.
+    Both text and prefix are compared case-insensitively.
+
+    Args:
+        text: The text to tokenize and search.
+        prefix: The prefix to match against tokens (must be lowercase).
+
+    Returns:
+        True if any token starts with the prefix.
+    """
+    tokens = re.split(r"[^a-zA-Z0-9]+", text.lower())
+    return any(token.startswith(prefix) for token in tokens if token)
+
+
 class AsyncInMemoryVideoRepository:
     """Async in-memory implementation for testing.
 
@@ -304,12 +323,27 @@ class AsyncInMemoryVideoRepository:
         return [copy.deepcopy(v) for v in sorted_videos[offset : offset + limit]]
 
     async def search(self, query: str, limit: int = 100) -> list[Video]:
-        """Search videos by filename or path."""
+        """Search videos by filename or path using per-token prefix matching.
+
+        Tokenizes filenames and paths by non-alphanumeric characters, then
+        checks if any token starts with the query. This approximates FTS5
+        prefix-match semantics used by the SQLite implementation.
+
+        Known differences from FTS5:
+            (a) Multi-word phrase handling — FTS5 supports adjacent-token
+                phrase queries; this implementation treats the query as a
+                single token prefix.
+            (b) Field scope — FTS5 indexes filename and path together;
+                this implementation checks them separately.
+            (c) Tokenization rules — FTS5 uses the unicode61 tokenizer;
+                this implementation splits on non-alphanumeric characters.
+        """
         query_lower = query.lower()
         results = [
             v
             for v in self._videos.values()
-            if query_lower in v.filename.lower() or query_lower in v.path.lower()
+            if _any_token_startswith(v.filename, query_lower)
+            or _any_token_startswith(v.path, query_lower)
         ]
         return [copy.deepcopy(v) for v in results[:limit]]
 

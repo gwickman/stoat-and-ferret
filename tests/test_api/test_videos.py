@@ -190,7 +190,7 @@ async def test_search_respects_limit(
     for i in range(5):
         await video_repository.add(make_test_video(filename=f"test_video_{i}.mp4"))
 
-    response = client.get("/api/v1/videos/search?q=test_video&limit=3")
+    response = client.get("/api/v1/videos/search?q=test&limit=3")
     assert response.status_code == 200
     data = response.json()
     assert len(data["videos"]) == 3
