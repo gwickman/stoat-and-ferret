@@ -370,7 +370,7 @@ class AsyncioJobQueue:
                     entry.status = JobStatus.COMPLETE
                     entry.result = result
                     logger.info("job_completed", job_id=job_id, job_type=entry.job_type)
-                except TimeoutError:
+                except asyncio.TimeoutError:
                     entry.status = JobStatus.TIMEOUT
                     entry.error = f"Job timed out after {self._timeout}s"
                     logger.warning(
