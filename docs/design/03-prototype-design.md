@@ -20,7 +20,7 @@ This document defines the Minimum Viable Product (MVP) for the AI-driven video e
 
 | Feature | Description | Implementation |
 |---------|-------------|----------------|
-| Library Scan | Scan directory, extract metadata, generate thumbnails | Python + Rust path validation |
+| Library Scan | Scan directory (async job), extract metadata, generate thumbnails | Python + asyncio.Queue job queue |
 | Video Search | Full-text search across filenames and metadata | Python (SQLite FTS5) |
 | Basic Timeline | Single video track with clips | Python API + Rust timeline math |
 | Text Overlay | Add text with position and basic fade | Rust filter builder |
@@ -79,7 +79,7 @@ This document defines the Minimum Viable Product (MVP) for the AI-driven video e
                                   │
 ┌─────────────────────────────────┼───────────────────────────────────────┐
 │                         REST API (FastAPI)                               │
-│  /videos  /projects  /clips  /effects  /render  /health  /metrics      │
+│  /videos  /jobs  /projects  /clips  /effects  /render  /health /metrics │
 │  /ws (WebSocket)  /gui/* (static files)                                 │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
 │  │  Middleware: Correlation ID → Metrics → Error Handler           │    │
@@ -583,7 +583,7 @@ mod tests {
 
 ### Library Endpoints
 
-#### Scan Directory
+#### Scan Directory (Async)
 ```http
 POST /videos/scan
 Content-Type: application/json
@@ -593,16 +593,31 @@ Content-Type: application/json
   "recursive": true
 }
 
-Response 200:
+Response 202:
 {
-  "scanned": 47,
-  "new": 12,
-  "updated": 3,
-  "errors": []
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
 
-Path is validated by Rust sanitizer before scanning.
+Scanning is submitted as an async job. The directory path is validated synchronously before submission. Poll `GET /jobs/{job_id}` for status:
+
+```http
+GET /jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+Response 200 (complete):
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "complete",
+  "result": {
+    "scanned": 47,
+    "new": 12,
+    "updated": 3,
+    "skipped": 32,
+    "errors": []
+  },
+  "error": null
+}
+```
 
 #### List Videos
 ```http
@@ -974,7 +989,7 @@ ai-video-editor/
 ### Functional Criteria
 
 1. **Library Management**
-   - [ ] Can scan a directory (path validated by Rust)
+   - [ ] Can scan a directory (async job with polling via /jobs/{id})
    - [ ] Can search videos by filename
    - [ ] Thumbnails are generated automatically
 
@@ -1120,10 +1135,14 @@ curl http://localhost:8000/system/info
 # Discover effects (for AI integration)
 curl http://localhost:8000/effects
 
-# Scan videos
+# Scan videos (async - returns job ID)
 curl -X POST http://localhost:8000/videos/scan \
   -H "Content-Type: application/json" \
   -d '{"path": "/path/to/videos"}'
+# Returns: {"job_id": "..."}
+
+# Poll for scan results
+curl http://localhost:8000/jobs/{job_id}
 ```
 
 ---

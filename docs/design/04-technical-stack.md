@@ -26,7 +26,7 @@ This document details the technology selections for the AI-driven video editor u
 | Validation | Pydantic | 2.0+ | Request/response validation |
 | Database | SQLite | 3.35+ | Video library metadata |
 | Search | SQLite FTS5 | Built-in | Full-text search |
-| Task Queue | arq | 0.25+ | Async job processing |
+| Job Queue | asyncio.Queue | Built-in | In-process async job processing |
 
 ### Rust Core
 
@@ -56,7 +56,6 @@ This document details the technology selections for the AI-driven video editor u
 | Video Processing | FFmpeg | 5.0+ | All video operations |
 | Metadata | FFprobe | 5.0+ | Video analysis |
 | Preview | libmpv | 0.35+ | Real-time playback |
-| Queue Backend | Redis | 6.0+ | For arq task queue |
 
 ### Quality Infrastructure
 
@@ -129,7 +128,7 @@ The project uses a dedicated black box testing harness (see 07-quality-architect
 | FFmpeg command building | | Yes |
 | Subprocess execution | Yes | |
 | Database operations | Yes | |
-| Job queue | Yes | |
+| Job queue (asyncio.Queue) | Yes | |
 | Metrics/logging | Yes | |
 
 ### Why Web-Based GUI
@@ -283,12 +282,15 @@ async def execute(self, command: FFmpegCommand):
 
 ---
 
-### Task Queue: arq
+### Job Queue: asyncio.Queue
 
-**Why arq:**
-- Python-native async
-- Redis-backed (reliable, fast)
-- Built-in retries and timeouts
+**Why asyncio.Queue:**
+- Zero external dependencies (stdlib only)
+- Native async/await integration
+- In-process producer-consumer pattern
+- Background worker via `asyncio.create_task()`
+- Timeout enforcement via `asyncio.wait_for()`
+- Sufficient for single-instance deployment
 
 ---
 
@@ -435,7 +437,6 @@ dependencies = [
     "pydantic>=2.0.0",
     "sqlalchemy>=2.0.0",
     "aiosqlite>=0.19.0",
-    "arq>=0.25.0",
     "structlog>=24.1.0",
     "prometheus-client>=0.17.0",
     "pydantic-settings>=2.0.0",

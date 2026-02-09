@@ -150,7 +150,7 @@ This document describes the architecture of an AI-driven video editing system de
 │  • API schema generation (OpenAPI, effect discovery)                    │
 │  • Subprocess management (FFmpeg execution, libmpv control)             │
 │  • Database operations (SQLite, project storage)                        │
-│  • Job queue orchestration (arq/Redis)                                  │
+│  • Job queue orchestration (asyncio.Queue)                              │
 │  • Observability (logging, metrics, health checks)                      │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -283,6 +283,7 @@ The architecture integrates quality attributes at every layer. These are not opt
 | Group | Purpose |
 |-------|---------|
 | `/videos` | Library management (CRUD, scan, search) |
+| `/jobs` | Async job status polling |
 | `/projects` | Project/timeline management |
 | `/clips` | Clip operations within projects |
 | `/effects` | Effect application and discovery |
@@ -583,14 +584,15 @@ class FFmpegExecutor(Protocol):
 
 **Job Queue (Python)**
 
-For long-running render operations with full reliability:
-- Async task processing (recommend: `arq` with Redis)
-- **Job recovery on restart** - interrupted jobs can resume or be marked failed
-- Job status persistence with history
-- Progress percentage calculation (using Rust ETA module)
-- Cancellation support with cleanup
-- Webhook callbacks on completion
-- **Metrics:** queue_depth, job_duration, success_rate
+For long-running operations (directory scanning, rendering) with the async producer-consumer pattern:
+- **`asyncio.Queue`-based** in-process job queue with background worker coroutine
+- Jobs submitted via API endpoints return immediately with a UUID job ID
+- Job status polled via `GET /jobs/{id}` (pending → running → complete/failed/timeout)
+- Per-job timeout enforcement via `asyncio.wait_for()` (default 300s)
+- Handler registration pattern: `job_queue.register_handler(job_type, handler_fn)`
+- **Lifespan integration**: worker started via `asyncio.create_task()` on startup, cancelled on shutdown
+- Graceful shutdown cancels worker and suppresses `CancelledError`
+- **Test double**: `InMemoryJobQueue` executes synchronously for deterministic testing
 
 **Preview Engine (Python)**
 
@@ -832,31 +834,42 @@ Effect schemas are defined to support AI discovery. The Rust core validates para
 
 ## Data Flow
 
-### Video Import Flow
+### Video Import Flow (Async)
 
 ```
-User Request                API Layer              Service Layer           Storage
-     │                          │                        │                    │
-     │  POST /videos/scan       │                        │                    │
-     │  {path: "/media"}        │                        │                    │
-     ├─────────────────────────>│                        │                    │
-     │                          │  scan_directory()      │                    │
-     │                          ├───────────────────────>│                    │
-     │                          │                        │  validate_path()   │
-     │                          │                        │  (Rust core)       │
-     │                          │                        │  find video files  │
-     │                          │                        ├───────────────────>│
-     │                          │                        │<───────────────────┤
-     │                          │                        │                    │
-     │                          │                        │  for each file:    │
-     │                          │                        │  - ffprobe metadata│
-     │                          │                        │  - generate thumb  │
-     │                          │                        │  - insert to DB    │
-     │                          │                        ├───────────────────>│
-     │                          │                        │<───────────────────┤
-     │                          │<───────────────────────┤                    │
-     │  {scanned: 47, new: 12}  │                        │                    │
-     │<─────────────────────────┤                        │                    │
+User Request                API Layer            Job Queue             Scan Handler        Storage
+     │                          │                     │                      │                 │
+     │  POST /videos/scan       │                     │                      │                 │
+     │  {path: "/media"}        │                     │                      │                 │
+     ├─────────────────────────>│                     │                      │                 │
+     │                          │  validate path      │                      │                 │
+     │                          │  exists (sync)      │                      │                 │
+     │                          │  submit(scan, ...)  │                      │                 │
+     │                          ├────────────────────>│                      │                 │
+     │                          │  job_id (UUID)      │                      │                 │
+     │                          │<────────────────────┤                      │                 │
+     │  202 {job_id: "abc..."}  │                     │                      │                 │
+     │<─────────────────────────┤                     │                      │                 │
+     │                          │                     │                      │                 │
+     │                          │              [Background Worker]           │                 │
+     │                          │                     │  dequeue job_id      │                 │
+     │                          │                     ├─────────────────────>│                 │
+     │                          │                     │                      │  scan_directory()│
+     │                          │                     │                      │  find video files│
+     │                          │                     │                      ├────────────────>│
+     │                          │                     │                      │  ffprobe + save │
+     │                          │                     │                      │<────────────────┤
+     │                          │                     │  result (complete)   │                 │
+     │                          │                     │<─────────────────────┤                 │
+     │                          │                     │                      │                 │
+     │  GET /jobs/{job_id}      │                     │                      │                 │
+     ├─────────────────────────>│                     │                      │                 │
+     │                          │  get_result(job_id) │                      │                 │
+     │                          ├────────────────────>│                      │                 │
+     │                          │<────────────────────┤                      │                 │
+     │  {status: "complete",    │                     │                      │                 │
+     │   result: {scanned: 47}} │                     │                      │                 │
+     │<─────────────────────────┤                     │                      │                 │
 ```
 
 ### Render Flow with Rust Core

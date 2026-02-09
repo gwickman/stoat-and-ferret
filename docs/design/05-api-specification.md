@@ -50,6 +50,21 @@ Authorization: Bearer <token>
 
 ## Endpoint Reference
 
+### Endpoint Group Summary
+
+| Group | Purpose |
+|-------|---------|
+| `/videos` | Library management (CRUD, scan, search) |
+| `/jobs` | Async job status polling |
+| `/projects` | Project/timeline management |
+| `/clips` | Clip operations within projects |
+| `/effects` | Effect application and discovery |
+| `/render` | Export job management |
+| `/health` | Health checks (liveness, readiness) |
+| `/system` | System information |
+
+---
+
 ### System & Health
 
 #### Get System Info
@@ -210,10 +225,12 @@ GET /videos/search
 
 ---
 
-#### Scan Directory
+#### Scan Directory (Async)
 ```http
 POST /videos/scan
 ```
+
+Submits a directory scan as an asynchronous job. Returns immediately with a job ID for polling.
 
 **Request Body:**
 ```json
@@ -223,9 +240,17 @@ POST /videos/scan
 }
 ```
 
-**Note:** Path validation is performed by Rust core for security.
+**Note:** Path validation is performed synchronously before job submission. The directory must exist.
 
-**Response:** `200 OK`
+**Response:** `202 Accepted`
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+```
+
+Use `GET /jobs/{job_id}` to poll for scan progress and results. When the job completes, the `result` field contains the scan summary:
+
 ```json
 {
   "scanned": 47,
@@ -240,6 +265,98 @@ POST /videos/scan
   ]
 }
 ```
+
+---
+
+### Jobs (Async Job Status)
+
+#### Get Job Status
+```http
+GET /jobs/{job_id}
+```
+
+Poll the status of an asynchronous job submitted via endpoints like `POST /videos/scan`.
+
+**Response (Pending):** `200 OK`
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "pending",
+  "progress": null,
+  "result": null,
+  "error": null
+}
+```
+
+**Response (Running):** `200 OK`
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "running",
+  "progress": null,
+  "result": null,
+  "error": null
+}
+```
+
+**Response (Complete):** `200 OK`
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "complete",
+  "progress": null,
+  "result": {
+    "scanned": 47,
+    "new": 12,
+    "updated": 3,
+    "skipped": 32,
+    "errors": []
+  },
+  "error": null
+}
+```
+
+**Response (Failed):** `200 OK`
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "failed",
+  "progress": null,
+  "result": null,
+  "error": "Scan failed: permission denied"
+}
+```
+
+**Response (Timeout):** `200 OK`
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "timeout",
+  "progress": null,
+  "result": null,
+  "error": "Job timed out after 300.0s"
+}
+```
+
+**Error Response:** `404 Not Found`
+```json
+{
+  "detail": {
+    "code": "NOT_FOUND",
+    "message": "Job a1b2c3d4-... not found"
+  }
+}
+```
+
+**Job Statuses:**
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Job is queued, waiting to be processed |
+| `running` | Job is currently being executed |
+| `complete` | Job finished successfully; result available |
+| `failed` | Job encountered an error; error message available |
+| `timeout` | Job exceeded the configured timeout (default 300s) |
 
 ---
 
