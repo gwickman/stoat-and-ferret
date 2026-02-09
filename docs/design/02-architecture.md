@@ -15,13 +15,13 @@ This document describes the architecture of an AI-driven video editing system de
 │                              Client Layer                                    │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
 │  │  AI Agent    │  │   Web UI     │  │   CLI Tool   │  │  External    │    │
-│  │  (Claude)    │  │  (Future)    │  │              │  │  Systems     │    │
+│  │  (Claude)    │  │ (React SPA)  │  │              │  │  Systems     │    │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
 └─────────┼─────────────────┼─────────────────┼─────────────────┼────────────┘
           │                 │                 │                 │
           └─────────────────┴────────┬────────┴─────────────────┘
                                      │
-                              REST API (JSON)
+                          REST API (JSON) + WebSocket
                                      │
 ┌────────────────────────────────────┼────────────────────────────────────────┐
 │                      Python API Layer (FastAPI)                              │
@@ -31,6 +31,10 @@ This document describes the architecture of an AI-driven video editing system de
 │  │  │  /videos   │ │ /projects  │ │  /effects  │ │  /render   │         │  │
 │  │  │  /search   │ │  /clips    │ │  /compose  │ │  /preview  │         │  │
 │  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘         │  │
+│  │  ┌────────────┐ ┌────────────┐                                       │  │
+│  │  │  /ws       │ │ /gui       │                                       │  │
+│  │  │ (WebSocket)│ │ (static)   │                                       │  │
+│  │  └────────────┘ └────────────┘                                       │  │
 │  │  ┌────────────────────────────────────────────────────────────────┐   │  │
 │  │  │  Middleware: Correlation ID │ Metrics │ Error Handler │ Auth   │   │  │
 │  │  └────────────────────────────────────────────────────────────────┘   │  │
@@ -290,6 +294,16 @@ The architecture integrates quality attributes at every layer. These are not opt
 | `/compose` | Multi-stream composition (PIP, split) |
 | `/render` | Export job management |
 | `/preview` | Real-time preview control |
+| `/ws` | WebSocket endpoint for real-time event streaming |
+| `/gui` | Static file serving for the React frontend |
+
+**WebSocket Transport Layer:**
+
+The `/ws` endpoint provides real-time event streaming to connected clients using a `ConnectionManager` that tracks active connections and broadcasts events. Supported event types include `HEARTBEAT`, `SCAN_STARTED`, `SCAN_COMPLETED`, `PROJECT_CREATED`, and `HEALTH_STATUS`. A configurable heartbeat interval (default 30s) keeps connections alive.
+
+**Frontend Static Serving:**
+
+Built React/TypeScript frontend assets are served from `/gui` via FastAPI's `StaticFiles` mount with `html=True` for SPA client-side routing support. The mount path is configurable via the `STOAT_GUI_STATIC_PATH` setting.
 
 ### 2. Python Service Layer
 
@@ -1001,6 +1015,18 @@ pub fn escape_ffmpeg_text(text: &str) -> String {
 
 ```
 ai-video-editor/
+├── gui/                          # Frontend (React/TypeScript/Vite)
+│   ├── src/                      # React source code
+│   │   ├── main.tsx              # Entry point
+│   │   ├── App.tsx               # Root component
+│   │   └── assets/               # Static assets
+│   ├── dist/                     # Built output (served at /gui)
+│   ├── index.html                # HTML template
+│   ├── package.json              # Node dependencies
+│   ├── vite.config.ts            # Vite build config (proxy to API)
+│   ├── tsconfig.json             # TypeScript config
+│   └── vitest.config.ts          # Test config
+│
 ├── src/                          # Python source
 │   ├── api/
 │   │   ├── __init__.py

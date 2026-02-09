@@ -72,6 +72,39 @@ class TestSettings:
             settings = Settings(log_level=level)  # type: ignore[arg-type]
             assert settings.log_level == level
 
+    def test_default_thumbnail_dir(self) -> None:
+        """Thumbnail directory has sensible default."""
+        settings = Settings()
+        assert settings.thumbnail_dir == "data/thumbnails"
+
+    def test_thumbnail_dir_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """STOAT_THUMBNAIL_DIR env var overrides default."""
+        monkeypatch.setenv("STOAT_THUMBNAIL_DIR", "/custom/thumbs")
+        settings = Settings()
+        assert settings.thumbnail_dir == "/custom/thumbs"
+
+    def test_default_gui_static_path(self) -> None:
+        """GUI static path has sensible default."""
+        settings = Settings()
+        assert settings.gui_static_path == "gui/dist"
+
+    def test_gui_static_path_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """STOAT_GUI_STATIC_PATH env var overrides default."""
+        monkeypatch.setenv("STOAT_GUI_STATIC_PATH", "/opt/gui/build")
+        settings = Settings()
+        assert settings.gui_static_path == "/opt/gui/build"
+
+    def test_default_ws_heartbeat_interval(self) -> None:
+        """WebSocket heartbeat interval has sensible default."""
+        settings = Settings()
+        assert settings.ws_heartbeat_interval == 30
+
+    def test_ws_heartbeat_interval_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """STOAT_WS_HEARTBEAT_INTERVAL env var overrides default."""
+        monkeypatch.setenv("STOAT_WS_HEARTBEAT_INTERVAL", "15")
+        settings = Settings()
+        assert settings.ws_heartbeat_interval == 15
+
     def test_database_path_resolved_property(self) -> None:
         """database_path_resolved returns a Path object."""
         settings = Settings(database_path="/some/path.db")
