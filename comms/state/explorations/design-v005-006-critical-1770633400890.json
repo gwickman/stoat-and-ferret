@@ -1,14 +1,19 @@
 {
   "exploration_id": "design-v005-006-critical-1770633400890",
   "results_folder": "design-v005-006-critical",
-  "status": "running",
+  "status": "complete",
   "pid": 21620,
   "started_at": "2026-02-09T10:36:40.890589",
-  "updated_at": "2026-02-09T10:36:42.698601",
-  "completed_at": null,
+  "updated_at": "2026-02-09T10:42:40.140815",
+  "completed_at": "2026-02-09T10:42:40.140376",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "investigation-log.md",
+    "refined-logical-design.md",
+    "risk-assessment.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v005-006-critical/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v005-006-critical"
