@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v005-retrospective-1770662068854",
+  "results_folder": "v005-retrospective",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-09T18:34:28.854913",
+  "updated_at": "2026-02-09T18:34:28.854913",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v005-retrospective/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v005-retrospective"
+}
