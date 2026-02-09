@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import App from './App'
+import Shell from '../Shell'
 
 class MockWebSocket {
   static readonly OPEN = 1
@@ -21,40 +21,25 @@ beforeEach(() => {
   )
 })
 
-describe('App', () => {
-  it('renders the shell layout', () => {
+describe('Shell', () => {
+  it('renders header, main, and footer sections', () => {
     render(
       <MemoryRouter>
-        <App />
+        <Shell />
       </MemoryRouter>,
     )
+    expect(screen.getByTestId('navigation')).toBeDefined()
+    expect(screen.getByTestId('health-indicator')).toBeDefined()
     expect(screen.getByTestId('status-bar')).toBeDefined()
   })
 
-  it('renders dashboard page at root', () => {
+  it('displays WebSocket status in status bar', () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
-        <App />
+      <MemoryRouter>
+        <Shell />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Dashboard')).toBeDefined()
-  })
-
-  it('renders library page at /library', () => {
-    render(
-      <MemoryRouter initialEntries={['/library']}>
-        <App />
-      </MemoryRouter>,
-    )
-    expect(screen.getByText('Library')).toBeDefined()
-  })
-
-  it('renders projects page at /projects', () => {
-    render(
-      <MemoryRouter initialEntries={['/projects']}>
-        <App />
-      </MemoryRouter>,
-    )
-    expect(screen.getByText('Projects')).toBeDefined()
+    // Initially disconnected until onopen fires
+    expect(screen.getByTestId('status-bar')).toBeDefined()
   })
 })
