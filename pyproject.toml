@@ -65,6 +65,7 @@ markers = [
     "api: API endpoint tests",
     "blackbox: Black box tests exercising complete workflows through the REST API",
     "contract: Contract tests for protocol compliance",
+    "requires_ffmpeg: Tests that require FFmpeg to be installed",
 ]
 
 [tool.coverage.run]

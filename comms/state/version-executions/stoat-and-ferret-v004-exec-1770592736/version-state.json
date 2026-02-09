@@ -21,7 +21,7 @@
       "name": "blackbox-contract",
       "status": "in_progress",
       "features_total": 3,
-      "features_complete": 0,
+      "features_complete": 1,
       "started_at": "2026-02-08T23:58:34.699088Z",
       "completed_at": null,
       "skip_reason": null
@@ -58,6 +58,6 @@
     }
   ],
   "current_theme": 2,
-  "current_feature": 1,
+  "current_feature": 2,
   "baseline_failures": []
 }

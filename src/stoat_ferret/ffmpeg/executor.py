@@ -174,26 +174,29 @@ class FakeFFmpegExecutor:
     Useful for testing without actually running FFmpeg.
     """
 
-    def __init__(self, recordings: list[dict[str, object]]) -> None:
+    def __init__(self, recordings: list[dict[str, object]], *, strict: bool = False) -> None:
         """Initialize with a list of recorded interactions.
 
         Args:
             recordings: List of recorded interaction dictionaries.
+            strict: When True, verify args match the recording before replaying.
         """
         self._recordings = recordings
         self._index = 0
+        self._strict = strict
 
     @classmethod
-    def from_file(cls, path: Path) -> FakeFFmpegExecutor:
+    def from_file(cls, path: Path, *, strict: bool = False) -> FakeFFmpegExecutor:
         """Load recordings from a JSON file.
 
         Args:
             path: Path to the recording JSON file.
+            strict: When True, verify args match the recording before replaying.
 
         Returns:
             A FakeFFmpegExecutor loaded with the recordings.
         """
-        return cls(json.loads(path.read_text()))
+        return cls(json.loads(path.read_text()), strict=strict)
 
     def run(
         self,
@@ -205,7 +208,7 @@ class FakeFFmpegExecutor:
         """Replay the next recorded interaction.
 
         Args:
-            args: Arguments (used for command reconstruction).
+            args: Arguments (used for command reconstruction; validated in strict mode).
             stdin: Ignored (not validated against recording).
             timeout: Ignored.
 
@@ -213,7 +216,8 @@ class FakeFFmpegExecutor:
             ExecutionResult from the recording.
 
         Raises:
-            RuntimeError: If no more recordings are available.
+            RuntimeError: If no more recordings are available or args mismatch
+                in strict mode.
         """
         if self._index >= len(self._recordings):
             raise RuntimeError(
@@ -222,6 +226,15 @@ class FakeFFmpegExecutor:
             )
 
         recording = self._recordings[self._index]
+
+        if self._strict:
+            recorded_args = recording.get("args", [])
+            if args != recorded_args:
+                raise RuntimeError(
+                    f"Strict mode: args mismatch at call {self._index}. "
+                    f"Expected {recorded_args!r}, got {args!r}"
+                )
+
         self._index += 1
 
         result_data = recording["result"]
