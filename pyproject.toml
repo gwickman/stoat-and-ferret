@@ -63,6 +63,7 @@ asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "api: API endpoint tests",
+    "blackbox: Black box tests exercising complete workflows through the REST API",
     "contract: Contract tests for protocol compliance",
 ]
 

@@ -9,20 +9,20 @@
     {
       "number": 1,
       "name": "test-foundation",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 3,
       "features_complete": 3,
       "started_at": "2026-02-08T23:19:08.529972Z",
-      "completed_at": null,
+      "completed_at": "2026-02-08T23:58:34.696684Z",
       "skip_reason": null
     },
     {
       "number": 2,
       "name": "blackbox-contract",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 3,
       "features_complete": 0,
-      "started_at": null,
+      "started_at": "2026-02-08T23:58:34.699088Z",
       "completed_at": null,
       "skip_reason": null
     },
@@ -57,7 +57,7 @@
       "skip_reason": null
     }
   ],
-  "current_theme": 1,
-  "current_feature": 3,
+  "current_theme": 2,
+  "current_feature": 1,
   "baseline_failures": []
 }
