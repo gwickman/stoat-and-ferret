@@ -209,4 +209,8 @@ __marimo__/
 # Generated stubs (for verification, not committed)
 .generated-stubs/
 
+# Frontend
+gui/node_modules/
+gui/dist/
+
 nul
