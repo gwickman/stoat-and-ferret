@@ -7,8 +7,8 @@
 
 ## Current Focus
 
-**Recently Completed:** v004 (testing infrastructure + quality verification)
-**Upcoming:** v005 (GUI shell + library browser + project manager)
+**Recently Completed:** v005 (GUI shell + library browser + project manager)
+**Upcoming:** v006 (effects engine foundation: filter expression engine, graph validation, text overlay, speed control)
 
 ## Roadmap → Version Mapping
 
@@ -16,7 +16,7 @@
 |---------|-------------------|-------|--------|
 | v007 | Phase 2, M2.4–2.6, M2.8–2.9 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | 📋 planned |
 | v006 | Phase 2, M2.1–2.3 | Effects engine foundation: filter expression engine, graph validation, text overlay, speed control | 📋 planned |
-| v005 | Phase 1, M1.10–1.12 | GUI shell + library browser + project manager | 📋 planned |
+| v005 | Phase 1, M1.10–1.12 | GUI shell + library browser + project manager | ✅ complete |
 | v004 | Phase 1, M1.8–1.9 | Testing infrastructure + quality verification | ✅ complete |
 | v003 | Phase 1, M1.6–1.7 | API layer + Clip model | ✅ complete |
 | v002 | Phase 1, M1.4–1.5 | Database + FFmpeg integration | ✅ complete |
@@ -30,33 +30,13 @@ Track explorations that must complete before version design.
 |----|----------|---------|--------|
 | EXP-001 | PyO3/maturin hybrid build workflow — dev experience, CI setup, stub generation | v001 | complete |
 | EXP-002 | Recording fake pattern — concrete implementation for RecordingFFmpegExecutor | v001, v004 | complete |
-| EXP-003 | FastAPI static file serving — GUI deployment from API server | v005 | pending |
-| BL-028 | Frontend framework selection (extends EXP-003) | v005 | pending |
+| EXP-003 | FastAPI static file serving — GUI deployment from API server | v005 | complete |
+| BL-028 | Frontend framework selection (extends EXP-003) | v005 | complete |
 | BL-043 | Clip effect model design (how effects attach to clips) | v006 | pending |
 | BL-047 | Effect registry schema and builder protocol design | v007 | pending |
 | BL-051 | Preview thumbnail pipeline (frame extraction + effect application) | v007 | pending |
 
 ## Planned Versions
-
-### v005 - GUI Shell, Library Browser & Project Manager (Planned)
-
-**Goal:** Frontend project from scratch, WebSocket support, application shell, library browser with thumbnails, project manager. Milestones M1.10–1.12.
-**Estimated scope:** 9 new items + 1 existing prerequisite
-
-**New Items (BL-028–036):**
-- BL-028 (P1): EXP: Frontend framework selection and Vite setup
-- BL-029 (P1): Implement WebSocket endpoint for real-time events
-- BL-030 (P1): Build application shell and navigation
-- BL-031 (P2): Build dashboard panel
-- BL-032 (P1): Implement thumbnail generation pipeline
-- BL-033 (P1): Build library browser
-- BL-034 (P2): Fix pagination total count
-- BL-035 (P1): Build project manager
-- BL-036 (P2): E2E test infrastructure
-
-**Existing:** BL-003 (EXP-003: FastAPI static file serving)
-
-**Dependencies:** Depends on v004 (black box tests validate GUI backend). BL-030→BL-028, BL-033→BL-028+BL-032, BL-036→BL-030+BL-033+BL-035
 
 ### v006 - Effects Engine Foundation (Planned)
 
@@ -93,6 +73,13 @@ Track explorations that must complete before version design.
 **Dependencies:** Depends on v006 (effects engine) and v005 (frontend project). BL-044/045→BL-037 (expression engine), BL-046→BL-045, BL-047→BL-044+BL-045, BL-048→BL-047, BL-049→BL-048, BL-050→BL-049, BL-051→BL-048+BL-049+BL-050, BL-052→BL-051
 
 ## Completed Versions
+
+### v005 - GUI Shell, Library Browser & Project Manager (2026-02-09)
+- **Themes:** frontend-foundation, backend-services, gui-components, e2e-testing
+- **Features:** 11 completed across 4 themes
+- **Backlog Resolved:** BL-003, BL-028, BL-029, BL-030, BL-031, BL-032, BL-033, BL-034, BL-035, BL-036
+- **Key Changes:** React/TypeScript/Vite frontend in gui/, WebSocket endpoint with ConnectionManager, ThumbnailService with FFmpeg, application shell with tab navigation, dashboard with health cards, library browser with search/sort/scan, project manager with CRUD, Zustand stores, Playwright E2E tests with WCAG AA accessibility, pagination total count fix
+- **Deferred:** SPA fallback routing for deep links, WebSocket connection consolidation
 
 ### v004 - Testing Infrastructure & Quality Verification (2026-02-09)
 - **Themes:** test-foundation, blackbox-contract, async-scan, security-performance, devex-coverage
@@ -147,6 +134,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-09 | v005 complete: GUI Shell, Library Browser & Project Manager delivered (4 themes, 11 features, 10 backlog items completed). Moved v005 from Planned to Completed. Updated Current Focus to v006. Marked EXP-003 and BL-028 investigations as complete. |
 | 2026-02-09 | v004 complete: Testing Infrastructure & Quality Verification delivered (5 themes, 15 features, 13 backlog items completed). Moved v004 from Planned to Completed. Updated Current Focus to v005. |
 | 2026-02-08 | Rewrote plan.md to match auto-dev-mcp format. Added Planned Versions sections for v004–v007 with full backlog item listings and dependency chains. |
 | 2026-02-08 | Gap analysis completed (backlog-gap-analysis exploration). Created 33 new backlog items (BL-020–052) for v004–v007. Retagged 5 existing items to v004. Updated plan with backlog coverage and scoping decisions for v006/v007. |
