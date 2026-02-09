@@ -1,6 +1,7 @@
 """Job queue abstractions and implementations."""
 
 from stoat_ferret.jobs.queue import (
+    AsyncioJobQueue,
     AsyncJobQueue,
     InMemoryJobQueue,
     JobOutcome,
@@ -10,6 +11,7 @@ from stoat_ferret.jobs.queue import (
 
 __all__ = [
     "AsyncJobQueue",
+    "AsyncioJobQueue",
     "InMemoryJobQueue",
     "JobOutcome",
     "JobResult",

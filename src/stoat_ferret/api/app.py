@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import aiosqlite
+import structlog
 from fastapi import FastAPI
 from prometheus_client import make_asgi_app
 
@@ -16,6 +19,9 @@ from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
+from stoat_ferret.jobs.queue import AsyncioJobQueue
+
+logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
@@ -24,6 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     Opens database connection on startup and closes on shutdown.
     The connection is stored in app.state.db for access by routes.
+    Starts and stops the job queue worker.
     Skips database setup when repositories have been injected via create_app().
 
     Args:
@@ -32,7 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None after startup completes.
     """
-    # Skip DB setup when all repositories are already injected (test mode)
+    # Skip DB and worker setup when dependencies are injected (test mode)
     if getattr(app.state, "_deps_injected", False):
         yield
         return
@@ -43,9 +50,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.db = await aiosqlite.connect(settings.database_path_resolved)
     app.state.db.row_factory = aiosqlite.Row
 
+    # Startup: create job queue and start worker
+    job_queue = AsyncioJobQueue()
+    app.state.job_queue = job_queue
+    worker_task = asyncio.create_task(job_queue.process_jobs())
+    logger.info("job_worker_started")
+
     yield
 
-    # Shutdown: close database connection
+    # Shutdown: cancel worker and close database
+    worker_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await worker_task
+    logger.info("job_worker_stopped")
+
     await app.state.db.close()
 
 
@@ -54,6 +72,7 @@ def create_app(
     video_repository: AsyncVideoRepository | None = None,
     project_repository: AsyncProjectRepository | None = None,
     clip_repository: AsyncClipRepository | None = None,
+    job_queue: AsyncioJobQueue | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -65,6 +84,7 @@ def create_app(
         video_repository: Optional video repository for dependency injection.
         project_repository: Optional project repository for dependency injection.
         clip_repository: Optional clip repository for dependency injection.
+        job_queue: Optional job queue for dependency injection.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -78,13 +98,15 @@ def create_app(
 
     # Store injected dependencies on app.state
     has_injected = any(
-        dep is not None for dep in (video_repository, project_repository, clip_repository)
+        dep is not None
+        for dep in (video_repository, project_repository, clip_repository, job_queue)
     )
     if has_injected:
         app.state._deps_injected = True
         app.state.video_repository = video_repository
         app.state.project_repository = project_repository
         app.state.clip_repository = clip_repository
+        app.state.job_queue = job_queue
 
     app.include_router(health.router)
     app.include_router(videos.router)

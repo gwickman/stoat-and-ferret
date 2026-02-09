@@ -1,11 +1,17 @@
-"""Job queue protocol and in-memory implementation."""
+"""Job queue protocol and implementations."""
 
 from __future__ import annotations
 
+import asyncio
 import enum
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
+
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 
 class JobStatus(enum.Enum):
@@ -219,3 +225,171 @@ class InMemoryJobQueue:
         if job_id not in self._jobs:
             raise KeyError(f"Job {job_id} not found")
         return self._jobs[job_id].result
+
+
+# Type alias for job handler functions
+JobHandler = Callable[[str, dict[str, Any]], Awaitable[Any]]
+
+
+@dataclass
+class _AsyncJobEntry:
+    """Internal storage for a job in the async queue."""
+
+    job_id: str
+    job_type: str
+    payload: dict[str, Any]
+    status: JobStatus = JobStatus.PENDING
+    result: Any = None
+    error: str | None = None
+
+
+class AsyncioJobQueue:
+    """Async job queue using asyncio.Queue with a background worker.
+
+    Jobs are submitted to an internal asyncio.Queue and processed by a
+    background worker coroutine. Each job is dispatched to a registered
+    handler based on job_type.
+
+    Attributes:
+        DEFAULT_TIMEOUT: Default per-job timeout in seconds (300 = 5 minutes).
+    """
+
+    DEFAULT_TIMEOUT: float = 300.0
+
+    def __init__(self, *, timeout: float | None = None) -> None:
+        """Initialize the async job queue.
+
+        Args:
+            timeout: Per-job timeout in seconds. Defaults to DEFAULT_TIMEOUT.
+        """
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
+        self._jobs: dict[str, _AsyncJobEntry] = {}
+        self._handlers: dict[str, JobHandler] = {}
+        self._timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+
+    def register_handler(self, job_type: str, handler: JobHandler) -> None:
+        """Register a handler for a job type.
+
+        Args:
+            job_type: The job type identifier.
+            handler: Async callable that processes the job payload.
+        """
+        self._handlers[job_type] = handler
+
+    async def submit(self, job_type: str, payload: dict[str, Any]) -> str:
+        """Submit a job to the queue for async processing.
+
+        Args:
+            job_type: Type identifier for the job.
+            payload: Job parameters.
+
+        Returns:
+            The unique job ID.
+        """
+        job_id = str(uuid.uuid4())
+        entry = _AsyncJobEntry(job_id=job_id, job_type=job_type, payload=payload)
+        self._jobs[job_id] = entry
+        await self._queue.put(job_id)
+        logger.info("job_submitted", job_id=job_id, job_type=job_type)
+        return job_id
+
+    async def get_status(self, job_id: str) -> JobStatus:
+        """Get the current status of a job.
+
+        Args:
+            job_id: The job ID.
+
+        Returns:
+            Current job status.
+
+        Raises:
+            KeyError: If the job ID is not found.
+        """
+        if job_id not in self._jobs:
+            raise KeyError(f"Job {job_id} not found")
+        return self._jobs[job_id].status
+
+    async def get_result(self, job_id: str) -> JobResult:
+        """Get the result of a job.
+
+        Args:
+            job_id: The job ID.
+
+        Returns:
+            The job result.
+
+        Raises:
+            KeyError: If the job ID is not found.
+        """
+        if job_id not in self._jobs:
+            raise KeyError(f"Job {job_id} not found")
+        entry = self._jobs[job_id]
+        return JobResult(
+            job_id=entry.job_id,
+            status=entry.status,
+            result=entry.result,
+            error=entry.error,
+        )
+
+    async def process_jobs(self) -> None:
+        """Worker coroutine that processes jobs from the queue.
+
+        Runs indefinitely, pulling jobs from the queue and dispatching them
+        to registered handlers. Handles timeout and errors gracefully.
+        Exits cleanly on cancellation.
+        """
+        logger.info("worker_started")
+        try:
+            while True:
+                job_id = await self._queue.get()
+                entry = self._jobs.get(job_id)
+                if entry is None:
+                    self._queue.task_done()
+                    continue
+
+                handler = self._handlers.get(entry.job_type)
+                if handler is None:
+                    entry.status = JobStatus.FAILED
+                    entry.error = f"No handler registered for job type: {entry.job_type}"
+                    logger.error(
+                        "job_no_handler",
+                        job_id=job_id,
+                        job_type=entry.job_type,
+                    )
+                    self._queue.task_done()
+                    continue
+
+                entry.status = JobStatus.RUNNING
+                logger.info("job_started", job_id=job_id, job_type=entry.job_type)
+
+                try:
+                    result = await asyncio.wait_for(
+                        handler(entry.job_type, entry.payload),
+                        timeout=self._timeout,
+                    )
+                    entry.status = JobStatus.COMPLETE
+                    entry.result = result
+                    logger.info("job_completed", job_id=job_id, job_type=entry.job_type)
+                except TimeoutError:
+                    entry.status = JobStatus.TIMEOUT
+                    entry.error = f"Job timed out after {self._timeout}s"
+                    logger.warning(
+                        "job_timeout",
+                        job_id=job_id,
+                        job_type=entry.job_type,
+                        timeout=self._timeout,
+                    )
+                except Exception as exc:
+                    entry.status = JobStatus.FAILED
+                    entry.error = str(exc)
+                    logger.error(
+                        "job_failed",
+                        job_id=job_id,
+                        job_type=entry.job_type,
+                        error=str(exc),
+                    )
+                finally:
+                    self._queue.task_done()
+        except asyncio.CancelledError:
+            logger.info("worker_stopped")
+            raise
