@@ -23,6 +23,12 @@ This document defines development standards for the project.
 - Use descriptive test names
 - Mock only external boundaries
 
+### Property Tests
+- Use Hypothesis for property-based testing (`@pytest.mark.property`)
+- Identify invariants before implementation (invariant-first design)
+- Use `@given` for pure functions, `RuleBasedStateMachine` for stateful systems
+- See `tests/examples/test_property_example.py` for patterns
+
 ### Coverage
 - Maintain minimum coverage threshold
 - Focus on critical paths

@@ -39,25 +39,25 @@
     {
       "number": 4,
       "name": "security-performance",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 2,
       "features_complete": 2,
       "started_at": "2026-02-09T01:21:12.001386Z",
-      "completed_at": null,
+      "completed_at": "2026-02-09T01:49:28.478097Z",
       "skip_reason": null
     },
     {
       "number": 5,
       "name": "devex-coverage",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 4,
       "features_complete": 0,
-      "started_at": null,
+      "started_at": "2026-02-09T01:49:28.480200Z",
       "completed_at": null,
       "skip_reason": null
     }
   ],
-  "current_theme": 4,
-  "current_feature": 2,
+  "current_theme": 5,
+  "current_feature": 1,
   "baseline_failures": []
 }

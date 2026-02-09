@@ -45,6 +45,26 @@ Document:
 
 Explicitly list what is NOT included to prevent scope creep.
 
+### 6. Identify Property Test Invariants
+
+Before implementation, identify properties that should always hold:
+- **Pure functions**: What round-trip or idempotency properties exist?
+- **Domain rules**: What invariants must the domain objects maintain?
+- **Boundary conditions**: What holds at edge values (zero, max, negative)?
+
+Write invariants as plain-language assertions first, then translate to Hypothesis tests during implementation. This "invariant-first" approach turns specifications into executable tests.
+
+**When to include property tests:**
+- Functions with mathematical relationships (e.g., `Position + Duration - Duration == Position`)
+- Serialization/deserialization round-trips
+- Data validation that must reject all invalid inputs
+- Stateful systems where operation sequences must preserve invariants
+
+**When property tests are NOT needed:**
+- Simple CRUD with no domain logic
+- UI/presentation concerns
+- Integration tests against external systems
+
 ## Document Template
 
 ```markdown
@@ -67,6 +87,16 @@ Explicitly list what is NOT included to prevent scope creep.
 **Category:** Performance/Security/Scalability
 **Description:** {Requirement}
 **Metric:** {How measured}
+
+## Property Test Invariants
+
+Identify properties before implementation. These become executable specifications.
+
+| ID | Invariant | Applies To |
+|----|-----------|------------|
+| PT-001 | {Plain-language property that must always hold} | {Function or module} |
+
+**Expected property test count:** {N}
 
 ## Dependencies
 - {Dependency}

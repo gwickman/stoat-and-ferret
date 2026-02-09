@@ -108,8 +108,9 @@ For EACH feature, create requirements.md:
 - Background (context, backlog items)
 - Functional Requirements (FR-001, FR-002, etc. with acceptance criteria)
 - Non-Functional Requirements (NFR-001, etc. with metrics)
+- Property Test Invariants (PT-001, etc. — plain-language properties that must always hold; include when the feature has pure functions, round-trips, or domain invariants; see `docs/auto-dev/PROCESS/generic/02-REQUIREMENTS.md` for guidance)
 - Out of Scope (explicit boundaries)
-- Test Requirements (from Task 005/006 test strategy)
+- Test Requirements (from Task 005/006 test strategy, including expected property test count)
 - Reference: `See comms/outbox/versions/design/${VERSION}/004-research/ for supporting evidence`
 
 **CRITICAL — Backlog ID Cross-Reference:**

@@ -73,6 +73,13 @@ Document risks and mitigations:
 ## Testing Strategy
 {Approach}
 
+### Property Tests
+If the requirements define property test invariants (PT-xxx), implement them
+using Hypothesis with `@given` strategies. Mark with `@pytest.mark.property`.
+
+Use `@given` for pure functions and `RuleBasedStateMachine` for stateful systems.
+See `tests/examples/test_property_example.py` for patterns.
+
 ## Risks
 | Risk | Impact | Mitigation |
 |------|--------|------------|
