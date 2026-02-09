@@ -6,10 +6,12 @@ import asyncio
 import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import aiosqlite
 import structlog
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import make_asgi_app
 
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
@@ -79,6 +81,7 @@ def create_app(
     project_repository: AsyncProjectRepository | None = None,
     clip_repository: AsyncClipRepository | None = None,
     job_queue: AsyncioJobQueue | None = None,
+    gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -91,6 +94,7 @@ def create_app(
         project_repository: Optional project repository for dependency injection.
         clip_repository: Optional clip repository for dependency injection.
         job_queue: Optional job queue for dependency injection.
+        gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -126,5 +130,11 @@ def create_app(
     # Mount Prometheus metrics endpoint
     metrics_app = make_asgi_app()
     app.mount("/metrics", metrics_app)
+
+    # Mount frontend static files (after all API routers)
+    if gui_static_path is not None:
+        gui_dir = Path(gui_static_path)
+        if gui_dir.is_dir():
+            app.mount("/gui", StaticFiles(directory=gui_dir, html=True), name="gui")
 
     return app

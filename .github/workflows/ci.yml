@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      gui: ${{ steps.filter.outputs.gui }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +31,9 @@ jobs:
               - 'pyproject.toml'
               - 'Cargo.toml'
               - 'uv.lock'
+              - '.github/workflows/**'
+            gui:
+              - 'gui/**'
               - '.github/workflows/**'
 
   test:
@@ -138,9 +142,40 @@ jobs:
           name: rust-coverage-lcov
           path: rust-lcov.info
 
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.gui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: gui/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('gui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: gui
+
+      - name: Build
+        run: npm run build
+        working-directory: gui
+
+      - name: Test
+        run: npx vitest run
+        working-directory: gui
+
   ci-status:
     runs-on: ubuntu-latest
-    needs: [changes, test, rust-coverage]
+    needs: [changes, test, rust-coverage, frontend]
     if: always()
     steps:
       - name: Check CI status
@@ -151,6 +186,10 @@ jobs:
           fi
           if [[ "${{ needs.rust-coverage.result }}" == "failure" ]]; then
             echo "Rust coverage failed"
+            exit 1
+          fi
+          if [[ "${{ needs.frontend.result }}" == "failure" ]]; then
+            echo "Frontend failed"
             exit 1
           fi
           echo "CI passed"
