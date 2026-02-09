@@ -258,6 +258,33 @@ class TestAsyncUpdate:
 
 
 @pytest.mark.contract
+class TestAsyncCount:
+    """Tests for async count() method."""
+
+    async def test_count_empty(self, repository: AsyncRepositoryType) -> None:
+        """Count returns zero for empty repository."""
+        result = await repository.count()
+        assert result == 0
+
+    async def test_count_reflects_adds(self, repository: AsyncRepositoryType) -> None:
+        """Count returns the number of stored videos."""
+        await repository.add(make_test_video())
+        assert await repository.count() == 1
+
+        await repository.add(make_test_video())
+        assert await repository.count() == 2
+
+    async def test_count_reflects_deletes(self, repository: AsyncRepositoryType) -> None:
+        """Count decreases after deletion."""
+        video = make_test_video()
+        await repository.add(video)
+        assert await repository.count() == 1
+
+        await repository.delete(video.id)
+        assert await repository.count() == 0
+
+
+@pytest.mark.contract
 class TestAsyncDelete:
     """Tests for async delete() method."""
 
