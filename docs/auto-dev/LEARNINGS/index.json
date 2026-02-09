@@ -326,7 +326,115 @@
       "summary": "Sequence infrastructure themes before consumer themes in version planning; the upfront investment pays off when subsequent themes consume the infrastructure.",
       "content_path": "docs/auto-dev/LEARNINGS/LRN-019-build-infrastructure-first-in-sequential-version-p.md",
       "status": "active"
+    },
+    {
+      "id": "LRN-020",
+      "title": "Conditional Static Mount Pattern for Optional Frontend Serving",
+      "tags": [
+        "fastapi",
+        "patterns",
+        "testing",
+        "frontend",
+        "static-files"
+      ],
+      "created": "2026-02-09T18:54:06.211262Z",
+      "source": "v005/01-frontend-foundation, v005/04-e2e-testing",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Only mount StaticFiles when the directory exists to decouple backend testing from frontend build state; auto-load from settings for seamless production serving.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-020-conditional-static-mount-pattern-for-optional-fron.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-021",
+      "title": "Separate Vitest Config for Vite 7+ Projects",
+      "tags": [
+        "frontend",
+        "vite",
+        "vitest",
+        "typescript",
+        "configuration"
+      ],
+      "created": "2026-02-09T18:54:14.315152Z",
+      "source": "v005/01-frontend-foundation/001-frontend-scaffolding",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Vite 7 + Vitest 4 require separate vitest.config.ts; inline test config in vite.config.ts causes TypeScript errors.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-021-separate-vitest-config-for-vite-7-projects.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-022",
+      "title": "Automated Accessibility Testing Catches Real Violations",
+      "tags": [
+        "accessibility",
+        "testing",
+        "e2e",
+        "playwright",
+        "wcag"
+      ],
+      "created": "2026-02-09T18:54:23.874701Z",
+      "source": "v005/04-e2e-testing/002-e2e-test-suite",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Automated axe-core accessibility checks in E2E tests catch real WCAG violations cheaply; include them from the start rather than retrofitting.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-022-automated-accessibility-testing-catches-real-viola.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-023",
+      "title": "Client-Side Navigation for SPA E2E Tests Without Server-Side Routing",
+      "tags": [
+        "e2e",
+        "testing",
+        "spa",
+        "routing",
+        "playwright"
+      ],
+      "created": "2026-02-09T18:54:34.266089Z",
+      "source": "v005/04-e2e-testing/002-e2e-test-suite",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "SPA E2E tests must use client-side navigation (clicking UI elements) from root path when the server doesn't handle SPA fallback routing for sub-paths.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-023-client-side-navigation-for-spa-e2e-tests-without-s.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-024",
+      "title": "Focused Zustand Stores Over Monolithic State Management",
+      "tags": [
+        "frontend",
+        "react",
+        "state-management",
+        "zustand",
+        "patterns"
+      ],
+      "created": "2026-02-09T18:54:45.662195Z",
+      "source": "v005/03-gui-components (cross-theme pattern)",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Use multiple focused Zustand stores scoped to feature domains with bounded eviction policies for lightweight, testable state management in React apps.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-024-focused-zustand-stores-over-monolithic-state-manag.md",
+      "status": "active"
+    },
+    {
+      "id": "LRN-025",
+      "title": "Feature Handoff Documents Enable Zero-Rework Sequencing",
+      "tags": [
+        "process",
+        "sequencing",
+        "handoff",
+        "documentation",
+        "patterns"
+      ],
+      "created": "2026-02-09T18:54:55.806218Z",
+      "source": "v005 version retrospective (cross-theme learning)",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Feature handoff documents communicating integration points and patterns enable zero-rework feature chains when combined with correct sequencing.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-025-feature-handoff-documents-enable-zero-rework-seque.md",
+      "status": "active"
     }
   ],
-  "next_id": 20
+  "next_id": 26
 }
