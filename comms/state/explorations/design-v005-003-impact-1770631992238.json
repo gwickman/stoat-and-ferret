@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v005-003-impact-1770631992238",
+  "results_folder": "design-v005-003-impact",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-09T10:13:12.238163",
+  "updated_at": "2026-02-09T10:13:12.238163",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v005-003-impact/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v005-003-impact"
+}
