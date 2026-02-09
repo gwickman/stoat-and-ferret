@@ -8,14 +8,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
+from stoat_ferret.api.schemas.job import JobSubmitResponse
 from stoat_ferret.api.schemas.video import (
     ScanRequest,
-    ScanResponse,
     VideoListResponse,
     VideoResponse,
     VideoSearchResponse,
 )
-from stoat_ferret.api.services.scan import scan_directory
+from stoat_ferret.api.services.scan import SCAN_JOB_TYPE
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -123,37 +123,39 @@ async def get_video(
     return VideoResponse.model_validate(video)
 
 
-@router.post("/scan", response_model=ScanResponse)
+@router.post("/scan", response_model=JobSubmitResponse, status_code=status.HTTP_202_ACCEPTED)
 async def scan_videos(
-    request: ScanRequest,
-    repo: RepoDep,
-) -> ScanResponse:
-    """Scan directory for video files.
+    scan_request: ScanRequest,
+    request: Request,
+) -> JobSubmitResponse:
+    """Submit a directory scan as an async job.
 
-    Walks the specified directory, finds video files by extension,
-    extracts metadata using ffprobe, and adds/updates them in the database.
+    Creates a scan job and returns the job ID immediately.
+    Use GET /api/v1/jobs/{job_id} to poll for status and results.
 
     Args:
-        request: Scan request with directory path and recursion flag.
-        repo: Video repository dependency.
+        scan_request: Scan request with directory path and recursion flag.
+        request: The FastAPI request object for accessing app state.
 
     Returns:
-        Scan results summary with counts of scanned, new, updated, skipped files.
+        Job submission response with the job ID.
 
     Raises:
         HTTPException: 400 if path is not a valid directory.
     """
-    try:
-        return await scan_directory(
-            path=request.path,
-            recursive=request.recursive,
-            repository=repo,
-        )
-    except ValueError as e:
+    path = scan_request.path
+    if not os.path.isdir(path):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "INVALID_PATH", "message": str(e)},
-        ) from None
+            detail={"code": "INVALID_PATH", "message": f"Not a directory: {path}"},
+        )
+
+    job_queue = request.app.state.job_queue
+    job_id = await job_queue.submit(
+        SCAN_JOB_TYPE,
+        {"path": path, "recursive": scan_request.recursive},
+    )
+    return JobSubmitResponse(job_id=job_id)
 
 
 @router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)

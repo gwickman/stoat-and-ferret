@@ -115,7 +115,8 @@ class InMemoryJobQueue:
     """In-memory job queue with synchronous deterministic execution.
 
     Jobs are executed synchronously at submit time for deterministic
-    test behavior. Outcomes can be configured per job type.
+    test behavior. Outcomes can be configured per job type, or handlers
+    can be registered to run real logic.
     """
 
     def __init__(self) -> None:
@@ -124,6 +125,19 @@ class InMemoryJobQueue:
         self._outcomes: dict[str, JobOutcome] = {}
         self._default_outcome: JobOutcome = JobOutcome.SUCCESS
         self._results: dict[str, Any] = {}
+        self._handlers: dict[str, JobHandler] = {}
+
+    def register_handler(self, job_type: str, handler: JobHandler) -> None:
+        """Register a handler for a job type.
+
+        When a handler is registered, submit() executes it synchronously
+        instead of returning a preconfigured outcome.
+
+        Args:
+            job_type: The job type identifier.
+            handler: Async callable that processes the job payload.
+        """
+        self._handlers[job_type] = handler
 
     def configure_outcome(
         self,
@@ -157,6 +171,9 @@ class InMemoryJobQueue:
     async def submit(self, job_type: str, payload: dict[str, Any]) -> str:
         """Submit and synchronously execute a job.
 
+        If a handler is registered for the job type, it is executed
+        immediately. Otherwise, a preconfigured outcome is used.
+
         Args:
             job_type: Type identifier for the job.
             payload: Job parameters.
@@ -167,29 +184,45 @@ class InMemoryJobQueue:
         job_id = str(uuid.uuid4())
         entry = _JobEntry(job_id=job_id, job_type=job_type, payload=payload)
 
-        outcome = self._outcomes.get(job_type, self._default_outcome)
+        handler = self._handlers.get(job_type)
+        if handler is not None:
+            try:
+                result_value = await handler(job_type, payload)
+                entry.result = JobResult(
+                    job_id=job_id,
+                    status=JobStatus.COMPLETE,
+                    result=result_value,
+                )
+            except Exception as exc:
+                entry.result = JobResult(
+                    job_id=job_id,
+                    status=JobStatus.FAILED,
+                    error=str(exc),
+                )
+        else:
+            outcome = self._outcomes.get(job_type, self._default_outcome)
 
-        if outcome == JobOutcome.SUCCESS:
-            result_value = self._results.get(job_type, {"status": "ok"})
-            entry.result = JobResult(
-                job_id=job_id,
-                status=JobStatus.COMPLETE,
-                result=result_value,
-            )
-        elif outcome == JobOutcome.FAILURE:
-            error_msg = self._results.get(f"{job_type}:error", f"Job {job_type} failed")
-            entry.result = JobResult(
-                job_id=job_id,
-                status=JobStatus.FAILED,
-                error=error_msg,
-            )
-        elif outcome == JobOutcome.TIMEOUT:
-            error_msg = self._results.get(f"{job_type}:error", f"Job {job_type} timed out")
-            entry.result = JobResult(
-                job_id=job_id,
-                status=JobStatus.TIMEOUT,
-                error=error_msg,
-            )
+            if outcome == JobOutcome.SUCCESS:
+                result_value = self._results.get(job_type, {"status": "ok"})
+                entry.result = JobResult(
+                    job_id=job_id,
+                    status=JobStatus.COMPLETE,
+                    result=result_value,
+                )
+            elif outcome == JobOutcome.FAILURE:
+                error_msg = self._results.get(f"{job_type}:error", f"Job {job_type} failed")
+                entry.result = JobResult(
+                    job_id=job_id,
+                    status=JobStatus.FAILED,
+                    error=error_msg,
+                )
+            elif outcome == JobOutcome.TIMEOUT:
+                error_msg = self._results.get(f"{job_type}:error", f"Job {job_type} timed out")
+                entry.result = JobResult(
+                    job_id=job_id,
+                    status=JobStatus.TIMEOUT,
+                    error=error_msg,
+                )
 
         self._jobs[job_id] = entry
         return job_id

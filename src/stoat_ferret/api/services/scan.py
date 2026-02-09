@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from stoat_ferret.api.schemas.video import ScanError, ScanResponse
 from stoat_ferret.db.async_repository import AsyncVideoRepository
@@ -11,6 +13,40 @@ from stoat_ferret.db.models import Video
 from stoat_ferret.ffmpeg.probe import ffprobe_video
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v"}
+
+SCAN_JOB_TYPE = "scan"
+
+
+def make_scan_handler(
+    repository: AsyncVideoRepository,
+) -> Callable[[str, dict[str, Any]], Awaitable[Any]]:
+    """Create a scan job handler bound to a repository.
+
+    Args:
+        repository: Video repository for storing scan results.
+
+    Returns:
+        Async handler function compatible with the job queue.
+    """
+
+    async def handler(_job_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Execute a scan job.
+
+        Args:
+            _job_type: Job type identifier (unused).
+            payload: Must contain 'path' and optionally 'recursive'.
+
+        Returns:
+            Scan results as a dict.
+        """
+        result = await scan_directory(
+            path=payload["path"],
+            recursive=payload.get("recursive", True),
+            repository=repository,
+        )
+        return result.model_dump()
+
+    return handler
 
 
 async def scan_directory(
