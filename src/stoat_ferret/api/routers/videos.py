@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import os
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import FileResponse
 
 from stoat_ferret.api.schemas.job import JobSubmitResponse
 from stoat_ferret.api.schemas.video import (
@@ -20,6 +22,10 @@ from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
+)
+
+_PLACEHOLDER_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "static" / "placeholder-thumb.jpg"
 )
 
 router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
@@ -96,6 +102,39 @@ async def search_videos(
         total=len(videos),
         query=q,
     )
+
+
+@router.get("/{video_id}/thumbnail")
+async def get_thumbnail(
+    video_id: str,
+    repo: RepoDep,
+) -> FileResponse:
+    """Get thumbnail image for a video.
+
+    Returns the generated thumbnail if available, or a placeholder image
+    if thumbnail generation failed or hasn't been run.
+
+    Args:
+        video_id: The unique video identifier.
+        repo: Video repository dependency.
+
+    Returns:
+        JPEG image response.
+
+    Raises:
+        HTTPException: 404 if video not found.
+    """
+    video = await repo.get(video_id)
+    if video is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Video {video_id} not found"},
+        )
+
+    if video.thumbnail_path and Path(video.thumbnail_path).is_file():
+        return FileResponse(video.thumbnail_path, media_type="image/jpeg")
+
+    return FileResponse(str(_PLACEHOLDER_PATH), media_type="image/jpeg")
 
 
 @router.get("/{video_id}", response_model=VideoResponse)
