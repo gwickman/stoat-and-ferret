@@ -1,6 +1,6 @@
 {
   "next_id": 53,
-  "updated_at": "2026-02-08T20:29:13.293045",
+  "updated_at": "2026-02-09T06:28:50.928003",
   "items": [
     {
       "id": "BL-001",
@@ -312,10 +312,10 @@
       "id": "BL-009",
       "title": "Add property test guidance to feature design template",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-01-26T17:16:23.472478",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:42.861436",
       "tags": [
         "process",
         "testing",
@@ -343,17 +343,17 @@
       ],
       "notes": "Use case: A developer designing a new Rust type (e.g., AudioMixer) opens the feature design template and sees a property test section. Following the guidance, they write proptest invariants first — \"mixing two silent tracks produces silence\", \"output duration equals longest input\" — then implement the type to satisfy them. The invariants serve as executable specifications that catch edge cases unit tests would miss.",
       "use_case": "This feature addresses: Add property test guidance to feature design template. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "devex-coverage"
     },
     {
       "id": "BL-010",
       "title": "Configure Rust code coverage with llvm-cov",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-01-26T17:16:28.865973",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:43.978905",
       "tags": [
         "testing",
         "coverage",
@@ -382,8 +382,8 @@
       ],
       "notes": "Use case: After merging a PR that adds new Rust code, the CI pipeline runs llvm-cov and reports that Rust coverage dropped from 92% to 85%. The developer sees the uncovered lines in the CI artifact, adds tests for the missing paths, and pushes a fix — maintaining the 90% threshold before the PR can merge.",
       "use_case": "This feature addresses: Configure Rust code coverage with llvm-cov. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "devex-coverage"
     },
     {
       "id": "BL-011",
@@ -426,10 +426,10 @@
       "id": "BL-012",
       "title": "Fix coverage reporting gaps for ImportError fallback",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-01-26T17:16:39.614208",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:45.186999",
       "tags": [
         "testing",
         "coverage",
@@ -457,8 +457,8 @@
       ],
       "notes": "Use case: A developer notices the coverage report shows 93% but suspects some lines are excluded via pragmas. They audit all # pragma: no cover comments and find the ImportError fallback for the Rust extension is excluded but could be tested by running without the compiled module. After removing unjustified exclusions and adding targeted tests, the coverage number reflects actual test quality.",
       "use_case": "This feature addresses: Fix coverage reporting gaps for ImportError fallback. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "devex-coverage"
     },
     {
       "id": "BL-013",
@@ -502,10 +502,10 @@
       "id": "BL-014",
       "title": "Add Docker-based local testing option",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "s",
       "added": "2026-01-28T09:26:42.609453",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:46.257733",
       "tags": [
         "tooling",
         "docker",
@@ -530,8 +530,8 @@
       ],
       "notes": "Use case: A contributor on Windows with Application Control policies enabled cannot run pytest locally because the policy blocks Python execution. They run docker-compose up test and the full test suite executes inside a Linux container, bypassing host restrictions and providing the same environment as CI.",
       "use_case": "This feature addresses: Add Docker-based local testing option. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "devex-coverage"
     },
     {
       "id": "BL-015",
@@ -571,10 +571,10 @@
       "id": "BL-016",
       "title": "Unify InMemory vs FTS5 search behavior",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "s",
       "added": "2026-01-28T09:26:52.286493",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:47.480503",
       "tags": [
         "database",
         "cleanup",
@@ -599,8 +599,8 @@
       ],
       "notes": "Use case: A test uses InMemoryVideoRepository and searches for \"sunset beach\". It finds the video because substring match hits. The same test against SQLite with FTS5 would not find it because FTS5 tokenizes differently. This inconsistency means tests pass with the in-memory double but fail in production. Unifying search semantics ensures test results predict production behavior.",
       "use_case": "This feature addresses: Unify InMemory vs FTS5 search behavior. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "blackbox-contract"
     },
     {
       "id": "BL-017",
@@ -683,10 +683,10 @@
       "id": "BL-020",
       "title": "Implement InMemory test doubles for Projects and Jobs",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:56:36.056975",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:48.704164",
       "tags": [
         "v004",
         "testing",
@@ -713,17 +713,17 @@
       ],
       "notes": "Use case: A developer writing integration tests for the project management API needs to verify that creating a project, adding clips, and rendering produces the correct FFmpeg command — without touching the real database or file system. They instantiate InMemoryProjectStorage and InMemoryJobQueue, seed them with test data, wire them into the app, and assert on outcomes deterministically.",
       "use_case": "This feature addresses: Implement InMemory test doubles for Projects and Jobs. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "test-foundation"
     },
     {
       "id": "BL-021",
       "title": "Add dependency injection to create_app() for test wiring",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-02-08T17:56:42.085445",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:49.818774",
       "tags": [
         "v004",
         "testing",
@@ -750,17 +750,17 @@
       ],
       "notes": "Use case: A test author needs to verify end-to-end API behavior with recording fakes. They call create_app(executor=RecordingFFmpegExecutor(), repository=InMemoryVideoRepository()) and get a fully wired FastAPI app where every dependency is a test double — no monkey-patching, no module-level globals to swap.",
       "use_case": "This feature addresses: Add dependency injection to create_app() for test wiring. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "test-foundation"
     },
     {
       "id": "BL-022",
       "title": "Build fixture factory with builder pattern for test data",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-02-08T17:56:48.722950",
-      "completed_at": null,
+      "completed_at": "2026-02-09T06:28:50.928000",
       "tags": [
         "v004",
         "testing",
@@ -787,8 +787,8 @@
       ],
       "notes": "Use case: A developer writes a test for clip reordering. Instead of 15 lines of manual dict construction, they write ProjectBuilder().with_clip(start=0, end=5).with_clip(start=5, end=10).build() and get a valid Project with two clips. When the Clip model adds a new required field next version, only the builder needs updating — not every test.",
       "use_case": "This feature addresses: Build fixture factory with builder pattern for test data. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null
+      "implemented_in_version": "v004",
+      "implemented_in_theme": "test-foundation"
     },
     {
       "id": "BL-023",
@@ -1989,6 +1989,6 @@
       "implemented_in_theme": null
     }
   ],
-  "completed_count": 9,
+  "completed_count": 17,
   "cancelled_count": 0
 }

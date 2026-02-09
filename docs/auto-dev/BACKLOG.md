@@ -1,26 +1,23 @@
 # Project Backlog
 
-*Last updated: 2026-02-08 20:29*
+*Last updated: 2026-02-09 06:28*
 
-**Total completed:** 9 | **Cancelled:** 0
+**Total completed:** 17 | **Cancelled:** 0
 
 ## Priority Summary
 
 | Priority | Name | Count |
 |----------|------|-------|
 | P0 | Critical | 0 |
-| P1 | High | 24 |
-| P2 | Medium | 13 |
-| P3 | Low | 5 |
+| P1 | High | 21 |
+| P2 | Medium | 11 |
+| P3 | Low | 2 |
 
 ## Quick Reference
 
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P1 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
-| <a id="bl-020-ref"></a>[BL-020](#bl-020) | P1 | l | Implement InMemory test doubles for Projects and Jobs | The RecordingFFmpegExecutor test double exists from v002,... |
-| <a id="bl-021-ref"></a>[BL-021](#bl-021) | P1 | m | Add dependency injection to create_app() for test wiring | The `create_app()` factory exists but does not accept inj... |
-| <a id="bl-022-ref"></a>[BL-022](#bl-022) | P1 | m | Build fixture factory with builder pattern for test data | No builder-pattern fixture factory exists for creating te... |
 | <a id="bl-023-ref"></a>[BL-023](#bl-023) | P1 | m | Implement black box test scenario catalog | No black box integration tests exist despite the API bein... |
 | <a id="bl-028-ref"></a>[BL-028](#bl-028) | P1 | m | EXP: Frontend framework selection and Vite project setup | No frontend project exists — no `gui/` directory, package... |
 | <a id="bl-029-ref"></a>[BL-029](#bl-029) | P1 | m | Implement WebSocket endpoint for real-time events | M1.10 requires a `/ws` WebSocket endpoint for real-time e... |
@@ -42,8 +39,6 @@
 | <a id="bl-050-ref"></a>[BL-050](#bl-050) | P1 | m | Implement live FFmpeg filter preview in effect parameter UI | M2.8 specifies showing the Rust-generated FFmpeg filter s... |
 | <a id="bl-051-ref"></a>[BL-051](#bl-051) | P1 | l | Build effect builder workflow with clip selector and effect stack | M2.9 specifies a complete effect builder workflow: select... |
 | <a id="bl-003-ref"></a>[BL-003](#bl-003) | P2 | m | EXP-003: FastAPI static file serving for GUI | Investigate serving the React/Svelte GUI from FastAPI: |
-| <a id="bl-009-ref"></a>[BL-009](#bl-009) | P2 | m | Add property test guidance to feature design template | v001 retrospective suggested writing proptest invariants ... |
-| <a id="bl-014-ref"></a>[BL-014](#bl-014) | P2 | s | Add Docker-based local testing option | v002 retrospective identified that Windows Application Co... |
 | <a id="bl-018-ref"></a>[BL-018](#bl-018) | P2 | s | Create C4 architecture documentation | No C4 architecture documentation currently exists for the... |
 | <a id="bl-024-ref"></a>[BL-024](#bl-024) | P2 | m | Contract tests with real FFmpeg for executor fidelity | RecordingFFmpegExecutor and FakeFFmpegExecutor exist from... |
 | <a id="bl-025-ref"></a>[BL-025](#bl-025) | P2 | m | Security audit of Rust path validation and input sanitization | M1.9 specifies a security review of Rust sanitization cov... |
@@ -54,54 +49,39 @@
 | <a id="bl-042-ref"></a>[BL-042](#bl-042) | P2 | l | Create effect discovery API endpoint | M2.2 and 05-api-specification.md specify an `/effects` di... |
 | <a id="bl-043-ref"></a>[BL-043](#bl-043) | P2 | l | Create API endpoint to apply text overlay effect to clips | No API endpoint exists to apply effects to clips. The Rus... |
 | <a id="bl-052-ref"></a>[BL-052](#bl-052) | P2 | m | E2E tests for effect workshop workflow | The effect workshop comprises multiple GUI components (ca... |
-| <a id="bl-010-ref"></a>[BL-010](#bl-010) | P3 | m | Configure Rust code coverage with llvm-cov | v001 retrospective noted Rust code coverage is not tracke... |
 | <a id="bl-011-ref"></a>[BL-011](#bl-011) | P3 | m | Consolidate Python/Rust build backends | v001 uses hatchling for Python package management and mat... |
-| <a id="bl-012-ref"></a>[BL-012](#bl-012) | P3 | m | Fix coverage reporting gaps for ImportError fallback | v001 retrospective noted ImportError fallback code is exc... |
-| <a id="bl-016-ref"></a>[BL-016](#bl-016) | P3 | s | Unify InMemory vs FTS5 search behavior | v002 retrospective noted that InMemoryVideoRepository use... |
 | <a id="bl-026-ref"></a>[BL-026](#bl-026) | P3 | m | Rust vs Python performance benchmark for core operations | M1.9 requires benchmarking Rust core operations against p... |
 
 ## Tags Summary
 
 | Tag | Count | Items |
 |-----|-------|-------|
-| v004 | 13 | BL-009, BL-010, BL-012, BL-014, ... |
-| testing | 11 | BL-009, BL-010, BL-012, BL-016, ... |
 | gui | 10 | BL-003, BL-028, BL-030, BL-031, ... |
-| rust | 9 | BL-010, BL-026, BL-037, BL-038, ... |
 | v005 | 9 | BL-028, BL-029, BL-030, BL-031, ... |
 | v007 | 9 | BL-044, BL-045, BL-046, BL-047, ... |
+| rust | 8 | BL-026, BL-037, BL-038, BL-039, ... |
 | v006 | 7 | BL-037, BL-038, BL-039, BL-040, ... |
 | effects | 6 | BL-042, BL-047, BL-048, BL-049, ... |
+| v004 | 5 | BL-023, BL-024, BL-025, BL-026, ... |
 | api | 5 | BL-029, BL-034, BL-042, BL-043, ... |
+| testing | 4 | BL-023, BL-024, BL-036, BL-052 |
 | filters | 3 | BL-037, BL-038, BL-039 |
 | investigation | 2 | BL-003, BL-028 |
-| process | 2 | BL-009, BL-014 |
-| coverage | 2 | BL-010, BL-012 |
-| tooling | 2 | BL-011, BL-014 |
-| cleanup | 2 | BL-012, BL-016 |
 | ffmpeg | 2 | BL-024, BL-032 |
 | e2e | 2 | BL-036, BL-052 |
 | text-overlay | 2 | BL-040, BL-043 |
 | transitions | 2 | BL-045, BL-046 |
 | v005-prerequisite | 1 | BL-003 |
 | fastapi | 1 | BL-003 |
-| proptest | 1 | BL-009 |
-| ci | 1 | BL-010 |
+| tooling | 1 | BL-011 |
 | build | 1 | BL-011 |
 | complexity | 1 | BL-011 |
-| docker | 1 | BL-014 |
-| developer-experience | 1 | BL-014 |
-| database | 1 | BL-016 |
-| consistency | 1 | BL-016 |
 | documentation | 1 | BL-018 |
 | architecture | 1 | BL-018 |
 | c4 | 1 | BL-018 |
 | windows | 1 | BL-019 |
 | agents-md | 1 | BL-019 |
 | gitignore | 1 | BL-019 |
-| test-doubles | 1 | BL-020 |
-| dependency-injection | 1 | BL-021 |
-| fixtures | 1 | BL-022 |
 | black-box | 1 | BL-023 |
 | contract | 1 | BL-024 |
 | security | 1 | BL-025 |
@@ -145,63 +125,6 @@ Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore
 **Use Case:** This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.
 
 [↑ Back to list](#bl-019-ref)
-
-#### 📋 BL-020: Implement InMemory test doubles for Projects and Jobs
-
-**Status:** open
-**Tags:** v004, testing, test-doubles
-
-The RecordingFFmpegExecutor test double exists from v002, but InMemoryProjectStorage and InMemoryJobQueue are missing. The 07-quality-architecture.md spec requires these test doubles for black box testing (M1.8), but only InMemoryVideoRepository has been implemented. Without these doubles, integration tests cannot run in isolation from real storage and must use the actual database, making tests slow and non-deterministic.
-
-**Use Case:** This feature addresses: Implement InMemory test doubles for Projects and Jobs. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] InMemoryProjectStorage implements AsyncProjectRepository protocol with deepcopy isolation
-- [ ] InMemoryJobQueue provides synchronous deterministic execution with configurable outcomes
-- [ ] Both doubles include seed helpers for populating test data
-- [ ] Contract tests verify InMemory behavior matches real SQLite implementations
-
-**Notes:** Use case: A developer writing integration tests for the project management API needs to verify that creating a project, adding clips, and rendering produces the correct FFmpeg command — without touching the real database or file system. They instantiate InMemoryProjectStorage and InMemoryJobQueue, seed them with test data, wire them into the app, and assert on outcomes deterministically.
-
-[↑ Back to list](#bl-020-ref)
-
-#### 📋 BL-021: Add dependency injection to create_app() for test wiring
-
-**Status:** open
-**Tags:** v004, testing, dependency-injection
-
-The `create_app()` factory exists but does not accept injectable dependencies as specified in 07-quality-architecture.md. Tests currently cannot swap in recording or in-memory fakes at the application level. This blocks black box testing (M1.8) because there is no way to wire test doubles into the running FastAPI app without monkey-patching.
-
-**Use Case:** This feature addresses: Add dependency injection to create_app() for test wiring. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] create_app() accepts optional executor, repository, and job queue parameters
-- [ ] Default behavior unchanged — production uses real implementations when None passed
-- [ ] Test mode injects recording/in-memory fakes through the same interface
-- [ ] At least one integration test demonstrates the test wiring end-to-end
-
-**Notes:** Use case: A test author needs to verify end-to-end API behavior with recording fakes. They call create_app(executor=RecordingFFmpegExecutor(), repository=InMemoryVideoRepository()) and get a fully wired FastAPI app where every dependency is a test double — no monkey-patching, no module-level globals to swap.
-
-[↑ Back to list](#bl-021-ref)
-
-#### 📋 BL-022: Build fixture factory with builder pattern for test data
-
-**Status:** open
-**Tags:** v004, testing, fixtures
-
-No builder-pattern fixture factory exists for creating test data. Tests currently construct project and clip objects inline with repetitive setup code. The 07-quality-architecture.md spec requires `with_clip()`, `with_text_overlay()`, `build()`, and `create_via_api()` methods. Without a fixture factory, tests are verbose, inconsistent, and fragile when data models change.
-
-**Use Case:** This feature addresses: Build fixture factory with builder pattern for test data. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Builder creates test projects with configurable clips and effects via chained methods
-- [ ] build() returns domain objects directly for unit tests without HTTP
-- [ ] create_via_api() exercises the full HTTP path for black box tests
-- [ ] Pytest fixtures use the factory, replacing inline test data construction
-
-**Notes:** Use case: A developer writes a test for clip reordering. Instead of 15 lines of manual dict construction, they write ProjectBuilder().with_clip(start=0, end=5).with_clip(start=5, end=10).build() and get a valid Project with two clips. When the Clip model adds a new required field next version, only the builder needs updating — not every test.
-
-[↑ Back to list](#bl-022-ref)
 
 #### 📋 BL-023: Implement black box test scenario catalog
 
@@ -590,43 +513,6 @@ This informs v005 (GUI shell).
 
 [↑ Back to list](#bl-003-ref)
 
-#### 📋 BL-009: Add property test guidance to feature design template
-
-**Status:** open
-**Tags:** process, testing, proptest, v004
-
-v001 retrospective suggested writing proptest invariants before implementation as executable specifications. Add guidance to feature design templates encouraging this pattern, along with tracking expected test counts.
-
-**Use Case:** This feature addresses: Add property test guidance to feature design template. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Feature design template includes property test section
-- [ ] Guidance on writing proptest invariants before implementation
-- [ ] Example showing invariant-first design approach
-- [ ] Documentation on expected test count tracking
-
-**Notes:** Use case: A developer designing a new Rust type (e.g., AudioMixer) opens the feature design template and sees a property test section. Following the guidance, they write proptest invariants first — "mixing two silent tracks produces silence", "output duration equals longest input" — then implement the type to satisfy them. The invariants serve as executable specifications that catch edge cases unit tests would miss.
-
-[↑ Back to list](#bl-009-ref)
-
-#### 📋 BL-014: Add Docker-based local testing option
-
-**Status:** open
-**Tags:** tooling, docker, process, developer-experience, v004
-
-v002 retrospective identified that Windows Application Control policies can block local Python testing. A Docker-based option would bypass these restrictions and provide consistent dev environments.
-
-**Use Case:** This feature addresses: Add Docker-based local testing option. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] docker-compose.yml with Python + Rust build environment
-- [ ] README documents Docker-based testing workflow
-- [ ] Tests can run inside container bypassing host restrictions
-
-**Notes:** Use case: A contributor on Windows with Application Control policies enabled cannot run pytest locally because the policy blocks Python execution. They run docker-compose up test and the full test suite executes inside a Linux container, bypassing host restrictions and providing the same environment as CI.
-
-[↑ Back to list](#bl-014-ref)
-
 #### 📋 BL-018: Create C4 architecture documentation
 
 **Status:** open
@@ -800,25 +686,6 @@ The effect workshop comprises multiple GUI components (catalog, form generator, 
 
 ### P3: Low
 
-#### 📋 BL-010: Configure Rust code coverage with llvm-cov
-
-**Status:** open
-**Tags:** testing, coverage, rust, ci, v004
-
-v001 retrospective noted Rust code coverage is not tracked. Configure llvm-cov to measure and report Rust test coverage alongside Python coverage.
-
-**Use Case:** This feature addresses: Configure Rust code coverage with llvm-cov. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] llvm-cov configured for Rust workspace
-- [ ] Coverage reports generated during CI
-- [ ] Coverage threshold enforced (e.g., 80%)
-- [ ] Coverage visible in CI artifacts or dashboard
-
-**Notes:** Use case: After merging a PR that adds new Rust code, the CI pipeline runs llvm-cov and reports that Rust coverage dropped from 92% to 85%. The developer sees the uncovered lines in the CI artifact, adds tests for the missing paths, and pushes a fix — maintaining the 90% threshold before the PR can merge.
-
-[↑ Back to list](#bl-010-ref)
-
 #### 📋 BL-011: Consolidate Python/Rust build backends
 
 **Status:** open
@@ -835,43 +702,6 @@ v001 uses hatchling for Python package management and maturin for Rust/PyO3 buil
 - [ ] Update developer documentation
 
 [↑ Back to list](#bl-011-ref)
-
-#### 📋 BL-012: Fix coverage reporting gaps for ImportError fallback
-
-**Status:** open
-**Tags:** testing, coverage, cleanup, v004
-
-v001 retrospective noted ImportError fallback code is excluded from coverage. Review all coverage exclusions and ensure they are intentional and documented.
-
-**Use Case:** This feature addresses: Fix coverage reporting gaps for ImportError fallback. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Identify all coverage exclusions in Python code
-- [ ] Remove or justify each exclusion
-- [ ] ImportError fallback properly tested or documented as intentional exclusion
-- [ ] Coverage threshold maintained
-
-**Notes:** Use case: A developer notices the coverage report shows 93% but suspects some lines are excluded via pragmas. They audit all # pragma: no cover comments and find the ImportError fallback for the Rust extension is excluded but could be tested by running without the compiled module. After removing unjustified exclusions and adding targeted tests, the coverage number reflects actual test quality.
-
-[↑ Back to list](#bl-012-ref)
-
-#### 📋 BL-016: Unify InMemory vs FTS5 search behavior
-
-**Status:** open
-**Tags:** database, cleanup, testing, consistency, v004
-
-v002 retrospective noted that InMemoryVideoRepository uses substring match while SQLiteVideoRepository uses FTS5 full-text search. Consider unifying search behavior for consistent testing.
-
-**Use Case:** This feature addresses: Unify InMemory vs FTS5 search behavior. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] InMemoryVideoRepository uses same search semantics as SQLite FTS5
-- [ ] Tests verify consistent behavior across implementations
-- [ ] Documentation explains search behavior
-
-**Notes:** Use case: A test uses InMemoryVideoRepository and searches for "sunset beach". It finds the video because substring match hits. The same test against SQLite with FTS5 would not find it because FTS5 tokenizes differently. This inconsistency means tests pass with the in-memory double but fail in production. Unifying search semantics ensures test results predict production behavior.
-
-[↑ Back to list](#bl-016-ref)
 
 #### 📋 BL-026: Rust vs Python performance benchmark for core operations
 
