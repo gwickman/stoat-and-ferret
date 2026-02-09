@@ -1,0 +1,59 @@
+# Git
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.py[codz]
+*.egg-info
+.eggs
+dist
+build
+*.egg
+
+# Virtual environments
+.venv
+venv
+env
+
+# Test/coverage caches
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.hypothesis
+.coverage
+.coverage.*
+htmlcov
+coverage.xml
+
+# Rust build artifacts
+rust/stoat_ferret_core/target
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Generated stubs (rebuilt in container)
+.generated-stubs
+
+# Database files
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Comms/docs (not needed for testing)
+comms
+docs/auto-dev
+
+# Benchmarks (not needed for testing)
+benchmarks
