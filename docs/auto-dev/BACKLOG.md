@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-09 18:43*
+*Last updated: 2026-02-09 18:49*
 
 **Total completed:** 32 | **Cancelled:** 0
 
@@ -336,6 +336,8 @@ No C4 architecture documentation currently exists for the project. Establish doc
 **Use Case:** This feature addresses: Create C4 architecture documentation. It improves the system by resolving the described requirement.
 
 **Notes:** v004 retrospective architecture check (2026-02-09): The primary architecture doc (docs/design/02-architecture.md) was updated during v004 Theme 03 Feature 3 to reflect async scan, job queue, and updated data flows. No additional drift detected in the design docs. However, the v004 version retrospective explicitly notes that C4 documentation was skipped. v004 added: (1) AsyncioJobQueue with handler registration and background worker, (2) GET /api/v1/jobs/{job_id} status endpoint, (3) ALLOWED_SCAN_ROOTS security configuration with validate_scan_path(), (4) InMemory test doubles and create_app() DI pattern, (5) Docker multi-stage build infrastructure, (6) Rust coverage CI enforcement. These components should be captured when C4 documentation is created.
+
+v005 retrospective architecture check (2026-02-09): The design doc (docs/design/02-architecture.md) already includes /ws and /gui endpoint groups and high-level WebSocket/frontend descriptions added during v004. No C4 documentation exists (docs/C4-Documentation/ not found). v005 added significant frontend architecture not yet documented at the component level: (1) React/TypeScript/Vite frontend with Tailwind CSS v4, (2) ConnectionManager for WebSocket with lazy dead-connection cleanup, (3) ThumbnailService with GET /api/v1/videos/{id}/thumbnail endpoint, (4) AsyncVideoRepository.count() protocol method, (5) GUI components: Shell layout, Dashboard panel, Library Browser, Project Manager, (6) Zustand state management with 3 stores (activityStore, libraryStore, projectStore), (7) Playwright E2E testing infrastructure with CI job, (8) New settings: thumbnail_dir, gui_static_path, ws_heartbeat_interval. The design doc captures the high-level architecture correctly but lacks frontend component-level detail. C4 documentation would address this gap comprehensively.
 
 [↑ Back to list](#bl-018-ref)
 

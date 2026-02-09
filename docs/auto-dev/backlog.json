@@ -1,6 +1,6 @@
 {
   "next_id": 53,
-  "updated_at": "2026-02-09T18:43:11.355666",
+  "updated_at": "2026-02-09T18:49:57.217438",
   "items": [
     {
       "id": "BL-001",
@@ -654,7 +654,7 @@
       ],
       "description": "No C4 architecture documentation currently exists for the project. Establish documentation at appropriate levels (Context, Container, Component, Code) to document the system architecture.",
       "acceptance_criteria": [],
-      "notes": "v004 retrospective architecture check (2026-02-09): The primary architecture doc (docs/design/02-architecture.md) was updated during v004 Theme 03 Feature 3 to reflect async scan, job queue, and updated data flows. No additional drift detected in the design docs. However, the v004 version retrospective explicitly notes that C4 documentation was skipped. v004 added: (1) AsyncioJobQueue with handler registration and background worker, (2) GET /api/v1/jobs/{job_id} status endpoint, (3) ALLOWED_SCAN_ROOTS security configuration with validate_scan_path(), (4) InMemory test doubles and create_app() DI pattern, (5) Docker multi-stage build infrastructure, (6) Rust coverage CI enforcement. These components should be captured when C4 documentation is created.",
+      "notes": "v004 retrospective architecture check (2026-02-09): The primary architecture doc (docs/design/02-architecture.md) was updated during v004 Theme 03 Feature 3 to reflect async scan, job queue, and updated data flows. No additional drift detected in the design docs. However, the v004 version retrospective explicitly notes that C4 documentation was skipped. v004 added: (1) AsyncioJobQueue with handler registration and background worker, (2) GET /api/v1/jobs/{job_id} status endpoint, (3) ALLOWED_SCAN_ROOTS security configuration with validate_scan_path(), (4) InMemory test doubles and create_app() DI pattern, (5) Docker multi-stage build infrastructure, (6) Rust coverage CI enforcement. These components should be captured when C4 documentation is created.\n\nv005 retrospective architecture check (2026-02-09): The design doc (docs/design/02-architecture.md) already includes /ws and /gui endpoint groups and high-level WebSocket/frontend descriptions added during v004. No C4 documentation exists (docs/C4-Documentation/ not found). v005 added significant frontend architecture not yet documented at the component level: (1) React/TypeScript/Vite frontend with Tailwind CSS v4, (2) ConnectionManager for WebSocket with lazy dead-connection cleanup, (3) ThumbnailService with GET /api/v1/videos/{id}/thumbnail endpoint, (4) AsyncVideoRepository.count() protocol method, (5) GUI components: Shell layout, Dashboard panel, Library Browser, Project Manager, (6) Zustand state management with 3 stores (activityStore, libraryStore, projectStore), (7) Playwright E2E testing infrastructure with CI job, (8) New settings: thumbnail_dir, gui_static_path, ws_heartbeat_interval. The design doc captures the high-level architecture correctly but lacks frontend component-level detail. C4 documentation would address this gap comprehensively.",
       "use_case": "This feature addresses: Create C4 architecture documentation. It improves the system by resolving the described requirement.",
       "implemented_in_version": null,
       "implemented_in_theme": null
