@@ -8,6 +8,7 @@ AI-driven video editor with hybrid Python/Rust architecture.
 stoat-and-ferret/
 ├── src/                    # Python source (FastAPI, orchestration)
 ├── rust/stoat_ferret_core/ # Rust crate (filters, timeline math, FFmpeg)
+├── gui/                    # Frontend (React/TypeScript/Vite)
 ├── stubs/                  # Python type stubs for Rust bindings
 ├── tests/                  # Python tests (pytest)
 ├── docs/design/            # Architecture and design documents
@@ -24,6 +25,13 @@ uv run ruff check .          # Lint
 uv run ruff format .         # Format
 uv run mypy src/             # Type check
 uv run pytest                # Test
+
+# Frontend
+cd gui
+npm install                  # Install dependencies
+npm run dev                  # Dev server (proxies API to :8000)
+npm run build                # Production build to gui/dist/
+npx vitest run               # Run tests
 
 # Rust
 cd rust/stoat_ferret_core
@@ -71,6 +79,14 @@ uv run ruff check src/ tests/
 uv run ruff format --check src/ tests/
 uv run mypy src/
 uv run pytest tests/ --cov=src --cov-fail-under=80
+```
+
+### Frontend (TypeScript, Vitest)
+
+```bash
+cd gui
+npx tsc -b                   # Type check
+npx vitest run               # Run tests
 ```
 
 ### Rust (clippy, cargo test)

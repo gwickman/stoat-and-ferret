@@ -62,6 +62,8 @@ Authorization: Bearer <token>
 | `/render` | Export job management |
 | `/health` | Health checks (liveness, readiness) |
 | `/system` | System information |
+| `/ws` | WebSocket endpoint for real-time events |
+| `/gui` | Static file serving for React frontend |
 
 ---
 
@@ -1072,6 +1074,51 @@ GET /render/jobs
   ]
 }
 ```
+
+---
+
+### WebSocket (Real-Time Events)
+
+#### Connect to WebSocket
+```
+ws://localhost:8000/ws
+```
+
+Establishes a WebSocket connection for receiving real-time server events. The server sends a heartbeat message at a configurable interval (default 30s, set via `STOAT_WS_HEARTBEAT_INTERVAL`) to keep the connection alive.
+
+**Event Message Schema:**
+```json
+{
+  "type": "<event_type>",
+  "payload": {},
+  "correlation_id": "uuid",
+  "timestamp": "2024-01-15T12:00:00.123Z"
+}
+```
+
+**Event Types:**
+
+| Type | Description | Payload |
+|------|-------------|---------|
+| `heartbeat` | Keep-alive signal | `{}` |
+| `scan.started` | Video scan initiated | `{"path": "/media"}` |
+| `scan.completed` | Scan finished | `{"scanned": 47}` |
+| `project.created` | New project created | `{"project_id": "..."}` |
+| `health.status` | Health check event | `{"status": "ok"}` |
+
+---
+
+### GUI Static Files
+
+#### Serve Frontend
+```http
+GET /gui
+GET /gui/{path}
+```
+
+Serves the built React frontend as static files. Configured via `STOAT_GUI_STATIC_PATH` setting (default: `gui/dist`). Uses `html=True` mode for SPA client-side routing — non-file paths return `index.html`.
+
+Only mounted when the configured directory exists on disk.
 
 ---
 

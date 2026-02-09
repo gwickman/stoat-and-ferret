@@ -55,6 +55,25 @@ class Settings(BaseSettings):
         description="Logging level",
     )
 
+    # Storage
+    thumbnail_dir: str = Field(
+        default="data/thumbnails",
+        description="Directory for storing generated thumbnails",
+    )
+
+    # Frontend
+    gui_static_path: str = Field(
+        default="gui/dist",
+        description="Path to GUI static files directory",
+    )
+
+    # WebSocket
+    ws_heartbeat_interval: int = Field(
+        default=30,
+        ge=1,
+        description="WebSocket heartbeat interval in seconds",
+    )
+
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,
