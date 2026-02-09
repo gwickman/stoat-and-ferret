@@ -1,10 +1,10 @@
 {
   "exploration_id": "v004-retro-005-architecture-1770618673446",
   "results_folder": "v004-retro-005-architecture",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 21620,
   "started_at": "2026-02-09T06:31:13.446971",
-  "updated_at": "2026-02-09T06:31:13.446971",
+  "updated_at": "2026-02-09T06:31:15.262709",
   "completed_at": null,
   "error": null,
   "documents": [],
