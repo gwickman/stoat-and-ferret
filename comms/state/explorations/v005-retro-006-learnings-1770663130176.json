@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v005-retro-006-learnings-1770663130176",
+  "results_folder": "v005-retro-006-learnings",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-09T18:52:10.176288",
+  "updated_at": "2026-02-09T18:52:10.176288",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v005-retro-006-learnings/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v005-retro-006-learnings"
+}

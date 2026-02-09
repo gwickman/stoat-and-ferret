@@ -1,14 +1,16 @@
 {
   "exploration_id": "v005-retro-005-architecture-1770662893893",
   "results_folder": "v005-retro-005-architecture",
-  "status": "running",
+  "status": "complete",
   "pid": 22096,
   "started_at": "2026-02-09T18:48:13.893105",
-  "updated_at": "2026-02-09T18:48:15.716078",
-  "completed_at": null,
+  "updated_at": "2026-02-09T18:51:35.069595",
+  "completed_at": "2026-02-09T18:51:35.069299",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v005-retro-005-architecture/prompt.md",
   "outbox_path": "comms/outbox/exploration/v005-retro-005-architecture"
