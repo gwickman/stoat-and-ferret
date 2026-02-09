@@ -80,10 +80,11 @@ try:
         validate_video_codec,
         validate_volume,
     )
-except ImportError:  # pragma: no cover
-    # Rust extension not built - provide stubs for development/testing
+except ImportError:
+    # Rust extension not built - provide stubs for development/testing.
+    # Tested in tests/test_coverage/test_import_fallback.py
 
-    def _not_built(*args, **kwargs):  # type: ignore[no-untyped-def]
+    def _not_built(*args, **kwargs):  # type: ignore[no-untyped-def]  # intentional catch-all signature
         """Stub when native module unavailable."""
         raise RuntimeError(
             "stoat_ferret_core native extension not built. "
@@ -91,6 +92,7 @@ except ImportError:  # pragma: no cover
         )
 
     health_check = _not_built
+    # Callable stub replacing typed classes (intentional fallback)
     Clip = _not_built  # type: ignore[misc,assignment]
     ClipValidationError = _not_built  # type: ignore[misc,assignment]
     validate_clip = _not_built
@@ -116,6 +118,7 @@ except ImportError:  # pragma: no cover
     validate_video_codec = _not_built
     validate_audio_codec = _not_built
     validate_preset = _not_built
+    # Aliasing exceptions to RuntimeError (intentional fallback)
     ValidationError = RuntimeError  # type: ignore[misc,assignment]
     CommandError = RuntimeError  # type: ignore[misc,assignment]
     SanitizationError = RuntimeError  # type: ignore[misc,assignment]
