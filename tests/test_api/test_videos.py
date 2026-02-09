@@ -47,7 +47,7 @@ async def test_list_videos_respects_limit(
     client: TestClient,
     video_repository: AsyncInMemoryVideoRepository,
 ) -> None:
-    """List respects limit parameter."""
+    """List respects limit parameter and total reflects full dataset."""
     for _ in range(5):
         await video_repository.add(make_test_video())
 
@@ -56,6 +56,7 @@ async def test_list_videos_respects_limit(
     data = response.json()
     assert len(data["videos"]) == 3
     assert data["limit"] == 3
+    assert data["total"] == 5
 
 
 @pytest.mark.api
@@ -63,7 +64,7 @@ async def test_list_videos_respects_offset(
     client: TestClient,
     video_repository: AsyncInMemoryVideoRepository,
 ) -> None:
-    """List respects offset parameter."""
+    """List respects offset parameter and total reflects full dataset."""
     for _ in range(5):
         await video_repository.add(make_test_video())
 
@@ -72,6 +73,7 @@ async def test_list_videos_respects_offset(
     data = response.json()
     assert len(data["videos"]) == 3
     assert data["offset"] == 2
+    assert data["total"] == 5
 
 
 @pytest.mark.api

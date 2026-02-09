@@ -97,6 +97,14 @@ class AsyncVideoRepository(Protocol):
         """
         ...
 
+    async def count(self) -> int:
+        """Return the total number of videos in the repository.
+
+        Returns:
+            Total video count.
+        """
+        ...
+
     async def delete(self, id: str) -> bool:
         """Delete a video by its ID.
 
@@ -198,6 +206,13 @@ class AsyncSQLiteVideoRepository:
         )
         rows = await cursor.fetchall()
         return [self._row_to_video(row) for row in rows]
+
+    async def count(self) -> int:
+        """Return the total number of videos in the database."""
+        cursor = await self._conn.execute("SELECT COUNT(*) FROM videos")
+        row = await cursor.fetchone()
+        assert row is not None  # COUNT(*) always returns a row
+        return int(row[0])
 
     async def update(self, video: Video) -> Video:
         """Update an existing video."""
@@ -346,6 +361,10 @@ class AsyncInMemoryVideoRepository:
             or _any_token_startswith(v.path, query_lower)
         ]
         return [copy.deepcopy(v) for v in results[:limit]]
+
+    async def count(self) -> int:
+        """Return the total number of videos in the repository."""
+        return len(self._videos)
 
     async def update(self, video: Video) -> Video:
         """Update an existing video."""

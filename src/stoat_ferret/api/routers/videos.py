@@ -70,10 +70,11 @@ async def list_videos(
         Paginated list of videos.
     """
     videos = await repo.list_videos(limit=limit, offset=offset)
+    total = await repo.count()
 
     return VideoListResponse(
         videos=[VideoResponse.model_validate(v) for v in videos],
-        total=len(videos),
+        total=total,
         limit=limit,
         offset=offset,
     )
