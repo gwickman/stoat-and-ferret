@@ -26,6 +26,7 @@ export default function SortControls({
         onChange={(e) => onSortFieldChange(e.target.value as SortField)}
         className="rounded border border-gray-700 bg-gray-800 px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:outline-none"
         data-testid="sort-field"
+        aria-label="Sort by"
       >
         {SORT_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
