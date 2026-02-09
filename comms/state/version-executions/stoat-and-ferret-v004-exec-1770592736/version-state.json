@@ -31,7 +31,7 @@
       "name": "async-scan",
       "status": "in_progress",
       "features_total": 3,
-      "features_complete": 0,
+      "features_complete": 3,
       "started_at": "2026-02-09T00:39:34.181186Z",
       "completed_at": null,
       "skip_reason": null
@@ -58,6 +58,6 @@
     }
   ],
   "current_theme": 3,
-  "current_feature": 1,
+  "current_feature": 3,
   "baseline_failures": []
 }
