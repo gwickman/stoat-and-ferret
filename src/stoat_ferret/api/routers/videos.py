@@ -15,7 +15,8 @@ from stoat_ferret.api.schemas.video import (
     VideoResponse,
     VideoSearchResponse,
 )
-from stoat_ferret.api.services.scan import SCAN_JOB_TYPE
+from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, validate_scan_path
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -148,6 +149,14 @@ async def scan_videos(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "INVALID_PATH", "message": f"Not a directory: {path}"},
+        )
+
+    settings = get_settings()
+    error = validate_scan_path(path, settings.allowed_scan_roots)
+    if error is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "PATH_NOT_ALLOWED", "message": error},
         )
 
     job_queue = request.app.state.job_queue

@@ -55,6 +55,12 @@ class Settings(BaseSettings):
         description="Logging level",
     )
 
+    # Security
+    allowed_scan_roots: list[str] = Field(
+        default_factory=list,
+        description="Allowed root directories for scanning. Empty list allows all directories.",
+    )
+
     @property
     def database_path_resolved(self) -> Path:
         """Get database path as a Path object.

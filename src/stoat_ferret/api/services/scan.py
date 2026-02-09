@@ -14,6 +14,32 @@ from stoat_ferret.ffmpeg.probe import ffprobe_video
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v"}
 
+
+def validate_scan_path(path: str, allowed_roots: list[str]) -> str | None:
+    """Check that a scan path falls under an allowed root directory.
+
+    Args:
+        path: The directory path to validate.
+        allowed_roots: List of allowed root directories. Empty list allows all.
+
+    Returns:
+        An error message string if the path is not allowed, or None if valid.
+    """
+    if not allowed_roots:
+        return None
+
+    resolved = Path(path).resolve()
+    for root in allowed_roots:
+        root_resolved = Path(root).resolve()
+        try:
+            resolved.relative_to(root_resolved)
+            return None
+        except ValueError:
+            continue
+
+    return f"Path '{path}' is not under any allowed scan root"
+
+
 SCAN_JOB_TYPE = "scan"
 
 
