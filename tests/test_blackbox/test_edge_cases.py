@@ -62,18 +62,24 @@ class TestEmptyResults:
         assert data["total"] == 0
 
     def test_scan_empty_directory(self, client: TestClient, tmp_path: Any) -> None:
-        """Scan an empty directory returns zero counts."""
+        """Scan an empty directory returns zero counts via job result."""
         resp = client.post(
             "/api/v1/videos/scan",
             json={"path": str(tmp_path)},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 202
 
-        data = resp.json()
-        assert data["scanned"] == 0
-        assert data["new"] == 0
-        assert data["updated"] == 0
-        assert data["errors"] == []
+        job_id = resp.json()["job_id"]
+        job_resp = client.get(f"/api/v1/jobs/{job_id}")
+        assert job_resp.status_code == 200
+
+        data = job_resp.json()
+        assert data["status"] == "complete"
+        result = data["result"]
+        assert result["scanned"] == 0
+        assert result["new"] == 0
+        assert result["updated"] == 0
+        assert result["errors"] == []
 
 
 class TestDuplicateHandling:

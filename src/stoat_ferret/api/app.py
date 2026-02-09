@@ -14,9 +14,13 @@ from prometheus_client import make_asgi_app
 
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
-from stoat_ferret.api.routers import health, projects, videos
+from stoat_ferret.api.routers import health, jobs, projects, videos
+from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.settings import get_settings
-from stoat_ferret.db.async_repository import AsyncVideoRepository
+from stoat_ferret.db.async_repository import (
+    AsyncSQLiteVideoRepository,
+    AsyncVideoRepository,
+)
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.jobs.queue import AsyncioJobQueue
@@ -50,8 +54,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.db = await aiosqlite.connect(settings.database_path_resolved)
     app.state.db.row_factory = aiosqlite.Row
 
-    # Startup: create job queue and start worker
+    # Startup: create job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
+    repo = AsyncSQLiteVideoRepository(app.state.db)
+    job_queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(repo))
     app.state.job_queue = job_queue
     worker_task = asyncio.create_task(job_queue.process_jobs())
     logger.info("job_worker_started")
@@ -111,6 +117,7 @@ def create_app(
     app.include_router(health.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
+    app.include_router(jobs.router)
 
     # Add middleware (order matters - first added = outermost)
     app.add_middleware(MetricsMiddleware)

@@ -214,6 +214,40 @@ def _make_mock_metadata() -> VideoMetadata:
     )
 
 
+def _submit_scan(client: TestClient, path: str, **kwargs: object) -> str:
+    """Submit a scan job and return the job ID.
+
+    Args:
+        client: Test client.
+        path: Directory to scan.
+        **kwargs: Additional scan request fields.
+
+    Returns:
+        The job ID string.
+    """
+    payload: dict[str, object] = {"path": path, **kwargs}
+    response = client.post("/api/v1/videos/scan", json=payload)
+    assert response.status_code == 202
+    data = response.json()
+    assert "job_id" in data
+    return data["job_id"]
+
+
+def _get_job_result(client: TestClient, job_id: str) -> dict[str, object]:
+    """Poll job status and return the response.
+
+    Args:
+        client: Test client.
+        job_id: Job ID to poll.
+
+    Returns:
+        The job status response dict.
+    """
+    response = client.get(f"/api/v1/jobs/{job_id}")
+    assert response.status_code == 200
+    return response.json()
+
+
 @pytest.mark.api
 def test_scan_invalid_path(client: TestClient) -> None:
     """Scan returns 400 for invalid path."""
@@ -227,25 +261,37 @@ def test_scan_invalid_path(client: TestClient) -> None:
 
 
 @pytest.mark.api
-def test_scan_empty_directory(client: TestClient, tmp_path: Path) -> None:
-    """Scan of empty directory returns zeros."""
+def test_scan_returns_job_id(client: TestClient, tmp_path: Path) -> None:
+    """Scan returns 202 with a job ID."""
     response = client.post(
         "/api/v1/videos/scan",
         json={"path": str(tmp_path)},
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
     data = response.json()
-    assert data["scanned"] == 0
-    assert data["new"] == 0
-    assert data["updated"] == 0
-    assert data["skipped"] == 0
-    assert data["errors"] == []
+    assert "job_id" in data
+    assert isinstance(data["job_id"], str)
+    assert len(data["job_id"]) > 0
+
+
+@pytest.mark.api
+def test_scan_empty_directory(client: TestClient, tmp_path: Path) -> None:
+    """Scan of empty directory returns zeros via job result."""
+    job_id = _submit_scan(client, str(tmp_path))
+    job = _get_job_result(client, job_id)
+
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["scanned"] == 0
+    assert result["new"] == 0
+    assert result["updated"] == 0
+    assert result["skipped"] == 0
+    assert result["errors"] == []
 
 
 @pytest.mark.api
 def test_scan_finds_video_files(client: TestClient, tmp_path: Path) -> None:
     """Scan finds and adds video files."""
-    # Create test video files
     (tmp_path / "video1.mp4").touch()
     (tmp_path / "video2.mkv").touch()
     (tmp_path / "not_video.txt").touch()
@@ -256,18 +302,16 @@ def test_scan_finds_video_files(client: TestClient, tmp_path: Path) -> None:
         "stoat_ferret.api.services.scan.ffprobe_video",
         return_value=mock_metadata,
     ):
-        response = client.post(
-            "/api/v1/videos/scan",
-            json={"path": str(tmp_path)},
-        )
+        job_id = _submit_scan(client, str(tmp_path))
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["scanned"] == 2
-    assert data["new"] == 2
-    assert data["updated"] == 0
-    assert data["skipped"] == 0
-    assert data["errors"] == []
+    job = _get_job_result(client, job_id)
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["scanned"] == 2
+    assert result["new"] == 2
+    assert result["updated"] == 0
+    assert result["skipped"] == 0
+    assert result["errors"] == []
 
 
 @pytest.mark.api
@@ -284,15 +328,13 @@ def test_scan_recursive(client: TestClient, tmp_path: Path) -> None:
         "stoat_ferret.api.services.scan.ffprobe_video",
         return_value=mock_metadata,
     ):
-        response = client.post(
-            "/api/v1/videos/scan",
-            json={"path": str(tmp_path), "recursive": True},
-        )
+        job_id = _submit_scan(client, str(tmp_path), recursive=True)
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["scanned"] == 2
-    assert data["new"] == 2
+    job = _get_job_result(client, job_id)
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["scanned"] == 2
+    assert result["new"] == 2
 
 
 @pytest.mark.api
@@ -309,15 +351,13 @@ def test_scan_non_recursive(client: TestClient, tmp_path: Path) -> None:
         "stoat_ferret.api.services.scan.ffprobe_video",
         return_value=mock_metadata,
     ):
-        response = client.post(
-            "/api/v1/videos/scan",
-            json={"path": str(tmp_path), "recursive": False},
-        )
+        job_id = _submit_scan(client, str(tmp_path), recursive=False)
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["scanned"] == 1
-    assert data["new"] == 1
+    job = _get_job_result(client, job_id)
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["scanned"] == 1
+    assert result["new"] == 1
 
 
 @pytest.mark.api
@@ -330,7 +370,6 @@ async def test_scan_updates_existing_videos(
     video_path = tmp_path / "existing.mp4"
     video_path.touch()
 
-    # Add existing video to repository
     existing_video = make_test_video(
         path=str(video_path.absolute()),
         filename="existing.mp4",
@@ -343,16 +382,14 @@ async def test_scan_updates_existing_videos(
         "stoat_ferret.api.services.scan.ffprobe_video",
         return_value=mock_metadata,
     ):
-        response = client.post(
-            "/api/v1/videos/scan",
-            json={"path": str(tmp_path)},
-        )
+        job_id = _submit_scan(client, str(tmp_path))
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["scanned"] == 1
-    assert data["new"] == 0
-    assert data["updated"] == 1
+    job = _get_job_result(client, job_id)
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["scanned"] == 1
+    assert result["new"] == 0
+    assert result["updated"] == 1
 
 
 @pytest.mark.api
@@ -362,11 +399,8 @@ def test_scan_handles_errors_gracefully(client: TestClient, tmp_path: Path) -> N
     (tmp_path / "bad.mp4").touch()
 
     mock_metadata = _make_mock_metadata()
-    call_count = 0
 
     def mock_probe(path: str) -> VideoMetadata:
-        nonlocal call_count
-        call_count += 1
         if "bad" in path:
             raise ValueError("Probe failed")
         return mock_metadata
@@ -375,23 +409,21 @@ def test_scan_handles_errors_gracefully(client: TestClient, tmp_path: Path) -> N
         "stoat_ferret.api.services.scan.ffprobe_video",
         side_effect=mock_probe,
     ):
-        response = client.post(
-            "/api/v1/videos/scan",
-            json={"path": str(tmp_path)},
-        )
+        job_id = _submit_scan(client, str(tmp_path))
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["scanned"] == 2
-    assert data["new"] == 1
-    assert len(data["errors"]) == 1
-    assert "bad.mp4" in data["errors"][0]["path"]
-    assert "Probe failed" in data["errors"][0]["error"]
+    job = _get_job_result(client, job_id)
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["scanned"] == 2
+    assert result["new"] == 1
+    assert len(result["errors"]) == 1
+    assert "bad.mp4" in result["errors"][0]["path"]
+    assert "Probe failed" in result["errors"][0]["error"]
 
 
 @pytest.mark.api
 def test_scan_returns_summary(client: TestClient, tmp_path: Path) -> None:
-    """Scan returns complete summary response."""
+    """Scan job result contains complete summary."""
     (tmp_path / "video.mp4").touch()
 
     mock_metadata = _make_mock_metadata()
@@ -400,19 +432,16 @@ def test_scan_returns_summary(client: TestClient, tmp_path: Path) -> None:
         "stoat_ferret.api.services.scan.ffprobe_video",
         return_value=mock_metadata,
     ):
-        response = client.post(
-            "/api/v1/videos/scan",
-            json={"path": str(tmp_path)},
-        )
+        job_id = _submit_scan(client, str(tmp_path))
 
-    assert response.status_code == 200
-    data = response.json()
-    # Verify all fields are present
-    assert "scanned" in data
-    assert "new" in data
-    assert "updated" in data
-    assert "skipped" in data
-    assert "errors" in data
+    job = _get_job_result(client, job_id)
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert "scanned" in result
+    assert "new" in result
+    assert "updated" in result
+    assert "skipped" in result
+    assert "errors" in result
 
 
 # --- Delete endpoint tests ---

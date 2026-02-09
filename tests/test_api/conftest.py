@@ -10,9 +10,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
+from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.jobs.queue import InMemoryJobQueue
 from tests.factories import ProjectFactory, make_test_video
 
 
@@ -47,10 +49,26 @@ def clip_repository() -> AsyncInMemoryClipRepository:
 
 
 @pytest.fixture
+def job_queue(video_repository: AsyncInMemoryVideoRepository) -> InMemoryJobQueue:
+    """Create in-memory job queue with scan handler registered.
+
+    Args:
+        video_repository: In-memory video repository for the scan handler.
+
+    Returns:
+        Job queue with scan handler for deterministic test execution.
+    """
+    queue = InMemoryJobQueue()
+    queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(video_repository))
+    return queue
+
+
+@pytest.fixture
 def app(
     video_repository: AsyncInMemoryVideoRepository,
     project_repository: AsyncInMemoryProjectRepository,
     clip_repository: AsyncInMemoryClipRepository,
+    job_queue: InMemoryJobQueue,
 ) -> FastAPI:
     """Create test application with injected in-memory repositories.
 
@@ -60,6 +78,7 @@ def app(
         video_repository: In-memory video repository for testing.
         project_repository: In-memory project repository for testing.
         clip_repository: In-memory clip repository for testing.
+        job_queue: In-memory job queue for testing.
 
     Returns:
         Configured FastAPI application for testing.
@@ -68,6 +87,7 @@ def app(
         video_repository=video_repository,
         project_repository=project_repository,
         clip_repository=clip_repository,
+        job_queue=job_queue,
     )
 
 
