@@ -1,14 +1,18 @@
 {
   "exploration_id": "c4-v005-001-discovery-1770717666443",
   "results_folder": "c4-v005-001-discovery",
-  "status": "running",
+  "status": "complete",
   "pid": 22380,
   "started_at": "2026-02-10T10:01:06.443211",
-  "updated_at": "2026-02-10T10:01:08.429400",
-  "completed_at": null,
+  "updated_at": "2026-02-10T10:02:59.767720",
+  "completed_at": "2026-02-10T10:02:59.766888",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "directory-manifest.md",
+    "exclusion-log.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/c4-v005-001-discovery/prompt.md",
   "outbox_path": "comms/outbox/exploration/c4-v005-001-discovery"
