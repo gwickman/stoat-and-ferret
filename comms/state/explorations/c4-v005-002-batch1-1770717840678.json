@@ -1,14 +1,16 @@
 {
   "exploration_id": "c4-v005-002-batch1-1770717840678",
   "results_folder": "c4-v005-002-batch1",
-  "status": "running",
+  "status": "complete",
   "pid": 22380,
   "started_at": "2026-02-10T10:04:00.678399",
-  "updated_at": "2026-02-10T10:04:02.755551",
-  "completed_at": null,
+  "updated_at": "2026-02-10T10:10:02.671057",
+  "completed_at": "2026-02-10T10:10:02.670734",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/c4-v005-002-batch1/prompt.md",
   "outbox_path": "comms/outbox/exploration/c4-v005-002-batch1"
