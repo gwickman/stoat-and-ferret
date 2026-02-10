@@ -1,14 +1,16 @@
 {
   "exploration_id": "c4-v005-003-components-1770718420382",
   "results_folder": "c4-v005-003-components",
-  "status": "running",
+  "status": "complete",
   "pid": 22380,
   "started_at": "2026-02-10T10:13:40.382356",
-  "updated_at": "2026-02-10T10:13:42.384456",
-  "completed_at": null,
+  "updated_at": "2026-02-10T10:19:13.974005",
+  "completed_at": "2026-02-10T10:19:13.973665",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/c4-v005-003-components/prompt.md",
   "outbox_path": "comms/outbox/exploration/c4-v005-003-components"
