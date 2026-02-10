@@ -1,14 +1,16 @@
 {
   "exploration_id": "v005-retrospective-1770662068854",
   "results_folder": "v005-retrospective",
-  "status": "running",
+  "status": "complete",
   "pid": 22096,
   "started_at": "2026-02-09T18:34:28.854913",
-  "updated_at": "2026-02-09T18:34:30.758325",
-  "completed_at": null,
+  "updated_at": "2026-02-09T19:21:23.772916",
+  "completed_at": "2026-02-09T19:21:23.772616",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v005-retrospective/prompt.md",
   "outbox_path": "comms/outbox/exploration/v005-retrospective"

@@ -1,0 +1,15 @@
+{
+  "exploration_id": "c4-v005-orchestrator-1770717624966",
+  "results_folder": "c4-v005-orchestrator",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-10T10:00:24.966268",
+  "updated_at": "2026-02-10T10:00:24.966268",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/c4-v005-orchestrator/prompt.md",
+  "outbox_path": "comms/outbox/exploration/c4-v005-orchestrator"
+}
