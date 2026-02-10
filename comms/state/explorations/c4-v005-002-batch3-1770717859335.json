@@ -1,0 +1,15 @@
+{
+  "exploration_id": "c4-v005-002-batch3-1770717859335",
+  "results_folder": "c4-v005-002-batch3",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-10T10:04:19.335454",
+  "updated_at": "2026-02-10T10:04:19.335454",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/c4-v005-002-batch3/prompt.md",
+  "outbox_path": "comms/outbox/exploration/c4-v005-002-batch3"
+}
