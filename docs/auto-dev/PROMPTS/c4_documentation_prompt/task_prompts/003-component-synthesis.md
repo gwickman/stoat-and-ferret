@@ -41,6 +41,9 @@ Group code-level elements into logical components based on:
 **Rules:**
 - Every `c4-code-*.md` file must belong to exactly one component
 - Target 2-8 code-level elements per component. Single-element components are acceptable for standalone modules. Components exceeding 8 elements should be reviewed for possible splitting, but are acceptable when the domain justifies it
+- Never merge unrelated directories just to reach the minimum. A 2-element component with clear purpose is better than a 5-element component with mixed concerns
+- Do NOT merge directories that have separate concerns just to meet a size target. If `src/errors/` and `src/validation/` are separate directories with distinct purposes, they should be separate components even if each has only 2-3 code elements
+- Barrel export files (e.g., `src/index.ts` that just re-exports from other modules) should be documented at the code level but do NOT warrant their own component. Assign barrel exports to whichever component they most closely serve, or to a "Shell" component only if there is genuine orchestration logic beyond re-exports
 - If a directory doesn't fit anywhere, it becomes its own component
 
 ### 3. Document Each Component
@@ -97,7 +100,11 @@ C4Component
     Rel(comp1, comp2, "[Relationship]")
 ```
 
-### 4. Create Master Component Index
+### 4. Update Code-Level Parent Component Links
+
+After identifying component boundaries, update each `c4-code-*.md` file's "Parent Component" field with a link to the component doc it belongs to (e.g., `[Error Framework](./c4-component-error-framework.md)`). This creates upward navigation from code-level docs to their parent component.
+
+### 5. Create Master Component Index
 
 Create `docs/C4-Documentation/c4-component.md`:
 
@@ -114,12 +121,16 @@ Create `docs/C4-Documentation/c4-component.md`:
 
 [Mermaid C4Component diagram showing ALL components and their relationships]
 
+## Full Dependency Graph
+
+[Single comprehensive Mermaid diagram showing ALL import relationships between components — not just primary dependencies. Every component-to-component relationship should be represented.]
+
 ## Component-to-Code Mapping
 
 [Table showing which c4-code-*.md files belong to which component]
 ```
 
-### 5. Delta Mode Consideration
+### 6. Delta Mode Consideration
 
 If MODE is `delta`:
 - Re-read ALL existing component docs (not just changed ones)

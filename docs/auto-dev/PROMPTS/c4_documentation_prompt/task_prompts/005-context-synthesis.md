@@ -58,6 +58,8 @@ Extract a feature list from test names — this is often more accurate than READ
 - What CI/CD pipelines interact with it?
 - What monitoring or automation tools connect to it?
 
+Identify at LEAST 3 personas. Consider these categories: end users (human consumers of the system), programmatic users (other systems, CLI tools, agents that interact with the system), maintainers (developers, CI systems, automation tools that modify the system). If an automation tool like auto-dev-mcp or CI is a significant actor, give it its own persona.
+
 **If unclear from docs:** Infer from API design, authentication mechanisms, and test fixtures.
 
 ### 4. Map System Features
@@ -90,6 +92,8 @@ For programmatic users, document the integration journey:
 3. **Process**: System validates and processes request
 4. **Respond**: Returns result with status code
 ```
+
+Create at LEAST one user journey per persona. For library projects, include a "Library Integration" journey showing how a consumer adds and uses the dependency. For projects with automation, include an "Automated Development" journey showing the CI/auto-dev workflow.
 
 ### 6. Catalog External Dependencies
 

@@ -43,6 +43,7 @@ Produce a markdown file following this structure:
 - **Location**: [Relative path from repo root]
 - **Language**: [Primary language(s)]
 - **Purpose**: [What this code accomplishes]
+- **Parent Component**: [To be assigned in Task 003]
 
 ## Code Elements
 
@@ -193,11 +194,13 @@ Each `c4-code-*.md` file written directly to `docs/C4-Documentation/` (NOT to th
 
 ## Guidelines
 
+- **Include a Parent Component field** set to "TBD" in each code-level doc — Task 003 will update these references during component synthesis
 - **Accuracy over completeness** — if you can't determine a return type, say "unknown" rather than guess
 - **Complete function signatures** — include all parameters with types where available
 - **Keep each code doc under 300 lines** — summarize if a directory has 50+ functions, prioritizing public API and key abstractions
 - **Skip test files** unless the directory contains ONLY test files (then document the test structure)
 - **For test directories, include:** total test count (number of `it()` or `test()` calls), test file inventory with per-file counts, and coverage summary showing which source functions have test coverage
+- **Verified test counts:** When documenting test directories, attempt to get verified test counts by running the project's test command (e.g., `npm test`, `pytest --co -q`, `cargo test -- --list`). If the test command succeeds, use the actual count. If it fails or is unavailable, estimate from the source and note "estimated from source — not verified by execution"
 - **Skip generated files** (auto-generated code, compiled output, etc.)
 - **Link to source** — use relative paths from repo root for all file references
 - Do NOT synthesize components — that's Task 003's job

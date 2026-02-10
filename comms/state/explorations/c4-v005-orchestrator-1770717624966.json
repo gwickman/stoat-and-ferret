@@ -1,14 +1,17 @@
 {
   "exploration_id": "c4-v005-orchestrator-1770717624966",
   "results_folder": "c4-v005-orchestrator",
-  "status": "running",
+  "status": "complete",
   "pid": 22380,
   "started_at": "2026-02-10T10:00:24.966268",
-  "updated_at": "2026-02-10T10:00:27.496931",
-  "completed_at": null,
+  "updated_at": "2026-02-10T10:33:23.543643",
+  "completed_at": "2026-02-10T10:33:23.543325",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "orchestration-log.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/c4-v005-orchestrator/prompt.md",
   "outbox_path": "comms/outbox/exploration/c4-v005-orchestrator"

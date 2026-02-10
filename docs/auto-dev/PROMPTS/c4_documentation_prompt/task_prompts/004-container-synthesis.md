@@ -44,6 +44,8 @@ A container is **something that needs to be running** for the system to work:
 - File storage systems
 - Reverse proxies / API gateways
 
+Development tools and test runners (Jest, pytest, cargo test, etc.) are **NOT** containers. They run inside development environments and CI pipelines, not as independently deployable units. Only include them if they are separately deployed services (e.g., a dedicated test environment with its own infrastructure).
+
 **If no explicit infrastructure definitions exist:**
 - Infer containers from the codebase structure (entry points, main files, service definitions)
 - Document inferred containers clearly as "inferred from code structure"
@@ -108,6 +110,13 @@ C4Container
 #### Dependencies
 - [Other Container]: [Protocol, description]
 - [External System]: [Integration type]
+
+#### Build Output
+- **Build Command**: [e.g., `npm run build`, `cargo build --release`]
+- **Output Directory**: [e.g., `dist/`, `target/release/`]
+- **Key Artifacts**: [List of output files — compiled JS, declaration files, binaries, etc.]
+- **Module Format**: [e.g., ESM, CJS, UMD]
+- **Declaration Files**: [e.g., `.d.ts` files for TypeScript libraries]
 
 #### Infrastructure
 - **Config**: [Link to Dockerfile/manifest]
