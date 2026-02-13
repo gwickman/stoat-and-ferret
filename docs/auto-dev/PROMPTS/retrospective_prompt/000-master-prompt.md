@@ -1,4 +1,4 @@
-# Post-Version Retrospective Orchestrator - Master Prompt
+# Post-Version Retrospective Orchestrator v2 - Master Prompt
 
 **PROJECT CONFIGURATION:**
 ```
@@ -7,6 +7,86 @@ VERSION=[SET_VERSION_HERE]
 ```
 
 **CRITICAL:** Set both PROJECT and VERSION variables above before proceeding.
+
+---
+
+## Orchestrator Rules
+
+**Your ONLY job is to launch sub-explorations and poll them to completion. Follow these rules strictly:**
+
+1. **NEVER execute task work inline.** You are an orchestrator, not a worker. Every task (001–010) MUST be delegated to a sub-exploration via `start_exploration`. Do not write files, run quality gates, check backlog items, or extract learnings yourself.
+
+2. **Read each task prompt ONLY when you are about to launch it.** Do not read task prompts in advance or in batches. This wastes your context budget.
+
+3. **Poll sub-explorations with 30-second minimum intervals.** After calling `get_exploration_status`, wait at least 30 seconds before polling again. Sub-explorations typically take 3–10 minutes.
+
+4. **Use the sub-exploration launch template exactly.** See the template below. The `results_folder` must follow the pattern `{VERSION}-retro-{NNN}-{short-name}`. The prompt must reference `comms/outbox/exploration/{results_folder}/` as its output path.
+
+5. **Task prompts write to the retrospective deliverables store.** Each task prompt already contains instructions to write output to `comms/outbox/versions/retrospective/{VERSION}/{NNN}-{name}/`. The exploration outbox (`comms/outbox/exploration/{results_folder}/`) is for the sub-exploration's own README — the real artifacts go to the deliverables store. Do not conflate these two paths.
+
+---
+
+## State File Mutation Rules
+
+**NEVER directly edit state files.** The following files are managed exclusively by MCP tools and MUST NOT be modified via Write, Edit, or any direct file operation:
+
+- `backlog.json`
+- `learnings.json`
+- `product_requests.json`
+- Any files under `comms/state/`
+
+**ALL data mutations MUST use MCP tools.** Use the appropriate tool for each operation:
+
+| Operation | Correct (MCP Tool) | FORBIDDEN (Direct Edit) |
+|-----------|-------------------|------------------------|
+| Complete a backlog item | `complete_backlog_item(project=..., item_id="BL-XXX")` | Editing `backlog.json` to change status |
+| Add a backlog item | `add_backlog_item(project=..., title=..., ...)` | Appending an entry to `backlog.json` |
+| Save a learning | `save_learning(project=..., title=..., ...)` | Editing `learnings.json` directly |
+| Update a learning | `update_learning(project=..., learning_id=..., ...)` | Editing `learnings.json` directly |
+
+**WARNING — next_id counter corruption:** Direct edits to `backlog.json` bypass the `next_id` counter increment managed by the MCP server. This causes duplicate ID collisions (e.g., two items both assigned BL-473). ALWAYS use MCP tools to ensure IDs are assigned correctly.
+
+---
+
+## Sub-Exploration Launch Template
+
+For each task, use this exact pattern:
+
+```
+start_exploration(
+  project=PROJECT,
+  results_folder="{VERSION}-retro-{NNN}-{short-name}",
+  prompt="""Read AGENTS.md first and follow all instructions there, including the mandatory PR workflow.
+
+Follow the task instructions in docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/{NNN}-{task-file}.md exactly.
+
+PROJECT={PROJECT}
+VERSION={VERSION}
+
+Output Requirements:
+- Save task artifacts to comms/outbox/versions/retrospective/{VERSION}/{NNN}-{name}/ as specified in the task prompt
+- Save a README.md to comms/outbox/exploration/{VERSION}-retro-{NNN}-{short-name}/ summarizing what was produced
+- Commit all changes with descriptive messages
+""",
+  allowed_mcp_tools=[...tools listed in the task prompt's "Allowed MCP Tools" section...]
+)
+```
+
+**Mapping for each task:**
+
+| Task | results_folder | Task file | Allowed MCP Tools |
+|------|---------------|-----------|-------------------|
+| 001 | `{VERSION}-retro-001-env` | `001-environment-verification.md` | health_check, get_project_info, get_version_status, git_read, read_document |
+| 002 | `{VERSION}-retro-002-docs` | `002-documentation-completeness.md` | read_document, get_version_status, get_theme_status |
+| 003 | `{VERSION}-retro-003-backlog` | `003-backlog-verification.md` | read_document, get_backlog_item, list_backlog_items, complete_backlog_item |
+| 004 | `{VERSION}-retro-004-quality` | `004-quality-gates.md` | run_quality_gates, read_document |
+| 005 | `{VERSION}-retro-005-arch` | `005-architecture-alignment.md` | list_backlog_items, get_backlog_item, update_backlog_item, add_backlog_item, read_document |
+| 006 | `{VERSION}-retro-006-learn` | `006-learning-extraction.md` | read_document, save_learning, list_learnings, extract_learnings |
+| 007 | `{VERSION}-retro-007-proposals` | `007-stage1-proposals.md` | read_document, add_backlog_item |
+| 008 | `{VERSION}-retro-008-closure` | `008-generic-closure.md` | read_document, git_read |
+| 009 | `{VERSION}-retro-009-project` | `009-project-specific-closure.md` | read_document, health_check, run_quality_gates, start_exploration, get_exploration_status, get_exploration_result, list_backlog_items, add_backlog_item, git_read |
+| 010 | `{VERSION}-retro-010-final` | `010-finalization.md` | read_document, run_quality_gates, complete_version, commit_changes, git_read |
+| 011 | `{VERSION}-retro-011-cross-version` | `011-cross-version-analysis.md` | read_document, get_server_logs, list_backlog_items, list_learnings, search_learnings, add_product_request |
 
 ---
 
@@ -76,39 +156,41 @@ comms/outbox/versions/retrospective/{VERSION}/
 
 ## Task Execution Flow
 
+**For each task below, the procedure is identical:**
+1. Read the task prompt file (ONE file only — the one you are about to launch)
+2. Launch a sub-exploration using the template above
+3. Poll with `get_exploration_status` at 30-second minimum intervals
+4. When complete, call `get_exploration_result` to verify documents were produced
+5. If the sub-exploration failed or produced 0 documents, document the failure and STOP
+6. Proceed to the next task
+
 ### Phase 1: Verification (Tasks 001-004)
 
 **Task 001:** Environment verification
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/001-environment-verification.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/001-environment/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/001-environment-verification.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/001-environment/`
 
 **Task 002:** Documentation completeness
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/002-documentation-completeness.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/002-documentation/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/002-documentation-completeness.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/002-documentation/`
 
 **Task 003:** Backlog verification
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/003-backlog-verification.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/003-backlog/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/003-backlog-verification.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/003-backlog/`
 
 **Task 004:** Quality gates
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/004-quality-gates.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/004-quality/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/004-quality-gates.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/004-quality/`
 
 ### Phase 2: Analysis (Tasks 005-006)
 
 **Task 005:** Architecture alignment
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/005-architecture-alignment.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/005-architecture/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/005-architecture-alignment.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/005-architecture/`
 
 **Task 006:** Learning extraction
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/006-learning-extraction.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/006-learnings/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/006-learning-extraction.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/006-learnings/`
 
 **COMMIT:** After Task 006, commit verification and analysis artifacts:
 ```bash
@@ -120,9 +202,8 @@ git push
 ### Phase 3: Remediation (Task 007)
 
 **Task 007:** Stage 1 proposals compilation
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/007-stage1-proposals.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/007-proposals/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/007-stage1-proposals.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/007-proposals/`
 
 **If proposals identify remediation actions:**
 Launch a SEPARATE exploration to execute remediation:
@@ -163,30 +244,40 @@ Poll for completion. If remediation exploration fails, document the failure and 
 ### Phase 4: Closure (Tasks 008-009)
 
 **Task 008:** Generic closure
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/008-generic-closure.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/008-closure/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/008-generic-closure.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/008-closure/`
 
-**Task 009:** Project-specific closure (CONDITIONAL)
-
-```python
-# Check if docs/auto-dev/VERSION_CLOSURE.md exists for this project
-if file_exists(f"docs/auto-dev/VERSION_CLOSURE.md"):
-    # Run task 009
-    # Read: docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/009-project-specific-closure.md
-    # Output: comms/outbox/versions/retrospective/{VERSION}/009-project-closure/
-    # Start exploration → poll → verify output README.md exists
-else:
-    # Skip task 009
-    # Create 009-project-closure/README.md with: "Skipped: No VERSION_CLOSURE.md found."
-```
+**Task 009:** Project-specific closure
+- Task prompt: `task_prompts/009-project-specific-closure.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/009-project-closure/`
+- Note: This task always runs. It evaluates project-specific closure needs based on the version's actual changes, then executes the VERSION_CLOSURE.md checklist if present.
 
 ### Phase 5: Finalization (Task 010)
 
 **Task 010:** Finalization
-- Read: `docs/auto-dev/PROMPTS/retrospective_prompt/task_prompts/010-finalization.md`
-- Output: `comms/outbox/versions/retrospective/{VERSION}/010-finalization/`
-- Start exploration → poll → verify output README.md exists
+- Task prompt: `task_prompts/010-finalization.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/010-finalization/`
+
+### Phase 6: Cross-Version Retrospective (Conditional)
+
+**Condition:** Execute this phase ONLY if `int(VERSION[1:]) % 5 == 0` (i.e., versions v050, v055, v060, v065, etc.)
+
+```python
+if int(VERSION[1:]) % 5 == 0:
+    # Launch Task 011: Cross-Version Analysis
+else:
+    # Skip — no output, no action
+```
+
+**If the condition is met:**
+
+**Task 011:** Cross-version analysis
+- Task prompt: `task_prompts/011-cross-version-analysis.md`
+- Deliverables store output: `comms/outbox/versions/retrospective/{VERSION}/011-cross-version/`
+- Create the `011-cross-version/` subfolder in the deliverables structure before launching
+
+**If the condition is NOT met:**
+- Skip this phase entirely — no output, no action, no folder creation
 
 ---
 
@@ -216,8 +307,9 @@ Between each task:
 - [ ] COMMIT: Verification and analysis artifacts
 - [ ] Task 007: Stage 1 proposals + remediation explore
 - [ ] Task 008: Generic closure
-- [ ] Task 009: Project-specific closure (conditional)
+- [ ] Task 009: Project-specific closure
 - [ ] Task 010: Finalization
+- [ ] Task 011: Cross-version analysis (conditional: `int(VERSION[1:]) % 5 == 0`)
 
 ---
 

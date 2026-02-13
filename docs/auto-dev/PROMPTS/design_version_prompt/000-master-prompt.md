@@ -1,4 +1,4 @@
-# Version Design Orchestrator v2 - Master Prompt
+# Version Design Orchestrator v3 - Master Prompt
 
 **PROJECT CONFIGURATION:**
 ```
@@ -6,6 +6,62 @@ PROJECT=[SET_PROJECT_NAME_HERE]
 ```
 
 **CRITICAL:** Set the PROJECT variable above before proceeding.
+
+---
+
+## Orchestrator Rules
+
+**Your ONLY job is to launch sub-explorations and poll them to completion. Follow these rules strictly:**
+
+1. **NEVER execute task work inline.** You are an orchestrator, not a worker. Every task (001–009) MUST be delegated to a sub-exploration via `start_exploration`. Do not write files, run health checks, or analyze backlog items yourself.
+
+2. **Read each task prompt ONLY when you are about to launch it.** Do not read task prompts in advance or in batches. This wastes your context budget.
+
+3. **Poll sub-explorations with 30-second minimum intervals.** After calling `get_exploration_status`, wait at least 30 seconds before polling again. Sub-explorations typically take 3–10 minutes.
+
+4. **Use the sub-exploration launch template exactly.** See the template below. The `results_folder` must follow the pattern `design-{VERSION}-{NNN}-{short-name}`. The prompt must reference `comms/outbox/exploration/{results_folder}/` as its output path (not the design artifact store path).
+
+5. **Task prompts write to the design artifact store.** Each task prompt already contains instructions to write output to `comms/outbox/versions/design/{VERSION}/{NNN}-{name}/`. The exploration outbox (`comms/outbox/exploration/{results_folder}/`) is for the sub-exploration's own README — the real artifacts go to the design store. Do not conflate these two paths.
+
+---
+
+## Sub-Exploration Launch Template
+
+For each task, use this exact pattern:
+
+```
+start_exploration(
+  project=PROJECT,
+  results_folder="design-{VERSION}-{NNN}-{short-name}",
+  prompt="""Read AGENTS.md first and follow all instructions there.
+
+Follow the task instructions in docs/auto-dev/PROMPTS/design_version_prompt/task_prompts/{NNN}-{task-file}.md exactly.
+
+PROJECT={PROJECT}
+VERSION={VERSION}
+
+Output Requirements:
+- Save task artifacts to comms/outbox/versions/design/{VERSION}/{NNN}-{name}/ as specified in the task prompt
+- Save a README.md to comms/outbox/exploration/design-{VERSION}-{NNN}-{short-name}/ summarizing what was produced
+- Commit all changes with descriptive messages
+""",
+  allowed_mcp_tools=[...tools listed in the task prompt's "Allowed MCP Tools" section...]
+)
+```
+
+**Mapping for each task:**
+
+| Task | results_folder | Task file | Allowed MCP Tools |
+|------|---------------|-----------|-------------------|
+| 001 | `design-{VERSION}-001-env` | `001-environment-verification.md` | health_check, get_project_info, git_read, read_document |
+| 002 | `design-{VERSION}-002-backlog` | `002-backlog-analysis.md` | get_backlog_item, list_backlog_items, search_learnings, read_document |
+| 003 | `design-{VERSION}-003-impact` | `003-impact-assessment.md` | request_clarification, read_document |
+| 004 | `design-{VERSION}-004-research` | `004-research-investigation.md` | request_clarification, read_document, start_exploration, get_exploration_status, get_exploration_result |
+| 005 | `design-{VERSION}-005-logical` | `005-logical-design.md` | read_document |
+| 006 | `design-{VERSION}-006-critical` | `006-critical-thinking.md` | request_clarification, read_document |
+| 007 | `design-{VERSION}-007-drafts` | `007-document-drafts.md` | read_document |
+| 008 | `design-{VERSION}-008-persist` | `008-persist-documents.md` | read_document, design_version, design_theme, validate_version_design |
+| 009 | `design-{VERSION}-009-validation` | `009-pre-execution-validation.md` | read_document, validate_version_design |
 
 ---
 
@@ -53,41 +109,55 @@ if PROJECT == "[SET_PROJECT_NAME_HERE]" or not PROJECT or PROJECT.strip() == "":
 
 ---
 
+## Test Target Project Awareness
+
+Some features affect cross-project tooling (MCP tools, git operations, exploration) and should be validated against destructive test target projects during implementation.
+
+**During Task 005 (Logical Design):** When proposing themes and features, identify any features that modify cross-project behavior. Flag these in the test strategy as requiring test-target validation. Registered test target projects (with `destructive_test_target: true` in `projects.yaml`) exist specifically for safe destructive testing.
+
+**During Task 007 (Document Drafts):** For features flagged for test-target validation, include test-target steps in the implementation plan (e.g., "validate against a registered test target project using `test_target_reset` in `git_write`").
+
+Features that only affect internal logic or single-project documentation do not need test-target steps.
+
+---
+
 ## Task Execution Flow
+
+**For each task below, the procedure is identical:**
+1. Read the task prompt file (ONE file only — the one you are about to launch)
+2. Launch a sub-exploration using the template above
+3. Poll with `get_exploration_status` at 30-second minimum intervals
+4. When complete, call `get_exploration_result` to verify documents were produced
+5. If the sub-exploration failed or produced 0 documents, document the failure and STOP
+6. Proceed to the next task
 
 ### Phase 1: Environment & Investigation (Tasks 001-004)
 
 **Task 001:** Environment verification
-- Read: `prompts/task_prompts/001-environment-verification.md`
-- Output: `comms/outbox/versions/design/{VERSION}/001-environment/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/001-environment-verification.md`
+- Design store output: `comms/outbox/versions/design/{VERSION}/001-environment/`
 
 **Task 002:** Backlog analysis
-- Read: `prompts/task_prompts/002-backlog-analysis.md`
-- Output: `comms/outbox/versions/design/{VERSION}/002-backlog/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/002-backlog-analysis.md`
+- Design store output: `comms/outbox/versions/design/{VERSION}/002-backlog/`
 
 **Task 003:** Impact assessment
-- Read: `prompts/task_prompts/003-impact-assessment.md`
-- Output: `comms/outbox/versions/design/{VERSION}/003-impact-assessment/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/003-impact-assessment.md`
+- Design store output: `comms/outbox/versions/design/{VERSION}/003-impact-assessment/`
 
 **Task 004:** Research investigation
-- Read: `prompts/task_prompts/004-research-investigation.md`
-- Output: `comms/outbox/versions/design/{VERSION}/004-research/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/004-research-investigation.md`
+- Design store output: `comms/outbox/versions/design/{VERSION}/004-research/`
 
 ### Phase 2: Logical Design & Critical Thinking (Tasks 005-006)
 
 **Task 005:** Logical design proposal
-- Read: `prompts/task_prompts/005-logical-design.md`
-- Output: `comms/outbox/versions/design/{VERSION}/005-logical-design/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/005-logical-design.md`
+- Design store output: `comms/outbox/versions/design/{VERSION}/005-logical-design/`
 
 **Task 006:** Critical thinking and risk investigation
-- Read: `prompts/task_prompts/006-critical-thinking.md`
-- Output: `comms/outbox/versions/design/{VERSION}/006-critical-thinking/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/006-critical-thinking.md`
+- Design store output: `comms/outbox/versions/design/{VERSION}/006-critical-thinking/`
 
 **COMMIT:** After Task 006, commit the design artifact store:
 ```bash
@@ -99,21 +169,18 @@ git push
 ### Phase 3: Document Drafts & Persistence (Tasks 007-008)
 
 **Task 007:** Document drafts
-- Read: `prompts/task_prompts/007-document-drafts.md`
-- Output: `comms/outbox/exploration/design-{VERSION}-007-drafts/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/007-document-drafts.md`
+- Exploration output: `comms/outbox/exploration/design-{VERSION}-007-drafts/`
 
 **Task 008:** Persist documents to inbox
-- Read: `prompts/task_prompts/008-persist-documents.md`
-- Output: `comms/outbox/exploration/design-{VERSION}-008-persist/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/008-persist-documents.md`
+- Exploration output: `comms/outbox/exploration/design-{VERSION}-008-persist/`
 
 ### Phase 4: Validation (Task 009)
 
 **Task 009:** Pre-execution validation (READ-ONLY)
-- Read: `prompts/task_prompts/009-pre-execution-validation.md`
-- Output: `comms/outbox/exploration/design-{VERSION}-009-validation/`
-- Start exploration → poll → verify
+- Task prompt: `task_prompts/009-pre-execution-validation.md`
+- Exploration output: `comms/outbox/exploration/design-{VERSION}-009-validation/`
 
 ---
 

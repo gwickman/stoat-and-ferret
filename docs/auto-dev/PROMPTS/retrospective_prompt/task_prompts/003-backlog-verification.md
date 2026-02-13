@@ -12,25 +12,41 @@ Post-version retrospective for `${PROJECT}` version `${VERSION}`. Completed feat
 
 ## Tasks
 
-### 1. Scan Feature Requirements for BL-XXX References
+### 1. Get Planned Items from PLAN.md
+
+Read `docs/auto-dev/PLAN.md` — this is the **authoritative source** for which backlog items were planned for a version.
+
+Find the section for `${VERSION}` and extract all `BL-XXX` references listed under its themes. The format looks like:
+
+```
+#### vXXX — Description (N items)
+- **Theme 1: theme-name** — BL-101 (S), BL-102 (M), BL-103 (L)
+- **Theme 2: theme-name** — BL-104 (S), BL-105 (M)
+```
+
+Record every BL-XXX from the version's section as a **planned** item.
+
+> **Note:** Use `docs/auto-dev/PLAN.md` (the main plan file with all version sections), not per-version `VERSION_DESIGN.md` files.
+
+### 2. Scan Feature Requirements for BL-XXX References
 
 Read `comms/inbox/versions/execution/${VERSION}/THEME_INDEX.md` to get the version structure.
 
 For each feature, read:
 - `comms/inbox/versions/execution/${VERSION}/<theme>/<feature>/requirements.md`
 
-Extract all `BL-XXX` references from each requirements file.
+Extract all `BL-XXX` references from each requirements file. This is a **secondary validation** step that catches items referenced in implementation but potentially missing from PLAN.md.
 
-### 2. Check Backlog Item Status
+### 3. Check Backlog Item Status
 
-For each unique BL-XXX reference found, call:
+For each unique BL-XXX reference found (from both Step 1 and Step 2), call:
 ```python
 get_backlog_item(project="${PROJECT}", item_id="BL-XXX")
 ```
 
-Record: item ID, title, current status, referencing feature.
+Record: item ID, title, current status, referencing feature, and whether the item was in PLAN.md (planned) or only found in requirements.md (unplanned).
 
-### 3. Complete Open Backlog Items
+### 4. Complete Open Backlog Items
 
 For each backlog item that is still "open" but was referenced by a completed feature:
 
@@ -46,7 +62,7 @@ complete_backlog_item(
 
 Record: item ID, action taken, result.
 
-### 4. Check for Orphaned Items
+### 5. Check for Orphaned Items
 
 Call `list_backlog_items(project="${PROJECT}", status="open")` and check if any open items reference `${VERSION}` in their description or notes but were not found in requirements files.
 
@@ -72,11 +88,23 @@ Then:
 Detailed table:
 
 ```markdown
-| Backlog Item | Title | Feature | Status Before | Action | Status After |
-|--------------|-------|---------|---------------|--------|--------------|
-| BL-042 | Login flow | 001-login | open | completed | completed |
-| BL-043 | Auth tokens | 001-login | completed | none | completed |
+| Backlog Item | Title | Feature | Planned | Status Before | Action | Status After |
+|--------------|-------|---------|---------|---------------|--------|--------------|
+| BL-042 | Login flow | 001-login | Yes | open | completed | completed |
+| BL-043 | Auth tokens | 001-login | Yes | completed | none | completed |
+| BL-099 | Edge case fix | 002-api | No | open | completed | completed |
 ```
+
+- **Planned = Yes**: Item appeared in `docs/auto-dev/PLAN.md` under the version section
+- **Planned = No**: Item found only in feature `requirements.md` files (out-of-scope addition)
+
+### Handling Unplanned Items
+
+Items found in `requirements.md` but **not** in `PLAN.md` are out-of-scope additions. These are not errors, but should be flagged for visibility:
+
+- Still complete them if the feature was implemented
+- Note them in the README.md under a separate **Unplanned Items** section
+- Include a brief explanation of why they were added (if apparent from the requirements)
 
 ## Allowed MCP Tools
 
@@ -86,6 +114,8 @@ Detailed table:
 - `complete_backlog_item`
 
 ## Guidelines
+
+**MCP Tools Only:** All backlog operations (completion, updates, creation) MUST use MCP tools (`complete_backlog_item`, `update_backlog_item`, `add_backlog_item`, `get_backlog_item`, `list_backlog_items`). NEVER edit `backlog.json` directly. Direct edits bypass the `next_id` counter increment, causing duplicate ID collisions.
 
 - Complete ALL open items that have corresponding completed features — do not defer
 - If `complete_backlog_item` fails for an item, document the error and continue

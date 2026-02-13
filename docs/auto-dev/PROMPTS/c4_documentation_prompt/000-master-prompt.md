@@ -1,4 +1,4 @@
-# C4 Architecture Documentation Orchestrator - Master Prompt
+# C4 Architecture Documentation Orchestrator v2 - Master Prompt
 
 **PROJECT CONFIGURATION:**
 ```
@@ -14,6 +14,31 @@ PUSH=true        # Set to false to commit locally without pushing
 - `delta` — Delta only; fails if no existing C4 docs found
 
 **CRITICAL:** Set PROJECT and VERSION variables above before proceeding.
+
+---
+
+## Orchestrator Rules
+
+**Your ONLY job is to launch sub-explorations and poll them to completion. Follow these rules strictly:**
+
+1. **NEVER execute task work inline.** You are an orchestrator, not a worker. Every task (001–006) MUST be delegated to a sub-exploration via `start_exploration`. Do not write files, read source code, create C4 documents, or analyze directories yourself.
+
+2. **Read each task prompt ONLY when you are about to launch it.** Do not read task prompts in advance or in batches. This wastes your context budget. The only exception is the Variable Substitution step below, which requires reading a task prompt to perform token replacement before launching.
+
+3. **Poll sub-explorations with 30-second minimum intervals.** After calling `get_exploration_status`, wait at least 30 seconds before polling again. Sub-explorations typically take 3–10 minutes. For parallel Task 002 batches, poll in round-robin rather than rapid-fire on a single batch.
+
+4. **Use compact results_folder names.** The `results_folder` must have at most 5 hyphen-separated parts. Use patterns like `c4-{VERSION}-001-discovery` or `c4-{VERSION}-002-batch1`.
+
+**Task-to-tools mapping:**
+
+| Task | results_folder | Task file | Allowed MCP Tools |
+|------|---------------|-----------|-------------------|
+| 001 | `c4-{VERSION}-001-discovery` | `001-discovery-and-planning.md` | read_document, git_read |
+| 002 | `c4-{VERSION}-002-batch{N}` | `002-code-level-analysis.md` | read_document |
+| 003 | `c4-{VERSION}-003-components` | `003-component-synthesis.md` | read_document |
+| 004 | `c4-{VERSION}-004-containers` | `004-container-synthesis.md` | read_document |
+| 005 | `c4-{VERSION}-005-context` | `005-context-synthesis.md` | read_document, list_backlog_items |
+| 006 | `c4-{VERSION}-006-finalize` | `006-finalization.md` | read_document |
 
 ---
 
@@ -147,13 +172,21 @@ Current Version: {VERSION}
 
 ## Task Execution Flow
 
+**For each task below (except Task 002 parallel batches), the procedure is:**
+1. Read the task prompt file (ONE file only — the one you are about to launch)
+2. Perform variable substitution as described in the Variable Substitution section
+3. Launch a sub-exploration with the resolved prompt
+4. Poll with `get_exploration_status` at 30-second minimum intervals
+5. When complete, call `get_exploration_result` to verify documents were produced
+6. If the sub-exploration failed or produced 0 documents, document the failure and STOP
+7. Proceed to the next task
+
 ### Phase 1: Discovery & Planning (Task 001)
 
 **Task 001:** Discovery and directory manifest
-- Read: `docs/auto-dev/PROMPTS/c4_documentation_prompt/task_prompts/001-discovery-and-planning.md`
+- Task prompt: `task_prompts/001-discovery-and-planning.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${MODE}`, `${PREVIOUS_VERSION}`, `${PREVIOUS_C4_COMMIT}`
 - Output: `comms/outbox/exploration/c4-${VERSION}-001-discovery/`
-- Start exploration → poll → verify
 
 **After Task 001 completes:**
 - Read `comms/outbox/exploration/c4-${VERSION}-001-discovery/directory-manifest.md`
@@ -173,7 +206,7 @@ Current Version: {VERSION}
 
 **For each batch N (1 to BATCH_COUNT), launch in PARALLEL:**
 
-- Read: `docs/auto-dev/PROMPTS/c4_documentation_prompt/task_prompts/002-code-level-analysis.md`
+- Task prompt: `task_prompts/002-code-level-analysis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${BATCH_NUMBER}`, `${BATCH_DIRECTORIES}` (from manifest)
 - Results folder: `c4-${VERSION}-002-batch${N}`
 - Start exploration (do NOT wait — launch all batches)
@@ -203,26 +236,23 @@ git_write(project=PROJECT, message="docs(c4): ${VERSION} code-level analysis com
 ### Phase 3: Component Synthesis (Task 003)
 
 **Task 003:** Synthesize code docs into components
-- Read: `docs/auto-dev/PROMPTS/c4_documentation_prompt/task_prompts/003-component-synthesis.md`
+- Task prompt: `task_prompts/003-component-synthesis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${MODE}`
 - Output: `comms/outbox/exploration/c4-${VERSION}-003-components/`
-- Start exploration → poll → verify
 
 ---
 
 ### Phase 4: Container & Context Synthesis (Tasks 004-005 — SEQUENTIAL)
 
 **Task 004:** Container-level synthesis
-- Read: `docs/auto-dev/PROMPTS/c4_documentation_prompt/task_prompts/004-container-synthesis.md`
+- Task prompt: `task_prompts/004-container-synthesis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`
 - Output: `comms/outbox/exploration/c4-${VERSION}-004-containers/`
-- Start exploration → poll → verify
 
 **Task 005:** Context-level synthesis
-- Read: `docs/auto-dev/PROMPTS/c4_documentation_prompt/task_prompts/005-context-synthesis.md`
+- Task prompt: `task_prompts/005-context-synthesis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`
 - Output: `comms/outbox/exploration/c4-${VERSION}-005-context/`
-- Start exploration → poll → verify
 
 **COMMIT after Phase 4:**
 ```python
@@ -234,10 +264,9 @@ git_write(project=PROJECT, message="docs(c4): ${VERSION} component/container/con
 ### Phase 5: Finalization (Task 006)
 
 **Task 006:** README generation and validation
-- Read: `docs/auto-dev/PROMPTS/c4_documentation_prompt/task_prompts/006-finalization.md`
+- Task prompt: `task_prompts/006-finalization.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${MODE}`
 - Output: `comms/outbox/exploration/c4-${VERSION}-006-finalize/`
-- Start exploration → poll → verify
 
 **FINAL COMMIT after Task 006:**
 ```python

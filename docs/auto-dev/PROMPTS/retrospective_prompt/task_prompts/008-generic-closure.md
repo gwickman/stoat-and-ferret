@@ -14,12 +14,12 @@ Post-version retrospective for `${PROJECT}` version `${VERSION}`. These closure 
 
 ### 1. Update plan.md
 
-Read `docs/auto-dev/PLAN.md` (or `docs/auto-dev/plan.md`) and make these changes:
+Read `docs/auto-dev/plan.md` and make these changes (the file is lowercase `plan.md`, not `PLAN.md`):
 - Mark `${VERSION}` as completed in the version list
 - Update "Current Version" section to reflect the next planned version
 - Move completed items from "Planned" to "Completed" section
 
-If `PLAN.md` does not exist, document this in the output.
+If `plan.md` does not exist, document this in the output.
 
 ### 2. Verify CHANGELOG.md
 
