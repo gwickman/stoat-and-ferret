@@ -1,0 +1,88 @@
+{
+  "version": "v006",
+  "description": "Effects Engine Foundation — Build the Rust filter expression engine, graph validation, filter composition, text overlay builder, speed control, and effect discovery/application API endpoints.",
+  "backlog_ids": ["BL-037", "BL-038", "BL-039", "BL-040", "BL-041", "BL-042", "BL-043"],
+  "context": {
+    "rationale": "v006 is the first version to tackle video effects. All prior versions (v001-v005) built the foundation (Rust core, database, API, testing, GUI). This version extends the Rust core with a filter expression DSL, composition system, and bridges them to the Python API layer with discovery and application endpoints. Covers Phase 2 milestones M2.1-M2.3.",
+    "constraints": [
+      "Independent of v005 — pure Rust + API work, no GUI changes",
+      "All new Rust code must have doc comments, no unwrap() in library code",
+      "PyO3 bindings added in the same feature (incremental binding rule)",
+      "py_ prefix convention for binding methods with #[pyo3(name = ...)] clean names",
+      "Python 3.10 compatibility — use asyncio.TimeoutError not builtins.TimeoutError",
+      "Python coverage 80% minimum, Rust coverage 90% minimum target",
+      "Rust coverage currently at ~75% from v004 deferral"
+    ],
+    "assumptions": [
+      "Research gaps (Task 004 incomplete) are addressable during implementation",
+      "Effects stored as JSON list on clip model, serialized to DB as TEXT column",
+      "Rust Clip type unchanged — Python owns effect storage, Rust owns filter generation",
+      "Existing CI FFmpeg setup sufficient for contract tests",
+      "setpts PTS/factor is frame-rate independent — drop-frame timecode irrelevant"
+    ],
+    "deferred_items": []
+  },
+  "themes": [
+    {
+      "number": 1,
+      "slug": "filter-expression-infrastructure",
+      "goal": "Build the foundational Rust infrastructure — a type-safe expression engine for FFmpeg filter expressions and a graph validation system for verifying filter graph correctness before serialization.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "expression-engine",
+          "goal": "Implement type-safe FFmpeg expression AST with builder API, serialization, property-based tests, and PyO3 bindings."
+        },
+        {
+          "number": 2,
+          "slug": "graph-validation",
+          "goal": "Add pad matching validation, unconnected pad detection, and cycle detection to FilterGraph with actionable error messages."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "slug": "filter-builders-and-composition",
+      "goal": "Build the concrete filter builders (drawtext, speed control) and the composition system for chaining, branching, and merging filter graphs.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "filter-composition",
+          "goal": "Build chain/branch/merge composition API with automatic pad management and validation."
+        },
+        {
+          "number": 2,
+          "slug": "drawtext-builder",
+          "goal": "Implement drawtext filter builder with position, styling, alpha animation, and contract tests."
+        },
+        {
+          "number": 3,
+          "slug": "speed-control",
+          "goal": "Implement setpts/atempo builders with automatic atempo chaining for >2x speeds."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "slug": "effects-api-layer",
+      "goal": "Bridge the Rust effects engine to the Python API layer with discovery and application endpoints.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "effect-discovery",
+          "goal": "Create GET /effects endpoint with registry service, parameter JSON schemas, and AI hints."
+        },
+        {
+          "number": 2,
+          "slug": "clip-effect-model",
+          "goal": "Extend clip data model with effects storage across Python schema, DB repository, and Alembic migration."
+        },
+        {
+          "number": 3,
+          "slug": "text-overlay-apply",
+          "goal": "Create POST endpoint to apply text overlay to clips with validation, persistence, and filter preview."
+        }
+      ]
+    }
+  ]
+}
