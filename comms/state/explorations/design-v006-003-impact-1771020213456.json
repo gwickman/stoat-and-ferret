@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v006-003-impact-1771020213456",
   "results_folder": "design-v006-003-impact",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 25532,
   "started_at": "2026-02-13T22:03:33.456395",
-  "updated_at": "2026-02-13T22:03:33.456395",
+  "updated_at": "2026-02-13T22:03:35.247356",
   "completed_at": null,
   "error": null,
   "documents": [],
