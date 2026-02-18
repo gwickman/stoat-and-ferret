@@ -120,6 +120,7 @@ When writing the "Backlog Item: BL-XXX" line in each feature's requirements.md, 
 For EACH feature, create implementation-plan.md:
 - Overview (2-3 sentences)
 - Files to Create/Modify (table with actions)
+- Test Files (list of test file paths to run for this feature, e.g., `tests/test_backlog.py tests/test_theme.py` — used by execution prompts for targeted pytest runs instead of the full suite)
 - Implementation Stages (Stage 1, Stage 2, etc. with verification commands)
 - Test Infrastructure Updates (from test strategy)
 - Quality Gates (standard commands)
@@ -243,6 +244,11 @@ Verification checklist:
 
 - `read_document`
 - `request_clarification` (path verification only — see Section 6a)
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 (All content should come from the design artifact store. request_clarification is permitted solely for verifying file paths in implementation plans.)
 

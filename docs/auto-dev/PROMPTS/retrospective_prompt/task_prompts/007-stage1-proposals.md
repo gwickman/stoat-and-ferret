@@ -38,7 +38,17 @@ From each task, extract items that need remediation:
 
 For each failure classified as a "code problem" in Task 004's README.md:
 
-1. Create a backlog item:
+**Before creating any backlog item, search existing items first:**
+
+```python
+list_backlog_items(project="${PROJECT}", status="open", search="<test_name or brief description>")
+list_backlog_items(project="${PROJECT}", status="open", tags=["bug", "quality-gate"])
+```
+
+- If an existing item already covers the finding, reference it by ID rather than creating a duplicate
+- Only create a new item when no existing item covers the finding
+
+1. Create a backlog item (only if no existing item covers it):
    ```python
    add_backlog_item(
        project="${PROJECT}",
@@ -137,7 +147,13 @@ Complete proposals document with all findings in Crystal Clear Actions format. T
 ## Allowed MCP Tools
 
 - `read_document`
+- `list_backlog_items`
 - `add_backlog_item`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

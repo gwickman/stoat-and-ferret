@@ -46,6 +46,7 @@ From all identified learnings:
 - Remove duplicates (same insight from multiple sources)
 - Remove implementation-specific details (code snippets, file paths)
 - Remove version-specific references that won't generalize
+- Verify causal claims before saving: if a completion report says "X failed because Y," check whether the evidence supports that causation or if it's post-hoc rationalization. Do not propagate unverified root-cause narratives as learnings. (See LRN-135.)
 - Keep: transferable patterns, failure modes, decision frameworks, debugging approaches
 
 ### 5. Save Learnings
@@ -111,6 +112,11 @@ For each learning saved:
 - `save_learning`
 - `list_learnings`
 - `extract_learnings`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

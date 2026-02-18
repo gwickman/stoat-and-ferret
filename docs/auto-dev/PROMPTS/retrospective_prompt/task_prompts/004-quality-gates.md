@@ -122,6 +122,11 @@ Full quality gate output including:
 
 - `run_quality_gates`
 - `read_document`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

@@ -122,6 +122,11 @@ Summary by classification:
 - `request_clarification`
 - `tool_help`
 - `search_learnings`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 
@@ -129,6 +134,7 @@ Summary by classification:
 - Generic checks run for every project; project-specific checks only when IMPACT_ASSESSMENT.md exists
 - Missing IMPACT_ASSESSMENT.md is normal for new projects — not an error
 - Be thorough but practical — only flag genuine impacts, not speculative ones
+- Verify each impact by reading the actual tool_help output or document content that would be affected — do not flag impacts based on assumed file contents
 - Each impact must have a concrete work item, not just "review X"
 - Keep each document under 200 lines
 - Do NOT commit — the master prompt handles commits after Phase 2

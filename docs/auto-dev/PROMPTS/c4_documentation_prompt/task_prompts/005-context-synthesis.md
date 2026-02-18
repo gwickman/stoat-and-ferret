@@ -195,6 +195,7 @@ Then:
 - **Stakeholder-friendly language** — avoid jargon; a product manager should understand this
 - **Focus on people and systems, not technology** — C4 context level deliberately excludes tech details
 - **User journeys should be concrete** — not abstract workflows but specific step sequences
+- **Verify journeys against code** — confirm each step in a user journey actually works by checking route definitions, handler implementations, or test assertions, rather than describing intended behavior
 - **Test-driven feature discovery** — test names are often the most honest feature list
 - **Don't invent personas** — if you can only identify one user type, that's fine
 - **Qualify deployment status in user journeys** — when writing user journeys, cross-reference the container doc for deployment status. If a package is not published or a service is not deployed, qualify installation/access steps accordingly (e.g., "after publishing" or "via local installation"). Do not imply public availability unless the container doc confirms it.

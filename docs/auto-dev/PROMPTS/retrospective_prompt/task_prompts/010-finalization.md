@@ -137,6 +137,11 @@ Complete retrospective summary:
 - `complete_version`
 - `commit_changes`
 - `git_read`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

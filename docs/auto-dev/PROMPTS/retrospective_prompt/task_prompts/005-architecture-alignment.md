@@ -55,6 +55,8 @@ Compare the changes from step 2 against the documentation from step 3:
 - Do data flows reflect the current implementation?
 - Are external dependencies current?
 
+For each drift item identified, verify it against the actual codebase (check file existence, read imports, confirm module structure) rather than relying solely on retrospective descriptions. Retrospective narratives may be inaccurate — ground drift findings in code evidence. (See LRN-135.)
+
 ### 5. Take Action Based on Findings
 
 **If NO new drift detected** (changes align with docs, or no docs exist to drift from):
@@ -105,6 +107,11 @@ Then:
 - `update_backlog_item`
 - `add_backlog_item`
 - `read_document`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

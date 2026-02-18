@@ -173,11 +173,16 @@ Detailed analysis report:
 - `list_learnings`
 - `search_learnings`
 - `add_product_request`
+- `list_product_requests`
+- `get_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 
 - Focus on patterns that span multiple versions — single-version issues are out of scope
 - Be conservative with Product Request creation: only create requests for well-evidenced, actionable findings
 - Include version numbers and specific evidence in every finding
+- Distinguish correlation from causation: when a pattern appears across versions, verify the mechanism rather than assuming a shared root cause. Cite specific log entries, test outputs, or code evidence — not just the co-occurrence of symptoms. (See LRN-135.)
 - Do NOT attempt to fix issues — only report and create Product Requests
 - Do NOT commit — the master prompt handles commits

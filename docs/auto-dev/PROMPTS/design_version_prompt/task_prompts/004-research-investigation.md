@@ -60,6 +60,9 @@ For questions about external libraries, patterns, or best practices:
 - Use web search for official documentation, guides, GitHub issues
 - Priority: Official docs > Library tests > GitHub issues
 - Document URLs and relevant excerpts
+- Never use WebFetch on URLs not provided by the user or found via web search. Do not hallucinate or construct URLs.
+- Always pre-check URLs with curl --max-time 10 before WebFetch. This catches unresponsive hosts before they hang the session.
+- If curl times out, skip WebFetch for that URL. Do not retry — move on and note the URL was unreachable.
 
 ### 5. Sub-Explorations for Complex Investigation
 
@@ -143,6 +146,12 @@ Analysis of implementation impact:
 - `list_explorations`
 - `get_learning`
 - `search_learnings`
+- `get_backlog_item`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 Plus DeepWiki tools:
 - `mcp__deepwiki__ask_question`

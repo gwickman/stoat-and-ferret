@@ -83,6 +83,11 @@ Complete context from PLAN.md including:
 - `get_project_info`
 - `git_read`
 - `read_document`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

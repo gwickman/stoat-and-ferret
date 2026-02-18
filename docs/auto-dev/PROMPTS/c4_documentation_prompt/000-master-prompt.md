@@ -68,7 +68,7 @@ prompt = task_template
     .replace("${BATCH_NUMBER}", str(batch_num))
     .replace("${BATCH_COUNT}", str(total_batches))
     .replace("${BATCH_DIRECTORIES}", batch_directory_list)
-start_exploration(project=PROJECT, prompt=prompt, results_folder=f"c4-{VERSION}-002-batch{batch_num}")
+start_exploration(project=PROJECT, prompt=prompt, results_folder=f"c4-{VERSION}-002-batch{batch_num}", allowed_mcp_tools=["read_document"])
 ```
 
 NOTE: results_folder must have at most 5 hyphen-separated parts. Use compact names like "c4-v003-002-batch1".
@@ -175,7 +175,7 @@ Current Version: {VERSION}
 **For each task below (except Task 002 parallel batches), the procedure is:**
 1. Read the task prompt file (ONE file only — the one you are about to launch)
 2. Perform variable substitution as described in the Variable Substitution section
-3. Launch a sub-exploration with the resolved prompt
+3. Launch a sub-exploration with the resolved prompt, passing `allowed_mcp_tools` from the Task-to-tools mapping table above
 4. Poll with `get_exploration_status` at 30-second minimum intervals
 5. When complete, call `get_exploration_result` to verify documents were produced
 6. If the sub-exploration failed or produced 0 documents, document the failure and STOP
@@ -186,6 +186,7 @@ Current Version: {VERSION}
 **Task 001:** Discovery and directory manifest
 - Task prompt: `task_prompts/001-discovery-and-planning.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${MODE}`, `${PREVIOUS_VERSION}`, `${PREVIOUS_C4_COMMIT}`
+- `allowed_mcp_tools`: `["read_document", "git_read"]`
 - Output: `comms/outbox/exploration/c4-${VERSION}-001-discovery/`
 
 **After Task 001 completes:**
@@ -208,6 +209,7 @@ Current Version: {VERSION}
 
 - Task prompt: `task_prompts/002-code-level-analysis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${BATCH_NUMBER}`, `${BATCH_DIRECTORIES}` (from manifest)
+- `allowed_mcp_tools`: `["read_document"]`
 - Results folder: `c4-${VERSION}-002-batch${N}`
 - Start exploration (do NOT wait — launch all batches)
 
@@ -238,6 +240,7 @@ git_write(project=PROJECT, message="docs(c4): ${VERSION} code-level analysis com
 **Task 003:** Synthesize code docs into components
 - Task prompt: `task_prompts/003-component-synthesis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${MODE}`
+- `allowed_mcp_tools`: `["read_document"]`
 - Output: `comms/outbox/exploration/c4-${VERSION}-003-components/`
 
 ---
@@ -247,11 +250,13 @@ git_write(project=PROJECT, message="docs(c4): ${VERSION} code-level analysis com
 **Task 004:** Container-level synthesis
 - Task prompt: `task_prompts/004-container-synthesis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`
+- `allowed_mcp_tools`: `["read_document"]`
 - Output: `comms/outbox/exploration/c4-${VERSION}-004-containers/`
 
 **Task 005:** Context-level synthesis
 - Task prompt: `task_prompts/005-context-synthesis.md`
 - Substitute: `${PROJECT}`, `${VERSION}`
+- `allowed_mcp_tools`: `["read_document", "list_backlog_items"]`
 - Output: `comms/outbox/exploration/c4-${VERSION}-005-context/`
 
 **COMMIT after Phase 4:**
@@ -266,6 +271,7 @@ git_write(project=PROJECT, message="docs(c4): ${VERSION} component/container/con
 **Task 006:** README generation and validation
 - Task prompt: `task_prompts/006-finalization.md`
 - Substitute: `${PROJECT}`, `${VERSION}`, `${MODE}`
+- `allowed_mcp_tools`: `["read_document"]`
 - Output: `comms/outbox/exploration/c4-${VERSION}-006-finalize/`
 
 **FINAL COMMIT after Task 006:**

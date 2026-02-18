@@ -123,6 +123,11 @@ Relevant learnings from project learning repository:
 - `search_learnings`
 - `list_learnings`
 - `get_learning`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

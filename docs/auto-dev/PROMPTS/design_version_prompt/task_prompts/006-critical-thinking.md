@@ -38,6 +38,8 @@ For each "Investigate now" item:
 - Spawn sub-explorations for complex investigations if needed
 - Document findings with evidence (file paths, URLs, data)
 
+**Empirical verification required:** Do not conclude that code "should behave X way" based solely on reading the code path. Where possible, verify against actual runtime data (test output, log files, state files). Architectural reasoning generates hypotheses; only empirical evidence confirms them. (See LRN-135.)
+
 ### 4. Define Mitigations
 
 For each "Accept with mitigation" item:
@@ -113,6 +115,11 @@ Detailed log of all investigations performed:
 - `start_exploration` (with `allowed_mcp_tools=["ALL_ALLOWED"]` for investigations)
 - `get_exploration_status`
 - `get_exploration_result`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 Plus DeepWiki tools:
 - `mcp__deepwiki__ask_question`

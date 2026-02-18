@@ -76,17 +76,17 @@ Output Requirements:
 
 | Task | results_folder | Task file | Allowed MCP Tools |
 |------|---------------|-----------|-------------------|
-| 001 | `{VERSION}-retro-001-env` | `001-environment-verification.md` | health_check, get_project_info, get_version_status, git_read, read_document |
-| 002 | `{VERSION}-retro-002-docs` | `002-documentation-completeness.md` | read_document, get_version_status, get_theme_status |
-| 003 | `{VERSION}-retro-003-backlog` | `003-backlog-verification.md` | read_document, get_backlog_item, list_backlog_items, complete_backlog_item |
-| 004 | `{VERSION}-retro-004-quality` | `004-quality-gates.md` | run_quality_gates, read_document |
-| 005 | `{VERSION}-retro-005-arch` | `005-architecture-alignment.md` | list_backlog_items, get_backlog_item, update_backlog_item, add_backlog_item, read_document |
-| 006 | `{VERSION}-retro-006-learn` | `006-learning-extraction.md` | read_document, save_learning, list_learnings, extract_learnings |
-| 007 | `{VERSION}-retro-007-proposals` | `007-stage1-proposals.md` | read_document, add_backlog_item |
-| 008 | `{VERSION}-retro-008-closure` | `008-generic-closure.md` | read_document, git_read |
-| 009 | `{VERSION}-retro-009-project` | `009-project-specific-closure.md` | read_document, health_check, run_quality_gates, start_exploration, get_exploration_status, get_exploration_result, list_backlog_items, add_backlog_item, git_read |
-| 010 | `{VERSION}-retro-010-final` | `010-finalization.md` | read_document, run_quality_gates, complete_version, commit_changes, git_read |
-| 011 | `{VERSION}-retro-011-cross-version` | `011-cross-version-analysis.md` | read_document, get_server_logs, list_backlog_items, list_learnings, search_learnings, add_product_request |
+| 001 | `{VERSION}-retro-001-env` | `001-environment-verification.md` | health_check, get_project_info, get_version_status, git_read, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 002 | `{VERSION}-retro-002-docs` | `002-documentation-completeness.md` | read_document, get_version_status, get_theme_status, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 003 | `{VERSION}-retro-003-backlog` | `003-backlog-verification.md` | read_document, get_backlog_item, list_backlog_items, complete_backlog_item, get_theme_status, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 004 | `{VERSION}-retro-004-quality` | `004-quality-gates.md` | run_quality_gates, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 005 | `{VERSION}-retro-005-arch` | `005-architecture-alignment.md` | list_backlog_items, get_backlog_item, update_backlog_item, add_backlog_item, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 006 | `{VERSION}-retro-006-learn` | `006-learning-extraction.md` | read_document, save_learning, list_learnings, extract_learnings, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 007 | `{VERSION}-retro-007-proposals` | `007-stage1-proposals.md` | read_document, add_backlog_item, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 008 | `{VERSION}-retro-008-closure` | `008-generic-closure.md` | read_document, git_read, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 009 | `{VERSION}-retro-009-project` | `009-project-specific-closure.md` | read_document, health_check, run_quality_gates, start_exploration, get_exploration_status, get_exploration_result, list_backlog_items, add_backlog_item, git_read, list_learnings, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 010 | `{VERSION}-retro-010-final` | `010-finalization.md` | read_document, run_quality_gates, complete_version, commit_changes, git_read, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 011 | `{VERSION}-retro-011-cross-version` | `011-cross-version-analysis.md` | read_document, get_server_logs, list_backlog_items, list_learnings, search_learnings, add_product_request, list_product_requests, get_product_request, update_product_request, upvote_item |
 
 ---
 

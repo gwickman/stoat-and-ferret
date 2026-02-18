@@ -68,6 +68,37 @@ Call `list_backlog_items(project="${PROJECT}", status="open")` and check if any 
 
 Document any orphaned items found.
 
+### 6. Backlog Hygiene Checks (Advisory)
+
+Run the following advisory hygiene checks and include observations in the output. These are informational only and do NOT block the retrospective.
+
+#### 6a. Staleness Detection
+
+Use the `BacklogService.check_staleness()` method (available via the backlog service) to identify open items not updated within 90 days. Items with "deferred" in their notes are reported separately as intentionally deferred.
+
+Report:
+- Number of stale items (open > 90 days without deferred marker)
+- Number of intentionally deferred items
+- Top 5 stale items by age (ID, title, age in days)
+
+#### 6b. Tag Consistency Review
+
+Use the `BacklogService.check_tag_consistency()` method to identify:
+- Orphaned tags (used only by completed/cancelled items, not by any active item)
+- Tag frequency distribution for active items
+
+Report:
+- List of orphaned tags
+- Top 10 most-used tags with counts
+
+#### 6c. Size Calibration
+
+For completed items in this version, compare the `size` estimate (S/M/L/XL) to actual execution patterns. Note any items whose actual complexity appeared to differ significantly from the estimate.
+
+Report:
+- Count of completed items by size category
+- Any notable calibration observations
+
 ## Output Requirements
 
 Save outputs to `comms/outbox/versions/retrospective/${VERSION}/003-backlog/`:
@@ -82,6 +113,7 @@ Then:
 - **Already Complete**: List of items that were already closed
 - **Orphaned Items**: Any open items referencing this version not in requirements
 - **Issues**: Any items that could not be completed (with reason)
+- **Hygiene Observations**: Advisory results from staleness detection, tag consistency review, and size calibration (Section 6)
 
 ### backlog-report.md
 
@@ -112,6 +144,12 @@ Items found in `requirements.md` but **not** in `PLAN.md` are out-of-scope addit
 - `get_backlog_item`
 - `list_backlog_items`
 - `complete_backlog_item`
+- `get_theme_status`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

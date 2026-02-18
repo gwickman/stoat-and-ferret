@@ -219,6 +219,12 @@ Document any issues found. If none: "No discrepancies identified."
 - `read_document`
 - `validate_version_design`
 - `git_read` (operation="status")
+- `get_backlog_item`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

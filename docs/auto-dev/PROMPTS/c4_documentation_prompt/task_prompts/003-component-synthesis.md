@@ -168,6 +168,7 @@ All `c4-component-*.md` and `c4-component.md` written directly to `docs/C4-Docum
 - **Every code file must be assigned** — no orphans
 - **Component names should be meaningful** — "AuthenticationService" not "src-auth-handlers"
 - **Interfaces should be concrete** — document actual function signatures, not vague descriptions
+- **Ground grouping decisions in import graphs** — verify component boundaries by checking actual import/dependency relationships between files, not by inferring purpose from names or directory structure alone
 - **Keep individual component docs under 200 lines**
 - **Master index should fit on one screen** — summary view, not exhaustive detail
 - Do NOT map to containers — that's Task 004's job

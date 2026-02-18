@@ -132,6 +132,7 @@ for theme in manifest["themes"]:
         features.append({
             "number": f["number"],
             "name": f["slug"],              # slug only, tool adds prefix
+            "goal": f.get("goal"),           # for THEME_INDEX.md feature descriptions
             "requirements": req,
             "implementation_plan": plan      # underscore, not hyphen
         })
@@ -151,6 +152,7 @@ for theme in manifest["themes"]:
 Each feature dict MUST contain ALL of these fields:
 - `number` (int): Feature number within the theme, 1-indexed sequential
 - `name` (str): Feature slug WITHOUT number prefix (e.g., "feature-name", NOT "001-feature-name")
+- `goal` (str | None): Feature goal from manifest for THEME_INDEX.md descriptions (omit or None to use placeholder fallback)
 - `requirements` (str): Full requirements.md markdown content
 - `implementation_plan` (str): Full implementation-plan.md markdown content (NOTE: underscore, not hyphen)
 
@@ -225,6 +227,11 @@ Use `read_document` to verify each file exists.
 - `design_version`
 - `design_theme`
 - `validate_version_design`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 ## Guidelines
 

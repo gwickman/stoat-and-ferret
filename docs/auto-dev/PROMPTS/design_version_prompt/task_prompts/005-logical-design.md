@@ -80,7 +80,7 @@ For each, provide:
 - Description
 - Severity (high/medium/low)
 - What investigation would help resolve it
-- Current best guess if unresolved
+- Current best guess if unresolved (clearly labeled as UNVERIFIED — do not present guesses as conclusions)
 
 ## Output Requirements
 
@@ -148,6 +148,11 @@ All identified risks and unknowns for Task 006:
 ## Allowed MCP Tools
 
 - `read_document`
+- `list_product_requests`
+- `get_product_request`
+- `add_product_request`
+- `update_product_request`
+- `upvote_item`
 
 (All data should come from design artifact store, tasks 001-004)
 
