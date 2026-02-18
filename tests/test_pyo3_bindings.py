@@ -286,6 +286,75 @@ class TestFilter:
         assert "[outv]" in result
         assert ";" in result  # Chain separator
 
+    def test_filtergraph_validate_valid(self) -> None:
+        """Test FilterGraph.validate() passes for a valid graph."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = (
+            FilterGraph()
+            .chain(FilterChain().input("0:v").filter(Filter.scale(1280, 720)).output("v0"))
+            .chain(FilterChain().input("1:v").filter(Filter.scale(1280, 720)).output("v1"))
+            .chain(
+                FilterChain().input("v0").input("v1").filter(Filter.concat(2, 1, 0)).output("outv")
+            )
+        )
+        graph.validate()  # Should not raise
+
+    def test_filtergraph_validate_unconnected_pad(self) -> None:
+        """Test FilterGraph.validate() raises for unconnected input pad."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = FilterGraph().chain(
+            FilterChain().input("missing").filter(Filter.scale(1280, 720)).output("out")
+        )
+        with pytest.raises(ValueError, match="Unconnected pad"):
+            graph.validate()
+
+    def test_filtergraph_validate_duplicate_label(self) -> None:
+        """Test FilterGraph.validate() raises for duplicate output labels."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = (
+            FilterGraph()
+            .chain(FilterChain().input("0:v").filter(Filter.scale(1280, 720)).output("dup"))
+            .chain(FilterChain().input("1:v").filter(Filter.scale(640, 480)).output("dup"))
+        )
+        with pytest.raises(ValueError, match="Duplicate output label"):
+            graph.validate()
+
+    def test_filtergraph_validate_cycle(self) -> None:
+        """Test FilterGraph.validate() raises for cyclic graphs."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = (
+            FilterGraph()
+            .chain(FilterChain().input("a").filter(Filter("null")).output("b"))
+            .chain(FilterChain().input("b").filter(Filter("null")).output("a"))
+        )
+        with pytest.raises(ValueError, match="Cycle detected"):
+            graph.validate()
+
+    def test_filtergraph_validated_to_string_valid(self) -> None:
+        """Test FilterGraph.validated_to_string() returns string for valid graph."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = FilterGraph().chain(
+            FilterChain().input("0:v").filter(Filter.scale(1280, 720)).output("out")
+        )
+        result = graph.validated_to_string()
+        assert "[0:v]" in result
+        assert "[out]" in result
+
+    def test_filtergraph_validated_to_string_invalid(self) -> None:
+        """Test FilterGraph.validated_to_string() raises for invalid graph."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = FilterGraph().chain(
+            FilterChain().input("missing").filter(Filter("null")).output("out")
+        )
+        with pytest.raises(ValueError, match="Unconnected pad"):
+            graph.validated_to_string()
+
 
 class TestSanitization:
     """Tests for sanitization functions."""

@@ -709,6 +709,26 @@ class FilterGraph:
         """Adds a filter chain to the graph."""
         ...
 
+    def validate(self) -> None:
+        """Validates the filter graph structure.
+
+        Checks for duplicate output labels, unconnected input pads, and cycles.
+
+        Raises:
+            ValueError: If any validation errors are found.
+        """
+        ...
+
+    def validated_to_string(self) -> str:
+        """Validates the graph and returns the filter string if valid.
+
+        Convenience method that validates first, then serializes.
+
+        Raises:
+            ValueError: If any validation errors are found.
+        """
+        ...
+
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 

@@ -28,9 +28,65 @@
 //! );
 //! ```
 
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
+
+/// Errors detected during filter graph validation.
+///
+/// These errors represent structural problems with the graph that would cause
+/// FFmpeg to fail at runtime.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GraphValidationError {
+    /// A pad label has no matching connection in the graph.
+    UnconnectedPad {
+        /// The unmatched pad label.
+        label: String,
+    },
+    /// The graph contains a cycle, preventing topological ordering.
+    CycleDetected {
+        /// Labels involved in the cycle.
+        labels: Vec<String>,
+    },
+    /// The same label is used as an output by multiple chains.
+    DuplicateLabel {
+        /// The duplicated label.
+        label: String,
+    },
+}
+
+impl fmt::Display for GraphValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GraphValidationError::UnconnectedPad { label } => {
+                write!(
+                    f,
+                    "Unconnected pad [{label}]: no matching output found. \
+                     Add an output label [{label}] to another chain, or remove this input."
+                )
+            }
+            GraphValidationError::CycleDetected { labels } => {
+                let list = labels.join(", ");
+                write!(
+                    f,
+                    "Cycle detected involving labels: [{list}]. \
+                     Break the cycle by removing or redirecting one of these connections."
+                )
+            }
+            GraphValidationError::DuplicateLabel { label } => {
+                write!(
+                    f,
+                    "Duplicate output label [{label}]: each output label must be unique. \
+                     Rename one of the outputs to a different label."
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for GraphValidationError {}
 
 /// A single FFmpeg filter with optional parameters.
 ///
@@ -575,6 +631,150 @@ impl FilterGraph {
         self.chains.push(chain);
         self
     }
+
+    /// Validates the filter graph structure.
+    ///
+    /// Checks for duplicate output labels, unconnected input pads, and cycles
+    /// (via Kahn's algorithm). Stream references like `[0:v]` or `[1:a]` are
+    /// treated as external inputs and are not required to match an output label.
+    ///
+    /// Returns `Ok(())` if the graph is valid, or a list of all detected errors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stoat_ferret_core::ffmpeg::filter::{FilterGraph, FilterChain, scale, concat};
+    ///
+    /// let graph = FilterGraph::new()
+    ///     .chain(FilterChain::new().input("0:v").filter(scale(1280, 720)).output("v0"))
+    ///     .chain(FilterChain::new().input("v0").filter(scale(640, 480)).output("out"));
+    ///
+    /// assert!(graph.validate().is_ok());
+    /// ```
+    pub fn validate(&self) -> Result<(), Vec<GraphValidationError>> {
+        let mut errors = Vec::new();
+
+        // Strip brackets: "[label]" -> "label"
+        let strip = |s: &str| -> String {
+            s.trim_start_matches('[').trim_end_matches(']').to_string()
+        };
+
+        // Returns true for stream references like "0:v", "1:a", "2:v"
+        let is_stream_ref = |label: &str| -> bool {
+            if let Some((left, _right)) = label.split_once(':') {
+                left.chars().all(|c| c.is_ascii_digit())
+            } else {
+                false
+            }
+        };
+
+        // Build output label -> chain index map, detect duplicates
+        let mut output_map: HashMap<String, usize> = HashMap::new();
+        for (chain_idx, chain) in self.chains.iter().enumerate() {
+            for out in &chain.outputs {
+                let label = strip(out);
+                if let Some(_prev) = output_map.insert(label.clone(), chain_idx) {
+                    errors.push(GraphValidationError::DuplicateLabel { label });
+                }
+            }
+        }
+
+        // Check for unconnected input pads (skip stream references)
+        for chain in &self.chains {
+            for inp in &chain.inputs {
+                let label = strip(inp);
+                if !is_stream_ref(&label) && !output_map.contains_key(&label) {
+                    errors.push(GraphValidationError::UnconnectedPad { label });
+                }
+            }
+        }
+
+        // Cycle detection via Kahn's algorithm
+        // Build adjacency: for each chain, find which chains feed into it
+        let num_chains = self.chains.len();
+        let mut in_degree = vec![0usize; num_chains];
+        let mut adjacency: Vec<Vec<usize>> = vec![Vec::new(); num_chains];
+
+        for (chain_idx, chain) in self.chains.iter().enumerate() {
+            for inp in &chain.inputs {
+                let label = strip(inp);
+                if let Some(&src_chain) = output_map.get(&label) {
+                    adjacency[src_chain].push(chain_idx);
+                    in_degree[chain_idx] += 1;
+                }
+            }
+        }
+
+        // BFS with zero in-degree nodes
+        let mut queue = VecDeque::new();
+        for (i, &deg) in in_degree.iter().enumerate() {
+            if deg == 0 {
+                queue.push_back(i);
+            }
+        }
+
+        let mut visited = 0usize;
+        while let Some(node) = queue.pop_front() {
+            visited += 1;
+            for &neighbor in &adjacency[node] {
+                in_degree[neighbor] -= 1;
+                if in_degree[neighbor] == 0 {
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+
+        if visited < num_chains {
+            // Collect labels from chains involved in the cycle
+            let cycle_labels: Vec<String> = self
+                .chains
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| in_degree[*i] > 0)
+                .flat_map(|(_, chain)| {
+                    chain
+                        .outputs
+                        .iter()
+                        .map(|o| strip(o))
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+            errors.push(GraphValidationError::CycleDetected {
+                labels: cycle_labels,
+            });
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Validates the graph and returns the filter string if valid.
+    ///
+    /// Convenience method that calls [`validate()`](Self::validate) first, then
+    /// serializes the graph to a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns a list of validation errors if the graph is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stoat_ferret_core::ffmpeg::filter::{FilterGraph, FilterChain, scale};
+    ///
+    /// let graph = FilterGraph::new()
+    ///     .chain(FilterChain::new().input("0:v").filter(scale(1280, 720)).output("out"));
+    ///
+    /// let result = graph.validated_to_string().unwrap();
+    /// assert_eq!(result, "[0:v]scale=w=1280:h=720[out]");
+    /// ```
+    pub fn validated_to_string(&self) -> Result<String, Vec<GraphValidationError>> {
+        self.validate()?;
+        Ok(self.to_string())
+    }
 }
 
 impl fmt::Display for FilterGraph {
@@ -600,6 +800,30 @@ impl FilterGraph {
     fn py_chain(mut slf: PyRefMut<'_, Self>, chain: FilterChain) -> PyRefMut<'_, Self> {
         slf.chains.push(chain);
         slf
+    }
+
+    /// Validates the filter graph structure.
+    ///
+    /// Checks for duplicate output labels, unconnected input pads, and cycles.
+    /// Raises ValueError if any validation errors are found.
+    #[pyo3(name = "validate")]
+    fn py_validate(&self) -> PyResult<()> {
+        self.validate().map_err(|errors| {
+            let messages: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+            PyValueError::new_err(messages.join("; "))
+        })
+    }
+
+    /// Validates the graph and returns the filter string if valid.
+    ///
+    /// Convenience method that validates first, then serializes.
+    /// Raises ValueError if any validation errors are found.
+    #[pyo3(name = "validated_to_string")]
+    fn py_validated_to_string(&self) -> PyResult<String> {
+        self.validated_to_string().map_err(|errors| {
+            let messages: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+            PyValueError::new_err(messages.join("; "))
+        })
     }
 
     /// Returns a string representation of the filter graph.
@@ -913,5 +1137,269 @@ mod tests {
         assert_eq!(filter_complex, "[0:v]scale=w=1280:h=720[scaled]");
 
         // This string can be passed to FFmpegCommand::filter_complex()
+    }
+
+    // ========== Graph Validation Tests ==========
+
+    #[test]
+    fn test_validate_valid_linear_graph() {
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("0:v")
+                    .filter(scale(1280, 720))
+                    .output("v0"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("v0")
+                    .filter(format("yuv420p"))
+                    .output("out"),
+            );
+        assert!(graph.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_valid_concat_graph() {
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("0:v")
+                    .filter(scale(1280, 720))
+                    .output("v0"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("1:v")
+                    .filter(scale(1280, 720))
+                    .output("v1"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("v0")
+                    .input("v1")
+                    .filter(concat(2, 1, 0))
+                    .output("outv"),
+            );
+        assert!(graph.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_stream_refs_not_checked() {
+        // Stream references like 0:v, 1:a should pass validation
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .input("0:v")
+                .input("1:a")
+                .filter(Filter::new("amerge"))
+                .output("out"),
+        );
+        assert!(graph.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_empty_graph() {
+        let graph = FilterGraph::new();
+        assert!(graph.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_single_chain_no_labels() {
+        let graph = FilterGraph::new().chain(FilterChain::new().filter(Filter::new("null")));
+        assert!(graph.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_unconnected_pad() {
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .input("missing")
+                .filter(scale(1280, 720))
+                .output("out"),
+        );
+        let errors = graph.validate().unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert!(matches!(
+            &errors[0],
+            GraphValidationError::UnconnectedPad { label } if label == "missing"
+        ));
+    }
+
+    #[test]
+    fn test_validate_duplicate_label() {
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("0:v")
+                    .filter(scale(1280, 720))
+                    .output("dup"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("1:v")
+                    .filter(scale(640, 480))
+                    .output("dup"),
+            );
+        let errors = graph.validate().unwrap_err();
+        assert!(errors
+            .iter()
+            .any(|e| matches!(e, GraphValidationError::DuplicateLabel { label } if label == "dup")));
+    }
+
+    #[test]
+    fn test_validate_cycle_detected() {
+        // Chain 0: input [a] -> output [b]
+        // Chain 1: input [b] -> output [a]
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("a")
+                    .filter(Filter::new("null"))
+                    .output("b"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("b")
+                    .filter(Filter::new("null"))
+                    .output("a"),
+            );
+        let errors = graph.validate().unwrap_err();
+        assert!(errors
+            .iter()
+            .any(|e| matches!(e, GraphValidationError::CycleDetected { .. })));
+    }
+
+    #[test]
+    fn test_validate_multiple_errors() {
+        // Both unconnected pad and duplicate label
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("0:v")
+                    .filter(Filter::new("null"))
+                    .output("dup"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("1:v")
+                    .filter(Filter::new("null"))
+                    .output("dup"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("missing")
+                    .filter(Filter::new("null"))
+                    .output("out"),
+            );
+        let errors = graph.validate().unwrap_err();
+        assert!(errors.len() >= 2);
+    }
+
+    #[test]
+    fn test_validated_to_string_valid() {
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .input("0:v")
+                .filter(scale(1280, 720))
+                .output("out"),
+        );
+        let result = graph.validated_to_string().unwrap();
+        assert_eq!(result, "[0:v]scale=w=1280:h=720[out]");
+    }
+
+    #[test]
+    fn test_validated_to_string_invalid() {
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .input("missing")
+                .filter(Filter::new("null"))
+                .output("out"),
+        );
+        assert!(graph.validated_to_string().is_err());
+    }
+
+    #[test]
+    fn test_validation_error_display_unconnected() {
+        let err = GraphValidationError::UnconnectedPad {
+            label: "foo".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("foo"));
+        assert!(msg.contains("Unconnected pad"));
+    }
+
+    #[test]
+    fn test_validation_error_display_cycle() {
+        let err = GraphValidationError::CycleDetected {
+            labels: vec!["a".to_string(), "b".to_string()],
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("Cycle detected"));
+        assert!(msg.contains("a, b"));
+    }
+
+    #[test]
+    fn test_validation_error_display_duplicate() {
+        let err = GraphValidationError::DuplicateLabel {
+            label: "dup".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("Duplicate output label"));
+        assert!(msg.contains("dup"));
+    }
+
+    #[test]
+    fn test_existing_graph_to_string_unchanged() {
+        // Verify existing to_string() / Display is not affected by validation code
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("0:v")
+                    .filter(scale(1280, 720))
+                    .output("v0"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("1:v")
+                    .filter(scale(1280, 720))
+                    .output("v1"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("v0")
+                    .input("v1")
+                    .filter(concat(2, 1, 0))
+                    .output("outv"),
+            );
+        assert_eq!(
+            graph.to_string(),
+            "[0:v]scale=w=1280:h=720[v0];[1:v]scale=w=1280:h=720[v1];[v0][v1]concat=n=2:v=1:a=0[outv]"
+        );
+    }
+
+    #[test]
+    fn test_validate_graph_with_split() {
+        // One output feeding two inputs (split pattern)
+        let graph = FilterGraph::new()
+            .chain(
+                FilterChain::new()
+                    .input("0:v")
+                    .filter(Filter::new("split"))
+                    .output("s1")
+                    .output("s2"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("s1")
+                    .filter(scale(1280, 720))
+                    .output("out1"),
+            )
+            .chain(
+                FilterChain::new()
+                    .input("s2")
+                    .filter(scale(640, 480))
+                    .output("out2"),
+            );
+        assert!(graph.validate().is_ok());
     }
 }
