@@ -655,9 +655,8 @@ impl FilterGraph {
         let mut errors = Vec::new();
 
         // Strip brackets: "[label]" -> "label"
-        let strip = |s: &str| -> String {
-            s.trim_start_matches('[').trim_end_matches(']').to_string()
-        };
+        let strip =
+            |s: &str| -> String { s.trim_start_matches('[').trim_end_matches(']').to_string() };
 
         // Returns true for stream references like "0:v", "1:a", "2:v"
         let is_stream_ref = |label: &str| -> bool {
@@ -731,13 +730,7 @@ impl FilterGraph {
                 .iter()
                 .enumerate()
                 .filter(|(i, _)| in_degree[*i] > 0)
-                .flat_map(|(_, chain)| {
-                    chain
-                        .outputs
-                        .iter()
-                        .map(|o| strip(o))
-                        .collect::<Vec<_>>()
-                })
+                .flat_map(|(_, chain)| chain.outputs.iter().map(|o| strip(o)).collect::<Vec<_>>())
                 .collect();
             errors.push(GraphValidationError::CycleDetected {
                 labels: cycle_labels,
@@ -1241,9 +1234,9 @@ mod tests {
                     .output("dup"),
             );
         let errors = graph.validate().unwrap_err();
-        assert!(errors
-            .iter()
-            .any(|e| matches!(e, GraphValidationError::DuplicateLabel { label } if label == "dup")));
+        assert!(errors.iter().any(
+            |e| matches!(e, GraphValidationError::DuplicateLabel { label } if label == "dup")
+        ));
     }
 
     #[test]
