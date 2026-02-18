@@ -1,14 +1,16 @@
 {
   "exploration_id": "design-v006-002-backlog-1771448818602",
   "results_folder": "design-v006-002-backlog",
-  "status": "running",
+  "status": "complete",
   "pid": 16308,
   "started_at": "2026-02-18T21:06:58.602769",
-  "updated_at": "2026-02-18T21:07:06.438882",
-  "completed_at": null,
+  "updated_at": "2026-02-18T21:13:08.474617",
+  "completed_at": "2026-02-18T21:13:08.472349",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v006-002-backlog/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v006-002-backlog"
