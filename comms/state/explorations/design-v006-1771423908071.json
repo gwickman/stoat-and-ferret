@@ -1,14 +1,14 @@
 {
   "exploration_id": "design-v006-1771423908071",
   "results_folder": "design-v006",
-  "status": "running",
+  "status": "complete",
   "pid": 13848,
   "started_at": "2026-02-18T14:11:48.071292",
-  "updated_at": "2026-02-18T14:11:50.093779",
-  "completed_at": null,
+  "updated_at": "2026-02-18T16:21:34.637285",
+  "completed_at": "2026-02-18T16:21:34.636871",
   "error": null,
   "documents": [],
-  "committed": false,
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v006/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v006"
