@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v006-008-persist-1771451856418",
+  "results_folder": "design-v006-008-persist",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-18T21:57:36.418010",
+  "updated_at": "2026-02-18T21:57:36.418010",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v006-008-persist/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v006-008-persist"
+}
