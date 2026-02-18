@@ -614,11 +614,7 @@ impl PyExpr {
     /// Creates an `ifnot(cond, then, else)` inverted conditional expression.
     #[staticmethod]
     fn if_not(cond: PyExpr, then_expr: PyExpr, else_expr: PyExpr) -> Self {
-        Self::new(Expr::if_not(
-            cond.inner,
-            then_expr.inner,
-            else_expr.inner,
-        ))
+        Self::new(Expr::if_not(cond.inner, then_expr.inner, else_expr.inner))
     }
 
     /// Creates a `lt(x, y)` less-than expression.
@@ -930,7 +926,11 @@ mod tests {
     fn test_func_correct_arity() {
         let result = Expr::func(
             FuncName::Between,
-            vec![Expr::constant(1.0), Expr::constant(2.0), Expr::constant(3.0)],
+            vec![
+                Expr::constant(1.0),
+                Expr::constant(2.0),
+                Expr::constant(3.0),
+            ],
         );
         assert!(result.is_ok());
     }
@@ -951,7 +951,11 @@ mod tests {
     #[test]
     fn test_func_abs_arity() {
         assert!(Expr::func(FuncName::Abs, vec![Expr::constant(1.0)]).is_ok());
-        assert!(Expr::func(FuncName::Abs, vec![Expr::constant(1.0), Expr::constant(2.0)]).is_err());
+        assert!(Expr::func(
+            FuncName::Abs,
+            vec![Expr::constant(1.0), Expr::constant(2.0)]
+        )
+        .is_err());
     }
 
     #[test]
