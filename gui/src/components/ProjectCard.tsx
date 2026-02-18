@@ -42,7 +42,7 @@ export default function ProjectCard({ project, clipCount, onSelect, onDelete }: 
       <div className="space-y-1 text-sm text-gray-400">
         <p data-testid={`project-date-${project.id}`}>Created {formatDate(project.created_at)}</p>
         <p data-testid={`project-clips-${project.id}`}>{clipCount} clip{clipCount !== 1 ? 's' : ''}</p>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           {project.output_width}x{project.output_height} @ {project.output_fps}fps
         </p>
       </div>
