@@ -1,14 +1,16 @@
 {
   "exploration_id": "design-v006-004-research-1771449622459",
   "results_folder": "design-v006-004-research",
-  "status": "running",
+  "status": "complete",
   "pid": 16308,
   "started_at": "2026-02-18T21:20:22.459525",
-  "updated_at": "2026-02-18T21:20:24.331075",
-  "completed_at": null,
+  "updated_at": "2026-02-18T21:33:25.362284",
+  "completed_at": "2026-02-18T21:33:25.361626",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v006-004-research/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v006-004-research"
