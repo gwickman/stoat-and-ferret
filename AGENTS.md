@@ -7,7 +7,7 @@ AI-driven video editor with hybrid Python/Rust architecture.
 ```
 stoat-and-ferret/
 ├── src/                    # Python source (FastAPI, orchestration)
-├── rust/stoat_ferret_core/ # Rust crate (filters, timeline math, FFmpeg)
+├── rust/stoat_ferret_core/ # Rust crate (filters, timeline math, FFmpeg, expressions)
 ├── gui/                    # Frontend (React/TypeScript/Vite)
 ├── stubs/                  # Python type stubs for Rust bindings
 ├── tests/                  # Python tests (pytest)

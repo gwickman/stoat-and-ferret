@@ -93,16 +93,13 @@ class Clip:
         from stoat_ferret_core import Clip as RustClip
         from stoat_ferret_core import Duration, Position, validate_clip
 
-        # Note: type ignores due to incomplete auto-generated stubs for Position/Duration/Clip
-        in_pos = Position(self.in_point)  # type: ignore[call-arg]
-        out_pos = Position(self.out_point)  # type: ignore[call-arg]
+        in_pos = Position(self.in_point)
+        out_pos = Position(self.out_point)
         source_dur = (
-            Duration(source_duration_frames)  # type: ignore[call-arg]
-            if source_duration_frames is not None
-            else None
+            Duration(source_duration_frames) if source_duration_frames is not None else None
         )
 
-        rust_clip = RustClip(source_path, in_pos, out_pos, source_dur)  # type: ignore[call-arg]
+        rust_clip = RustClip(source_path, in_pos, out_pos, source_dur)
         errors = validate_clip(rust_clip)
         if errors:
             # Raise the first validation error wrapped as a Python exception

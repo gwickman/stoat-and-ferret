@@ -282,6 +282,17 @@ class FrameRate:
 class Position:
     """A position on a timeline represented as a frame count."""
 
+    def __new__(cls, frames: int) -> Position:
+        """Creates a position from a frame count.
+
+        Args:
+            frames: The frame number (0-indexed).
+
+        Returns:
+            A new Position instance.
+        """
+        ...
+
     @staticmethod
     def from_frames(frames: int) -> Position:
         """Creates a position from a frame count.
@@ -355,6 +366,17 @@ class Position:
 
 class Duration:
     """A duration on a timeline represented as a frame count."""
+
+    def __new__(cls, frames: int) -> Duration:
+        """Creates a duration from a frame count.
+
+        Args:
+            frames: The number of frames.
+
+        Returns:
+            A new Duration instance.
+        """
+        ...
 
     @staticmethod
     def from_frames(frames: int) -> Duration:
@@ -687,6 +709,169 @@ class FilterGraph:
         """Adds a filter chain to the graph."""
         ...
 
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
+
+# ========== Expression Engine ==========
+
+
+class Expr:
+    """A type-safe FFmpeg filter expression builder.
+
+    Expressions are built using static constructor methods and operator
+    overloading, then serialized to FFmpeg syntax via str().
+
+    Supports constants, variables (t, n, w, h, etc.), arithmetic operators
+    (+, -, *, /), and FFmpeg functions (between, if, gt, lt, etc.).
+    """
+
+    @staticmethod
+    def constant(value: float) -> Expr:
+        """Creates a constant numeric expression.
+
+        Args:
+            value: The numeric value.
+
+        Returns:
+            A new Expr representing a constant.
+        """
+        ...
+
+    @staticmethod
+    def var(name: str) -> Expr:
+        """Creates a variable expression from a variable name string.
+
+        Valid names: "t", "n", "pos", "w", "h", "text_w", "text_h",
+        "line_h", "main_w", "main_h".
+
+        Args:
+            name: The FFmpeg variable name.
+
+        Returns:
+            A new Expr representing a variable.
+
+        Raises:
+            ValueError: If the variable name is not recognized.
+        """
+        ...
+
+    @staticmethod
+    def negate(operand: Expr) -> Expr:
+        """Creates a negation expression (-x).
+
+        Args:
+            operand: The expression to negate.
+
+        Returns:
+            A new Expr representing the negation.
+        """
+        ...
+
+    @staticmethod
+    def between(x: Expr, min: Expr, max: Expr) -> Expr:
+        """Creates a between(x, min, max) expression.
+
+        Returns 1 if min <= x <= max, 0 otherwise.
+
+        Args:
+            x: The value to test.
+            min: The minimum bound.
+            max: The maximum bound.
+
+        Returns:
+            A new Expr representing the between function.
+        """
+        ...
+
+    @staticmethod
+    def if_then_else(cond: Expr, then_expr: Expr, else_expr: Expr) -> Expr:
+        """Creates an if(cond, then, else) conditional expression.
+
+        Args:
+            cond: The condition expression.
+            then_expr: Expression evaluated when condition is true.
+            else_expr: Expression evaluated when condition is false.
+
+        Returns:
+            A new Expr representing the conditional.
+        """
+        ...
+
+    @staticmethod
+    def if_not(cond: Expr, then_expr: Expr, else_expr: Expr) -> Expr:
+        """Creates an ifnot(cond, then, else) inverted conditional expression.
+
+        Args:
+            cond: The condition expression.
+            then_expr: Expression evaluated when condition is false.
+            else_expr: Expression evaluated when condition is true.
+
+        Returns:
+            A new Expr representing the inverted conditional.
+        """
+        ...
+
+    @staticmethod
+    def lt(a: Expr, b: Expr) -> Expr:
+        """Creates a lt(x, y) less-than expression."""
+        ...
+
+    @staticmethod
+    def gt(a: Expr, b: Expr) -> Expr:
+        """Creates a gt(x, y) greater-than expression."""
+        ...
+
+    @staticmethod
+    def eq_expr(a: Expr, b: Expr) -> Expr:
+        """Creates an eq(x, y) equality expression."""
+        ...
+
+    @staticmethod
+    def gte(a: Expr, b: Expr) -> Expr:
+        """Creates a gte(x, y) greater-than-or-equal expression."""
+        ...
+
+    @staticmethod
+    def lte(a: Expr, b: Expr) -> Expr:
+        """Creates a lte(x, y) less-than-or-equal expression."""
+        ...
+
+    @staticmethod
+    def clip(x: Expr, min: Expr, max: Expr) -> Expr:
+        """Creates a clip(x, min, max) clamping expression."""
+        ...
+
+    @staticmethod
+    def abs(x: Expr) -> Expr:
+        """Creates an abs(x) absolute value expression."""
+        ...
+
+    @staticmethod
+    def min(a: Expr, b: Expr) -> Expr:
+        """Creates a min(x, y) minimum expression."""
+        ...
+
+    @staticmethod
+    def max(a: Expr, b: Expr) -> Expr:
+        """Creates a max(x, y) maximum expression."""
+        ...
+
+    @staticmethod
+    def modulo(a: Expr, b: Expr) -> Expr:
+        """Creates a mod(x, y) modulo expression."""
+        ...
+
+    @staticmethod
+    def not_(x: Expr) -> Expr:
+        """Creates a not(x) logical not expression."""
+        ...
+
+    def __add__(self, other: Expr) -> Expr: ...
+    def __sub__(self, other: Expr) -> Expr: ...
+    def __mul__(self, other: Expr) -> Expr: ...
+    def __truediv__(self, other: Expr) -> Expr: ...
+    def __neg__(self) -> Expr: ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 

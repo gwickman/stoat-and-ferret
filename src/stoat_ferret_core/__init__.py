@@ -21,6 +21,10 @@ Timeline Types
 - merge_ranges: Merge overlapping/adjacent ranges
 - total_coverage: Calculate total duration covered by ranges
 
+Expression Engine
+-----------------
+- Expr: Type-safe FFmpeg filter expression builder
+
 FFmpeg Command Building
 -----------------------
 - FFmpegCommand: Type-safe builder for FFmpeg command arguments
@@ -54,6 +58,7 @@ try:
         ClipValidationError,
         CommandError,
         Duration,
+        Expr,
         FFmpegCommand,
         Filter,
         FilterChain,
@@ -104,6 +109,7 @@ except ImportError:
     find_gaps = _not_built
     merge_ranges = _not_built
     total_coverage = _not_built
+    Expr = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
     FilterChain = _not_built  # type: ignore[misc,assignment]
@@ -141,6 +147,8 @@ __all__ = [
     "find_gaps",
     "merge_ranges",
     "total_coverage",
+    # Expression engine
+    "Expr",
     # FFmpeg command building
     "FFmpegCommand",
     "Filter",

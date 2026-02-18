@@ -59,6 +59,7 @@
 //! ```
 
 mod command;
+pub mod expression;
 pub mod filter;
 
 pub use command::{CommandError, FFmpegCommand};

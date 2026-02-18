@@ -748,6 +748,8 @@ class TestModuleExports:
             "find_gaps",
             "merge_ranges",
             "total_coverage",
+            # Expression engine
+            "Expr",
             # FFmpeg
             "FFmpegCommand",
             "Filter",
@@ -770,6 +772,159 @@ class TestModuleExports:
         for name in expected:
             assert name in stoat_ferret_core.__all__
             assert hasattr(stoat_ferret_core, name)
+
+
+class TestExpr:
+    """Tests for the FFmpeg filter expression builder."""
+
+    def test_constant(self) -> None:
+        """Test Expr.constant creates a constant expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.constant(5.0)
+        assert str(expr) == "5"
+
+    def test_constant_float(self) -> None:
+        """Test Expr.constant with fractional value."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.constant(3.14)
+        assert str(expr) == "3.14"
+
+    def test_var(self) -> None:
+        """Test Expr.var creates a variable expression."""
+        from stoat_ferret_core import Expr
+
+        assert str(Expr.var("t")) == "t"
+        assert str(Expr.var("n")) == "n"
+        assert str(Expr.var("w")) == "w"
+        assert str(Expr.var("h")) == "h"
+        assert str(Expr.var("text_w")) == "text_w"
+        assert str(Expr.var("main_w")) == "main_w"
+
+    def test_var_invalid(self) -> None:
+        """Test Expr.var rejects invalid variable names."""
+        from stoat_ferret_core import Expr
+
+        with pytest.raises(ValueError, match="unknown variable"):
+            Expr.var("invalid")
+
+    def test_between(self) -> None:
+        """Test Expr.between creates a between expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.between(Expr.var("t"), Expr.constant(3.0), Expr.constant(5.0))
+        assert str(expr) == "between(t,3,5)"
+
+    def test_if_then_else(self) -> None:
+        """Test Expr.if_then_else creates a conditional expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.if_then_else(
+            Expr.gt(Expr.var("t"), Expr.constant(10.0)),
+            Expr.constant(0.5),
+            Expr.constant(1.0),
+        )
+        assert str(expr) == "if(gt(t,10),0.5,1)"
+
+    def test_comparison_functions(self) -> None:
+        """Test comparison function expressions."""
+        from stoat_ferret_core import Expr
+
+        assert str(Expr.lt(Expr.var("t"), Expr.constant(5.0))) == "lt(t,5)"
+        assert str(Expr.gt(Expr.var("t"), Expr.constant(5.0))) == "gt(t,5)"
+        assert str(Expr.eq_expr(Expr.var("n"), Expr.constant(0.0))) == "eq(n,0)"
+        assert str(Expr.gte(Expr.var("t"), Expr.constant(1.0))) == "gte(t,1)"
+        assert str(Expr.lte(Expr.var("t"), Expr.constant(10.0))) == "lte(t,10)"
+
+    def test_clip(self) -> None:
+        """Test Expr.clip creates a clamping expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.clip(Expr.var("t"), Expr.constant(0.0), Expr.constant(10.0))
+        assert str(expr) == "clip(t,0,10)"
+
+    def test_abs(self) -> None:
+        """Test Expr.abs creates an absolute value expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.abs(Expr.var("t") - Expr.constant(5.0))
+        assert str(expr) == "abs(t-5)"
+
+    def test_min_max(self) -> None:
+        """Test Expr.min and Expr.max."""
+        from stoat_ferret_core import Expr
+
+        assert str(Expr.min(Expr.var("w"), Expr.var("h"))) == "min(w,h)"
+        assert str(Expr.max(Expr.var("w"), Expr.var("h"))) == "max(w,h)"
+
+    def test_modulo(self) -> None:
+        """Test Expr.modulo creates a modulo expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.modulo(Expr.var("n"), Expr.constant(2.0))
+        assert str(expr) == "mod(n,2)"
+
+    def test_not(self) -> None:
+        """Test Expr.not_ creates a logical not expression."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.not_(Expr.between(Expr.var("t"), Expr.constant(3.0), Expr.constant(5.0)))
+        assert str(expr) == "not(between(t,3,5))"
+
+    def test_negate(self) -> None:
+        """Test Expr.negate and __neg__ operator."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.negate(Expr.var("t"))
+        assert str(expr) == "-t"
+        # Also test __neg__
+        assert str(-Expr.var("t")) == "-t"
+
+    def test_arithmetic_operators(self) -> None:
+        """Test +, -, *, / operator overloading."""
+        from stoat_ferret_core import Expr
+
+        t = Expr.var("t")
+        c = Expr.constant(2.0)
+        assert str(t + c) == "t+2"
+        assert str(t - c) == "t-2"
+        assert str(t * c) == "t*2"
+        assert str(t / c) == "t/2"
+
+    def test_precedence(self) -> None:
+        """Test that precedence is correct in serialization."""
+        from stoat_ferret_core import Expr
+
+        # (t + 1) * 2 -> (t+1)*2
+        expr = (Expr.var("t") + Expr.constant(1.0)) * Expr.constant(2.0)
+        assert str(expr) == "(t+1)*2"
+        # t * 2 + 1 -> t*2+1 (no unnecessary parens)
+        expr = Expr.var("t") * Expr.constant(2.0) + Expr.constant(1.0)
+        assert str(expr) == "t*2+1"
+
+    def test_complex_expression(self) -> None:
+        """Test a complex nested expression."""
+        from stoat_ferret_core import Expr
+
+        # if(gt(t,10),clip(t/2,0,1),0)
+        expr = Expr.if_then_else(
+            Expr.gt(Expr.var("t"), Expr.constant(10.0)),
+            Expr.clip(
+                Expr.var("t") / Expr.constant(2.0),
+                Expr.constant(0.0),
+                Expr.constant(1.0),
+            ),
+            Expr.constant(0.0),
+        )
+        assert str(expr) == "if(gt(t,10),clip(t/2,0,1),0)"
+
+    def test_repr(self) -> None:
+        """Test Expr.__repr__ format."""
+        from stoat_ferret_core import Expr
+
+        expr = Expr.constant(5.0)
+        assert repr(expr) == "Expr(5)"
 
 
 class TestExceptions:
