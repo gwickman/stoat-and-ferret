@@ -1,14 +1,19 @@
 {
   "exploration_id": "design-v006-009-validation-1771452449938",
   "results_folder": "design-v006-009-validation",
-  "status": "running",
+  "status": "complete",
   "pid": 16308,
   "started_at": "2026-02-18T22:07:29.938984",
-  "updated_at": "2026-02-18T22:07:31.723840",
-  "completed_at": null,
+  "updated_at": "2026-02-18T22:15:10.210596",
+  "completed_at": "2026-02-18T22:15:10.210195",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "discrepancies.md",
+    "pre-execution-checklist.md",
+    "validation-details.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v006-009-validation/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v006-009-validation"
