@@ -9,10 +9,10 @@
     {
       "number": 1,
       "name": "rust-filter-builders",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 2,
-      "features_complete": 0,
-      "started_at": null,
+      "features_complete": 1,
+      "started_at": "2026-02-19T11:04:52.679982Z",
       "completed_at": null,
       "skip_reason": null
     },
@@ -48,6 +48,6 @@
     }
   ],
   "current_theme": 1,
-  "current_feature": 1,
+  "current_feature": 2,
   "baseline_failures": []
 }
