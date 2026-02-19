@@ -1,10 +1,10 @@
 {
   "exploration_id": "v006-retro-005-arch-1771484072806",
   "results_folder": "v006-retro-005-arch",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 12828,
   "started_at": "2026-02-19T06:54:32.806217",
-  "updated_at": "2026-02-19T06:54:32.806217",
+  "updated_at": "2026-02-19T06:54:34.579438",
   "completed_at": null,
   "error": null,
   "documents": [],
