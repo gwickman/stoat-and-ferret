@@ -2,11 +2,30 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import jsonschema
 import structlog
 
 from stoat_ferret.effects.definitions import EffectDefinition
 
 logger = structlog.get_logger(__name__)
+
+
+class EffectValidationError:
+    """Structured validation error from JSON schema validation.
+
+    Attributes:
+        path: JSON path to the invalid field (e.g. "fontsize").
+        message: Human-readable error description.
+    """
+
+    def __init__(self, path: str, message: str) -> None:
+        self.path = path
+        self.message = message
+
+    def __repr__(self) -> str:
+        return f"EffectValidationError(path={self.path!r}, message={self.message!r})"
 
 
 class EffectRegistry:
@@ -47,3 +66,29 @@ class EffectRegistry:
             List of (effect_type, definition) tuples.
         """
         return list(self._effects.items())
+
+    def validate(self, effect_type: str, parameters: dict[str, Any]) -> list[EffectValidationError]:
+        """Validate parameters against the effect's JSON schema.
+
+        Args:
+            effect_type: The effect type identifier.
+            parameters: The parameters to validate.
+
+        Returns:
+            List of validation errors. Empty if valid.
+
+        Raises:
+            KeyError: If the effect type is not registered.
+        """
+        definition = self._effects.get(effect_type)
+        if definition is None:
+            msg = f"Unknown effect type: {effect_type}"
+            raise KeyError(msg)
+
+        schema = definition.parameter_schema
+        validator = jsonschema.Draft7Validator(schema)
+        errors: list[EffectValidationError] = []
+        for error in validator.iter_errors(parameters):
+            path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
+            errors.append(EffectValidationError(path=path, message=error.message))
+        return errors

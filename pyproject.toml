@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.109",
     "uvicorn[standard]>=0.27",
     "pydantic-settings>=2.0",
+    "jsonschema>=4.26.0",
 ]
 
 # Build system: Use maturin when building with Rust component
@@ -41,6 +42,7 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
     "maturin>=1.0",
+    "types-jsonschema>=4.26.0.20260202",
 ]
 
 [tool.ruff]
