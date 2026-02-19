@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v007-002-backlog-1771491324256",
   "results_folder": "design-v007-002-backlog",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 12828,
   "started_at": "2026-02-19T08:55:24.256350",
-  "updated_at": "2026-02-19T08:55:24.256350",
+  "updated_at": "2026-02-19T08:55:26.145259",
   "completed_at": null,
   "error": null,
   "documents": [],
