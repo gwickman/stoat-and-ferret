@@ -1,0 +1,43 @@
+{
+  "schema_version": "2.0",
+  "version": "v006",
+  "description": "Effects Engine Foundation — Build a greenfield Rust filter expression engine with graph validation, composition system, text overlay builder, speed control builders, effect discovery API, and clip effect application endpoint.",
+  "status": "running",
+  "started_at": "2026-02-18T21:58:39.789776Z",
+  "completed_at": null,
+  "themes": [
+    {
+      "number": 1,
+      "name": "filter-engine",
+      "status": "in_progress",
+      "features_total": 3,
+      "features_complete": 3,
+      "started_at": "2026-02-18T22:33:14.183633Z",
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 2,
+      "name": "filter-builders",
+      "status": "pending",
+      "features_total": 2,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 3,
+      "name": "effects-api",
+      "status": "pending",
+      "features_total": 3,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    }
+  ],
+  "current_theme": 1,
+  "current_feature": 3,
+  "baseline_failures": []
+}
