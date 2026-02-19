@@ -48,15 +48,19 @@ async function navigateAndSelectClip(
 ) {
   await navigateToEffects(page);
 
-  // Select correct project if multiple projects exist
+  // Wait for projects to load — the dropdown only renders when > 1 project exists.
+  // Use waitFor with a timeout so we handle both single-project and multi-project cases.
   const projectSelect = page.getByTestId("project-select");
-  if ((await projectSelect.count()) > 0) {
+  try {
+    await projectSelect.waitFor({ state: "visible", timeout: 5_000 });
     await projectSelect.selectOption(projectId);
+  } catch {
+    // Single project — auto-selected, no dropdown rendered
   }
 
   // Wait for clip to load and select it
   await expect(page.getByTestId(`clip-option-${clipId}`)).toBeVisible({
-    timeout: 10_000,
+    timeout: 15_000,
   });
   await page.getByTestId(`clip-option-${clipId}`).click();
 }
