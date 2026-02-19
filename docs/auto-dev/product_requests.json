@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": "PR-001",
+      "title": "Session health: Orphaned WebFetch calls across 14 instances",
+      "description": "14 unique orphaned WebFetch tool_use calls found across 11 sessions in the past 7 days. These HTTP requests were issued but never returned results, wasting execution time and blocking parallel tool completion. Related to existing BL-054 (WebFetch safety rules). The current lack of effective WebFetch timeout means any hung HTTP request blocks the entire session until manual termination. Adding timeout enforcement would eliminate this class of waste and improve session reliability.",
+      "priority": "P1",
+      "status": "open",
+      "tags": [
+        "session-health",
+        "retrospective"
+      ],
+      "project": "stoat-and-ferret",
+      "upvotes": 0,
+      "created": "2026-02-19T23:09:53.038879",
+      "updated": "2026-02-19T23:09:53.038879"
+    },
+    {
+      "id": "PR-002",
+      "title": "Session health: 34 orphaned non-WebFetch tool calls detected",
+      "description": "34 unique orphaned tool calls (tool_use without tool_result) found across 7 tool types: Bash (11), Task (7), TaskOutput (7), Read (6), Edit (1), Grep (1), Write (1). Orphaned Read/Edit/Write calls indicate abnormal session termination where work may have been lost. Adding graceful shutdown handling that records partial results for in-flight tool calls would improve debugging and reduce repeated work after interrupted sessions.",
+      "priority": "P2",
+      "status": "open",
+      "tags": [
+        "session-health",
+        "retrospective"
+      ],
+      "project": "stoat-and-ferret",
+      "upvotes": 0,
+      "created": "2026-02-19T23:09:55.253835",
+      "updated": "2026-02-19T23:09:55.253837"
+    }
+  ],
+  "next_id": 3,
+  "updated": "2026-02-19T23:09:55.253842"
+}
