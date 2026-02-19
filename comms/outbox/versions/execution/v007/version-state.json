@@ -4,7 +4,7 @@
   "description": "Effect Workshop GUI — Complete remaining effect types (audio mixing, transitions), build the effect registry with JSON schema validation and registry-based dispatch, and construct the full GUI effect workshop with catalog UI, parameter forms, and live preview. Covers milestones M2.4-2.6, M2.8-2.9.",
   "status": "completed",
   "started_at": "2026-02-19T09:52:53.799763Z",
-  "completed_at": "2026-02-19T22:29:03.479883Z",
+  "completed_at": "2026-02-19T23:45:12.803307Z",
   "themes": [
     {
       "number": 1,

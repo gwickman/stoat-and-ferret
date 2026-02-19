@@ -4,6 +4,7 @@
 - **Project**: stoat-and-ferret
 - **Version**: v007 (Effect Workshop GUI)
 - **Status**: Complete
+- **Commit**: `babbd4e`
 - **Retrospective Tasks**: 10/10 executed
 
 ## Verification Results
