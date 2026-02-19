@@ -56,12 +56,12 @@ Output Requirements:
 | 001 | `design-{VERSION}-001-env` | `001-environment-verification.md` | health_check, get_project_info, git_read, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 | 002 | `design-{VERSION}-002-backlog` | `002-backlog-analysis.md` | get_backlog_item, list_backlog_items, search_learnings, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 | 003 | `design-{VERSION}-003-impact` | `003-impact-assessment.md` | request_clarification, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
-| 004 | `design-{VERSION}-004-research` | `004-research-investigation.md` | request_clarification, read_document, start_exploration, get_exploration_status, get_exploration_result, get_backlog_item, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 004 | `design-{VERSION}-004-research` | `004-research-investigation.md` | request_clarification, read_document, start_exploration, get_exploration_status, get_exploration_result, get_backlog_item, query_cli_sessions, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 | 005 | `design-{VERSION}-005-logical` | `005-logical-design.md` | read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 | 006 | `design-{VERSION}-006-critical` | `006-critical-thinking.md` | request_clarification, read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 | 007 | `design-{VERSION}-007-drafts` | `007-document-drafts.md` | read_document, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 | 008 | `design-{VERSION}-008-persist` | `008-persist-documents.md` | read_document, design_version, design_theme, validate_version_design, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
-| 009 | `design-{VERSION}-009-validation` | `009-pre-execution-validation.md` | read_document, validate_version_design, get_backlog_item, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
+| 009 | `design-{VERSION}-009-validation` | `009-pre-execution-validation.md` | read_document, validate_version_design, get_backlog_item, list_backlog_items, list_product_requests, get_product_request, add_product_request, update_product_request, upvote_item |
 
 ---
 

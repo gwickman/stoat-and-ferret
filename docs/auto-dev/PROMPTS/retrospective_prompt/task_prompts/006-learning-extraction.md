@@ -40,6 +40,45 @@ Read:
 
 Identify version-level insights not covered by individual themes.
 
+### 3b. Read Session Health Findings
+
+Read Task 004b output if available:
+- `comms/outbox/versions/retrospective/${VERSION}/004b-session-health/README.md`
+- `comms/outbox/versions/retrospective/${VERSION}/004b-session-health/findings-detail.md`
+
+Identify learnings from session health patterns (e.g., recurring hung tools, authorization loops, compaction issues). These represent empirical evidence of execution problems that may yield transferable insights.
+
+### 3c. Mine Session Analytics for Undocumented Patterns
+
+Query session analytics to find failure patterns and execution characteristics that may not appear in written reports:
+
+```python
+# Find sessions with high error rates — these often contain undocumented learnings
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="troubleshoot",
+    query_type="failed_sessions",
+    since_days=30,
+    intent='{"investigating": "Sessions with high failure rates during version execution", "expected": "Sessions where many tool calls failed, indicating systemic issues"}'
+)
+
+# Check for patterns in tool errors across sessions
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="troubleshoot",
+    query_type="errors",
+    since_days=30,
+    intent='{"investigating": "Recurring error patterns across implementation sessions", "expected": "Repeated tool errors that suggest process or tooling improvements"}'
+)
+```
+
+Look for:
+- **Recurring tool errors** across multiple sessions — these indicate tooling or process gaps worth capturing as learnings
+- **Sessions with excessive duration** — may reveal debugging struggles that should inform future implementation guidance
+- **Tool authorization denials** — repeated denials for the same tool suggest prompts need `allowed_mcp_tools` updates
+
+Include session-sourced findings in Step 4 (Deduplicate and Filter) alongside report-sourced learnings. Mark the source as "session analytics" rather than a specific completion report.
+
 ### 4. Deduplicate and Filter
 
 From all identified learnings:
@@ -112,6 +151,7 @@ For each learning saved:
 - `save_learning`
 - `list_learnings`
 - `extract_learnings`
+- `query_cli_sessions`
 - `list_product_requests`
 - `get_product_request`
 - `add_product_request`

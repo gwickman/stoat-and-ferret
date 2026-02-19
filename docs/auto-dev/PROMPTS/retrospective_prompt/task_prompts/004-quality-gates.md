@@ -87,6 +87,37 @@ For each code problem, record:
 
 These flow to Task 007 for backlog item creation.
 
+#### 3e. Cross-Reference with Session Analytics (Optional)
+
+When classifying ambiguous test failures, use `query_cli_sessions` to check the execution history of sessions that implemented the relevant features:
+
+```python
+# Check for tool errors during the feature implementation session
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="troubleshoot",
+    query_type="errors",
+    since_days=30,
+    intent='{"investigating": "Whether tool errors during implementation correlate with test failures", "expected": "Tool call errors from sessions implementing features in this version"}'
+)
+
+# Check for hung or slow tool calls that may have left incomplete state
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="troubleshoot",
+    query_type="slow_tools",
+    since_days=30,
+    intent='{"investigating": "Whether slow/hung tools during implementation left incomplete changes", "expected": "Tool calls with excessive duration during version implementation"}'
+)
+```
+
+Use session analytics to:
+- Identify features that had troubled implementation sessions (many errors, retries, or hung tools)
+- Cross-reference test failures with sessions that had tool authorization denials (incomplete work)
+- Detect sessions with excessive context compaction (may indicate incomplete implementations)
+
+This evidence supplements — but does not replace — the code-level classification in Steps 3a-3d.
+
 ### 4. Final Gate Check
 
 After all test-problem fixes are applied, run `run_quality_gates` one final time.
@@ -122,6 +153,7 @@ Full quality gate output including:
 
 - `run_quality_gates`
 - `read_document`
+- `query_cli_sessions`
 - `list_product_requests`
 - `get_product_request`
 - `add_product_request`

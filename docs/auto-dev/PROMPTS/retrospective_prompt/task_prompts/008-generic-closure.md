@@ -56,6 +56,23 @@ git_read(project="${PROJECT}", operation="status")
 
 If stale branches exist, document them for cleanup.
 
+### 4b. Verify Session Completeness (Optional)
+
+If repository cleanup in Step 4 found unexpected state (stale branches, uncommitted changes), query session analytics to understand what happened:
+
+```python
+# Check for sessions that may have terminated abnormally
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="top_sessions",
+    since_days=30,
+    intent='{"investigating": "Whether any implementation sessions terminated abnormally leaving incomplete state", "expected": "Sessions sorted by duration to identify potential hangs or crashes"}'
+)
+```
+
+If stale branches correlate with sessions that had tool errors or excessive duration, document this in the closure report — it may indicate a process gap (e.g., missing cleanup on session failure).
+
 <!-- Documentation review moved to design-phase impact assessment (003-impact-assessment.md).
      See docs/auto-dev/IMPACT_ASSESSMENT.md for project-specific checks. -->
 
@@ -85,6 +102,7 @@ Detailed report of all changes made:
 
 - `read_document`
 - `git_read`
+- `query_cli_sessions`
 - `list_product_requests`
 - `get_product_request`
 - `add_product_request`

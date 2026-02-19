@@ -42,6 +42,16 @@ For each feature within themes:
 - Backlog item(s) addressed (BL-XXX references)
 - Dependencies (features or themes that must complete first)
 
+### 3a. End-to-End Acceptance Criteria for Bug Fixes
+
+When a feature is a bug fix (addresses incorrect behavior rather than adding new functionality):
+
+- Require at least one acceptance criterion that validates **user-observable end-to-end behavior**, not just internal method correctness
+- If the fix modifies a service method signature or adds a parameter, an AC must verify that the production caller passes the parameter and the user sees the corrected behavior
+- Example: a fix that adds a `goal` parameter to a service method needs an AC verifying that the prompt template (production caller) supplies `goal` and the generated output reflects it
+
+This prevents fixes that pass unit tests but remain practically ineffective because no caller was updated to exercise the fix (see LRN-079).
+
 ### 4. Execution Order
 
 Propose the order for theme and feature execution:
@@ -81,6 +91,29 @@ For each, provide:
 - Severity (high/medium/low)
 - What investigation would help resolve it
 - Current best guess if unresolved (clearly labeled as UNVERIFIED — do not present guesses as conclusions)
+
+### 8. Handler Concurrency Decisions
+
+For each new MCP tool handler introduced in the version, evaluate the following:
+
+1. **I/O Profile**: Does the handler perform filesystem I/O, database queries, network calls, or subprocess invocations? List each I/O operation and its expected latency.
+
+2. **Event Loop Blocking Potential**: Will any I/O operation block the event loop for >100ms under normal conditions? If yes, the handler should be async with `run_in_executor` for blocking calls, or use native async I/O libraries.
+
+3. **Concurrent Caller Support**: Can multiple clients call this handler simultaneously? If yes, ensure shared state is protected (e.g., file locks, atomic writes) or that the handler is stateless.
+
+Document the sync/async decision and rationale for each new handler in the logical design output.
+
+If no new handlers are introduced in the version, note "Not applicable — no new handlers" and skip the evaluation.
+
+**Example entry:**
+```
+Handler: query_cli_sessions
+- I/O Profile: filesystem scan + SQLite read (~200ms)
+- Event Loop Blocking: Yes — SQLite I/O blocks >100ms
+- Concurrent Callers: Yes — multiple clients may query simultaneously
+- Decision: async with run_in_executor for DB operations
+```
 
 ## Output Requirements
 

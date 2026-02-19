@@ -62,11 +62,56 @@ Run the following generic analysis checks across the collected data:
 - Look for increasing iteration counts (features requiring multiple fix cycles)
 - Identify themes or feature types that consistently take longer
 
-#### 4d. Log Patterns
+#### 4d. Execution Analytics
 
-- Use `get_server_logs` MCP tool with `source="cli"` to check for patterns in execution logs
-- Identify recurring error patterns or investigation difficulties
-- Flag excessive log retrieval indicating debugging struggles
+Use `query_cli_sessions` to analyse execution patterns across the version range:
+
+```python
+# Token consumption trends across versions
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="token_summary",
+    scope="project",
+    intent='{"investigating": "Token consumption trends across recent versions", "expected": "Per-model token usage to identify cost trends"}'
+)
+
+# Tool failure rates across sessions
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="tool_usage",
+    scope="project",
+    intent='{"investigating": "Tool call failure rates and latency trends", "expected": "Tool usage stats showing error rates and performance patterns"}'
+)
+
+# Session cost estimates
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="cost_estimate",
+    scope="project",
+    intent='{"investigating": "API cost trends across recent versions", "expected": "Cost estimates by model showing spending patterns"}'
+)
+
+# Daily activity distribution for workload patterns
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="daily_activity",
+    scope="project",
+    since_days=60,
+    intent='{"investigating": "Activity distribution across the version range", "expected": "Day-by-day breakdown of sessions, messages, and tool calls"}'
+)
+```
+
+Analyse:
+- **Token consumption trends**: Are versions getting more expensive? Which models drive cost?
+- **Tool failure rates**: Are certain tools failing more often? Increasing error rates indicate tooling degradation.
+- **Session duration distribution**: Are implementation sessions getting longer? This may indicate increasing complexity or decreasing tool effectiveness.
+- **Cost per version**: Normalise costs by feature count to identify efficiency trends.
+
+Cross-reference `query_cli_sessions` findings with `get_server_logs` patterns — structured analytics for trends, raw logs for specific incident investigation.
 
 #### 4e. Backlog Hygiene
 
@@ -147,7 +192,7 @@ Detailed analysis report:
 ### Efficiency Trends
 [Findings or "No concerning trends detected"]
 
-### Log Patterns
+### Execution Analytics
 [Findings or "No problematic patterns detected"]
 
 ### Backlog Hygiene
@@ -169,6 +214,7 @@ Detailed analysis report:
 
 - `read_document`
 - `get_server_logs`
+- `query_cli_sessions`
 - `list_backlog_items`
 - `list_learnings`
 - `search_learnings`

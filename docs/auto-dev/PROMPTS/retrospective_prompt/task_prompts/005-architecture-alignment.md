@@ -57,6 +57,28 @@ Compare the changes from step 2 against the documentation from step 3:
 
 For each drift item identified, verify it against the actual codebase (check file existence, read imports, confirm module structure) rather than relying solely on retrospective descriptions. Retrospective narratives may be inaccurate — ground drift findings in code evidence. (See LRN-135.)
 
+### 4b. Verify Drift with Session Evidence (Optional)
+
+When drift findings from Step 4 rely on retrospective narratives rather than direct code evidence, use `query_cli_sessions` to check what actually happened during implementation:
+
+```python
+# See which MCP tools were heavily used during this version's execution
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="tool_usage",
+    since_days=30,
+    intent='{"investigating": "Which tools and services were actively used during version execution", "expected": "Tool usage frequency showing which components were exercised"}'
+)
+```
+
+Session analytics can reveal:
+- Components that were heavily modified (high tool call counts to specific files/services)
+- New integration patterns (tools used together that weren't before)
+- Services that were not exercised at all (potential dead code or documentation-only components)
+
+This strengthens the "verify drift findings against code evidence" guideline from Step 4. Do NOT use session analytics as the primary drift detection method — it supplements code inspection.
+
 ### 5. Take Action Based on Findings
 
 **If NO new drift detected** (changes align with docs, or no docs exist to drift from):
@@ -107,6 +129,7 @@ Then:
 - `update_backlog_item`
 - `add_backlog_item`
 - `read_document`
+- `query_cli_sessions`
 - `list_product_requests`
 - `get_product_request`
 - `add_product_request`

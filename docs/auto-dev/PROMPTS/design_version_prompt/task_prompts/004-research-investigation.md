@@ -80,6 +80,38 @@ For any concrete values needed (timeouts, limits, thresholds):
 - If not determinable pre-implementation, mark as "TBD - requires runtime testing"
 - NEVER guess or use "typical" values without evidence
 
+#### 6b. Historical Execution Evidence
+
+When researching timing estimates, complexity assessments, or tool usage patterns, query session analytics for empirical data from past implementations:
+
+```python
+# How long did similar features take in past versions?
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="session_list",
+    scope="project",
+    intent='{"investigating": "Historical session durations for features similar to planned backlog items", "expected": "Session summaries with timing data to calibrate effort estimates"}'
+)
+
+# Which tools had issues in recent versions? Useful for risk assessment.
+query_cli_sessions(
+    project="${PROJECT}",
+    mode="analytics",
+    query_type="tool_usage",
+    scope="project",
+    since_days=60,
+    intent='{"investigating": "Tool reliability data to identify risks for planned features", "expected": "Tool call success rates and latency to identify fragile tools"}'
+)
+```
+
+Use session analytics to:
+- **Calibrate effort estimates**: Check actual session durations for past features of similar complexity
+- **Identify tool reliability risks**: If a tool the planned features depend on has high error rates, flag it as a risk
+- **Verify assumptions**: If research assumes a particular workflow is fast/reliable, check session data for evidence
+
+Mark findings sourced from session analytics with the tag "Source: query_cli_sessions" in evidence-log.md.
+
 ### 7. Impact Analysis
 
 Document:
@@ -87,6 +119,18 @@ Document:
 - **Breaking changes**: Will existing workflows or APIs break?
 - **Test impact**: What tests need creation or update?
 - **Documentation**: What docs require update after implementation?
+
+### 8. State & Persistence Analysis
+
+For each feature that introduces or modifies persistent state (files, databases, config stores), analyse:
+
+1. **Storage Location**: Where does the data live? Identify the file path, database, or config store. Verify the storage path API exists via `request_clarification` or codebase search — do not assume an API exists without evidence.
+2. **Multi-Project Implications**: Does the storage location work correctly when multiple projects are registered? Is data isolated per project or shared globally?
+3. **Data Classification**: Is the data user-generated, system-managed, or cached/derivable? What is the impact of data loss?
+4. **Lifecycle**: When is data created, updated, and deleted? Are there cleanup or migration requirements?
+5. **Path Stability**: Will the storage path remain valid across server restarts, project renames, and directory moves?
+
+If no features introduce persistent state, note "No persistent state introduced" in the README and skip the `persistence-analysis.md` output.
 
 ## Output Requirements
 
@@ -136,6 +180,15 @@ Analysis of implementation impact:
 - Test infrastructure needs
 - Documentation updates required
 
+### persistence-analysis.md (conditional)
+
+Required only when features introduce or modify persistent state. For each feature with persistence:
+- Storage location and verified API path
+- Multi-project isolation assessment
+- Data classification and loss impact
+- Lifecycle (create/update/delete) and migration needs
+- Path stability across restarts and renames
+
 ## Allowed MCP Tools
 
 - `request_clarification`
@@ -152,6 +205,7 @@ Analysis of implementation impact:
 - `add_product_request`
 - `update_product_request`
 - `upvote_item`
+- `query_cli_sessions`
 
 Plus DeepWiki tools:
 - `mcp__deepwiki__ask_question`

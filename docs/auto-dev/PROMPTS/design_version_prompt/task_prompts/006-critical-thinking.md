@@ -62,6 +62,7 @@ Review the refined design for:
 - No circular dependencies introduced
 - Test strategy covers new risk mitigations
 - Execution order still makes sense
+- **Persistence coherence**: If Task 004 produced a `persistence-analysis.md`, validate that the logical design accounts for all identified storage concerns (location, isolation, lifecycle, path stability). Features that introduce persistent state but reference a storage path API that was **NOT verified** in Task 004 must be flagged as **BLOCKING** risk — unverified storage APIs have caused runtime failures in past versions (see BL-539)
 
 ## Output Requirements
 

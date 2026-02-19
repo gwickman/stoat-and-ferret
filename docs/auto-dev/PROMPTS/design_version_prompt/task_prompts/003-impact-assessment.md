@@ -25,21 +25,7 @@ Identify which tools, documentation, and project areas will be affected by the p
 
 These checks apply to all projects regardless of project-specific configuration.
 
-#### 2.1 tool_help Currency
-
-For each MCP tool whose parameters or behavior will change based on the planned backlog items:
-- Check current `tool_help` content for the tool
-- Identify if the planned changes will make the help text inaccurate
-- Record each tool requiring a `tool_help` update
-
-#### 2.2 Tool Description Accuracy
-
-For each MCP tool affected by planned changes:
-- Review the tool's description (the short text shown in tool listings)
-- Flag descriptions that will become stale after implementation
-- Record each tool requiring a description update
-
-#### 2.3 Documentation Review
+#### 2.1 Documentation Review
 
 Identify which documentation files reference areas that will change:
 - Search for references to changed tools, services, or APIs
@@ -75,6 +61,22 @@ For each impact, produce a work item description that can feed into the logical 
 - Where the change is needed (file paths or areas)
 - Estimated scope (small/substantial/cross-version)
 - Which planned feature causes this impact
+
+### 6. Caller Impact Analysis
+
+For any backlog item that modifies tool parameters, service method signatures, or API schemas:
+
+1. **Enumerate production callers** — identify all callers of the modified interface:
+   - Prompt templates that invoke the tool or service
+   - Service methods that call the modified method
+   - Handlers that wire parameters to the service layer
+   - Test fixtures that exercise the interface
+2. **Assess caller adoption** — for each caller, determine whether it will exercise the new/modified parameter or behavior
+3. **Flag caller-adoption risks** — if any production caller will NOT exercise the new behavior, record it as a caller-adoption risk in the impact table with classification "substantial"
+
+This prevents the pattern where an internal fix passes all tests but is practically ineffective because no production caller was updated to use the new behavior (see LRN-079: "Wire call sites alongside parameter additions").
+
+Include caller-impact findings as rows in the impact table (impact-table.md) with area "caller-impact".
 
 ## Output Requirements
 

@@ -4,7 +4,7 @@ Read AGENTS.md first and follow all instructions there, including the mandatory 
 
 ## Objective
 
-Compile all findings from tasks 001-006 into a single proposals document using the Crystal Clear Actions format. All proposals are auto-approved.
+Compile all findings from tasks 001-006 (including 004b) into a single proposals document using the Crystal Clear Actions format. All proposals are auto-approved.
 
 ## Context
 
@@ -19,6 +19,7 @@ Read the README.md from each completed task:
 - `comms/outbox/versions/retrospective/${VERSION}/002-documentation/README.md`
 - `comms/outbox/versions/retrospective/${VERSION}/003-backlog/README.md`
 - `comms/outbox/versions/retrospective/${VERSION}/004-quality/README.md`
+- `comms/outbox/versions/retrospective/${VERSION}/004b-session-health/README.md`
 - `comms/outbox/versions/retrospective/${VERSION}/005-architecture/README.md`
 - `comms/outbox/versions/retrospective/${VERSION}/006-learnings/README.md`
 
@@ -31,6 +32,7 @@ From each task, extract items that need remediation:
 - **002**: Missing documentation artifacts
 - **003**: Backlog items that failed to complete
 - **004**: Quality gate failures not yet fixed
+- **004b**: Session health findings — product requests already created by 004b (reference only); check for any HIGH findings that need additional backlog items
 - **005**: Architecture drift items (already handled via backlog — reference only)
 - **006**: Learning extraction issues (unlikely but check)
 

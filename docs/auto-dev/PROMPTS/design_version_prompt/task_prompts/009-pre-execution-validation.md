@@ -125,6 +125,22 @@ Parse THEME_INDEX.md and compare against actual folder structure:
 
 Any mismatch is a BLOCKING FAILURE.
 
+### Backlog Cross-Referencing (all checks)
+
+When reporting a warning or issue from any check above, search the backlog for related items:
+
+1. Call `list_backlog_items(project=PROJECT, search="<keywords>")` using keywords from the warning text and affected component names
+2. Limit to 5 results per warning (`limit=5`) to avoid verbose output
+3. Include matches in the validation report with: **BL ID**, **title**, and **status**
+4. Cross-references are **informational only** — they do not block validation
+5. If a related backlog item is found (especially completed ones), note whether the issue may indicate an incomplete fix
+
+Example output format:
+```
+- Warning: THEME_INDEX contains placeholder text in theme 02
+  Related backlog: BL-394 "Fix THEME_INDEX placeholder text" (status: completed) — may indicate incomplete fix
+```
+
 ## Output Requirements
 
 Create in `comms/outbox/exploration/design-${VERSION}-009-validation/`:
@@ -220,6 +236,7 @@ Document any issues found. If none: "No discrepancies identified."
 - `validate_version_design`
 - `git_read` (operation="status")
 - `get_backlog_item`
+- `list_backlog_items`
 - `list_product_requests`
 - `get_product_request`
 - `add_product_request`

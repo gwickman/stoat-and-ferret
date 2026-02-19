@@ -108,6 +108,10 @@ For EACH feature, create requirements.md:
 - Background (context, backlog items)
 - Functional Requirements (FR-001, FR-002, etc. with acceptance criteria)
 - Non-Functional Requirements (NFR-001, etc. with metrics)
+- Handler Pattern (conditional: only when the feature introduces new MCP tool handlers)
+  - Pattern: sync or async (from Task 005 Handler Concurrency Decisions analysis)
+  - Rationale: brief justification referencing I/O profile, event loop blocking, and concurrent caller assessment
+  - If no new handlers, include "Not applicable for ${VERSION} — no new handlers introduced" or omit the section entirely
 - Out of Scope (explicit boundaries)
 - Test Requirements (from Task 005/006 test strategy)
 - Reference: `See comms/outbox/versions/design/${VERSION}/004-research/ for supporting evidence`
