@@ -854,9 +854,15 @@ mod tests {
 
     #[test]
     fn test_transition_type_specific_values() {
-        assert_eq!(TransitionType::parse("wipeleft").unwrap(), TransitionType::Wipeleft);
+        assert_eq!(
+            TransitionType::parse("wipeleft").unwrap(),
+            TransitionType::Wipeleft
+        );
         assert_eq!(TransitionType::Wipeleft.as_str(), "wipeleft");
-        assert_eq!(TransitionType::parse("dissolve").unwrap(), TransitionType::Dissolve);
+        assert_eq!(
+            TransitionType::parse("dissolve").unwrap(),
+            TransitionType::Dissolve
+        );
         assert_eq!(TransitionType::Dissolve.as_str(), "dissolve");
     }
 
@@ -1072,10 +1078,7 @@ mod tests {
             .with_curve1(FadeCurve::Qsin)
             .with_curve2(FadeCurve::Log)
             .build();
-        assert_eq!(
-            filter.to_string(),
-            "acrossfade=d=1.5:c1=qsin:c2=log"
-        );
+        assert_eq!(filter.to_string(), "acrossfade=d=1.5:c1=qsin:c2=log");
     }
 
     #[test]
