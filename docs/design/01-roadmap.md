@@ -205,23 +205,23 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 - [x] Validation with helpful error messages (Rust Error types)
 
 ### Milestone 2.4: Audio Mixing
-- [ ] Implement amix filter builder (Rust)
-- [ ] Add volume level controls per track
-- [ ] Create audio fade in/out capability
-- [ ] Build audio ducking patterns
-- [ ] Test with edge cases (silence, clipping, format mismatches)
+- [x] Implement amix filter builder (Rust)
+- [x] Add volume level controls per track
+- [x] Create audio fade in/out capability
+- [x] Build audio ducking patterns
+- [x] Test with edge cases (silence, clipping, format mismatches)
 
 ### Milestone 2.5: Transitions
-- [ ] Implement fade transitions (fade in/out/crossfade) in Rust
-- [ ] Add xfade filter support for transition effects
-- [ ] Create transition parameter validation
-- [ ] Build `/effects/transition` API endpoint (Python)
+- [x] Implement fade transitions (fade in/out/crossfade) in Rust
+- [x] Add xfade filter support for transition effects
+- [x] Create transition parameter validation
+- [x] Build `/effects/transition` API endpoint (Python)
 
 ### Milestone 2.6: Effect Registry & Discovery
 - [x] Design effect registry with JSON schema validation
 - [x] Implement effect parameter validation as Rust functions
 - [x] Create effect builder protocol for dependency injection
-- [ ] Add effect metrics (effect_applications_total by type)
+- [x] Add effect metrics (effect_applications_total by type)
 - [x] Build `/effects` discovery endpoint with AI hints
 
 ### Milestone 2.7: Quality Verification
@@ -232,18 +232,18 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 - [ ] Security review of text input sanitization
 
 ### Milestone 2.8: GUI - Effect Discovery UI
-- [ ] Build effect catalog component from `/effects` endpoint
-- [ ] Create parameter form generator from JSON schema
-- [ ] Display AI hints as contextual tooltips
-- [ ] Implement live filter string preview (shows Rust-generated FFmpeg filter)
-- [ ] Add parameter validation with inline error display
+- [x] Build effect catalog component from `/effects` endpoint
+- [x] Create parameter form generator from JSON schema
+- [x] Display AI hints as contextual tooltips
+- [x] Implement live filter string preview (shows Rust-generated FFmpeg filter)
+- [x] Add parameter validation with inline error display
 
 ### Milestone 2.9: GUI - Effect Builder
-- [ ] Create effect configuration panel with all parameters
-- [ ] Build "Apply to Clip" workflow with clip selector
-- [ ] Show effect stack visualization per clip
+- [x] Create effect configuration panel with all parameters
+- [x] Build "Apply to Clip" workflow with clip selector
+- [x] Show effect stack visualization per clip
 - [ ] Add effect preview thumbnail (static frame with effect applied)
-- [ ] Implement effect editing and removal
+- [x] Implement effect editing and removal
 
 ### Deliverables
 - Text overlay with timing and animation

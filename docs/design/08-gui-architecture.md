@@ -44,6 +44,21 @@ The GUI is served as static files from the FastAPI application:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Client-Side Routes
+
+The React app uses `react-router-dom` with `BrowserRouter` rooted at `/gui`:
+
+| URL | Page Component | Description |
+|-----|----------------|-------------|
+| `/gui/` | `DashboardPage` | Operations dashboard with health and metrics |
+| `/gui/library` | `LibraryPage` | Video library browser with search |
+| `/gui/projects` | `ProjectsPage` | Project list and management |
+| `/gui/effects` | `EffectsPage` | Effect Workshop with full CRUD workflow |
+
+Navigation tabs are dynamically shown/hidden based on backend endpoint availability checks.
+
+**Known Limitation — SPA Fallback:** Direct URL access to client-side routes (e.g., typing `/gui/effects` in the browser address bar) may return 404 since `StaticFiles` serves files, not SPA routes. **Workaround:** Navigate to `/gui` first, then use in-app links. The React Router handles routing correctly once the SPA is loaded.
+
 ### Communication Patterns
 
 ```
@@ -210,48 +225,81 @@ Create and manage editing projects:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5. Effect Workshop Panel (Phase 2)
+### 5. Effect Workshop Panel (Phase 2) — Implemented
 
-Interactive effect builder with live preview:
+Interactive effect builder with live preview, accessible at `/gui/effects`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Effect Workshop                                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
+│  Project: [My Vacation Montage ▼]                                        │
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Clip Selector                                                   │    │
+│  │  [beach_sunset] [mountain_view] [city_timelapse]                 │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                          │
 │  ┌─────────────────────────┐  ┌─────────────────────────────────────┐  │
 │  │  Available Effects      │  │  Effect Configuration               │  │
 │  │  ─────────────────────  │  │  ─────────────────────────────────  │  │
-│  │  ● Text Overlay         │  │  Type: Text Overlay                 │  │
-│  │    Speed Control        │  │                                     │  │
-│  │    Fade Transition      │  │  Text: [Chapter 1          ]        │  │
-│  │    Audio Mix            │  │  Position: [Center ▼]               │  │
-│  │                         │  │  Font Size: [48    ] px             │  │
-│  │                         │  │  Color: [#FFFFFF] ■                 │  │
-│  │  AI Hint:               │  │  Start: [0.0   ] s                  │  │
-│  │  "Add titles, captions, │  │  Duration: [3.0   ] s               │  │
-│  │   or labels to video"   │  │  Fade In: [0.5   ] s                │  │
-│  │                         │  │  Fade Out: [0.5   ] s               │  │
+│  │  🔍 Search...           │  │  Type: Text Overlay                 │  │
+│  │  [Video▼] [Grid/List]   │  │                                     │  │
+│  │                         │  │  Text: [Chapter 1          ]        │  │
+│  │  ● Text Overlay         │  │  Position: [Center ▼]               │  │
+│  │    Speed Control        │  │  Font Size: [48    ] px             │  │
+│  │    Video Fade           │  │  Color: [#FFFFFF] ■                 │  │
+│  │    Crossfade (Video)    │  │                                     │  │
+│  │    ...                  │  │                                     │  │
 │  └─────────────────────────┘  └─────────────────────────────────────┘  │
 │                                                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │  Filter Preview (Generated by Rust Core)                         │    │
+│  │  Filter Preview (Generated by Rust Core)              [📋 Copy]  │    │
 │  │  ─────────────────────────────────────────────────────────────  │    │
 │  │  drawtext=text='Chapter 1':fontsize=48:fontcolor=white:         │    │
-│  │  x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,0,3)':         │    │
-│  │  alpha='if(lt(t,0.5),(t-0)/0.5,if(gt(t,2.5),(3-t)/0.5,1))'      │    │
+│  │  x=(w-text_w)/2:y=(h-text_h)/2                                  │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                          │
-│  [Apply to Selected Clip]                    [Preview Effect →]          │
+│  [Apply Effect]                                                          │
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Effect Stack (beach_sunset)                                     │    │
+│  │  ─────────────────────────────────────────────────────────────  │    │
+│  │  1. text_overlay  text="Chapter 1" fontsize=48    [Edit][Remove] │    │
+│  │  2. video_fade    fade_type=in duration=1.5       [Edit][Remove] │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Implemented Components:**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `EffectsPage` | `pages/EffectsPage.tsx` | Orchestrator composing all sub-components |
+| `ClipSelector` | `components/ClipSelector.tsx` | Horizontal clip selection with timeline info |
+| `EffectCatalog` | `components/EffectCatalog.tsx` | Browsable effect list with search and category filter |
+| `EffectParameterForm` | `components/EffectParameterForm.tsx` | Schema-driven form generator from JSON Schema |
+| `FilterPreview` | `components/FilterPreview.tsx` | Live FFmpeg filter string with syntax highlighting |
+| `EffectStack` | `components/EffectStack.tsx` | Per-clip effect list with edit/remove actions |
+
+**Zustand Stores:**
+
+| Store | File | State |
+|-------|------|-------|
+| `useEffectCatalogStore` | `stores/effectCatalogStore.ts` | Search, category filter, selection, view mode |
+| `useEffectFormStore` | `stores/effectFormStore.ts` | Parameters, validation errors, JSON schema |
+| `useEffectPreviewStore` | `stores/effectPreviewStore.ts` | Filter string, loading state |
+| `useEffectStackStore` | `stores/effectStackStore.ts` | Selected clip, applied effects, CRUD |
+
 **Features:**
-- Effect catalog from `/effects` endpoint
-- Parameter forms auto-generated from JSON schema
+- Effect catalog from `/api/v1/effects` endpoint with search and category filtering
+- Parameter forms auto-generated from JSON schema (number, string, enum, boolean, color fields)
 - AI hints displayed as contextual help
-- Live filter string preview (transparency)
-- Apply to clip workflow
+- Live filter string preview with syntax highlighting and copy-to-clipboard
+- Apply to clip workflow with clip selector
+- Effect stack visualization with inline edit and two-step-confirm removal
+- Full CRUD: apply (POST), update (PATCH), remove (DELETE) effects
 
 ### 6. Timeline Canvas (Phase 3)
 
@@ -509,16 +557,16 @@ interface PreviewUpdateEvent {
 ### Phase 2: Effect Workshop
 
 **GUI Milestone 2.1: Effect Discovery UI**
-- [ ] Build effect catalog from `/effects` endpoint
-- [ ] Create parameter form generator from JSON schema
-- [ ] Add AI hints as tooltips
-- [ ] Implement filter preview display
+- [x] Build effect catalog from `/effects` endpoint
+- [x] Create parameter form generator from JSON schema
+- [x] Add AI hints as tooltips
+- [x] Implement filter preview display
 
 **GUI Milestone 2.2: Effect Builder**
-- [ ] Create effect configuration panel
-- [ ] Add live parameter validation
-- [ ] Build "Apply to Clip" workflow
-- [ ] Show effect stack per clip
+- [x] Create effect configuration panel
+- [x] Add live parameter validation
+- [x] Build "Apply to Clip" workflow
+- [x] Show effect stack per clip
 
 ### Phase 3: Timeline Canvas
 
@@ -623,9 +671,10 @@ stoat-and-ferret/
 │   │   │   │   └── ClipList.tsx
 │   │   │   │
 │   │   │   ├── effects/
-│   │   │   │   ├── EffectWorkshop.tsx
 │   │   │   │   ├── EffectCatalog.tsx
-│   │   │   │   ├── ParameterForm.tsx
+│   │   │   │   ├── EffectParameterForm.tsx
+│   │   │   │   ├── EffectStack.tsx
+│   │   │   │   ├── ClipSelector.tsx
 │   │   │   │   └── FilterPreview.tsx
 │   │   │   │
 │   │   │   ├── timeline/
@@ -653,11 +702,17 @@ stoat-and-ferret/
 │   │   ├── hooks/
 │   │   │   ├── useWebSocket.ts
 │   │   │   ├── useApi.ts
+│   │   │   ├── useEffects.ts
+│   │   │   ├── useEffectPreview.ts
 │   │   │   └── useTheaterMode.ts
 │   │   │
 │   │   ├── stores/
 │   │   │   ├── appStore.ts
 │   │   │   ├── projectStore.ts
+│   │   │   ├── effectCatalogStore.ts
+│   │   │   ├── effectFormStore.ts
+│   │   │   ├── effectPreviewStore.ts
+│   │   │   ├── effectStackStore.ts
 │   │   │   └── theaterStore.ts
 │   │   │
 │   │   ├── api/
