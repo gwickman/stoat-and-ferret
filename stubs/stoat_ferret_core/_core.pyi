@@ -635,6 +635,140 @@ class FFmpegCommand:
     def __repr__(self) -> str: ...
 
 
+class DrawtextBuilder:
+    """Type-safe builder for FFmpeg drawtext filters.
+
+    Builds drawtext filters with position presets, font styling, shadow,
+    box background, and alpha animation via the expression engine.
+    """
+
+    def __new__(cls, text: str) -> DrawtextBuilder:
+        """Creates a new drawtext builder with the given text.
+
+        The text is automatically escaped for FFmpeg drawtext syntax,
+        including ``%`` -> ``%%`` for text expansion mode.
+
+        Args:
+            text: The text to display.
+        """
+        ...
+
+    def font(self, name: str) -> DrawtextBuilder:
+        """Sets the font name via fontconfig lookup.
+
+        Args:
+            name: The fontconfig font name (e.g., "monospace", "Sans").
+        """
+        ...
+
+    def fontfile(self, path: str) -> DrawtextBuilder:
+        """Sets the font file path directly.
+
+        Args:
+            path: Path to the font file.
+        """
+        ...
+
+    def fontsize(self, size: int) -> DrawtextBuilder:
+        """Sets the font size in pixels. Default is 16.
+
+        Args:
+            size: Font size in pixels.
+        """
+        ...
+
+    def fontcolor(self, color: str) -> DrawtextBuilder:
+        """Sets the font color. Default is "black".
+
+        Args:
+            color: Font color (e.g., "white", "#FF0000", "white@0.5").
+        """
+        ...
+
+    def position(
+        self, preset: str, margin: int = 10, x: int = 0, y: int = 0
+    ) -> DrawtextBuilder:
+        """Sets the text position using a preset name.
+
+        Preset names: "center", "bottom_center", "top_left", "top_right",
+        "bottom_left", "bottom_right", "absolute".
+
+        For margin-based presets, pass the margin parameter.
+        For absolute positioning, use preset="absolute" with x and y.
+
+        Args:
+            preset: Position preset name.
+            margin: Margin in pixels for margin-based presets (default: 10).
+            x: X coordinate for absolute positioning (default: 0).
+            y: Y coordinate for absolute positioning (default: 0).
+
+        Raises:
+            ValueError: If preset name is unknown.
+        """
+        ...
+
+    def shadow(self, x_offset: int, y_offset: int, color: str) -> DrawtextBuilder:
+        """Adds a shadow effect to the text.
+
+        Args:
+            x_offset: Horizontal shadow offset in pixels.
+            y_offset: Vertical shadow offset in pixels.
+            color: Shadow color.
+        """
+        ...
+
+    def box_background(self, color: str, borderw: int) -> DrawtextBuilder:
+        """Adds a box background behind the text.
+
+        Args:
+            color: Box background color (e.g., "black@0.5").
+            borderw: Box border width in pixels.
+        """
+        ...
+
+    def alpha(self, value: float) -> DrawtextBuilder:
+        """Sets a static alpha value.
+
+        Args:
+            value: Alpha value between 0.0 (transparent) and 1.0 (opaque).
+
+        Raises:
+            ValueError: If alpha is not in [0.0, 1.0].
+        """
+        ...
+
+    def alpha_fade(
+        self, start_time: float, fade_in: float, end_time: float, fade_out: float
+    ) -> DrawtextBuilder:
+        """Sets an alpha fade animation using the expression engine.
+
+        Args:
+            start_time: When the text first appears (seconds).
+            fade_in: Duration of fade in (seconds).
+            end_time: When the text starts fading out (seconds).
+            fade_out: Duration of fade out (seconds).
+        """
+        ...
+
+    def enable(self, expr: str) -> DrawtextBuilder:
+        """Sets a time-based enable expression.
+
+        Args:
+            expr: An FFmpeg expression string for the enable parameter.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the drawtext filter.
+
+        Returns:
+            A Filter that can be used in filter chains and graphs.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 

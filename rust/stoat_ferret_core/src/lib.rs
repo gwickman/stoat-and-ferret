@@ -81,6 +81,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register expression types
     m.add_class::<ffmpeg::expression::PyExpr>()?;
 
+    // Register drawtext builder
+    m.add_class::<ffmpeg::drawtext::DrawtextBuilder>()?;
+
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_path, m)?)?;

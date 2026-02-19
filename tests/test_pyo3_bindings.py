@@ -973,6 +973,8 @@ class TestModuleExports:
             "find_gaps",
             "merge_ranges",
             "total_coverage",
+            # Drawtext builder
+            "DrawtextBuilder",
             # Expression engine
             "Expr",
             # FFmpeg
@@ -1150,6 +1152,202 @@ class TestExpr:
 
         expr = Expr.constant(5.0)
         assert repr(expr) == "Expr(5)"
+
+
+class TestDrawtextBuilder:
+    """Tests for DrawtextBuilder PyO3 bindings."""
+
+    def test_basic_build(self) -> None:
+        """Test building a simple drawtext filter."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("Hello World").build()
+        s = str(f)
+        assert s.startswith("drawtext=")
+        assert "text=Hello World" in s
+
+    def test_text_escaping(self) -> None:
+        """Test that special characters are escaped in text."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("Score: 100%").build()
+        s = str(f)
+        assert "Score\\: 100%%" in s
+
+    def test_font_and_fontsize(self) -> None:
+        """Test setting font and fontsize."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").font("monospace").fontsize(32).build()
+        s = str(f)
+        assert "font=monospace" in s
+        assert "fontsize=32" in s
+
+    def test_fontfile(self) -> None:
+        """Test setting fontfile clears font."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").font("monospace").fontfile("/path/to/font.ttf").build()
+        s = str(f)
+        assert "fontfile=/path/to/font.ttf" in s
+        assert "font=" not in s
+
+    def test_fontcolor(self) -> None:
+        """Test setting font color."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").fontcolor("white").build()
+        s = str(f)
+        assert "fontcolor=white" in s
+
+    def test_position_center(self) -> None:
+        """Test center position preset."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").position("center").build()
+        s = str(f)
+        assert "x=(w-text_w)/2" in s
+        assert "y=(h-text_h)/2" in s
+
+    def test_position_bottom_center(self) -> None:
+        """Test bottom_center position preset with margin."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").position("bottom_center", margin=20).build()
+        s = str(f)
+        assert "x=(w-text_w)/2" in s
+        assert "y=h-text_h-20" in s
+
+    def test_position_top_left(self) -> None:
+        """Test top_left position preset."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").position("top_left", margin=15).build()
+        s = str(f)
+        assert "x=15" in s
+        assert "y=15" in s
+
+    def test_position_absolute(self) -> None:
+        """Test absolute position preset."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").position("absolute", x=100, y=200).build()
+        s = str(f)
+        assert "x=100" in s
+        assert "y=200" in s
+
+    def test_position_invalid(self) -> None:
+        """Test invalid position preset raises ValueError."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        with pytest.raises(ValueError, match="unknown position preset"):
+            DrawtextBuilder("text").position("invalid_preset")
+
+    def test_shadow(self) -> None:
+        """Test shadow effect."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").shadow(2, 2, "black").build()
+        s = str(f)
+        assert "shadowx=2" in s
+        assert "shadowy=2" in s
+        assert "shadowcolor=black" in s
+
+    def test_box_background(self) -> None:
+        """Test box background."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").box_background("black@0.5", 5).build()
+        s = str(f)
+        assert "box=1" in s
+        assert "boxcolor=black@0.5" in s
+        assert "boxborderw=5" in s
+
+    def test_alpha_static(self) -> None:
+        """Test static alpha value."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").alpha(0.5).build()
+        s = str(f)
+        assert "alpha='0.5'" in s
+
+    def test_alpha_invalid(self) -> None:
+        """Test alpha out of range raises ValueError."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        with pytest.raises(ValueError, match="alpha must be between"):
+            DrawtextBuilder("text").alpha(1.5)
+
+    def test_alpha_fade(self) -> None:
+        """Test alpha fade animation generates expression."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").alpha_fade(1.0, 0.5, 5.0, 0.5).build()
+        s = str(f)
+        assert "alpha=" in s
+        assert "if(" in s
+        assert "lt(t," in s
+
+    def test_enable(self) -> None:
+        """Test enable expression."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("text").enable("between(t,1,5)").build()
+        s = str(f)
+        assert "enable='between(t,1,5)'" in s
+
+    def test_method_chaining(self) -> None:
+        """Test full method chaining works."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = (
+            DrawtextBuilder("Hello")
+            .font("Sans")
+            .fontsize(24)
+            .fontcolor("white")
+            .position("center")
+            .shadow(1, 1, "black")
+            .box_background("black@0.5", 5)
+            .alpha(0.8)
+            .enable("between(t,0,10)")
+            .build()
+        )
+        s = str(f)
+        assert "drawtext=" in s
+        assert "font=Sans" in s
+        assert "fontsize=24" in s
+        assert "fontcolor=white" in s
+        assert "x=(w-text_w)/2" in s
+        assert "shadowx=1" in s
+        assert "box=1" in s
+        assert "alpha='0.8'" in s
+        assert "enable='between(t,0,10)'" in s
+
+    def test_build_returns_filter(self) -> None:
+        """Test that build() returns a Filter object."""
+        from stoat_ferret_core import DrawtextBuilder, Filter
+
+        f = DrawtextBuilder("text").build()
+        # The result should be a Filter - check it has param method
+        assert isinstance(f, Filter)
+
+    def test_repr(self) -> None:
+        """Test repr output."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        b = DrawtextBuilder("text")
+        assert "DrawtextBuilder" in repr(b)
+
+    def test_in_filter_chain(self) -> None:
+        """Test DrawtextBuilder output works in a FilterChain."""
+        from stoat_ferret_core import DrawtextBuilder, FilterChain
+
+        f = DrawtextBuilder("Overlay").position("center").fontsize(48).build()
+        chain = FilterChain().input("0:v").filter(f).output("out")
+        s = str(chain)
+        assert "[0:v]" in s
+        assert "drawtext=" in s
+        assert "[out]" in s
 
 
 class TestExceptions:
