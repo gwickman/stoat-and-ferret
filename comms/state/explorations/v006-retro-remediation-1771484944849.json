@@ -1,10 +1,10 @@
 {
   "exploration_id": "v006-retro-remediation-1771484944849",
   "results_folder": "v006-retro-remediation",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 12828,
   "started_at": "2026-02-19T07:09:04.849465",
-  "updated_at": "2026-02-19T07:09:04.849465",
+  "updated_at": "2026-02-19T07:09:06.650481",
   "completed_at": null,
   "error": null,
   "documents": [],
