@@ -1,0 +1,53 @@
+{
+  "schema_version": "2.0",
+  "version": "v007",
+  "description": "Effect Workshop GUI — Complete remaining effect types (audio mixing, transitions), build the effect registry with JSON schema validation and registry-based dispatch, and construct the full GUI effect workshop with catalog UI, parameter forms, and live preview. Covers milestones M2.4-2.6, M2.8-2.9.",
+  "status": "pending",
+  "started_at": "2026-02-19T09:52:53.799763Z",
+  "completed_at": null,
+  "themes": [
+    {
+      "number": 1,
+      "name": "rust-filter-builders",
+      "status": "pending",
+      "features_total": 2,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 2,
+      "name": "effect-registry-api",
+      "status": "pending",
+      "features_total": 3,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 3,
+      "name": "effect-workshop-gui",
+      "status": "pending",
+      "features_total": 4,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 4,
+      "name": "quality-validation",
+      "status": "pending",
+      "features_total": 2,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    }
+  ],
+  "current_theme": 1,
+  "current_feature": 1,
+  "baseline_failures": []
+}
