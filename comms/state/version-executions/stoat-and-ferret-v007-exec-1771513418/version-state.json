@@ -21,7 +21,7 @@
       "name": "effect-registry-api",
       "status": "in_progress",
       "features_total": 3,
-      "features_complete": 1,
+      "features_complete": 2,
       "started_at": "2026-02-19T15:04:03.071419Z",
       "completed_at": null,
       "skip_reason": null
@@ -48,6 +48,6 @@
     }
   ],
   "current_theme": 2,
-  "current_feature": 2,
+  "current_feature": 3,
   "baseline_failures": []
 }

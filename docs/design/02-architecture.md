@@ -144,6 +144,8 @@ This document describes the architecture of an AI-driven video editing system de
 │  • FFmpeg expression engine (type-safe expression tree builder)         │
 │  • Drawtext filter builder (text overlays with position presets)        │
 │  • Speed control filters (setpts + auto-chained atempo)                │
+│  • Audio mixing filters (volume, afade, amix, ducking)                 │
+│  • Transition filters (fade, xfade, acrossfade)                        │
 │  • Input sanitization (text escaping, path validation)                  │
 │  • Layout math (PIP positions, split-screen grids)                      │
 │  • Render coordination (progress tracking, ETA calculation)             │
@@ -186,13 +188,13 @@ The architecture integrates quality attributes at every layer. These are not opt
 ```
 
 **Metrics (Prometheus format):**
-- `video_editor_http_requests_total{method, endpoint, status}`
-- `video_editor_http_request_duration_seconds{method, endpoint}`
-- `video_editor_render_jobs_total{status}`
-- `video_editor_render_duration_seconds{quality}`
-- `video_editor_ffmpeg_processes_active`
-- `video_editor_rust_core_operation_seconds{operation}` - Rust operation timing
-- `video_editor_filter_generation_seconds` - Filter chain build time
+- `http_requests_total{method, path, status}` - HTTP request counter
+- `http_request_duration_seconds{method, path}` - HTTP request duration histogram
+- `stoat_ferret_effect_applications_total{effect_type}` - Effect applications by type
+- `stoat_ferret_transition_applications_total{transition_type}` - Transition applications by type
+- `stoat_ferret_ffmpeg_executions_total{status}` - FFmpeg execution counter
+- `stoat_ferret_ffmpeg_execution_duration_seconds` - FFmpeg execution duration histogram
+- `stoat_ferret_ffmpeg_active_processes` - Active FFmpeg process gauge
 
 **Structured Logs:**
 ```json
@@ -245,6 +247,8 @@ The architecture integrates quality attributes at every layer. These are not opt
 - Expression engine (`Expr` tree builder with arity validation)
 - `DrawtextBuilder` (text overlay with position presets, alpha fades)
 - `SpeedControl` (setpts + auto-chained atempo filters)
+- `VolumeBuilder`, `AfadeBuilder`, `AmixBuilder`, `DuckingPattern` (audio mixing)
+- `FadeBuilder`, `XfadeBuilder`, `AcrossfadeBuilder` (transitions)
 - Filter types (`Filter`, `FilterChain`, `FilterGraph`)
 - Timeline calculations
 - Path validation and sanitization
@@ -354,32 +358,43 @@ Responsibilities:
 
 **Effects Service**
 
-Uses an `EffectRegistry` to manage effect definitions and delegates filter generation to Rust builders.
+Uses an `EffectRegistry` to manage effect definitions and delegates filter generation to Rust builders via a `build_fn` dispatch pattern.
 
 ```
 Responsibilities:
 ├── Effect discovery (GET /effects returns all registered effects with schemas)
 ├── Effect application (POST to clip, persists in effects_json)
-├── Filter string generation via Rust builders (DrawtextBuilder, SpeedControl)
-├── Parameter validation against JSON Schema definitions
+├── Transition application (POST /effects/transition between adjacent clips)
+├── Filter string generation via build_fn dispatch to Rust builders
+├── Parameter validation against JSON Schema (Draft7Validator)
 ├── AI hint metadata per effect for agent integration
-└── Registry: EffectRegistry with register/get/list_all pattern
+├── Prometheus metrics (effect_applications_total, transition_applications_total)
+└── Registry: EffectRegistry with register/get/list_all/validate pattern
 
 Registry Architecture:
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  EffectRegistry  │────>│ EffectDefinition │────>│  preview_fn()    │
-│  register()      │     │  name            │     │  (calls Rust     │
-│  get()           │     │  description     │     │   builders)      │
+│  EffectRegistry  │────>│ EffectDefinition │────>│  build_fn()      │
+│  register()      │     │  name            │     │  (dispatches to  │
+│  get()           │     │  description     │     │   Rust builder)  │
 │  list_all()      │     │  parameter_schema│     └──────────────────┘
-└──────────────────┘     │  ai_hints        │
-                         └──────────────────┘
+│  validate()      │     │  ai_hints        │     ┌──────────────────┐
+└──────────────────┘     │  preview_fn      │────>│  preview_fn()    │
+                         │  build_fn        │     │  (sample output) │
+                         └──────────────────┘     └──────────────────┘
 
-Built-in effects (v006):
-├── text_overlay → DrawtextBuilder (Rust)
-└── speed_control → SpeedControl (Rust)
+Registered effects (v007):
+├── text_overlay  → DrawtextBuilder (Rust)
+├── speed_control → SpeedControl (Rust)
+├── audio_mix     → AmixBuilder (Rust)
+├── volume        → VolumeBuilder (Rust)
+├── audio_fade    → AfadeBuilder (Rust)
+├── audio_ducking → DuckingPattern (Rust)
+├── video_fade    → FadeBuilder (Rust)
+├── xfade         → XfadeBuilder + TransitionType (Rust)
+└── acrossfade    → AcrossfadeBuilder (Rust)
 ```
 
-The registry is injected via `app.state.effect_registry` (DI pattern). Each `EffectDefinition` includes a `preview_fn` callable that invokes the Rust builder to produce a sample filter string, keeping previews accurate to actual generation logic.
+The registry is injected via `app.state.effect_registry` (DI pattern). Each `EffectDefinition` includes both a `preview_fn` (produces a sample filter string) and a `build_fn` (generates the actual filter from user parameters by dispatching to the corresponding Rust builder). Parameter validation uses `jsonschema.Draft7Validator` against the definition's `parameter_schema`.
 
 **Render Service**
 ```
@@ -413,6 +428,8 @@ pub mod filter;        // Filter, FilterChain, FilterGraph types
 pub mod expression;    // Type-safe FFmpeg expression tree builder
 pub mod drawtext;      // DrawtextBuilder for text overlay filters
 pub mod speed;         // SpeedControl for setpts/atempo filters
+pub mod audio;         // Audio mixing builders (VolumeBuilder, AfadeBuilder, AmixBuilder, DuckingPattern)
+pub mod transitions;   // Transition builders (FadeBuilder, XfadeBuilder, AcrossfadeBuilder)
 pub mod commands;      // FFmpeg command construction
 ```
 
@@ -468,6 +485,63 @@ ctrl.atempo_filters();   // [atempo=2, atempo=1.5]  (product = 3.0)
 ```
 
 The `atempo_chain` algorithm automatically decomposes speeds outside FFmpeg's `[0.5, 2.0]` per-filter limit into a chain of filters whose product equals the target speed.
+
+**Audio Module (`ffmpeg/audio.rs`):**
+
+Builders for audio mixing and processing filters, all exposed via PyO3.
+
+```rust
+// Volume control (linear or dB)
+let vol = VolumeBuilder::new(0.8)?.build();           // volume=0.8
+let vol = VolumeBuilder::from_db("-3dB")?.build();    // volume=-3dB
+
+// Audio fade in/out with curve support
+let fade = AfadeBuilder::new("in", 2.0)?
+    .start_time(1.0)
+    .curve("tri")
+    .build();                                          // afade=t=in:d=2:st=1:curve=tri
+
+// Multi-input audio mixing (2-32 inputs)
+let mix = AmixBuilder::new(3)?
+    .duration_mode("longest")
+    .weights(vec![1.0, 0.5, 0.3])
+    .normalize(false)
+    .build();                                          // amix=inputs=3:duration=longest:...
+
+// Ducking pattern (FilterGraph: asplit + sidechaincompress + anull)
+let duck = DuckingPattern::new()
+    .threshold(0.05)
+    .ratio(4.0)
+    .attack(0.01)
+    .release(0.3)
+    .build();                                          // Returns FilterGraph
+```
+
+Supported fade curves: `tri`, `qsin`, `hsin`, `esin`, `log`, `ipar`, `qua`, `cub`, `squ`, `cbr`, `par`.
+
+**Transitions Module (`ffmpeg/transitions.rs`):**
+
+Builders for video and audio transition filters, with `TransitionType` covering all 59 FFmpeg xfade transitions.
+
+```rust
+// Video fade in/out
+let fade = FadeBuilder::new("in", 1.5)?
+    .color("black")
+    .build();                                          // fade=t=in:d=1.5:c=black
+
+// Video crossfade (xfade) with named transition type
+let xf = XfadeBuilder::new(TransitionType::Dissolve, 1.0, 5.0)?
+    .build();                                          // xfade=transition=dissolve:duration=1:offset=5
+
+// Audio crossfade
+let acf = AcrossfadeBuilder::new(1.0)?
+    .curve1("tri")
+    .curve2("tri")
+    .overlap(true)
+    .build();                                          // acrossfade=d=1:c1=tri:c2=tri:o=1
+```
+
+`TransitionType` supports 59 named transitions including `Fade`, `Dissolve`, `Wipeleft`, `Circleopen`, `Radial`, `Pixelize`, `Hblur`, and more. Conversion via `TransitionType::from_str(name)`.
 
 **Timeline Module (Pure Functions):**
 ```rust
@@ -580,12 +654,24 @@ fn _core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<FilterGraph>()?;
     m.add_class::<FFmpegCommand>()?;
 
-    // Expression engine (v006)
+    // Expression engine
     m.add_class::<PyExpr>()?;            // Expr - FFmpeg expression builder
 
-    // Effect builders (v006)
+    // Effect builders
     m.add_class::<DrawtextBuilder>()?;   // Drawtext filter builder
     m.add_class::<SpeedControl>()?;      // Speed control (setpts + atempo)
+
+    // Audio mixing builders (v007)
+    m.add_class::<VolumeBuilder>()?;     // Volume control (linear/dB)
+    m.add_class::<AfadeBuilder>()?;      // Audio fade in/out
+    m.add_class::<AmixBuilder>()?;       // Multi-input audio mixing
+    m.add_class::<DuckingPattern>()?;    // Sidechain ducking (FilterGraph)
+
+    // Transition builders (v007)
+    m.add_class::<TransitionType>()?;    // 59 named xfade transition types
+    m.add_class::<FadeBuilder>()?;       // Video fade in/out
+    m.add_class::<XfadeBuilder>()?;      // Video crossfade (xfade)
+    m.add_class::<AcrossfadeBuilder>()?; // Audio crossfade
 
     // Timeline & clip types
     m.add_class::<ClipInput>()?;
@@ -595,10 +681,14 @@ fn _core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 ```
 
-**v006 Python API examples:**
+**Python API examples:**
 
 ```python
-from stoat_ferret_core import DrawtextBuilder, SpeedControl, Expr
+from stoat_ferret_core import (
+    DrawtextBuilder, SpeedControl, Expr,
+    VolumeBuilder, AfadeBuilder, AmixBuilder, DuckingPattern,
+    FadeBuilder, XfadeBuilder, AcrossfadeBuilder, TransitionType,
+)
 
 # Text overlay with fade
 builder = (DrawtextBuilder("Hello World")
@@ -612,6 +702,17 @@ filter = builder.build()  # Returns Filter
 ctrl = SpeedControl(3.0)          # Validates [0.25, 4.0]
 video_filter = ctrl.setpts_filter()    # setpts=0.333333*PTS
 audio_filters = ctrl.atempo_filters()  # [atempo=2, atempo=1.5]
+
+# Audio mixing (v007)
+mix = AmixBuilder(3).duration_mode("longest").build()  # Returns Filter
+vol = VolumeBuilder(0.8).build()                       # volume=0.8
+fade = AfadeBuilder("in", 2.0).curve("tri").build()    # afade=t=in:d=2:curve=tri
+duck = DuckingPattern().threshold(0.05).build()        # Returns FilterGraph
+
+# Transitions (v007)
+vfade = FadeBuilder("in", 1.5).build()                 # fade=t=in:d=1.5
+xf = XfadeBuilder(TransitionType.from_str("dissolve"), 1.0, 5.0).build()
+acf = AcrossfadeBuilder(1.0).curve1("tri").build()     # acrossfade=d=1:c1=tri
 
 # Expression builder
 expr = Expr.between(Expr.var("t"), Expr.constant(2), Expr.constant(5))
@@ -907,7 +1008,7 @@ projects/
 
 ### Effect Definition Schema
 
-Effects are defined using `EffectDefinition` dataclasses in Python, with each definition including a `preview_fn` that invokes the corresponding Rust builder.
+Effects are defined using `EffectDefinition` dataclasses in Python, with each definition including a `preview_fn` for sample output and a `build_fn` that dispatches to the corresponding Rust builder.
 
 ```python
 @dataclass(frozen=True)
@@ -917,14 +1018,22 @@ class EffectDefinition:
     parameter_schema: dict[str, object] # JSON Schema for parameters
     ai_hints: dict[str, str]            # Per-parameter AI guidance
     preview_fn: Callable[[], str]       # Calls Rust builder for sample output
+    build_fn: Callable[[dict], str]     # Dispatches to Rust builder with user params
 ```
 
-**Registered effects (v006):**
+**Registered effects (v007):**
 
 | Effect Type | Rust Builder | Parameters |
 |-------------|-------------|------------|
 | `text_overlay` | `DrawtextBuilder` | `text` (required), `fontsize`, `fontcolor`, `position`, `margin`, `font` |
 | `speed_control` | `SpeedControl` | `factor` (required, 0.25-4.0), `drop_audio` |
+| `audio_mix` | `AmixBuilder` | `inputs` (required, 2-32), `duration_mode`, `weights`, `normalize` |
+| `volume` | `VolumeBuilder` | `volume` (required, 0.0-10.0 or dB string), `precision` |
+| `audio_fade` | `AfadeBuilder` | `fade_type` (required, "in"/"out"), `duration` (required), `start_time`, `curve` |
+| `audio_ducking` | `DuckingPattern` | `threshold`, `ratio`, `attack`, `release` |
+| `video_fade` | `FadeBuilder` | `fade_type` (required, "in"/"out"), `duration` (required), `start_time`, `color`, `alpha` |
+| `xfade` | `XfadeBuilder` | `transition` (required), `duration` (required, 0-60), `offset` (required) |
+| `acrossfade` | `AcrossfadeBuilder` | `duration` (required, 0-60), `curve1`, `curve2`, `overlap` |
 
 **Clip effects storage format** (`effects_json` column):
 
@@ -1209,6 +1318,8 @@ ai-video-editor/
 │   │       │   ├── expression.rs # FFmpeg expression tree builder
 │   │       │   ├── drawtext.rs  # DrawtextBuilder for text overlays
 │   │       │   ├── speed.rs     # SpeedControl (setpts + atempo)
+│   │       │   ├── audio.rs     # Audio mixing (VolumeBuilder, AfadeBuilder, AmixBuilder, DuckingPattern)
+│   │       │   ├── transitions.rs # Transitions (FadeBuilder, XfadeBuilder, AcrossfadeBuilder)
 │   │       │   └── commands.rs  # FFmpeg command construction
 │   │       ├── sanitize.rs      # Input validation/escaping
 │   │       ├── layout.rs        # PIP, split-screen geometry
