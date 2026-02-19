@@ -1,0 +1,15 @@
+{
+  "exploration_id": "fix-e2e-deeper-1771527025790",
+  "results_folder": "fix-e2e-deeper",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-19T18:50:25.790769",
+  "updated_at": "2026-02-19T18:50:25.790769",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/fix-e2e-deeper/prompt.md",
+  "outbox_path": "comms/outbox/exploration/fix-e2e-deeper"
+}
