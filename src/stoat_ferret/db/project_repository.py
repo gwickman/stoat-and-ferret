@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -98,14 +99,17 @@ class AsyncSQLiteProjectRepository:
 
     async def add(self, project: Project) -> Project:
         """Add a project to the repository."""
+        transitions_json = (
+            json.dumps(project.transitions) if project.transitions is not None else None
+        )
         try:
             await self._conn.execute(
                 """
                 INSERT INTO projects (
                     id, name, output_width, output_height, output_fps,
-                    created_at, updated_at
+                    transitions_json, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     project.id,
@@ -113,6 +117,7 @@ class AsyncSQLiteProjectRepository:
                     project.output_width,
                     project.output_height,
                     project.output_fps,
+                    transitions_json,
                     project.created_at.isoformat(),
                     project.updated_at.isoformat(),
                 ),
@@ -139,6 +144,9 @@ class AsyncSQLiteProjectRepository:
 
     async def update(self, project: Project) -> Project:
         """Update an existing project."""
+        transitions_json = (
+            json.dumps(project.transitions) if project.transitions is not None else None
+        )
         cursor = await self._conn.execute(
             """
             UPDATE projects SET
@@ -146,6 +154,7 @@ class AsyncSQLiteProjectRepository:
                 output_width = ?,
                 output_height = ?,
                 output_fps = ?,
+                transitions_json = ?,
                 updated_at = ?
             WHERE id = ?
             """,
@@ -154,6 +163,7 @@ class AsyncSQLiteProjectRepository:
                 project.output_width,
                 project.output_height,
                 project.output_fps,
+                transitions_json,
                 project.updated_at.isoformat(),
                 project.id,
             ),
@@ -171,6 +181,8 @@ class AsyncSQLiteProjectRepository:
 
     def _row_to_project(self, row: Any) -> Project:
         """Convert a database row to a Project object."""
+        transitions_raw = row["transitions_json"]
+        transitions = json.loads(transitions_raw) if transitions_raw is not None else None
         return Project(
             id=row["id"],
             name=row["name"],
@@ -179,6 +191,7 @@ class AsyncSQLiteProjectRepository:
             output_fps=row["output_fps"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
+            transitions=transitions,
         )
 
 

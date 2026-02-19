@@ -14,6 +14,8 @@ from stoat_ferret.api.schemas.effect import (
     EffectApplyResponse,
     EffectListResponse,
     EffectResponse,
+    TransitionRequest,
+    TransitionResponse,
 )
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.project_repository import (
@@ -29,6 +31,11 @@ effect_applications_total = Counter(
     "stoat_ferret_effect_applications_total",
     "Total effect applications by type",
     ["effect_type"],
+)
+transition_applications_total = Counter(
+    "stoat_ferret_transition_applications_total",
+    "Total transition applications by type",
+    ["transition_type"],
 )
 
 router = APIRouter(prefix="/api/v1", tags=["effects"])
@@ -211,6 +218,165 @@ async def apply_effect_to_clip(
 
     return EffectApplyResponse(
         effect_type=request.effect_type,
+        parameters=request.parameters,
+        filter_string=filter_string,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/effects/transition",
+    response_model=TransitionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def apply_transition(
+    project_id: str,
+    request: TransitionRequest,
+    registry: RegistryDep,
+    project_repo: ProjectRepoDep,
+    clip_repo: ClipRepoDep,
+) -> TransitionResponse:
+    """Apply a transition between two adjacent clips.
+
+    Validates that both clips exist and are adjacent in the project timeline,
+    generates the FFmpeg filter string via the effect registry, and stores
+    the transition in the project model.
+
+    Args:
+        project_id: The unique project identifier.
+        request: Transition request with source/target clips, type, and parameters.
+        registry: Effect registry dependency.
+        project_repo: Project repository dependency.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        The applied transition with generated filter string.
+
+    Raises:
+        HTTPException: 404 if project or clips not found, 400 if clips not adjacent
+            or transition type unknown or parameters invalid.
+    """
+    # Validate project exists
+    project = await project_repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    # Same clip check
+    if request.source_clip_id == request.target_clip_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "SAME_CLIP",
+                "message": "Source and target clips must be different",
+            },
+        )
+
+    # Get all clips in the project timeline
+    clips = await clip_repo.list_by_project(project_id)
+    if not clips:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "EMPTY_TIMELINE", "message": "Project timeline has no clips"},
+        )
+
+    # Find source and target clips
+    clip_index: dict[str, int] = {c.id: i for i, c in enumerate(clips)}
+
+    if request.source_clip_id not in clip_index:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Clip {request.source_clip_id} not found",
+            },
+        )
+    if request.target_clip_id not in clip_index:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Clip {request.target_clip_id} not found",
+            },
+        )
+
+    # Adjacency check: source must immediately precede target in timeline order
+    source_idx = clip_index[request.source_clip_id]
+    target_idx = clip_index[request.target_clip_id]
+    if target_idx != source_idx + 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "NOT_ADJACENT",
+                "message": "Source and target clips are not adjacent in the timeline",
+            },
+        )
+
+    # Validate transition type via registry
+    definition = registry.get(request.transition_type)
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "EFFECT_NOT_FOUND",
+                "message": f"Unknown transition type: {request.transition_type}",
+            },
+        )
+
+    # Validate parameters against JSON schema
+    validation_errors = registry.validate(request.transition_type, request.parameters)
+    if validation_errors:
+        messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "; ".join(messages),
+                "errors": [{"path": e.path, "message": e.message} for e in validation_errors],
+            },
+        )
+
+    # Generate filter string via registered build function
+    try:
+        filter_string = definition.build_fn(request.parameters)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": str(e),
+            },
+        ) from None
+
+    # Store transition in project model
+    transition_entry: dict[str, Any] = {
+        "source_clip_id": request.source_clip_id,
+        "target_clip_id": request.target_clip_id,
+        "transition_type": request.transition_type,
+        "parameters": request.parameters,
+        "filter_string": filter_string,
+    }
+    if project.transitions is None:
+        project.transitions = []
+    project.transitions.append(transition_entry)
+    project.updated_at = datetime.now(timezone.utc)
+    await project_repo.update(project)
+
+    transition_applications_total.labels(transition_type=request.transition_type).inc()
+
+    logger.info(
+        "transition_applied",
+        project_id=project_id,
+        source_clip_id=request.source_clip_id,
+        target_clip_id=request.target_clip_id,
+        transition_type=request.transition_type,
+    )
+
+    return TransitionResponse(
+        source_clip_id=request.source_clip_id,
+        target_clip_id=request.target_clip_id,
+        transition_type=request.transition_type,
         parameters=request.parameters,
         filter_string=filter_string,
     )

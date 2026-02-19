@@ -121,6 +121,7 @@ class Project:
     output_fps: int
     created_at: datetime
     updated_at: datetime
+    transitions: list[dict[str, Any]] | None = field(default=None)
 
     @staticmethod
     def new_id() -> str:

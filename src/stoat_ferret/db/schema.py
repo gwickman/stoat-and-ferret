@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS projects (
     output_width INTEGER NOT NULL DEFAULT 1920,
     output_height INTEGER NOT NULL DEFAULT 1080,
     output_fps INTEGER NOT NULL DEFAULT 30,
+    transitions_json TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

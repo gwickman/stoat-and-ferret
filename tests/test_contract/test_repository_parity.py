@@ -249,7 +249,7 @@ class TestClipParity:
         # Insert FK references for SQLite
         await sqlite_conn.execute(
             "INSERT INTO projects VALUES "
-            "('project-1','Test',1920,1080,30,'2024-01-01','2024-01-01')"
+            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01')"
         )
         await sqlite_conn.execute(
             "INSERT INTO videos VALUES ('video-1','/t.mp4','t.mp4',1000,24,1,1920,1080,"
@@ -276,7 +276,7 @@ class TestClipParity:
         """Both implementations return clips in the same timeline order."""
         await sqlite_conn.execute(
             "INSERT INTO projects VALUES "
-            "('project-1','Test',1920,1080,30,'2024-01-01','2024-01-01')"
+            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01')"
         )
         await sqlite_conn.execute(
             "INSERT INTO videos VALUES ('video-1','/t.mp4','t.mp4',1000,24,1,1920,1080,"

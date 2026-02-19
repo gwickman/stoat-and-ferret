@@ -42,3 +42,22 @@ class EffectApplyResponse(BaseModel):
     effect_type: str
     parameters: dict[str, Any]
     filter_string: str
+
+
+class TransitionRequest(BaseModel):
+    """Request schema for applying a transition between two clips."""
+
+    source_clip_id: str
+    target_clip_id: str
+    transition_type: str
+    parameters: dict[str, Any]
+
+
+class TransitionResponse(BaseModel):
+    """Response schema for a successfully applied transition."""
+
+    source_clip_id: str
+    target_clip_id: str
+    transition_type: str
+    parameters: dict[str, Any]
+    filter_string: str
