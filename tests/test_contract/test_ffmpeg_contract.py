@@ -370,7 +370,7 @@ class TestDrawtextContract:
         """Drawtext with special characters in text is valid FFmpeg syntax."""
         from stoat_ferret_core import DrawtextBuilder
 
-        f = DrawtextBuilder("Score: 100%").fontsize(24).build()
+        f = DrawtextBuilder("Title: [Part 1]").fontsize(24).build()
         result = self._run_filter_check(str(f))
         assert result.returncode == 0, f"FFmpeg rejected filter: {result.stderr}"
 
