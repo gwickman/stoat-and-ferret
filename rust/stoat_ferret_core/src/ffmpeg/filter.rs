@@ -825,11 +825,7 @@ impl FilterGraph {
     /// assert!(!out.is_empty());
     /// assert!(graph.validate().is_ok());
     /// ```
-    pub fn compose_chain(
-        &mut self,
-        input: &str,
-        filters: Vec<Filter>,
-    ) -> Result<String, String> {
+    pub fn compose_chain(&mut self, input: &str, filters: Vec<Filter>) -> Result<String, String> {
         if filters.is_empty() {
             return Err("compose_chain requires at least one filter".to_string());
         }
@@ -1707,9 +1703,7 @@ mod tests {
     fn test_compose_chain_chained_operations() {
         let mut graph = FilterGraph::new();
         let mid = graph.compose_chain("0:v", vec![scale(1280, 720)]).unwrap();
-        let out = graph
-            .compose_chain(&mid, vec![format("yuv420p")])
-            .unwrap();
+        let out = graph.compose_chain(&mid, vec![format("yuv420p")]).unwrap();
         assert!(graph.validate().is_ok());
         let s = graph.to_string();
         assert!(s.contains(";"));
