@@ -16,7 +16,7 @@ from prometheus_client import make_asgi_app
 
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
-from stoat_ferret.api.routers import health, jobs, projects, videos
+from stoat_ferret.api.routers import effects, health, jobs, projects, videos
 from stoat_ferret.api.routers.ws import websocket_endpoint
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.services.thumbnail import ThumbnailService
@@ -28,6 +28,7 @@ from stoat_ferret.db.async_repository import (
 )
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
+from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
 
@@ -94,6 +95,7 @@ def create_app(
     clip_repository: AsyncClipRepository | None = None,
     job_queue: AsyncioJobQueue | None = None,
     ws_manager: ConnectionManager | None = None,
+    effect_registry: EffectRegistry | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -108,6 +110,7 @@ def create_app(
         clip_repository: Optional clip repository for dependency injection.
         job_queue: Optional job queue for dependency injection.
         ws_manager: Optional WebSocket connection manager for dependency injection.
+        effect_registry: Optional effect registry for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -135,10 +138,14 @@ def create_app(
     if ws_manager is not None:
         app.state.ws_manager = ws_manager
 
+    if effect_registry is not None:
+        app.state.effect_registry = effect_registry
+
     app.include_router(health.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
     app.include_router(jobs.router)
+    app.include_router(effects.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)
