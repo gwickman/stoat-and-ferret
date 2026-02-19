@@ -64,6 +64,7 @@ pub mod drawtext;
 pub mod expression;
 pub mod filter;
 pub mod speed;
+pub mod transitions;
 
 pub use command::{CommandError, FFmpegCommand};
 

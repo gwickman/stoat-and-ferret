@@ -93,6 +93,12 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::audio::AmixBuilder>()?;
     m.add_class::<ffmpeg::audio::DuckingPattern>()?;
 
+    // Register transition builders
+    m.add_class::<ffmpeg::transitions::TransitionType>()?;
+    m.add_class::<ffmpeg::transitions::FadeBuilder>()?;
+    m.add_class::<ffmpeg::transitions::XfadeBuilder>()?;
+    m.add_class::<ffmpeg::transitions::AcrossfadeBuilder>()?;
+
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_path, m)?)?;

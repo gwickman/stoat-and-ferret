@@ -1056,6 +1056,253 @@ class DuckingPattern:
     def __repr__(self) -> str: ...
 
 
+class TransitionType:
+    """All FFmpeg xfade transition variants.
+
+    Use class attributes to access specific transition types, or
+    ``TransitionType.from_str("wipeleft")`` to parse from a string.
+    """
+
+    Fade: TransitionType
+    Fadeblack: TransitionType
+    Fadewhite: TransitionType
+    Fadegrays: TransitionType
+    Fadefast: TransitionType
+    Fadeslow: TransitionType
+    Wipeleft: TransitionType
+    Wiperight: TransitionType
+    Wipeup: TransitionType
+    Wipedown: TransitionType
+    Wipetl: TransitionType
+    Wipetr: TransitionType
+    Wipebl: TransitionType
+    Wipebr: TransitionType
+    Slideleft: TransitionType
+    Slideright: TransitionType
+    Slideup: TransitionType
+    Slidedown: TransitionType
+    Smoothleft: TransitionType
+    Smoothright: TransitionType
+    Smoothup: TransitionType
+    Smoothdown: TransitionType
+    Circlecrop: TransitionType
+    Rectcrop: TransitionType
+    Circleopen: TransitionType
+    Circleclose: TransitionType
+    Radial: TransitionType
+    Vertopen: TransitionType
+    Vertclose: TransitionType
+    Horzopen: TransitionType
+    Horzclose: TransitionType
+    Dissolve: TransitionType
+    Pixelize: TransitionType
+    Distance: TransitionType
+    Hblur: TransitionType
+    Diagtl: TransitionType
+    Diagtr: TransitionType
+    Diagbl: TransitionType
+    Diagbr: TransitionType
+    Hlslice: TransitionType
+    Hrslice: TransitionType
+    Vuslice: TransitionType
+    Vdslice: TransitionType
+    Squeezeh: TransitionType
+    Squeezev: TransitionType
+    Zoomin: TransitionType
+    Hlwind: TransitionType
+    Hrwind: TransitionType
+    Vuwind: TransitionType
+    Vdwind: TransitionType
+    Coverleft: TransitionType
+    Coverright: TransitionType
+    Coverup: TransitionType
+    Coverdown: TransitionType
+    Revealleft: TransitionType
+    Revealright: TransitionType
+    Revealup: TransitionType
+    Revealdown: TransitionType
+    Custom: TransitionType
+
+    @staticmethod
+    def from_str(name: str) -> TransitionType:
+        """Creates a TransitionType from a string name.
+
+        Args:
+            name: Transition type name (e.g., "wipeleft", "dissolve").
+
+        Raises:
+            ValueError: If the name is not a valid transition type.
+        """
+        ...
+
+    def as_str(self) -> str:
+        """Returns the FFmpeg string representation of this transition type."""
+        ...
+
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+
+
+class FadeBuilder:
+    """Type-safe builder for FFmpeg fade video filter.
+
+    Supports fade in/out with configurable duration, color, alpha mode,
+    start time, and nb_frames alternative.
+    """
+
+    def __new__(cls, fade_type: str, duration: float) -> FadeBuilder:
+        """Creates a new FadeBuilder.
+
+        Args:
+            fade_type: "in" or "out".
+            duration: Fade duration in seconds (must be > 0).
+
+        Raises:
+            ValueError: If fade_type is invalid or duration <= 0.
+        """
+        ...
+
+    def start_time(self, start_time: float) -> FadeBuilder:
+        """Sets the start time for the fade in seconds.
+
+        Args:
+            start_time: Start time in seconds.
+        """
+        ...
+
+    def color(self, color: str) -> FadeBuilder:
+        """Sets the fade color (named colors or hex #RRGGBB).
+
+        Args:
+            color: Fade color (e.g., "black", "white", "#FF0000").
+        """
+        ...
+
+    def alpha(self, alpha: bool) -> FadeBuilder:
+        """Enables or disables alpha channel fading.
+
+        Args:
+            alpha: Whether to fade the alpha channel.
+        """
+        ...
+
+    def nb_frames(self, nb_frames: int) -> FadeBuilder:
+        """Sets the number of frames for the fade (alternative to duration).
+
+        Args:
+            nb_frames: Number of frames.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the fade Filter.
+
+        Returns:
+            A Filter with the fade syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
+class XfadeBuilder:
+    """Type-safe builder for FFmpeg xfade video crossfade filter.
+
+    Creates a two-input crossfade with a selectable transition effect.
+    Duration is validated in range 0.0-60.0 seconds.
+    """
+
+    def __new__(
+        cls, transition: TransitionType, duration: float, offset: float
+    ) -> XfadeBuilder:
+        """Creates a new XfadeBuilder.
+
+        Args:
+            transition: The transition effect to use.
+            duration: Transition duration in seconds (0.0-60.0).
+            offset: When the transition starts relative to the first input.
+
+        Raises:
+            ValueError: If duration is outside [0.0, 60.0].
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the xfade Filter.
+
+        Returns:
+            A Filter with the xfade syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
+class AcrossfadeBuilder:
+    """Type-safe builder for FFmpeg acrossfade audio crossfade filter.
+
+    Creates a two-input audio crossfade with configurable duration,
+    curve types, and overlap toggle.
+    """
+
+    def __new__(cls, duration: float) -> AcrossfadeBuilder:
+        """Creates a new AcrossfadeBuilder.
+
+        Args:
+            duration: Crossfade duration in seconds (> 0 and <= 60.0).
+
+        Raises:
+            ValueError: If duration is <= 0 or > 60.0.
+        """
+        ...
+
+    def curve1(self, curve: str) -> AcrossfadeBuilder:
+        """Sets the fade curve for the first input.
+
+        Valid curves: tri, qsin, hsin, esin, log, ipar, qua, cub, squ, cbr, par.
+
+        Args:
+            curve: Curve type name.
+
+        Raises:
+            ValueError: If curve name is invalid.
+        """
+        ...
+
+    def curve2(self, curve: str) -> AcrossfadeBuilder:
+        """Sets the fade curve for the second input.
+
+        Valid curves: tri, qsin, hsin, esin, log, ipar, qua, cub, squ, cbr, par.
+
+        Args:
+            curve: Curve type name.
+
+        Raises:
+            ValueError: If curve name is invalid.
+        """
+        ...
+
+    def overlap(self, overlap: bool) -> AcrossfadeBuilder:
+        """Sets the overlap toggle.
+
+        Args:
+            overlap: Whether inputs overlap (default: enabled).
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the acrossfade Filter.
+
+        Returns:
+            A Filter with the acrossfade syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 

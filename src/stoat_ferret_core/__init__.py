@@ -58,6 +58,7 @@ from __future__ import annotations
 
 try:
     from stoat_ferret_core._core import (
+        AcrossfadeBuilder,
         AfadeBuilder,
         AmixBuilder,
         Clip,
@@ -67,6 +68,7 @@ try:
         DuckingPattern,
         Duration,
         Expr,
+        FadeBuilder,
         FFmpegCommand,
         Filter,
         FilterChain,
@@ -76,8 +78,10 @@ try:
         SanitizationError,
         SpeedControl,
         TimeRange,
+        TransitionType,
         ValidationError,
         VolumeBuilder,
+        XfadeBuilder,
         concat_filter,
         escape_filter_text,
         find_gaps,
@@ -125,6 +129,10 @@ except ImportError:
     AfadeBuilder = _not_built  # type: ignore[misc,assignment]
     AmixBuilder = _not_built  # type: ignore[misc,assignment]
     DuckingPattern = _not_built  # type: ignore[misc,assignment]
+    TransitionType = _not_built  # type: ignore[misc,assignment]
+    FadeBuilder = _not_built  # type: ignore[misc,assignment]
+    XfadeBuilder = _not_built  # type: ignore[misc,assignment]
+    AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
     Expr = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
@@ -172,6 +180,11 @@ __all__ = [
     "AfadeBuilder",
     "AmixBuilder",
     "DuckingPattern",
+    # Transition builders
+    "TransitionType",
+    "FadeBuilder",
+    "XfadeBuilder",
+    "AcrossfadeBuilder",
     # Expression engine
     "Expr",
     # FFmpeg command building
