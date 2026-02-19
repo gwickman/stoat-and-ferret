@@ -24,8 +24,16 @@ test.describe("Project creation", () => {
     await page.getByTestId("input-fps").clear();
     await page.getByTestId("input-fps").fill("30");
 
-    // Submit
+    // Submit and wait for the API response before checking modal state.
+    // The modal only closes after the POST completes; in CI the backend
+    // can be slow, so the default assertion timeout is not enough.
+    const created = page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/projects") &&
+        resp.request().method() === "POST",
+    );
     await page.getByTestId("btn-create").click();
+    await created;
 
     // Modal closes and project appears in the list
     await expect(page.getByTestId("create-project-modal")).toBeHidden();
