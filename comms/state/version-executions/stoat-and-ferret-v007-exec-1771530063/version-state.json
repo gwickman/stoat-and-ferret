@@ -29,25 +29,25 @@
     {
       "number": 3,
       "name": "effect-workshop-gui",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 4,
       "features_complete": 2,
       "started_at": "2026-02-19T19:42:03.781431Z",
-      "completed_at": null,
+      "completed_at": "2026-02-19T20:11:01.274247Z",
       "skip_reason": null
     },
     {
       "number": 4,
       "name": "quality-validation",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 2,
-      "features_complete": 0,
-      "started_at": null,
+      "features_complete": 2,
+      "started_at": "2026-02-19T20:11:01.311554Z",
       "completed_at": null,
       "skip_reason": null
     }
   ],
-  "current_theme": 3,
-  "current_feature": 4,
+  "current_theme": 4,
+  "current_feature": 2,
   "baseline_failures": []
 }
