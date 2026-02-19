@@ -57,6 +57,7 @@ try:
         Clip,
         ClipValidationError,
         CommandError,
+        DrawtextBuilder,
         Duration,
         Expr,
         FFmpegCommand,
@@ -109,6 +110,7 @@ except ImportError:
     find_gaps = _not_built
     merge_ranges = _not_built
     total_coverage = _not_built
+    DrawtextBuilder = _not_built  # type: ignore[misc,assignment]
     Expr = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
@@ -147,6 +149,8 @@ __all__ = [
     "find_gaps",
     "merge_ranges",
     "total_coverage",
+    # Drawtext builder
+    "DrawtextBuilder",
     # Expression engine
     "Expr",
     # FFmpeg command building

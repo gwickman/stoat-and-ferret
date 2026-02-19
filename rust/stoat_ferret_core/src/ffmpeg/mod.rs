@@ -59,6 +59,7 @@
 //! ```
 
 mod command;
+pub mod drawtext;
 pub mod expression;
 pub mod filter;
 

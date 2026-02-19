@@ -304,6 +304,86 @@ class TestStrictModeContract:
 
 
 # ---------------------------------------------------------------------------
+# Stage 5: DrawtextBuilder contract tests (requires FFmpeg)
+# ---------------------------------------------------------------------------
+
+
+@requires_ffmpeg
+@pytest.mark.contract
+class TestDrawtextContract:
+    """Verify DrawtextBuilder output is accepted by real FFmpeg."""
+
+    def _run_filter_check(self, filter_str: str) -> ExecutionResult:
+        """Run FFmpeg with a filter to verify syntax is valid.
+
+        Uses lavfi as virtual input and null output to validate filters
+        without needing actual media files.
+        """
+        real = RealFFmpegExecutor()
+        return real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=black:s=320x240:d=0.1,{filter_str}",
+                "-frames:v",
+                "1",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+
+    def test_basic_drawtext(self) -> None:
+        """Basic drawtext filter string is valid FFmpeg syntax."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("Hello").fontsize(24).build()
+        result = self._run_filter_check(str(f))
+        assert result.returncode == 0, f"FFmpeg rejected filter: {result.stderr}"
+
+    def test_drawtext_with_position(self) -> None:
+        """Drawtext with position preset is valid FFmpeg syntax."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("Centered").position("center").fontsize(24).build()
+        result = self._run_filter_check(str(f))
+        assert result.returncode == 0, f"FFmpeg rejected filter: {result.stderr}"
+
+    def test_drawtext_with_styling(self) -> None:
+        """Drawtext with full styling is valid FFmpeg syntax."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = (
+            DrawtextBuilder("Styled")
+            .fontsize(32)
+            .fontcolor("white")
+            .position("bottom_center", margin=10)
+            .shadow(2, 2, "black")
+            .box_background("black@0.5", 5)
+            .build()
+        )
+        result = self._run_filter_check(str(f))
+        assert result.returncode == 0, f"FFmpeg rejected filter: {result.stderr}"
+
+    def test_drawtext_with_special_chars(self) -> None:
+        """Drawtext with special characters in text is valid FFmpeg syntax."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("Hello World!").fontsize(24).build()
+        result = self._run_filter_check(str(f))
+        assert result.returncode == 0, f"FFmpeg rejected filter: {result.stderr}"
+
+    def test_drawtext_with_alpha(self) -> None:
+        """Drawtext with static alpha is valid FFmpeg syntax."""
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = DrawtextBuilder("Alpha").fontsize(24).alpha(0.5).build()
+        result = self._run_filter_check(str(f))
+        assert result.returncode == 0, f"FFmpeg rejected filter: {result.stderr}"
+
+
+# ---------------------------------------------------------------------------
 # Error consistency tests
 # ---------------------------------------------------------------------------
 

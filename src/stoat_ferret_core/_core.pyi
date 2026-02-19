@@ -613,6 +613,190 @@ class FFmpegCommand:
 
     def __repr__(self) -> str: ...
 
+class DrawtextBuilder:
+    """Type-safe builder for FFmpeg drawtext filters.
+
+    Constructs drawtext filters with position presets, font styling,
+    shadow effects, box backgrounds, and alpha animation via the
+    expression engine.
+
+    Example::
+
+        from stoat_ferret_core import DrawtextBuilder
+
+        f = (
+            DrawtextBuilder("Hello World")
+            .font("monospace")
+            .fontsize(24)
+            .fontcolor("white")
+            .position("center")
+            .shadow(2, 2, "black")
+            .build()
+        )
+    """
+
+    def __new__(cls, text: str) -> DrawtextBuilder:
+        """Creates a new drawtext builder with the given text.
+
+        The text is automatically escaped for FFmpeg drawtext syntax.
+
+        Args:
+            text: The text to display.
+
+        Returns:
+            A new DrawtextBuilder instance.
+        """
+        ...
+
+    def font(self, name: str) -> DrawtextBuilder:
+        """Sets the font name via fontconfig lookup.
+
+        Args:
+            name: The fontconfig font name (e.g., "monospace", "Sans").
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def fontfile(self, path: str) -> DrawtextBuilder:
+        """Sets the font file path directly.
+
+        Args:
+            path: Path to the font file.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def fontsize(self, size: int) -> DrawtextBuilder:
+        """Sets the font size in pixels.
+
+        Default is 16.
+
+        Args:
+            size: Font size in pixels.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def fontcolor(self, color: str) -> DrawtextBuilder:
+        """Sets the font color.
+
+        Default is "black". Accepts FFmpeg color names or hex values.
+
+        Args:
+            color: Font color (e.g., "white", "red", "#FF0000", "white@0.5").
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def position(self, preset: str, margin: int = 10, x: int = 0, y: int = 0) -> DrawtextBuilder:
+        """Sets the text position using a preset name.
+
+        Preset names: "center", "bottom_center", "top_left", "top_right",
+        "bottom_left", "bottom_right", "absolute".
+
+        For presets with margin, pass the margin parameter (default: 10).
+        For absolute positioning, pass x and y coordinates.
+
+        Args:
+            preset: Position preset name.
+            margin: Margin in pixels for corner/edge presets.
+            x: X coordinate for absolute positioning.
+            y: Y coordinate for absolute positioning.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If preset name is unknown.
+        """
+        ...
+
+    def shadow(self, x_offset: int, y_offset: int, color: str) -> DrawtextBuilder:
+        """Adds a shadow effect to the text.
+
+        Args:
+            x_offset: Horizontal shadow offset in pixels.
+            y_offset: Vertical shadow offset in pixels.
+            color: Shadow color.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def box_background(self, color: str, borderw: int) -> DrawtextBuilder:
+        """Adds a box background behind the text.
+
+        Args:
+            color: Box background color (e.g., "black@0.5").
+            borderw: Box border width in pixels.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def alpha(self, value: float) -> DrawtextBuilder:
+        """Sets a static alpha value (0.0 to 1.0).
+
+        Args:
+            value: Alpha value between 0.0 (transparent) and 1.0 (opaque).
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If alpha is not in [0.0, 1.0].
+        """
+        ...
+
+    def alpha_fade(
+        self, start_time: float, fade_in: float, end_time: float, fade_out: float
+    ) -> DrawtextBuilder:
+        """Sets an alpha fade animation.
+
+        Generates a fade-in/fade-out expression using the expression engine.
+
+        Args:
+            start_time: When the text first appears (seconds).
+            fade_in: Duration of fade in (seconds).
+            end_time: When the text starts fading out (seconds).
+            fade_out: Duration of fade out (seconds).
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def enable(self, expr: str) -> DrawtextBuilder:
+        """Sets a time-based enable expression.
+
+        Args:
+            expr: An FFmpeg expression string for the enable parameter.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the drawtext filter.
+
+        Returns:
+            A Filter that can be used in filter chains and graphs.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 
