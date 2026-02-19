@@ -7,6 +7,7 @@ from typing import Annotated, Any
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from prometheus_client import Counter
 
 from stoat_ferret.api.schemas.effect import (
     EffectApplyRequest,
@@ -23,6 +24,12 @@ from stoat_ferret.effects.definitions import create_default_registry
 from stoat_ferret.effects.registry import EffectRegistry
 
 logger = structlog.get_logger(__name__)
+
+effect_applications_total = Counter(
+    "stoat_ferret_effect_applications_total",
+    "Total effect applications by type",
+    ["effect_type"],
+)
 
 router = APIRouter(prefix="/api/v1", tags=["effects"])
 
@@ -95,53 +102,6 @@ async def list_effects(registry: RegistryDep) -> EffectListResponse:
     return EffectListResponse(effects=effects, total=len(effects))
 
 
-def _build_filter_string(effect_type: str, parameters: dict[str, Any]) -> str:
-    """Build an FFmpeg filter string from effect type and parameters.
-
-    Args:
-        effect_type: The effect type identifier (e.g., "text_overlay").
-        parameters: The effect parameters.
-
-    Returns:
-        The generated FFmpeg filter string.
-
-    Raises:
-        ValueError: If the parameters are invalid for the effect type.
-    """
-    if effect_type == "text_overlay":
-        from stoat_ferret_core import DrawtextBuilder
-
-        text = parameters.get("text", "")
-        builder = DrawtextBuilder(text)
-
-        if "fontsize" in parameters:
-            builder = builder.fontsize(parameters["fontsize"])
-        if "fontcolor" in parameters:
-            builder = builder.fontcolor(parameters["fontcolor"])
-        if "position" in parameters:
-            margin = parameters.get("margin", 10)
-            builder = builder.position(parameters["position"], margin=margin)
-        if "font" in parameters:
-            builder = builder.font(parameters["font"])
-
-        f = builder.build()
-        return str(f)
-
-    if effect_type == "speed_control":
-        from stoat_ferret_core import SpeedControl
-
-        factor = parameters.get("factor", 2.0)
-        sc = SpeedControl(factor)
-        video_filter = sc.setpts_filter()
-        audio_filters = sc.atempo_filters()
-        parts = [str(video_filter)]
-        parts.extend(str(af) for af in audio_filters)
-        return "; ".join(parts)
-
-    msg = f"Unknown effect type: {effect_type}"
-    raise ValueError(msg)
-
-
 @router.post(
     "/projects/{project_id}/clips/{clip_id}/effects",
     response_model=EffectApplyResponse,
@@ -157,8 +117,9 @@ async def apply_effect_to_clip(
 ) -> EffectApplyResponse:
     """Apply an effect to a clip.
 
-    Validates the effect type via the registry, generates a filter string
-    via the Rust builder, and stores the effect configuration on the clip.
+    Validates the effect type via the registry, validates parameters against
+    the JSON schema, generates a filter string via the registered build function,
+    and stores the effect configuration on the clip.
 
     Args:
         project_id: The unique project identifier.
@@ -202,9 +163,22 @@ async def apply_effect_to_clip(
             },
         )
 
-    # Generate filter string via Rust builder
+    # Validate parameters against JSON schema
+    validation_errors = registry.validate(request.effect_type, request.parameters)
+    if validation_errors:
+        messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "; ".join(messages),
+                "errors": [{"path": e.path, "message": e.message} for e in validation_errors],
+            },
+        )
+
+    # Generate filter string via registered build function
     try:
-        filter_string = _build_filter_string(request.effect_type, request.parameters)
+        filter_string = definition.build_fn(request.parameters)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -225,6 +199,8 @@ async def apply_effect_to_clip(
     clip.effects.append(effect_entry)
     clip.updated_at = datetime.now(timezone.utc)
     await clip_repo.update(clip)
+
+    effect_applications_total.labels(effect_type=request.effect_type).inc()
 
     logger.info(
         "effect_applied",

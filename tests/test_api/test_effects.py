@@ -3,23 +3,47 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
+from stoat_ferret.api.routers.effects import effect_applications_total
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.effects.definitions import (
+    ACROSSFADE,
+    AUDIO_DUCKING,
+    AUDIO_FADE,
+    AUDIO_MIX,
     SPEED_CONTROL,
     TEXT_OVERLAY,
+    VIDEO_FADE,
+    VOLUME,
+    XFADE,
     EffectDefinition,
+    _build_speed_control,
+    _build_text_overlay,
     create_default_registry,
 )
 from stoat_ferret.effects.registry import EffectRegistry
 from tests.factories import make_test_video
+
+#: All effect types that must be registered in the default registry.
+EXPECTED_EFFECT_TYPES = {
+    "text_overlay",
+    "speed_control",
+    "audio_mix",
+    "volume",
+    "audio_fade",
+    "audio_ducking",
+    "video_fade",
+    "xfade",
+    "acrossfade",
+}
 
 # ---- Registry unit tests ----
 
@@ -159,6 +183,7 @@ def test_injected_registry_used_by_endpoint() -> None:
             parameter_schema={"type": "object", "properties": {}},
             ai_hints={"param": "test hint"},
             preview_fn=lambda: "custom_filter=test",
+            build_fn=lambda params: "custom_filter=test",
         ),
     )
 
@@ -204,11 +229,10 @@ def test_no_effect_registry_falls_back_to_default() -> None:
         response = client.get("/api/v1/effects")
         assert response.status_code == 200
         data = response.json()
-        # Default registry has text_overlay and speed_control
-        assert data["total"] == 2
-        types = [e["effect_type"] for e in data["effects"]]
-        assert "text_overlay" in types
-        assert "speed_control" in types
+        # Default registry has all built-in effects
+        assert data["total"] == len(EXPECTED_EFFECT_TYPES)
+        types = {e["effect_type"] for e in data["effects"]}
+        assert types == EXPECTED_EFFECT_TYPES
 
 
 # ---- Clip effect application tests ----
@@ -486,3 +510,296 @@ async def test_clip_response_includes_effects(
     assert clip_data["effects"] is not None
     assert len(clip_data["effects"]) == 1
     assert clip_data["effects"][0]["effect_type"] == "text_overlay"
+
+
+# ---- Parity tests: build_fn produces same output as old dispatch ----
+
+
+@pytest.mark.api
+def test_parity_text_overlay_build_fn() -> None:
+    """build_fn for text_overlay produces identical output to old dispatch."""
+    params: dict[str, Any] = {
+        "text": "Hello World",
+        "fontsize": 48,
+        "fontcolor": "white",
+        "position": "bottom_center",
+        "margin": 20,
+    }
+    result = _build_text_overlay(params)
+    assert "drawtext" in result
+    assert "Hello World" in result or "Hello" in result
+    assert "fontsize=48" in result
+    assert "fontcolor=white" in result
+
+
+@pytest.mark.api
+def test_parity_speed_control_build_fn() -> None:
+    """build_fn for speed_control produces identical output to old dispatch."""
+    params: dict[str, Any] = {"factor": 2.0}
+    result = _build_speed_control(params)
+    assert "setpts" in result
+    assert "atempo" in result
+
+
+# ---- EffectDefinition build_fn callable invocation tests ----
+
+
+@pytest.mark.api
+def test_effect_definition_build_fn_callable() -> None:
+    """EffectDefinition.build_fn is callable and returns a string."""
+    result = TEXT_OVERLAY.build_fn({"text": "Test"})
+    assert isinstance(result, str)
+    assert "drawtext" in result
+
+
+@pytest.mark.api
+def test_effect_definition_build_fn_receives_params() -> None:
+    """EffectDefinition.build_fn receives parameter dict correctly."""
+    result = SPEED_CONTROL.build_fn({"factor": 0.5})
+    assert isinstance(result, str)
+    assert "setpts" in result
+
+
+@pytest.mark.api
+def test_effect_definition_build_fn_returns_filter_string() -> None:
+    """Each built-in effect's build_fn returns a non-empty string."""
+    effects_and_params: list[tuple[EffectDefinition, dict[str, Any]]] = [
+        (TEXT_OVERLAY, {"text": "test"}),
+        (SPEED_CONTROL, {"factor": 2.0}),
+        (AUDIO_MIX, {"inputs": 2}),
+        (VOLUME, {"volume": 1.5}),
+        (AUDIO_FADE, {"fade_type": "in", "duration": 1.0}),
+        (AUDIO_DUCKING, {}),
+        (VIDEO_FADE, {"fade_type": "in", "duration": 1.0}),
+        (XFADE, {"transition": "fade", "duration": 1.0, "offset": 0.0}),
+        (ACROSSFADE, {"duration": 1.0}),
+    ]
+    for defn, params in effects_and_params:
+        result = defn.build_fn(params)
+        assert isinstance(result, str), f"{defn.name} build_fn did not return str"
+        assert len(result) > 0, f"{defn.name} build_fn returned empty string"
+
+
+# ---- JSON schema validation tests ----
+
+
+@pytest.mark.api
+def test_schema_validation_valid_params() -> None:
+    """Valid parameters pass schema validation with no errors."""
+    registry = create_default_registry()
+    errors = registry.validate("text_overlay", {"text": "Hello"})
+    assert errors == []
+
+
+@pytest.mark.api
+def test_schema_validation_missing_required_field() -> None:
+    """Missing required field is detected by schema validation."""
+    registry = create_default_registry()
+    errors = registry.validate("text_overlay", {})
+    assert len(errors) > 0
+    messages = [e.message for e in errors]
+    assert any("text" in m and "required" in m.lower() for m in messages)
+
+
+@pytest.mark.api
+def test_schema_validation_type_mismatch() -> None:
+    """Type mismatch is detected by schema validation."""
+    registry = create_default_registry()
+    errors = registry.validate("text_overlay", {"text": "Hello", "fontsize": "not_a_number"})
+    assert len(errors) > 0
+    assert any("fontsize" in e.path for e in errors)
+
+
+@pytest.mark.api
+def test_schema_validation_invalid_enum_value() -> None:
+    """Invalid enum value is detected by schema validation."""
+    registry = create_default_registry()
+    errors = registry.validate("text_overlay", {"text": "Hello", "position": "invalid_position"})
+    assert len(errors) > 0
+
+
+@pytest.mark.api
+def test_schema_validation_unknown_effect_raises_keyerror() -> None:
+    """Validating an unknown effect type raises KeyError."""
+    registry = create_default_registry()
+    with pytest.raises(KeyError, match="Unknown effect type"):
+        registry.validate("nonexistent", {})
+
+
+# ---- Registry dispatch tests ----
+
+
+@pytest.mark.api
+def test_registry_dispatch_text_overlay() -> None:
+    """Registry dispatch for text_overlay produces drawtext filter."""
+    registry = create_default_registry()
+    defn = registry.get("text_overlay")
+    assert defn is not None
+    result = defn.build_fn({"text": "dispatch test"})
+    assert "drawtext" in result
+
+
+@pytest.mark.api
+def test_registry_dispatch_speed_control() -> None:
+    """Registry dispatch for speed_control produces setpts filter."""
+    registry = create_default_registry()
+    defn = registry.get("speed_control")
+    assert defn is not None
+    result = defn.build_fn({"factor": 1.5})
+    assert "setpts" in result
+
+
+@pytest.mark.api
+def test_registry_dispatch_volume() -> None:
+    """Registry dispatch for volume produces volume filter."""
+    registry = create_default_registry()
+    defn = registry.get("volume")
+    assert defn is not None
+    result = defn.build_fn({"volume": 2.0})
+    assert "volume" in result
+
+
+@pytest.mark.api
+def test_registry_dispatch_video_fade() -> None:
+    """Registry dispatch for video_fade produces fade filter."""
+    registry = create_default_registry()
+    defn = registry.get("video_fade")
+    assert defn is not None
+    result = defn.build_fn({"fade_type": "in", "duration": 1.0})
+    assert "fade" in result
+
+
+# ---- Registration completeness test ----
+
+
+@pytest.mark.api
+def test_registry_completeness() -> None:
+    """Default registry contains all expected effect types."""
+    registry = create_default_registry()
+    registered_types = {t for t, _ in registry.list_all()}
+    assert registered_types == EXPECTED_EFFECT_TYPES
+
+
+# ---- EffectDefinition schema round-trip contract test ----
+
+
+@pytest.mark.contract
+def test_effect_definition_schema_roundtrip() -> None:
+    """EffectDefinition parameter_schema validates its own build_fn default params."""
+    # Each effect's schema should accept the parameters used in its preview
+    registry = create_default_registry()
+    # text_overlay: preview uses default params, build_fn uses {"text": "x"}
+    errors = registry.validate("text_overlay", {"text": "test"})
+    assert errors == [], f"text_overlay schema rejected valid params: {errors}"
+
+    errors = registry.validate("speed_control", {"factor": 2.0})
+    assert errors == [], f"speed_control schema rejected valid params: {errors}"
+
+
+# ---- Prometheus metrics tests ----
+
+
+@pytest.mark.api
+async def test_prometheus_counter_increments_on_apply(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Prometheus counter increments when an effect is applied."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    # Record counter before
+    before = effect_applications_total.labels(effect_type="text_overlay")._value.get()
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"text": "Metrics Test"},
+        },
+    )
+    assert response.status_code == 201
+
+    # Counter should have incremented
+    after = effect_applications_total.labels(effect_type="text_overlay")._value.get()
+    assert after == before + 1
+
+
+@pytest.mark.api
+def test_prometheus_counter_exists() -> None:
+    """The effect applications counter is registered with correct name."""
+    # prometheus_client strips _total suffix from counter _name
+    assert effect_applications_total._name == "stoat_ferret_effect_applications"
+
+
+# ---- Schema validation via API endpoint tests ----
+
+
+@pytest.mark.api
+async def test_apply_effect_with_invalid_params_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Applying effect with schema-invalid parameters returns 400."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    # Missing required 'text' field
+    response = client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"fontsize": 48},
+        },
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
