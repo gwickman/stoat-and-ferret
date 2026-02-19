@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-19 07:09*
+*Last updated: 2026-02-19 16:59*
 
 **Total completed:** 40 | **Cancelled:** 0
 
@@ -8,7 +8,7 @@
 
 | Priority | Name | Count |
 |----------|------|-------|
-| P0 | Critical | 0 |
+| P0 | Critical | 1 |
 | P1 | High | 11 |
 | P2 | Medium | 1 |
 | P3 | Low | 1 |
@@ -17,6 +17,7 @@
 
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
+| <a id="bl-055-ref"></a>[BL-055](#bl-055) | P0 | l | Fix flaky E2E test in project-creation.spec.ts (toBeHidden timeout) | The E2E test at gui/e2e/project-creation.spec.ts:31 inter... |
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P1 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-044-ref"></a>[BL-044](#bl-044) | P1 | l | Implement audio mixing filter builders (amix/volume/fade) | No Rust types exist for audio mixing, volume control, or ... |
 | <a id="bl-045-ref"></a>[BL-045](#bl-045) | P1 | m | Implement transition filter builders (fade/xfade) | No Rust types exist for video transitions. M2.5 requires ... |
@@ -41,6 +42,7 @@
 | agents-md | 3 | BL-019, BL-053, BL-054 |
 | rust | 2 | BL-044, BL-045 |
 | transitions | 2 | BL-045, BL-046 |
+| e2e | 2 | BL-052, BL-055 |
 | tooling | 1 | BL-011 |
 | build | 1 | BL-011 |
 | complexity | 1 | BL-011 |
@@ -57,15 +59,35 @@
 | transparency | 1 | BL-050 |
 | builder | 1 | BL-051 |
 | testing | 1 | BL-052 |
-| e2e | 1 | BL-052 |
 | product-requests | 1 | BL-053 |
 | documentation | 1 | BL-053 |
 | decision-framework | 1 | BL-053 |
 | webfetch | 1 | BL-054 |
 | safety | 1 | BL-054 |
 | hang-prevention | 1 | BL-054 |
+| bug | 1 | BL-055 |
+| ci | 1 | BL-055 |
+| flaky-test | 1 | BL-055 |
 
 ## Item Details
+
+### P0: Critical
+
+#### 📋 BL-055: Fix flaky E2E test in project-creation.spec.ts (toBeHidden timeout)
+
+**Status:** open
+**Tags:** bug, e2e, ci, flaky-test
+
+The E2E test at gui/e2e/project-creation.spec.ts:31 intermittently fails with a toBeHidden assertion timeout on the project creation modal. The test fails on main (GitHub Actions run 22188785818) independent of any feature branch changes. During v007 execution, this caused the dynamic-parameter-forms feature to receive a 'partial' completion status despite 12/12 acceptance criteria passing and all other quality gates green. The execution pipeline halted, requiring manual restart. Any future feature touching the E2E CI job is at risk of the same false-positive halt.
+
+**Acceptance Criteria:**
+- [ ] project-creation.spec.ts:31 toBeHidden assertion passes reliably across 10 consecutive CI runs
+- [ ] No E2E test requires retry loops to pass in CI
+- [ ] Flaky test fix does not alter the tested project creation functionality
+
+**Notes:** Discovered during v007 execution. PR #88 (dynamic-parameter-forms) was retried 3 times per AGENTS.md limit without resolution. Likely cause: timing-dependent modal animation or state cleanup between tests.
+
+[↑ Back to list](#bl-055-ref)
 
 ### P1: High
 

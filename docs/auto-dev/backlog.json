@@ -1,6 +1,6 @@
 {
-  "next_id": 55,
-  "updated_at": "2026-02-19T07:09:24.379054",
+  "next_id": 56,
+  "updated_at": "2026-02-19T16:59:19.174765",
   "items": [
     {
       "id": "BL-001",
@@ -2110,6 +2110,41 @@
       ],
       "notes": null,
       "use_case": "Same as BL-517: prevent WebFetch hangs from freezing sessions by requiring URL verification before every WebFetch call.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-055",
+      "title": "Fix flaky E2E test in project-creation.spec.ts (toBeHidden timeout)",
+      "priority": "P0",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-19T16:59:19.174758",
+      "completed_at": null,
+      "tags": [
+        "bug",
+        "e2e",
+        "ci",
+        "flaky-test"
+      ],
+      "description": "The E2E test at gui/e2e/project-creation.spec.ts:31 intermittently fails with a toBeHidden assertion timeout on the project creation modal. The test fails on main (GitHub Actions run 22188785818) independent of any feature branch changes. During v007 execution, this caused the dynamic-parameter-forms feature to receive a 'partial' completion status despite 12/12 acceptance criteria passing and all other quality gates green. The execution pipeline halted, requiring manual restart. Any future feature touching the E2E CI job is at risk of the same false-positive halt.",
+      "acceptance_criteria": [
+        {
+          "text": "project-creation.spec.ts:31 toBeHidden assertion passes reliably across 10 consecutive CI runs",
+          "done": false
+        },
+        {
+          "text": "No E2E test requires retry loops to pass in CI",
+          "done": false
+        },
+        {
+          "text": "Flaky test fix does not alter the tested project creation functionality",
+          "done": false
+        }
+      ],
+      "notes": "Discovered during v007 execution. PR #88 (dynamic-parameter-forms) was retried 3 times per AGENTS.md limit without resolution. Likely cause: timing-dependent modal animation or state cleanup between tests.",
+      "use_case": null,
       "implemented_in_version": null,
       "implemented_in_theme": null,
       "upvotes": 0
