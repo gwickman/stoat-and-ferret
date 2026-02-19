@@ -13,6 +13,8 @@ from stoat_ferret.api.schemas.effect import (
     EffectApplyRequest,
     EffectApplyResponse,
     EffectListResponse,
+    EffectPreviewRequest,
+    EffectPreviewResponse,
     EffectResponse,
     TransitionRequest,
     TransitionResponse,
@@ -107,6 +109,65 @@ async def list_effects(registry: RegistryDep) -> EffectListResponse:
             )
         )
     return EffectListResponse(effects=effects, total=len(effects))
+
+
+@router.post("/effects/preview", response_model=EffectPreviewResponse)
+async def preview_effect(
+    request: EffectPreviewRequest,
+    registry: RegistryDep,
+) -> EffectPreviewResponse:
+    """Preview the filter string an effect would generate without applying it.
+
+    Validates the effect type and parameters, then returns the generated
+    FFmpeg filter string.
+
+    Args:
+        request: Effect preview request with type and parameters.
+        registry: Effect registry dependency.
+
+    Returns:
+        The effect type and generated filter string.
+
+    Raises:
+        HTTPException: 400 if effect type unknown or parameters invalid.
+    """
+    definition = registry.get(request.effect_type)
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "EFFECT_NOT_FOUND",
+                "message": f"Unknown effect type: {request.effect_type}",
+            },
+        )
+
+    validation_errors = registry.validate(request.effect_type, request.parameters)
+    if validation_errors:
+        messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "; ".join(messages),
+                "errors": [{"path": e.path, "message": e.message} for e in validation_errors],
+            },
+        )
+
+    try:
+        filter_string = definition.build_fn(request.parameters)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": str(e),
+            },
+        ) from None
+
+    return EffectPreviewResponse(
+        effect_type=request.effect_type,
+        filter_string=filter_string,
+    )
 
 
 @router.post(

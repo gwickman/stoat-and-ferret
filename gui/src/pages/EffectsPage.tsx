@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import EffectCatalog from '../components/EffectCatalog'
 import EffectParameterForm from '../components/EffectParameterForm'
+import FilterPreview from '../components/FilterPreview'
+import { useEffectPreview } from '../hooks/useEffectPreview'
 import { useEffects } from '../hooks/useEffects'
 import { useEffectCatalogStore } from '../stores/effectCatalogStore'
 import type { ParameterSchema } from '../stores/effectFormStore'
@@ -23,11 +25,14 @@ export default function EffectsPage() {
     }
   }, [selectedEffect, effects, setSchema, resetForm])
 
+  useEffectPreview()
+
   return (
     <div className="p-6" data-testid="effects-page">
       <h2 className="mb-4 text-2xl font-semibold">Effects</h2>
       <EffectCatalog />
       <EffectParameterForm />
+      <FilterPreview />
     </div>
   )
 }

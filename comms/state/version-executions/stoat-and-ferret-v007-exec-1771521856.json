@@ -1,0 +1,19 @@
+{
+  "schema_version": "2.0",
+  "execution_id": "stoat-and-ferret-v007-exec-1771521856",
+  "project": "stoat-and-ferret",
+  "version": "v007",
+  "status": "failed",
+  "phase": "development",
+  "post_dev_step": null,
+  "post_dev_progress": null,
+  "started_at": "2026-02-19T17:24:16.944815Z",
+  "updated_at": "2026-02-19T17:56:10.689369Z",
+  "completed_at": "2026-02-19T17:56:10.689364Z",
+  "halt_reason": "Feature live-filter-preview failed: Completion report status: partial",
+  "c4_regenerated": null,
+  "pause_reason": null,
+  "pause_message": null,
+  "crashed_predecessor": null,
+  "crashed_successor": null
+}

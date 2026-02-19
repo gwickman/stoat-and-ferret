@@ -44,6 +44,20 @@ class EffectApplyResponse(BaseModel):
     filter_string: str
 
 
+class EffectPreviewRequest(BaseModel):
+    """Request schema for previewing an effect's filter string."""
+
+    effect_type: str
+    parameters: dict[str, Any]
+
+
+class EffectPreviewResponse(BaseModel):
+    """Response schema for an effect filter string preview."""
+
+    effect_type: str
+    filter_string: str
+
+
 class TransitionRequest(BaseModel):
     """Request schema for applying a transition between two clips."""
 
