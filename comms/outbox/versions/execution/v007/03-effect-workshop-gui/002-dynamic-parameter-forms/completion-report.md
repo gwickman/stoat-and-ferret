@@ -1,5 +1,5 @@
 ---
-status: complete
+status: partial
 acceptance_passed: 12
 acceptance_total: 12
 quality_gates:
@@ -8,6 +8,7 @@ quality_gates:
   pytest: pass
   tsc: pass
   vitest: pass
+  ci_e2e: fail_preexisting
 ---
 # Completion Report: 002-dynamic-parameter-forms
 
@@ -57,3 +58,9 @@ Implemented a schema-driven parameter form generator that dynamically renders in
 - `integer` type is handled identically to `number` type (both render numeric input)
 - Range slider only appears when both `minimum` and `maximum` are defined in the schema
 - Validation errors are managed via the store's `setValidationErrors` action, allowing backend errors to be wired in by upstream callers
+
+## CI Status
+
+PR #88 created and pushed. All relevant CI checks pass (`changes`, `frontend`). The `e2e` job fails due to a **pre-existing flaky test** in `gui/e2e/project-creation.spec.ts:31` (project creation modal `toBeHidden` assertion). This same test also fails on `main` (run 22188785818). The failure is unrelated to this feature — it tests the project creation modal, not the effect parameter form.
+
+CI was retried 3 times (the AGENTS.md iteration limit). The PR is ready to merge once the flaky E2E test is addressed separately.
