@@ -99,27 +99,16 @@ impl Position {
     fn to_xy(&self) -> (String, String) {
         match self {
             Position::Absolute { x, y } => (x.to_string(), y.to_string()),
-            Position::Center => (
-                "(w-text_w)/2".to_string(),
-                "(h-text_h)/2".to_string(),
-            ),
-            Position::BottomCenter { margin } => (
-                "(w-text_w)/2".to_string(),
-                format!("h-text_h-{margin}"),
-            ),
+            Position::Center => ("(w-text_w)/2".to_string(), "(h-text_h)/2".to_string()),
+            Position::BottomCenter { margin } => {
+                ("(w-text_w)/2".to_string(), format!("h-text_h-{margin}"))
+            }
             Position::TopLeft { margin } => (margin.to_string(), margin.to_string()),
-            Position::TopRight { margin } => (
-                format!("w-text_w-{margin}"),
-                margin.to_string(),
-            ),
-            Position::BottomLeft { margin } => (
-                margin.to_string(),
-                format!("h-text_h-{margin}"),
-            ),
-            Position::BottomRight { margin } => (
-                format!("w-text_w-{margin}"),
-                format!("h-text_h-{margin}"),
-            ),
+            Position::TopRight { margin } => (format!("w-text_w-{margin}"), margin.to_string()),
+            Position::BottomLeft { margin } => (margin.to_string(), format!("h-text_h-{margin}")),
+            Position::BottomRight { margin } => {
+                (format!("w-text_w-{margin}"), format!("h-text_h-{margin}"))
+            }
         }
     }
 }
@@ -327,7 +316,13 @@ impl DrawtextBuilder {
     /// * `end_time` - When the text starts fading out (seconds)
     /// * `fade_out` - Duration of fade out (seconds)
     #[must_use]
-    pub fn alpha_fade(mut self, start_time: f64, fade_in: f64, end_time: f64, fade_out: f64) -> Self {
+    pub fn alpha_fade(
+        mut self,
+        start_time: f64,
+        fade_in: f64,
+        end_time: f64,
+        fade_out: f64,
+    ) -> Self {
         let t = Expr::var(Variable::T);
         let t1 = Expr::constant(start_time);
         let fi = Expr::constant(fade_in);
@@ -357,11 +352,7 @@ impl DrawtextBuilder {
         );
 
         // if(lt(t,T1), 0, fade_in_expr)
-        let full_expr = Expr::if_then_else(
-            Expr::lt(t, t1),
-            Expr::constant(0.0),
-            fade_in_expr,
-        );
+        let full_expr = Expr::if_then_else(Expr::lt(t, t1), Expr::constant(0.0), fade_in_expr);
 
         self.alpha = Some(full_expr.to_string());
         self
@@ -383,8 +374,7 @@ impl DrawtextBuilder {
     /// Returns a [`Filter`] that can be used in filter chains and graphs.
     #[must_use]
     pub fn build(self) -> Filter {
-        let mut filter = Filter::new("drawtext")
-            .param("text", &self.text);
+        let mut filter = Filter::new("drawtext").param("text", &self.text);
 
         // Font specification
         if let Some(font) = &self.font {
@@ -625,11 +615,7 @@ impl DrawtextBuilder {
             visible_expr,
         );
 
-        let full_expr = Expr::if_then_else(
-            Expr::lt(t, t1),
-            Expr::constant(0.0),
-            fade_in_expr,
-        );
+        let full_expr = Expr::if_then_else(Expr::lt(t, t1), Expr::constant(0.0), fade_in_expr);
 
         slf.alpha = Some(full_expr.to_string());
         slf
@@ -847,9 +833,7 @@ mod tests {
 
     #[test]
     fn test_shadow() {
-        let filter = DrawtextBuilder::new("hello")
-            .shadow(2, 2, "black")
-            .build();
+        let filter = DrawtextBuilder::new("hello").shadow(2, 2, "black").build();
         let s = filter.to_string();
         assert!(s.contains("shadowx=2"));
         assert!(s.contains("shadowy=2"));
