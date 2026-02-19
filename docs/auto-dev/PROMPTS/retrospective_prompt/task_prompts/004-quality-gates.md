@@ -12,7 +12,26 @@ Post-version retrospective for `${PROJECT}` version `${VERSION}`. Quality gates 
 
 ## Tasks
 
+### 0. Check for Python File Changes
+
+Before running quality gates, check if any Python files changed in this version:
+
+```bash
+git diff --name-only <version-start-commit> HEAD -- '*.py'
+```
+
+Determine `<version-start-commit>` from the version's first merge commit or tag.
+
+Record the result:
+- **Python files changed**: YES / NO
+
+If **NO** (doc-only version): skip the full pytest coverage run in Step 1. Run only static analysis: `run_quality_gates(project="${PROJECT}", checks=["ruff", "mypy"])`. Then skip to Step 1b for unconditional test categories.
+
+If **YES**: proceed with Step 1 as written.
+
 ### 1. Run Quality Gates
+
+**If Python files changed** (from Step 0):
 
 Call:
 ```python
@@ -20,6 +39,32 @@ run_quality_gates(project="${PROJECT}")
 ```
 
 Record the result for each check: pytest, ruff, mypy.
+
+**If no Python files changed** (doc-only version):
+
+Call:
+```python
+run_quality_gates(project="${PROJECT}", checks=["ruff", "mypy"])
+```
+
+Record the result for ruff and mypy. The full pytest coverage run is skipped.
+
+### 1b. Unconditional Test Categories
+
+Regardless of whether Python files changed, the following test categories still run:
+
+```bash
+# Golden scenarios
+EXECUTION_BACKEND_MODE=replay uv run pytest tests/system/scenarios/ -v
+
+# Contract tests
+uv run pytest tests/contract/ -v
+
+# Parity tests
+uv run pytest tests/parity/ -v
+```
+
+Record pass/fail for each category.
 
 ### 2. Evaluate Results
 

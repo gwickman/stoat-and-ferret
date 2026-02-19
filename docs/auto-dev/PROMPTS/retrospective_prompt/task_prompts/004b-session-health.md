@@ -73,7 +73,7 @@ query_cli_sessions(
             COUNT(*) as denial_count
         FROM tool_calls tc
         WHERE tc.is_error = TRUE
-          AND tc.result LIKE '%UNAUTHORIZED%'
+          AND tc.result_snippet LIKE '%UNAUTHORIZED%'
         GROUP BY tc.session_id, tc.tool_name
         HAVING COUNT(*) >= 3
         ORDER BY denial_count DESC
