@@ -3,19 +3,19 @@
 > Bridge between strategic roadmap and auto-dev execution.
 >
 > Strategic Roadmap: `docs/design/01-roadmap.md`
-> Last Updated: 2026-02-08
+> Last Updated: 2026-02-19
 
 ## Current Focus
 
-**Recently Completed:** v005 (GUI shell + library browser + project manager)
-**Upcoming:** v006 (effects engine foundation: filter expression engine, graph validation, text overlay, speed control)
+**Recently Completed:** v006 (effects engine foundation: filter expression engine, graph validation, text overlay, speed control)
+**Upcoming:** v007 (effect workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview)
 
 ## Roadmap → Version Mapping
 
 | Version | Roadmap Reference | Focus | Status |
 |---------|-------------------|-------|--------|
 | v007 | Phase 2, M2.4–2.6, M2.8–2.9 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | 📋 planned |
-| v006 | Phase 2, M2.1–2.3 | Effects engine foundation: filter expression engine, graph validation, text overlay, speed control | 📋 planned |
+| v006 | Phase 2, M2.1–2.3 | Effects engine foundation: filter expression engine, graph validation, text overlay, speed control | ✅ complete |
 | v005 | Phase 1, M1.10–1.12 | GUI shell + library browser + project manager | ✅ complete |
 | v004 | Phase 1, M1.8–1.9 | Testing infrastructure + quality verification | ✅ complete |
 | v003 | Phase 1, M1.6–1.7 | API layer + Clip model | ✅ complete |
@@ -32,27 +32,11 @@ Track explorations that must complete before version design.
 | EXP-002 | Recording fake pattern — concrete implementation for RecordingFFmpegExecutor | v001, v004 | complete |
 | EXP-003 | FastAPI static file serving — GUI deployment from API server | v005 | complete |
 | BL-028 | Frontend framework selection (extends EXP-003) | v005 | complete |
-| BL-043 | Clip effect model design (how effects attach to clips) | v006 | pending |
+| BL-043 | Clip effect model design (how effects attach to clips) | v006 | complete |
 | BL-047 | Effect registry schema and builder protocol design | v007 | pending |
 | BL-051 | Preview thumbnail pipeline (frame extraction + effect application) | v007 | pending |
 
 ## Planned Versions
-
-### v006 - Effects Engine Foundation (Planned)
-
-**Goal:** Greenfield Rust filter expression engine, graph validation, text overlay, speed control, effect discovery API. Milestones M2.1–2.3.
-**Estimated scope:** 7 items
-
-**Items (BL-037–043):**
-- BL-037 (P1): Implement FFmpeg filter expression engine in Rust
-- BL-038 (P1): Implement filter graph validation
-- BL-039 (P1): Build filter composition system
-- BL-040 (P1): Implement drawtext filter builder
-- BL-041 (P1): Implement speed control filters
-- BL-042 (P2): Create effect discovery API endpoint
-- BL-043 (P2): Apply text overlay to clip API
-
-**Dependencies:** Independent of v005 (pure Rust + API work). BL-039→BL-038, BL-040→BL-037, BL-042→BL-040+BL-041, BL-043→BL-040+BL-042. BL-043 may need EXP for clip effect model.
 
 ### v007 - Effect Workshop GUI (Planned)
 
@@ -73,6 +57,13 @@ Track explorations that must complete before version design.
 **Dependencies:** Depends on v006 (effects engine) and v005 (frontend project). BL-044/045→BL-037 (expression engine), BL-046→BL-045, BL-047→BL-044+BL-045, BL-048→BL-047, BL-049→BL-048, BL-050→BL-049, BL-051→BL-048+BL-049+BL-050, BL-052→BL-051
 
 ## Completed Versions
+
+### v006 - Effects Engine Foundation (2026-02-19)
+- **Themes:** filter-engine, filter-builders, effects-api
+- **Features:** 8 completed across 3 themes
+- **Backlog Resolved:** BL-037, BL-038, BL-039, BL-040, BL-041, BL-042, BL-043
+- **Key Changes:** Greenfield Rust filter expression engine with type-safe Expr builder API, filter graph validation with cycle detection (Kahn's algorithm), filter composition system with LabelGenerator, DrawtextBuilder with position presets and alpha fade, SpeedControl with setpts/atempo and automatic chaining for extreme speeds, EffectRegistry with effect discovery API, clip effect application endpoint with effects_json storage
+- **Deferred:** None
 
 ### v005 - GUI Shell, Library Browser & Project Manager (2026-02-09)
 - **Themes:** frontend-foundation, backend-services, gui-components, e2e-testing
@@ -134,6 +125,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-19 | v006 complete: Effects Engine Foundation delivered (3 themes, 8 features, 7 backlog items completed). Moved v006 from Planned to Completed. Updated Current Focus to v007. Marked BL-043 investigation as complete. |
 | 2026-02-09 | v005 complete: GUI Shell, Library Browser & Project Manager delivered (4 themes, 11 features, 10 backlog items completed). Moved v005 from Planned to Completed. Updated Current Focus to v006. Marked EXP-003 and BL-028 investigations as complete. |
 | 2026-02-09 | v004 complete: Testing Infrastructure & Quality Verification delivered (5 themes, 15 features, 13 backlog items completed). Moved v004 from Planned to Completed. Updated Current Focus to v005. |
 | 2026-02-08 | Rewrote plan.md to match auto-dev-mcp format. Added Planned Versions sections for v004–v007 with full backlog item listings and dependency chains. |
