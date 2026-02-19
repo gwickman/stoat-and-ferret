@@ -866,6 +866,291 @@ class SpeedControl:
 
     def __repr__(self) -> str: ...
 
+# ========== Audio Mixing Builders ==========
+
+class VolumeBuilder:
+    """Type-safe builder for FFmpeg `volume` audio filter.
+
+    Supports linear (float) and dB (string like "3dB") modes, plus precision
+    control. Validates volume range 0.0-10.0.
+
+    Example::
+
+        from stoat_ferret_core import VolumeBuilder
+
+        f = VolumeBuilder(0.5).build()
+        assert str(f) == "volume=volume=0.5"
+
+        f = VolumeBuilder.from_db("3dB").build()
+        assert str(f) == "volume=volume=3dB"
+    """
+
+    def __new__(cls, level: float) -> VolumeBuilder:
+        """Creates a new volume builder with a linear level.
+
+        Args:
+            level: Volume level in range [0.0, 10.0].
+
+        Raises:
+            ValueError: If level is outside [0.0, 10.0].
+        """
+        ...
+
+    @staticmethod
+    def from_db(db_str: str) -> VolumeBuilder:
+        """Creates a volume builder from a dB string.
+
+        Args:
+            db_str: Volume in dB format (e.g., "3dB", "-6dB").
+
+        Returns:
+            A new VolumeBuilder instance.
+
+        Raises:
+            ValueError: If the dB string is invalid.
+        """
+        ...
+
+    def precision(self, precision: str) -> VolumeBuilder:
+        """Sets the volume precision mode.
+
+        Args:
+            precision: Precision mode ("fixed", "float", or "double").
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If precision is not a valid mode.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the volume filter.
+
+        Returns:
+            A Filter instance.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class AfadeBuilder:
+    """Type-safe builder for FFmpeg `afade` audio filter.
+
+    Supports fade in/out with configurable duration, start time, and curve type.
+
+    Example::
+
+        from stoat_ferret_core import AfadeBuilder
+
+        f = AfadeBuilder("in", 3.0).build()
+        assert str(f) == "afade=t=in:d=3"
+    """
+
+    def __new__(cls, fade_type: str, duration: float) -> AfadeBuilder:
+        """Creates a new fade builder.
+
+        Args:
+            fade_type: Either "in" or "out".
+            duration: Fade duration in seconds (must be > 0).
+
+        Raises:
+            ValueError: If fade_type is invalid or duration <= 0.
+        """
+        ...
+
+    def start_time(self, time: float) -> AfadeBuilder:
+        """Sets the start time of the fade.
+
+        Args:
+            time: Start time in seconds.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def curve(self, curve: str) -> AfadeBuilder:
+        """Sets the fade curve type.
+
+        Args:
+            curve: Curve name. Valid: "tri", "qsin", "hsin", "esin", "log",
+                "ipar", "qua", "cub", "squ", "cbr", "par".
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If curve name is not recognized.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the afade filter.
+
+        Returns:
+            A Filter instance.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class AmixBuilder:
+    """Type-safe builder for FFmpeg `amix` audio mixing filter.
+
+    Mixes multiple audio inputs into a single output.
+
+    Example::
+
+        from stoat_ferret_core import AmixBuilder
+
+        f = AmixBuilder(4).build()
+        assert str(f) == "amix=inputs=4"
+    """
+
+    def __new__(cls, inputs: int) -> AmixBuilder:
+        """Creates a new amix builder.
+
+        Args:
+            inputs: Number of input streams (2-32).
+
+        Raises:
+            ValueError: If inputs is outside [2, 32].
+        """
+        ...
+
+    def duration_mode(self, mode: str) -> AmixBuilder:
+        """Sets the duration mode.
+
+        Args:
+            mode: Duration mode ("longest", "shortest", or "first").
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If mode is not recognized.
+        """
+        ...
+
+    def weights(self, weights: list[float]) -> AmixBuilder:
+        """Sets per-input weights.
+
+        Args:
+            weights: List of float weights, one per input.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def normalize(self, enable: bool) -> AmixBuilder:
+        """Sets whether to normalize output volume.
+
+        Args:
+            enable: Whether to enable normalization.
+
+        Returns:
+            Self for method chaining.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the amix filter.
+
+        Returns:
+            A Filter instance.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class DuckingPattern:
+    """Builds a ducking pattern that lowers music volume during speech.
+
+    Uses FFmpeg's sidechaincompress filter in a FilterGraph composition.
+
+    Example::
+
+        from stoat_ferret_core import DuckingPattern
+
+        graph = DuckingPattern().build()
+        s = str(graph)
+        assert "asplit" in s
+        assert "sidechaincompress" in s
+    """
+
+    def __new__(cls) -> DuckingPattern:
+        """Creates a new ducking pattern with default parameters."""
+        ...
+
+    def threshold(self, value: float) -> DuckingPattern:
+        """Sets the compression threshold (0.0-1.0).
+
+        Args:
+            value: Threshold value.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If value is outside [0.0, 1.0].
+        """
+        ...
+
+    def ratio(self, value: float) -> DuckingPattern:
+        """Sets the compression ratio (1.0-20.0).
+
+        Args:
+            value: Ratio value.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If value is outside [1.0, 20.0].
+        """
+        ...
+
+    def attack(self, value: float) -> DuckingPattern:
+        """Sets the attack time in milliseconds (0.01-2000.0).
+
+        Args:
+            value: Attack time in ms.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If value is outside [0.01, 2000.0].
+        """
+        ...
+
+    def release(self, value: float) -> DuckingPattern:
+        """Sets the release time in milliseconds (0.01-9000.0).
+
+        Args:
+            value: Release time in ms.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If value is outside [0.01, 9000.0].
+        """
+        ...
+
+    def build(self) -> FilterGraph:
+        """Builds the ducking filter graph.
+
+        Returns:
+            A FilterGraph containing the ducking pattern.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 
