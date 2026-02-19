@@ -1,10 +1,10 @@
 {
   "exploration_id": "fix-flaky-e2e-test-1771520423901",
   "results_folder": "fix-flaky-e2e-test",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 24592,
   "started_at": "2026-02-19T17:00:23.901759",
-  "updated_at": "2026-02-19T17:00:23.901759",
+  "updated_at": "2026-02-19T17:00:26.737737",
   "completed_at": null,
   "error": null,
   "documents": [],
