@@ -48,21 +48,26 @@ async function navigateAndSelectClip(
 ) {
   await navigateToEffects(page);
 
-  // Wait for projects to load — the dropdown only renders when > 1 project exists.
-  // Use waitFor with a timeout so we handle both single-project and multi-project cases.
-  const projectSelect = page.getByTestId("project-select");
-  try {
-    await projectSelect.waitFor({ state: "visible", timeout: 5_000 });
-    await projectSelect.selectOption(projectId);
-  } catch {
-    // Single project — auto-selected, no dropdown rendered
+  // Wait for projects to load — the clip selector (or empty state) appears once
+  // a project has been auto-selected and clips have been fetched.
+  await expect(
+    page
+      .getByTestId("clip-selector")
+      .or(page.getByTestId("clip-selector-empty")),
+  ).toBeVisible({ timeout: 10_000 });
+
+  // If our clip isn't visible yet, switch to the correct project via the dropdown
+  const clipButton = page.getByTestId(`clip-option-${clipId}`);
+  if ((await clipButton.count()) === 0) {
+    const projectSelect = page.getByTestId("project-select");
+    if ((await projectSelect.count()) > 0) {
+      await projectSelect.selectOption(projectId);
+    }
   }
 
-  // Wait for clip to load and select it
-  await expect(page.getByTestId(`clip-option-${clipId}`)).toBeVisible({
-    timeout: 15_000,
-  });
-  await page.getByTestId(`clip-option-${clipId}`).click();
+  // Wait for our clip to appear after project selection
+  await expect(clipButton).toBeVisible({ timeout: 15_000 });
+  await clipButton.click();
 }
 
 /** Create a project with a clip via API, returning IDs. */
