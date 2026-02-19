@@ -58,6 +58,19 @@ class EffectPreviewResponse(BaseModel):
     filter_string: str
 
 
+class EffectUpdateRequest(BaseModel):
+    """Request schema for updating an effect at a specific index."""
+
+    parameters: dict[str, Any]
+
+
+class EffectDeleteResponse(BaseModel):
+    """Response schema for a deleted effect."""
+
+    index: int
+    deleted_effect_type: str
+
+
 class TransitionRequest(BaseModel):
     """Request schema for applying a transition between two clips."""
 

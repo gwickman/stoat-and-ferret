@@ -1301,3 +1301,322 @@ async def test_transition_black_box_full_flow(
     assert len(project.transitions) == 1
     stored = project.transitions[0]
     assert stored["filter_string"] == data["filter_string"]
+
+
+# ---- Effect CRUD (PATCH/DELETE) tests ----
+
+
+async def _seed_clip_with_effects(
+    project_repo: AsyncInMemoryProjectRepository,
+    clip_repo: AsyncInMemoryClipRepository,
+    video_repo: AsyncInMemoryVideoRepository,
+    client: TestClient,
+    effect_count: int = 2,
+) -> tuple[str, str]:
+    """Seed a project with a clip and apply effects for CRUD testing.
+
+    Args:
+        project_repo: Project repository to seed.
+        clip_repo: Clip repository to seed.
+        video_repo: Video repository to seed.
+        client: Test client for applying effects.
+        effect_count: Number of effects to apply.
+
+    Returns:
+        Tuple of (project_id, clip_id).
+    """
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-crud",
+        name="CRUD Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repo.add(project)
+    video = make_test_video()
+    await video_repo.add(video)
+    clip = Clip(
+        id="clip-crud",
+        project_id="proj-crud",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repo.add(clip)
+
+    effects = [
+        {"effect_type": "text_overlay", "parameters": {"text": "First"}},
+        {"effect_type": "volume", "parameters": {"volume": 1.5}},
+        {"effect_type": "text_overlay", "parameters": {"text": "Third"}},
+    ]
+    for i in range(effect_count):
+        resp = client.post(
+            "/api/v1/projects/proj-crud/clips/clip-crud/effects",
+            json=effects[i % len(effects)],
+        )
+        assert resp.status_code == 201
+
+    return "proj-crud", "clip-crud"
+
+
+@pytest.mark.api
+async def test_patch_effect_updates_parameters(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """PATCH /effects/{index} updates effect parameters and regenerates filter string."""
+    await _seed_clip_with_effects(
+        project_repository, clip_repository, video_repository, client, effect_count=1
+    )
+
+    response = client.patch(
+        "/api/v1/projects/proj-crud/clips/clip-crud/effects/0",
+        json={"parameters": {"text": "Updated Text", "fontsize": 72}},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["effect_type"] == "text_overlay"
+    assert data["parameters"]["text"] == "Updated Text"
+    assert data["parameters"]["fontsize"] == 72
+    assert "drawtext" in data["filter_string"]
+    assert "fontsize=72" in data["filter_string"]
+
+
+@pytest.mark.api
+async def test_patch_effect_persists_changes(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """PATCH /effects/{index} persists the updated effect on the clip."""
+    await _seed_clip_with_effects(
+        project_repository, clip_repository, video_repository, client, effect_count=1
+    )
+
+    client.patch(
+        "/api/v1/projects/proj-crud/clips/clip-crud/effects/0",
+        json={"parameters": {"text": "Persisted"}},
+    )
+
+    clip = await clip_repository.get("clip-crud")
+    assert clip is not None
+    assert clip.effects is not None
+    assert clip.effects[0]["parameters"]["text"] == "Persisted"
+
+
+@pytest.mark.api
+async def test_patch_effect_invalid_index_returns_404(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """PATCH /effects/{index} with out-of-range index returns 404."""
+    await _seed_clip_with_effects(
+        project_repository, clip_repository, video_repository, client, effect_count=1
+    )
+
+    response = client.patch(
+        "/api/v1/projects/proj-crud/clips/clip-crud/effects/99",
+        json={"parameters": {"text": "Nope"}},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_delete_effect_removes_from_stack(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """DELETE /effects/{index} removes the effect and returns deleted info."""
+    await _seed_clip_with_effects(
+        project_repository, clip_repository, video_repository, client, effect_count=2
+    )
+
+    response = client.delete(
+        "/api/v1/projects/proj-crud/clips/clip-crud/effects/0",
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["index"] == 0
+    assert data["deleted_effect_type"] == "text_overlay"
+
+    # Verify only one effect remains
+    clip = await clip_repository.get("clip-crud")
+    assert clip is not None
+    assert clip.effects is not None
+    assert len(clip.effects) == 1
+    assert clip.effects[0]["effect_type"] == "volume"
+
+
+@pytest.mark.api
+async def test_delete_effect_invalid_index_returns_404(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """DELETE /effects/{index} with out-of-range index returns 404."""
+    await _seed_clip_with_effects(
+        project_repository, clip_repository, video_repository, client, effect_count=1
+    )
+
+    response = client.delete(
+        "/api/v1/projects/proj-crud/clips/clip-crud/effects/5",
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_delete_effect_nonexistent_project_returns_404(
+    client: TestClient,
+) -> None:
+    """DELETE /effects/{index} with nonexistent project returns 404."""
+    response = client.delete(
+        "/api/v1/projects/nonexistent/clips/clip-1/effects/0",
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.api
+async def test_patch_effect_invalid_params_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """PATCH /effects/{index} with invalid parameters returns 400."""
+    await _seed_clip_with_effects(
+        project_repository, clip_repository, video_repository, client, effect_count=1
+    )
+
+    # text_overlay requires 'text' field
+    response = client.patch(
+        "/api/v1/projects/proj-crud/clips/clip-crud/effects/0",
+        json={"parameters": {"fontsize": "not_a_number"}},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+
+
+# ---- Effect CRUD schema contract tests ----
+
+
+@pytest.mark.contract
+def test_effect_update_request_schema_roundtrip() -> None:
+    """EffectUpdateRequest serializes and deserializes correctly."""
+    from stoat_ferret.api.schemas.effect import EffectUpdateRequest
+
+    data: dict[str, Any] = {"parameters": {"text": "hello", "fontsize": 48}}
+    req = EffectUpdateRequest(**data)
+    assert req.parameters["text"] == "hello"
+    dumped = req.model_dump()
+    restored = EffectUpdateRequest(**dumped)
+    assert restored == req
+
+
+@pytest.mark.contract
+def test_effect_delete_response_schema_roundtrip() -> None:
+    """EffectDeleteResponse serializes and deserializes correctly."""
+    from stoat_ferret.api.schemas.effect import EffectDeleteResponse
+
+    data: dict[str, Any] = {"index": 0, "deleted_effect_type": "text_overlay"}
+    resp = EffectDeleteResponse(**data)
+    assert resp.index == 0
+    assert resp.deleted_effect_type == "text_overlay"
+    dumped = resp.model_dump()
+    restored = EffectDeleteResponse(**dumped)
+    assert restored == resp
+
+
+# ---- Golden test: full CRUD workflow ----
+
+
+@pytest.mark.api
+async def test_golden_full_crud_workflow(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Golden test: select effect, configure, apply, verify stack, edit, remove."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-golden",
+        name="Golden Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-golden",
+        project_id="proj-golden",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    # 1. Apply two effects
+    resp1 = client.post(
+        "/api/v1/projects/proj-golden/clips/clip-golden/effects",
+        json={"effect_type": "text_overlay", "parameters": {"text": "Title"}},
+    )
+    assert resp1.status_code == 201
+
+    resp2 = client.post(
+        "/api/v1/projects/proj-golden/clips/clip-golden/effects",
+        json={"effect_type": "volume", "parameters": {"volume": 2.0}},
+    )
+    assert resp2.status_code == 201
+
+    # 2. Verify stack has two effects
+    clip_data = await clip_repository.get("clip-golden")
+    assert clip_data is not None
+    assert clip_data.effects is not None
+    assert len(clip_data.effects) == 2
+    assert clip_data.effects[0]["effect_type"] == "text_overlay"
+    assert clip_data.effects[1]["effect_type"] == "volume"
+
+    # 3. Edit first effect
+    resp3 = client.patch(
+        "/api/v1/projects/proj-golden/clips/clip-golden/effects/0",
+        json={"parameters": {"text": "Updated Title", "fontsize": 96}},
+    )
+    assert resp3.status_code == 200
+    assert resp3.json()["parameters"]["text"] == "Updated Title"
+
+    # 4. Remove second effect
+    resp4 = client.delete(
+        "/api/v1/projects/proj-golden/clips/clip-golden/effects/1",
+    )
+    assert resp4.status_code == 200
+    assert resp4.json()["deleted_effect_type"] == "volume"
+
+    # 5. Verify final state
+    clip_final = await clip_repository.get("clip-golden")
+    assert clip_final is not None
+    assert clip_final.effects is not None
+    assert len(clip_final.effects) == 1
+    assert clip_final.effects[0]["parameters"]["text"] == "Updated Title"

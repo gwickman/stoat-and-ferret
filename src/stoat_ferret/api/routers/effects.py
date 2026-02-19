@@ -12,10 +12,12 @@ from prometheus_client import Counter
 from stoat_ferret.api.schemas.effect import (
     EffectApplyRequest,
     EffectApplyResponse,
+    EffectDeleteResponse,
     EffectListResponse,
     EffectPreviewRequest,
     EffectPreviewResponse,
     EffectResponse,
+    EffectUpdateRequest,
     TransitionRequest,
     TransitionResponse,
 )
@@ -281,6 +283,195 @@ async def apply_effect_to_clip(
         effect_type=request.effect_type,
         parameters=request.parameters,
         filter_string=filter_string,
+    )
+
+
+@router.patch(
+    "/projects/{project_id}/clips/{clip_id}/effects/{index}",
+    response_model=EffectApplyResponse,
+)
+async def update_clip_effect(
+    project_id: str,
+    clip_id: str,
+    index: int,
+    request: EffectUpdateRequest,
+    registry: RegistryDep,
+    project_repo: ProjectRepoDep,
+    clip_repo: ClipRepoDep,
+) -> EffectApplyResponse:
+    """Update an effect at a specific index on a clip.
+
+    Validates the index is within bounds, validates the new parameters
+    against the effect's JSON schema, regenerates the filter string,
+    and updates the effect in-place.
+
+    Args:
+        project_id: The unique project identifier.
+        clip_id: The unique clip identifier.
+        index: Zero-based index of the effect in the clip's effects list.
+        request: Updated parameters for the effect.
+        registry: Effect registry dependency.
+        project_repo: Project repository dependency.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        The updated effect with regenerated filter string.
+
+    Raises:
+        HTTPException: 404 if project, clip, or effect index not found,
+            400 if parameters invalid.
+    """
+    project = await project_repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    clip = await clip_repo.get(clip_id)
+    if clip is None or clip.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {clip_id} not found"},
+        )
+
+    effects = clip.effects or []
+    if index < 0 or index >= len(effects):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Effect index {index} out of range (0..{len(effects) - 1})",
+            },
+        )
+
+    effect_entry = effects[index]
+    effect_type = effect_entry["effect_type"]
+
+    definition = registry.get(effect_type)
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "EFFECT_NOT_FOUND",
+                "message": f"Unknown effect type: {effect_type}",
+            },
+        )
+
+    validation_errors = registry.validate(effect_type, request.parameters)
+    if validation_errors:
+        messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "; ".join(messages),
+                "errors": [{"path": e.path, "message": e.message} for e in validation_errors],
+            },
+        )
+
+    try:
+        filter_string = definition.build_fn(request.parameters)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": str(e),
+            },
+        ) from None
+
+    effects[index] = {
+        "effect_type": effect_type,
+        "parameters": request.parameters,
+        "filter_string": filter_string,
+    }
+    clip.updated_at = datetime.now(timezone.utc)
+    await clip_repo.update(clip)
+
+    logger.info(
+        "effect_updated",
+        project_id=project_id,
+        clip_id=clip_id,
+        effect_type=effect_type,
+        index=index,
+    )
+
+    return EffectApplyResponse(
+        effect_type=effect_type,
+        parameters=request.parameters,
+        filter_string=filter_string,
+    )
+
+
+@router.delete(
+    "/projects/{project_id}/clips/{clip_id}/effects/{index}",
+    response_model=EffectDeleteResponse,
+)
+async def delete_clip_effect(
+    project_id: str,
+    clip_id: str,
+    index: int,
+    project_repo: ProjectRepoDep,
+    clip_repo: ClipRepoDep,
+) -> EffectDeleteResponse:
+    """Remove an effect at a specific index from a clip.
+
+    Validates the index is within bounds, removes the effect from the
+    clip's effects list, and persists the change.
+
+    Args:
+        project_id: The unique project identifier.
+        clip_id: The unique clip identifier.
+        index: Zero-based index of the effect to remove.
+        project_repo: Project repository dependency.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        The deleted effect index and type.
+
+    Raises:
+        HTTPException: 404 if project, clip, or effect index not found.
+    """
+    project = await project_repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    clip = await clip_repo.get(clip_id)
+    if clip is None or clip.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {clip_id} not found"},
+        )
+
+    effects = clip.effects or []
+    if index < 0 or index >= len(effects):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Effect index {index} out of range (0..{len(effects) - 1})",
+            },
+        )
+
+    removed = effects.pop(index)
+    clip.updated_at = datetime.now(timezone.utc)
+    await clip_repo.update(clip)
+
+    logger.info(
+        "effect_deleted",
+        project_id=project_id,
+        clip_id=clip_id,
+        effect_type=removed["effect_type"],
+        index=index,
+    )
+
+    return EffectDeleteResponse(
+        index=index,
+        deleted_effect_type=removed["effect_type"],
     )
 
 
