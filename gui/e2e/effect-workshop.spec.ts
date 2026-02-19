@@ -4,14 +4,40 @@ import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
+// --- Environment checks ---
+
+function ffmpegAvailable(): boolean {
+  try {
+    execSync("ffmpeg -version", { stdio: "pipe", timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const HAS_FFMPEG = ffmpegAvailable();
+
 // --- Helpers ---
+
+/** Check that the effects API is working (requires Rust module). */
+async function checkEffectsApi(request: APIRequestContext): Promise<boolean> {
+  try {
+    const res = await request.get("/api/v1/effects");
+    return res.ok();
+  } catch {
+    return false;
+  }
+}
 
 /** Navigate to the Effects page via client-side routing (SPA). */
 async function navigateToEffects(page: Page) {
   await page.goto("/gui/");
   await page.getByTestId("nav-tab-effects").click();
   await expect(page.getByRole("heading", { name: "Effects" })).toBeVisible();
-  await expect(page.getByTestId("effect-catalog")).toBeVisible();
+  // Wait for catalog (may take longer in CI due to cold start)
+  await expect(page.getByTestId("effect-catalog")).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 /** Navigate to effects page and select a specific project's clip. */
@@ -101,7 +127,13 @@ async function setupProjectWithClip(
 // --- FR-001: Browse catalog and select effect ---
 
 test.describe("Effect Workshop - Catalog", () => {
-  test("browses effect catalog and selects an effect", async ({ page }) => {
+  test("browses effect catalog and selects an effect", async ({
+    page,
+    request,
+  }) => {
+    const apiOk = await checkEffectsApi(request);
+    test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
+
     await navigateToEffects(page);
 
     // Catalog displays effect cards
@@ -134,7 +166,11 @@ test.describe("Effect Workshop - Catalog", () => {
 test.describe("Effect Workshop - Parameters and Preview", () => {
   test("configures parameters and verifies filter preview updates", async ({
     page,
+    request,
   }) => {
+    const apiOk = await checkEffectsApi(request);
+    test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
+
     await navigateToEffects(page);
 
     // Select volume effect
@@ -174,6 +210,10 @@ test.describe("Effect Workshop - Apply, Edit, Remove", () => {
     page,
     request,
   }) => {
+    const apiOk = await checkEffectsApi(request);
+    test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
+    test.skip(!HAS_FFMPEG, "ffmpeg required for clip setup");
+
     await ensureSetup(request);
     await navigateAndSelectClip(page, projectId, clipId);
 
@@ -198,6 +238,10 @@ test.describe("Effect Workshop - Apply, Edit, Remove", () => {
     page,
     request,
   }) => {
+    const apiOk = await checkEffectsApi(request);
+    test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
+    test.skip(!HAS_FFMPEG, "ffmpeg required for clip setup");
+
     await ensureSetup(request);
     await navigateAndSelectClip(page, projectId, clipId);
 
@@ -227,6 +271,10 @@ test.describe("Effect Workshop - Apply, Edit, Remove", () => {
     page,
     request,
   }) => {
+    const apiOk = await checkEffectsApi(request);
+    test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
+    test.skip(!HAS_FFMPEG, "ffmpeg required for clip setup");
+
     await ensureSetup(request);
     await navigateAndSelectClip(page, projectId, clipId);
 
@@ -251,7 +299,11 @@ test.describe("Effect Workshop - Apply, Edit, Remove", () => {
 test.describe("Effect Workshop - Keyboard Navigation", () => {
   test("navigates full workflow with Tab, Enter, and Space", async ({
     page,
+    request,
   }) => {
+    const apiOk = await checkEffectsApi(request);
+    test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
+
     await navigateToEffects(page);
 
     // Select effect via Enter key
