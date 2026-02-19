@@ -157,9 +157,7 @@ impl VolumeBuilder {
     /// Returns an error if the string doesn't end with "dB".
     pub fn new_db(db_str: &str) -> Result<Self, String> {
         if !db_str.ends_with("dB") {
-            return Err(format!(
-                "dB volume must end with 'dB', got '{db_str}'"
-            ));
+            return Err(format!("dB volume must end with 'dB', got '{db_str}'"));
         }
         // Validate the numeric part parses
         let numeric = &db_str[..db_str.len() - 2];
@@ -240,7 +238,10 @@ impl VolumeBuilder {
     ///
     /// Returns self for method chaining.
     #[pyo3(name = "precision")]
-    fn py_precision<'a>(mut slf: PyRefMut<'a, Self>, precision: &str) -> PyResult<PyRefMut<'a, Self>> {
+    fn py_precision<'a>(
+        mut slf: PyRefMut<'a, Self>,
+        precision: &str,
+    ) -> PyResult<PyRefMut<'a, Self>> {
         match precision {
             "fixed" | "float" | "double" => {
                 slf.precision = Some(precision.to_string());
@@ -482,9 +483,7 @@ impl AmixBuilder {
     /// Returns an error if inputs is outside [2, 32].
     pub fn new(inputs: usize) -> Result<Self, String> {
         if !(2..=32).contains(&inputs) {
-            return Err(format!(
-                "amix input count must be 2-32, got {inputs}"
-            ));
+            return Err(format!("amix input count must be 2-32, got {inputs}"));
         }
         Ok(Self {
             inputs,
@@ -663,9 +662,7 @@ impl DuckingPattern {
     /// * `threshold` - Range [0.00097563, 1.0]
     pub fn with_threshold(mut self, threshold: f64) -> Result<Self, String> {
         if !(0.00097563..=1.0).contains(&threshold) {
-            return Err(format!(
-                "threshold must be 0.00097563-1.0, got {threshold}"
-            ));
+            return Err(format!("threshold must be 0.00097563-1.0, got {threshold}"));
         }
         self.threshold = threshold;
         Ok(self)
@@ -733,10 +730,7 @@ impl DuckingPattern {
             .param("release", format_duration_value(self.release));
 
         let compressed = graph
-            .compose_merge(
-                &[branches[0].as_str(), branches[1].as_str()],
-                sc_filter,
-            )
+            .compose_merge(&[branches[0].as_str(), branches[1].as_str()], sc_filter)
             .expect("compose_merge with 2 inputs cannot fail");
 
         // Step 3: Merge the compressed result with amerge
@@ -1121,19 +1115,13 @@ mod tests {
 
     #[test]
     fn test_amix_normalize_disabled() {
-        let filter = AmixBuilder::new(2)
-            .unwrap()
-            .with_normalize(false)
-            .build();
+        let filter = AmixBuilder::new(2).unwrap().with_normalize(false).build();
         assert!(filter.to_string().contains("normalize=0"));
     }
 
     #[test]
     fn test_amix_normalize_enabled() {
-        let filter = AmixBuilder::new(2)
-            .unwrap()
-            .with_normalize(true)
-            .build();
+        let filter = AmixBuilder::new(2).unwrap().with_normalize(true).build();
         assert!(filter.to_string().contains("normalize=1"));
     }
 
@@ -1161,10 +1149,7 @@ mod tests {
         let s = graph.to_string();
         assert!(s.contains("asplit"));
         assert!(s.contains("sidechaincompress"));
-        assert!(
-            s.contains("threshold=0.125"),
-            "Expected threshold in: {s}"
-        );
+        assert!(s.contains("threshold=0.125"), "Expected threshold in: {s}");
         assert!(s.contains("ratio=2"), "Expected ratio in: {s}");
         assert!(s.contains("attack=20"), "Expected attack in: {s}");
         assert!(s.contains("release=250"), "Expected release in: {s}");
@@ -1220,11 +1205,7 @@ mod tests {
         let graph = pattern.build();
         let s = graph.to_string();
         // asplit ; sidechaincompress ; anull = 3 chains = 2 semicolons
-        assert_eq!(
-            s.matches(';').count(),
-            2,
-            "Expected 2 semicolons in: {s}"
-        );
+        assert_eq!(s.matches(';').count(), 2, "Expected 2 semicolons in: {s}");
     }
 
     // ========== Edge case tests ==========
@@ -1261,12 +1242,8 @@ mod tests {
         use super::super::filter::{FilterChain, FilterGraph};
 
         let vol = VolumeBuilder::new(0.5).unwrap().build();
-        let graph = FilterGraph::new().chain(
-            FilterChain::new()
-                .input("0:a")
-                .filter(vol)
-                .output("quiet"),
-        );
+        let graph =
+            FilterGraph::new().chain(FilterChain::new().input("0:a").filter(vol).output("quiet"));
         let s = graph.to_string();
         assert!(s.contains("[0:a]"));
         assert!(s.contains("volume="));
@@ -1278,12 +1255,8 @@ mod tests {
         use super::super::filter::{FilterChain, FilterGraph};
 
         let fade = AfadeBuilder::new("in", 2.0).unwrap().build();
-        let graph = FilterGraph::new().chain(
-            FilterChain::new()
-                .input("0:a")
-                .filter(fade)
-                .output("faded"),
-        );
+        let graph =
+            FilterGraph::new().chain(FilterChain::new().input("0:a").filter(fade).output("faded"));
         let s = graph.to_string();
         assert!(s.contains("[0:a]"));
         assert!(s.contains("afade="));
