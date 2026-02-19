@@ -769,6 +769,66 @@ class DrawtextBuilder:
     def __repr__(self) -> str: ...
 
 
+class SpeedControl:
+    """Speed control builder for FFmpeg video and audio speed adjustment.
+
+    Generates setpts filters for video and atempo filters for audio.
+    The atempo builder automatically chains instances to keep each within
+    the [0.5, 2.0] quality range.
+    """
+
+    def __new__(cls, factor: float) -> SpeedControl:
+        """Creates a new speed control with the given factor.
+
+        Args:
+            factor: Speed multiplier in range [0.25, 4.0].
+
+        Raises:
+            ValueError: If factor is outside [0.25, 4.0].
+        """
+        ...
+
+    def drop_audio(self, drop: bool) -> SpeedControl:
+        """Sets whether to drop audio instead of speed-adjusting it.
+
+        When enabled, atempo_filters() returns an empty list.
+        Useful for timelapse-style effects.
+
+        Args:
+            drop: True to drop audio, False to speed-adjust it.
+        """
+        ...
+
+    @property
+    def speed_factor(self) -> float:
+        """The speed multiplier."""
+        ...
+
+    @property
+    def drop_audio_enabled(self) -> bool:
+        """Whether audio will be dropped."""
+        ...
+
+    def setpts_filter(self) -> Filter:
+        """Generates the setpts filter for video speed adjustment.
+
+        Returns:
+            A Filter with the setpts expression.
+        """
+        ...
+
+    def atempo_filters(self) -> list[Filter]:
+        """Generates atempo filter(s) for audio speed adjustment.
+
+        Returns a list of Filter instances. Multiple filters are chained
+        for speeds above 2.0x or below 0.5x to maintain audio quality.
+        Returns an empty list if drop_audio is enabled or speed is 1.0.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 

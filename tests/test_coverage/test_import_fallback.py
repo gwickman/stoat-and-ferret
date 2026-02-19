@@ -69,6 +69,8 @@ class TestImportFallback:
             "Position",
             "Duration",
             "TimeRange",
+            "DrawtextBuilder",
+            "SpeedControl",
             "FFmpegCommand",
             "Filter",
             "FilterChain",

@@ -21,6 +21,10 @@ Timeline Types
 - merge_ranges: Merge overlapping/adjacent ranges
 - total_coverage: Calculate total duration covered by ranges
 
+Speed Control
+-------------
+- SpeedControl: Speed adjustment builder with setpts and atempo auto-chaining
+
 Expression Engine
 -----------------
 - Expr: Type-safe FFmpeg filter expression builder
@@ -67,6 +71,7 @@ try:
         FrameRate,
         Position,
         SanitizationError,
+        SpeedControl,
         TimeRange,
         ValidationError,
         concat_filter,
@@ -111,6 +116,7 @@ except ImportError:
     merge_ranges = _not_built
     total_coverage = _not_built
     DrawtextBuilder = _not_built  # type: ignore[misc,assignment]
+    SpeedControl = _not_built  # type: ignore[misc,assignment]
     Expr = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
@@ -151,6 +157,8 @@ __all__ = [
     "total_coverage",
     # Drawtext builder
     "DrawtextBuilder",
+    # Speed control builder
+    "SpeedControl",
     # Expression engine
     "Expr",
     # FFmpeg command building

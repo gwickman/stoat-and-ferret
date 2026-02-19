@@ -84,6 +84,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register drawtext builder
     m.add_class::<ffmpeg::drawtext::DrawtextBuilder>()?;
 
+    // Register speed control builder
+    m.add_class::<ffmpeg::speed::SpeedControl>()?;
+
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_path, m)?)?;

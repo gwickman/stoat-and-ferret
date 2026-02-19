@@ -975,6 +975,8 @@ class TestModuleExports:
             "total_coverage",
             # Drawtext builder
             "DrawtextBuilder",
+            # Speed control builder
+            "SpeedControl",
             # Expression engine
             "Expr",
             # FFmpeg
@@ -1348,6 +1350,223 @@ class TestDrawtextBuilder:
         assert "[0:v]" in s
         assert "drawtext=" in s
         assert "[out]" in s
+
+
+class TestSpeedControl:
+    """Tests for SpeedControl PyO3 bindings."""
+
+    def test_basic_construction(self) -> None:
+        """Test SpeedControl construction with valid speed."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        assert ctrl.speed_factor == 2.0
+        assert ctrl.drop_audio_enabled is False
+
+    def test_minimum_speed(self) -> None:
+        """Test SpeedControl at minimum valid speed (0.25x)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(0.25)
+        assert ctrl.speed_factor == 0.25
+
+    def test_maximum_speed(self) -> None:
+        """Test SpeedControl at maximum valid speed (4.0x)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(4.0)
+        assert ctrl.speed_factor == 4.0
+
+    def test_invalid_speed_too_low(self) -> None:
+        """Test SpeedControl rejects speed below 0.25."""
+        from stoat_ferret_core import SpeedControl
+
+        with pytest.raises(ValueError, match="range"):
+            SpeedControl(0.1)
+
+    def test_invalid_speed_too_high(self) -> None:
+        """Test SpeedControl rejects speed above 4.0."""
+        from stoat_ferret_core import SpeedControl
+
+        with pytest.raises(ValueError, match="range"):
+            SpeedControl(5.0)
+
+    def test_setpts_2x(self) -> None:
+        """Test setpts filter at 2x speed."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        f = ctrl.setpts_filter()
+        assert str(f) == "setpts=0.5*PTS"
+
+    def test_setpts_half_speed(self) -> None:
+        """Test setpts filter at 0.5x speed."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(0.5)
+        f = ctrl.setpts_filter()
+        assert str(f) == "setpts=2*PTS"
+
+    def test_setpts_1x_identity(self) -> None:
+        """Test setpts filter at 1x speed (identity)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(1.0)
+        f = ctrl.setpts_filter()
+        assert str(f) == "setpts=1*PTS"
+
+    def test_setpts_4x(self) -> None:
+        """Test setpts filter at 4x speed."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(4.0)
+        f = ctrl.setpts_filter()
+        assert str(f) == "setpts=0.25*PTS"
+
+    def test_setpts_quarter_speed(self) -> None:
+        """Test setpts filter at 0.25x speed."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(0.25)
+        f = ctrl.setpts_filter()
+        assert str(f) == "setpts=4*PTS"
+
+    def test_atempo_2x(self) -> None:
+        """Test atempo at 2x speed (single filter)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 1
+        assert str(filters[0]) == "atempo=2"
+
+    def test_atempo_4x_chained(self) -> None:
+        """Test atempo at 4x speed (auto-chained)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(4.0)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 2
+        assert str(filters[0]) == "atempo=2"
+        assert str(filters[1]) == "atempo=2"
+
+    def test_atempo_3x_chained(self) -> None:
+        """Test atempo at 3x speed (2.0 + 1.5)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(3.0)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 2
+        assert str(filters[0]) == "atempo=2"
+        assert str(filters[1]) == "atempo=1.5"
+
+    def test_atempo_0_25x_chained(self) -> None:
+        """Test atempo at 0.25x speed (auto-chained)."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(0.25)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 2
+        assert str(filters[0]) == "atempo=0.5"
+        assert str(filters[1]) == "atempo=0.5"
+
+    def test_atempo_1x_noop(self) -> None:
+        """Test atempo at 1x speed returns empty list."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(1.0)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 0
+
+    def test_drop_audio(self) -> None:
+        """Test drop_audio option returns empty atempo list."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0).drop_audio(True)
+        assert ctrl.drop_audio_enabled is True
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 0
+        # setpts still works
+        f = ctrl.setpts_filter()
+        assert "setpts=" in str(f)
+
+    def test_drop_audio_chaining(self) -> None:
+        """Test drop_audio method chaining."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0).drop_audio(True)
+        assert ctrl.drop_audio_enabled is True
+        ctrl2 = SpeedControl(2.0).drop_audio(False)
+        assert ctrl2.drop_audio_enabled is False
+
+    def test_setpts_returns_filter(self) -> None:
+        """Test that setpts_filter returns a Filter object."""
+        from stoat_ferret_core import Filter, SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        f = ctrl.setpts_filter()
+        assert isinstance(f, Filter)
+
+    def test_atempo_returns_filters(self) -> None:
+        """Test that atempo_filters returns Filter objects."""
+        from stoat_ferret_core import Filter, SpeedControl
+
+        ctrl = SpeedControl(3.0)
+        filters = ctrl.atempo_filters()
+        for f in filters:
+            assert isinstance(f, Filter)
+
+    def test_repr(self) -> None:
+        """Test repr output."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        r = repr(ctrl)
+        assert "SpeedControl" in r
+        assert "2" in r
+
+    def test_in_filter_chain(self) -> None:
+        """Test SpeedControl filters work in FilterChain."""
+        from stoat_ferret_core import FilterChain, SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        chain = FilterChain().input("0:v").filter(ctrl.setpts_filter()).output("fast_v")
+        s = str(chain)
+        assert "[0:v]" in s
+        assert "setpts=" in s
+        assert "[fast_v]" in s
+
+    def test_atempo_in_filter_chain(self) -> None:
+        """Test atempo filters work in FilterChain with chaining."""
+        from stoat_ferret_core import FilterChain, SpeedControl
+
+        ctrl = SpeedControl(3.0)
+        chain = FilterChain().input("0:a")
+        for f in ctrl.atempo_filters():
+            chain = chain.filter(f)
+        chain = chain.output("fast_a")
+        s = str(chain)
+        assert "[0:a]" in s
+        assert "atempo=2" in s
+        assert "atempo=1.5" in s
+        assert "[fast_a]" in s
+
+    def test_boundary_2x_single_atempo(self) -> None:
+        """Test that 2.0x speed produces exactly one atempo filter."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(2.0)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 1
+
+    def test_boundary_0_5x_single_atempo(self) -> None:
+        """Test that 0.5x speed produces exactly one atempo filter."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(0.5)
+        filters = ctrl.atempo_filters()
+        assert len(filters) == 1
+        assert str(filters[0]) == "atempo=0.5"
 
 
 class TestExceptions:
