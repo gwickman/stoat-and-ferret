@@ -1,8 +1,8 @@
 # C4 Architecture Documentation
 
-**Last Updated:** 2026-02-10 UTC
-**Generated for Version:** v005
-**Generation Mode:** full
+**Last Updated:** 2026-02-19 UTC
+**Generated for Version:** v006
+**Generation Mode:** delta
 **Generator:** auto-dev-mcp C4 documentation prompt
 
 ## Quick Reference
@@ -23,7 +23,7 @@
 
 ## API Specifications
 
-- [api-server-api.yaml](./apis/api-server-api.yaml) — OpenAPI 3.1 specification for the REST API (v0.3.0)
+- [api-server-api.yaml](./apis/api-server-api.yaml) -- OpenAPI 3.1 specification for the REST API (v0.6.0)
 
 ## Contents
 
@@ -31,11 +31,12 @@
 
 | File | Description |
 |------|-------------|
-| [c4-component-rust-core-engine.md](./c4-component-rust-core-engine.md) | Frame-accurate timeline math, clip validation, FFmpeg command building, input sanitization |
+| [c4-component-rust-core-engine.md](./c4-component-rust-core-engine.md) | Frame-accurate timeline math, clip validation, FFmpeg command building, filter graph, expressions, input sanitization |
 | [c4-component-python-bindings.md](./c4-component-python-bindings.md) | Python re-export package, type stubs, and stub verification for Rust core |
-| [c4-component-api-gateway.md](./c4-component-api-gateway.md) | FastAPI REST/WebSocket endpoints, middleware, schemas, and configuration |
+| [c4-component-effects-engine.md](./c4-component-effects-engine.md) | Effect definition registry with JSON Schema parameters and AI hints (new in v006) |
+| [c4-component-api-gateway.md](./c4-component-api-gateway.md) | FastAPI REST/WebSocket endpoints, middleware, schemas, configuration, and effects discovery API |
 | [c4-component-application-services.md](./c4-component-application-services.md) | Video scanning, thumbnail generation, FFmpeg execution, async job queue |
-| [c4-component-data-access.md](./c4-component-data-access.md) | SQLite repository pattern, domain models, schema, audit logging |
+| [c4-component-data-access.md](./c4-component-data-access.md) | SQLite repository pattern, domain models, ORM models, schema, audit logging |
 | [c4-component-web-gui.md](./c4-component-web-gui.md) | React SPA with dashboard, video library, project management, real-time monitoring |
 | [c4-component-test-infrastructure.md](./c4-component-test-infrastructure.md) | Unit, integration, contract, black-box, security, and property-based test suites |
 
@@ -43,6 +44,8 @@
 
 | File | Description |
 |------|-------------|
+| [c4-code-rust-core.md](./c4-code-rust-core.md) | Crate root (lib.rs), PyO3 module registration, custom exceptions, health check |
+| [c4-code-rust-ffmpeg.md](./c4-code-rust-ffmpeg.md) | FFmpegCommand builder, Filter, FilterChain, FilterGraph, Expr/PyExpr, DrawtextBuilder, SpeedControl |
 | [c4-code-rust-stoat-ferret-core-src.md](./c4-code-rust-stoat-ferret-core-src.md) | Crate root (lib.rs), PyO3 module registration |
 | [c4-code-rust-stoat-ferret-core-timeline.md](./c4-code-rust-stoat-ferret-core-timeline.md) | Timeline module: FrameRate, Position, Duration, TimeRange |
 | [c4-code-rust-stoat-ferret-core-clip.md](./c4-code-rust-stoat-ferret-core-clip.md) | Clip module: Clip struct, validation |
@@ -52,8 +55,12 @@
 | [c4-code-stoat-ferret-core.md](./c4-code-stoat-ferret-core.md) | Python bindings package (stoat_ferret_core) |
 | [c4-code-stubs-stoat-ferret-core.md](./c4-code-stubs-stoat-ferret-core.md) | Python type stubs for Rust bindings |
 | [c4-code-scripts.md](./c4-code-scripts.md) | Scripts (stub verification) |
+| [c4-code-python-effects.md](./c4-code-python-effects.md) | Effects module: EffectDefinition, EffectRegistry, built-in effects (new in v006) |
+| [c4-code-python-api.md](./c4-code-python-api.md) | Higher-level API layer overview with routers, schemas, services, and WebSocket |
+| [c4-code-python-schemas.md](./c4-code-python-schemas.md) | Schema definitions overview with effect and job schemas |
+| [c4-code-python-db.md](./c4-code-python-db.md) | SQLAlchemy ORM models, generic BaseRepository, async repositories |
 | [c4-code-stoat-ferret-api.md](./c4-code-stoat-ferret-api.md) | API application factory, settings, entry point |
-| [c4-code-stoat-ferret-api-routers.md](./c4-code-stoat-ferret-api-routers.md) | API route handlers (health, videos, projects, jobs) |
+| [c4-code-stoat-ferret-api-routers.md](./c4-code-stoat-ferret-api-routers.md) | API route handlers (health, videos, projects, jobs, effects, ws) |
 | [c4-code-stoat-ferret-api-middleware.md](./c4-code-stoat-ferret-api-middleware.md) | API middleware (correlation ID, metrics) |
 | [c4-code-stoat-ferret-api-schemas.md](./c4-code-stoat-ferret-api-schemas.md) | API Pydantic request/response schemas |
 | [c4-code-stoat-ferret-api-websocket.md](./c4-code-stoat-ferret-api-websocket.md) | WebSocket connection manager, events |
@@ -84,6 +91,7 @@
 | Version | Mode | Date | Notes |
 |---------|------|------|-------|
 | v005 | full | 2026-02-10 | Complete C4 documentation across all levels. No gaps. |
+| v006 | delta | 2026-02-19 | Delta update for effects engine. Added c4-component-effects-engine.md. Updated 6 code-level files, 5 component files, container, context, API spec. Added 6 new code-level files for v006 modules. |
 
 ## Regeneration
 
