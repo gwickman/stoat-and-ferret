@@ -183,26 +183,26 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 **Objective:** Implement core video effects with Rust filter chain builder, maintaining pure functions and comprehensive testing. GUI adds interactive Effect Workshop for discovery and configuration.
 
 ### Milestone 2.1: Rust Core - Filter Expression Engine
-- [ ] Implement FFmpeg filter expression parser/builder in Rust
-- [ ] Create filter graph validation (input/output pad matching)
-- [ ] Build filter composition system (chaining, branching)
-- [ ] Implement expression builder for enable/alpha/time expressions
-- [ ] Add comprehensive property-based tests (proptest)
+- [x] Implement FFmpeg filter expression parser/builder in Rust
+- [x] Create filter graph validation (input/output pad matching)
+- [x] Build filter composition system (chaining, branching)
+- [x] Implement expression builder for enable/alpha/time expressions
+- [x] Add comprehensive property-based tests (proptest)
 
 ### Milestone 2.2: Text Overlay System (Rust + Python)
-- [ ] Implement drawtext filter builder in Rust (pure function)
-- [ ] Add text sanitization with compile-time safety guarantees
-- [ ] Create alpha animation expressions for fade in/out
-- [ ] Build text styling options (position, color, shadow, box)
-- [ ] Python API for effect discovery with AI hints
-- [ ] Contract tests: generated filters produce valid FFmpeg commands
+- [x] Implement drawtext filter builder in Rust (pure function)
+- [x] Add text sanitization with compile-time safety guarantees
+- [x] Create alpha animation expressions for fade in/out
+- [x] Build text styling options (position, color, shadow, box)
+- [x] Python API for effect discovery with AI hints
+- [x] Contract tests: generated filters produce valid FFmpeg commands
 
 ### Milestone 2.3: Speed Control (Rust Core)
-- [ ] Implement setpts filter for video speed (pure function, Rust)
-- [ ] Build atempo chain generator for audio speed (handle >2x speeds)
-- [ ] Create speed calculation functions with exhaustive unit tests
-- [ ] Handle audio removal option for extreme speeds
-- [ ] Validation with helpful error messages (Rust Error types)
+- [x] Implement setpts filter for video speed (pure function, Rust)
+- [x] Build atempo chain generator for audio speed (handle >2x speeds)
+- [x] Create speed calculation functions with exhaustive unit tests
+- [x] Handle audio removal option for extreme speeds
+- [x] Validation with helpful error messages (Rust Error types)
 
 ### Milestone 2.4: Audio Mixing
 - [ ] Implement amix filter builder (Rust)
@@ -218,11 +218,11 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 - [ ] Build `/effects/transition` API endpoint (Python)
 
 ### Milestone 2.6: Effect Registry & Discovery
-- [ ] Design effect registry with JSON schema validation
-- [ ] Implement effect parameter validation as Rust functions
-- [ ] Create effect builder protocol for dependency injection
+- [x] Design effect registry with JSON schema validation
+- [x] Implement effect parameter validation as Rust functions
+- [x] Create effect builder protocol for dependency injection
 - [ ] Add effect metrics (effect_applications_total by type)
-- [ ] Build `/effects` discovery endpoint with AI hints
+- [x] Build `/effects` discovery endpoint with AI hints
 
 ### Milestone 2.7: Quality Verification
 - [ ] Rust unit tests for all filter builders (>95% coverage)

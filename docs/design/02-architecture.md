@@ -141,6 +141,9 @@ This document describes the architecture of an AI-driven video editing system de
 ├─────────────────────────────────────────────────────────────────────────┤
 │  • Timeline calculations (positions, durations, overlaps)               │
 │  • FFmpeg command generation (filter chains, encoding presets)          │
+│  • FFmpeg expression engine (type-safe expression tree builder)         │
+│  • Drawtext filter builder (text overlays with position presets)        │
+│  • Speed control filters (setpts + auto-chained atempo)                │
 │  • Input sanitization (text escaping, path validation)                  │
 │  • Layout math (PIP positions, split-screen grids)                      │
 │  • Render coordination (progress tracking, ETA calculation)             │
@@ -239,7 +242,10 @@ The architecture integrates quality attributes at every layer. These are not opt
 ```
 
 **Pure Functions in Rust Core:**
-- Filter builders (text overlay, speed, transitions)
+- Expression engine (`Expr` tree builder with arity validation)
+- `DrawtextBuilder` (text overlay with position presets, alpha fades)
+- `SpeedControl` (setpts + auto-chained atempo filters)
+- Filter types (`Filter`, `FilterChain`, `FilterGraph`)
 - Timeline calculations
 - Path validation and sanitization
 - All testable without mocks
@@ -347,15 +353,33 @@ Responsibilities:
 ```
 
 **Effects Service**
+
+Uses an `EffectRegistry` to manage effect definitions and delegates filter generation to Rust builders.
+
 ```
 Responsibilities:
-├── Effect parameter validation (via Rust core)
-├── Filter expression generation (via Rust core)
-├── Effect composition/chaining
-├── Available effects discovery
-├── Default parameter generation
-└── Emit metrics: effects_applied_total by type
+├── Effect discovery (GET /effects returns all registered effects with schemas)
+├── Effect application (POST to clip, persists in effects_json)
+├── Filter string generation via Rust builders (DrawtextBuilder, SpeedControl)
+├── Parameter validation against JSON Schema definitions
+├── AI hint metadata per effect for agent integration
+└── Registry: EffectRegistry with register/get/list_all pattern
+
+Registry Architecture:
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  EffectRegistry  │────>│ EffectDefinition │────>│  preview_fn()    │
+│  register()      │     │  name            │     │  (calls Rust     │
+│  get()           │     │  description     │     │   builders)      │
+│  list_all()      │     │  parameter_schema│     └──────────────────┘
+└──────────────────┘     │  ai_hints        │
+                         └──────────────────┘
+
+Built-in effects (v006):
+├── text_overlay → DrawtextBuilder (Rust)
+└── speed_control → SpeedControl (Rust)
 ```
+
+The registry is injected via `app.state.effect_registry` (DI pattern). Each `EffectDefinition` includes a `preview_fn` callable that invokes the Rust builder to produce a sample filter string, keeping previews accurate to actual generation logic.
 
 **Render Service**
 ```
@@ -378,13 +402,72 @@ The performance-critical heart of the system. All compute-intensive operations a
 ```rust
 // stoat_ferret_core/src/lib.rs
 pub mod timeline;      // Timeline math, position calculations
-pub mod filters;       // FFmpeg filter chain building
-pub mod commands;      // FFmpeg command construction
+pub mod ffmpeg;        // FFmpeg filter/command modules (submodules below)
 pub mod sanitize;      // Input validation and escaping
 pub mod layout;        // PIP, split-screen geometry
 pub mod render;        // Render coordination, progress tracking
 pub mod hardware;      // Encoder detection
+
+// stoat_ferret_core/src/ffmpeg/
+pub mod filter;        // Filter, FilterChain, FilterGraph types
+pub mod expression;    // Type-safe FFmpeg expression tree builder
+pub mod drawtext;      // DrawtextBuilder for text overlay filters
+pub mod speed;         // SpeedControl for setpts/atempo filters
+pub mod commands;      // FFmpeg command construction
 ```
+
+**Expression Module (`ffmpeg/expression.rs`):**
+
+Type-safe builder for FFmpeg filter expressions (alpha curves, enable conditions, timing). Expressions are represented as an algebraic tree that serializes to valid FFmpeg syntax.
+
+```rust
+/// Expression tree for FFmpeg filter expressions.
+pub enum Expr {
+    Const(f64),
+    Var(Variable),                             // t, n, w, h, text_w, etc.
+    BinaryOp(BinaryOp, Box<Expr>, Box<Expr>),  // +, -, *, /, ^
+    UnaryOp(UnaryOp, Box<Expr>),               // negation
+    Func(FuncName, Vec<Expr>),                  // between, if, lt, gt, etc.
+}
+
+// Builder API with operator overloading:
+let fade_in = Expr::if_then_else(
+    Expr::lt(Expr::var(Variable::T), Expr::constant(2.0)),
+    Expr::var(Variable::T) / Expr::constant(2.0),
+    Expr::constant(1.0),
+);
+// Serializes to: "if(lt(t,2),t/2,1)"
+```
+
+Supports 14 FFmpeg functions (`between`, `if`, `lt`, `gt`, `eq`, `gte`, `lte`, `clip`, `abs`, `min`, `max`, `mod`, `not`, `ifnot`) with arity validation. Integers render without decimals (`5.0` → `"5"`).
+
+**Drawtext Builder Module (`ffmpeg/drawtext.rs`):**
+
+Type-safe builder for FFmpeg `drawtext` filters with automatic text escaping and position presets.
+
+```rust
+let filter = DrawtextBuilder::new("Chapter 1: Introduction")
+    .fontsize(64)
+    .fontcolor("white")
+    .position(Position::Center)
+    .alpha_fade(0.0, 1.0, 5.0, 0.5)  // Uses expression engine
+    .build();
+// Produces: drawtext=text='Chapter 1\: Introduction':fontsize=64:fontcolor=white:...
+```
+
+Position presets: `Center`, `BottomCenter`, `TopLeft`, `TopRight`, `BottomLeft`, `BottomRight` (with configurable margin), and `Absolute { x, y }`. Text is automatically escaped for FFmpeg safety (`:`, `'`, `\`, `%`, `[`, `]`, `;`).
+
+**Speed Control Module (`ffmpeg/speed.rs`):**
+
+Generates `setpts` (video) and `atempo` (audio) filters with automatic chaining for speeds outside the `[0.5, 2.0]` range.
+
+```rust
+let ctrl = SpeedControl::new(3.0)?;  // Validates [0.25, 4.0] range
+ctrl.setpts_filter();    // setpts=0.333333*PTS
+ctrl.atempo_filters();   // [atempo=2, atempo=1.5]  (product = 3.0)
+```
+
+The `atempo_chain` algorithm automatically decomposes speeds outside FFmpeg's `[0.5, 2.0]` per-filter limit into a chain of filters whose product equals the target speed.
 
 **Timeline Module (Pure Functions):**
 ```rust
@@ -422,37 +505,27 @@ pub fn validate_time_range(in_point: f64, out_point: f64, duration: f64) -> Resu
 }
 ```
 
-**Filter Builder Module (Pure Functions):**
+**Filter Module (`ffmpeg/filter.rs`):**
+
+Core filter types used as output by all builders:
+
 ```rust
-/// Build FFmpeg drawtext filter string.
-/// Pure function - no side effects, fully deterministic.
-/// Text is sanitized to prevent command injection.
-pub fn build_text_overlay_filter(params: &TextOverlayParams) -> String {
-    let sanitized_text = sanitize::escape_ffmpeg_text(&params.text);
-    let (x, y) = params.position.to_coordinates();
-    let alpha_expr = build_alpha_expression(
-        params.start,
-        params.start + params.duration,
-        params.fade_in,
-        params.fade_out,
-    );
-    let enable_expr = format!("between(t,{},{})", params.start, params.start + params.duration);
+/// A single FFmpeg filter with named parameters.
+pub struct Filter { name: String, params: Vec<(String, String)> }
+/// A semicolon-separated sequence of filters.
+pub struct FilterChain { filters: Vec<Filter> }
+/// A complete filter graph (comma-separated chains).
+pub struct FilterGraph { chains: Vec<FilterChain> }
 
-    format!(
-        "drawtext=text='{}':fontsize={}:fontcolor={}:x={}:y={}:enable='{}':alpha='{}'",
-        sanitized_text, params.font_size, params.font_color, x, y, enable_expr, alpha_expr
-    )
-}
-
-/// Build filter chain for concatenation.
-pub fn build_concat_filter_chain(
-    inputs: &[ConcatInput],
-    output_settings: &OutputSettings,
-) -> FilterChain {
-    // Build complex filter graph with scale, pad, format normalization
-    // Returns validated filter chain structure
-}
+// Usage example from DrawtextBuilder:
+let filter = Filter::new("drawtext")
+    .param("text", "'Chapter 1\\: Intro'")
+    .param("fontsize", "64")
+    .param("fontcolor", "white");
+// Renders: drawtext=text='Chapter 1\: Intro':fontsize=64:fontcolor=white
 ```
+
+`DrawtextBuilder::build()` and `SpeedControl::setpts_filter()` return `Filter` instances. `SpeedControl::atempo_filters()` returns `Vec<Filter>` for chaining.
 
 **Sanitization Module (Security):**
 ```rust
@@ -493,24 +566,56 @@ pub fn validate_path(user_path: &Path, allowed_roots: &[PathBuf]) -> Result<Path
 ```
 
 **PyO3 Bindings:**
+
+The `_core` module exposes Rust types to Python via PyO3:
+
 ```rust
 use pyo3::prelude::*;
 
 #[pymodule]
-fn stoat_ferret_core(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(py_calculate_clip_positions, m)?)?;
-    m.add_function(wrap_pyfunction!(py_build_text_overlay_filter, m)?)?;
-    m.add_function(wrap_pyfunction!(py_validate_path, m)?)?;
-    m.add_function(wrap_pyfunction!(py_build_concat_command, m)?)?;
-    m.add_class::<PyTextOverlayParams>()?;
-    m.add_class::<PyOutputSettings>()?;
+fn _core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Filter types
+    m.add_class::<Filter>()?;
+    m.add_class::<FilterChain>()?;
+    m.add_class::<FilterGraph>()?;
+    m.add_class::<FFmpegCommand>()?;
+
+    // Expression engine (v006)
+    m.add_class::<PyExpr>()?;            // Expr - FFmpeg expression builder
+
+    // Effect builders (v006)
+    m.add_class::<DrawtextBuilder>()?;   // Drawtext filter builder
+    m.add_class::<SpeedControl>()?;      // Speed control (setpts + atempo)
+
+    // Timeline & clip types
+    m.add_class::<ClipInput>()?;
+    m.add_class::<ClipWithPosition>()?;
+    // ... sanitization functions, etc.
     Ok(())
 }
+```
 
-#[pyfunction]
-fn py_build_text_overlay_filter(params: PyTextOverlayParams) -> PyResult<String> {
-    Ok(filters::build_text_overlay_filter(&params.into()))
-}
+**v006 Python API examples:**
+
+```python
+from stoat_ferret_core import DrawtextBuilder, SpeedControl, Expr
+
+# Text overlay with fade
+builder = (DrawtextBuilder("Hello World")
+    .fontsize(48)
+    .fontcolor("white")
+    .position("center")
+    .alpha_fade(0.0, 1.0, 5.0, 0.5))
+filter = builder.build()  # Returns Filter
+
+# Speed control with auto-chained atempo
+ctrl = SpeedControl(3.0)          # Validates [0.25, 4.0]
+video_filter = ctrl.setpts_filter()    # setpts=0.333333*PTS
+audio_filters = ctrl.atempo_filters()  # [atempo=2, atempo=1.5]
+
+# Expression builder
+expr = Expr.between(Expr.var("t"), Expr.constant(2), Expr.constant(5))
+str(expr)  # "between(t,2,5)"
 ```
 
 **Testing Strategy for Rust Core:**
@@ -659,6 +764,19 @@ CREATE VIRTUAL TABLE videos_fts USING fts5(
     content_rowid='id'
 );
 
+-- Clips with effects storage
+CREATE TABLE clips (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    source_video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE RESTRICT,
+    in_point INTEGER NOT NULL,
+    out_point INTEGER NOT NULL,
+    timeline_position INTEGER NOT NULL,
+    effects_json TEXT,    -- JSON array of {effect_type, parameters, filter_string}
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 -- Render jobs with recovery support
 CREATE TABLE jobs (
     id TEXT PRIMARY KEY,
@@ -789,60 +907,43 @@ projects/
 
 ### Effect Definition Schema
 
-Effect schemas are defined to support AI discovery. The Rust core validates parameters while Python exposes the discovery API.
+Effects are defined using `EffectDefinition` dataclasses in Python, with each definition including a `preview_fn` that invokes the corresponding Rust builder.
+
+```python
+@dataclass(frozen=True)
+class EffectDefinition:
+    name: str                           # Human-readable name
+    description: str                    # What the effect does
+    parameter_schema: dict[str, object] # JSON Schema for parameters
+    ai_hints: dict[str, str]            # Per-parameter AI guidance
+    preview_fn: Callable[[], str]       # Calls Rust builder for sample output
+```
+
+**Registered effects (v006):**
+
+| Effect Type | Rust Builder | Parameters |
+|-------------|-------------|------------|
+| `text_overlay` | `DrawtextBuilder` | `text` (required), `fontsize`, `fontcolor`, `position`, `margin`, `font` |
+| `speed_control` | `SpeedControl` | `factor` (required, 0.25-4.0), `drop_audio` |
+
+**Clip effects storage format** (`effects_json` column):
 
 ```json
-{
-  "effect_type": "text_overlay",
-  "display_name": "Text Overlay",
-  "description": "Add text with optional fade animation",
-  "category": "overlay",
-  "ai_hint": "Use this to add titles, captions, or labels to video",
-  "parameters": {
-    "text": {
-      "type": "string",
-      "required": true,
-      "description": "Text to display"
+[
+  {
+    "effect_type": "text_overlay",
+    "parameters": {
+      "text": "Chapter 1",
+      "fontsize": 64,
+      "fontcolor": "white",
+      "position": "center"
     },
-    "position": {
-      "type": "enum",
-      "values": ["center", "top", "bottom", "top_left", "top_right", "bottom_left", "bottom_right"],
-      "default": "center"
-    },
-    "font_size": {
-      "type": "integer",
-      "min": 8,
-      "max": 500,
-      "default": 48
-    },
-    "font_color": {
-      "type": "string",
-      "format": "color",
-      "default": "white"
-    },
-    "start": {
-      "type": "number",
-      "min": 0,
-      "description": "Start time in seconds relative to clip"
-    },
-    "duration": {
-      "type": "number",
-      "min": 0,
-      "description": "Duration in seconds"
-    },
-    "fade_in": {
-      "type": "number",
-      "min": 0,
-      "default": 0
-    },
-    "fade_out": {
-      "type": "number",
-      "min": 0,
-      "default": 0
-    }
+    "filter_string": "drawtext=text='Chapter 1':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2"
   }
-}
+]
 ```
+
+The `filter_string` is generated by the Rust builder at application time and stored alongside the parameters for transparency and debugging.
 
 ---
 
@@ -1048,6 +1149,10 @@ ai-video-editor/
 │   │       ├── effect.py
 │   │       └── error.py         # Structured error schema
 │   │
+│   ├── effects/                 # Effects subsystem
+│   │   ├── registry.py          # EffectRegistry (register/get/list_all)
+│   │   └── definitions.py       # Built-in effect definitions + preview fns
+│   │
 │   ├── services/                # Business logic (injectable)
 │   │   ├── library.py
 │   │   ├── timeline.py
@@ -1098,8 +1203,13 @@ ai-video-editor/
 │   │   └── src/
 │   │       ├── lib.rs           # PyO3 module definition
 │   │       ├── timeline.rs      # Timeline calculations
-│   │       ├── filters.rs       # Filter builders
-│   │       ├── commands.rs      # FFmpeg command construction
+│   │       ├── ffmpeg/          # FFmpeg filter/command modules
+│   │       │   ├── mod.rs       # Module declarations
+│   │       │   ├── filter.rs    # Filter, FilterChain, FilterGraph types
+│   │       │   ├── expression.rs # FFmpeg expression tree builder
+│   │       │   ├── drawtext.rs  # DrawtextBuilder for text overlays
+│   │       │   ├── speed.rs     # SpeedControl (setpts + atempo)
+│   │       │   └── commands.rs  # FFmpeg command construction
 │   │       ├── sanitize.rs      # Input validation/escaping
 │   │       ├── layout.rs        # PIP, split-screen geometry
 │   │       ├── render.rs        # Render coordination
@@ -1160,14 +1270,15 @@ POST /effects/text
 ### Discovery Endpoints for AI
 
 ```
-GET /effects
-Returns: List of all available effects with their parameter schemas
+GET /api/v1/effects
+Returns: All registered effects with parameter schemas, AI hints,
+         and filter_preview strings generated by Rust builders.
+         Powered by EffectRegistry.list_all()
 
-GET /effects/{effect_type}/schema
-Returns: JSON Schema for effect parameters
-
-GET /compose/layouts
-Returns: Available composition layouts (pip, split-screen variants)
+POST /api/v1/projects/{project_id}/clips/{clip_id}/effects
+Applies: Effect to clip, generates filter string via Rust builder,
+         persists in clip's effects_json column.
+         Returns effect_type, parameters, and filter_string.
 
 GET /system/info
 Returns: System info including Rust core version
