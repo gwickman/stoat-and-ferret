@@ -231,14 +231,16 @@ test.describe("Effect Workshop - Apply, Edit, Remove", () => {
     await expect(page.getByTestId("effect-parameter-form")).toBeVisible();
     await page.getByTestId("input-volume").fill("2");
 
-    // Apply effect to the clip
-    await page.getByTestId("apply-effect-btn").click();
-    await expect(page.getByTestId("apply-status")).toContainText(
-      "Effect applied!",
+    // Apply effect to the clip — wait for the API response to complete
+    const applyResponse = page.waitForResponse(
+      (res) => res.url().includes("/effects") && res.request().method() === "POST",
     );
+    await page.getByTestId("apply-effect-btn").click();
+    await applyResponse;
 
-    // Effect appears in the stack
-    await expect(page.getByTestId("effect-stack")).toBeVisible();
+    // Effect appears in the stack (the apply-status text is transient since
+    // the apply section unmounts when selectedEffect is cleared)
+    await expect(page.getByTestId("effect-stack")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("effect-entry-0")).toBeVisible();
     await expect(page.getByTestId("effect-type-0")).toContainText("volume");
   });
@@ -267,13 +269,16 @@ test.describe("Effect Workshop - Apply, Edit, Remove", () => {
       "Update Effect",
     );
 
-    // Update the volume parameter and save
+    // Update the volume parameter and save — wait for the API response
     await page.getByTestId("input-volume").fill("3");
-    await page.getByTestId("apply-effect-btn").click();
-
-    await expect(page.getByTestId("apply-status")).toContainText(
-      "Effect updated!",
+    const updateResponse = page.waitForResponse(
+      (res) => res.url().includes("/effects/") && res.request().method() === "PATCH",
     );
+    await page.getByTestId("apply-effect-btn").click();
+    await updateResponse;
+
+    // Effect stack still has the effect after update
+    await expect(page.getByTestId("effect-entry-0")).toBeVisible({ timeout: 10_000 });
   });
 
   test("removes applied effect with confirmation dialog", async ({
