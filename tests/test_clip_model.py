@@ -146,3 +146,22 @@ class TestClipDataclass:
         assert clip.timeline_position == 50
         assert clip.created_at == now
         assert clip.updated_at == now
+
+    def test_clip_effects_defaults_to_none(self) -> None:
+        """Clip effects field defaults to None."""
+        clip = make_clip()
+        assert clip.effects is None
+
+    def test_clip_effects_stores_list(self) -> None:
+        """Clip effects field stores a list of effect dicts."""
+        effects = [
+            {
+                "effect_type": "text_overlay",
+                "parameters": {"text": "Hello"},
+                "filter_string": "drawtext=text='Hello'",
+            }
+        ]
+        clip = make_clip(effects=effects)
+        assert clip.effects is not None
+        assert len(clip.effects) == 1
+        assert clip.effects[0]["effect_type"] == "text_overlay"

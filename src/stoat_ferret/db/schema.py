@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS clips (
     in_point INTEGER NOT NULL,
     out_point INTEGER NOT NULL,
     timeline_position INTEGER NOT NULL,
+    effects_json TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

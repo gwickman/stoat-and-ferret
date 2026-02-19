@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,6 +36,7 @@ class ClipResponse(BaseModel):
     in_point: int
     out_point: int
     timeline_position: int
+    effects: list[dict[str, Any]] | None = None
     created_at: datetime
     updated_at: datetime
 

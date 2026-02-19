@@ -27,3 +27,18 @@ class EffectListResponse(BaseModel):
 
     effects: list[EffectResponse]
     total: int
+
+
+class EffectApplyRequest(BaseModel):
+    """Request schema for applying an effect to a clip."""
+
+    effect_type: str
+    parameters: dict[str, Any]
+
+
+class EffectApplyResponse(BaseModel):
+    """Response schema for a successfully applied effect."""
+
+    effect_type: str
+    parameters: dict[str, Any]
+    filter_string: str

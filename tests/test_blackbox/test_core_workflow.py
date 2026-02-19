@@ -173,3 +173,64 @@ class TestProjectClipWorkflow:
         resp = client.get(f"/api/v1/projects/{project['id']}/clips")
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
+
+
+class TestClipEffectWorkflow:
+    """End-to-end apply effect → read clip → verify filter string."""
+
+    @pytest.fixture
+    async def _seed_video(self, video_repository: AsyncInMemoryVideoRepository) -> dict[str, Any]:
+        """Seed a video for clip creation."""
+        video = make_test_video()
+        await video_repository.add(video)
+        return {"id": video.id, "duration_frames": video.duration_frames}
+
+    def test_apply_text_overlay_and_verify_filter_string(
+        self,
+        client: TestClient,
+        _seed_video: dict[str, Any],
+    ) -> None:
+        """Apply text overlay to clip, then read clip and verify filter string is stored."""
+        # Create project and clip
+        project = create_project_via_api(client, name="Effect Test Project")
+        clip = add_clip_via_api(
+            client,
+            project_id=project["id"],
+            source_video_id=_seed_video["id"],
+            in_point=0,
+            out_point=100,
+            timeline_position=0,
+        )
+
+        # Apply text overlay effect
+        effect_resp = client.post(
+            f"/api/v1/projects/{project['id']}/clips/{clip['id']}/effects",
+            json={
+                "effect_type": "text_overlay",
+                "parameters": {
+                    "text": "Black Box Title",
+                    "fontsize": 48,
+                    "fontcolor": "white",
+                    "position": "bottom_center",
+                    "margin": 20,
+                },
+            },
+        )
+        assert effect_resp.status_code == 201
+        effect_data = effect_resp.json()
+        assert effect_data["effect_type"] == "text_overlay"
+        assert "drawtext" in effect_data["filter_string"]
+
+        # Read clip back and verify effects are stored with filter string
+        clips_resp = client.get(f"/api/v1/projects/{project['id']}/clips")
+        assert clips_resp.status_code == 200
+        clips_data = clips_resp.json()
+        assert clips_data["total"] == 1
+
+        clip_data = clips_data["clips"][0]
+        assert clip_data["effects"] is not None
+        assert len(clip_data["effects"]) == 1
+        stored_effect = clip_data["effects"][0]
+        assert stored_effect["effect_type"] == "text_overlay"
+        assert "drawtext" in stored_effect["filter_string"]
+        assert stored_effect["parameters"]["text"] == "Black Box Title"

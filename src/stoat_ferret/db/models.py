@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from stoat_ferret_core import ClipValidationError as RustClipValidationError
@@ -72,6 +72,7 @@ class Clip:
     timeline_position: int  # frames
     created_at: datetime
     updated_at: datetime
+    effects: list[dict[str, Any]] | None = field(default=None)
 
     @staticmethod
     def new_id() -> str:

@@ -162,3 +162,12 @@ def test_create_tables_idempotent(db_conn: sqlite3.Connection) -> None:
 
     assert TABLE_VIDEOS in tables
     assert TABLE_VIDEOS_FTS in tables
+
+
+def test_clips_table_has_effects_json_column(db_conn: sqlite3.Connection) -> None:
+    """Verify the clips table includes the effects_json column."""
+    cursor = db_conn.cursor()
+    cursor.execute("PRAGMA table_info(clips)")
+    columns = {row[1] for row in cursor.fetchall()}
+
+    assert "effects_json" in columns

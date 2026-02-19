@@ -1,6 +1,8 @@
-"""Integration tests for effect discovery endpoint."""
+"""Integration tests for effect discovery and application endpoints."""
 
 from __future__ import annotations
+
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +10,7 @@ from fastapi.testclient import TestClient
 from stoat_ferret.api.app import create_app
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.effects.definitions import (
     SPEED_CONTROL,
@@ -16,6 +19,7 @@ from stoat_ferret.effects.definitions import (
     create_default_registry,
 )
 from stoat_ferret.effects.registry import EffectRegistry
+from tests.factories import make_test_video
 
 # ---- Registry unit tests ----
 
@@ -205,3 +209,280 @@ def test_no_effect_registry_falls_back_to_default() -> None:
         types = [e["effect_type"] for e in data["effects"]]
         assert "text_overlay" in types
         assert "speed_control" in types
+
+
+# ---- Clip effect application tests ----
+
+
+@pytest.mark.api
+async def test_apply_text_overlay_to_clip(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /projects/{id}/clips/{id}/effects applies text overlay and returns filter string."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"text": "Hello World", "fontsize": 48, "fontcolor": "white"},
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["effect_type"] == "text_overlay"
+    assert "drawtext" in data["filter_string"]
+    assert data["parameters"]["text"] == "Hello World"
+
+
+@pytest.mark.api
+async def test_apply_effect_stores_on_clip(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Applied effect is persisted in the clip's effects list."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"text": "Stored"},
+        },
+    )
+
+    # Read clip back and verify effects stored
+    updated_clip = await clip_repository.get("clip-1")
+    assert updated_clip is not None
+    assert updated_clip.effects is not None
+    assert len(updated_clip.effects) == 1
+    assert updated_clip.effects[0]["effect_type"] == "text_overlay"
+    assert "drawtext" in updated_clip.effects[0]["filter_string"]
+
+
+@pytest.mark.api
+async def test_apply_effect_unknown_type_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """Applying an unknown effect type returns 400."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id="video-1",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "nonexistent_effect",
+            "parameters": {},
+        },
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "EFFECT_NOT_FOUND"
+
+
+@pytest.mark.api
+def test_apply_effect_clip_not_found_returns_404(client: TestClient) -> None:
+    """Applying effect to nonexistent clip returns 404."""
+    response = client.post(
+        "/api/v1/projects/proj-1/clips/nonexistent/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"text": "Test"},
+        },
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.api
+async def test_apply_effect_project_not_found_returns_404(
+    client: TestClient,
+) -> None:
+    """Applying effect to clip in nonexistent project returns 404."""
+    response = client.post(
+        "/api/v1/projects/nonexistent/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"text": "Test"},
+        },
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_apply_effect_filter_string_transparency(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Response includes generated FFmpeg filter string for transparency."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {
+                "text": "Title",
+                "fontsize": 64,
+                "fontcolor": "yellow",
+                "position": "center",
+            },
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert "filter_string" in data
+    assert "drawtext" in data["filter_string"]
+    assert "fontsize=64" in data["filter_string"]
+
+
+@pytest.mark.api
+async def test_clip_response_includes_effects(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Clip list response includes applied effects."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+    video = make_test_video()
+    await video_repository.add(video)
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    # Apply an effect
+    client.post(
+        "/api/v1/projects/proj-1/clips/clip-1/effects",
+        json={
+            "effect_type": "text_overlay",
+            "parameters": {"text": "Visible"},
+        },
+    )
+
+    # List clips and check effects are included
+    response = client.get("/api/v1/projects/proj-1/clips")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["clips"]) == 1
+    clip_data = data["clips"][0]
+    assert clip_data["effects"] is not None
+    assert len(clip_data["effects"]) == 1
+    assert clip_data["effects"][0]["effect_type"] == "text_overlay"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -95,12 +96,13 @@ class AsyncSQLiteClipRepository:
 
     async def add(self, clip: Clip) -> Clip:
         """Add a clip to the repository."""
+        effects_json = json.dumps(clip.effects) if clip.effects is not None else None
         try:
             await self._conn.execute(
                 """
                 INSERT INTO clips (id, project_id, source_video_id, in_point, out_point,
-                                  timeline_position, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                  timeline_position, effects_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     clip.id,
@@ -109,6 +111,7 @@ class AsyncSQLiteClipRepository:
                     clip.in_point,
                     clip.out_point,
                     clip.timeline_position,
+                    effects_json,
                     clip.created_at.isoformat(),
                     clip.updated_at.isoformat(),
                 ),
@@ -135,16 +138,19 @@ class AsyncSQLiteClipRepository:
 
     async def update(self, clip: Clip) -> Clip:
         """Update an existing clip."""
+        effects_json = json.dumps(clip.effects) if clip.effects is not None else None
         cursor = await self._conn.execute(
             """
             UPDATE clips SET
-                in_point = ?, out_point = ?, timeline_position = ?, updated_at = ?
+                in_point = ?, out_point = ?, timeline_position = ?,
+                effects_json = ?, updated_at = ?
             WHERE id = ?
             """,
             (
                 clip.in_point,
                 clip.out_point,
                 clip.timeline_position,
+                effects_json,
                 clip.updated_at.isoformat(),
                 clip.id,
             ),
@@ -162,6 +168,8 @@ class AsyncSQLiteClipRepository:
 
     def _row_to_clip(self, row: Any) -> Clip:
         """Convert a database row to a Clip object."""
+        effects_raw = row["effects_json"]
+        effects = json.loads(effects_raw) if effects_raw is not None else None
         return Clip(
             id=row["id"],
             project_id=row["project_id"],
@@ -171,6 +179,7 @@ class AsyncSQLiteClipRepository:
             timeline_position=row["timeline_position"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
+            effects=effects,
         )
 
 
