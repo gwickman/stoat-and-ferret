@@ -33,6 +33,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Errors detected during filter graph validation.
 ///
@@ -87,6 +88,37 @@ impl fmt::Display for GraphValidationError {
 }
 
 impl std::error::Error for GraphValidationError {}
+
+/// Global counter for generating unique label prefixes across `LabelGenerator` instances.
+static LABEL_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Generates unique pad labels for filter graph composition.
+///
+/// Each generator has a unique prefix (based on a global atomic counter) to avoid
+/// conflicts between independently created generators. Labels follow the pattern
+/// `_auto_{prefix}_{seq}` (e.g., `_auto_0_0`, `_auto_0_1`).
+#[derive(Debug)]
+struct LabelGenerator {
+    prefix: u64,
+    next: u64,
+}
+
+impl LabelGenerator {
+    /// Creates a new label generator with a unique prefix.
+    fn new() -> Self {
+        Self {
+            prefix: LABEL_COUNTER.fetch_add(1, Ordering::Relaxed),
+            next: 0,
+        }
+    }
+
+    /// Generates the next unique label.
+    fn next_label(&mut self) -> String {
+        let label = format!("_auto_{}_{}", self.prefix, self.next);
+        self.next += 1;
+        label
+    }
+}
 
 /// A single FFmpeg filter with optional parameters.
 ///
@@ -768,6 +800,148 @@ impl FilterGraph {
         self.validate()?;
         Ok(self.to_string())
     }
+
+    /// Composes a chain of filters applied sequentially to an input stream.
+    ///
+    /// Creates intermediate pad labels automatically so each filter feeds into
+    /// the next. Returns the output label of the final filter in the chain.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The input pad label (e.g., `"0:v"`)
+    /// * `filters` - A sequence of filters to apply in order
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `filters` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stoat_ferret_core::ffmpeg::filter::{FilterGraph, Filter, scale, format};
+    ///
+    /// let mut graph = FilterGraph::new();
+    /// let out = graph.compose_chain("0:v", vec![scale(1280, 720), format("yuv420p")]).unwrap();
+    /// assert!(!out.is_empty());
+    /// assert!(graph.validate().is_ok());
+    /// ```
+    pub fn compose_chain(
+        &mut self,
+        input: &str,
+        filters: Vec<Filter>,
+    ) -> Result<String, String> {
+        if filters.is_empty() {
+            return Err("compose_chain requires at least one filter".to_string());
+        }
+
+        let mut gen = LabelGenerator::new();
+        let output_label = gen.next_label();
+
+        let mut chain = FilterChain::new().input(input);
+        for f in filters {
+            chain = chain.filter(f);
+        }
+        chain = chain.output(&output_label);
+
+        self.chains.push(chain);
+        Ok(output_label)
+    }
+
+    /// Splits one stream into multiple output streams.
+    ///
+    /// Uses the FFmpeg `split` (video) or `asplit` (audio) filter to duplicate
+    /// the input stream. Returns the output labels for each branch.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The input pad label (e.g., `"0:v"` or an auto-generated label)
+    /// * `count` - Number of output streams to create (must be >= 2)
+    /// * `audio` - If `true`, uses `asplit` instead of `split`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `count` is less than 2.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stoat_ferret_core::ffmpeg::filter::FilterGraph;
+    ///
+    /// let mut graph = FilterGraph::new();
+    /// let labels = graph.compose_branch("0:v", 3, false).unwrap();
+    /// assert_eq!(labels.len(), 3);
+    /// assert!(graph.validate().is_ok());
+    /// ```
+    pub fn compose_branch(
+        &mut self,
+        input: &str,
+        count: usize,
+        audio: bool,
+    ) -> Result<Vec<String>, String> {
+        if count < 2 {
+            return Err("compose_branch requires count >= 2".to_string());
+        }
+
+        let mut gen = LabelGenerator::new();
+        let filter_name = if audio { "asplit" } else { "split" };
+        let split_filter = Filter::new(filter_name).param("outputs", count);
+
+        let mut chain = FilterChain::new().input(input).filter(split_filter);
+        let mut output_labels = Vec::with_capacity(count);
+        for _ in 0..count {
+            let label = gen.next_label();
+            chain = chain.output(&label);
+            output_labels.push(label);
+        }
+
+        self.chains.push(chain);
+        Ok(output_labels)
+    }
+
+    /// Merges multiple input streams using a specified filter.
+    ///
+    /// Wires the given input labels into a single filter (e.g., `overlay`,
+    /// `amix`, `concat`) and returns the output label.
+    ///
+    /// # Arguments
+    ///
+    /// * `inputs` - The input pad labels to merge
+    /// * `merge_filter` - The filter to use for merging (e.g., `overlay()`, `concat(2,1,0)`)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if fewer than 2 inputs are provided.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stoat_ferret_core::ffmpeg::filter::{FilterGraph, Filter};
+    ///
+    /// let mut graph = FilterGraph::new();
+    /// let out = graph.compose_merge(&["v0", "v1"], Filter::new("overlay")).unwrap();
+    /// assert!(!out.is_empty());
+    /// ```
+    pub fn compose_merge(
+        &mut self,
+        inputs: &[&str],
+        merge_filter: Filter,
+    ) -> Result<String, String> {
+        if inputs.len() < 2 {
+            return Err("compose_merge requires at least 2 inputs".to_string());
+        }
+
+        let mut gen = LabelGenerator::new();
+        let output_label = gen.next_label();
+
+        let mut chain = FilterChain::new();
+        for &inp in inputs {
+            chain = chain.input(inp);
+        }
+        chain = chain.filter(merge_filter).output(&output_label);
+
+        self.chains.push(chain);
+        Ok(output_label)
+    }
 }
 
 impl fmt::Display for FilterGraph {
@@ -817,6 +991,81 @@ impl FilterGraph {
             let messages: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
             PyValueError::new_err(messages.join("; "))
         })
+    }
+
+    /// Composes a chain of filters applied sequentially to an input stream.
+    ///
+    /// Creates intermediate pad labels automatically. Returns the output label
+    /// of the final filter in the chain.
+    ///
+    /// Args:
+    ///     input: The input pad label (e.g., "0:v").
+    ///     filters: A list of filters to apply in order.
+    ///
+    /// Returns:
+    ///     The output pad label.
+    ///
+    /// Raises:
+    ///     ValueError: If filters list is empty.
+    #[pyo3(name = "compose_chain")]
+    fn py_compose_chain(
+        mut slf: PyRefMut<'_, Self>,
+        input: String,
+        filters: Vec<Filter>,
+    ) -> PyResult<String> {
+        slf.compose_chain(&input, filters)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Splits one stream into multiple output streams.
+    ///
+    /// Uses the FFmpeg split (video) or asplit (audio) filter to duplicate
+    /// the input stream.
+    ///
+    /// Args:
+    ///     input: The input pad label.
+    ///     count: Number of output streams (must be >= 2).
+    ///     audio: If True, uses asplit instead of split.
+    ///
+    /// Returns:
+    ///     A list of output pad labels.
+    ///
+    /// Raises:
+    ///     ValueError: If count < 2.
+    #[pyo3(name = "compose_branch", signature = (input, count, audio = false))]
+    fn py_compose_branch(
+        mut slf: PyRefMut<'_, Self>,
+        input: String,
+        count: usize,
+        audio: bool,
+    ) -> PyResult<Vec<String>> {
+        slf.compose_branch(&input, count, audio)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Merges multiple input streams using a specified filter.
+    ///
+    /// Wires the given input labels into a single filter and returns
+    /// the output label.
+    ///
+    /// Args:
+    ///     inputs: List of input pad labels.
+    ///     merge_filter: The filter to use for merging (e.g., overlay, amix, concat).
+    ///
+    /// Returns:
+    ///     The output pad label.
+    ///
+    /// Raises:
+    ///     ValueError: If fewer than 2 inputs are provided.
+    #[pyo3(name = "compose_merge")]
+    fn py_compose_merge(
+        mut slf: PyRefMut<'_, Self>,
+        inputs: Vec<String>,
+        merge_filter: Filter,
+    ) -> PyResult<String> {
+        let refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
+        slf.compose_merge(&refs, merge_filter)
+            .map_err(PyValueError::new_err)
     }
 
     /// Returns a string representation of the filter graph.
@@ -1394,5 +1643,218 @@ mod tests {
                     .output("out2"),
             );
         assert!(graph.validate().is_ok());
+    }
+
+    // ========== Label Generator Tests ==========
+
+    #[test]
+    fn test_label_generator_produces_unique_labels() {
+        let mut gen = LabelGenerator::new();
+        let l1 = gen.next_label();
+        let l2 = gen.next_label();
+        let l3 = gen.next_label();
+        assert_ne!(l1, l2);
+        assert_ne!(l2, l3);
+        assert_ne!(l1, l3);
+        assert!(l1.starts_with("_auto_"));
+        assert!(l2.starts_with("_auto_"));
+    }
+
+    #[test]
+    fn test_label_generator_different_instances_unique() {
+        let mut gen1 = LabelGenerator::new();
+        let mut gen2 = LabelGenerator::new();
+        let l1 = gen1.next_label();
+        let l2 = gen2.next_label();
+        assert_ne!(l1, l2);
+    }
+
+    // ========== Compose Chain Tests ==========
+
+    #[test]
+    fn test_compose_chain_single_filter() {
+        let mut graph = FilterGraph::new();
+        let out = graph.compose_chain("0:v", vec![scale(1280, 720)]).unwrap();
+        assert!(!out.is_empty());
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert!(s.contains("[0:v]"));
+        assert!(s.contains("scale=w=1280:h=720"));
+        assert!(s.contains(&format!("[{out}]")));
+    }
+
+    #[test]
+    fn test_compose_chain_multiple_filters() {
+        let mut graph = FilterGraph::new();
+        let out = graph
+            .compose_chain("0:v", vec![scale(1280, 720), format("yuv420p")])
+            .unwrap();
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert!(s.contains("scale=w=1280:h=720,format=pix_fmts=yuv420p"));
+        assert!(s.contains(&format!("[{out}]")));
+    }
+
+    #[test]
+    fn test_compose_chain_empty_filters_error() {
+        let mut graph = FilterGraph::new();
+        let result = graph.compose_chain("0:v", vec![]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("at least one filter"));
+    }
+
+    #[test]
+    fn test_compose_chain_chained_operations() {
+        let mut graph = FilterGraph::new();
+        let mid = graph.compose_chain("0:v", vec![scale(1280, 720)]).unwrap();
+        let out = graph
+            .compose_chain(&mid, vec![format("yuv420p")])
+            .unwrap();
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert!(s.contains(";"));
+        assert!(s.contains(&format!("[{mid}]")));
+        assert!(s.contains(&format!("[{out}]")));
+    }
+
+    // ========== Compose Branch Tests ==========
+
+    #[test]
+    fn test_compose_branch_video() {
+        let mut graph = FilterGraph::new();
+        let labels = graph.compose_branch("0:v", 3, false).unwrap();
+        assert_eq!(labels.len(), 3);
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert!(s.contains("[0:v]"));
+        assert!(s.contains("split=outputs=3"));
+        for label in &labels {
+            assert!(s.contains(&format!("[{label}]")));
+        }
+    }
+
+    #[test]
+    fn test_compose_branch_audio() {
+        let mut graph = FilterGraph::new();
+        let labels = graph.compose_branch("0:a", 2, true).unwrap();
+        assert_eq!(labels.len(), 2);
+        let s = graph.to_string();
+        assert!(s.contains("asplit=outputs=2"));
+    }
+
+    #[test]
+    fn test_compose_branch_count_too_low() {
+        let mut graph = FilterGraph::new();
+        let result = graph.compose_branch("0:v", 1, false);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("count >= 2"));
+    }
+
+    #[test]
+    fn test_compose_branch_labels_unique() {
+        let mut graph = FilterGraph::new();
+        let labels = graph.compose_branch("0:v", 4, false).unwrap();
+        let unique: std::collections::HashSet<&String> = labels.iter().collect();
+        assert_eq!(unique.len(), 4);
+    }
+
+    // ========== Compose Merge Tests ==========
+
+    #[test]
+    fn test_compose_merge_overlay() {
+        let mut graph = FilterGraph::new();
+        let out = graph
+            .compose_merge(&["v0", "v1"], Filter::new("overlay"))
+            .unwrap();
+        assert!(!out.is_empty());
+        let s = graph.to_string();
+        assert!(s.contains("[v0][v1]"));
+        assert!(s.contains("overlay"));
+        assert!(s.contains(&format!("[{out}]")));
+    }
+
+    #[test]
+    fn test_compose_merge_concat() {
+        let mut graph = FilterGraph::new();
+        let out = graph
+            .compose_merge(&["v0", "v1", "v2"], concat(3, 1, 0))
+            .unwrap();
+        assert!(!out.is_empty());
+        let s = graph.to_string();
+        assert!(s.contains("[v0][v1][v2]"));
+        assert!(s.contains("concat=n=3:v=1:a=0"));
+    }
+
+    #[test]
+    fn test_compose_merge_too_few_inputs() {
+        let mut graph = FilterGraph::new();
+        let result = graph.compose_merge(&["v0"], Filter::new("overlay"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("at least 2 inputs"));
+    }
+
+    // ========== Composition Integration Tests ==========
+
+    #[test]
+    fn test_compose_chain_branch_merge() {
+        let mut graph = FilterGraph::new();
+        let scaled = graph.compose_chain("0:v", vec![scale(1280, 720)]).unwrap();
+        let branches = graph.compose_branch(&scaled, 2, false).unwrap();
+        let out = graph
+            .compose_merge(
+                &branches.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+                concat(2, 1, 0),
+            )
+            .unwrap();
+
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert!(s.contains("scale=w=1280:h=720"));
+        assert!(s.contains("split=outputs=2"));
+        assert!(s.contains("concat=n=2:v=1:a=0"));
+        assert!(s.contains(&format!("[{out}]")));
+    }
+
+    #[test]
+    fn test_compose_two_inputs_merge() {
+        let mut graph = FilterGraph::new();
+        let v0 = graph.compose_chain("0:v", vec![scale(1280, 720)]).unwrap();
+        let v1 = graph.compose_chain("1:v", vec![scale(1280, 720)]).unwrap();
+        let out = graph
+            .compose_merge(&[&v0, &v1], Filter::new("overlay"))
+            .unwrap();
+
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert_eq!(s.matches(';').count(), 2);
+        assert!(s.contains(&format!("[{out}]")));
+    }
+
+    #[test]
+    fn test_compose_validates_automatically() {
+        let mut graph = FilterGraph::new();
+        let out = graph
+            .compose_chain("0:v", vec![scale(1280, 720), format("yuv420p")])
+            .unwrap();
+        let result = graph.validated_to_string();
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains(&format!("[{out}]")));
+    }
+
+    #[test]
+    fn test_compose_mixed_with_manual_chains() {
+        let mut graph = FilterGraph::new();
+        let auto_out = graph.compose_chain("0:v", vec![scale(1280, 720)]).unwrap();
+
+        let graph = graph.chain(
+            FilterChain::new()
+                .input(&auto_out)
+                .filter(format("yuv420p"))
+                .output("final"),
+        );
+
+        assert!(graph.validate().is_ok());
+        let s = graph.to_string();
+        assert!(s.contains("[final]"));
     }
 }

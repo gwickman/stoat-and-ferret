@@ -356,6 +356,162 @@ class TestFilter:
             graph.validated_to_string()
 
 
+class TestFilterComposition:
+    """Tests for FilterGraph composition API (compose_chain, compose_branch, compose_merge)."""
+
+    def test_compose_chain_single_filter(self) -> None:
+        """Test compose_chain with a single filter."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        out = graph.compose_chain("0:v", [Filter.scale(1280, 720)])
+        assert out.startswith("_auto_")
+        result = str(graph)
+        assert "[0:v]" in result
+        assert "scale" in result
+        assert f"[{out}]" in result
+
+    def test_compose_chain_multiple_filters(self) -> None:
+        """Test compose_chain with multiple filters applied sequentially."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        out = graph.compose_chain("0:v", [Filter.scale(1280, 720), Filter.format("yuv420p")])
+        result = str(graph)
+        assert "scale" in result
+        assert "format" in result
+        assert f"[{out}]" in result
+
+    def test_compose_chain_empty_filters_raises(self) -> None:
+        """Test compose_chain raises ValueError for empty filters list."""
+        from stoat_ferret_core import FilterGraph
+
+        graph = FilterGraph()
+        with pytest.raises(ValueError, match="at least one filter"):
+            graph.compose_chain("0:v", [])
+
+    def test_compose_chain_chained_calls(self) -> None:
+        """Test chaining multiple compose_chain calls."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        mid = graph.compose_chain("0:v", [Filter.scale(1280, 720)])
+        out = graph.compose_chain(mid, [Filter.format("yuv420p")])
+        result = str(graph)
+        assert ";" in result
+        assert f"[{mid}]" in result
+        assert f"[{out}]" in result
+        graph.validate()
+
+    def test_compose_branch_video(self) -> None:
+        """Test compose_branch splits video stream."""
+        from stoat_ferret_core import FilterGraph
+
+        graph = FilterGraph()
+        labels = graph.compose_branch("0:v", 3)
+        assert len(labels) == 3
+        result = str(graph)
+        assert "split=outputs=3" in result
+        for label in labels:
+            assert f"[{label}]" in result
+        graph.validate()
+
+    def test_compose_branch_audio(self) -> None:
+        """Test compose_branch with audio=True uses asplit."""
+        from stoat_ferret_core import FilterGraph
+
+        graph = FilterGraph()
+        labels = graph.compose_branch("0:a", 2, audio=True)
+        assert len(labels) == 2
+        result = str(graph)
+        assert "asplit=outputs=2" in result
+
+    def test_compose_branch_count_too_low_raises(self) -> None:
+        """Test compose_branch raises ValueError for count < 2."""
+        from stoat_ferret_core import FilterGraph
+
+        graph = FilterGraph()
+        with pytest.raises(ValueError, match="count >= 2"):
+            graph.compose_branch("0:v", 1)
+
+    def test_compose_branch_labels_unique(self) -> None:
+        """Test compose_branch produces unique labels."""
+        from stoat_ferret_core import FilterGraph
+
+        graph = FilterGraph()
+        labels = graph.compose_branch("0:v", 4)
+        assert len(set(labels)) == 4
+
+    def test_compose_merge_overlay(self) -> None:
+        """Test compose_merge with overlay filter."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        out = graph.compose_merge(["v0", "v1"], Filter("overlay"))
+        result = str(graph)
+        assert "[v0][v1]" in result
+        assert "overlay" in result
+        assert f"[{out}]" in result
+
+    def test_compose_merge_concat(self) -> None:
+        """Test compose_merge with concat filter."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        out = graph.compose_merge(["v0", "v1", "v2"], Filter.concat(3, 1, 0))
+        result = str(graph)
+        assert "[v0][v1][v2]" in result
+        assert "concat" in result
+        assert f"[{out}]" in result
+
+    def test_compose_merge_too_few_inputs_raises(self) -> None:
+        """Test compose_merge raises ValueError for fewer than 2 inputs."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        with pytest.raises(ValueError, match="at least 2 inputs"):
+            graph.compose_merge(["v0"], Filter("overlay"))
+
+    def test_compose_chain_branch_merge_integration(self) -> None:
+        """Test full composition: chain -> branch -> merge."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        scaled = graph.compose_chain("0:v", [Filter.scale(1280, 720)])
+        branches = graph.compose_branch(scaled, 2)
+        out = graph.compose_merge(branches, Filter.concat(2, 1, 0))
+
+        graph.validate()
+        result = str(graph)
+        assert "scale" in result
+        assert "split" in result
+        assert "concat" in result
+        assert f"[{out}]" in result
+
+    def test_compose_two_inputs_merge(self) -> None:
+        """Test composing two independent chains and merging."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        v0 = graph.compose_chain("0:v", [Filter.scale(1280, 720)])
+        v1 = graph.compose_chain("1:v", [Filter.scale(1280, 720)])
+        out = graph.compose_merge([v0, v1], Filter("overlay"))
+
+        graph.validate()
+        result = str(graph)
+        assert result.count(";") == 2
+        assert f"[{out}]" in result
+
+    def test_compose_validated_to_string(self) -> None:
+        """Test that composed graphs pass validated_to_string."""
+        from stoat_ferret_core import Filter, FilterGraph
+
+        graph = FilterGraph()
+        out = graph.compose_chain("0:v", [Filter.scale(1280, 720)])
+        result = graph.validated_to_string()
+        assert f"[{out}]" in result
+
+
 class TestSanitization:
     """Tests for sanitization functions."""
 

@@ -685,6 +685,56 @@ class FilterGraph:
         """Adds a filter chain to the graph."""
         ...
 
+    def compose_chain(self, input: str, filters: list[Filter]) -> str:
+        """Compose filters sequentially on a single stream.
+
+        Connects filters in order with auto-generated intermediate labels.
+
+        Args:
+            input: The input pad label to start the chain from.
+            filters: One or more filters to apply sequentially.
+
+        Returns:
+            The output pad label of the final filter.
+
+        Raises:
+            ValueError: If filters is empty.
+        """
+        ...
+
+    def compose_branch(self, input: str, count: int, audio: bool = False) -> list[str]:
+        """Split a stream into multiple branches.
+
+        Uses ``split`` for video or ``asplit`` for audio.
+
+        Args:
+            input: The input pad label to split.
+            count: Number of output branches (must be >= 2).
+            audio: If True, use ``asplit`` instead of ``split``.
+
+        Returns:
+            List of output pad labels, one per branch.
+
+        Raises:
+            ValueError: If count < 2.
+        """
+        ...
+
+    def compose_merge(self, inputs: list[str], merge_filter: Filter) -> str:
+        """Merge multiple streams through a single filter.
+
+        Args:
+            inputs: Input pad labels to merge (must be >= 2).
+            merge_filter: The filter to merge through (e.g. overlay, amix, concat).
+
+        Returns:
+            The output pad label.
+
+        Raises:
+            ValueError: If fewer than 2 inputs provided.
+        """
+        ...
+
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 

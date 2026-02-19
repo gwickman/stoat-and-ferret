@@ -729,6 +729,63 @@ class FilterGraph:
         """
         ...
 
+    def compose_chain(self, input: str, filters: list[Filter]) -> str:
+        """Composes a chain of filters applied sequentially to an input stream.
+
+        Creates intermediate pad labels automatically. Returns the output label
+        of the final filter in the chain.
+
+        Args:
+            input: The input pad label (e.g., "0:v").
+            filters: A list of filters to apply in order.
+
+        Returns:
+            The output pad label.
+
+        Raises:
+            ValueError: If filters list is empty.
+        """
+        ...
+
+    def compose_branch(
+        self, input: str, count: int, audio: bool = False
+    ) -> list[str]:
+        """Splits one stream into multiple output streams.
+
+        Uses the FFmpeg split (video) or asplit (audio) filter to duplicate
+        the input stream.
+
+        Args:
+            input: The input pad label.
+            count: Number of output streams (must be >= 2).
+            audio: If True, uses asplit instead of split.
+
+        Returns:
+            A list of output pad labels.
+
+        Raises:
+            ValueError: If count < 2.
+        """
+        ...
+
+    def compose_merge(self, inputs: list[str], merge_filter: Filter) -> str:
+        """Merges multiple input streams using a specified filter.
+
+        Wires the given input labels into a single filter and returns
+        the output label.
+
+        Args:
+            inputs: List of input pad labels.
+            merge_filter: The filter to use for merging.
+
+        Returns:
+            The output pad label.
+
+        Raises:
+            ValueError: If fewer than 2 inputs are provided.
+        """
+        ...
+
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 
