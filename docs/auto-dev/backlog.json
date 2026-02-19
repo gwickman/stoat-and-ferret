@@ -1,6 +1,6 @@
 {
   "next_id": 55,
-  "updated_at": "2026-02-18T21:08:37.854526",
+  "updated_at": "2026-02-19T06:48:07.177132",
   "items": [
     {
       "id": "BL-001",
@@ -1365,10 +1365,10 @@
       "id": "BL-037",
       "title": "Implement FFmpeg filter expression engine in Rust",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:58:45.828090",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:47:59.758199",
       "tags": [
         "v006",
         "rust",
@@ -1400,18 +1400,18 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Implement FFmpeg filter expression engine in Rust. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "filter-engine",
       "upvotes": 0
     },
     {
       "id": "BL-038",
       "title": "Implement filter graph validation for pad matching",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:58:50.346126",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:48:00.916285",
       "tags": [
         "v006",
         "rust",
@@ -1443,18 +1443,18 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Implement filter graph validation for pad matching. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "filter-engine",
       "upvotes": 0
     },
     {
       "id": "BL-039",
       "title": "Build filter composition system for chaining, branching, and merging",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:58:55.785960",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:48:02.035518",
       "tags": [
         "v006",
         "rust",
@@ -1486,18 +1486,18 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Build filter composition system for chaining, branching, and merging. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "filter-engine",
       "upvotes": 0
     },
     {
       "id": "BL-040",
       "title": "Implement drawtext filter builder for text overlays",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:59:02.289043",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:48:03.141204",
       "tags": [
         "v006",
         "rust",
@@ -1528,18 +1528,18 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Implement drawtext filter builder for text overlays. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "filter-builders",
       "upvotes": 0
     },
     {
       "id": "BL-041",
       "title": "Implement speed control filter builders (setpts/atempo)",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-02-08T17:59:12.246297",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:48:04.932995",
       "tags": [
         "v006",
         "rust",
@@ -1570,18 +1570,18 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Implement speed control filter builders (setpts/atempo). It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "filter-builders",
       "upvotes": 0
     },
     {
       "id": "BL-042",
       "title": "Create effect discovery API endpoint",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:59:18.403862",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:48:06.031365",
       "tags": [
         "v006",
         "api",
@@ -1613,18 +1613,18 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Create effect discovery API endpoint. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "effects-api",
       "upvotes": 0
     },
     {
       "id": "BL-043",
       "title": "Create API endpoint to apply text overlay effect to clips",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-08T17:59:24.988435",
-      "completed_at": null,
+      "completed_at": "2026-02-19T06:48:07.177129",
       "tags": [
         "v006",
         "api",
@@ -1655,8 +1655,8 @@
       ],
       "notes": null,
       "use_case": "This feature addresses: Create API endpoint to apply text overlay effect to clips. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v006",
+      "implemented_in_theme": "effects-api",
       "upvotes": 0
     },
     {
@@ -2115,6 +2115,6 @@
       "upvotes": 0
     }
   ],
-  "completed_count": 32,
+  "completed_count": 39,
   "cancelled_count": 0
 }

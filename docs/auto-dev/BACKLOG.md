@@ -1,16 +1,16 @@
 # Project Backlog
 
-*Last updated: 2026-02-18 21:08*
+*Last updated: 2026-02-19 06:48*
 
-**Total completed:** 32 | **Cancelled:** 0
+**Total completed:** 39 | **Cancelled:** 0
 
 ## Priority Summary
 
 | Priority | Name | Count |
 |----------|------|-------|
 | P0 | Critical | 0 |
-| P1 | High | 16 |
-| P2 | Medium | 4 |
+| P1 | High | 11 |
+| P2 | Medium | 2 |
 | P3 | Low | 1 |
 
 ## Quick Reference
@@ -18,11 +18,6 @@
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P1 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
-| <a id="bl-037-ref"></a>[BL-037](#bl-037) | P1 | l | Implement FFmpeg filter expression engine in Rust | The current filter system (v001) handles simple key=value... |
-| <a id="bl-038-ref"></a>[BL-038](#bl-038) | P1 | l | Implement filter graph validation for pad matching | The current FilterGraph (v001) builds FFmpeg filter strin... |
-| <a id="bl-039-ref"></a>[BL-039](#bl-039) | P1 | l | Build filter composition system for chaining, branching, and merging | No support exists for composing filter chains programmati... |
-| <a id="bl-040-ref"></a>[BL-040](#bl-040) | P1 | l | Implement drawtext filter builder for text overlays | The `escape_filter_text()` function exists in the Rust sa... |
-| <a id="bl-041-ref"></a>[BL-041](#bl-041) | P1 | m | Implement speed control filter builders (setpts/atempo) | No Rust types exist for video speed (setpts) or audio spe... |
 | <a id="bl-044-ref"></a>[BL-044](#bl-044) | P1 | l | Implement audio mixing filter builders (amix/volume/fade) | No Rust types exist for audio mixing, volume control, or ... |
 | <a id="bl-045-ref"></a>[BL-045](#bl-045) | P1 | m | Implement transition filter builders (fade/xfade) | No Rust types exist for video transitions. M2.5 requires ... |
 | <a id="bl-046-ref"></a>[BL-046](#bl-046) | P1 | m | Create transition API endpoint for clip-to-clip transitions | M2.5 specifies an `/effects/transition` endpoint for appl... |
@@ -34,8 +29,6 @@
 | <a id="bl-053-ref"></a>[BL-053](#bl-053) | P1 | l | Add PR vs BL routing guidance to AGENTS.md (stoat-and-ferret) | AGENTS.md in the stoat-and-ferret project lists both add_... |
 | <a id="bl-054-ref"></a>[BL-054](#bl-054) | P1 | l | Add WebFetch safety rules to AGENTS.md | Mirror of auto-dev-mcp BL-517. Add WebFetch safety block ... |
 | <a id="bl-018-ref"></a>[BL-018](#bl-018) | P2 | s | Create C4 architecture documentation | No C4 architecture documentation currently exists for the... |
-| <a id="bl-042-ref"></a>[BL-042](#bl-042) | P2 | l | Create effect discovery API endpoint | M2.2 and 05-api-specification.md specify an `/effects` di... |
-| <a id="bl-043-ref"></a>[BL-043](#bl-043) | P2 | l | Create API endpoint to apply text overlay effect to clips | No API endpoint exists to apply effects to clips. The Rus... |
 | <a id="bl-052-ref"></a>[BL-052](#bl-052) | P2 | m | E2E tests for effect workshop workflow | The effect workshop comprises multiple GUI components (ca... |
 | <a id="bl-011-ref"></a>[BL-011](#bl-011) | P3 | m | Consolidate Python/Rust build backends | v001 uses hatchling for Python package management and mat... |
 
@@ -44,15 +37,11 @@
 | Tag | Count | Items |
 |-----|-------|-------|
 | v007 | 9 | BL-044, BL-045, BL-046, BL-047, ... |
-| v006 | 7 | BL-037, BL-038, BL-039, BL-040, ... |
-| rust | 7 | BL-037, BL-038, BL-039, BL-040, ... |
-| effects | 6 | BL-042, BL-047, BL-048, BL-049, ... |
+| effects | 5 | BL-047, BL-048, BL-049, BL-051, ... |
 | gui | 4 | BL-048, BL-049, BL-050, BL-051 |
 | agents-md | 3 | BL-019, BL-053, BL-054 |
-| filters | 3 | BL-037, BL-038, BL-039 |
-| api | 3 | BL-042, BL-043, BL-046 |
 | documentation | 2 | BL-018, BL-053 |
-| text-overlay | 2 | BL-040, BL-043 |
+| rust | 2 | BL-044, BL-045 |
 | transitions | 2 | BL-045, BL-046 |
 | tooling | 1 | BL-011 |
 | build | 1 | BL-011 |
@@ -61,13 +50,9 @@
 | c4 | 1 | BL-018 |
 | windows | 1 | BL-019 |
 | gitignore | 1 | BL-019 |
-| expressions | 1 | BL-037 |
-| validation | 1 | BL-038 |
-| composition | 1 | BL-039 |
-| speed-control | 1 | BL-041 |
-| discovery | 1 | BL-042 |
 | audio | 1 | BL-044 |
 | mixing | 1 | BL-044 |
+| api | 1 | BL-046 |
 | registry | 1 | BL-047 |
 | schema | 1 | BL-047 |
 | catalog | 1 | BL-048 |
@@ -97,96 +82,6 @@ Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore
 **Use Case:** This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.
 
 [↑ Back to list](#bl-019-ref)
-
-#### 📋 BL-037: Implement FFmpeg filter expression engine in Rust
-
-**Status:** open
-**Tags:** v006, rust, filters, expressions
-
-The current filter system (v001) handles simple key=value parameters only. FFmpeg filter expressions like `enable='between(t,3,5)'`, alpha expressions, and time-based arithmetic have no Rust representation. M2.1 requires a type-safe expression builder that prevents syntactically invalid expressions. Without this, text overlay animations (M2.2), speed control (M2.3), and all v007 effects cannot be built safely.
-
-**Use Case:** This feature addresses: Implement FFmpeg filter expression engine in Rust. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Expression types cover enable, alpha, time, and arithmetic expressions
-- [ ] Builder API prevents construction of syntactically invalid expressions at compile time
-- [ ] Expressions serialize to valid FFmpeg filter syntax strings
-- [ ] Property-based tests (proptest) generate random valid expressions and verify serialization
-- [ ] PyO3 bindings expose expression builder to Python with type stubs
-
-[↑ Back to list](#bl-037-ref)
-
-#### 📋 BL-038: Implement filter graph validation for pad matching
-
-**Status:** open
-**Tags:** v006, rust, filters, validation
-
-The current FilterGraph (v001) builds FFmpeg filter strings but performs no validation of input/output pad matching. Invalid graphs (unconnected pads, cycles, mismatched labels) are only caught when FFmpeg rejects the command at runtime. M2.1 requires compile-time-safe graph construction. Without validation, complex filter graphs for effects composition will produce cryptic FFmpeg errors instead of actionable messages.
-
-**Use Case:** This feature addresses: Implement filter graph validation for pad matching. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Pad labels validated for correct matching (output label feeds matching input label)
-- [ ] Unconnected pads detected and reported with the specific pad name
-- [ ] Graph cycles detected and rejected before serialization
-- [ ] Validation error messages include actionable guidance on how to fix the graph
-- [ ] Existing FilterGraph tests updated to cover validation
-
-[↑ Back to list](#bl-038-ref)
-
-#### 📋 BL-039: Build filter composition system for chaining, branching, and merging
-
-**Status:** open
-**Tags:** v006, rust, filters, composition
-
-No support exists for composing filter chains programmatically. The current system builds individual filters but cannot chain them sequentially, branch one stream into multiple, or merge multiple streams (e.g., overlay, amix). M2.1 requires a composition API for building complex filter graphs. Without it, every effect combination must manually construct raw filter strings, which is error-prone and unvalidatable.
-
-**Use Case:** This feature addresses: Build filter composition system for chaining, branching, and merging. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Chain composition applies filters sequentially to a single stream
-- [ ] Branch splits one stream into multiple output streams
-- [ ] Merge combines multiple streams using overlay, amix, or concat
-- [ ] Composed graphs pass FilterGraph validation automatically
-- [ ] PyO3 bindings expose composition API to Python with type stubs
-
-[↑ Back to list](#bl-039-ref)
-
-#### 📋 BL-040: Implement drawtext filter builder for text overlays
-
-**Status:** open
-**Tags:** v006, rust, text-overlay
-
-The `escape_filter_text()` function exists in the Rust sanitize module, but no structured drawtext builder handles position, font, color, shadow, box background, or alpha animation parameters. M2.2 requires a type-safe text overlay system. Without a builder, constructing drawtext filters requires manually assembling complex parameter strings with correct escaping — a frequent source of FFmpeg errors.
-
-**Use Case:** This feature addresses: Implement drawtext filter builder for text overlays. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Position options support absolute coordinates, centered, and margin-based placement
-- [ ] Styling covers font size, color, shadow offset/color, and box background
-- [ ] Alpha animation supports fade in/out with configurable duration using expression engine
-- [ ] Generated drawtext filters validated as syntactically correct FFmpeg syntax
-- [ ] Contract tests verify generated commands pass ffmpeg -filter_complex validation
-
-[↑ Back to list](#bl-040-ref)
-
-#### 📋 BL-041: Implement speed control filter builders (setpts/atempo)
-
-**Status:** open
-**Tags:** v006, rust, speed-control
-
-No Rust types exist for video speed (setpts) or audio speed (atempo) control. M2.3 requires speed adjustment from 0.25x to 4.0x. The atempo filter maxes at 2.0x and requires automatic chaining for higher speeds — a non-obvious FFmpeg detail that should be encapsulated in the builder. Without these builders, speed control must be hand-coded with raw filter strings for each speed value.
-
-**Use Case:** This feature addresses: Implement speed control filter builders (setpts/atempo). It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] Video speed adjustable via setpts with factor range 0.25x–4.0x
-- [ ] Audio speed via atempo with automatic chaining for factors above 2.0x
-- [ ] Option to drop audio entirely instead of speed-adjusting it
-- [ ] Validation rejects out-of-range values with helpful error messages
-- [ ] Unit tests cover edge cases: 1x (no-op), boundary values, extreme speeds
-
-[↑ Back to list](#bl-041-ref)
 
 #### 📋 BL-044: Implement audio mixing filter builders (amix/volume/fade)
 
@@ -393,42 +288,6 @@ No C4 architecture documentation currently exists for the project. Establish doc
 v005 retrospective architecture check (2026-02-09): The design doc (docs/design/02-architecture.md) already includes /ws and /gui endpoint groups and high-level WebSocket/frontend descriptions added during v004. No C4 documentation exists (docs/C4-Documentation/ not found). v005 added significant frontend architecture not yet documented at the component level: (1) React/TypeScript/Vite frontend with Tailwind CSS v4, (2) ConnectionManager for WebSocket with lazy dead-connection cleanup, (3) ThumbnailService with GET /api/v1/videos/{id}/thumbnail endpoint, (4) AsyncVideoRepository.count() protocol method, (5) GUI components: Shell layout, Dashboard panel, Library Browser, Project Manager, (6) Zustand state management with 3 stores (activityStore, libraryStore, projectStore), (7) Playwright E2E testing infrastructure with CI job, (8) New settings: thumbnail_dir, gui_static_path, ws_heartbeat_interval. The design doc captures the high-level architecture correctly but lacks frontend component-level detail. C4 documentation would address this gap comprehensively.
 
 [↑ Back to list](#bl-018-ref)
-
-#### 📋 BL-042: Create effect discovery API endpoint
-
-**Status:** open
-**Tags:** v006, api, effects, discovery
-
-M2.2 and 05-api-specification.md specify an `/effects` discovery endpoint, but no such endpoint exists. The frontend needs a way to discover available effects with their parameter schemas and AI hints. Without a discovery endpoint, the GUI must hard-code knowledge of available effects, breaking the extensibility model and preventing the v007 Effect Workshop from dynamically generating parameter forms.
-
-**Use Case:** This feature addresses: Create effect discovery API endpoint. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] GET /effects returns a list of all available effects
-- [ ] Each effect includes name, description, and parameter JSON schema
-- [ ] AI hints included for each parameter to guide user input
-- [ ] Text overlay and speed control registered as discoverable effects
-- [ ] Response includes Rust-generated filter preview for default parameters
-
-[↑ Back to list](#bl-042-ref)
-
-#### 📋 BL-043: Create API endpoint to apply text overlay effect to clips
-
-**Status:** open
-**Tags:** v006, api, text-overlay
-
-No API endpoint exists to apply effects to clips. The Rust drawtext builder will generate filter strings, but there is no REST endpoint to receive effect parameters, apply them to a specific clip, and store the configuration in the project model. M2.2 requires this bridge between the Rust effects engine and the clip/project data model. The clip model currently has no field for storing applied effects.
-
-**Use Case:** This feature addresses: Create API endpoint to apply text overlay effect to clips. It improves the system by resolving the described requirement.
-
-**Acceptance Criteria:**
-- [ ] POST endpoint applies text overlay parameters to a specified clip
-- [ ] Effect configuration stored persistently in the clip/project model
-- [ ] Response includes the generated FFmpeg filter string for transparency
-- [ ] Validation errors from Rust surface as structured API error responses
-- [ ] Black box test covers the apply → verify filter string flow
-
-[↑ Back to list](#bl-043-ref)
 
 #### 📋 BL-052: E2E tests for effect workshop workflow
 
