@@ -614,7 +614,7 @@ impl AmixBuilder {
 /// Uses FFmpeg's `sidechaincompress` filter in a FilterGraph composition:
 /// - Splits the audio input using `asplit`
 /// - Applies `sidechaincompress` to one branch (keyed by the other)
-/// - Merges the result with `amerge`
+/// - Passes the compressed output through `anull` for labeling
 ///
 /// # Examples
 ///
@@ -626,7 +626,7 @@ impl AmixBuilder {
 /// let s = graph.to_string();
 /// assert!(s.contains("asplit"));
 /// assert!(s.contains("sidechaincompress"));
-/// assert!(s.contains("amerge"));
+/// assert!(s.contains("anull"));
 /// ```
 #[gen_stub_pyclass]
 #[pyclass]
@@ -712,7 +712,7 @@ impl DuckingPattern {
     /// Creates a graph that:
     /// 1. Splits input "0:a" into two branches using `asplit`
     /// 2. Applies `sidechaincompress` on one branch (keyed by the other)
-    /// 3. Merges the compressed and original audio with `amerge`
+    /// 3. Passes compressed output through `anull` for labeled output
     #[must_use]
     pub fn build(&self) -> FilterGraph {
         let mut graph = FilterGraph::new();
@@ -733,7 +733,7 @@ impl DuckingPattern {
             .compose_merge(&[branches[0].as_str(), branches[1].as_str()], sc_filter)
             .expect("compose_merge with 2 inputs cannot fail");
 
-        // Step 3: Merge the compressed result with amerge
+        // Step 3: Pass compressed result through anull for labeled output
         // For ducking, the compressed output is the final output.
         // We use compose_chain to pass through with a null filter to get a labeled output.
         let _out = graph
