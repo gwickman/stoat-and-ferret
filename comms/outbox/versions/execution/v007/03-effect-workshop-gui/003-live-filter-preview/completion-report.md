@@ -1,5 +1,5 @@
 ---
-status: complete
+status: partial
 acceptance_passed: 10
 acceptance_total: 10
 quality_gates:
@@ -8,12 +8,16 @@ quality_gates:
   pytest: pass
   tsc: pass
   vitest: pass
+  e2e: fail (pre-existing BL-055)
+ci_status: blocked by pre-existing flaky e2e test
 ---
 # Completion Report: 003-live-filter-preview
 
 ## Summary
 
 Implemented live FFmpeg filter string preview with debounced API calls, regex-based syntax highlighting, and copy-to-clipboard. The preview panel appears below the parameter form and updates in real time as users adjust effect parameters.
+
+All feature acceptance criteria pass. PR merge is blocked by a pre-existing E2E test failure (BL-055) in `project-creation.spec.ts` that is unrelated to this feature.
 
 ## Acceptance Criteria
 
@@ -56,3 +60,20 @@ Implemented live FFmpeg filter string preview with debounced API calls, regex-ba
 | tsc | Pass |
 | vitest | Pass (132 tests) |
 | pytest | Pass (854 tests, 91.6% coverage) |
+| Rust clippy/test | Pass |
+| E2E | Fail (pre-existing, unrelated) |
+
+## CI Blocker
+
+PR #89 cannot merge due to a pre-existing E2E test failure in `gui/e2e/project-creation.spec.ts` (BL-055).
+
+**Root cause:** The `project-creation` E2E test's `toBeHidden` assertion on the create-project-modal never resolves. The modal stays visible because the `POST /api/v1/projects` call appears to fail consistently in CI (the catch block in `CreateProjectModal` keeps the modal open and shows the error). This is NOT a timing issue — increasing the timeout to 10s made no difference.
+
+**Impact:** Only the `project-creation` E2E test fails. All 6 other E2E tests pass. All unit tests, integration tests, and type checks pass across all platforms.
+
+**Fix attempts:**
+1. Re-ran failed CI (same flaky test, attempt 1)
+2. Re-ran failed CI (same flaky test, attempt 2)
+3. Increased `toBeHidden` timeout from default to 10000ms — still fails consistently
+
+**Recommendation:** The `project-creation.spec.ts` E2E test needs investigation into why the `POST /api/v1/projects` consistently fails in the CI E2E environment. This should be addressed as a separate fix to BL-055.
