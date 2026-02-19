@@ -35,8 +35,12 @@ test.describe("Project creation", () => {
     await page.getByTestId("btn-create").click();
     await created;
 
-    // Modal closes and project appears in the list
-    await expect(page.getByTestId("create-project-modal")).toBeHidden();
+    // Modal closes and project appears in the list.
+    // The modal close depends on React re-render after the POST response;
+    // in CI the server can be slow, so use an explicit timeout (BL-055).
+    await expect(page.getByTestId("create-project-modal")).toBeHidden({
+      timeout: 10000,
+    });
     await expect(page.getByText(projectName)).toBeVisible({ timeout: 5000 });
   });
 });
