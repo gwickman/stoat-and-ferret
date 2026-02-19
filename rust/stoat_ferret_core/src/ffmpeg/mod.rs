@@ -58,6 +58,7 @@
 //!     .expect("Valid command");
 //! ```
 
+pub mod audio;
 mod command;
 pub mod drawtext;
 pub mod expression;

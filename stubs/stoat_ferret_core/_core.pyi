@@ -829,6 +829,233 @@ class SpeedControl:
     def __repr__(self) -> str: ...
 
 
+class VolumeBuilder:
+    """Type-safe builder for FFmpeg volume audio filter.
+
+    Supports linear (float) and dB (string like "3dB") modes, plus
+    precision control. Validates volume range 0.0-10.0.
+    """
+
+    def __new__(cls, volume: float) -> VolumeBuilder:
+        """Creates a new VolumeBuilder with a linear volume value.
+
+        Args:
+            volume: Volume multiplier in range [0.0, 10.0].
+
+        Raises:
+            ValueError: If volume is outside [0.0, 10.0].
+        """
+        ...
+
+    @staticmethod
+    def from_db(db_str: str) -> VolumeBuilder:
+        """Creates a VolumeBuilder from a dB string (e.g., "3dB", "-6dB").
+
+        Args:
+            db_str: Volume in dB format.
+
+        Raises:
+            ValueError: If the string format is invalid.
+        """
+        ...
+
+    def precision(self, precision: str) -> VolumeBuilder:
+        """Sets the precision mode ("fixed", "float", or "double").
+
+        Args:
+            precision: Precision mode.
+
+        Raises:
+            ValueError: If precision is not one of the valid values.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the volume Filter.
+
+        Returns:
+            A Filter with the volume syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
+class AfadeBuilder:
+    """Type-safe builder for FFmpeg afade audio filter.
+
+    Supports fade in/out with configurable duration, start time, and curve type.
+    """
+
+    def __new__(cls, fade_type: str, duration: float) -> AfadeBuilder:
+        """Creates a new AfadeBuilder.
+
+        Args:
+            fade_type: "in" or "out".
+            duration: Fade duration in seconds (must be > 0).
+
+        Raises:
+            ValueError: If fade_type is invalid or duration <= 0.
+        """
+        ...
+
+    def start_time(self, start_time: float) -> AfadeBuilder:
+        """Sets the start time for the fade in seconds.
+
+        Args:
+            start_time: Start time in seconds.
+        """
+        ...
+
+    def curve(self, curve: str) -> AfadeBuilder:
+        """Sets the fade curve type.
+
+        Valid curves: tri, qsin, hsin, esin, log, ipar, qua, cub, squ, cbr, par.
+
+        Args:
+            curve: Curve type name.
+
+        Raises:
+            ValueError: If curve name is invalid.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the afade Filter.
+
+        Returns:
+            A Filter with the afade syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
+class AmixBuilder:
+    """Type-safe builder for FFmpeg amix audio mixing filter.
+
+    Mixes multiple audio input streams into a single output. Supports
+    configurable input count (2-32), duration mode, per-input weights,
+    and normalization.
+    """
+
+    def __new__(cls, inputs: int) -> AmixBuilder:
+        """Creates a new AmixBuilder with the given input count.
+
+        Args:
+            inputs: Number of audio inputs (2-32).
+
+        Raises:
+            ValueError: If inputs is outside [2, 32].
+        """
+        ...
+
+    def duration_mode(self, mode: str) -> AmixBuilder:
+        """Sets the duration mode ("longest", "shortest", or "first").
+
+        Args:
+            mode: Duration mode.
+
+        Raises:
+            ValueError: If mode is not one of the valid values.
+        """
+        ...
+
+    def weights(self, weights: list[float]) -> AmixBuilder:
+        """Sets per-input weights as a list of floats.
+
+        Args:
+            weights: List of weight values.
+        """
+        ...
+
+    def normalize(self, normalize: bool) -> AmixBuilder:
+        """Sets the normalize flag.
+
+        Args:
+            normalize: Whether to normalize the output.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the amix Filter.
+
+        Returns:
+            A Filter with the amix syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
+class DuckingPattern:
+    """Builds a ducking pattern that lowers music volume during speech.
+
+    Uses FFmpeg's sidechaincompress filter in a FilterGraph composition.
+    """
+
+    def __new__(cls) -> DuckingPattern:
+        """Creates a new DuckingPattern with default parameters.
+
+        Defaults: threshold=0.125, ratio=2, attack=20, release=250.
+        """
+        ...
+
+    def threshold(self, threshold: float) -> DuckingPattern:
+        """Sets the detection threshold (0.00097563-1.0).
+
+        Args:
+            threshold: Detection threshold.
+
+        Raises:
+            ValueError: If threshold is out of range.
+        """
+        ...
+
+    def ratio(self, ratio: float) -> DuckingPattern:
+        """Sets the compression ratio (1-20).
+
+        Args:
+            ratio: Compression ratio.
+
+        Raises:
+            ValueError: If ratio is out of range.
+        """
+        ...
+
+    def attack(self, attack: float) -> DuckingPattern:
+        """Sets the attack time in milliseconds (0.01-2000).
+
+        Args:
+            attack: Attack time in ms.
+
+        Raises:
+            ValueError: If attack is out of range.
+        """
+        ...
+
+    def release(self, release: float) -> DuckingPattern:
+        """Sets the release time in milliseconds (0.01-9000).
+
+        Args:
+            release: Release time in ms.
+
+        Raises:
+            ValueError: If release is out of range.
+        """
+        ...
+
+    def build(self) -> FilterGraph:
+        """Builds the ducking FilterGraph.
+
+        Returns:
+            A FilterGraph implementing the ducking pattern.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 

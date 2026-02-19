@@ -58,10 +58,13 @@ from __future__ import annotations
 
 try:
     from stoat_ferret_core._core import (
+        AfadeBuilder,
+        AmixBuilder,
         Clip,
         ClipValidationError,
         CommandError,
         DrawtextBuilder,
+        DuckingPattern,
         Duration,
         Expr,
         FFmpegCommand,
@@ -74,6 +77,7 @@ try:
         SpeedControl,
         TimeRange,
         ValidationError,
+        VolumeBuilder,
         concat_filter,
         escape_filter_text,
         find_gaps,
@@ -117,6 +121,10 @@ except ImportError:
     total_coverage = _not_built
     DrawtextBuilder = _not_built  # type: ignore[misc,assignment]
     SpeedControl = _not_built  # type: ignore[misc,assignment]
+    VolumeBuilder = _not_built  # type: ignore[misc,assignment]
+    AfadeBuilder = _not_built  # type: ignore[misc,assignment]
+    AmixBuilder = _not_built  # type: ignore[misc,assignment]
+    DuckingPattern = _not_built  # type: ignore[misc,assignment]
     Expr = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
@@ -159,6 +167,11 @@ __all__ = [
     "DrawtextBuilder",
     # Speed control builder
     "SpeedControl",
+    # Audio mixing builders
+    "VolumeBuilder",
+    "AfadeBuilder",
+    "AmixBuilder",
+    "DuckingPattern",
     # Expression engine
     "Expr",
     # FFmpeg command building

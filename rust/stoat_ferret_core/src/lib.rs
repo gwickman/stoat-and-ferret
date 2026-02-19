@@ -87,6 +87,12 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register speed control builder
     m.add_class::<ffmpeg::speed::SpeedControl>()?;
 
+    // Register audio mixing builders
+    m.add_class::<ffmpeg::audio::VolumeBuilder>()?;
+    m.add_class::<ffmpeg::audio::AfadeBuilder>()?;
+    m.add_class::<ffmpeg::audio::AmixBuilder>()?;
+    m.add_class::<ffmpeg::audio::DuckingPattern>()?;
+
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_path, m)?)?;
