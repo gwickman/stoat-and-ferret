@@ -1,10 +1,10 @@
 {
   "exploration_id": "create-user-docs-1771613357438",
   "results_folder": "create-user-docs",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 8392,
   "started_at": "2026-02-20T18:49:17.438993",
-  "updated_at": "2026-02-20T18:49:17.438993",
+  "updated_at": "2026-02-20T18:49:20.115664",
   "completed_at": null,
   "error": null,
   "documents": [],
