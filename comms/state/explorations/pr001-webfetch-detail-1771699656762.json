@@ -1,0 +1,15 @@
+{
+  "exploration_id": "pr001-webfetch-detail-1771699656762",
+  "results_folder": "pr001-webfetch-detail",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-21T18:47:36.762031",
+  "updated_at": "2026-02-21T18:47:36.762031",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/pr001-webfetch-detail/prompt.md",
+  "outbox_path": "comms/outbox/exploration/pr001-webfetch-detail"
+}

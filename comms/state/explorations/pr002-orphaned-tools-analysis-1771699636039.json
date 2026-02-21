@@ -1,10 +1,10 @@
 {
   "exploration_id": "pr002-orphaned-tools-analysis-1771699636039",
   "results_folder": "pr002-orphaned-tools-analysis",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 3164,
   "started_at": "2026-02-21T18:47:16.039098",
-  "updated_at": "2026-02-21T18:47:16.039098",
+  "updated_at": "2026-02-21T18:47:18.167477",
   "completed_at": null,
   "error": null,
   "documents": [],
