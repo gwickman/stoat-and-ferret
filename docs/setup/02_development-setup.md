@@ -1,6 +1,6 @@
 # Development Setup
 
-This guide walks through setting up a local development environment from scratch. Make sure you have all tools listed in [Prerequisites](prerequisites.md) installed before starting.
+This guide walks through setting up a local development environment from scratch. Make sure you have all tools listed in [Prerequisites](01_prerequisites.md) installed before starting.
 
 ## 1. Clone the Repository
 
@@ -35,7 +35,7 @@ uv run maturin develop
 uv run python -c "from stoat_ferret_core import health_check; print(health_check())"
 ```
 
-This should print a health check message confirming the Rust extension loaded successfully. If you see `RuntimeError: stoat_ferret_core native extension not built`, the maturin build did not complete correctly -- see [Troubleshooting](troubleshooting.md).
+This should print a health check message confirming the Rust extension loaded successfully. If you see `RuntimeError: stoat_ferret_core native extension not built`, the maturin build did not complete correctly -- see [Troubleshooting](05_troubleshooting.md).
 
 ## 4. Install Frontend Dependencies
 
@@ -218,6 +218,6 @@ stoat-and-ferret/
 
 ## Next Steps
 
-- See [Configuration](configuration.md) for environment variables and settings.
-- See [Docker Setup](docker-setup.md) for containerized testing.
-- See [Troubleshooting](troubleshooting.md) if you encounter build or runtime issues.
+- See [Configuration](04_configuration.md) for environment variables and settings.
+- See [Docker Setup](03_docker-setup.md) for containerized testing.
+- See [Troubleshooting](05_troubleshooting.md) if you encounter build or runtime issues.

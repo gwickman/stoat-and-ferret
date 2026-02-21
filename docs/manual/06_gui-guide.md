@@ -201,6 +201,6 @@ The following features are planned but not yet implemented:
 
 ## Next Steps
 
-- [Effects Guide](effects-guide.md) -- detailed effect parameters and curl examples
-- [Timeline Guide](timeline-guide.md) -- frame-based clip management
-- [AI Integration](ai-integration.md) -- programmatic control for AI workflows
+- [Effects Guide](04_effects-guide.md) -- detailed effect parameters and curl examples
+- [Timeline Guide](05_timeline-guide.md) -- frame-based clip management
+- [AI Integration](08_ai-integration.md) -- programmatic control for AI workflows

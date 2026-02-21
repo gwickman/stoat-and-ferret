@@ -29,7 +29,7 @@ The server starts on `http://localhost:8000` by default. You can configure the h
 STOAT_API_HOST=0.0.0.0 STOAT_API_PORT=9000 python -m stoat_ferret.api
 ```
 
-All settings use the `STOAT_` prefix and can also be placed in a `.env` file. See [API Overview](api-overview.md) for the full settings reference.
+All settings use the `STOAT_` prefix and can also be placed in a `.env` file. See [API Overview](02_api-overview.md) for the full settings reference.
 
 ## Verify the Server is Running
 
@@ -71,7 +71,7 @@ Open your browser and navigate to:
 http://localhost:8000/gui/
 ```
 
-The GUI provides a Dashboard, Library browser, Projects page, and Effect Workshop. See the [GUI Guide](gui-guide.md) for details.
+The GUI provides a Dashboard, Library browser, Projects page, and Effect Workshop. See the [GUI Guide](06_gui-guide.md) for details.
 
 > **Note:** Due to SPA routing, always navigate to `/gui/` first, then use in-app links. Direct URL navigation to sub-pages (e.g., `/gui/library`) may not work without the SPA fallback in place.
 
@@ -246,8 +246,8 @@ Response (HTTP 201):
 
 ## Next Steps
 
-- [API Reference](api-reference.md) -- complete endpoint documentation
-- [Effects Guide](effects-guide.md) -- all 9 available effects with parameter details
-- [Timeline Guide](timeline-guide.md) -- frame-based clip management
-- [GUI Guide](gui-guide.md) -- using the web interface
-- [AI Integration](ai-integration.md) -- programmatic and AI-driven workflows
+- [API Reference](03_api-reference.md) -- complete endpoint documentation
+- [Effects Guide](04_effects-guide.md) -- all 9 available effects with parameter details
+- [Timeline Guide](05_timeline-guide.md) -- frame-based clip management
+- [GUI Guide](06_gui-guide.md) -- using the web interface
+- [AI Integration](08_ai-integration.md) -- programmatic and AI-driven workflows

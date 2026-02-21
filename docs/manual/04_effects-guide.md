@@ -391,10 +391,10 @@ The web GUI at `/gui/effects` provides an interactive Effect Workshop with:
 - **Filter Preview** -- see the generated FFmpeg filter string in real time
 - **Effect Stack** -- view, reorder, and manage applied effects
 
-See the [GUI Guide](gui-guide.md) for more details.
+See the [GUI Guide](06_gui-guide.md) for more details.
 
 ## Next Steps
 
-- [API Reference](api-reference.md) -- complete endpoint documentation
-- [Timeline Guide](timeline-guide.md) -- clip and project management
-- [AI Integration](ai-integration.md) -- using effects programmatically with AI agents
+- [API Reference](03_api-reference.md) -- complete endpoint documentation
+- [Timeline Guide](05_timeline-guide.md) -- clip and project management
+- [AI Integration](08_ai-integration.md) -- using effects programmatically with AI agents

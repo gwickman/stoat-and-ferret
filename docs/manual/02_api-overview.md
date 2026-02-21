@@ -149,6 +149,6 @@ Event types: `heartbeat`, `health_status`, `scan_started`, `scan_completed`, `pr
 
 ## Next Steps
 
-- [API Reference](api-reference.md) -- complete endpoint documentation with curl examples
-- [Effects Guide](effects-guide.md) -- effects system details
-- [Getting Started](getting-started.md) -- quick tutorial workflow
+- [API Reference](03_api-reference.md) -- complete endpoint documentation with curl examples
+- [Effects Guide](04_effects-guide.md) -- effects system details
+- [Getting Started](01_getting-started.md) -- quick tutorial workflow

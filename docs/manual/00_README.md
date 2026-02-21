@@ -16,15 +16,15 @@ Stoat & Ferret is an AI-driven programmatic video editor built on a hybrid Pytho
 
 | Guide | Description |
 |-------|-------------|
-| [Getting Started](getting-started.md) | Start the server, make your first API call, create a project |
-| [API Overview](api-overview.md) | Base URL, error format, pagination, endpoint groups |
-| [API Reference](api-reference.md) | Detailed endpoint documentation with curl examples |
-| [Effects Guide](effects-guide.md) | Available effects, parameter details, previewing and applying |
-| [Timeline Guide](timeline-guide.md) | Projects, clips, frame-based editing, video library |
-| [GUI Guide](gui-guide.md) | Web interface: Dashboard, Library, Projects, Effect Workshop |
-| [Rendering Guide](rendering-guide.md) | **[Planned]** Export and rendering pipeline |
-| [AI Integration](ai-integration.md) | AI-driven workflows, OpenAPI schema, effect discovery |
-| [Glossary](glossary.md) | Definitions of key terms and concepts |
+| [Getting Started](01_getting-started.md) | Start the server, make your first API call, create a project |
+| [API Overview](02_api-overview.md) | Base URL, error format, pagination, endpoint groups |
+| [API Reference](03_api-reference.md) | Detailed endpoint documentation with curl examples |
+| [Effects Guide](04_effects-guide.md) | Available effects, parameter details, previewing and applying |
+| [Timeline Guide](05_timeline-guide.md) | Projects, clips, frame-based editing, video library |
+| [GUI Guide](06_gui-guide.md) | Web interface: Dashboard, Library, Projects, Effect Workshop |
+| [Rendering Guide](07_rendering-guide.md) | **[Planned]** Export and rendering pipeline |
+| [AI Integration](08_ai-integration.md) | AI-driven workflows, OpenAPI schema, effect discovery |
+| [Glossary](09_glossary.md) | Definitions of key terms and concepts |
 
 ## Quick Links
 

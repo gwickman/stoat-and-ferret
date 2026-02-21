@@ -312,4 +312,4 @@ If you encounter an issue not covered here:
 1. Check the [CI workflow](../../.github/workflows/ci.yml) to see exactly how the project is built and tested in CI.
 2. Look at the `Dockerfile` to see how a clean build environment is configured.
 3. Search existing issues in the project repository.
-4. Ensure all [prerequisites](prerequisites.md) are correctly installed and on your PATH.
+4. Ensure all [prerequisites](01_prerequisites.md) are correctly installed and on your PATH.

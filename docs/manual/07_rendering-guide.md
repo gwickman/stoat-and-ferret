@@ -154,13 +154,13 @@ The pipeline will leverage the existing FFmpeg executor infrastructure and job q
 
 While rendering is not yet implemented, the building blocks are in place:
 
-- **Effect system** generates valid FFmpeg filter strings (see [Effects Guide](effects-guide.md))
-- **Timeline model** tracks clip ordering and positions (see [Timeline Guide](timeline-guide.md))
+- **Effect system** generates valid FFmpeg filter strings (see [Effects Guide](04_effects-guide.md))
+- **Timeline model** tracks clip ordering and positions (see [Timeline Guide](05_timeline-guide.md))
 - **Job queue** provides async job execution infrastructure
 - **FFmpeg executor** wraps FFmpeg process management with timeout and error handling
 
 ## Next Steps
 
-- [Effects Guide](effects-guide.md) -- current effect system that generates filter strings
-- [Timeline Guide](timeline-guide.md) -- building timelines for rendering
-- [API Reference](api-reference.md) -- currently available endpoints
+- [Effects Guide](04_effects-guide.md) -- current effect system that generates filter strings
+- [Timeline Guide](05_timeline-guide.md) -- building timelines for rendering
+- [API Reference](03_api-reference.md) -- currently available endpoints

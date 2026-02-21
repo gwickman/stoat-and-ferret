@@ -151,5 +151,5 @@ When the server is running, these endpoints are available:
 
 ## See Also
 
-- [Development Setup](development-setup.md) for getting the server running.
-- [Troubleshooting](troubleshooting.md) for configuration-related issues.
+- [Development Setup](02_development-setup.md) for getting the server running.
+- [Troubleshooting](05_troubleshooting.md) for configuration-related issues.

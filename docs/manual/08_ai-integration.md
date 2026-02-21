@@ -292,6 +292,6 @@ A planned feature called "AI Theater Mode" will provide a specialized interface 
 
 ## Next Steps
 
-- [API Reference](api-reference.md) -- complete endpoint details for integration
-- [Effects Guide](effects-guide.md) -- all effects with parameter schemas and AI hints
-- [API Overview](api-overview.md) -- error handling, pagination, and conventions
+- [API Reference](03_api-reference.md) -- complete endpoint details for integration
+- [Effects Guide](04_effects-guide.md) -- all effects with parameter schemas and AI hints
+- [API Overview](02_api-overview.md) -- error handling, pagination, and conventions

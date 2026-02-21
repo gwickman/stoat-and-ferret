@@ -6,11 +6,11 @@ This directory contains everything you need to get a working **stoat-and-ferret*
 
 | Document | Description |
 |----------|-------------|
-| [Prerequisites](prerequisites.md) | Required tools and OS-specific installation notes |
-| [Development Setup](development-setup.md) | Step-by-step guide to build and run the project locally |
-| [Docker Setup](docker-setup.md) | Containerized testing with Docker Compose |
-| [Configuration](configuration.md) | Environment variables, settings, and database configuration |
-| [Troubleshooting](troubleshooting.md) | Common issues and how to fix them |
+| [Prerequisites](01_prerequisites.md) | Required tools and OS-specific installation notes |
+| [Development Setup](02_development-setup.md) | Step-by-step guide to build and run the project locally |
+| [Docker Setup](03_docker-setup.md) | Containerized testing with Docker Compose |
+| [Configuration](04_configuration.md) | Environment variables, settings, and database configuration |
+| [Troubleshooting](05_troubleshooting.md) | Common issues and how to fix them |
 
 ## Quick Start
 
@@ -39,4 +39,4 @@ uv run uvicorn stoat_ferret.api.app:create_app --factory --reload
 
 The API is then available at `http://127.0.0.1:8000/api/v1/` and the GUI at `http://127.0.0.1:8000/gui/`.
 
-For detailed instructions, start with [Prerequisites](prerequisites.md) and then follow [Development Setup](development-setup.md).
+For detailed instructions, start with [Prerequisites](01_prerequisites.md) and then follow [Development Setup](02_development-setup.md).

@@ -352,6 +352,6 @@ The following timeline features are planned but not yet implemented:
 
 ## Next Steps
 
-- [Effects Guide](effects-guide.md) -- applying effects and transitions to clips
-- [GUI Guide](gui-guide.md) -- managing projects and clips through the web interface
-- [Rendering Guide](rendering-guide.md) -- **[Planned]** exporting the final video
+- [Effects Guide](04_effects-guide.md) -- applying effects and transitions to clips
+- [GUI Guide](06_gui-guide.md) -- managing projects and clips through the web interface
+- [Rendering Guide](07_rendering-guide.md) -- **[Planned]** exporting the final video

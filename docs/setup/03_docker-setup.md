@@ -121,5 +121,5 @@ docker system prune
 
 ## See Also
 
-- [Development Setup](development-setup.md) for local development without Docker.
-- [Troubleshooting](troubleshooting.md) for common build issues.
+- [Development Setup](02_development-setup.md) for local development without Docker.
+- [Troubleshooting](05_troubleshooting.md) for common build issues.

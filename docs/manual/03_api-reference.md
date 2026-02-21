@@ -1,6 +1,6 @@
 # API Reference
 
-Complete endpoint reference for the Stoat & Ferret REST API. All endpoints use `http://localhost:8000` as the base URL. See [API Overview](api-overview.md) for conventions, error format, and pagination.
+Complete endpoint reference for the Stoat & Ferret REST API. All endpoints use `http://localhost:8000` as the base URL. See [API Overview](02_api-overview.md) for conventions, error format, and pagination.
 
 ---
 

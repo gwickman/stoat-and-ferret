@@ -1,6 +1,6 @@
 # Prerequisites
 
-This document lists all tools required to build and develop stoat-and-ferret. Install everything listed here before proceeding to [Development Setup](development-setup.md).
+This document lists all tools required to build and develop stoat-and-ferret. Install everything listed here before proceeding to [Development Setup](02_development-setup.md).
 
 ## Required Tools
 
@@ -177,4 +177,4 @@ If you already have Xcode installed, this step is not needed.
 | uv | latest | `uv --version` |
 | maturin | 1.0+ | `maturin --version` |
 
-Once all prerequisites are installed, proceed to [Development Setup](development-setup.md).
+Once all prerequisites are installed, proceed to [Development Setup](02_development-setup.md).
