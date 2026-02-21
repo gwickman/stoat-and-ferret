@@ -159,8 +159,7 @@ Work categories:
 | `discovered` | Found during execution, not originally planned |
 | `blocked` | Waiting on external dependency |
 
-**Version-agnostic items** (can be addressed opportunistically):
-- BL-018 (P2): Create C4 architecture documentation
+**Version-agnostic items:** None — all open items assigned to v008-v010.
 
 Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
