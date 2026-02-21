@@ -1,10 +1,10 @@
 {
   "exploration_id": "logging-plan-vs-reality-1771683483171",
   "results_folder": "logging-plan-vs-reality",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 11564,
   "started_at": "2026-02-21T14:18:03.172007",
-  "updated_at": "2026-02-21T14:18:03.172007",
+  "updated_at": "2026-02-21T14:18:05.087504",
   "completed_at": null,
   "error": null,
   "documents": [],
