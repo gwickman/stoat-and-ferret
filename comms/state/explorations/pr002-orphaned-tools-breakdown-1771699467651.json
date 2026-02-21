@@ -1,0 +1,15 @@
+{
+  "exploration_id": "pr002-orphaned-tools-breakdown-1771699467651",
+  "results_folder": "pr002-orphaned-tools-breakdown",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-21T18:44:27.651725",
+  "updated_at": "2026-02-21T18:44:27.651725",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/pr002-orphaned-tools-breakdown/prompt.md",
+  "outbox_path": "comms/outbox/exploration/pr002-orphaned-tools-breakdown"
+}
