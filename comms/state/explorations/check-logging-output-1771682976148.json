@@ -1,14 +1,18 @@
 {
   "exploration_id": "check-logging-output-1771682976148",
   "results_folder": "check-logging-output",
-  "status": "running",
+  "status": "complete",
   "pid": 11564,
   "started_at": "2026-02-21T14:09:36.148885",
-  "updated_at": "2026-02-21T14:09:38.099743",
-  "completed_at": null,
+  "updated_at": "2026-02-21T14:12:20.875718",
+  "completed_at": "2026-02-21T14:12:20.875421",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "log-destinations.md",
+    "logging-config.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/check-logging-output/prompt.md",
   "outbox_path": "comms/outbox/exploration/check-logging-output"
