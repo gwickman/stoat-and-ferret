@@ -1,10 +1,10 @@
 {
   "exploration_id": "reorder-user-docs-1771672454900",
   "results_folder": "reorder-user-docs",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 11564,
   "started_at": "2026-02-21T11:14:14.900201",
-  "updated_at": "2026-02-21T11:14:14.900201",
+  "updated_at": "2026-02-21T11:14:16.883071",
   "completed_at": null,
   "error": null,
   "documents": [],
