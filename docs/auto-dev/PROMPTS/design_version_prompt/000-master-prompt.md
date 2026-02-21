@@ -67,15 +67,7 @@ Output Requirements:
 
 ## Pre-Execution Validation
 
-**STEP 1:** Verify PROJECT variable is set.
-
-```python
-if PROJECT == "[SET_PROJECT_NAME_HERE]" or not PROJECT or PROJECT.strip() == "":
-    print("ERROR: PROJECT variable not set.")
-    STOP IMMEDIATELY
-```
-
-**STEP 2:** Read `docs/auto-dev/PLAN.md` and derive the next version number.
+**STEP 1:** Read `docs/auto-dev/PLAN.md` and derive the next version number.
 
 ```python
 # Find "Planned Versions" section
@@ -84,7 +76,7 @@ if PROJECT == "[SET_PROJECT_NAME_HERE]" or not PROJECT or PROJECT.strip() == "":
 # Set: VERSION = "vXXX"
 ```
 
-**STEP 3:** Verify version folder does NOT exist.
+**STEP 2:** Verify version folder does NOT exist.
 
 ```python
 # Check: comms/inbox/versions/execution/{VERSION}/ must NOT exist
@@ -92,7 +84,7 @@ if PROJECT == "[SET_PROJECT_NAME_HERE]" or not PROJECT or PROJECT.strip() == "":
 # STOP IMMEDIATELY
 ```
 
-**STEP 4:** Create the design artifact store.
+**STEP 3:** Create the design artifact store.
 
 ```python
 # Create: comms/outbox/versions/design/{VERSION}/

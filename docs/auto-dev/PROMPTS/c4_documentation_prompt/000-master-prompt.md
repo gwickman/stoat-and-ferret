@@ -101,16 +101,7 @@ This prompt orchestrates C4 architecture documentation generation using the expl
 
 ## Pre-Execution Validation
 
-**STEP 1:** Verify variables are set.
-
-```python
-if PROJECT == "[SET_PROJECT_NAME_HERE]" or not PROJECT.strip():
-    STOP: "ERROR: PROJECT variable not set."
-if VERSION == "[SET_VERSION_HERE]" or not VERSION.strip():
-    STOP: "ERROR: VERSION variable not set."
-```
-
-**STEP 2:** Verify project exists.
+**STEP 1:** Verify project exists.
 
 ```python
 result = get_project_info(project=PROJECT)
@@ -118,14 +109,14 @@ if not result.success:
     STOP: "ERROR: Project {PROJECT} not found."
 ```
 
-**STEP 3:** Check git status.
+**STEP 2:** Check git status.
 
 ```python
 result = git_read(project=PROJECT, operation="status")
 # Note current branch and any uncommitted changes
 ```
 
-**STEP 4:** Determine execution mode.
+**STEP 3:** Determine execution mode.
 
 ```python
 # Check for existing C4 documentation
@@ -158,7 +149,7 @@ elif MODE == "delta":
 
 **CRITICAL:** The final commit message MUST use the exact format `docs(c4): ${VERSION} C4 documentation finalized (${MODE} mode)`. Delta mode detection depends on matching the pattern `docs(c4):.*finalized` in git log. Do not modify, reword, squash, or amend these commit messages — doing so will silently break delta mode for future runs.
 
-**STEP 5:** Log mode decision.
+**STEP 4:** Log mode decision.
 
 ```
 Mode: {MODE}

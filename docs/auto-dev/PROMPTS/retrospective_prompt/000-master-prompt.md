@@ -101,16 +101,7 @@ Extract the autoDevToolKey from your initial prompt if present:
 
 ## Pre-Execution Validation
 
-**STEP 1:** Verify variables are set.
-
-```python
-if PROJECT == "[SET_PROJECT_NAME_HERE]" or not PROJECT.strip():
-    STOP: "ERROR: PROJECT variable not set."
-if VERSION == "[SET_VERSION_HERE]" or not VERSION.strip():
-    STOP: "ERROR: VERSION variable not set."
-```
-
-**STEP 2:** Verify project exists.
+**STEP 1:** Verify project exists.
 
 ```python
 result = get_project_info(project=PROJECT)
@@ -118,7 +109,7 @@ if not result.success:
     STOP: "ERROR: Project {PROJECT} not found."
 ```
 
-**STEP 3:** Verify version execution is complete.
+**STEP 2:** Verify version execution is complete.
 
 ```python
 result = get_version_status(project=PROJECT, version_number=int(VERSION[1:]))
@@ -127,7 +118,7 @@ if status not in ("completed", "all_themes_complete"):
     STOP: "ERROR: Version {VERSION} execution not complete."
 ```
 
-**STEP 4:** Verify retrospective folder does NOT already exist.
+**STEP 3:** Verify retrospective folder does NOT already exist.
 
 ```python
 # Check: comms/outbox/versions/retrospective/{VERSION}/ must NOT exist
@@ -135,7 +126,7 @@ if folder_exists:
     STOP: "ERROR: Retrospective for {VERSION} already exists."
 ```
 
-**STEP 5:** Create deliverables folder structure.
+**STEP 4:** Create deliverables folder structure.
 
 ```
 comms/outbox/versions/retrospective/{VERSION}/

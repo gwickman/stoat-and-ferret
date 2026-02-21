@@ -1,14 +1,16 @@
 {
   "exploration_id": "create-user-docs-1771613357438",
   "results_folder": "create-user-docs",
-  "status": "running",
+  "status": "complete",
   "pid": 8392,
   "started_at": "2026-02-20T18:49:17.438993",
-  "updated_at": "2026-02-20T18:49:20.115664",
-  "completed_at": null,
+  "updated_at": "2026-02-20T19:02:07.757084",
+  "completed_at": "2026-02-20T19:02:07.756694",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/create-user-docs/prompt.md",
   "outbox_path": "comms/outbox/exploration/create-user-docs"
