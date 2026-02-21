@@ -1,0 +1,15 @@
+{
+  "exploration_id": "wiring-audit-v003-v004-retry-1771693562819",
+  "results_folder": "wiring-audit-v003-v004-retry",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-21T17:06:02.819496",
+  "updated_at": "2026-02-21T17:06:02.819496",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/wiring-audit-v003-v004-retry/prompt.md",
+  "outbox_path": "comms/outbox/exploration/wiring-audit-v003-v004-retry"
+}
