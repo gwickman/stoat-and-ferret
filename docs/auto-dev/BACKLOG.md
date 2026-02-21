@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-19 22:57*
+*Last updated: 2026-02-21 15:39*
 
 **Total completed:** 49 | **Cancelled:** 0
 
@@ -9,8 +9,8 @@
 | Priority | Name | Count |
 |----------|------|-------|
 | P0 | Critical | 1 |
-| P1 | High | 3 |
-| P2 | Medium | 0 |
+| P1 | High | 4 |
+| P2 | Medium | 1 |
 | P3 | Low | 1 |
 
 ## Quick Reference
@@ -21,6 +21,8 @@
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P1 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-053-ref"></a>[BL-053](#bl-053) | P1 | l | Add PR vs BL routing guidance to AGENTS.md (stoat-and-ferret) | AGENTS.md in the stoat-and-ferret project lists both add_... |
 | <a id="bl-054-ref"></a>[BL-054](#bl-054) | P1 | l | Add WebFetch safety rules to AGENTS.md | Mirror of auto-dev-mcp BL-517. Add WebFetch safety block ... |
+| <a id="bl-056-ref"></a>[BL-056](#bl-056) | P1 | xl | Wire up structured logging at application startup | **Current state:** `configure_logging()` exists in `src/s... |
+| <a id="bl-057-ref"></a>[BL-057](#bl-057) | P2 | l | Add file-based logging with rotation to logs/ directory | **Current state:** After BL-056, structured logging will ... |
 | <a id="bl-011-ref"></a>[BL-011](#bl-011) | P3 | m | Consolidate Python/Rust build backends | v001 uses hatchling for Python package management and mat... |
 
 ## Tags Summary
@@ -28,6 +30,8 @@
 | Tag | Count | Items |
 |-----|-------|-------|
 | agents-md | 3 | BL-019, BL-053, BL-054 |
+| observability | 2 | BL-056, BL-057 |
+| logging | 2 | BL-056, BL-057 |
 | tooling | 1 | BL-011 |
 | build | 1 | BL-011 |
 | complexity | 1 | BL-011 |
@@ -43,6 +47,7 @@
 | e2e | 1 | BL-055 |
 | ci | 1 | BL-055 |
 | flaky-test | 1 | BL-055 |
+| wiring-gap | 1 | BL-056 |
 
 ## Item Details
 
@@ -122,6 +127,56 @@ stoat-and-ferret v006 Task 004 was the first incident — 2 hung WebFetch calls 
 - [ ] No other changes to AGENTS.md beyond the insertion
 
 [↑ Back to list](#bl-054-ref)
+
+#### 📋 BL-056: Wire up structured logging at application startup
+
+**Status:** open
+**Tags:** observability, logging, wiring-gap
+
+**Current state:** `configure_logging()` exists in `src/stoat_ferret/logging.py` and 10 modules emit structlog calls, but `configure_logging()` is never called at startup. `settings.log_level` (via `STOAT_LOG_LEVEL` env var) is defined but never consumed. As a result, all `logger.info()` calls are silently dropped (Python's `lastResort` handler only shows WARNING+), and the only functioning log output is uvicorn's hardcoded `log_level="info"`.
+
+**Gap:** The logging infrastructure was built in v002/v003 but never wired together. The function, the setting, and the log call sites all exist independently with no connection between them.
+
+**Impact:** No application-level logging is visible. Correlation IDs, job lifecycle events, effect registration, websocket events, and all structured log data are lost. Debugging production issues requires code changes to enable any logging.
+
+**Use Case:** During development and incident debugging, any developer or the auto-dev execution pipeline needs visible structured log output to diagnose failures without modifying code.
+
+**Acceptance Criteria:**
+- [ ] Application calls configure_logging() during startup lifespan before any request handling
+- [ ] settings.log_level value is passed to configure_logging() and controls the root logger level
+- [ ] STOAT_LOG_LEVEL=DEBUG produces visible debug output on stdout
+- [ ] All existing logger.info() calls across the 10 modules produce visible structured output at INFO level
+- [ ] uvicorn log_level uses settings.log_level instead of hardcoded 'info'
+- [ ] Existing tests continue to pass with logging active
+
+**Notes:** Scope: wires up existing stdout-only logging infrastructure. File-based logging is a separate follow-on item.
+
+[↑ Back to list](#bl-056-ref)
+
+### P2: Medium
+
+#### 📋 BL-057: Add file-based logging with rotation to logs/ directory
+
+**Status:** open
+**Tags:** observability, logging
+
+**Current state:** After BL-056, structured logging will be wired up but outputs to stdout only. There is no persistent log output — when the process stops, all log history is lost.
+
+**Gap:** No file-based logging exists. Debugging issues after the fact requires the developer to have been watching stdout at the time. There's no way to review historical log output.
+
+**Impact:** Post-hoc debugging is impossible without log persistence. Auto-dev execution pipeline output is lost when sessions end.
+
+**Acceptance Criteria:**
+- [ ] configure_logging() adds a RotatingFileHandler writing to logs/ directory at project root
+- [ ] Log files rotate at 10MB with a configurable backup count
+- [ ] logs/ directory is created automatically on startup if it doesn't exist
+- [ ] logs/ is added to .gitignore
+- [ ] File handler uses the same structlog formatter and log level as the stdout handler
+- [ ] Stdout logging continues to work alongside file logging
+
+**Notes:** Depends on BL-056 (wire up stdout logging first). Use RotatingFileHandler with maxBytes=10MB. Log directory: {project_root}/logs/. Must add logs/ to .gitignore.
+
+[↑ Back to list](#bl-057-ref)
 
 ### P3: Low
 

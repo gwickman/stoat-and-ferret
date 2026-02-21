@@ -1,6 +1,6 @@
 {
-  "next_id": 56,
-  "updated_at": "2026-02-19T22:57:11.050544",
+  "next_id": 58,
+  "updated_at": "2026-02-21T15:39:39.168375",
   "items": [
     {
       "id": "BL-001",
@@ -2144,6 +2144,97 @@
         }
       ],
       "notes": "Discovered during v007 execution. PR #88 (dynamic-parameter-forms) was retried 3 times per AGENTS.md limit without resolution. Likely cause: timing-dependent modal animation or state cleanup between tests.",
+      "use_case": null,
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-056",
+      "title": "Wire up structured logging at application startup",
+      "priority": "P1",
+      "status": "open",
+      "size": "xl",
+      "added": "2026-02-21T15:28:31.127809",
+      "completed_at": null,
+      "tags": [
+        "observability",
+        "logging",
+        "wiring-gap"
+      ],
+      "description": "**Current state:** `configure_logging()` exists in `src/stoat_ferret/logging.py` and 10 modules emit structlog calls, but `configure_logging()` is never called at startup. `settings.log_level` (via `STOAT_LOG_LEVEL` env var) is defined but never consumed. As a result, all `logger.info()` calls are silently dropped (Python's `lastResort` handler only shows WARNING+), and the only functioning log output is uvicorn's hardcoded `log_level=\"info\"`.\n\n**Gap:** The logging infrastructure was built in v002/v003 but never wired together. The function, the setting, and the log call sites all exist independently with no connection between them.\n\n**Impact:** No application-level logging is visible. Correlation IDs, job lifecycle events, effect registration, websocket events, and all structured log data are lost. Debugging production issues requires code changes to enable any logging.",
+      "acceptance_criteria": [
+        {
+          "text": "Application calls configure_logging() during startup lifespan before any request handling",
+          "done": false
+        },
+        {
+          "text": "settings.log_level value is passed to configure_logging() and controls the root logger level",
+          "done": false
+        },
+        {
+          "text": "STOAT_LOG_LEVEL=DEBUG produces visible debug output on stdout",
+          "done": false
+        },
+        {
+          "text": "All existing logger.info() calls across the 10 modules produce visible structured output at INFO level",
+          "done": false
+        },
+        {
+          "text": "uvicorn log_level uses settings.log_level instead of hardcoded 'info'",
+          "done": false
+        },
+        {
+          "text": "Existing tests continue to pass with logging active",
+          "done": false
+        }
+      ],
+      "notes": "Scope: wires up existing stdout-only logging infrastructure. File-based logging is a separate follow-on item.",
+      "use_case": "During development and incident debugging, any developer or the auto-dev execution pipeline needs visible structured log output to diagnose failures without modifying code.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-057",
+      "title": "Add file-based logging with rotation to logs/ directory",
+      "priority": "P2",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-21T15:39:39.168368",
+      "completed_at": null,
+      "tags": [
+        "observability",
+        "logging"
+      ],
+      "description": "**Current state:** After BL-056, structured logging will be wired up but outputs to stdout only. There is no persistent log output \u2014 when the process stops, all log history is lost.\n\n**Gap:** No file-based logging exists. Debugging issues after the fact requires the developer to have been watching stdout at the time. There's no way to review historical log output.\n\n**Impact:** Post-hoc debugging is impossible without log persistence. Auto-dev execution pipeline output is lost when sessions end.",
+      "acceptance_criteria": [
+        {
+          "text": "configure_logging() adds a RotatingFileHandler writing to logs/ directory at project root",
+          "done": false
+        },
+        {
+          "text": "Log files rotate at 10MB with a configurable backup count",
+          "done": false
+        },
+        {
+          "text": "logs/ directory is created automatically on startup if it doesn't exist",
+          "done": false
+        },
+        {
+          "text": "logs/ is added to .gitignore",
+          "done": false
+        },
+        {
+          "text": "File handler uses the same structlog formatter and log level as the stdout handler",
+          "done": false
+        },
+        {
+          "text": "Stdout logging continues to work alongside file logging",
+          "done": false
+        }
+      ],
+      "notes": "Depends on BL-056 (wire up stdout logging first). Use RotatingFileHandler with maxBytes=10MB. Log directory: {project_root}/logs/. Must add logs/ to .gitignore.",
       "use_case": null,
       "implemented_in_version": null,
       "implemented_in_theme": null,

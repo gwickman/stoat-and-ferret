@@ -1,14 +1,19 @@
 {
   "exploration_id": "logging-plan-vs-reality-1771683483171",
   "results_folder": "logging-plan-vs-reality",
-  "status": "running",
+  "status": "complete",
   "pid": 11564,
   "started_at": "2026-02-21T14:18:03.172007",
-  "updated_at": "2026-02-21T14:18:05.087504",
-  "completed_at": null,
+  "updated_at": "2026-02-21T14:22:23.911754",
+  "completed_at": "2026-02-21T14:22:23.911416",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "gap-analysis.md",
+    "implemented-logging.md",
+    "planned-logging.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/logging-plan-vs-reality/prompt.md",
   "outbox_path": "comms/outbox/exploration/logging-plan-vs-reality"
