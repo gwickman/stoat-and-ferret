@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v008-006-critical-1771706400214",
+  "results_folder": "design-v008-006-critical",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-21T20:40:00.214798",
+  "updated_at": "2026-02-21T20:40:00.214798",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v008-006-critical/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v008-006-critical"
+}
