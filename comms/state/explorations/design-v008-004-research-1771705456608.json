@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v008-004-research-1771705456608",
+  "results_folder": "design-v008-004-research",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-21T20:24:16.608790",
+  "updated_at": "2026-02-21T20:24:16.608790",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v008-004-research/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v008-004-research"
+}
