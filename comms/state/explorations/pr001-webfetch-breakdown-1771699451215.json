@@ -1,14 +1,17 @@
 {
   "exploration_id": "pr001-webfetch-breakdown-1771699451215",
   "results_folder": "pr001-webfetch-breakdown",
-  "status": "running",
+  "status": "complete",
   "pid": 3164,
   "started_at": "2026-02-21T18:44:11.215254",
-  "updated_at": "2026-02-21T18:44:13.545988",
-  "completed_at": null,
+  "updated_at": "2026-02-21T18:57:22.302025",
+  "completed_at": "2026-02-21T18:57:22.301709",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "version-breakdown.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/pr001-webfetch-breakdown/prompt.md",
   "outbox_path": "comms/outbox/exploration/pr001-webfetch-breakdown"
