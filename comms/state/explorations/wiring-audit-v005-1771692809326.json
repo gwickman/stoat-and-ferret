@@ -1,0 +1,15 @@
+{
+  "exploration_id": "wiring-audit-v005-1771692809326",
+  "results_folder": "wiring-audit-v005",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-21T16:53:29.326047",
+  "updated_at": "2026-02-21T16:53:29.326047",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/wiring-audit-v005/prompt.md",
+  "outbox_path": "comms/outbox/exploration/wiring-audit-v005"
+}
