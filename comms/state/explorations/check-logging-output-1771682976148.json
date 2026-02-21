@@ -1,10 +1,10 @@
 {
   "exploration_id": "check-logging-output-1771682976148",
   "results_folder": "check-logging-output",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 11564,
   "started_at": "2026-02-21T14:09:36.148885",
-  "updated_at": "2026-02-21T14:09:36.148885",
+  "updated_at": "2026-02-21T14:09:38.099743",
   "completed_at": null,
   "error": null,
   "documents": [],
