@@ -3,17 +3,18 @@
 > Bridge between strategic roadmap and auto-dev execution.
 >
 > Strategic Roadmap: `docs/design/01-roadmap.md`
-> Last Updated: 2026-02-19
+> Last Updated: 2026-02-22
 
 ## Current Focus
 
-**Recently Completed:** v008 (Startup Integrity & CI Stability — wiring audit fixes)
-**Upcoming:** v009 (Observability & GUI Runtime)
+**Recently Completed:** v009 (Observability & GUI Runtime)
+**Upcoming:** v010 (API Surface Cleanup & Remaining)
 
 ## Roadmap → Version Mapping
 
 | Version | Roadmap Reference | Focus | Status |
 |---------|-------------------|-------|--------|
+| v009 | Wiring audit + Phase 2 gaps | Observability & GUI Runtime: FFmpeg metrics, audit logging, file logging, SPA routing, pagination, WebSocket broadcasts | ✅ complete |
 | v008 | Wiring audit | Startup Integrity & CI Stability: database startup, logging startup, orphaned settings, flaky E2E fix | ✅ complete |
 | v007 | Phase 2, M2.4–2.6, M2.8–2.9 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | ✅ complete |
 | v006 | Phase 2, M2.1–2.3 | Effects engine foundation: filter expression engine, graph validation, text overlay, speed control | ✅ complete |
@@ -39,26 +40,6 @@ Track explorations that must complete before version design.
 
 ## Planned Versions
 
-### v009 — Observability & GUI Runtime
-
-**Goal:** Complete the observability pipeline (FFmpeg metrics, audit logging, file-based logs) and fix GUI runtime gaps (SPA routing, pagination, WebSocket broadcasts).
-
-**Theme 1: observability-pipeline**
-- 001-ffmpeg-observability: Wire `ObservableFFmpegExecutor` into DI chain [BL-059, P1]
-- 002-audit-logging: Wire `AuditLogger` into repository DI [BL-060, P2]
-- 003-file-logging: Add `RotatingFileHandler` to `configure_logging()` [BL-057, P2]
-
-**Theme 2: gui-runtime-fixes**
-- 001-spa-routing: Add SPA fallback to serve index.html for GUI sub-paths [BL-063, P1]
-- 002-pagination-fix: Add `count()` to `AsyncProjectRepository`, fix total in GET /projects [BL-064, P2]
-- 003-websocket-broadcasts: Wire `ConnectionManager.broadcast()` calls into API operations [BL-065, P2]
-
-**Backlog items:** BL-057, BL-059, BL-060, BL-063, BL-064, BL-065 (6 items)
-**Dependencies:** BL-057 depends on BL-056 (v008). All others independent.
-**Risk:** BL-065 (WebSocket broadcasts) touches multiple API endpoints.
-
----
-
 ### v010 — API Surface Cleanup & Remaining
 
 **Goal:** Audit and trim dead PyO3 bindings, resolve the Rust-Python FFmpeg bridge, add transition GUI support, and close remaining housekeeping.
@@ -77,6 +58,13 @@ Track explorations that must complete before version design.
 **Risk:** BL-061 requires a design decision (wire vs remove). BL-067/BL-068 are audit-then-act.
 
 ## Completed Versions
+
+### v009 - Observability & GUI Runtime (2026-02-22)
+- **Themes:** observability-pipeline, gui-runtime-fixes
+- **Features:** 6 completed across 2 themes
+- **Backlog Resolved:** BL-057, BL-059, BL-060, BL-063, BL-064, BL-065
+- **Key Changes:** ObservableFFmpegExecutor wired into DI chain with Prometheus metrics, AuditLogger wired with separate sync sqlite3 connection and WAL mode, RotatingFileHandler integrated into configure_logging() with 10MB rotation, SPA routing fallback replacing StaticFiles mount, AsyncProjectRepository.count() fixing pagination totals, WebSocket broadcast wiring for project and scan events
+- **Deferred:** None
 
 ### v008 - Startup Integrity & CI Stability (2026-02-22)
 - **Themes:** application-startup-wiring, ci-stability
@@ -149,7 +137,7 @@ Work categories:
 | `discovered` | Found during execution, not originally planned |
 | `blocked` | Waiting on external dependency |
 
-**Version-agnostic items:** None — all open items assigned to v008-v010.
+**Version-agnostic items:** None — all open items assigned to v010.
 
 Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
@@ -165,6 +153,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-22 | v009 complete: Observability & GUI Runtime delivered (2 themes, 6 features, 6 backlog items completed). Moved v009 from Planned to Completed. Updated Current Focus to v010. |
 | 2026-02-22 | v008 complete: Startup Integrity & CI Stability delivered (2 themes, 4 features, 4 backlog items completed). Moved v008 from Planned to Completed. Updated Current Focus to v009. |
 | 2026-02-21 | Planned v008-v010 covering all 15 open backlog items from wiring audit. Cancelled BL-011, BL-053, BL-054. Closed PR-001, PR-002 after investigation. Deferred Phase 3: Composition Engine to post-v010. |
 | 2026-02-19 | v007 complete: Effect Workshop GUI delivered (4 themes, 11 features, 9 backlog items completed). Moved v007 from Planned to Completed. Updated Current Focus to v008. Marked BL-047 and BL-051 investigations as complete. |
