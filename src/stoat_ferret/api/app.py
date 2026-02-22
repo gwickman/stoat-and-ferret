@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -32,6 +33,7 @@ from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
+from stoat_ferret.logging import configure_logging
 
 logger = structlog.get_logger(__name__)
 
@@ -51,6 +53,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None after startup completes.
     """
+    # Configure structured logging before anything else
+    settings = get_settings()
+    configure_logging(level=getattr(logging, settings.log_level))
+
     # Create ConnectionManager if not injected
     if not getattr(app.state, "ws_manager", None):
         app.state.ws_manager = ConnectionManager()
@@ -59,8 +65,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if getattr(app.state, "_deps_injected", False):
         yield
         return
-
-    settings = get_settings()
 
     # Startup: open database connection
     app.state.db = await aiosqlite.connect(settings.database_path_resolved)
