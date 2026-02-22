@@ -30,9 +30,15 @@ All passed on the final run:
 
 No failures. No code problem deferrals needed.
 
+## Commit
+
+- **SHA**: `7077a18`
+- **Message**: `chore(v009): version closure housekeeping - finalization task complete`
+- **Pushed**: Yes
+
 ## Version Status
 
-Version marked complete via `complete_version(project="stoat-and-ferret", version_number=9)`.
+Version marked complete via `complete_version(project="stoat-and-ferret", version_number=9)`. Published 7 artifacts to `docs/versions/v009/`.
 
 ## Retrospective Summary
 
