@@ -11,7 +11,7 @@
       "name": "observability-pipeline",
       "status": "in_progress",
       "features_total": 3,
-      "features_complete": 2,
+      "features_complete": 3,
       "started_at": "2026-02-22T15:29:25.667802Z",
       "completed_at": null,
       "skip_reason": null
