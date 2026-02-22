@@ -108,9 +108,10 @@ async def list_projects(
         Paginated list of projects.
     """
     projects = await repo.list_projects(limit=limit, offset=offset)
+    total = await repo.count()
     return ProjectListResponse(
         projects=[ProjectResponse.model_validate(p) for p in projects],
-        total=len(projects),
+        total=total,
     )
 
 

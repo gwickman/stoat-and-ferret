@@ -84,6 +84,14 @@ class AsyncProjectRepository(Protocol):
         """
         ...
 
+    async def count(self) -> int:
+        """Return the total number of projects in the repository.
+
+        Returns:
+            Total project count.
+        """
+        ...
+
 
 class AsyncSQLiteProjectRepository:
     """Async SQLite implementation of the ProjectRepository protocol."""
@@ -179,6 +187,13 @@ class AsyncSQLiteProjectRepository:
         await self._conn.commit()
         return cursor.rowcount > 0
 
+    async def count(self) -> int:
+        """Return the total number of projects in the database."""
+        cursor = await self._conn.execute("SELECT COUNT(*) FROM projects")
+        row = await cursor.fetchone()
+        assert row is not None  # COUNT(*) always returns a row
+        return int(row[0])
+
     def _row_to_project(self, row: Any) -> Project:
         """Convert a database row to a Project object."""
         transitions_raw = row["transitions_json"]
@@ -235,6 +250,10 @@ class AsyncInMemoryProjectRepository:
             return False
         del self._projects[id]
         return True
+
+    async def count(self) -> int:
+        """Return the total number of projects in the repository."""
+        return len(self._projects)
 
     def seed(self, projects: list[Project]) -> None:
         """Populate the repository with initial test data.

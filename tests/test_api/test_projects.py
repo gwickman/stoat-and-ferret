@@ -198,3 +198,30 @@ async def test_list_projects_respects_limit(
     assert response.status_code == 200
     data = response.json()
     assert len(data["projects"]) == 3
+
+
+@pytest.mark.api
+async def test_list_projects_total_is_true_count(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Total reflects true database count, not page size."""
+    now = datetime.now(timezone.utc)
+    for i in range(25):
+        await project_repository.add(
+            Project(
+                id=f"proj-{i}",
+                name=f"Project {i}",
+                output_width=1920,
+                output_height=1080,
+                output_fps=30,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    response = client.get("/api/v1/projects?limit=10")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["projects"]) == 10
+    assert data["total"] == 25
