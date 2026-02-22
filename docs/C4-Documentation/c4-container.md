@@ -9,9 +9,9 @@ C4Container
     Person(user, "Editor User", "Uses the video editor via web browser")
 
     System_Boundary(system, "stoat-and-ferret") {
-        Container(gui, "Web GUI", "TypeScript/React/Vite", "SPA: dashboard, video library, project management, effect workshop")
-        Container(api, "API Server", "Python/FastAPI/uvicorn", "REST + WebSocket API, serves static GUI, runs background jobs")
-        Container(rust, "Rust Core Library", "Rust/PyO3", "Timeline math, clip validation, FFmpeg commands, filter graphs, 9 effect builders, sanitization")
+        Container(gui, "Web GUI", "TypeScript/React/Vite", "SPA: dashboard, video library, project management, effect workshop with apply/edit/remove lifecycle, WCAG AA")
+        Container(api, "API Server", "Python/FastAPI/uvicorn", "REST + WebSocket API, serves static GUI, runs background jobs, configurable heartbeat, structured logging")
+        Container(rust, "Rust Core Library", "Rust/PyO3", "Timeline math, clip validation, FFmpeg commands, filter graphs, 9 effect builders, transition builders, sanitization")
         ContainerDb(db, "SQLite Database", "SQLite/aiosqlite/Alembic", "Videos, projects, clips (with effects JSON), transitions, audit log, FTS5 index")
         Container(fs, "File Storage", "Local filesystem", "Source videos, thumbnails, database file")
     }
@@ -33,17 +33,17 @@ C4Container
 ### API Server
 
 - **Name**: API Server
-- **Description**: The FastAPI backend that hosts the REST API, WebSocket endpoint, background job worker, effects registry with full CRUD, transition engine, and serves the built GUI as static files. This is the single running process for the application.
+- **Description**: The FastAPI backend that hosts the REST API, WebSocket endpoint, background job worker, effects registry with full CRUD, transition engine, and serves the built GUI as static files. This is the single running process for the application. Structured logging is wired into the application lifespan on startup, and the WebSocket heartbeat interval is configurable via the `ws_heartbeat_interval` setting.
 - **Type**: API / Web Application
 - **Technology**: Python 3.10+, FastAPI, uvicorn, Starlette, Pydantic, asyncio, structlog, prometheus-client, jsonschema
 - **Deployment**: `python -m stoat_ferret.api` (uvicorn on port 8000). Dockerfile available for containerized testing.
 
 #### Components Deployed
 
-- [API Gateway](./c4-component-api-gateway.md) -- REST/WebSocket endpoints, middleware, schemas, settings, effects/transitions router
+- [API Gateway](./c4-component-api-gateway.md) -- REST/WebSocket endpoints, middleware, schemas, settings (`ws_heartbeat_interval`, `debug`, `allowed_scan_roots`), effects/transitions router
 - [Effects Engine](./c4-component-effects-engine.md) -- EffectRegistry with 9 built-in effects (text overlay, speed, volume, audio fade, audio mix, audio ducking, video fade, crossfade, audio crossfade), JSON Schema validation, AI hints
 - [Application Services](./c4-component-application-services.md) -- Scan service, thumbnail generation, FFmpeg execution, job queue
-- [Data Access Layer](./c4-component-data-access.md) -- Repository pattern, domain models (effects/transitions as JSON), schema, audit logging
+- [Data Access Layer](./c4-component-data-access.md) -- Repository pattern, domain models (effects/transitions as JSON), schema, audit logging, `configure_logging()` wired into lifespan
 - [Python Bindings Layer](./c4-component-python-bindings.md) -- Re-exports from Rust core, type stubs
 
 #### Interfaces
@@ -72,7 +72,7 @@ C4Container
   - `PATCH /api/v1/projects/{project_id}/clips/{clip_id}/effects/{index}` -- Update effect at index
   - `DELETE /api/v1/projects/{project_id}/clips/{clip_id}/effects/{index}` -- Remove effect at index
   - `POST /api/v1/projects/{project_id}/effects/transition` -- Apply transition between adjacent clips
-- **WebSocket**: WS/JSON at `/ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT)
+- **WebSocket**: WS/JSON at `/ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT) with configurable `ws_heartbeat_interval` (default 30s, wired from settings on startup)
 - **Prometheus Metrics**: HTTP at `/metrics` -- Request count, duration histograms, effect/transition application counters
 - **Static GUI**: HTTP at `/gui` -- Serves built React SPA assets
 
@@ -88,7 +88,7 @@ C4Container
 
 - **Docker image**: Multi-stage Dockerfile -- Stage 1 compiles Rust extension with maturin, Stage 2 creates slim Python runtime with uv
 - **Entry point**: `python -m stoat_ferret.api` or `uvicorn stoat_ferret.api.app:create_app`
-- **Settings**: Environment variables with `STOAT_` prefix (host, port, database path, scan roots, GUI static path, WebSocket heartbeat interval, debug mode, log level)
+- **Settings**: Environment variables with `STOAT_` prefix (host, port, database path, scan roots, GUI static path, `ws_heartbeat_interval`, `debug`, log level)
 - **Scaling**: Single-process; horizontal scaling not supported (SQLite file-based, in-process job queue)
 
 #### Infrastructure References
@@ -102,14 +102,14 @@ C4Container
 ### Web GUI
 
 - **Name**: Web GUI
-- **Description**: React single-page application built with Vite, served as static files by the API Server. In development, runs as a separate Vite dev server with API proxy.
+- **Description**: React single-page application built with Vite, served as static files by the API Server. In development, runs as a separate Vite dev server with API proxy. In v008, the effect workshop was fully implemented with apply/edit/remove lifecycle, WCAG AA accessibility compliance verified via axe-core Playwright integration, and the E2E suite expanded to 15 tests.
 - **Type**: Web Application (SPA)
-- **Technology**: TypeScript, React 19, Vite 7, Tailwind CSS 4, Zustand 5, React Router 7, Vitest, Playwright
+- **Technology**: TypeScript, React 19, Vite 7, Tailwind CSS 4, Zustand 5, React Router 7, Vitest, Playwright, axe-core
 - **Deployment**: Pre-built to `gui/dist/` and served by API Server at `/gui`. Dev mode: `npm run dev` (Vite dev server on port 5173 with proxy to API on port 8000).
 
 #### Components Deployed
 
-- [Web GUI](./c4-component-web-gui.md) -- 22 React components, 8 custom hooks, 7 Zustand stores, 4 pages (Dashboard, Library, Projects, Effects)
+- [Web GUI](./c4-component-web-gui.md) -- 22 React components, 8 custom hooks, 7 Zustand stores, 4 pages (Dashboard, Library, Projects, Effects); 131 unit tests + 15 Playwright E2E tests (including WCAG AA audits and effect workshop lifecycle)
 
 #### Interfaces
 
@@ -117,7 +117,7 @@ C4Container
   - `/` -- Dashboard (health cards, metrics, activity log)
   - `/library` -- Video library (search, sort, pagination, scan)
   - `/projects` -- Project management (CRUD, clip timeline)
-  - `/effects` -- Effect workshop (catalog, parameter form, filter preview, effect stack)
+  - `/effects` -- Effect workshop (catalog, parameter form, filter preview, effect apply/edit/remove stack)
 
 #### Dependencies
 
@@ -132,7 +132,7 @@ C4Container
 
 - **Config**: [gui/package.json](../../gui/package.json), [gui/vite.config.ts](../../gui/vite.config.ts)
 - **Dev proxy**: Vite proxies `/api`, `/health`, `/metrics`, `/ws` to `http://localhost:8000`
-- **CI**: Frontend CI job runs `npm ci && npm run build && npx vitest run`; E2E job runs Playwright with axe-core accessibility audits
+- **CI**: Frontend CI job runs `npm ci && npm run build && npx vitest run`; E2E job runs Playwright with axe-core accessibility audits (5 WCAG AA tests + 7 effect lifecycle tests)
 
 ---
 

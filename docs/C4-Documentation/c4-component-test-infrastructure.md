@@ -10,6 +10,8 @@
 
 The Test Infrastructure provides thorough validation of all Python backend components. It is organized into specialized test suites: root-level unit tests for repositories, models, FFmpeg, WebSocket, and Rust binding parity (including audio/transition builders); API endpoint tests using TestClient with in-memory doubles; black-box E2E tests exercising complete workflows through HTTP; contract tests ensuring test doubles faithfully match production implementations; security tests for input sanitization and path traversal; job queue lifecycle tests; test double validation; and property-based tests using Hypothesis.
 
+In v008, the root test suite expanded to cover structured logging startup configuration (`test_logging_startup.py`), database initialization during application lifespan (`test_database_startup.py`), and verification that previously orphaned settings (`debug`, `ws_heartbeat_interval`) are now wired to their consumers (`test_orphaned_settings.py`). Audio builder parity (`test_audio_builders.py`) and transition builder parity (`test_transition_builders.py`) were added alongside the existing PyO3 binding tests.
+
 The test infrastructure establishes key patterns used across all suites: contract testing parametrized over implementations, the recording/replay pattern for FFmpeg testing, fluent test data builders (factories), and dependency injection via `create_app()` kwargs.
 
 ## Software Features
@@ -24,11 +26,13 @@ The test infrastructure establishes key patterns used across all suites: contrac
 - **Property-Based Tests**: Hypothesis-driven invariant testing for Video and Clip models
 - **Import Fallback Tests**: Graceful degradation when Rust extension unavailable
 - **Test Factories**: Fluent builders for Video, Project, and Clip test data
+- **Startup Integration Tests**: Validate structured logging and database initialization during lifespan
+- **Orphaned Settings Tests**: Verify `debug` and `ws_heartbeat_interval` settings are consumed by their intended components
 
 ## Code Elements
 
 This component contains:
-- [c4-code-tests.md](./c4-code-tests.md) -- Root tests: conftest, factories, repo contracts, models, FFmpeg, WebSocket, logging, PyO3 bindings, audio/transition parity (~495 tests)
+- [c4-code-tests.md](./c4-code-tests.md) -- Root tests: conftest, factories, repo contracts, models, FFmpeg, WebSocket, logging, PyO3 bindings, audio/transition parity, startup integration, orphaned settings (~532 tests)
 - [c4-code-tests-test-api.md](./c4-code-tests-test-api.md) -- API endpoint tests with TestClient (180 tests)
 - [c4-code-tests-test-blackbox.md](./c4-code-tests-test-blackbox.md) -- Black-box E2E workflow tests (60 tests)
 - [c4-code-tests-test-contract.md](./c4-code-tests-test-contract.md) -- FFmpeg executor and repository parity tests (37 tests)
@@ -76,7 +80,7 @@ C4Component
     title Component Diagram for Test Infrastructure
 
     Container_Boundary(tests, "Test Infrastructure") {
-        Component(root_tests, "Root Tests", "Python/pytest", "Repos, models, FFmpeg, WebSocket, bindings, audio/transition parity (~495)")
+        Component(root_tests, "Root Tests", "Python/pytest", "Repos, models, FFmpeg, WebSocket, bindings, audio/transition parity, startup, orphaned settings (~532)")
         Component(api_tests, "API Tests", "Python/pytest", "REST endpoint tests with TestClient (180)")
         Component(blackbox, "Black-Box Tests", "Python/pytest", "E2E workflow tests via HTTP (60)")
         Component(contract, "Contract Tests", "Python/pytest", "FFmpeg executor and repo parity (37)")

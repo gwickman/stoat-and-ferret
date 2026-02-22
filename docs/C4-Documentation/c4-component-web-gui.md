@@ -12,6 +12,8 @@ The Web GUI provides the user-facing interface for stoat-and-ferret. It is a Rea
 
 The frontend uses Zustand for lightweight global state management (7 stores), custom React hooks for data fetching and WebSocket connectivity, and Tailwind CSS for styling. It is served as static files by the backend at `/gui` and connects to the API at the same origin.
 
+The E2E test suite expanded significantly in v008 to cover the effect workshop lifecycle (apply, edit, remove), accessibility compliance via WCAG AA audits with axe-core, and keyboard navigation through the full effect workflow.
+
 ## Software Features
 - **Dashboard**: Real-time health monitoring, Prometheus metrics display, WebSocket activity log
 - **Video Library**: Searchable video grid with debounced search, sort controls, pagination, and directory scan modal
@@ -21,6 +23,7 @@ The frontend uses Zustand for lightweight global state management (7 stores), cu
 - **Health Monitoring**: Polls readiness endpoint, maps to healthy/degraded/unhealthy states
 - **Metrics Parsing**: Parses Prometheus text format into structured metrics display
 - **State Management**: 7 Zustand stores for activity log, library filters, project UI, effect catalog, form, preview, and stack
+- **Accessibility**: WCAG 2.0 Level AA compliance verified via axe-core Playwright integration
 
 ## Code Elements
 
@@ -32,7 +35,7 @@ This component contains:
 - [c4-code-gui-stores.md](./c4-code-gui-stores.md) -- 7 Zustand stores: activityStore, libraryStore, projectStore, effectCatalogStore, effectFormStore, effectPreviewStore, effectStackStore
 - [c4-code-gui-components-tests.md](./c4-code-gui-components-tests.md) -- 101 component tests across 20 test files
 - [c4-code-gui-hooks-tests.md](./c4-code-gui-hooks-tests.md) -- 30 hook tests across 6 test files
-- [c4-code-gui-e2e.md](./c4-code-gui-e2e.md) -- 15 Playwright E2E tests: navigation, scan, project creation, accessibility (WCAG AA), effect workshop lifecycle
+- [c4-code-gui-e2e.md](./c4-code-gui-e2e.md) -- 15 Playwright E2E tests: navigation, scan, project creation, accessibility (WCAG AA, 5 tests), effect workshop lifecycle (7 tests covering apply/edit/remove and keyboard navigation)
 
 ## Interfaces
 
@@ -86,7 +89,7 @@ C4Component
         Component(components, "UI Components", "TypeScript/React", "22 components across layout, dashboard, library, projects, effects")
         Component(hooks, "Custom Hooks", "TypeScript/React", "useHealth, useWebSocket, useMetrics, useVideos, useProjects, useEffects, useEffectPreview, useDebounce")
         Component(stores, "State Stores", "TypeScript/Zustand", "7 stores: activity, library, project, effectCatalog, effectForm, effectPreview, effectStack")
-        Component(gui_tests, "Test Suites", "TypeScript/Vitest+Playwright", "131 unit + 15 E2E tests")
+        Component(gui_tests, "Test Suites", "TypeScript/Vitest+Playwright", "131 unit + 15 E2E tests (including WCAG AA and effect lifecycle)")
     }
 
     Rel(app_root, pages, "routes to")

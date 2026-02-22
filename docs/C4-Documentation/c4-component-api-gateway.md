@@ -2,7 +2,7 @@
 
 ## Overview
 - **Name**: API Gateway
-- **Description**: FastAPI application providing REST endpoints for videos, projects, clips, effects, transitions, and jobs, plus WebSocket connectivity, middleware, request/response schemas, and configuration
+- **Description**: FastAPI application providing REST endpoints for videos, projects, clips, effects, transitions, and jobs, plus WebSocket connectivity with configurable heartbeat, middleware, request/response schemas, and configuration
 - **Type**: Application
 - **Technology**: Python, FastAPI, Starlette, Pydantic, Prometheus, WebSocket
 
@@ -12,7 +12,7 @@ The API Gateway is the HTTP/WebSocket entry point for all client interactions wi
 
 The gateway uses FastAPI's dependency injection system for testability -- repositories, job queues, and services are injected via `create_app()` kwargs, allowing tests to substitute in-memory doubles without monkey-patching. The application factory pattern (`create_app()`) configures all routers, middleware, metrics, and static file serving.
 
-The effects router provides full CRUD operations for effects on clips (apply, update at index, delete at index), transition application between adjacent clips, and effect discovery with parameter schemas and AI hints.
+The effects router provides full CRUD operations for effects on clips (apply, update at index, delete at index), transition application between adjacent clips, and effect discovery with parameter schemas and AI hints. The WebSocket endpoint supports configurable heartbeat intervals from application settings, wired via the `ws_heartbeat_interval` setting on startup.
 
 ## Software Features
 - **REST API**: CRUD endpoints for videos, projects, clips, and jobs under `/api/v1/`
@@ -20,20 +20,20 @@ The effects router provides full CRUD operations for effects on clips (apply, up
 - **Effect Preview**: Preview FFmpeg filter strings without applying
 - **Effect CRUD on Clips**: Apply, update, and remove effects at specific indices on clips
 - **Transition Application**: Apply transitions between adjacent clips with type selection
-- **WebSocket**: Real-time event broadcasting at `/ws` with heartbeat and connection management
+- **WebSocket**: Real-time event broadcasting at `/ws` with configurable heartbeat interval and connection management
 - **Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) probes
 - **Request Tracing**: Correlation ID middleware for distributed tracing
-- **Metrics**: Prometheus HTTP request metrics and `/metrics` endpoint
+- **Metrics**: Prometheus HTTP request metrics, effect application counters, and `/metrics` endpoint
 - **Schema Validation**: Pydantic models for all request/response payloads
 - **Static File Serving**: GUI static files mounted at `/gui`
-- **Configuration**: Environment-based settings with `STOAT_` prefix
+- **Configuration**: Environment-based settings with `STOAT_` prefix including `debug`, `ws_heartbeat_interval`, and `allowed_scan_roots`
 
 ## Code Elements
 
 This component contains:
-- [c4-code-stoat-ferret-api.md](./c4-code-stoat-ferret-api.md) -- Application factory, settings, lifespan management, entry point
+- [c4-code-stoat-ferret-api.md](./c4-code-stoat-ferret-api.md) -- Application factory, settings (including `ws_heartbeat_interval`, `debug`), lifespan management with structured logging setup, entry point
 - [c4-code-python-api.md](./c4-code-python-api.md) -- Higher-level API layer overview
-- [c4-code-stoat-ferret-api-routers.md](./c4-code-stoat-ferret-api-routers.md) -- REST/WebSocket route handlers (health, videos, projects, jobs, effects with CRUD and transitions, ws)
+- [c4-code-stoat-ferret-api-routers.md](./c4-code-stoat-ferret-api-routers.md) -- REST/WebSocket route handlers (health, videos, projects, jobs, effects with CRUD and transitions, ws with configurable heartbeat)
 - [c4-code-stoat-ferret-api-middleware.md](./c4-code-stoat-ferret-api-middleware.md) -- CorrelationIdMiddleware, MetricsMiddleware
 - [c4-code-stoat-ferret-api-schemas.md](./c4-code-stoat-ferret-api-schemas.md) -- Pydantic request/response models including effect and transition schemas
 - [c4-code-python-schemas.md](./c4-code-python-schemas.md) -- Schema definitions overview
@@ -59,10 +59,10 @@ This component contains:
 
 ### WebSocket API
 - **Protocol**: WebSocket (JSON messages)
-- **Operations**: `WS /ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT)
+- **Operations**: `WS /ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT) with configurable `ws_heartbeat_interval` (default 30s)
 
 ### Prometheus Metrics
-- **Operations**: `GET /metrics` -- Request count, duration histograms
+- **Operations**: `GET /metrics` -- Request count, duration histograms, effect application counters by type
 
 ## Dependencies
 
@@ -84,11 +84,11 @@ C4Component
     title Component Diagram for API Gateway
 
     Container_Boundary(api, "API Gateway") {
-        Component(app, "App Factory", "Python/FastAPI", "create_app(), lifespan, settings")
-        Component(routers, "Route Handlers", "Python/FastAPI", "health, videos, projects, jobs, effects+transitions, ws")
+        Component(app, "App Factory", "Python/FastAPI", "create_app(), lifespan with logging setup, settings including debug and ws_heartbeat_interval")
+        Component(routers, "Route Handlers", "Python/FastAPI", "health, videos, projects, jobs, effects+transitions, ws with configurable heartbeat")
         Component(middleware, "Middleware", "Python/Starlette", "Correlation ID, Prometheus metrics")
         Component(schemas, "API Schemas", "Python/Pydantic", "Request/response models for all endpoints")
-        Component(websocket, "WebSocket Manager", "Python/Starlette", "Connection management, event broadcasting")
+        Component(websocket, "WebSocket Manager", "Python/Starlette", "Connection management, event broadcasting, heartbeat loop")
     }
 
     Component_Ext(effects_eng, "Effects Engine", "EffectRegistry")
