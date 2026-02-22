@@ -724,7 +724,141 @@
       "content_path": "docs/auto-dev/LEARNINGS/LRN-039-excessive-context-compaction-signals-need-for-task.md",
       "status": "active",
       "updated_at": null
+    },
+    {
+      "id": "LRN-040",
+      "title": "Idempotent Startup Functions for Lifespan Wiring",
+      "tags": [
+        "pattern",
+        "startup",
+        "idempotency",
+        "fastapi",
+        "lifespan"
+      ],
+      "created": "2026-02-22T10:48:03.307911Z",
+      "source": "v008/01-application-startup-wiring retrospective, v008/01-application-startup-wiring/001-database-startup completion-report, v008/01-application-startup-wiring/002-logging-startup completion-report",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Startup/lifespan functions must be idempotent using operation-appropriate guards (IF NOT EXISTS, handler dedup, init flags) to prevent side-effect accumulation in tests and production.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-040-idempotent-startup-functions-for-lifespan-wiring.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-041",
+      "title": "Static Type Checking Catches Cross-Module Wiring Errors",
+      "tags": [
+        "pattern",
+        "mypy",
+        "type-checking",
+        "wiring",
+        "debugging"
+      ],
+      "created": "2026-02-22T10:48:14.385048Z",
+      "source": "v008/01-application-startup-wiring/003-orphaned-settings completion-report, v008 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "mypy catches invalid API calls during cross-module wiring work (e.g., wrong kwargs on framework functions) before runtime, acting as design feedback on implementation plans.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-041-static-type-checking-catches-cross-module-wiring-e.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-042",
+      "title": "Group Features by Modification Point for Theme Cohesion",
+      "tags": [
+        "process",
+        "planning",
+        "theme-design",
+        "cohesion",
+        "efficiency"
+      ],
+      "created": "2026-02-22T10:48:23.768383Z",
+      "source": "v008/01-application-startup-wiring retrospective, v008 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Group features that modify the same code path into a single theme to reduce context-switching and enable knowledge compounding across features.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-042-group-features-by-modification-point-for-theme-coh.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-043",
+      "title": "Explicit Assertion Timeouts in CI-Bound E2E Tests",
+      "tags": [
+        "testing",
+        "e2e",
+        "playwright",
+        "ci",
+        "reliability",
+        "failure-mode"
+      ],
+      "created": "2026-02-22T10:48:35.116707Z",
+      "source": "v008/02-ci-stability/001-flaky-e2e-fix completion-report, v008/02-ci-stability retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Add explicit timeouts to all state-transition assertions in E2E specs; default Playwright timeouts cause intermittent CI failures in slower GitHub Actions environments.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-043-explicit-assertion-timeouts-in-ci-bound-e2e-tests.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-044",
+      "title": "Settings Consumer Traceability as a Completeness Check",
+      "tags": [
+        "pattern",
+        "configuration",
+        "settings",
+        "completeness",
+        "maintenance"
+      ],
+      "created": "2026-02-22T10:48:48.897027Z",
+      "source": "v008/01-application-startup-wiring/003-orphaned-settings completion-report, v008/01-application-startup-wiring retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Verify every settings field has a production consumer after wiring work; orphaned settings indicate incomplete wiring and create operator confusion.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-044-settings-consumer-traceability-as-a-completeness-c.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-045",
+      "title": "Single-Feature Themes for Precisely-Scoped Bug Fixes",
+      "tags": [
+        "process",
+        "planning",
+        "theme-design",
+        "bug-fixes",
+        "scoping"
+      ],
+      "created": "2026-02-22T10:48:59.922932Z",
+      "source": "v008/02-ci-stability retrospective, v008 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Isolate bug fixes as single-feature themes with their own acceptance criteria rather than bundling into unrelated themes; keeps scope clear and review trivial.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-045-single-feature-themes-for-precisely-scoped-bug-fix.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-046",
+      "title": "Maintenance Versions Succeed with Well-Understood Change Scoping",
+      "tags": [
+        "process",
+        "planning",
+        "scoping",
+        "maintenance",
+        "quality"
+      ],
+      "created": "2026-02-22T10:49:10.299313Z",
+      "source": "v008 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Maintenance-focused versions with well-understood changes achieve higher first-iteration success; dedicate versions to maintenance when debt inventory justifies it.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-046-maintenance-versions-succeed-with-well-understood-.md",
+      "status": "active",
+      "updated_at": null
     }
   ],
-  "next_id": 40
+  "next_id": 47
 }
