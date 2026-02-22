@@ -1,6 +1,6 @@
 {
   "next_id": 69,
-  "updated_at": "2026-02-21T18:43:44.327919",
+  "updated_at": "2026-02-22T10:24:16.860374",
   "items": [
     {
       "id": "BL-001",
@@ -2118,10 +2118,10 @@
       "id": "BL-055",
       "title": "Fix flaky E2E test in project-creation.spec.ts (toBeHidden timeout)",
       "priority": "P0",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-19T16:59:19.174758",
-      "completed_at": null,
+      "completed_at": "2026-02-22T10:24:16.860368",
       "tags": [
         "bug",
         "e2e",
@@ -2145,18 +2145,18 @@
       ],
       "notes": "Discovered during v007 execution. PR #88 (dynamic-parameter-forms) was retried 3 times per AGENTS.md limit without resolution. Likely cause: timing-dependent modal animation or state cleanup between tests.",
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v008",
+      "implemented_in_theme": "ci-stability",
       "upvotes": 0
     },
     {
       "id": "BL-056",
       "title": "Wire up structured logging at application startup",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "xl",
       "added": "2026-02-21T15:28:31.127809",
-      "completed_at": null,
+      "completed_at": "2026-02-22T10:24:14.604776",
       "tags": [
         "observability",
         "logging",
@@ -2191,8 +2191,8 @@
       ],
       "notes": "Scope: wires up existing stdout-only logging infrastructure. File-based logging is a separate follow-on item.",
       "use_case": "During development and incident debugging, any developer or the auto-dev execution pipeline needs visible structured log output to diagnose failures without modifying code.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v008",
+      "implemented_in_theme": "application-startup-wiring",
       "upvotes": 0
     },
     {
@@ -2244,10 +2244,10 @@
       "id": "BL-058",
       "title": "Wire database schema creation into application startup",
       "priority": "P0",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:29:21.122506",
-      "completed_at": null,
+      "completed_at": "2026-02-22T10:24:13.404833",
       "tags": [
         "wiring-gap",
         "database",
@@ -2274,8 +2274,8 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v008",
+      "implemented_in_theme": "application-startup-wiring",
       "upvotes": 0
     },
     {
@@ -2388,10 +2388,10 @@
       "id": "BL-062",
       "title": "Wire orphaned settings (debug, ws_heartbeat_interval) to their consumers",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:29:57.910080",
-      "completed_at": null,
+      "completed_at": "2026-02-22T10:24:15.778734",
       "tags": [
         "wiring-gap",
         "settings",
@@ -2414,8 +2414,8 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v008",
+      "implemented_in_theme": "application-startup-wiring",
       "upvotes": 0
     },
     {
@@ -2628,6 +2628,6 @@
       "upvotes": 0
     }
   ],
-  "completed_count": 49,
+  "completed_count": 53,
   "cancelled_count": 0
 }

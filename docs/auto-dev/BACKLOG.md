@@ -1,31 +1,27 @@
 # Project Backlog
 
-*Last updated: 2026-02-21 18:43*
+*Last updated: 2026-02-22 10:24*
 
-**Total completed:** 49 | **Cancelled:** 0
+**Total completed:** 53 | **Cancelled:** 0
 
 ## Priority Summary
 
 | Priority | Name | Count |
 |----------|------|-------|
-| P0 | Critical | 2 |
-| P1 | High | 3 |
-| P2 | Medium | 6 |
+| P0 | Critical | 0 |
+| P1 | High | 2 |
+| P2 | Medium | 5 |
 | P3 | Low | 4 |
 
 ## Quick Reference
 
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
-| <a id="bl-055-ref"></a>[BL-055](#bl-055) | P0 | l | Fix flaky E2E test in project-creation.spec.ts (toBeHidden timeout) | The E2E test at gui/e2e/project-creation.spec.ts:31 inter... |
-| <a id="bl-058-ref"></a>[BL-058](#bl-058) | P0 | l | Wire database schema creation into application startup | **Current state:** `create_tables()` exists and Alembic m... |
-| <a id="bl-056-ref"></a>[BL-056](#bl-056) | P1 | xl | Wire up structured logging at application startup | **Current state:** `configure_logging()` exists in `src/s... |
 | <a id="bl-059-ref"></a>[BL-059](#bl-059) | P1 | l | Wire ObservableFFmpegExecutor into dependency injection | **Current state:** `ObservableFFmpegExecutor` exists with... |
 | <a id="bl-063-ref"></a>[BL-063](#bl-063) | P1 | l | Add SPA routing fallback for GUI sub-paths | **Current state:** FastAPI serves the GUI via `StaticFile... |
 | <a id="bl-057-ref"></a>[BL-057](#bl-057) | P2 | l | Add file-based logging with rotation to logs/ directory | **Current state:** After BL-056, structured logging will ... |
 | <a id="bl-060-ref"></a>[BL-060](#bl-060) | P2 | l | Wire AuditLogger into repository dependency injection | **Current state:** `AuditLogger` class exists and reposit... |
 | <a id="bl-061-ref"></a>[BL-061](#bl-061) | P2 | l | Wire or remove execute_command() Rust-Python FFmpeg bridge | **Current state:** `execute_command()` was built in v002/... |
-| <a id="bl-062-ref"></a>[BL-062](#bl-062) | P2 | l | Wire orphaned settings (debug, ws_heartbeat_interval) to their consumers | **Current state:** Two settings fields are defined with f... |
 | <a id="bl-064-ref"></a>[BL-064](#bl-064) | P2 | l | Fix projects endpoint pagination total count | **Current state:** `GET /api/v1/projects` returns `total=... |
 | <a id="bl-065-ref"></a>[BL-065](#bl-065) | P2 | l | Wire WebSocket broadcast calls into API operations | **Current state:** The backend defines WebSocket event ty... |
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
@@ -37,25 +33,18 @@
 
 | Tag | Count | Items |
 |-----|-------|-------|
-| wiring-gap | 10 | BL-056, BL-058, BL-059, BL-060, ... |
-| observability | 4 | BL-056, BL-057, BL-059, BL-060 |
+| wiring-gap | 7 | BL-059, BL-060, BL-061, BL-063, ... |
+| observability | 3 | BL-057, BL-059, BL-060 |
 | rust-python | 3 | BL-061, BL-067, BL-068 |
 | gui | 3 | BL-063, BL-065, BL-066 |
-| logging | 2 | BL-056, BL-057 |
-| database | 2 | BL-058, BL-060 |
 | ffmpeg | 2 | BL-059, BL-061 |
 | dead-code | 2 | BL-067, BL-068 |
 | api-surface | 2 | BL-067, BL-068 |
 | windows | 1 | BL-019 |
 | agents-md | 1 | BL-019 |
 | gitignore | 1 | BL-019 |
-| bug | 1 | BL-055 |
-| e2e | 1 | BL-055 |
-| ci | 1 | BL-055 |
-| flaky-test | 1 | BL-055 |
-| startup | 1 | BL-058 |
-| settings | 1 | BL-062 |
-| configuration | 1 | BL-062 |
+| logging | 1 | BL-057 |
+| database | 1 | BL-060 |
 | routing | 1 | BL-063 |
 | api | 1 | BL-064 |
 | pagination | 1 | BL-064 |
@@ -116,69 +105,7 @@ Tags like `v070-tech-debt` are acceptable temporarily to group related items fro
 
 ## Item Details
 
-### P0: Critical
-
-#### 📋 BL-055: Fix flaky E2E test in project-creation.spec.ts (toBeHidden timeout)
-
-**Status:** open
-**Tags:** bug, e2e, ci, flaky-test
-
-The E2E test at gui/e2e/project-creation.spec.ts:31 intermittently fails with a toBeHidden assertion timeout on the project creation modal. The test fails on main (GitHub Actions run 22188785818) independent of any feature branch changes. During v007 execution, this caused the dynamic-parameter-forms feature to receive a 'partial' completion status despite 12/12 acceptance criteria passing and all other quality gates green. The execution pipeline halted, requiring manual restart. Any future feature touching the E2E CI job is at risk of the same false-positive halt.
-
-**Acceptance Criteria:**
-- [ ] project-creation.spec.ts:31 toBeHidden assertion passes reliably across 10 consecutive CI runs
-- [ ] No E2E test requires retry loops to pass in CI
-- [ ] Flaky test fix does not alter the tested project creation functionality
-
-**Notes:** Discovered during v007 execution. PR #88 (dynamic-parameter-forms) was retried 3 times per AGENTS.md limit without resolution. Likely cause: timing-dependent modal animation or state cleanup between tests.
-
-[↑ Back to list](#bl-055-ref)
-
-#### 📋 BL-058: Wire database schema creation into application startup
-
-**Status:** open
-**Tags:** wiring-gap, database, startup
-
-**Current state:** `create_tables()` exists and Alembic migrations are configured, but neither is called during application startup. A fresh database gets no schema — the application starts but any database operation will fail.
-
-**Gap:** Database initialization was built in v002/03-database-foundation but never wired into the lifespan startup sequence. Requires manual CLI intervention to create schema.
-
-**Impact:** The application cannot function against a new database without manual steps. This contradicts the project's principle that all processes must be fully automated.
-
-**Acceptance Criteria:**
-- [ ] Database tables are created automatically during application startup lifespan if they don't exist
-- [ ] Alembic migrations run at startup or a clear automated mechanism ensures schema is current
-- [ ] A fresh database with no prior state becomes fully functional after a single application start
-- [ ] Existing tests continue to pass
-
-[↑ Back to list](#bl-058-ref)
-
 ### P1: High
-
-#### 📋 BL-056: Wire up structured logging at application startup
-
-**Status:** open
-**Tags:** observability, logging, wiring-gap
-
-**Current state:** `configure_logging()` exists in `src/stoat_ferret/logging.py` and 10 modules emit structlog calls, but `configure_logging()` is never called at startup. `settings.log_level` (via `STOAT_LOG_LEVEL` env var) is defined but never consumed. As a result, all `logger.info()` calls are silently dropped (Python's `lastResort` handler only shows WARNING+), and the only functioning log output is uvicorn's hardcoded `log_level="info"`.
-
-**Gap:** The logging infrastructure was built in v002/v003 but never wired together. The function, the setting, and the log call sites all exist independently with no connection between them.
-
-**Impact:** No application-level logging is visible. Correlation IDs, job lifecycle events, effect registration, websocket events, and all structured log data are lost. Debugging production issues requires code changes to enable any logging.
-
-**Use Case:** During development and incident debugging, any developer or the auto-dev execution pipeline needs visible structured log output to diagnose failures without modifying code.
-
-**Acceptance Criteria:**
-- [ ] Application calls configure_logging() during startup lifespan before any request handling
-- [ ] settings.log_level value is passed to configure_logging() and controls the root logger level
-- [ ] STOAT_LOG_LEVEL=DEBUG produces visible debug output on stdout
-- [ ] All existing logger.info() calls across the 10 modules produce visible structured output at INFO level
-- [ ] uvicorn log_level uses settings.log_level instead of hardcoded 'info'
-- [ ] Existing tests continue to pass with logging active
-
-**Notes:** Scope: wires up existing stdout-only logging infrastructure. File-based logging is a separate follow-on item.
-
-[↑ Back to list](#bl-056-ref)
 
 #### 📋 BL-059: Wire ObservableFFmpegExecutor into dependency injection
 
@@ -277,24 +204,6 @@ The E2E test at gui/e2e/project-creation.spec.ts:31 intermittently fails with a 
 - [ ] If execute_command() is genuinely unnecessary, it is removed along with its tests
 
 [↑ Back to list](#bl-061-ref)
-
-#### 📋 BL-062: Wire orphaned settings (debug, ws_heartbeat_interval) to their consumers
-
-**Status:** open
-**Tags:** wiring-gap, settings, configuration
-
-**Current state:** Two settings fields are defined with full validation and env var support but never consumed: `debug` is never passed to FastAPI or uvicorn, and `ws_heartbeat_interval` is ignored in favour of a hardcoded `DEFAULT_HEARTBEAT_INTERVAL = 30` in ws.py.
-
-**Gap:** Settings were created in v003/02-api-foundation as "define the field" without "wire the field to its consumer."
-
-**Impact:** Operators cannot control debug mode or WebSocket heartbeat timing via configuration. The env vars exist but do nothing.
-
-**Acceptance Criteria:**
-- [ ] settings.debug is passed to FastAPI(debug=...) and/or uvicorn.run()
-- [ ] settings.ws_heartbeat_interval is read by ws.py instead of using hardcoded DEFAULT_HEARTBEAT_INTERVAL
-- [ ] No settings fields remain defined but unconsumed (excluding log_level which is covered by BL-056)
-
-[↑ Back to list](#bl-062-ref)
 
 #### 📋 BL-064: Fix projects endpoint pagination total count
 
