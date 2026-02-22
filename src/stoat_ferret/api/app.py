@@ -31,7 +31,8 @@ from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.effects.registry import EffectRegistry
-from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
+from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
+from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
 from stoat_ferret.logging import configure_logging
 
@@ -76,8 +77,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db)
+    app.state.ffmpeg_executor = ObservableFFmpegExecutor(RealFFmpegExecutor())
     thumbnail_service = ThumbnailService(
-        executor=RealFFmpegExecutor(),
+        executor=app.state.ffmpeg_executor,
         thumbnail_dir=settings.thumbnail_dir,
     )
     job_queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(repo, thumbnail_service))
@@ -104,6 +106,7 @@ def create_app(
     job_queue: AsyncioJobQueue | None = None,
     ws_manager: ConnectionManager | None = None,
     effect_registry: EffectRegistry | None = None,
+    ffmpeg_executor: FFmpegExecutor | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -119,6 +122,7 @@ def create_app(
         job_queue: Optional job queue for dependency injection.
         ws_manager: Optional WebSocket connection manager for dependency injection.
         effect_registry: Optional effect registry for dependency injection.
+        ffmpeg_executor: Optional FFmpeg executor for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -150,6 +154,9 @@ def create_app(
 
     if effect_registry is not None:
         app.state.effect_registry = effect_registry
+
+    if ffmpeg_executor is not None:
+        app.state.ffmpeg_executor = ffmpeg_executor
 
     app.include_router(health.router)
     app.include_router(videos.router)

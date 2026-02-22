@@ -9,10 +9,10 @@
     {
       "number": 1,
       "name": "observability-pipeline",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 3,
       "features_complete": 0,
-      "started_at": null,
+      "started_at": "2026-02-22T15:29:25.667802Z",
       "completed_at": null,
       "skip_reason": null
     },

@@ -101,6 +101,40 @@ def test_create_app_with_repos_sets_injected_flag() -> None:
 
 
 @pytest.mark.api
+def test_create_app_with_ffmpeg_executor_stores_on_state() -> None:
+    """create_app(ffmpeg_executor=...) stores executor on app.state."""
+    from stoat_ferret.ffmpeg.executor import ExecutionResult
+
+    class StubExecutor:
+        """Stub FFmpegExecutor for DI test."""
+
+        def run(
+            self,
+            args: list[str],
+            *,
+            stdin: bytes | None = None,
+            timeout: float | None = None,
+        ) -> ExecutionResult:
+            """Return a stub result."""
+            return ExecutionResult(
+                returncode=0,
+                stdout=b"",
+                stderr=b"",
+                command=["ffmpeg", *args],
+                duration_seconds=0.0,
+            )
+
+    executor = StubExecutor()
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        ffmpeg_executor=executor,
+    )
+    assert app.state.ffmpeg_executor is executor
+
+
+@pytest.mark.api
 def test_zero_dependency_overrides_in_conftest(client: TestClient) -> None:
     """Verify no dependency_overrides are set on the test app."""
     assert len(client.app.dependency_overrides) == 0  # type: ignore[union-attr]
