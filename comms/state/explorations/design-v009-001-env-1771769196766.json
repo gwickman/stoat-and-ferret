@@ -1,14 +1,16 @@
 {
   "exploration_id": "design-v009-001-env-1771769196766",
   "results_folder": "design-v009-001-env",
-  "status": "running",
+  "status": "complete",
   "pid": 9032,
   "started_at": "2026-02-22T14:06:36.766172",
-  "updated_at": "2026-02-22T14:06:38.601631",
-  "completed_at": null,
+  "updated_at": "2026-02-22T14:08:48.843302",
+  "completed_at": "2026-02-22T14:08:48.842914",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v009-001-env/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v009-001-env"
