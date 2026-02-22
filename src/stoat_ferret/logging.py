@@ -47,9 +47,14 @@ def configure_logging(json_format: bool = True, level: int = logging.INFO) -> No
         foreign_pre_chain=shared_processors,
     )
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-
     root = logging.getLogger()
-    root.addHandler(handler)
+
+    # Idempotency: only add a handler if root has no StreamHandler already.
+    # Use exact type match to avoid matching subclasses (e.g. pytest's LogCaptureHandler).
+    has_stream_handler = any(type(h) is logging.StreamHandler for h in root.handlers)
+    if not has_stream_handler:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+
     root.setLevel(level)
