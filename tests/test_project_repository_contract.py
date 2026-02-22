@@ -147,6 +147,35 @@ class TestAsyncProjectList:
 
 
 @pytest.mark.contract
+class TestAsyncProjectCount:
+    """Tests for async count() method."""
+
+    async def test_count_empty(self, project_repository: AsyncProjectRepositoryType) -> None:
+        """Count returns 0 for empty repository."""
+        result = await project_repository.count()
+        assert result == 0
+
+    async def test_count_returns_total(
+        self, project_repository: AsyncProjectRepositoryType
+    ) -> None:
+        """Count returns the total number of projects."""
+        for i in range(5):
+            await project_repository.add(make_test_project(name=f"Project {i}"))
+
+        result = await project_repository.count()
+        assert result == 5
+
+    async def test_count_after_delete(self, project_repository: AsyncProjectRepositoryType) -> None:
+        """Count decreases after deleting a project."""
+        project = make_test_project()
+        await project_repository.add(project)
+        assert await project_repository.count() == 1
+
+        await project_repository.delete(project.id)
+        assert await project_repository.count() == 0
+
+
+@pytest.mark.contract
 class TestAsyncProjectUpdate:
     """Tests for async update() method."""
 

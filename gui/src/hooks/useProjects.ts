@@ -31,6 +31,11 @@ interface ClipListResponse {
   total: number
 }
 
+interface UseProjectsOptions {
+  page?: number
+  pageSize?: number
+}
+
 interface UseProjectsResult {
   projects: Project[]
   total: number
@@ -39,7 +44,8 @@ interface UseProjectsResult {
   refetch: () => void
 }
 
-export function useProjects(): UseProjectsResult {
+export function useProjects(options: UseProjectsOptions = {}): UseProjectsResult {
+  const { page = 0, pageSize = 100 } = options
   const [projects, setProjects] = useState<Project[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -55,7 +61,11 @@ export function useProjects(): UseProjectsResult {
 
     async function fetchProjects() {
       try {
-        const res = await fetch('/api/v1/projects?limit=100')
+        const params = new URLSearchParams({
+          limit: String(pageSize),
+          offset: String(page * pageSize),
+        })
+        const res = await fetch(`/api/v1/projects?${params}`)
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
         const json: ProjectListResponse = await res.json()
         if (active) {
@@ -75,7 +85,7 @@ export function useProjects(): UseProjectsResult {
     return () => {
       active = false
     }
-  }, [fetchKey])
+  }, [page, pageSize, fetchKey])
 
   return { projects, total, loading, error, refetch }
 }

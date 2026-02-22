@@ -7,15 +7,20 @@ import { type Project, fetchClips, useProjects } from '../hooks/useProjects'
 import { useProjectStore } from '../stores/projectStore'
 
 export default function ProjectsPage() {
-  const { projects, loading, error, refetch } = useProjects()
   const {
     selectedProjectId,
     createModalOpen,
     deleteModalOpen,
+    page,
+    pageSize,
     setSelectedProjectId,
     setCreateModalOpen,
     setDeleteModalOpen,
+    setPage,
+    resetPage,
   } = useProjectStore()
+
+  const { projects, total, loading, error, refetch } = useProjects({ page, pageSize })
 
   const [clipCounts, setClipCounts] = useState<Record<string, number>>({})
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
@@ -68,14 +73,17 @@ export default function ProjectsPage() {
       setSelectedProjectId(null)
     }
     setDeleteTargetId(null)
+    resetPage()
     refetch()
-  }, [deleteTargetId, selectedProjectId, setSelectedProjectId, refetch])
+  }, [deleteTargetId, selectedProjectId, setSelectedProjectId, resetPage, refetch])
 
   const handleCreated = useCallback(() => {
+    resetPage()
     refetch()
-  }, [refetch])
+  }, [resetPage, refetch])
 
   const deleteTarget = projects.find((p) => p.id === deleteTargetId)
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
     <div className="p-6" data-testid="projects-page">
@@ -106,6 +114,33 @@ export default function ProjectsPage() {
             onSelect={handleSelect}
             onDelete={handleDelete}
           />
+
+          {!loading && !error && total > pageSize && (
+            <div
+              className="mt-4 flex items-center justify-center gap-2"
+              data-testid="pagination"
+            >
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 0}
+                className="rounded border border-gray-700 px-3 py-1 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+                data-testid="page-prev"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-400" data-testid="page-info">
+                Page {page + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages - 1}
+                className="rounded border border-gray-700 px-3 py-1 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+                data-testid="page-next"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </>
       )}
 
