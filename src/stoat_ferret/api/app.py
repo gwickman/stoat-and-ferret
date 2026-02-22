@@ -28,6 +28,7 @@ from stoat_ferret.db.async_repository import (
 )
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
+from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
@@ -64,6 +65,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: open database connection
     app.state.db = await aiosqlite.connect(settings.database_path_resolved)
     app.state.db.row_factory = aiosqlite.Row
+
+    # Ensure schema exists (idempotent, uses IF NOT EXISTS)
+    await create_tables_async(app.state.db)
 
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()

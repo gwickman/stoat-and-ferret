@@ -18,17 +18,7 @@ from stoat_ferret.db.project_repository import (
     AsyncInMemoryProjectRepository,
     AsyncSQLiteProjectRepository,
 )
-from stoat_ferret.db.schema import (
-    AUDIT_LOG_INDEX,
-    AUDIT_LOG_TABLE,
-    PROJECTS_TABLE,
-    VIDEOS_FTS,
-    VIDEOS_FTS_DELETE_TRIGGER,
-    VIDEOS_FTS_INSERT_TRIGGER,
-    VIDEOS_FTS_UPDATE_TRIGGER,
-    VIDEOS_PATH_INDEX,
-    VIDEOS_TABLE,
-)
+from stoat_ferret.db.schema import create_tables_async
 
 AsyncProjectRepositoryType = AsyncSQLiteProjectRepository | AsyncInMemoryProjectRepository
 
@@ -47,20 +37,6 @@ def make_test_project(**kwargs: object) -> Project:
     }
     defaults.update(kwargs)
     return Project(**defaults)  # type: ignore[arg-type]
-
-
-async def create_tables_async(conn: aiosqlite.Connection) -> None:
-    """Create all database tables asynchronously."""
-    await conn.execute(VIDEOS_TABLE)
-    await conn.execute(VIDEOS_PATH_INDEX)
-    await conn.execute(VIDEOS_FTS)
-    await conn.execute(VIDEOS_FTS_INSERT_TRIGGER)
-    await conn.execute(VIDEOS_FTS_DELETE_TRIGGER)
-    await conn.execute(VIDEOS_FTS_UPDATE_TRIGGER)
-    await conn.execute(AUDIT_LOG_TABLE)
-    await conn.execute(AUDIT_LOG_INDEX)
-    await conn.execute(PROJECTS_TABLE)
-    await conn.commit()
 
 
 @pytest.fixture(params=["sqlite", "memory"])

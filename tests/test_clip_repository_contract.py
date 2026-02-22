@@ -18,20 +18,7 @@ from stoat_ferret.db.clip_repository import (
     AsyncSQLiteClipRepository,
 )
 from stoat_ferret.db.models import Clip
-from stoat_ferret.db.schema import (
-    AUDIT_LOG_INDEX,
-    AUDIT_LOG_TABLE,
-    CLIPS_PROJECT_INDEX,
-    CLIPS_TABLE,
-    CLIPS_TIMELINE_INDEX,
-    PROJECTS_TABLE,
-    VIDEOS_FTS,
-    VIDEOS_FTS_DELETE_TRIGGER,
-    VIDEOS_FTS_INSERT_TRIGGER,
-    VIDEOS_FTS_UPDATE_TRIGGER,
-    VIDEOS_PATH_INDEX,
-    VIDEOS_TABLE,
-)
+from stoat_ferret.db.schema import create_tables_async
 
 AsyncClipRepositoryType = AsyncSQLiteClipRepository | AsyncInMemoryClipRepository
 
@@ -51,23 +38,6 @@ def make_test_clip(**kwargs: object) -> Clip:
     }
     defaults.update(kwargs)
     return Clip(**defaults)  # type: ignore[arg-type]
-
-
-async def create_tables_async(conn: aiosqlite.Connection) -> None:
-    """Create all database tables asynchronously."""
-    await conn.execute(VIDEOS_TABLE)
-    await conn.execute(VIDEOS_PATH_INDEX)
-    await conn.execute(VIDEOS_FTS)
-    await conn.execute(VIDEOS_FTS_INSERT_TRIGGER)
-    await conn.execute(VIDEOS_FTS_DELETE_TRIGGER)
-    await conn.execute(VIDEOS_FTS_UPDATE_TRIGGER)
-    await conn.execute(AUDIT_LOG_TABLE)
-    await conn.execute(AUDIT_LOG_INDEX)
-    await conn.execute(PROJECTS_TABLE)
-    await conn.execute(CLIPS_TABLE)
-    await conn.execute(CLIPS_PROJECT_INDEX)
-    await conn.execute(CLIPS_TIMELINE_INDEX)
-    await conn.commit()
 
 
 async def insert_test_project_and_video(conn: aiosqlite.Connection) -> None:

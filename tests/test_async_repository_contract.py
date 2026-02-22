@@ -17,34 +17,12 @@ from stoat_ferret.db.async_repository import (
     AsyncInMemoryVideoRepository,
     AsyncSQLiteVideoRepository,
 )
-from stoat_ferret.db.schema import (
-    AUDIT_LOG_INDEX,
-    AUDIT_LOG_TABLE,
-    VIDEOS_FTS,
-    VIDEOS_FTS_DELETE_TRIGGER,
-    VIDEOS_FTS_INSERT_TRIGGER,
-    VIDEOS_FTS_UPDATE_TRIGGER,
-    VIDEOS_PATH_INDEX,
-    VIDEOS_TABLE,
-)
+from stoat_ferret.db.schema import create_tables_async
 
 # Reuse helper from sync tests
 from tests.test_repository_contract import make_test_video
 
 AsyncRepositoryType = AsyncSQLiteVideoRepository | AsyncInMemoryVideoRepository
-
-
-async def create_tables_async(conn: aiosqlite.Connection) -> None:
-    """Create all database tables asynchronously."""
-    await conn.execute(VIDEOS_TABLE)
-    await conn.execute(VIDEOS_PATH_INDEX)
-    await conn.execute(VIDEOS_FTS)
-    await conn.execute(VIDEOS_FTS_INSERT_TRIGGER)
-    await conn.execute(VIDEOS_FTS_DELETE_TRIGGER)
-    await conn.execute(VIDEOS_FTS_UPDATE_TRIGGER)
-    await conn.execute(AUDIT_LOG_TABLE)
-    await conn.execute(AUDIT_LOG_INDEX)
-    await conn.commit()
 
 
 @pytest.fixture(params=["sqlite", "memory"])

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
+import aiosqlite
+
 # Table names
 TABLE_VIDEOS = "videos"
 TABLE_VIDEOS_FTS = "videos_fts"
@@ -141,3 +143,27 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(CLIPS_PROJECT_INDEX)
     cursor.execute(CLIPS_TIMELINE_INDEX)
     conn.commit()
+
+
+async def create_tables_async(db: aiosqlite.Connection) -> None:
+    """Create all database tables and indexes asynchronously.
+
+    Async equivalent of create_tables(). Uses IF NOT EXISTS so it is
+    idempotent and safe to call on every startup.
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    await db.execute(VIDEOS_TABLE)
+    await db.execute(VIDEOS_PATH_INDEX)
+    await db.execute(VIDEOS_FTS)
+    await db.execute(VIDEOS_FTS_INSERT_TRIGGER)
+    await db.execute(VIDEOS_FTS_DELETE_TRIGGER)
+    await db.execute(VIDEOS_FTS_UPDATE_TRIGGER)
+    await db.execute(AUDIT_LOG_TABLE)
+    await db.execute(AUDIT_LOG_INDEX)
+    await db.execute(PROJECTS_TABLE)
+    await db.execute(CLIPS_TABLE)
+    await db.execute(CLIPS_PROJECT_INDEX)
+    await db.execute(CLIPS_TIMELINE_INDEX)
+    await db.commit()
