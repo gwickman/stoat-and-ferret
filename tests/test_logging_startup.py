@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Generator
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -20,7 +22,11 @@ def _clean_root_handlers() -> Generator[None, None, None]:
     """Remove handlers added by configure_logging between tests."""
     yield
     root = logging.getLogger()
-    root.handlers = [h for h in root.handlers if type(h) is not logging.StreamHandler]
+    root.handlers = [
+        h
+        for h in root.handlers
+        if type(h) is not logging.StreamHandler and type(h) is not RotatingFileHandler
+    ]
 
 
 class TestConfigureLoggingIdempotency:
@@ -98,8 +104,12 @@ class TestLifespanLogging:
             async with lifespan(app):
                 pass
 
-        # Default log level is INFO
-        mock_configure.assert_called_once_with(level=logging.INFO)
+        # Default log level is INFO, with default rotation settings
+        mock_configure.assert_called_once_with(
+            level=logging.INFO,
+            max_bytes=10_485_760,
+            backup_count=5,
+        )
 
     async def test_configure_logging_called_before_deps_injected_check(self) -> None:
         """configure_logging() is called even in test mode (_deps_injected=True)."""
@@ -185,3 +195,103 @@ class TestLoggingOutput:
         configure_logging()
         root = logging.getLogger()
         assert root.level == logging.INFO
+
+
+class TestFileHandler:
+    """Tests for RotatingFileHandler in configure_logging() (FR-001 through FR-006)."""
+
+    def test_file_handler_added(self, tmp_path: Path) -> None:
+        """configure_logging() adds a RotatingFileHandler (FR-001)."""
+        configure_logging(log_dir=tmp_path)
+
+        root = logging.getLogger()
+        file_handlers = [h for h in root.handlers if type(h) is RotatingFileHandler]
+        assert len(file_handlers) == 1
+
+    def test_file_handler_idempotent(self, tmp_path: Path) -> None:
+        """Calling configure_logging() multiple times produces exactly 1 file handler (NFR-001)."""
+        configure_logging(log_dir=tmp_path)
+        configure_logging(log_dir=tmp_path)
+        configure_logging(log_dir=tmp_path)
+
+        root = logging.getLogger()
+        file_handlers = [h for h in root.handlers if type(h) is RotatingFileHandler]
+        stream_handlers = [h for h in root.handlers if type(h) is logging.StreamHandler]
+        assert len(file_handlers) == 1
+        assert len(stream_handlers) == 1
+
+    def test_log_directory_created(self, tmp_path: Path) -> None:
+        """logs/ directory is created if absent (FR-003)."""
+        log_dir = tmp_path / "subdir" / "logs"
+        assert not log_dir.exists()
+
+        configure_logging(log_dir=log_dir)
+
+        assert log_dir.exists()
+        assert log_dir.is_dir()
+
+    def test_file_handler_uses_same_formatter(self, tmp_path: Path) -> None:
+        """File handler uses the same formatter as the stdout handler (FR-005)."""
+        configure_logging(log_dir=tmp_path)
+
+        root = logging.getLogger()
+        stream_handler = next(h for h in root.handlers if type(h) is logging.StreamHandler)
+        file_handler = next(h for h in root.handlers if type(h) is RotatingFileHandler)
+
+        assert type(stream_handler.formatter) is type(file_handler.formatter)
+
+    def test_file_handler_uses_same_level(self, tmp_path: Path) -> None:
+        """File handler respects the configured log level (FR-005)."""
+        configure_logging(level=logging.DEBUG, log_dir=tmp_path)
+
+        root = logging.getLogger()
+        assert root.level == logging.DEBUG
+
+    def test_stdout_continues_alongside_file(self, tmp_path: Path) -> None:
+        """Stdout handler still present alongside file handler (FR-006)."""
+        configure_logging(log_dir=tmp_path)
+
+        root = logging.getLogger()
+        stream_handlers = [h for h in root.handlers if type(h) is logging.StreamHandler]
+        file_handlers = [h for h in root.handlers if type(h) is RotatingFileHandler]
+        assert len(stream_handlers) >= 1
+        assert len(file_handlers) >= 1
+
+    def test_log_file_receives_output(self, tmp_path: Path) -> None:
+        """Log entries are written to the file (FR-006)."""
+        import structlog
+
+        structlog.reset_defaults()
+        configure_logging(json_format=True, level=logging.INFO, log_dir=tmp_path)
+
+        logger = structlog.get_logger("test_file_output")
+        logger.info("file_output_test", key="value")
+
+        # Flush handlers to ensure write
+        root = logging.getLogger()
+        for h in root.handlers:
+            h.flush()
+
+        log_file = tmp_path / "stoat-ferret.log"
+        assert log_file.exists()
+        content = log_file.read_text(encoding="utf-8")
+        assert "file_output_test" in content
+
+    def test_rotation_config(self, tmp_path: Path) -> None:
+        """RotatingFileHandler uses configured maxBytes and backupCount (FR-002)."""
+        configure_logging(log_dir=tmp_path, max_bytes=5_000_000, backup_count=3)
+
+        root = logging.getLogger()
+        file_handler = next(h for h in root.handlers if type(h) is RotatingFileHandler)
+        assert file_handler.maxBytes == 5_000_000
+        assert file_handler.backupCount == 3
+
+
+class TestGitignore:
+    """Test that .gitignore includes logs/ entry (FR-004)."""
+
+    def test_gitignore_includes_logs(self) -> None:
+        """logs/ directory is listed in .gitignore."""
+        gitignore = Path(__file__).parent.parent / ".gitignore"
+        content = gitignore.read_text(encoding="utf-8")
+        assert "logs/" in content

@@ -58,7 +58,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Configure structured logging before anything else
     settings = get_settings()
-    configure_logging(level=getattr(logging, settings.log_level))
+    configure_logging(
+        level=getattr(logging, settings.log_level),
+        max_bytes=settings.log_max_bytes,
+        backup_count=settings.log_backup_count,
+    )
 
     # Create ConnectionManager if not injected
     if not getattr(app.state, "ws_manager", None):
