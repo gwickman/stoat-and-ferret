@@ -1,14 +1,16 @@
 {
   "exploration_id": "v008-retro-001-env-1771755410115",
   "results_folder": "v008-retro-001-env",
-  "status": "running",
+  "status": "complete",
   "pid": 9032,
   "started_at": "2026-02-22T10:16:50.115475",
-  "updated_at": "2026-02-22T10:16:52.108375",
-  "completed_at": null,
+  "updated_at": "2026-02-22T10:18:53.332532",
+  "completed_at": "2026-02-22T10:18:53.332143",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v008-retro-001-env/prompt.md",
   "outbox_path": "comms/outbox/exploration/v008-retro-001-env"

@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v008-retro-002-docs-1771755562298",
+  "results_folder": "v008-retro-002-docs",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-22T10:19:22.298513",
+  "updated_at": "2026-02-22T10:19:22.298513",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v008-retro-002-docs/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v008-retro-002-docs"
+}
