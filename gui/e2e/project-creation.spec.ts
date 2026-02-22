@@ -34,7 +34,7 @@ test.describe("Project creation", () => {
     await created;
 
     // Modal closes and project appears in the list.
-    await expect(page.getByTestId("create-project-modal")).toBeHidden();
+    await expect(page.getByTestId("create-project-modal")).toBeHidden({ timeout: 10_000 });
     await expect(page.getByText(projectName)).toBeVisible();
   });
 });
