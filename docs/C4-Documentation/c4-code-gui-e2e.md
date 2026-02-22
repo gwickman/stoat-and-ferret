@@ -29,9 +29,10 @@
 - **Prerequisite**: ffmpeg must be available on PATH to generate test video
 
 #### `project-creation.spec.ts` (1 test)
-- **Test**: "creates a project via the modal and navigates to its detail view" -- opens CreateProjectModal, fills name/resolution/fps, submits, verifies project card and detail view
+- **Test**: "creates a project via modal and verifies it appears in list" -- navigates to Projects tab, opens CreateProjectModal, fills name/resolution/fps, submits, verifies modal closes with 10s timeout, verifies project appears in list
 - **Scope**: Project CRUD workflow (POST /api/v1/projects)
 - **Dependencies**: `@playwright/test`
+- **Note**: Modal close timeout increased to 10_000ms (from previous version) to handle slower systems
 
 #### `accessibility.spec.ts` (5 tests)
 - **Tests**:

@@ -11,7 +11,7 @@
 
 ## Code Elements
 
-### Test Inventory (~495 tests across 20 test files)
+### Test Inventory (~532 tests across 23 test files)
 
 | File | Tests | Coverage |
 |------|-------|----------|
@@ -21,6 +21,7 @@
 | test_smoke.py | ~4 | Import smoke tests (catch breaking changes) |
 | test_pyo3_bindings.py | ~154 | Rust PyO3 binding verification (all types and functions) |
 | test_db_schema.py | ~9 | Database schema creation and migrations |
+| test_database_startup.py | ~4 | Database initialization during application lifespan (NEW) |
 | test_repository_contract.py | ~25 | Video repository contract (SQLite + InMemory) |
 | test_async_repository_contract.py | ~25 | Async video repository contract patterns |
 | test_project_repository_contract.py | ~12 | Project repository CRUD operations |
@@ -31,12 +32,14 @@
 | test_executor.py | ~28 | FFmpeg executor (Real, Recording, Fake implementations) |
 | test_integration.py | ~13 | Cross-component integration scenarios |
 | test_logging.py | ~4 | Structured logging setup and formatters |
+| test_logging_startup.py | ~11 | Structured logging configuration during application startup (NEW) |
 | test_observable.py | ~18 | Observable/event pattern and subscriptions |
 | test_websocket.py | ~13 | WebSocket protocol and frame handling |
 | test_ws_endpoint.py | ~10 | WebSocket API endpoint and broadcast |
 | test_thumbnail_service.py | ~11 | ThumbnailService generate and get_path |
 | test_audio_builders.py | ~42 | VolumeBuilder, AfadeBuilder, AmixBuilder, DuckingPattern parity |
 | test_transition_builders.py | ~46 | FadeBuilder, XfadeBuilder, TransitionType, AcrossfadeBuilder |
+| test_orphaned_settings.py | ~6 | Wired orphaned settings (debug, ws_heartbeat_interval) to consumers (NEW) |
 
 ### Root Test Files
 

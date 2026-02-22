@@ -15,9 +15,14 @@
 #### schema.py
 
 - `create_tables(conn: sqlite3.Connection) -> None`
-  - Description: Create all database tables, indexes, and FTS5 triggers
-  - Location: `src/stoat_ferret/db/schema.py:118`
+  - Description: Create all database tables, indexes, and FTS5 triggers (sync version, uses IF NOT EXISTS so is idempotent)
+  - Location: `src/stoat_ferret/db/schema.py:122`
   - Dependencies: `sqlite3`
+
+- `async create_tables_async(db: aiosqlite.Connection) -> None`
+  - Description: Create all database tables, indexes, and FTS5 triggers (async version, uses IF NOT EXISTS so is idempotent). Called from application lifespan to ensure schema exists on startup.
+  - Location: `src/stoat_ferret/db/schema.py:148`
+  - Dependencies: `aiosqlite`
 
 #### repository.py
 

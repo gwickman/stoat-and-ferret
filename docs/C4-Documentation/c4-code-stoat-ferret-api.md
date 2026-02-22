@@ -15,9 +15,9 @@
 #### app.py
 
 - `async lifespan(app: FastAPI) -> AsyncGenerator[None, None]`
-  - Description: Manages application lifespan -- opens database, creates ConnectionManager, starts job worker on startup; cancels worker, closes database on shutdown. Skips DB setup when dependencies are injected (test mode via `_deps_injected` flag).
-  - Location: `src/stoat_ferret/api/app.py:38`
-  - Dependencies: `aiosqlite`, `get_settings`, `AsyncSQLiteVideoRepository`, `ThumbnailService`, `RealFFmpegExecutor`, `AsyncioJobQueue`, `ConnectionManager`, `SCAN_JOB_TYPE`, `make_scan_handler`
+  - Description: Manages application lifespan -- configures structured logging on startup, opens database and creates schema, creates ConnectionManager, starts job worker on startup; cancels worker, closes database on shutdown. Skips DB setup when dependencies are injected (test mode via `_deps_injected` flag).
+  - Location: `src/stoat_ferret/api/app.py:41`
+  - Dependencies: `aiosqlite`, `get_settings`, `configure_logging`, `create_tables_async`, `AsyncSQLiteVideoRepository`, `ThumbnailService`, `RealFFmpegExecutor`, `AsyncioJobQueue`, `ConnectionManager`, `SCAN_JOB_TYPE`, `make_scan_handler`
 
 - `create_app(*, video_repository: AsyncVideoRepository | None = None, project_repository: AsyncProjectRepository | None = None, clip_repository: AsyncClipRepository | None = None, job_queue: AsyncioJobQueue | None = None, ws_manager: ConnectionManager | None = None, effect_registry: EffectRegistry | None = None, gui_static_path: str | Path | None = None) -> FastAPI`
   - Description: Application factory -- creates and configures FastAPI app with 5 routers (health, videos, projects, jobs, effects), WebSocket route, 2 middleware layers (correlation ID, metrics), Prometheus /metrics mount, optional frontend static files, and dependency injection support for testing.

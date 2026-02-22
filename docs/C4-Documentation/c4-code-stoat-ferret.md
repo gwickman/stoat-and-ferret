@@ -15,7 +15,7 @@
 #### logging.py
 
 - `configure_logging(json_format: bool = True, level: int = logging.INFO) -> None`
-  - Description: Configures structlog for the application with shared processors (log level, logger name, timestamps, stack info), JSON or console rendering, and stdlib integration via ProcessorFormatter.
+  - Description: Configures structlog for the application with shared processors (log level, logger name, timestamps, stack info), JSON or console rendering, and stdlib integration via ProcessorFormatter. Adds a StreamHandler to root logger if one doesn't already exist (idempotent). Called during application startup in the lifespan.
   - Location: `src/stoat_ferret/logging.py:15`
   - Dependencies: `structlog`, `logging`, `sys`
 

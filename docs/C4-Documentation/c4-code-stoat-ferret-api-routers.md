@@ -136,13 +136,15 @@
 
 #### ws.py
 
-- `async _heartbeat_loop(ws, interval) -> None`
-  - Description: Send periodic heartbeat messages over WebSocket
-  - Location: `src/stoat_ferret/api/routers/ws.py:18`
+- `async _heartbeat_loop(ws: WebSocket, interval: float) -> None`
+  - Description: Send periodic heartbeat messages to keep the connection alive
+  - Location: `src/stoat_ferret/api/routers/ws.py:17`
+  - Dependencies: `asyncio`, `EventType.HEARTBEAT`, `build_event`
 
-- `async websocket_endpoint(websocket) -> None`
-  - Description: Handle WebSocket connections at /ws with heartbeat
-  - Location: `src/stoat_ferret/api/routers/ws.py:30`
+- `async websocket_endpoint(websocket: WebSocket) -> None`
+  - Description: Handle WebSocket connections at /ws with configurable heartbeat interval. Accepts the connection, starts a heartbeat task, and listens for incoming messages until disconnect.
+  - Location: `src/stoat_ferret/api/routers/ws.py:29`
+  - Dependencies: `ConnectionManager`, `get_settings`, `ws_heartbeat_interval`
 
 ### Module-Level Variables
 
