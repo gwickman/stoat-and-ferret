@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v009-006-critical-1771771040010",
   "results_folder": "design-v009-006-critical",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 9032,
   "started_at": "2026-02-22T14:37:20.010355",
-  "updated_at": "2026-02-22T14:37:20.010355",
+  "updated_at": "2026-02-22T14:37:22.159190",
   "completed_at": null,
   "error": null,
   "documents": [],
