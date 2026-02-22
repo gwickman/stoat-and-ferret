@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v009-007-drafts-1771771915679",
   "results_folder": "design-v009-007-drafts",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 9032,
   "started_at": "2026-02-22T14:51:55.679389",
-  "updated_at": "2026-02-22T14:51:55.679389",
+  "updated_at": "2026-02-22T14:51:57.545262",
   "completed_at": null,
   "error": null,
   "documents": [],
