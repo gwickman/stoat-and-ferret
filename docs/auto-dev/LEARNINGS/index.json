@@ -858,7 +858,121 @@
       "content_path": "docs/auto-dev/LEARNINGS/LRN-046-maintenance-versions-succeed-with-well-understood-.md",
       "status": "active",
       "updated_at": null
+    },
+    {
+      "id": "LRN-047",
+      "title": "WAL Mode Enables Safe Mixed Sync/Async SQLite Access",
+      "tags": [
+        "pattern",
+        "sqlite",
+        "async",
+        "database",
+        "concurrency"
+      ],
+      "created": "2026-02-22T17:52:50.081379Z",
+      "source": "v009/01-observability-pipeline/002-audit-logging completion-report, v009/01-observability-pipeline retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Open a separate sync sqlite3 connection with WAL mode alongside aiosqlite for safe concurrent sync/async access to the same database without deadlocks.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-047-wal-mode-enables-safe-mixed-sync-async-sqlite-acce.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-048",
+      "title": "Catch-All Routes Replace StaticFiles for SPA Fallback in FastAPI",
+      "tags": [
+        "pattern",
+        "fastapi",
+        "spa",
+        "routing",
+        "frontend"
+      ],
+      "created": "2026-02-22T17:53:02.594672Z",
+      "source": "v009/02-gui-runtime-fixes/001-spa-routing completion-report, v009/02-gui-runtime-fixes retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Replace FastAPI StaticFiles mounts with catch-all route handlers that check for static files before falling back to index.html for SPA routing support.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-048-catch-all-routes-replace-staticfiles-for-spa-fallb.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-049",
+      "title": "Guard Optional Broadcast Calls to Avoid Runtime Crashes",
+      "tags": [
+        "pattern",
+        "websocket",
+        "dependency-injection",
+        "defensive-coding",
+        "testing"
+      ],
+      "created": "2026-02-22T17:53:12.146695Z",
+      "source": "v009/02-gui-runtime-fixes/003-websocket-broadcasts completion-report, v009/02-gui-runtime-fixes retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Guard optional broadcast/notification calls with if-checks so they become no-ops when the infrastructure is absent, decoupling events from core functionality.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-049-guard-optional-broadcast-calls-to-avoid-runtime-cr.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-050",
+      "title": "Incremental DI Wiring Is Fast and Low-Risk When Patterns Are Established",
+      "tags": [
+        "pattern",
+        "dependency-injection",
+        "process",
+        "planning",
+        "efficiency"
+      ],
+      "created": "2026-02-22T17:53:25.446668Z",
+      "source": "v009/01-observability-pipeline retrospective, v009 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Wiring existing code into an established DI chain is fast and low-risk; batch similar wiring tasks into dedicated themes for compounding efficiency.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-050-incremental-di-wiring-is-fast-and-low-risk-when-pa.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-051",
+      "title": "Add count() to Repository Protocols for Accurate Pagination",
+      "tags": [
+        "pattern",
+        "repository",
+        "pagination",
+        "api-design",
+        "database"
+      ],
+      "created": "2026-02-22T17:53:35.926003Z",
+      "source": "v009/02-gui-runtime-fixes/002-pagination-fix completion-report, v009/02-gui-runtime-fixes retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Add count() to repository protocols for accurate pagination totals; implement as SELECT COUNT(*) in SQLite and len() in InMemory to avoid returning page size as total.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-051-add-count-to-repository-protocols-for-accurate-pag.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-052",
+      "title": "Run Formatter Before Linter to Avoid Double Fix Cycles",
+      "tags": [
+        "process",
+        "tooling",
+        "ruff",
+        "code-quality",
+        "efficiency"
+      ],
+      "created": "2026-02-22T17:53:47.033681Z",
+      "source": "session analytics (v009 period)",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Run ruff format before ruff check to eliminate format-induced linter violations and reduce fix-and-rerun cycles during quality gate verification.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-052-run-formatter-before-linter-to-avoid-double-fix-cy.md",
+      "status": "active",
+      "updated_at": null
     }
   ],
-  "next_id": 47
+  "next_id": 53
 }
