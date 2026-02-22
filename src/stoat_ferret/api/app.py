@@ -13,7 +13,7 @@ from pathlib import Path
 import aiosqlite
 import structlog
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from prometheus_client import make_asgi_app
 
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
@@ -191,7 +191,7 @@ def create_app(
     metrics_app = make_asgi_app()
     app.mount("/metrics", metrics_app)
 
-    # Mount frontend static files (after all API routers)
+    # Mount frontend SPA routes (after all API routers)
     # Use settings default when gui_static_path is not explicitly provided
     effective_gui_path = gui_static_path
     if effective_gui_path is None and not has_injected:
@@ -199,6 +199,19 @@ def create_app(
     if effective_gui_path is not None:
         gui_dir = Path(effective_gui_path)
         if gui_dir.is_dir():
-            app.mount("/gui", StaticFiles(directory=gui_dir, html=True), name="gui")
+            index_html = gui_dir / "index.html"
+
+            @app.get("/gui")
+            async def gui_root() -> FileResponse:
+                """Serve index.html for the bare /gui path."""
+                return FileResponse(index_html)
+
+            @app.get("/gui/{path:path}")
+            async def gui_catch_all(path: str) -> FileResponse:
+                """Serve static files or fall back to index.html for SPA routing."""
+                file_path = gui_dir / path
+                if file_path.is_file():
+                    return FileResponse(file_path)
+                return FileResponse(index_html)
 
     return app
