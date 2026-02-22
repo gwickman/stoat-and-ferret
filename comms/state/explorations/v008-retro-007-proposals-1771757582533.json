@@ -1,14 +1,16 @@
 {
   "exploration_id": "v008-retro-007-proposals-1771757582533",
   "results_folder": "v008-retro-007-proposals",
-  "status": "running",
+  "status": "complete",
   "pid": 9032,
   "started_at": "2026-02-22T10:53:02.533751",
-  "updated_at": "2026-02-22T10:53:04.376342",
-  "completed_at": null,
+  "updated_at": "2026-02-22T10:56:29.769452",
+  "completed_at": "2026-02-22T10:56:29.769070",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v008-retro-007-proposals/prompt.md",
   "outbox_path": "comms/outbox/exploration/v008-retro-007-proposals"
