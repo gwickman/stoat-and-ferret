@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v009-retro-005-arch-1771782390842",
+  "results_folder": "v009-retro-005-arch",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-22T17:46:30.842197",
+  "updated_at": "2026-02-22T17:46:30.842197",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v009-retro-005-arch/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v009-retro-005-arch"
+}
