@@ -10,12 +10,14 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from stoat_ferret.api.schemas.video import ScanError, ScanResponse
+from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.models import Video
 from stoat_ferret.ffmpeg.probe import ffprobe_video
 
 if TYPE_CHECKING:
     from stoat_ferret.api.services.thumbnail import ThumbnailService
+    from stoat_ferret.api.websocket.manager import ConnectionManager
 
 logger = structlog.get_logger(__name__)
 
@@ -53,12 +55,14 @@ SCAN_JOB_TYPE = "scan"
 def make_scan_handler(
     repository: AsyncVideoRepository,
     thumbnail_service: ThumbnailService | None = None,
+    ws_manager: ConnectionManager | None = None,
 ) -> Callable[[str, dict[str, Any]], Awaitable[Any]]:
     """Create a scan job handler bound to a repository.
 
     Args:
         repository: Video repository for storing scan results.
         thumbnail_service: Optional thumbnail service for generating thumbnails.
+        ws_manager: Optional WebSocket manager for broadcasting scan events.
 
     Returns:
         Async handler function compatible with the job queue.
@@ -74,12 +78,26 @@ def make_scan_handler(
         Returns:
             Scan results as a dict.
         """
+        scan_path = payload["path"]
+
+        if ws_manager:
+            await ws_manager.broadcast(build_event(EventType.SCAN_STARTED, {"path": scan_path}))
+
         result = await scan_directory(
-            path=payload["path"],
+            path=scan_path,
             recursive=payload.get("recursive", True),
             repository=repository,
             thumbnail_service=thumbnail_service,
         )
+
+        if ws_manager:
+            await ws_manager.broadcast(
+                build_event(
+                    EventType.SCAN_COMPLETED,
+                    {"path": scan_path, "video_count": result.new + result.updated},
+                )
+            )
+
         return result.model_dump()
 
     return handler

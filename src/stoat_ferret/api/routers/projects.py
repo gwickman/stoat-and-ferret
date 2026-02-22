@@ -18,6 +18,8 @@ from stoat_ferret.api.schemas.project import (
     ProjectListResponse,
     ProjectResponse,
 )
+from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip, ClipValidationError, Project
@@ -117,13 +119,15 @@ async def list_projects(
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
-    request: ProjectCreate,
+    project_data: ProjectCreate,
+    request: Request,
     repo: ProjectRepoDep,
 ) -> ProjectResponse:
     """Create a new project.
 
     Args:
-        request: Project creation request.
+        project_data: Project creation request.
+        request: The FastAPI request object.
         repo: Project repository dependency.
 
     Returns:
@@ -132,14 +136,24 @@ async def create_project(
     now = datetime.now(timezone.utc)
     project = Project(
         id=Project.new_id(),
-        name=request.name,
-        output_width=request.output_width,
-        output_height=request.output_height,
-        output_fps=request.output_fps,
+        name=project_data.name,
+        output_width=project_data.output_width,
+        output_height=project_data.output_height,
+        output_fps=project_data.output_fps,
         created_at=now,
         updated_at=now,
     )
     await repo.add(project)
+
+    ws_manager: ConnectionManager | None = getattr(request.app.state, "ws_manager", None)
+    if ws_manager:
+        await ws_manager.broadcast(
+            build_event(
+                EventType.PROJECT_CREATED,
+                {"project_id": project.id, "name": project.name},
+            )
+        )
+
     return ProjectResponse.model_validate(project)
 
 
