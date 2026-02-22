@@ -74,6 +74,18 @@ class Settings(BaseSettings):
         description="WebSocket heartbeat interval in seconds",
     )
 
+    # Logging
+    log_backup_count: int = Field(
+        default=5,
+        ge=0,
+        description="Number of rotated log file backups to keep",
+    )
+    log_max_bytes: int = Field(
+        default=10_485_760,
+        ge=0,
+        description="Maximum log file size in bytes before rotation (default 10MB)",
+    )
+
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,
