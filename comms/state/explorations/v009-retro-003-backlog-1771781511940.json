@@ -1,10 +1,10 @@
 {
   "exploration_id": "v009-retro-003-backlog-1771781511940",
   "results_folder": "v009-retro-003-backlog",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10340,
   "started_at": "2026-02-22T17:31:51.940533",
-  "updated_at": "2026-02-22T17:31:51.940533",
+  "updated_at": "2026-02-22T17:31:53.734046",
   "completed_at": null,
   "error": null,
   "documents": [],

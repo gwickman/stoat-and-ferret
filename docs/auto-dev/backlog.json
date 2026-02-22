@@ -1,6 +1,6 @@
 {
   "next_id": 69,
-  "updated_at": "2026-02-22T14:11:25.153610",
+  "updated_at": "2026-02-22T17:33:24.761000",
   "items": [
     {
       "id": "BL-001",
@@ -2199,10 +2199,10 @@
       "id": "BL-057",
       "title": "Add file-based logging with rotation to logs/ directory",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T15:39:39.168368",
-      "completed_at": null,
+      "completed_at": "2026-02-22T17:33:19.292514",
       "tags": [
         "observability",
         "logging"
@@ -2236,8 +2236,8 @@
       ],
       "notes": "Depends on BL-056 (wire up stdout logging first). Use RotatingFileHandler with maxBytes=10MB. Log directory: {project_root}/logs/. Must add logs/ to .gitignore. Use case added during v009 design backlog analysis.",
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v009",
+      "implemented_in_theme": "observability-pipeline",
       "upvotes": 0
     },
     {
@@ -2282,10 +2282,10 @@
       "id": "BL-059",
       "title": "Wire ObservableFFmpegExecutor into dependency injection",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:29:30.577955",
-      "completed_at": null,
+      "completed_at": "2026-02-22T17:33:20.472585",
       "tags": [
         "wiring-gap",
         "observability",
@@ -2312,18 +2312,18 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v009",
+      "implemented_in_theme": "observability-pipeline",
       "upvotes": 0
     },
     {
       "id": "BL-060",
       "title": "Wire AuditLogger into repository dependency injection",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:29:38.024412",
-      "completed_at": null,
+      "completed_at": "2026-02-22T17:33:21.486343",
       "tags": [
         "wiring-gap",
         "observability",
@@ -2346,8 +2346,8 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v009",
+      "implemented_in_theme": "observability-pipeline",
       "upvotes": 0
     },
     {
@@ -2422,10 +2422,10 @@
       "id": "BL-063",
       "title": "Add SPA routing fallback for GUI sub-paths",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:30:08.176968",
-      "completed_at": null,
+      "completed_at": "2026-02-22T17:33:22.642111",
       "tags": [
         "wiring-gap",
         "gui",
@@ -2448,18 +2448,18 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v009",
+      "implemented_in_theme": "gui-runtime-fixes",
       "upvotes": 0
     },
     {
       "id": "BL-064",
       "title": "Fix projects endpoint pagination total count",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:30:16.415759",
-      "completed_at": null,
+      "completed_at": "2026-02-22T17:33:23.729959",
       "tags": [
         "wiring-gap",
         "api",
@@ -2482,18 +2482,18 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v009",
+      "implemented_in_theme": "gui-runtime-fixes",
       "upvotes": 0
     },
     {
       "id": "BL-065",
       "title": "Wire WebSocket broadcast calls into API operations",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:30:27.033787",
-      "completed_at": null,
+      "completed_at": "2026-02-22T17:33:24.760994",
       "tags": [
         "wiring-gap",
         "websocket",
@@ -2520,8 +2520,8 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v009",
+      "implemented_in_theme": "gui-runtime-fixes",
       "upvotes": 0
     },
     {
@@ -2628,6 +2628,6 @@
       "upvotes": 0
     }
   ],
-  "completed_count": 53,
+  "completed_count": 59,
   "cancelled_count": 0
 }
