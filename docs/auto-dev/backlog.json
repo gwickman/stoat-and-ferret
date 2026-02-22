@@ -1,6 +1,6 @@
 {
-  "next_id": 69,
-  "updated_at": "2026-02-22T17:33:24.761000",
+  "next_id": 70,
+  "updated_at": "2026-02-22T17:49:05.341351",
   "items": [
     {
       "id": "BL-001",
@@ -2623,6 +2623,48 @@
       ],
       "notes": null,
       "use_case": null,
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-069",
+      "title": "Update C4 architecture documentation for v009 changes",
+      "priority": "P2",
+      "status": "open",
+      "size": "xl",
+      "added": "2026-02-22T17:48:56.028378",
+      "completed_at": null,
+      "tags": [
+        "architecture",
+        "c4",
+        "documentation"
+      ],
+      "description": "C4 documentation was last generated for v008. v009 introduced 6 features across 2 themes (observability-pipeline, gui-runtime-fixes) that created architecture drift in 5 areas:\n\n1. **configure_logging() now includes RotatingFileHandler**: C4 Data Access component describes logging config as \"JSON/console logging setup\" but code now includes file-based logging with rotation (log_dir parameter, 10MB rotation, 5 backups). Evidence: src/stoat_ferret/logging.py:18-21,78-80.\n\n2. **Project Repository missing count() method**: C4 Data Access lists Project Repository operations as \"add, get, list_projects, update, delete\" \u2014 missing the new count() method added for pagination. Evidence: src/stoat_ferret/db/project_repository.py:87,190,254.\n\n3. **SPA routing uses catch-all routes, not StaticFiles mount**: C4 API Gateway states \"Static File Serving: GUI static files mounted at /gui\" but StaticFiles was replaced with @app.get(\"/gui\") and @app.get(\"/gui/{path:path}\") catch-all routes serving files with SPA fallback. Evidence: src/stoat_ferret/api/app.py:206-211.\n\n4. **ObservableFFmpegExecutor and AuditLogger wired into create_app() lifespan**: These were pre-existing dead code documented in v008 C4 but are now actively wired as DI components in the lifespan \u2014 ObservableFFmpegExecutor wrapping RealFFmpegExecutor, AuditLogger with separate sync SQLite connection. Evidence: src/stoat_ferret/api/app.py:86-94.\n\n5. **WebSocket broadcasts actively wired**: v008 C4 listed SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED event types but broadcast() calls were not wired. v009 added active broadcast calls in scan handler and project creation router. Evidence: src/stoat_ferret/api/services/scan.py:84,94 and src/stoat_ferret/api/routers/projects.py:150.\n\nThe version retrospective also notes C4 regeneration was attempted but failed for v009.",
+      "acceptance_criteria": [
+        {
+          "text": "C4 Data Access component documents configure_logging() file rotation capability with log_dir parameter",
+          "done": false
+        },
+        {
+          "text": "C4 Data Access component lists count() in Project Repository operations",
+          "done": false
+        },
+        {
+          "text": "C4 API Gateway component describes SPA catch-all routing pattern instead of StaticFiles mount",
+          "done": false
+        },
+        {
+          "text": "C4 API Gateway component reflects ObservableFFmpegExecutor and AuditLogger as DI-managed lifespan components",
+          "done": false
+        },
+        {
+          "text": "C4 container/context docs reflect that WebSocket broadcast events are actively wired (not just defined)",
+          "done": false
+        }
+      ],
+      "notes": "size: l \u2014 C4 regeneration following established process, auto-estimate inflated by detailed description listing all 5 drift areas with code evidence",
+      "use_case": "During version planning and onboarding, developers and the design agent consult C4 documentation to understand the current architecture. Stale documentation leads to incorrect assumptions about component capabilities and wiring, causing design decisions based on outdated information.",
       "implemented_in_version": null,
       "implemented_in_theme": null,
       "upvotes": 0

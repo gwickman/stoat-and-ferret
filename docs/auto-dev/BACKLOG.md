@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-22 17:33*
+*Last updated: 2026-02-22 17:49*
 
 **Total completed:** 59 | **Cancelled:** 0
 
@@ -10,7 +10,7 @@
 |----------|------|-------|
 | P0 | Critical | 0 |
 | P1 | High | 0 |
-| P2 | Medium | 1 |
+| P2 | Medium | 2 |
 | P3 | Low | 4 |
 
 ## Quick Reference
@@ -18,6 +18,7 @@
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
 | <a id="bl-061-ref"></a>[BL-061](#bl-061) | P2 | l | Wire or remove execute_command() Rust-Python FFmpeg bridge | **Current state:** `execute_command()` was built in v002/... |
+| <a id="bl-069-ref"></a>[BL-069](#bl-069) | P2 | xl | Update C4 architecture documentation for v009 changes | C4 documentation was last generated for v008. v009 introd... |
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-066-ref"></a>[BL-066](#bl-066) | P3 | l | Add transition support to Effect Workshop GUI | **Current state:** `POST /projects/{id}/effects/transitio... |
 | <a id="bl-067-ref"></a>[BL-067](#bl-067) | P3 | l | Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization) | **Current state:** Several Rust functions are exposed via... |
@@ -38,6 +39,9 @@
 | gui | 1 | BL-066 |
 | effects | 1 | BL-066 |
 | transitions | 1 | BL-066 |
+| architecture | 1 | BL-069 |
+| c4 | 1 | BL-069 |
+| documentation | 1 | BL-069 |
 
 ## Tag Conventions
 
@@ -111,6 +115,38 @@ Tags like `v070-tech-debt` are acceptable temporarily to group related items fro
 - [ ] If execute_command() is genuinely unnecessary, it is removed along with its tests
 
 [↑ Back to list](#bl-061-ref)
+
+#### 📋 BL-069: Update C4 architecture documentation for v009 changes
+
+**Status:** open
+**Tags:** architecture, c4, documentation
+
+C4 documentation was last generated for v008. v009 introduced 6 features across 2 themes (observability-pipeline, gui-runtime-fixes) that created architecture drift in 5 areas:
+
+1. **configure_logging() now includes RotatingFileHandler**: C4 Data Access component describes logging config as "JSON/console logging setup" but code now includes file-based logging with rotation (log_dir parameter, 10MB rotation, 5 backups). Evidence: src/stoat_ferret/logging.py:18-21,78-80.
+
+2. **Project Repository missing count() method**: C4 Data Access lists Project Repository operations as "add, get, list_projects, update, delete" — missing the new count() method added for pagination. Evidence: src/stoat_ferret/db/project_repository.py:87,190,254.
+
+3. **SPA routing uses catch-all routes, not StaticFiles mount**: C4 API Gateway states "Static File Serving: GUI static files mounted at /gui" but StaticFiles was replaced with @app.get("/gui") and @app.get("/gui/{path:path}") catch-all routes serving files with SPA fallback. Evidence: src/stoat_ferret/api/app.py:206-211.
+
+4. **ObservableFFmpegExecutor and AuditLogger wired into create_app() lifespan**: These were pre-existing dead code documented in v008 C4 but are now actively wired as DI components in the lifespan — ObservableFFmpegExecutor wrapping RealFFmpegExecutor, AuditLogger with separate sync SQLite connection. Evidence: src/stoat_ferret/api/app.py:86-94.
+
+5. **WebSocket broadcasts actively wired**: v008 C4 listed SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED event types but broadcast() calls were not wired. v009 added active broadcast calls in scan handler and project creation router. Evidence: src/stoat_ferret/api/services/scan.py:84,94 and src/stoat_ferret/api/routers/projects.py:150.
+
+The version retrospective also notes C4 regeneration was attempted but failed for v009.
+
+**Use Case:** During version planning and onboarding, developers and the design agent consult C4 documentation to understand the current architecture. Stale documentation leads to incorrect assumptions about component capabilities and wiring, causing design decisions based on outdated information.
+
+**Acceptance Criteria:**
+- [ ] C4 Data Access component documents configure_logging() file rotation capability with log_dir parameter
+- [ ] C4 Data Access component lists count() in Project Repository operations
+- [ ] C4 API Gateway component describes SPA catch-all routing pattern instead of StaticFiles mount
+- [ ] C4 API Gateway component reflects ObservableFFmpegExecutor and AuditLogger as DI-managed lifespan components
+- [ ] C4 container/context docs reflect that WebSocket broadcast events are actively wired (not just defined)
+
+**Notes:** size: l — C4 regeneration following established process, auto-estimate inflated by detailed description listing all 5 drift areas with code evidence
+
+[↑ Back to list](#bl-069-ref)
 
 ### P3: Low
 
