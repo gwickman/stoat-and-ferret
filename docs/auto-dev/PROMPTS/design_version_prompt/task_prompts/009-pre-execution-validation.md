@@ -125,6 +125,13 @@ Parse THEME_INDEX.md and compare against actual folder structure:
 
 Any mismatch is a BLOCKING FAILURE.
 
+### 14. No MCP Tool References in Feature Docs
+
+Verify no feature requirements.md or implementation-plan.md instructs Claude to call MCP tools:
+- Scan for MCP tool function names (e.g., `save_learning`, `add_backlog_item`, `query_cli_sessions`)
+- Features execute with file-level tools only (Read/Write/Edit/Bash)
+- Any MCP tool instruction in feature docs is a BLOCKING FAILURE
+
 ### Backlog Cross-Referencing (all checks)
 
 When reporting a warning or issue from any check above, search the backlog for related items:
@@ -150,7 +157,7 @@ Create in `comms/outbox/exploration/design-${VERSION}-009-validation/`:
 First paragraph: Summary of validation result (PASS/FAIL) with confidence level.
 
 Then:
-- **Checklist Status**: X/13 items passed
+- **Checklist Status**: X/14 items passed
 - **Blocking Issues**: Any failures requiring fix
 - **Warnings**: Non-blocking concerns
 - **Ready for Execution**: Yes/No with rationale
@@ -214,6 +221,10 @@ Then:
   - Status: [PASS/FAIL]
   - Notes: [findings]
 
+- [ ] **No MCP tool references** — Feature docs do not instruct MCP tool calls.
+  - Status: [PASS/FAIL]
+  - Notes: [findings]
+
 ## Summary
 
 **Overall Status**: [PASS/FAIL]
@@ -255,7 +266,7 @@ Document any issues found. If none: "No discrepancies identified."
 ## Success Criteria
 
 Validation PASSES only if:
-- ALL 13 checklist items pass (or N/A with justification)
+- ALL 14 checklist items pass (or N/A with justification)
 - `validate_version_design` returns 0 missing documents
 - No blocking issues identified
 - Design documents and artifact store are committed

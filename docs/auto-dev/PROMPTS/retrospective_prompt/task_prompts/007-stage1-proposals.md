@@ -35,6 +35,7 @@ From each task, extract items that need remediation:
 - **004b**: Session health findings — product requests already created by 004b (reference only); check for any HIGH findings that need additional backlog items
 - **005**: Architecture drift items (already handled via backlog — reference only)
 - **006**: Learning extraction issues (unlikely but check)
+- **State file integrity**: Check git history for direct edits to `comms/state/` files, `backlog.json`, `learnings.json`, or `product_requests.json` — these should only be modified via MCP tools, not direct file writes
 
 ### 3. Create Backlog Items for Quality Gate Code Problems
 

@@ -243,6 +243,7 @@ Verification checklist:
 - [ ] No theme or feature slug starts with a digit prefix (`^\d+-`)
 - [ ] Backlog IDs in each requirements.md cross-referenced against Task 002 backlog analysis (no mismatches)
 - [ ] All "Files to Modify" paths verified via `request_clarification` structure query (no unverified paths)
+- [ ] No feature requirements.md or implementation-plan.md instructs MCP tool calls (features execute with Read/Write/Edit/Bash only)
 
 ## Allowed MCP Tools
 
