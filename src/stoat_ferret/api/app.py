@@ -94,7 +94,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         executor=app.state.ffmpeg_executor,
         thumbnail_dir=settings.thumbnail_dir,
     )
-    job_queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(repo, thumbnail_service))
+    job_queue.register_handler(
+        SCAN_JOB_TYPE, make_scan_handler(repo, thumbnail_service, app.state.ws_manager)
+    )
     app.state.job_queue = job_queue
     worker_task = asyncio.create_task(job_queue.process_jobs())
     logger.info("job_worker_started")
