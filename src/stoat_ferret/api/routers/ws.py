@@ -7,12 +7,11 @@ import asyncio
 import structlog
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.api.websocket.manager import ConnectionManager
 
 logger = structlog.get_logger(__name__)
-
-DEFAULT_HEARTBEAT_INTERVAL = 30
 
 
 async def _heartbeat_loop(ws: WebSocket, interval: float) -> None:
@@ -39,7 +38,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     manager: ConnectionManager = websocket.app.state.ws_manager
     await manager.connect(websocket)
 
-    heartbeat_task = asyncio.create_task(_heartbeat_loop(websocket, DEFAULT_HEARTBEAT_INTERVAL))
+    heartbeat_interval = get_settings().ws_heartbeat_interval
+    heartbeat_task = asyncio.create_task(_heartbeat_loop(websocket, heartbeat_interval))
 
     try:
         while True:

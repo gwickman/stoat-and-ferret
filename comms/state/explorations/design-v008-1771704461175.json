@@ -1,14 +1,16 @@
 {
   "exploration_id": "design-v008-1771704461175",
   "results_folder": "design-v008",
-  "status": "running",
+  "status": "complete",
   "pid": 3164,
   "started_at": "2026-02-21T20:07:41.175697",
-  "updated_at": "2026-02-21T20:07:43.146952",
-  "completed_at": null,
+  "updated_at": "2026-02-21T21:14:41.078343",
+  "completed_at": "2026-02-21T21:14:41.077987",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v008/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v008"
