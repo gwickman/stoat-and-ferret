@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v009-001-env-1771769196766",
   "results_folder": "design-v009-001-env",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 9032,
   "started_at": "2026-02-22T14:06:36.766172",
-  "updated_at": "2026-02-22T14:06:36.766172",
+  "updated_at": "2026-02-22T14:06:38.601631",
   "completed_at": null,
   "error": null,
   "documents": [],
