@@ -4,6 +4,50 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v009] - 2026-02-22
+
+Observability Pipeline & GUI Runtime Fixes. Wires pre-existing observability components (FFmpeg metrics, audit logging, file-based logs) into the application's DI chain and startup sequence, and fixes three GUI runtime gaps (SPA routing fallback, projects pagination, WebSocket broadcasts).
+
+### Added
+
+- **FFmpeg Observability Wiring**
+  - `ObservableFFmpegExecutor` wired into DI chain via lifespan; FFmpeg operations now emit Prometheus metrics and structured logs in production
+  - Test-injection bypass preserves clean test doubles without observable wrapper noise
+
+- **Audit Logging Wiring**
+  - `AuditLogger` wired into repository DI with separate sync `sqlite3.Connection` alongside `aiosqlite`
+  - WAL mode enables concurrent sync/async access without deadlocks
+  - Database mutations now produce audit entries automatically
+
+- **File-Based Logging**
+  - `RotatingFileHandler` integrated into `configure_logging()` with 10MB rotation and 5 backup files
+  - `logs/` directory auto-created on startup
+  - Idempotent handler registration prevents duplicate file handlers
+
+- **SPA Routing Fallback**
+  - Replaced `StaticFiles` mount with catch-all FastAPI routes (`/gui` and `/gui/{path:path}`)
+  - Static files served directly; unmatched paths fall back to `index.html` for client-side routing
+
+- **Projects Pagination Fix**
+  - `count()` added to `AsyncProjectRepository` protocol (SQLite `SELECT COUNT(*)`, InMemory `len()`)
+  - API endpoint returns true total count instead of page result length
+  - Frontend pagination UI added to projects page matching library browser pattern
+
+- **WebSocket Broadcasts**
+  - `ConnectionManager.broadcast()` wired into project creation (`PROJECT_CREATED`) and scan handler (`SCAN_STARTED`, `SCAN_COMPLETED`)
+  - Guard pattern (`if ws_manager:`) allows broadcasts to be optional without affecting tests or minimal deployments
+
+### Changed
+
+- Lifespan startup sequence extended with FFmpeg observability wrapping, audit logger initialization, and file handler registration
+- SPA routing uses catch-all routes instead of `StaticFiles` mount for GUI paths
+- Projects list endpoint returns accurate pagination total via repository `count()`
+
+### Fixed
+
+- Direct navigation to GUI sub-paths (e.g., `/gui/library`) no longer returns 404
+- Projects pagination total now reflects actual dataset size instead of current page length
+
 ## [v008] - 2026-02-22
 
 Application Startup Wiring & CI Stability. Wires disconnected infrastructure — database schema creation, structured logging, and orphaned settings — into the FastAPI lifespan startup sequence, and fixes a flaky E2E test that intermittently blocked CI merges.
