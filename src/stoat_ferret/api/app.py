@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import sqlite3
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -27,6 +28,7 @@ from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
 )
+from stoat_ferret.db.audit import AuditLogger
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.schema import create_tables_async
@@ -74,9 +76,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Ensure schema exists (idempotent, uses IF NOT EXISTS)
     await create_tables_async(app.state.db)
 
+    # Open a separate sync connection for audit logging
+    sync_conn = sqlite3.connect(str(settings.database_path_resolved))
+    sync_conn.execute("PRAGMA journal_mode=WAL")
+    audit_logger = AuditLogger(conn=sync_conn)
+    app.state.audit_logger = audit_logger
+
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
-    repo = AsyncSQLiteVideoRepository(app.state.db)
+    repo = AsyncSQLiteVideoRepository(app.state.db, audit_logger=audit_logger)
     app.state.ffmpeg_executor = ObservableFFmpegExecutor(RealFFmpegExecutor())
     thumbnail_service = ThumbnailService(
         executor=app.state.ffmpeg_executor,
@@ -95,6 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await worker_task
     logger.info("job_worker_stopped")
 
+    sync_conn.close()
     await app.state.db.close()
 
 
@@ -107,6 +116,7 @@ def create_app(
     ws_manager: ConnectionManager | None = None,
     effect_registry: EffectRegistry | None = None,
     ffmpeg_executor: FFmpegExecutor | None = None,
+    audit_logger: AuditLogger | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -123,6 +133,7 @@ def create_app(
         ws_manager: Optional WebSocket connection manager for dependency injection.
         effect_registry: Optional effect registry for dependency injection.
         ffmpeg_executor: Optional FFmpeg executor for dependency injection.
+        audit_logger: Optional audit logger for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -148,6 +159,9 @@ def create_app(
         app.state.project_repository = project_repository
         app.state.clip_repository = clip_repository
         app.state.job_queue = job_queue
+
+    if audit_logger is not None:
+        app.state.audit_logger = audit_logger
 
     if ws_manager is not None:
         app.state.ws_manager = ws_manager

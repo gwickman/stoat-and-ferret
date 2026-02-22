@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sqlite3
 from dataclasses import replace
 from datetime import datetime, timezone
+from pathlib import Path
 
+import aiosqlite
 import pytest
 
 from stoat_ferret.db.audit import AuditLogger
@@ -249,3 +252,129 @@ class TestRepositoryAuditIntegration:
         assert "width" in changes
         assert changes["width"]["old"] == 1920
         assert changes["width"]["new"] == 3840
+
+
+class TestAsyncRepositoryAuditWiring:
+    """Tests for AuditLogger wiring with AsyncSQLiteVideoRepository."""
+
+    @pytest.fixture
+    def db_path(self, tmp_path: Path) -> Path:
+        """Provide a temporary database file path."""
+        return tmp_path / "test.db"
+
+    @pytest.fixture
+    def sync_conn(self, db_path: Path) -> sqlite3.Connection:
+        """Provide a sync SQLite connection with schema."""
+        connection = sqlite3.connect(str(db_path))
+        create_tables(connection)
+        return connection
+
+    @pytest.fixture
+    async def async_conn(
+        self, db_path: Path, sync_conn: sqlite3.Connection
+    ) -> aiosqlite.Connection:
+        """Provide an async SQLite connection to the same database."""
+        connection = await aiosqlite.connect(str(db_path))
+        connection.row_factory = aiosqlite.Row
+        yield connection  # type: ignore[misc]
+        await connection.close()
+
+    async def test_async_repo_add_produces_audit_entry(
+        self, async_conn: aiosqlite.Connection, sync_conn: sqlite3.Connection
+    ) -> None:
+        """Adding a video via AsyncSQLiteVideoRepository produces an audit entry."""
+        from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+
+        audit = AuditLogger(conn=sync_conn)
+        repo = AsyncSQLiteVideoRepository(async_conn, audit_logger=audit)
+
+        video = make_test_video()
+        await repo.add(video)
+
+        history = audit.get_history(video.id)
+        assert len(history) == 1
+        assert history[0].operation == "INSERT"
+        assert history[0].entity_type == "video"
+        assert history[0].entity_id == video.id
+
+    async def test_sync_conn_does_not_block_async_operations(
+        self, async_conn: aiosqlite.Connection, sync_conn: sqlite3.Connection
+    ) -> None:
+        """Audit INSERT on sync connection does not block async operations."""
+        from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+
+        # Enable WAL mode so sync and async connections can operate concurrently
+        sync_conn.execute("PRAGMA journal_mode=WAL")
+
+        audit = AuditLogger(conn=sync_conn)
+        repo = AsyncSQLiteVideoRepository(async_conn, audit_logger=audit)
+
+        # Add multiple videos concurrently to verify no deadlock
+        videos = [make_test_video() for _ in range(5)]
+
+        async def add_video(v: Video) -> None:
+            await repo.add(v)
+
+        results = await asyncio.gather(
+            *[add_video(v) for v in videos],
+            return_exceptions=True,
+        )
+
+        # All operations should complete without exceptions
+        for result in results:
+            assert not isinstance(result, Exception), f"Unexpected error: {result}"
+
+        # Verify all audit entries were created
+        total_entries = 0
+        for v in videos:
+            total_entries += len(audit.get_history(v.id))
+        assert total_entries == 5
+
+
+class TestLifespanAuditWiring:
+    """Tests for AuditLogger creation during application lifespan."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_settings_cache(self) -> None:
+        """Clear settings cache so env var changes take effect."""
+        from stoat_ferret.api.settings import get_settings
+
+        get_settings.cache_clear()
+
+    def test_lifespan_creates_audit_logger(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Lifespan creates AuditLogger and stores on app.state."""
+        from fastapi.testclient import TestClient
+
+        from stoat_ferret.api.app import create_app
+
+        db_path = tmp_path / "test.db"
+        monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+
+        app = create_app()
+        with TestClient(app):
+            assert hasattr(app.state, "audit_logger")
+            assert isinstance(app.state.audit_logger, AuditLogger)
+
+    def test_lifespan_sync_conn_closed_after_shutdown(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sync connection is closed after lifespan shutdown."""
+        from fastapi.testclient import TestClient
+
+        from stoat_ferret.api.app import create_app
+
+        db_path = tmp_path / "test.db"
+        monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+
+        app = create_app()
+        with TestClient(app):
+            audit = app.state.audit_logger
+            # Connection should be usable during lifespan
+            assert audit._conn is not None
+
+        # After lifespan ends, the sync connection should be closed
+        # Attempting to use it should raise ProgrammingError
+        with pytest.raises(sqlite3.ProgrammingError):
+            audit._conn.execute("SELECT 1")

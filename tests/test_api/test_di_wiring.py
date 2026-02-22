@@ -135,6 +135,21 @@ def test_create_app_with_ffmpeg_executor_stores_on_state() -> None:
 
 
 @pytest.mark.api
+def test_create_app_with_audit_logger_stores_on_state() -> None:
+    """create_app(audit_logger=...) stores audit logger on app.state."""
+    from unittest.mock import MagicMock
+
+    mock_logger = MagicMock()
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        audit_logger=mock_logger,
+    )
+    assert app.state.audit_logger is mock_logger
+
+
+@pytest.mark.api
 def test_zero_dependency_overrides_in_conftest(client: TestClient) -> None:
     """Verify no dependency_overrides are set on the test app."""
     assert len(client.app.dependency_overrides) == 0  # type: ignore[union-attr]
