@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -83,6 +84,7 @@ def make_scan_handler(
         """
         scan_path = payload["path"]
         job_id = payload.get("_job_id")
+        cancel_event: asyncio.Event | None = payload.get("_cancel_event")
 
         # Build progress callback if queue and job_id are available
         progress_callback: Callable[[float], None] | None = None
@@ -100,6 +102,7 @@ def make_scan_handler(
             repository=repository,
             thumbnail_service=thumbnail_service,
             progress_callback=progress_callback,
+            cancel_event=cancel_event,
         )
 
         if ws_manager:
@@ -122,6 +125,7 @@ async def scan_directory(
     thumbnail_service: ThumbnailService | None = None,
     *,
     progress_callback: Callable[[float], None] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> ScanResponse:
     """Scan directory for video files.
 
@@ -135,6 +139,7 @@ async def scan_directory(
         repository: Video repository for storing results.
         thumbnail_service: Optional thumbnail service for generating thumbnails.
         progress_callback: Optional callback invoked with progress 0.0-1.0 after each file.
+        cancel_event: Optional event; when set, scan breaks and returns partial results.
 
     Returns:
         ScanResponse with counts of scanned, new, updated, skipped files and errors.
@@ -158,6 +163,10 @@ async def scan_directory(
     total_files = len(video_files)
 
     for file_path in video_files:
+        if cancel_event and cancel_event.is_set():
+            logger.info("scan_cancelled", path=path, processed=processed, total=total_files)
+            break
+
         processed += 1
         str_path = str(file_path.absolute())
 

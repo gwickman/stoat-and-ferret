@@ -193,6 +193,74 @@ class TestJobTimeout:
         assert queue._timeout == 300.0
 
 
+class TestCancellation:
+    """Tests for job cancellation."""
+
+    async def test_entry_initializes_with_unset_cancel_event(self) -> None:
+        """_AsyncJobEntry initializes with an unset cancel_event."""
+        queue = AsyncioJobQueue()
+        queue.register_handler("render", _success_handler)
+        job_id = await queue.submit("render", {})
+        entry = queue._jobs[job_id]
+        assert not entry.cancel_event.is_set()
+
+    async def test_cancel_sets_cancel_event(self) -> None:
+        """cancel() sets the cancel event on the job entry."""
+        queue = AsyncioJobQueue()
+        queue.register_handler("render", _success_handler)
+        job_id = await queue.submit("render", {})
+        queue.cancel(job_id)
+        entry = queue._jobs[job_id]
+        assert entry.cancel_event.is_set()
+
+    async def test_cancel_unknown_job_raises(self) -> None:
+        """cancel() with invalid job_id raises KeyError."""
+        queue = AsyncioJobQueue()
+        with pytest.raises(KeyError):
+            queue.cancel("nonexistent")
+
+    async def test_cancelled_job_has_cancelled_status(self) -> None:
+        """Job cancelled during execution gets CANCELLED status with partial results."""
+        queue = AsyncioJobQueue()
+
+        async def cancellable_handler(job_type: str, payload: dict[str, Any]) -> list[str]:
+            """Handler that checks cancel_event between items."""
+            cancel_event = payload.get("_cancel_event")
+            results: list[str] = []
+            items = ["a", "b", "c", "d"]
+            for item in items:
+                if cancel_event and cancel_event.is_set():
+                    break
+                results.append(item)
+                await asyncio.sleep(0.02)
+            return results
+
+        queue.register_handler("scan", cancellable_handler)
+        job_id = await queue.submit("scan", {})
+
+        worker = asyncio.create_task(queue.process_jobs())
+        try:
+            # Let it start processing a couple items
+            await asyncio.sleep(0.05)
+            # Cancel mid-processing
+            queue.cancel(job_id)
+            await asyncio.sleep(0.1)
+
+            result = await queue.get_result(job_id)
+            assert result.status == JobStatus.CANCELLED
+            assert result.result is not None
+            # Should have partial results (not all 4 items)
+            assert len(result.result) < 4
+        finally:
+            worker.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await worker
+
+    async def test_cancelled_status_serializes_correctly(self) -> None:
+        """JobStatus.CANCELLED serializes to 'cancelled'."""
+        assert JobStatus.CANCELLED.value == "cancelled"
+
+
 class TestProgress:
     """Tests for progress tracking."""
 

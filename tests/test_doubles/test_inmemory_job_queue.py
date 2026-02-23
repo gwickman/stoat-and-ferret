@@ -137,3 +137,19 @@ class TestSetProgress:
         """set_progress with unknown job_id does not raise."""
         queue = InMemoryJobQueue()
         queue.set_progress("nonexistent", 0.5)
+
+
+class TestCancel:
+    """Tests for cancel() no-op."""
+
+    async def test_cancel_is_noop(self) -> None:
+        """cancel does not raise and has no effect."""
+        queue = InMemoryJobQueue()
+        job_id = await queue.submit("render", {})
+        # Should not raise
+        queue.cancel(job_id)
+
+    async def test_cancel_unknown_job_is_noop(self) -> None:
+        """cancel with unknown job_id does not raise."""
+        queue = InMemoryJobQueue()
+        queue.cancel("nonexistent")

@@ -6,11 +6,11 @@ interface ScanModalProps {
   onScanComplete: () => void
 }
 
-type ScanStatus = 'idle' | 'scanning' | 'complete' | 'error'
+type ScanStatus = 'idle' | 'scanning' | 'cancelling' | 'cancelled' | 'complete' | 'error'
 
 interface JobStatus {
   job_id: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   progress: number | null
   result: Record<string, unknown> | null
   error: string | null
@@ -27,6 +27,7 @@ export default function ScanModal({
   const [errorMessage, setErrorMessage] = useState('')
   const [progress, setProgress] = useState<number | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const jobIdRef = useRef<string | null>(null)
 
   const cleanup = useCallback(() => {
     if (pollRef.current) {
@@ -42,10 +43,23 @@ export default function ScanModal({
       setDirectory('')
       setErrorMessage('')
       setProgress(null)
+      jobIdRef.current = null
     }
   }, [open, cleanup])
 
   useEffect(() => () => cleanup(), [cleanup])
+
+  async function handleCancel() {
+    const jobId = jobIdRef.current
+    if (!jobId || scanStatus !== 'scanning') return
+
+    setScanStatus('cancelling')
+    try {
+      await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' })
+    } catch {
+      // Cancel request failed, polling will still detect final state
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -68,6 +82,7 @@ export default function ScanModal({
       }
 
       const { job_id }: { job_id: string } = await res.json()
+      jobIdRef.current = job_id
 
       pollRef.current = setInterval(async () => {
         try {
@@ -81,6 +96,9 @@ export default function ScanModal({
             cleanup()
             setScanStatus('complete')
             onScanComplete()
+          } else if (status.status === 'cancelled') {
+            cleanup()
+            setScanStatus('cancelled')
           } else if (status.status === 'failed') {
             cleanup()
             setScanStatus('error')
@@ -98,12 +116,14 @@ export default function ScanModal({
 
   if (!open) return null
 
+  const isScanning = scanStatus === 'scanning' || scanStatus === 'cancelling'
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="scan-modal-overlay"
       onClick={(e) => {
-        if (e.target === e.currentTarget && scanStatus !== 'scanning') onClose()
+        if (e.target === e.currentTarget && !isScanning) onClose()
       }}
     >
       <div className="w-full max-w-md rounded-lg border border-gray-700 bg-gray-900 p-6">
@@ -125,7 +145,7 @@ export default function ScanModal({
               value={directory}
               onChange={(e) => setDirectory(e.target.value)}
               placeholder="/path/to/videos"
-              disabled={scanStatus === 'scanning'}
+              disabled={isScanning}
               className="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
               data-testid="scan-directory-input"
             />
@@ -137,17 +157,17 @@ export default function ScanModal({
                 type="checkbox"
                 checked={recursive}
                 onChange={(e) => setRecursive(e.target.checked)}
-                disabled={scanStatus === 'scanning'}
+                disabled={isScanning}
                 data-testid="scan-recursive"
               />
               Scan subdirectories
             </label>
           </div>
 
-          {scanStatus === 'scanning' && (
+          {isScanning && (
             <div className="mb-4" data-testid="scan-progress">
               <div className="mb-1 flex justify-between text-sm text-gray-400">
-                <span>Scanning...</span>
+                <span>{scanStatus === 'cancelling' ? 'Cancelling...' : 'Scanning...'}</span>
                 {progress !== null && (
                   <span>{Math.round(progress * 100)}%</span>
                 )}
@@ -170,6 +190,15 @@ export default function ScanModal({
             </div>
           )}
 
+          {scanStatus === 'cancelled' && (
+            <div
+              className="mb-4 rounded border border-yellow-700 bg-yellow-900/50 p-3 text-sm text-yellow-200"
+              data-testid="scan-cancelled"
+            >
+              Scan cancelled. Partial results have been saved.
+            </div>
+          )}
+
           {scanStatus === 'error' && (
             <div
               className="mb-4 rounded border border-red-700 bg-red-900/50 p-3 text-sm text-red-200"
@@ -180,23 +209,34 @@ export default function ScanModal({
           )}
 
           <div className="flex justify-end gap-2">
+            {isScanning && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={scanStatus === 'cancelling'}
+                className="rounded border border-red-700 px-4 py-2 text-sm text-red-300 hover:bg-red-900/50 disabled:opacity-50"
+                data-testid="scan-abort"
+              >
+                {scanStatus === 'cancelling' ? 'Cancelling...' : 'Abort Scan'}
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
-              disabled={scanStatus === 'scanning'}
+              disabled={isScanning}
               className="rounded border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"
               data-testid="scan-cancel"
             >
-              {scanStatus === 'complete' ? 'Close' : 'Cancel'}
+              {scanStatus === 'complete' || scanStatus === 'cancelled' ? 'Close' : 'Cancel'}
             </button>
-            {scanStatus !== 'complete' && (
+            {scanStatus !== 'complete' && scanStatus !== 'cancelled' && (
               <button
                 type="submit"
-                disabled={!directory.trim() || scanStatus === 'scanning'}
+                disabled={!directory.trim() || isScanning}
                 className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
                 data-testid="scan-submit"
               >
-                {scanStatus === 'scanning' ? 'Scanning...' : 'Start Scan'}
+                {isScanning ? 'Scanning...' : 'Start Scan'}
               </button>
             )}
           </div>

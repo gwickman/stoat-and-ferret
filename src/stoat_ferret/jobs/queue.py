@@ -22,6 +22,7 @@ class JobStatus(enum.Enum):
     COMPLETE = "complete"
     FAILED = "failed"
     TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
 
 
 class JobOutcome(enum.Enum):
@@ -107,6 +108,14 @@ class AsyncJobQueue(Protocol):
         """
         ...
 
+    def cancel(self, job_id: str) -> None:
+        """Request cancellation of a job.
+
+        Args:
+            job_id: The job ID to cancel.
+        """
+        ...
+
 
 @dataclass
 class _JobEntry:
@@ -185,6 +194,13 @@ class InMemoryJobQueue:
         Args:
             job_id: The job ID.
             value: Progress value (ignored).
+        """
+
+    def cancel(self, job_id: str) -> None:
+        """No-op for protocol compliance.
+
+        Args:
+            job_id: The job ID (ignored).
         """
 
     async def submit(self, job_type: str, payload: dict[str, Any]) -> str:
@@ -294,6 +310,7 @@ class _AsyncJobEntry:
     result: Any = None
     error: str | None = None
     progress: float | None = None
+    cancel_event: asyncio.Event = field(default_factory=asyncio.Event)
 
 
 class AsyncioJobQueue:
@@ -339,6 +356,23 @@ class AsyncioJobQueue:
         entry = self._jobs.get(job_id)
         if entry is not None:
             entry.progress = value
+
+    def cancel(self, job_id: str) -> None:
+        """Request cancellation of a job.
+
+        Sets the cancel event so the handler can check and stop cooperatively.
+
+        Args:
+            job_id: The job ID to cancel.
+
+        Raises:
+            KeyError: If the job ID is not found.
+        """
+        entry = self._jobs.get(job_id)
+        if entry is None:
+            raise KeyError(f"Job {job_id} not found")
+        entry.cancel_event.set()
+        logger.info("job_cancel_requested", job_id=job_id)
 
     async def submit(self, job_type: str, payload: dict[str, Any]) -> str:
         """Submit a job to the queue for async processing.
@@ -427,17 +461,26 @@ class AsyncioJobQueue:
                 entry.status = JobStatus.RUNNING
                 logger.info("job_started", job_id=job_id, job_type=entry.job_type)
 
-                # Inject job_id so handlers can use it (e.g. for progress)
-                payload = {**entry.payload, "_job_id": job_id}
+                # Inject job_id and cancel_event so handlers can use them
+                payload = {
+                    **entry.payload,
+                    "_job_id": job_id,
+                    "_cancel_event": entry.cancel_event,
+                }
 
                 try:
                     result = await asyncio.wait_for(
                         handler(entry.job_type, payload),
                         timeout=self._timeout,
                     )
-                    entry.status = JobStatus.COMPLETE
-                    entry.result = result
-                    logger.info("job_completed", job_id=job_id, job_type=entry.job_type)
+                    if entry.cancel_event.is_set():
+                        entry.status = JobStatus.CANCELLED
+                        entry.result = result
+                        logger.info("job_cancelled", job_id=job_id, job_type=entry.job_type)
+                    else:
+                        entry.status = JobStatus.COMPLETE
+                        entry.result = result
+                        logger.info("job_completed", job_id=job_id, job_type=entry.job_type)
                 except asyncio.TimeoutError:
                     entry.status = JobStatus.TIMEOUT
                     entry.error = f"Job timed out after {self._timeout}s"
