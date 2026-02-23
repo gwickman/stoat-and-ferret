@@ -1,14 +1,18 @@
 {
   "exploration_id": "design-v010-008-persist-1771877387318",
   "results_folder": "design-v010-008-persist",
-  "status": "running",
+  "status": "complete",
   "pid": 11184,
   "started_at": "2026-02-23T20:09:47.318960",
-  "updated_at": "2026-02-23T20:09:49.264033",
-  "completed_at": null,
+  "updated_at": "2026-02-23T20:16:15.080405",
+  "completed_at": "2026-02-23T20:16:15.079798",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "persistence-log.md",
+    "verification-checklist.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v010-008-persist/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v010-008-persist"
