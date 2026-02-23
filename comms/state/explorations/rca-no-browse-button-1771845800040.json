@@ -1,14 +1,18 @@
 {
   "exploration_id": "rca-no-browse-button-1771845800040",
   "results_folder": "rca-no-browse-button",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T11:23:20.040198",
-  "updated_at": "2026-02-23T11:23:22.278057",
-  "completed_at": null,
+  "updated_at": "2026-02-23T11:26:23.375304",
+  "completed_at": "2026-02-23T11:26:23.374901",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "evidence-trail.md",
+    "recommendations.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/rca-no-browse-button/prompt.md",
   "outbox_path": "comms/outbox/exploration/rca-no-browse-button"
