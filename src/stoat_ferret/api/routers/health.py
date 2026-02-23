@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 import subprocess
 import time
@@ -49,7 +50,7 @@ async def readiness(request: Request) -> JSONResponse:
         all_healthy = False
 
     # FFmpeg check
-    ffmpeg_check = _check_ffmpeg()
+    ffmpeg_check = await _check_ffmpeg()
     checks["ffmpeg"] = ffmpeg_check
     if ffmpeg_check["status"] != "ok":
         all_healthy = False
@@ -82,7 +83,7 @@ async def _check_database(request: Request) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-def _check_ffmpeg() -> dict[str, Any]:
+async def _check_ffmpeg() -> dict[str, Any]:
     """Check FFmpeg availability by running ffmpeg -version.
 
     Returns:
@@ -93,7 +94,8 @@ def _check_ffmpeg() -> dict[str, Any]:
         return {"status": "error", "error": "ffmpeg not found in PATH"}
 
     try:
-        result = subprocess.run(
+        result = await asyncio.to_thread(
+            subprocess.run,
             ["ffmpeg", "-version"],
             capture_output=True,
             text=True,
