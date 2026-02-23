@@ -1,0 +1,15 @@
+{
+  "exploration_id": "rca-clip-management-1771845788074",
+  "results_folder": "rca-clip-management",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T11:23:08.074696",
+  "updated_at": "2026-02-23T11:23:08.074696",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/rca-clip-management/prompt.md",
+  "outbox_path": "comms/outbox/exploration/rca-clip-management"
+}
