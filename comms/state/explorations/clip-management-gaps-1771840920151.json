@@ -1,0 +1,15 @@
+{
+  "exploration_id": "clip-management-gaps-1771840920151",
+  "results_folder": "clip-management-gaps",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T10:02:00.151662",
+  "updated_at": "2026-02-23T10:02:00.151662",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/clip-management-gaps/prompt.md",
+  "outbox_path": "comms/outbox/exploration/clip-management-gaps"
+}

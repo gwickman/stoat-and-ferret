@@ -1,10 +1,10 @@
 {
   "exploration_id": "scan-directory-stuck-1771840904548",
   "results_folder": "scan-directory-stuck",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10340,
   "started_at": "2026-02-23T10:01:44.548253",
-  "updated_at": "2026-02-23T10:01:44.548253",
+  "updated_at": "2026-02-23T10:01:46.719006",
   "completed_at": null,
   "error": null,
   "documents": [],
