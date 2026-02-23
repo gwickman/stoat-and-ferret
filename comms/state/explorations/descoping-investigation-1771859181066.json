@@ -1,10 +1,10 @@
 {
   "exploration_id": "descoping-investigation-1771859181066",
   "results_folder": "descoping-investigation",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10340,
   "started_at": "2026-02-23T15:06:21.066422",
-  "updated_at": "2026-02-23T15:06:21.066422",
+  "updated_at": "2026-02-23T15:06:23.240340",
   "completed_at": null,
   "error": null,
   "documents": [],
