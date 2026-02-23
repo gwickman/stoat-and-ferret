@@ -1,6 +1,6 @@
 {
-  "next_id": 70,
-  "updated_at": "2026-02-22T17:49:05.341351",
+  "next_id": 72,
+  "updated_at": "2026-02-23T10:03:00.799722",
   "items": [
     {
       "id": "BL-001",
@@ -2665,6 +2665,84 @@
       ],
       "notes": "size: l \u2014 C4 regeneration following established process, auto-estimate inflated by detailed description listing all 5 drift areas with code evidence",
       "use_case": "During version planning and onboarding, developers and the design agent consult C4 documentation to understand the current architecture. Stale documentation leads to incorrect assumptions about component capabilities and wiring, causing design decisions based on outdated information.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-070",
+      "title": "Add Browse button for scan directory path selection",
+      "priority": "P2",
+      "status": "open",
+      "size": "m",
+      "added": "2026-02-23T10:02:50.779841",
+      "completed_at": null,
+      "tags": [
+        "gui",
+        "ux",
+        "library",
+        "user-feedback"
+      ],
+      "description": "Currently the Scan Directory feature requires users to manually type or paste a directory path. There is no file/folder browser dialog to help users navigate to and select the target directory. This creates friction - users must know the exact path and type it correctly, which is error-prone and a poor UX pattern for desktop-style file selection.",
+      "acceptance_criteria": [
+        {
+          "text": "Scan Directory UI includes a Browse button next to the path input field",
+          "done": false
+        },
+        {
+          "text": "Clicking Browse opens a folder selection dialog that allows navigating the filesystem",
+          "done": false
+        },
+        {
+          "text": "Selecting a folder in the dialog populates the path input field with the chosen path",
+          "done": false
+        },
+        {
+          "text": "Users can still manually type a path as an alternative to browsing",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "When a user wants to scan a media directory, they need to navigate to it visually rather than remembering and typing the full path, especially on systems with deep directory hierarchies.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-071",
+      "title": "Add .env.example file for environment configuration template",
+      "priority": "P2",
+      "status": "open",
+      "size": "m",
+      "added": "2026-02-23T10:03:00.799713",
+      "completed_at": null,
+      "tags": [
+        "devex",
+        "documentation",
+        "onboarding",
+        "user-feedback"
+      ],
+      "description": "The project has no .env.example file to guide new developers or users through environment configuration. Anyone setting up the project must reverse-engineer which environment variables are needed by reading source code. This is a common onboarding friction point - without a template, users may miss required configuration and encounter confusing startup failures.",
+      "acceptance_criteria": [
+        {
+          "text": "A .env.example file exists in the project root with all required/optional environment variables documented",
+          "done": false
+        },
+        {
+          "text": "Each variable includes a comment explaining its purpose and acceptable values",
+          "done": false
+        },
+        {
+          "text": "The file contains sensible defaults or placeholder values (not real secrets)",
+          "done": false
+        },
+        {
+          "text": "README or setup documentation references .env.example as part of the getting-started workflow",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "When a new developer or user clones the repo, they need a clear reference for what environment variables to configure before the application will start correctly.",
       "implemented_in_version": null,
       "implemented_in_theme": null,
       "upvotes": 0

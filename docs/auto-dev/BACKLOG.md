@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-22 17:49*
+*Last updated: 2026-02-23 10:03*
 
 **Total completed:** 59 | **Cancelled:** 0
 
@@ -10,7 +10,7 @@
 |----------|------|-------|
 | P0 | Critical | 0 |
 | P1 | High | 0 |
-| P2 | Medium | 2 |
+| P2 | Medium | 4 |
 | P3 | Low | 4 |
 
 ## Quick Reference
@@ -19,6 +19,8 @@
 |----|-----|------|-------|-------------|
 | <a id="bl-061-ref"></a>[BL-061](#bl-061) | P2 | l | Wire or remove execute_command() Rust-Python FFmpeg bridge | **Current state:** `execute_command()` was built in v002/... |
 | <a id="bl-069-ref"></a>[BL-069](#bl-069) | P2 | xl | Update C4 architecture documentation for v009 changes | C4 documentation was last generated for v008. v009 introd... |
+| <a id="bl-070-ref"></a>[BL-070](#bl-070) | P2 | m | Add Browse button for scan directory path selection | Currently the Scan Directory feature requires users to ma... |
+| <a id="bl-071-ref"></a>[BL-071](#bl-071) | P2 | m | Add .env.example file for environment configuration template | The project has no .env.example file to guide new develop... |
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-066-ref"></a>[BL-066](#bl-066) | P3 | l | Add transition support to Effect Workshop GUI | **Current state:** `POST /projects/{id}/effects/transitio... |
 | <a id="bl-067-ref"></a>[BL-067](#bl-067) | P3 | l | Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization) | **Current state:** Several Rust functions are exposed via... |
@@ -30,18 +32,23 @@
 |-----|-------|-------|
 | rust-python | 3 | BL-061, BL-067, BL-068 |
 | wiring-gap | 2 | BL-061, BL-066 |
+| gui | 2 | BL-066, BL-070 |
 | dead-code | 2 | BL-067, BL-068 |
 | api-surface | 2 | BL-067, BL-068 |
+| documentation | 2 | BL-069, BL-071 |
+| user-feedback | 2 | BL-070, BL-071 |
 | windows | 1 | BL-019 |
 | agents-md | 1 | BL-019 |
 | gitignore | 1 | BL-019 |
 | ffmpeg | 1 | BL-061 |
-| gui | 1 | BL-066 |
 | effects | 1 | BL-066 |
 | transitions | 1 | BL-066 |
 | architecture | 1 | BL-069 |
 | c4 | 1 | BL-069 |
-| documentation | 1 | BL-069 |
+| ux | 1 | BL-070 |
+| library | 1 | BL-070 |
+| devex | 1 | BL-071 |
+| onboarding | 1 | BL-071 |
 
 ## Tag Conventions
 
@@ -147,6 +154,40 @@ The version retrospective also notes C4 regeneration was attempted but failed fo
 **Notes:** size: l — C4 regeneration following established process, auto-estimate inflated by detailed description listing all 5 drift areas with code evidence
 
 [↑ Back to list](#bl-069-ref)
+
+#### 📋 BL-070: Add Browse button for scan directory path selection
+
+**Status:** open
+**Tags:** gui, ux, library, user-feedback
+
+Currently the Scan Directory feature requires users to manually type or paste a directory path. There is no file/folder browser dialog to help users navigate to and select the target directory. This creates friction - users must know the exact path and type it correctly, which is error-prone and a poor UX pattern for desktop-style file selection.
+
+**Use Case:** When a user wants to scan a media directory, they need to navigate to it visually rather than remembering and typing the full path, especially on systems with deep directory hierarchies.
+
+**Acceptance Criteria:**
+- [ ] Scan Directory UI includes a Browse button next to the path input field
+- [ ] Clicking Browse opens a folder selection dialog that allows navigating the filesystem
+- [ ] Selecting a folder in the dialog populates the path input field with the chosen path
+- [ ] Users can still manually type a path as an alternative to browsing
+
+[↑ Back to list](#bl-070-ref)
+
+#### 📋 BL-071: Add .env.example file for environment configuration template
+
+**Status:** open
+**Tags:** devex, documentation, onboarding, user-feedback
+
+The project has no .env.example file to guide new developers or users through environment configuration. Anyone setting up the project must reverse-engineer which environment variables are needed by reading source code. This is a common onboarding friction point - without a template, users may miss required configuration and encounter confusing startup failures.
+
+**Use Case:** When a new developer or user clones the repo, they need a clear reference for what environment variables to configure before the application will start correctly.
+
+**Acceptance Criteria:**
+- [ ] A .env.example file exists in the project root with all required/optional environment variables documented
+- [ ] Each variable includes a comment explaining its purpose and acceptable values
+- [ ] The file contains sensible defaults or placeholder values (not real secrets)
+- [ ] README or setup documentation references .env.example as part of the getting-started workflow
+
+[↑ Back to list](#bl-071-ref)
 
 ### P3: Low
 
