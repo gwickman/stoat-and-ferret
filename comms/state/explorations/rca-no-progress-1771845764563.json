@@ -1,0 +1,15 @@
+{
+  "exploration_id": "rca-no-progress-1771845764563",
+  "results_folder": "rca-no-progress",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T11:22:44.563873",
+  "updated_at": "2026-02-23T11:22:44.563873",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/rca-no-progress/prompt.md",
+  "outbox_path": "comms/outbox/exploration/rca-no-progress"
+}
