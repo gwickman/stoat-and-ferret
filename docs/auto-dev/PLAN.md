@@ -8,12 +8,15 @@
 ## Current Focus
 
 **Recently Completed:** v009 (Observability & GUI Runtime)
-**Upcoming:** v010 (API Surface Cleanup & Remaining)
+**Upcoming:** v010 (Async Pipeline & Job Controls)
 
 ## Roadmap → Version Mapping
 
 | Version | Roadmap Reference | Focus | Status |
 |---------|-------------------|-------|--------|
+| v012 | Phase 2 cleanup | API Surface & Bindings Cleanup: wire/remove FFmpeg bridge, audit PyO3 bindings, transition GUI, API spec polish | 📋 planned |
+| v011 | Phase 1–2 gaps | GUI Usability & Developer Experience: browse button, clip CRUD, .env.example, IMPACT_ASSESSMENT.md | 📋 planned |
+| v010 | RCA + Phase 1 gaps | Async Pipeline & Job Controls: fix blocking ffprobe, CI async gate, progress reporting, job cancellation | 📋 planned |
 | v009 | Wiring audit + Phase 2 gaps | Observability & GUI Runtime: FFmpeg metrics, audit logging, file logging, SPA routing, pagination, WebSocket broadcasts | ✅ complete |
 | v008 | Wiring audit | Startup Integrity & CI Stability: database startup, logging startup, orphaned settings, flaky E2E fix | ✅ complete |
 | v007 | Phase 2, M2.4–2.6, M2.8–2.9 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | ✅ complete |
@@ -40,22 +43,58 @@ Track explorations that must complete before version design.
 
 ## Planned Versions
 
-### v010 — API Surface Cleanup & Remaining
+### v010 — Async Pipeline & Job Controls
 
-**Goal:** Audit and trim dead PyO3 bindings, resolve the Rust-Python FFmpeg bridge, add transition GUI support, and close remaining housekeeping.
+**Goal:** Fix the P0 async blocking bug, add guardrails to prevent recurrence, then build user-facing job progress and cancellation on top of the working pipeline.
 
-**Theme 1: rust-python-api-cleanup**
-- 001-ffmpeg-bridge: Wire or remove `execute_command()` Rust-Python bridge [BL-061, P2]
+**Theme 1: async-pipeline-fix**
+- 001-fix-blocking-ffprobe: Fix blocking subprocess.run() in ffprobe [BL-072, P0]
+- 002-async-blocking-ci-gate: Add CI lint rule flagging blocking calls inside async def [BL-077, P2]
+- 003-event-loop-responsiveness-test: Integration test verifying event loop stays responsive during scan [BL-078, P2]
+
+**Theme 2: job-controls**
+- 001-progress-reporting: Add progress percentage and status updates to job queue, wire through WebSocket [BL-073, P1]
+- 002-job-cancellation: Add cancel endpoint and cooperative cancellation to scan and job queue [BL-074, P1]
+
+**Backlog items:** BL-072, BL-073, BL-074, BL-077, BL-078 (5 items)
+**Dependencies:** Theme 2 depends on Theme 1 — progress/cancellation are meaningless if the event loop is frozen.
+**Risk:** BL-072 touches async subprocess layer affecting all FFmpeg/ffprobe interactions. BL-078 validates the fix; BL-077 prevents regression.
+
+### v011 — GUI Usability & Developer Experience
+
+**Goal:** Close the biggest GUI interaction gaps and improve onboarding/process documentation.
+**Depends on:** v010 deployed (progress reporting needed for scan UX improvements).
+
+**Theme 1: scan-and-clip-ux**
+- 001-browse-button: Add file/directory browser dialog for scan path selection [BL-070, P2]
+- 002-clip-management-controls: Add Add/Edit/Delete clip controls to project detail view [BL-075, P1]
+
+**Theme 2: developer-onboarding**
+- 001-env-example: Create .env.example with all Settings fields documented [BL-071, P2]
+- 002-windows-dev-guidance: Add /dev/null → nul guidance to AGENTS.md, add nul to .gitignore [BL-019, P3]
+- 003-impact-assessment: Create IMPACT_ASSESSMENT.md with async safety, settings docs, cross-version wiring, and GUI input mechanism checks [BL-076, P1]
+
+**Backlog items:** BL-019, BL-070, BL-071, BL-075, BL-076 (5 items)
+**Dependencies:** None between themes. Within Theme 2, .env.example before IMPACT_ASSESSMENT.md since the assessment checks for .env.example updates.
+**Risk:** BL-075 (clip CRUD GUI) touches multiple layers. Browse button validates GUI build pipeline first.
+
+### v012 — API Surface & Bindings Cleanup
+
+**Goal:** Reduce technical debt in the Rust-Python boundary and close remaining polish items.
+**Depends on:** v011 deployed.
+
+**Theme 1: rust-bindings-audit**
+- 001-execute-command-resolution: Decide wire vs remove for execute_command(), implement the decision [BL-061, P2]
 - 002-v001-bindings-audit: Audit and trim unused v001 PyO3 bindings (TimeRange ops, sanitization) [BL-067, P3]
 - 003-v006-bindings-audit: Audit and trim unused v006 PyO3 bindings (Expr, graph validation, composition) [BL-068, P3]
 
-**Theme 2: gui-and-housekeeping**
-- 001-transition-gui: Add transition support to Effect Workshop GUI [BL-066, P3]
-- 002-agents-md-guidance: Add Windows bash /dev/null redirect guidance to AGENTS.md [BL-019, P3]
+**Theme 2: workshop-and-docs-polish**
+- 001-transition-support: Wire transition effects into the Effect Workshop GUI [BL-066, P3]
+- 002-api-spec-progress-examples: Update API spec examples with realistic progress values for running jobs [BL-079, P3]
 
-**Backlog items:** BL-019, BL-061, BL-066, BL-067, BL-068 (5 items)
-**Dependencies:** BL-066 depends on transition API from v007. All others independent.
-**Risk:** BL-061 requires a design decision (wire vs remove). BL-067/BL-068 are audit-then-act.
+**Backlog items:** BL-061, BL-066, BL-067, BL-068, BL-079 (5 items)
+**Dependencies:** BL-061 should precede BL-067/BL-068 — the execute_command decision may affect what counts as "unused". BL-079 benefits from v010's progress reporting being complete.
+**Risk:** BL-061 has moderate risk if decision is "wire it" (new integration code). If "remove", safe deletion.
 
 ## Completed Versions
 
@@ -137,7 +176,8 @@ Work categories:
 | `discovered` | Found during execution, not originally planned |
 | `blocked` | Waiting on external dependency |
 
-**Version-agnostic items:** None — all open items assigned to v010.
+**Version-agnostic items:** None — all open items assigned to v010–v012.
+**Excluded from versions:** BL-069 (C4 documentation update, deferred), PR-003 (auto-dev-mcp product request, not stoat-and-ferret code).
 
 Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
@@ -153,6 +193,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-23 | Replanned v010–v012 from 14 open backlog items. v010: Async Pipeline & Job Controls (BL-072, BL-073, BL-074, BL-077, BL-078). v011: GUI Usability & Developer Experience (BL-019, BL-070, BL-071, BL-075, BL-076). v012: API Surface & Bindings Cleanup (BL-061, BL-066, BL-067, BL-068, BL-079). Excluded BL-069 (C4 docs) and PR-003 (auto-dev product request). Updated BL-076 notes: project-specific code, not auto-dev artifact. |
 | 2026-02-22 | v009 complete: Observability & GUI Runtime delivered (2 themes, 6 features, 6 backlog items completed). Moved v009 from Planned to Completed. Updated Current Focus to v010. |
 | 2026-02-22 | v008 complete: Startup Integrity & CI Stability delivered (2 themes, 4 features, 4 backlog items completed). Moved v008 from Planned to Completed. Updated Current Focus to v009. |
 | 2026-02-21 | Planned v008-v010 covering all 15 open backlog items from wiring audit. Cancelled BL-011, BL-053, BL-054. Closed PR-001, PR-002 after investigation. Deferred Phase 3: Composition Engine to post-v010. |

@@ -1,6 +1,6 @@
 {
   "next_id": 80,
-  "updated_at": "2026-02-23T16:29:09.762866",
+  "updated_at": "2026-02-23T16:44:17.007680",
   "items": [
     {
       "id": "BL-001",
@@ -2968,7 +2968,7 @@
           "done": false
         }
       ],
-      "notes": null,
+      "notes": "IMPACT_ASSESSMENT.md is project-specific, not an auto-dev process artifact. Treat as project code \u2014 the assessment criteria are tailored to stoat-and-ferret's architecture and design constraints.",
       "use_case": "During version design, the auto-dev impact assessment step reads this file and executes project-specific checks, catching recurring issue patterns before they reach implementation.",
       "implemented_in_version": null,
       "implemented_in_theme": null,

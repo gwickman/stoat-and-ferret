@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-23 16:29*
+*Last updated: 2026-02-23 16:44*
 
 **Total completed:** 59 | **Cancelled:** 0
 
@@ -221,6 +221,8 @@ stoat-and-ferret has no IMPACT_ASSESSMENT.md, so the auto-dev design phase runs 
 - [ ] Contains cross-version wiring assumptions check: when features depend on behavior from prior versions, list assumptions explicitly
 - [ ] Contains GUI input mechanism check: for GUI features accepting user input, verify appropriate input mechanisms are specified
 - [ ] Each check section includes what to look for, why it matters, and a concrete example from project history
+
+**Notes:** IMPACT_ASSESSMENT.md is project-specific, not an auto-dev process artifact. Treat as project code — the assessment criteria are tailored to stoat-and-ferret's architecture and design constraints.
 
 [↑ Back to list](#bl-076-ref)
 
