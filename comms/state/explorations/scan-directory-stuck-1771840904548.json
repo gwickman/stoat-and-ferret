@@ -1,14 +1,19 @@
 {
   "exploration_id": "scan-directory-stuck-1771840904548",
   "results_folder": "scan-directory-stuck",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T10:01:44.548253",
-  "updated_at": "2026-02-23T10:01:46.719006",
-  "completed_at": null,
+  "updated_at": "2026-02-23T10:06:15.205661",
+  "completed_at": "2026-02-23T10:06:15.205288",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "backend-issues.md",
+    "frontend-issues.md",
+    "scan-flow-analysis.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/scan-directory-stuck/prompt.md",
   "outbox_path": "comms/outbox/exploration/scan-directory-stuck"
