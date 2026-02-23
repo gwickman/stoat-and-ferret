@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -42,7 +42,7 @@ class VideoMetadata:
         return int(self.duration_seconds * fps)
 
 
-def ffprobe_video(path: str, ffprobe_path: str = "ffprobe") -> VideoMetadata:
+async def ffprobe_video(path: str, ffprobe_path: str = "ffprobe") -> VideoMetadata:
     """Run ffprobe on a video file and return structured metadata.
 
     Args:
@@ -62,32 +62,32 @@ def ffprobe_video(path: str, ffprobe_path: str = "ffprobe") -> VideoMetadata:
         raise FileNotFoundError(f"Video file not found: {path}")
 
     try:
-        result = subprocess.run(
-            [
-                ffprobe_path,
-                "-v",
-                "quiet",
-                "-print_format",
-                "json",
-                "-show_format",
-                "-show_streams",
-                path,
-            ],
-            capture_output=True,
-            timeout=30,
-            check=False,
+        proc = await asyncio.create_subprocess_exec(
+            ffprobe_path,
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
     except FileNotFoundError:
         raise FFprobeError(f"ffprobe not found at: {ffprobe_path}. Is FFmpeg installed?") from None
-    except subprocess.TimeoutExpired as e:
-        raise FFprobeError(f"ffprobe timed out reading: {path}") from e
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.communicate()
+        raise FFprobeError(f"ffprobe timed out reading: {path}") from None
 
-    if result.returncode != 0:
-        stderr = result.stderr.decode(errors="replace")
-        raise FFprobeError(f"ffprobe failed for {path}: {stderr}")
+    if proc.returncode != 0:
+        stderr_text = stderr.decode(errors="replace")
+        raise FFprobeError(f"ffprobe failed for {path}: {stderr_text}")
 
     try:
-        data = json.loads(result.stdout)
+        data = json.loads(stdout)
     except json.JSONDecodeError as e:
         raise FFprobeError(f"Failed to parse ffprobe output: {e}") from e
 
