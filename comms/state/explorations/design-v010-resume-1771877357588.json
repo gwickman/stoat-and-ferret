@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v010-resume-1771877357588",
   "results_folder": "design-v010-resume",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 11184,
   "started_at": "2026-02-23T20:09:17.588644",
-  "updated_at": "2026-02-23T20:09:17.588644",
+  "updated_at": "2026-02-23T20:09:19.620186",
   "completed_at": null,
   "error": null,
   "documents": [],
