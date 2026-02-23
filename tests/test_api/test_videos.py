@@ -614,3 +614,74 @@ async def test_make_scan_handler_wires_progress_to_queue(tmp_path: Path) -> None
         await handler("scan", {"path": str(tmp_path), "_job_id": "test-job-123"})
 
     mock_queue.set_progress.assert_called_with("test-job-123", 1.0)
+
+
+# --- Scan cancellation tests ---
+
+
+@pytest.mark.api
+async def test_scan_directory_breaks_on_cancel_event(tmp_path: Path) -> None:
+    """scan_directory breaks file loop when cancel_event is set."""
+    import asyncio
+
+    (tmp_path / "a.mp4").touch()
+    (tmp_path / "b.mp4").touch()
+    (tmp_path / "c.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+    repo = AsyncInMemoryVideoRepository()
+
+    cancel_event = asyncio.Event()
+    cancel_event.set()  # Set before scan starts — should process 0 files
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
+        return_value=mock_metadata,
+    ):
+        result = await scan_directory(
+            path=str(tmp_path),
+            recursive=True,
+            repository=repo,
+            cancel_event=cancel_event,
+        )
+
+    assert result.scanned == 0
+    assert result.new == 0
+
+
+@pytest.mark.api
+async def test_scan_directory_returns_partial_results_on_cancel(tmp_path: Path) -> None:
+    """Cancelled scan returns partial results (files scanned before cancellation)."""
+    import asyncio
+
+    (tmp_path / "a.mp4").touch()
+    (tmp_path / "b.mp4").touch()
+    (tmp_path / "c.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+    repo = AsyncInMemoryVideoRepository()
+    cancel_event = asyncio.Event()
+    call_count = 0
+
+    async def probe_then_cancel(path: str) -> VideoMetadata:
+        nonlocal call_count
+        call_count += 1
+        if call_count >= 2:
+            cancel_event.set()
+        return mock_metadata
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        side_effect=probe_then_cancel,
+    ):
+        result = await scan_directory(
+            path=str(tmp_path),
+            recursive=True,
+            repository=repo,
+            cancel_event=cancel_event,
+        )
+
+    # Should have processed some but not all files
+    assert result.scanned < 3
+    assert result.new > 0

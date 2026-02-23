@@ -168,3 +168,63 @@ def test_job_status_progress_none_for_completed_empty_scan(
     assert data["status"] == "complete"
     # InMemoryJobQueue is a no-op for set_progress, so progress stays None
     assert data["progress"] is None
+
+
+# --- Cancel endpoint tests ---
+
+
+@pytest.mark.api
+def test_cancel_job_not_found(client: TestClient) -> None:
+    """POST /jobs/{id}/cancel returns 404 for unknown job."""
+    response = client.post("/api/v1/jobs/nonexistent-id/cancel")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+def test_cancel_completed_job_returns_409(client: TestClient, tmp_path: Path) -> None:
+    """POST /jobs/{id}/cancel returns 409 for already-completed job."""
+    # Submit a scan that completes immediately (InMemoryJobQueue)
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": str(tmp_path)},
+    )
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    # Verify it's complete
+    status_resp = client.get(f"/api/v1/jobs/{job_id}")
+    assert status_resp.json()["status"] == "complete"
+
+    # Try to cancel
+    cancel_resp = client.post(f"/api/v1/jobs/{job_id}/cancel")
+    assert cancel_resp.status_code == 409
+    data = cancel_resp.json()
+    assert data["detail"]["code"] == "ALREADY_TERMINAL"
+
+
+@pytest.mark.api
+def test_cancel_pending_job_returns_200(
+    client: TestClient,
+    job_queue: InMemoryJobQueue,
+    tmp_path: Path,
+) -> None:
+    """POST /jobs/{id}/cancel returns 200 for pending job.
+
+    InMemoryJobQueue.cancel() is a no-op, but the endpoint should still succeed
+    for non-terminal jobs. We test with a PENDING outcome by removing the handler
+    and not configuring any outcome for the "pending-type".
+    """
+    # Manually add a pending job to the InMemoryJobQueue
+    from stoat_ferret.jobs.queue import JobResult, JobStatus, _JobEntry
+
+    job_id = "test-cancel-pending"
+    entry = _JobEntry(job_id=job_id, job_type="scan", payload={})
+    entry.result = JobResult(job_id=job_id, status=JobStatus.PENDING)
+    job_queue._jobs[job_id] = entry
+
+    cancel_resp = client.post(f"/api/v1/jobs/{job_id}/cancel")
+    assert cancel_resp.status_code == 200
+    data = cancel_resp.json()
+    assert data["job_id"] == job_id

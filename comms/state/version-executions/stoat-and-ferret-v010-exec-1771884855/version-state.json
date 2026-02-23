@@ -9,25 +9,25 @@
     {
       "number": 1,
       "name": "async-pipeline-fix",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 3,
       "features_complete": 3,
       "started_at": "2026-02-23T22:14:48.660523Z",
-      "completed_at": null,
+      "completed_at": "2026-02-23T22:46:58.833327Z",
       "skip_reason": null
     },
     {
       "number": 2,
       "name": "job-controls",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 2,
-      "features_complete": 0,
-      "started_at": null,
+      "features_complete": 1,
+      "started_at": "2026-02-23T22:46:58.835517Z",
       "completed_at": null,
       "skip_reason": null
     }
   ],
-  "current_theme": 1,
-  "current_feature": 3,
+  "current_theme": 2,
+  "current_feature": 2,
   "baseline_failures": []
 }

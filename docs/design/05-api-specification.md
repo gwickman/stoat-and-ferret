@@ -359,6 +359,47 @@ Poll the status of an asynchronous job submitted via endpoints like `POST /video
 | `complete` | Job finished successfully; result available |
 | `failed` | Job encountered an error; error message available |
 | `timeout` | Job exceeded the configured timeout (default 300s) |
+| `cancelled` | Job was cancelled by the user; partial results may be available |
+
+---
+
+#### Cancel Job
+```http
+POST /jobs/{job_id}/cancel
+```
+
+Request cooperative cancellation of a running job. The job will stop at its next checkpoint and preserve any partial results.
+
+**Success Response:** `200 OK`
+```json
+{
+  "job_id": "a1b2c3d4-...",
+  "status": "pending",
+  "progress": 0.3,
+  "result": null,
+  "error": null
+}
+```
+
+**Error Response:** `404 Not Found`
+```json
+{
+  "detail": {
+    "code": "NOT_FOUND",
+    "message": "Job a1b2c3d4-... not found"
+  }
+}
+```
+
+**Error Response:** `409 Conflict` (job already in terminal state)
+```json
+{
+  "detail": {
+    "code": "ALREADY_TERMINAL",
+    "message": "Job a1b2c3d4-... is already complete"
+  }
+}
+```
 
 ---
 
