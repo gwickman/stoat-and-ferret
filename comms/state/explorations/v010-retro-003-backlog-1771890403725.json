@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v010-retro-003-backlog-1771890403725",
+  "results_folder": "v010-retro-003-backlog",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T23:46:43.725779",
+  "updated_at": "2026-02-23T23:46:43.725779",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v010-retro-003-backlog/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v010-retro-003-backlog"
+}
