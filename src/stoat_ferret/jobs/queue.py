@@ -41,12 +41,14 @@ class JobResult:
         status: Final status of the job.
         result: The return value if successful, None otherwise.
         error: Error message if failed or timed out, None otherwise.
+        progress: Progress value 0.0-1.0 for running jobs, None for queued.
     """
 
     job_id: str
     status: JobStatus
     result: Any = None
     error: str | None = None
+    progress: float | None = None
 
 
 class AsyncJobQueue(Protocol):
@@ -93,6 +95,15 @@ class AsyncJobQueue(Protocol):
 
         Raises:
             KeyError: If the job ID is not found.
+        """
+        ...
+
+    def set_progress(self, job_id: str, value: float) -> None:
+        """Update progress for a running job.
+
+        Args:
+            job_id: The job ID.
+            value: Progress value between 0.0 and 1.0.
         """
         ...
 
@@ -167,6 +178,14 @@ class InMemoryJobQueue:
             outcome: The default outcome.
         """
         self._default_outcome = outcome
+
+    def set_progress(self, job_id: str, value: float) -> None:
+        """No-op for protocol compliance.
+
+        Args:
+            job_id: The job ID.
+            value: Progress value (ignored).
+        """
 
     async def submit(self, job_type: str, payload: dict[str, Any]) -> str:
         """Submit and synchronously execute a job.
@@ -274,6 +293,7 @@ class _AsyncJobEntry:
     status: JobStatus = JobStatus.PENDING
     result: Any = None
     error: str | None = None
+    progress: float | None = None
 
 
 class AsyncioJobQueue:
@@ -308,6 +328,17 @@ class AsyncioJobQueue:
             handler: Async callable that processes the job payload.
         """
         self._handlers[job_type] = handler
+
+    def set_progress(self, job_id: str, value: float) -> None:
+        """Update progress for a running job.
+
+        Args:
+            job_id: The job ID.
+            value: Progress value between 0.0 and 1.0.
+        """
+        entry = self._jobs.get(job_id)
+        if entry is not None:
+            entry.progress = value
 
     async def submit(self, job_type: str, payload: dict[str, Any]) -> str:
         """Submit a job to the queue for async processing.
@@ -362,6 +393,7 @@ class AsyncioJobQueue:
             status=entry.status,
             result=entry.result,
             error=entry.error,
+            progress=entry.progress,
         )
 
     async def process_jobs(self) -> None:
@@ -395,9 +427,12 @@ class AsyncioJobQueue:
                 entry.status = JobStatus.RUNNING
                 logger.info("job_started", job_id=job_id, job_type=entry.job_type)
 
+                # Inject job_id so handlers can use it (e.g. for progress)
+                payload = {**entry.payload, "_job_id": job_id}
+
                 try:
                     result = await asyncio.wait_for(
-                        handler(entry.job_type, entry.payload),
+                        handler(entry.job_type, payload),
                         timeout=self._timeout,
                     )
                     entry.status = JobStatus.COMPLETE

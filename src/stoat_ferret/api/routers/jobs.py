@@ -38,6 +38,7 @@ async def get_job_status(
     return JobStatusResponse(
         job_id=result.job_id,
         status=result.status.value,
+        progress=result.progress,
         result=result.result,
         error=result.error,
     )

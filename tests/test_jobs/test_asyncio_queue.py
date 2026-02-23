@@ -191,3 +191,60 @@ class TestJobTimeout:
         """Default timeout is 5 minutes (300 seconds)."""
         queue = AsyncioJobQueue()
         assert queue._timeout == 300.0
+
+
+class TestProgress:
+    """Tests for progress tracking."""
+
+    async def test_entry_initializes_with_progress_none(self) -> None:
+        """_AsyncJobEntry initializes with progress = None."""
+        queue = AsyncioJobQueue()
+        queue.register_handler("render", _success_handler)
+        job_id = await queue.submit("render", {})
+        result = await queue.get_result(job_id)
+        assert result.progress is None
+
+    async def test_set_progress_updates_entry(self) -> None:
+        """set_progress updates the job's progress field."""
+        queue = AsyncioJobQueue()
+        queue.register_handler("render", _success_handler)
+        job_id = await queue.submit("render", {})
+        queue.set_progress(job_id, 0.5)
+        result = await queue.get_result(job_id)
+        assert result.progress == 0.5
+
+    async def test_set_progress_unknown_job_is_noop(self) -> None:
+        """set_progress with invalid job_id is a no-op."""
+        queue = AsyncioJobQueue()
+        # Should not raise
+        queue.set_progress("nonexistent", 0.5)
+
+    async def test_progress_preserved_after_completion(self) -> None:
+        """Progress value is preserved in result after job completes."""
+        queue = AsyncioJobQueue()
+        progress_values: list[float] = []
+
+        async def tracking_handler(job_type: str, payload: dict[str, Any]) -> str:
+            """Handler that sets progress via the queue."""
+            job_id = payload.get("_job_id", "")
+            queue.set_progress(job_id, 0.5)
+            progress_values.append(0.5)
+            queue.set_progress(job_id, 1.0)
+            progress_values.append(1.0)
+            return "done"
+
+        queue.register_handler("render", tracking_handler)
+        job_id = await queue.submit("render", {})
+
+        worker = asyncio.create_task(queue.process_jobs())
+        try:
+            await asyncio.sleep(0.05)
+
+            result = await queue.get_result(job_id)
+            assert result.status == JobStatus.COMPLETE
+            assert result.progress == 1.0
+            assert progress_values == [0.5, 1.0]
+        finally:
+            worker.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await worker
