@@ -74,6 +74,7 @@ markers = [
     "contract: Contract tests for protocol compliance",
     "property: Property-based tests using Hypothesis",
     "requires_ffmpeg: Tests that require FFmpeg to be installed",
+    "integration: marks tests as integration tests",
 ]
 
 [tool.coverage.run]
