@@ -79,6 +79,18 @@ Look for:
 
 Include session-sourced findings in Step 4 (Deduplicate and Filter) alongside report-sourced learnings. Mark the source as "session analytics" rather than a specific completion report.
 
+### 3d. Review Handoff Documents
+
+Read handoff-to-next.md for each completed feature:
+- `comms/outbox/versions/execution/${VERSION}/<theme>/<feature>/handoff-to-next.md`
+
+For each handoff document, identify:
+- **Unactioned suggestions** — deferred work or improvements the implementer flagged but did not complete
+- **Known limitations** — constraints or incomplete wiring the implementer documented for awareness
+- **Downstream dependencies** — items the implementer expected a later feature or version to address
+
+Include handoff-sourced findings in Step 4 (Deduplicate and Filter) alongside other learnings. Mark the source as `${VERSION}/<theme>/<feature> handoff-to-next` rather than a completion report. Not every feature will have a handoff document — skip missing files without error.
+
 ### 4. Deduplicate and Filter
 
 From all identified learnings:

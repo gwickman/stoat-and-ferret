@@ -42,9 +42,9 @@ For each feature within themes:
 - Backlog item(s) addressed (BL-XXX references)
 - Dependencies (features or themes that must complete first)
 
-### 3a. End-to-End Acceptance Criteria for Bug Fixes
+### 3a. End-to-End Acceptance Criteria for Observable Output
 
-When a feature is a bug fix (addresses incorrect behavior rather than adding new functionality):
+When a feature produces observable output (bug fixes, new endpoints, CLI commands, generated files, log entries, or any user-visible behavior):
 
 - Require at least one acceptance criterion that validates **user-observable end-to-end behavior**, not just internal method correctness
 - If the fix modifies a service method signature or adds a parameter, an AC must verify that the production caller passes the parameter and the user sees the corrected behavior
