@@ -130,13 +130,13 @@ describe('ScanModal', () => {
       result: null,
       error: null,
     }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
         })
       }
-      if (String(url).includes('/cancel') && init?.method === 'POST') {
+      if (String(url).includes('/cancel')) {
         return new Response(JSON.stringify({ job_id: 'job-1', status: 'cancelled' }), {
           status: 200,
         })
@@ -175,7 +175,7 @@ describe('ScanModal', () => {
       result: { scanned: 2, new: 2, updated: 0, skipped: 0, errors: [] },
       error: null,
     }
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
