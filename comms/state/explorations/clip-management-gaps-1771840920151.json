@@ -1,14 +1,19 @@
 {
   "exploration_id": "clip-management-gaps-1771840920151",
   "results_folder": "clip-management-gaps",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T10:02:00.151662",
-  "updated_at": "2026-02-23T10:02:02.244409",
-  "completed_at": null,
+  "updated_at": "2026-02-23T10:06:16.951119",
+  "completed_at": "2026-02-23T10:06:16.950729",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "api-clip-endpoints.md",
+    "gap-analysis.md",
+    "gui-clip-components.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/clip-management-gaps/prompt.md",
   "outbox_path": "comms/outbox/exploration/clip-management-gaps"

@@ -1,6 +1,6 @@
 {
-  "next_id": 72,
-  "updated_at": "2026-02-23T10:03:00.799722",
+  "next_id": 76,
+  "updated_at": "2026-02-23T10:21:43.862788",
   "items": [
     {
       "id": "BL-001",
@@ -2743,6 +2743,186 @@
       ],
       "notes": null,
       "use_case": "When a new developer or user clones the repo, they need a clear reference for what environment variables to configure before the application will start correctly.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-072",
+      "title": "Fix blocking subprocess.run() in ffprobe freezing async event loop",
+      "priority": "P0",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T10:21:08.828051",
+      "completed_at": null,
+      "tags": [
+        "bug",
+        "async",
+        "ffmpeg",
+        "scan",
+        "user-feedback"
+      ],
+      "description": "The `ffprobe_video()` function in `src/stoat_ferret/ffmpeg/probe.py` uses synchronous `subprocess.run()` with a 30s timeout per file. This is called from the async scan handler, which blocks the entire asyncio event loop for the duration of each ffprobe call. While blocked, the server cannot handle any HTTP requests \u2014 including job status polling \u2014 making the scan appear completely frozen. This also makes `asyncio.wait_for()` timeout unreliable since the event loop has no opportunity to check it between blocking calls. This is the primary cause of the \"scan directory hangs forever\" bug.",
+      "acceptance_criteria": [
+        {
+          "text": "ffprobe_video() uses asyncio.create_subprocess_exec() or asyncio.to_thread() instead of blocking subprocess.run()",
+          "done": false
+        },
+        {
+          "text": "HTTP status polling endpoint remains responsive during an active scan job",
+          "done": false
+        },
+        {
+          "text": "asyncio.wait_for() job timeout fires reliably at the configured threshold",
+          "done": false
+        },
+        {
+          "text": "Existing ffprobe tests pass with the async implementation",
+          "done": false
+        },
+        {
+          "text": "Scan of a directory with multiple video files completes without blocking other API requests",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "When a user scans a media directory, the server must remain responsive so progress polling, cancellation, and other API calls continue working throughout the scan.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-073",
+      "title": "Add progress reporting to job queue and scan handler",
+      "priority": "P1",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T10:21:20.060973",
+      "completed_at": null,
+      "tags": [
+        "jobs",
+        "scan",
+        "gui",
+        "ux",
+        "user-feedback"
+      ],
+      "description": "The job queue (`AsyncioJobQueue`), job result model (`JobResult`), and job status response (`JobStatusResponse`) have no progress field. The scan handler processes files in a loop but never reports intermediate progress. The frontend polls job status but always receives `null` for progress, so the progress bar is permanently stuck at 0%. Users have no visibility into how far along a scan is or whether it's actually working.",
+      "acceptance_criteria": [
+        {
+          "text": "_AsyncJobEntry includes a progress field (0.0-1.0 float or integer percentage)",
+          "done": false
+        },
+        {
+          "text": "AsyncioJobQueue exposes a set_progress(job_id, value) method callable from within job handlers",
+          "done": false
+        },
+        {
+          "text": "Scan handler calls set_progress after each file, reporting scanned_count/total_files",
+          "done": false
+        },
+        {
+          "text": "GET /api/v1/jobs/{id} response includes a populated progress field during active jobs",
+          "done": false
+        },
+        {
+          "text": "Frontend ScanModal progress bar reflects actual scan progress in real time",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "During a directory scan that may take minutes, users need to see real progress to know the operation is working and estimate remaining time.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-074",
+      "title": "Implement job cancellation support for scan and job queue",
+      "priority": "P1",
+      "status": "open",
+      "size": "m",
+      "added": "2026-02-23T10:21:31.138401",
+      "completed_at": null,
+      "tags": [
+        "jobs",
+        "scan",
+        "api",
+        "gui",
+        "user-feedback"
+      ],
+      "description": "The `AsyncioJobQueue` has no `cancel()` method, no cancellation flag mechanism, and no cancel API endpoint. The scan handler's file processing loop has no cancellation check point. The frontend cancel button exists in ScanModal but has nothing to call \u2014 once a scan starts, the only way to stop it is to restart the server. Users are stuck waiting for potentially long scans with no way to abort.",
+      "acceptance_criteria": [
+        {
+          "text": "AsyncioJobQueue has a cancel(job_id) method that sets a cancellation flag on the running job",
+          "done": false
+        },
+        {
+          "text": "A cancel API endpoint exists (DELETE /api/v1/jobs/{id} or POST /api/v1/jobs/{id}/cancel) returning appropriate status",
+          "done": false
+        },
+        {
+          "text": "Scan handler checks the cancellation flag between file iterations and exits cleanly when cancelled",
+          "done": false
+        },
+        {
+          "text": "Cancelled jobs report status 'cancelled' with partial results (files scanned so far are retained)",
+          "done": false
+        },
+        {
+          "text": "Frontend ScanModal cancel button calls the cancel endpoint and updates UI to reflect cancellation",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "When a user accidentally scans the wrong directory or needs to stop a long-running scan, they need the cancel button to actually work rather than being forced to restart the application.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-075",
+      "title": "Add clip management controls (Add/Edit/Delete) to project GUI",
+      "priority": "P1",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T10:21:43.862781",
+      "completed_at": null,
+      "tags": [
+        "gui",
+        "clips",
+        "crud",
+        "wiring-gap",
+        "user-feedback"
+      ],
+      "description": "The GUI currently displays clips in a read-only table on the ProjectDetails page but provides no controls to add, edit, or remove clips. The backend API has full CRUD support for clips (POST, PATCH, DELETE on `/api/v1/projects/{id}/clips`) \u2014 all implemented and integration-tested \u2014 but the frontend never calls the write endpoints. Users must use the API directly to manage clips, which defeats the purpose of having a GUI. This was deferred from v005 (Phase 1 delivered read-only display) but is now a significant gap in the user workflow.",
+      "acceptance_criteria": [
+        {
+          "text": "ProjectDetails page includes an Add Clip button that opens a form to create a new clip (selecting from library videos, setting in/out points)",
+          "done": false
+        },
+        {
+          "text": "Each clip row in the project clips table has Edit and Delete action buttons",
+          "done": false
+        },
+        {
+          "text": "Edit button opens an inline or modal form pre-populated with current clip properties (in/out points, label)",
+          "done": false
+        },
+        {
+          "text": "Delete button prompts for confirmation then removes the clip via DELETE /api/v1/projects/{id}/clips/{clip_id}",
+          "done": false
+        },
+        {
+          "text": "Add/Edit forms validate input and display errors from the backend (e.g. invalid time ranges)",
+          "done": false
+        },
+        {
+          "text": "Clip list refreshes after any add/update/delete operation",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "When building a project in the GUI, users need to add video clips from their library, adjust clip boundaries, and remove clips without switching to API calls or external tools.",
       "implemented_in_version": null,
       "implemented_in_theme": null,
       "upvotes": 0
