@@ -1,0 +1,15 @@
+{
+  "exploration_id": "rca-synthesis-1771848296497",
+  "results_folder": "rca-synthesis",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T12:04:56.497504",
+  "updated_at": "2026-02-23T12:04:56.497504",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/rca-synthesis/prompt.md",
+  "outbox_path": "comms/outbox/exploration/rca-synthesis"
+}

@@ -1,14 +1,18 @@
 {
   "exploration_id": "rca-no-env-example-1771845812817",
   "results_folder": "rca-no-env-example",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T11:23:32.817519",
-  "updated_at": "2026-02-23T11:23:34.893899",
-  "completed_at": null,
+  "updated_at": "2026-02-23T11:29:02.793670",
+  "completed_at": "2026-02-23T11:29:02.793279",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "evidence-trail.md",
+    "recommendations.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/rca-no-env-example/prompt.md",
   "outbox_path": "comms/outbox/exploration/rca-no-env-example"
