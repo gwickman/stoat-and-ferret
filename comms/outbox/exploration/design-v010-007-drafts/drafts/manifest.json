@@ -1,0 +1,62 @@
+{
+  "version": "v010",
+  "description": "Fix the P0 async blocking bug, add CI guardrails to prevent recurrence, then build user-facing job progress and cancellation on the working pipeline.",
+  "backlog_ids": ["BL-072", "BL-073", "BL-074", "BL-077", "BL-078"],
+  "context": {
+    "rationale": "BL-072 (P0) blocks all async-dependent features. Fixing it first restores event-loop correctness, enabling CI guardrails (BL-077, BL-078) and user-facing controls (BL-073, BL-074). Theme grouping by root cause (async fix) and modification point (job controls) minimizes merge conflicts.",
+    "constraints": [
+      "Python >=3.10 compatibility required (asyncio.Event, create_subprocess_exec)",
+      "Theme 2 depends on Theme 1 completing — progress/cancellation need a working event loop",
+      "No new create_app() kwargs — progress and cancellation are internal to job queue",
+      "Frontend already reads progress field — only backend population needed"
+    ],
+    "assumptions": [
+      "Only health.py:96 triggers ASYNC221 beyond the BL-072 target (verified)",
+      "asyncio.Event creation is safe in _AsyncJobEntry (verified — only created inside async def submit())",
+      "2-second responsiveness threshold is adequate for in-process ASGI transport",
+      "Two new scan_directory() parameters is within KISS/YAGNI bounds"
+    ],
+    "deferred_items": []
+  },
+  "themes": [
+    {
+      "number": 1,
+      "slug": "async-pipeline-fix",
+      "goal": "Fix the P0 blocking subprocess.run() in ffprobe that freezes the asyncio event loop during scans, then add CI guardrails and an integration test to prevent recurrence.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "fix-blocking-ffprobe",
+          "goal": "Convert ffprobe_video() from blocking subprocess.run() to async create_subprocess_exec()"
+        },
+        {
+          "number": 2,
+          "slug": "async-blocking-ci-gate",
+          "goal": "Add ruff ASYNC rules to detect blocking calls in async functions at CI time"
+        },
+        {
+          "number": 3,
+          "slug": "event-loop-responsiveness-test",
+          "goal": "Integration test verifying the event loop stays responsive during scan"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "slug": "job-controls",
+      "goal": "Add user-facing job progress reporting and cooperative cancellation to the scan pipeline, extending AsyncioJobQueue and wiring through to the frontend.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "progress-reporting",
+          "goal": "Add progress tracking to job queue and wire through scan handler to frontend"
+        },
+        {
+          "number": 2,
+          "slug": "job-cancellation",
+          "goal": "Add cooperative cancellation with cancel endpoint and partial results"
+        }
+      ]
+    }
+  ]
+}
