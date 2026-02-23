@@ -1,10 +1,10 @@
 {
   "exploration_id": "design-v010-005-logical-1771870620797",
   "results_folder": "design-v010-005-logical",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10340,
   "started_at": "2026-02-23T18:17:00.797836",
-  "updated_at": "2026-02-23T18:17:00.797836",
+  "updated_at": "2026-02-23T18:17:02.759746",
   "completed_at": null,
   "error": null,
   "documents": [],
