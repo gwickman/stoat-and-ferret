@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -112,6 +112,7 @@ def test_full_async_scan_workflow(client: TestClient, tmp_path: Path) -> None:
 
     with patch(
         "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
         return_value=mock_metadata,
     ):
         # Step 1: Submit scan

@@ -151,7 +151,7 @@ async def scan_directory(
             existing = await repository.get_by_path(str_path)
 
             # Probe video metadata
-            metadata = ffprobe_video(str_path)
+            metadata = await ffprobe_video(str_path)
 
             video_id = existing.id if existing else Video.new_id()
 

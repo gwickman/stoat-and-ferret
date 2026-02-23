@@ -93,9 +93,9 @@ class TestFFprobeVideoContract:
     with the actual ffprobe binary.
     """
 
-    def test_ffprobe_video_success(self, sample_video_path: Path) -> None:
+    async def test_ffprobe_video_success(self, sample_video_path: Path) -> None:
         """Test ffprobe_video returns correct metadata for a sample video."""
-        metadata = ffprobe_video(str(sample_video_path))
+        metadata = await ffprobe_video(str(sample_video_path))
 
         assert metadata.width == 320
         assert metadata.height == 240
@@ -107,18 +107,18 @@ class TestFFprobeVideoContract:
         assert metadata.audio_codec == "aac"
         assert metadata.file_size > 0
 
-    def test_ffprobe_video_no_audio(self, video_only_path: Path) -> None:
+    async def test_ffprobe_video_no_audio(self, video_only_path: Path) -> None:
         """Test ffprobe_video handles video without audio stream."""
-        metadata = ffprobe_video(str(video_only_path))
+        metadata = await ffprobe_video(str(video_only_path))
 
         assert metadata.width == 320
         assert metadata.height == 240
         assert metadata.video_codec == "h264"
         assert metadata.audio_codec is None
 
-    def test_ffprobe_video_duration_frames(self, sample_video_path: Path) -> None:
+    async def test_ffprobe_video_duration_frames(self, sample_video_path: Path) -> None:
         """Test duration_frames is correctly computed."""
-        metadata = ffprobe_video(str(sample_video_path))
+        metadata = await ffprobe_video(str(sample_video_path))
 
         # 1 second at 24 fps should be approximately 24 frames
         assert 20 <= metadata.duration_frames <= 28
@@ -127,37 +127,37 @@ class TestFFprobeVideoContract:
 class TestFFprobeVideoErrors:
     """Tests for ffprobe_video error handling."""
 
-    def test_file_not_found(self) -> None:
+    async def test_file_not_found(self) -> None:
         """Test FileNotFoundError raised for non-existent file."""
         with pytest.raises(FileNotFoundError, match="not found"):
-            ffprobe_video("/nonexistent/path/to/video.mp4")
+            await ffprobe_video("/nonexistent/path/to/video.mp4")
 
-    def test_ffprobe_not_installed(self, tmp_path: Path) -> None:
+    async def test_ffprobe_not_installed(self, tmp_path: Path) -> None:
         """Test FFprobeError raised when ffprobe binary not found."""
         # Create a file to avoid FileNotFoundError
         video_file = tmp_path / "video.mp4"
         video_file.write_bytes(b"not a real video")
 
         with pytest.raises(FFprobeError, match="ffprobe not found"):
-            ffprobe_video(str(video_file), ffprobe_path="/nonexistent/ffprobe")
+            await ffprobe_video(str(video_file), ffprobe_path="/nonexistent/ffprobe")
 
     @requires_ffprobe
-    def test_not_a_video_file(self, tmp_path: Path) -> None:
+    async def test_not_a_video_file(self, tmp_path: Path) -> None:
         """Test ValueError raised for non-video file."""
         text_file = tmp_path / "test.txt"
         text_file.write_text("this is not a video file")
 
         with pytest.raises((ValueError, FFprobeError)):
-            ffprobe_video(str(text_file))
+            await ffprobe_video(str(text_file))
 
     @requires_ffprobe
-    def test_empty_file(self, tmp_path: Path) -> None:
+    async def test_empty_file(self, tmp_path: Path) -> None:
         """Test error handling for empty file."""
         empty_file = tmp_path / "empty.mp4"
         empty_file.write_bytes(b"")
 
         with pytest.raises((ValueError, FFprobeError)):
-            ffprobe_video(str(empty_file))
+            await ffprobe_video(str(empty_file))
 
 
 class TestFFprobeExports:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -302,6 +302,7 @@ def test_scan_finds_video_files(client: TestClient, tmp_path: Path) -> None:
 
     with patch(
         "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
         return_value=mock_metadata,
     ):
         job_id = _submit_scan(client, str(tmp_path))
@@ -328,6 +329,7 @@ def test_scan_recursive(client: TestClient, tmp_path: Path) -> None:
 
     with patch(
         "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
         return_value=mock_metadata,
     ):
         job_id = _submit_scan(client, str(tmp_path), recursive=True)
@@ -351,6 +353,7 @@ def test_scan_non_recursive(client: TestClient, tmp_path: Path) -> None:
 
     with patch(
         "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
         return_value=mock_metadata,
     ):
         job_id = _submit_scan(client, str(tmp_path), recursive=False)
@@ -382,6 +385,7 @@ async def test_scan_updates_existing_videos(
 
     with patch(
         "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
         return_value=mock_metadata,
     ):
         job_id = _submit_scan(client, str(tmp_path))
@@ -402,7 +406,7 @@ def test_scan_handles_errors_gracefully(client: TestClient, tmp_path: Path) -> N
 
     mock_metadata = _make_mock_metadata()
 
-    def mock_probe(path: str) -> VideoMetadata:
+    async def mock_probe(path: str) -> VideoMetadata:
         if "bad" in path:
             raise ValueError("Probe failed")
         return mock_metadata
@@ -432,6 +436,7 @@ def test_scan_returns_summary(client: TestClient, tmp_path: Path) -> None:
 
     with patch(
         "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
         return_value=mock_metadata,
     ):
         job_id = _submit_scan(client, str(tmp_path))
