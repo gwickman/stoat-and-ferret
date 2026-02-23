@@ -4,6 +4,45 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v010] - 2026-02-23
+
+Async Pipeline Fix & Job Controls. Fixes the P0 blocking subprocess.run() in ffprobe that froze the asyncio event loop during scans, adds CI guardrails and runtime regression tests to prevent recurrence, then builds user-facing job progress reporting and cooperative cancellation on the working pipeline.
+
+### Added
+
+- **Async FFprobe**
+  - `ffprobe_video()` converted from blocking `subprocess.run()` to `asyncio.create_subprocess_exec()` with timeout and process cleanup
+  - 30-second configurable timeout with proper process termination on timeout/cancellation
+
+- **Async Blocking CI Gate**
+  - Ruff ASYNC rules (ASYNC210, ASYNC221, ASYNC230) enabled to detect blocking calls in async functions at CI time
+  - `_check_ffmpeg()` in health.py wrapped with `asyncio.to_thread()` to comply with new rules
+
+- **Event-Loop Responsiveness Test**
+  - Integration test verifying asyncio event loop stays responsive (< 2s jitter) during directory scans
+  - Uses production `AsyncioJobQueue` to exercise real async concurrency
+
+- **Job Progress Reporting**
+  - `progress` field added to job entries (percentage, current file index, total files)
+  - Scan handler reports per-file progress via `progress_callback`
+  - Progress exposed via `GET /api/v1/jobs/{id}` endpoint
+
+- **Cooperative Job Cancellation**
+  - `cancel_event` (`asyncio.Event`) for cooperative cancellation signaling
+  - `POST /api/v1/jobs/{id}/cancel` endpoint with 200/404/409 status codes
+  - Scan handler checks cancellation at per-file checkpoints, saves partial results
+  - Frontend abort button with Vitest test coverage
+
+### Changed
+
+- `scan_directory()` pre-collects video files for accurate progress total instead of lazy glob iteration
+- `AsyncJobQueue` Protocol extended with `set_progress()` and `cancel()` methods
+- `InMemoryJobQueue` updated with no-op stubs for new protocol methods
+
+### Fixed
+
+- P0: `ffprobe_video()` no longer freezes the asyncio event loop during directory scans (BL-072)
+
 ## [v009] - 2026-02-22
 
 Observability Pipeline & GUI Runtime Fixes. Wires pre-existing observability components (FFmpeg metrics, audit logging, file-based logs) into the application's DI chain and startup sequence, and fixes three GUI runtime gaps (SPA routing fallback, projects pagination, WebSocket broadcasts).

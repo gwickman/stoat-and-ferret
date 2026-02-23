@@ -1,0 +1,15 @@
+{
+  "exploration_id": "c4-v010-regen-1771888692418",
+  "results_folder": "c4-v010-regen",
+  "status": "complete",
+  "pid": 11184,
+  "started_at": "2026-02-23T23:18:12.418644",
+  "updated_at": "2026-02-23T23:19:10.363444",
+  "completed_at": "2026-02-23T23:19:10.363159",
+  "error": null,
+  "documents": [],
+  "committed": true,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/c4-v010-regen/prompt.md",
+  "outbox_path": "comms/outbox/exploration/c4-v010-regen"
+}

@@ -19,15 +19,15 @@
     {
       "number": 2,
       "name": "job-controls",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 2,
       "features_complete": 2,
       "started_at": "2026-02-23T22:46:58.835517Z",
-      "completed_at": null,
+      "completed_at": "2026-02-23T23:18:12.374404Z",
       "skip_reason": null
     }
   ],
-  "current_theme": 2,
-  "current_feature": 2,
+  "current_theme": 3,
+  "current_feature": 1,
   "baseline_failures": []
 }
