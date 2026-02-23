@@ -1,14 +1,19 @@
 {
   "exploration_id": "rca-synthesis-1771848296497",
   "results_folder": "rca-synthesis",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T12:04:56.497504",
-  "updated_at": "2026-02-23T12:04:58.497222",
-  "completed_at": null,
+  "updated_at": "2026-02-23T12:10:16.453918",
+  "completed_at": "2026-02-23T12:10:16.453455",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "critical-review.md",
+    "process-analysis.md",
+    "remediation-plan.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/rca-synthesis/prompt.md",
   "outbox_path": "comms/outbox/exploration/rca-synthesis"
