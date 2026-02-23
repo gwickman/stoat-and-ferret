@@ -1,6 +1,6 @@
 {
-  "next_id": 76,
-  "updated_at": "2026-02-23T10:21:43.862788",
+  "next_id": 80,
+  "updated_at": "2026-02-23T16:29:09.762866",
   "items": [
     {
       "id": "BL-001",
@@ -2923,6 +2923,171 @@
       ],
       "notes": null,
       "use_case": "When building a project in the GUI, users need to add video clips from their library, adjust clip boundaries, and remove clips without switching to API calls or external tools.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-076",
+      "title": "Create IMPACT_ASSESSMENT.md with project-specific design checks",
+      "priority": "P1",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T16:28:29.243036",
+      "completed_at": null,
+      "tags": [
+        "process",
+        "auto-dev",
+        "impact-assessment",
+        "rca"
+      ],
+      "description": "stoat-and-ferret has no IMPACT_ASSESSMENT.md, so the auto-dev design phase runs no project-specific checks. RCA analysis identified four recurring issue patterns that project-specific impact assessment checks would catch at design time: (1) blocking subprocess calls in async context (caused the ffprobe event-loop freeze), (2) Settings fields added without .env.example updates (9 versions without .env.example), (3) features consuming prior-version backends without verifying they work (progress bar assumed v004 progress worked \u2014 it didn't), (4) GUI features with text-only input where richer mechanisms are standard (scan directory path with no browse button).",
+      "acceptance_criteria": [
+        {
+          "text": "IMPACT_ASSESSMENT.md exists at docs/auto-dev/IMPACT_ASSESSMENT.md",
+          "done": false
+        },
+        {
+          "text": "Contains async safety check: flag features that introduce or modify subprocess.run/call/check_output or time.sleep inside files containing async def",
+          "done": false
+        },
+        {
+          "text": "Contains settings documentation check: if a version adds or modifies Settings fields, verify .env.example is updated",
+          "done": false
+        },
+        {
+          "text": "Contains cross-version wiring assumptions check: when features depend on behavior from prior versions, list assumptions explicitly",
+          "done": false
+        },
+        {
+          "text": "Contains GUI input mechanism check: for GUI features accepting user input, verify appropriate input mechanisms are specified",
+          "done": false
+        },
+        {
+          "text": "Each check section includes what to look for, why it matters, and a concrete example from project history",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": "During version design, the auto-dev impact assessment step reads this file and executes project-specific checks, catching recurring issue patterns before they reach implementation.",
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-077",
+      "title": "Add CI quality gate for blocking calls in async context",
+      "priority": "P2",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T16:28:45.639783",
+      "completed_at": null,
+      "tags": [
+        "ci",
+        "quality-gates",
+        "async",
+        "lint",
+        "rca"
+      ],
+      "description": "No automated check exists to detect synchronous blocking calls inside async code. Ruff, mypy, and pytest all pass despite `subprocess.run()` being called from an async scan handler, which froze the entire asyncio event loop. Two additional `subprocess.run()` calls exist in `src/` (executor.py:96, health.py:96) \u2014 one will cause the same problem when render jobs use the async job queue. A grep-based CI script (~20 lines) scanning for blocking calls in files containing `async def` would catch this entire class of bug at CI time.",
+      "acceptance_criteria": [
+        {
+          "text": "A CI script or quality gate check exists that scans Python source files for blocking calls (subprocess.run, subprocess.call, subprocess.check_output, time.sleep) inside files that also contain async def",
+          "done": false
+        },
+        {
+          "text": "The check runs as part of the existing quality gates (alongside ruff, mypy, pytest)",
+          "done": false
+        },
+        {
+          "text": "The check fails with a clear error message identifying the file, line number, and the blocking call",
+          "done": false
+        },
+        {
+          "text": "The check passes on the current codebase after BL-072 is fixed (async ffprobe)",
+          "done": false
+        },
+        {
+          "text": "False positives for legitimate sync-only files are avoided by only flagging files containing async def",
+          "done": false
+        }
+      ],
+      "notes": "Depends on BL-072 (fix blocking ffprobe) being completed first, otherwise the check would immediately fail on the known bug.",
+      "use_case": null,
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-078",
+      "title": "Add event-loop responsiveness integration test for scan pipeline",
+      "priority": "P2",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T16:28:57.593655",
+      "completed_at": null,
+      "tags": [
+        "testing",
+        "integration",
+        "async",
+        "scan",
+        "rca"
+      ],
+      "description": "All current scan tests mock `ffprobe_video()`, making the blocking behavior that caused the \"scan hangs forever\" bug invisible to the test suite. No integration test verifies that the server remains responsive during a scan. An event-loop responsiveness test that uses real or simulated-slow subprocess calls (not mocks) would have caught the ffprobe blocking bug and would serve as a regression guard against future async/blocking issues in the scan pipeline.",
+      "acceptance_criteria": [
+        {
+          "text": "An integration test exists that starts a directory scan with multiple files requiring real or simulated-slow processing",
+          "done": false
+        },
+        {
+          "text": "While the scan runs, the test verifies that GET /api/v1/jobs/{id} responds within 2 seconds",
+          "done": false
+        },
+        {
+          "text": "The test does NOT mock ffprobe_video \u2014 it must exercise real or simulated subprocess behavior to detect event-loop blocking",
+          "done": false
+        },
+        {
+          "text": "The test fails if the event loop is starved (i.e. if blocking subprocess calls prevent polling responses)",
+          "done": false
+        },
+        {
+          "text": "The test passes after BL-072 (async ffprobe) is implemented",
+          "done": false
+        }
+      ],
+      "notes": "Depends on BL-072 (fix blocking ffprobe) \u2014 this test validates the fix and prevents regression. Should be implemented alongside or after BL-072.",
+      "use_case": null,
+      "implemented_in_version": null,
+      "implemented_in_theme": null,
+      "upvotes": 0
+    },
+    {
+      "id": "BL-079",
+      "title": "Fix API spec examples to show realistic progress values for running jobs",
+      "priority": "P3",
+      "status": "open",
+      "size": "l",
+      "added": "2026-02-23T16:29:09.762859",
+      "completed_at": null,
+      "tags": [
+        "documentation",
+        "api-spec",
+        "rca"
+      ],
+      "description": "The API specification at `docs/design/05-api-specification.md` (lines 280-361) shows `\"progress\": null` in the running-state job status example. This normalized null progress as the correct behavior for running jobs, making it appear correct to implementors when the field was never actually populated. The spec examples should show realistic values for all states to set correct implementor expectations.",
+      "acceptance_criteria": [
+        {
+          "text": "The running-state job example in docs/design/05-api-specification.md shows a realistic progress value (e.g. 0.45) instead of null",
+          "done": false
+        },
+        {
+          "text": "All job status examples across the spec show realistic field values for their respective states",
+          "done": false
+        }
+      ],
+      "notes": null,
+      "use_case": null,
       "implemented_in_version": null,
       "implemented_in_theme": null,
       "upvotes": 0

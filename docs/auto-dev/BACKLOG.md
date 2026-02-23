@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-23 10:21*
+*Last updated: 2026-02-23 16:29*
 
 **Total completed:** 59 | **Cancelled:** 0
 
@@ -9,9 +9,9 @@
 | Priority | Name | Count |
 |----------|------|-------|
 | P0 | Critical | 1 |
-| P1 | High | 3 |
-| P2 | Medium | 4 |
-| P3 | Low | 4 |
+| P1 | High | 4 |
+| P2 | Medium | 6 |
+| P3 | Low | 5 |
 
 ## Quick Reference
 
@@ -21,14 +21,18 @@
 | <a id="bl-073-ref"></a>[BL-073](#bl-073) | P1 | l | Add progress reporting to job queue and scan handler | The job queue (`AsyncioJobQueue`), job result model (`Job... |
 | <a id="bl-074-ref"></a>[BL-074](#bl-074) | P1 | m | Implement job cancellation support for scan and job queue | The `AsyncioJobQueue` has no `cancel()` method, no cancel... |
 | <a id="bl-075-ref"></a>[BL-075](#bl-075) | P1 | l | Add clip management controls (Add/Edit/Delete) to project GUI | The GUI currently displays clips in a read-only table on ... |
+| <a id="bl-076-ref"></a>[BL-076](#bl-076) | P1 | l | Create IMPACT_ASSESSMENT.md with project-specific design checks | stoat-and-ferret has no IMPACT_ASSESSMENT.md, so the auto... |
 | <a id="bl-061-ref"></a>[BL-061](#bl-061) | P2 | l | Wire or remove execute_command() Rust-Python FFmpeg bridge | **Current state:** `execute_command()` was built in v002/... |
 | <a id="bl-069-ref"></a>[BL-069](#bl-069) | P2 | xl | Update C4 architecture documentation for v009 changes | C4 documentation was last generated for v008. v009 introd... |
 | <a id="bl-070-ref"></a>[BL-070](#bl-070) | P2 | m | Add Browse button for scan directory path selection | Currently the Scan Directory feature requires users to ma... |
 | <a id="bl-071-ref"></a>[BL-071](#bl-071) | P2 | m | Add .env.example file for environment configuration template | The project has no .env.example file to guide new develop... |
+| <a id="bl-077-ref"></a>[BL-077](#bl-077) | P2 | l | Add CI quality gate for blocking calls in async context | No automated check exists to detect synchronous blocking ... |
+| <a id="bl-078-ref"></a>[BL-078](#bl-078) | P2 | l | Add event-loop responsiveness integration test for scan pipeline | All current scan tests mock `ffprobe_video()`, making the... |
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-066-ref"></a>[BL-066](#bl-066) | P3 | l | Add transition support to Effect Workshop GUI | **Current state:** `POST /projects/{id}/effects/transitio... |
 | <a id="bl-067-ref"></a>[BL-067](#bl-067) | P3 | l | Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization) | **Current state:** Several Rust functions are exposed via... |
 | <a id="bl-068-ref"></a>[BL-068](#bl-068) | P3 | l | Audit and trim unused PyO3 bindings from v006 filter engine | **Current state:** Three v006 filter engine features (Exp... |
+| <a id="bl-079-ref"></a>[BL-079](#bl-079) | P3 | l | Fix API spec examples to show realistic progress values for running jobs | The API specification at `docs/design/05-api-specificatio... |
 
 ## Tags Summary
 
@@ -36,13 +40,15 @@
 |-----|-------|-------|
 | user-feedback | 6 | BL-070, BL-071, BL-072, BL-073, ... |
 | gui | 5 | BL-066, BL-070, BL-073, BL-074, ... |
+| scan | 4 | BL-072, BL-073, BL-074, BL-078 |
+| rca | 4 | BL-076, BL-077, BL-078, BL-079 |
 | wiring-gap | 3 | BL-061, BL-066, BL-075 |
 | rust-python | 3 | BL-061, BL-067, BL-068 |
-| scan | 3 | BL-072, BL-073, BL-074 |
+| documentation | 3 | BL-069, BL-071, BL-079 |
+| async | 3 | BL-072, BL-077, BL-078 |
 | ffmpeg | 2 | BL-061, BL-072 |
 | dead-code | 2 | BL-067, BL-068 |
 | api-surface | 2 | BL-067, BL-068 |
-| documentation | 2 | BL-069, BL-071 |
 | ux | 2 | BL-070, BL-073 |
 | jobs | 2 | BL-073, BL-074 |
 | windows | 1 | BL-019 |
@@ -56,10 +62,18 @@
 | devex | 1 | BL-071 |
 | onboarding | 1 | BL-071 |
 | bug | 1 | BL-072 |
-| async | 1 | BL-072 |
 | api | 1 | BL-074 |
 | clips | 1 | BL-075 |
 | crud | 1 | BL-075 |
+| process | 1 | BL-076 |
+| auto-dev | 1 | BL-076 |
+| impact-assessment | 1 | BL-076 |
+| ci | 1 | BL-077 |
+| quality-gates | 1 | BL-077 |
+| lint | 1 | BL-077 |
+| testing | 1 | BL-078 |
+| integration | 1 | BL-078 |
+| api-spec | 1 | BL-079 |
 
 ## Tag Conventions
 
@@ -191,6 +205,25 @@ The GUI currently displays clips in a read-only table on the ProjectDetails page
 
 [↑ Back to list](#bl-075-ref)
 
+#### 📋 BL-076: Create IMPACT_ASSESSMENT.md with project-specific design checks
+
+**Status:** open
+**Tags:** process, auto-dev, impact-assessment, rca
+
+stoat-and-ferret has no IMPACT_ASSESSMENT.md, so the auto-dev design phase runs no project-specific checks. RCA analysis identified four recurring issue patterns that project-specific impact assessment checks would catch at design time: (1) blocking subprocess calls in async context (caused the ffprobe event-loop freeze), (2) Settings fields added without .env.example updates (9 versions without .env.example), (3) features consuming prior-version backends without verifying they work (progress bar assumed v004 progress worked — it didn't), (4) GUI features with text-only input where richer mechanisms are standard (scan directory path with no browse button).
+
+**Use Case:** During version design, the auto-dev impact assessment step reads this file and executes project-specific checks, catching recurring issue patterns before they reach implementation.
+
+**Acceptance Criteria:**
+- [ ] IMPACT_ASSESSMENT.md exists at docs/auto-dev/IMPACT_ASSESSMENT.md
+- [ ] Contains async safety check: flag features that introduce or modify subprocess.run/call/check_output or time.sleep inside files containing async def
+- [ ] Contains settings documentation check: if a version adds or modifies Settings fields, verify .env.example is updated
+- [ ] Contains cross-version wiring assumptions check: when features depend on behavior from prior versions, list assumptions explicitly
+- [ ] Contains GUI input mechanism check: for GUI features accepting user input, verify appropriate input mechanisms are specified
+- [ ] Each check section includes what to look for, why it matters, and a concrete example from project history
+
+[↑ Back to list](#bl-076-ref)
+
 ### P2: Medium
 
 #### 📋 BL-061: Wire or remove execute_command() Rust-Python FFmpeg bridge
@@ -277,6 +310,42 @@ The project has no .env.example file to guide new developers or users through en
 
 [↑ Back to list](#bl-071-ref)
 
+#### 📋 BL-077: Add CI quality gate for blocking calls in async context
+
+**Status:** open
+**Tags:** ci, quality-gates, async, lint, rca
+
+No automated check exists to detect synchronous blocking calls inside async code. Ruff, mypy, and pytest all pass despite `subprocess.run()` being called from an async scan handler, which froze the entire asyncio event loop. Two additional `subprocess.run()` calls exist in `src/` (executor.py:96, health.py:96) — one will cause the same problem when render jobs use the async job queue. A grep-based CI script (~20 lines) scanning for blocking calls in files containing `async def` would catch this entire class of bug at CI time.
+
+**Acceptance Criteria:**
+- [ ] A CI script or quality gate check exists that scans Python source files for blocking calls (subprocess.run, subprocess.call, subprocess.check_output, time.sleep) inside files that also contain async def
+- [ ] The check runs as part of the existing quality gates (alongside ruff, mypy, pytest)
+- [ ] The check fails with a clear error message identifying the file, line number, and the blocking call
+- [ ] The check passes on the current codebase after BL-072 is fixed (async ffprobe)
+- [ ] False positives for legitimate sync-only files are avoided by only flagging files containing async def
+
+**Notes:** Depends on BL-072 (fix blocking ffprobe) being completed first, otherwise the check would immediately fail on the known bug.
+
+[↑ Back to list](#bl-077-ref)
+
+#### 📋 BL-078: Add event-loop responsiveness integration test for scan pipeline
+
+**Status:** open
+**Tags:** testing, integration, async, scan, rca
+
+All current scan tests mock `ffprobe_video()`, making the blocking behavior that caused the "scan hangs forever" bug invisible to the test suite. No integration test verifies that the server remains responsive during a scan. An event-loop responsiveness test that uses real or simulated-slow subprocess calls (not mocks) would have caught the ffprobe blocking bug and would serve as a regression guard against future async/blocking issues in the scan pipeline.
+
+**Acceptance Criteria:**
+- [ ] An integration test exists that starts a directory scan with multiple files requiring real or simulated-slow processing
+- [ ] While the scan runs, the test verifies that GET /api/v1/jobs/{id} responds within 2 seconds
+- [ ] The test does NOT mock ffprobe_video — it must exercise real or simulated subprocess behavior to detect event-loop blocking
+- [ ] The test fails if the event loop is starved (i.e. if blocking subprocess calls prevent polling responses)
+- [ ] The test passes after BL-072 (async ffprobe) is implemented
+
+**Notes:** Depends on BL-072 (fix blocking ffprobe) — this test validates the fix and prevents regression. Should be implemented alongside or after BL-072.
+
+[↑ Back to list](#bl-078-ref)
+
 ### P3: Low
 
 #### 📋 BL-019: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore
@@ -345,3 +414,16 @@ Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore
 - [ ] Parity tests are updated to reflect any binding changes
 
 [↑ Back to list](#bl-068-ref)
+
+#### 📋 BL-079: Fix API spec examples to show realistic progress values for running jobs
+
+**Status:** open
+**Tags:** documentation, api-spec, rca
+
+The API specification at `docs/design/05-api-specification.md` (lines 280-361) shows `"progress": null` in the running-state job status example. This normalized null progress as the correct behavior for running jobs, making it appear correct to implementors when the field was never actually populated. The spec examples should show realistic values for all states to set correct implementor expectations.
+
+**Acceptance Criteria:**
+- [ ] The running-state job example in docs/design/05-api-specification.md shows a realistic progress value (e.g. 0.45) instead of null
+- [ ] All job status examples across the spec show realistic field values for their respective states
+
+[↑ Back to list](#bl-079-ref)

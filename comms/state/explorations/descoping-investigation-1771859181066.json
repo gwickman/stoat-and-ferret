@@ -1,14 +1,19 @@
 {
   "exploration_id": "descoping-investigation-1771859181066",
   "results_folder": "descoping-investigation",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T15:06:21.066422",
-  "updated_at": "2026-02-23T15:06:23.240340",
-  "completed_at": null,
+  "updated_at": "2026-02-23T15:12:02.946610",
+  "completed_at": "2026-02-23T15:12:02.946291",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "descoping-timeline.md",
+    "design-script-analysis.md",
+    "revised-recommendation.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/descoping-investigation/prompt.md",
   "outbox_path": "comms/outbox/exploration/descoping-investigation"
