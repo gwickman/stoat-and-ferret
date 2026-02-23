@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v010-007-drafts-1771871551704",
+  "results_folder": "design-v010-007-drafts",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T18:32:31.704868",
+  "updated_at": "2026-02-23T18:32:31.704868",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v010-007-drafts/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v010-007-drafts"
+}
