@@ -133,3 +133,38 @@ def test_full_async_scan_workflow(client: TestClient, tmp_path: Path) -> None:
     assert job["result"]["scanned"] == 1
     assert job["result"]["new"] == 1
     assert job["error"] is None
+
+
+@pytest.mark.api
+def test_job_status_response_includes_progress_field(client: TestClient, tmp_path: Path) -> None:
+    """GET /jobs/{id} response includes progress field."""
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": str(tmp_path)},
+    )
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    response = client.get(f"/api/v1/jobs/{job_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert "progress" in data
+
+
+@pytest.mark.api
+def test_job_status_progress_none_for_completed_empty_scan(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Progress is None for a completed job that scanned no files (no callback invoked)."""
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": str(tmp_path)},
+    )
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    response = client.get(f"/api/v1/jobs/{job_id}")
+    data = response.json()
+    assert data["status"] == "complete"
+    # InMemoryJobQueue is a no-op for set_progress, so progress stays None
+    assert data["progress"] is None

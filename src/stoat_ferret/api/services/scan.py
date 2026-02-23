@@ -18,6 +18,7 @@ from stoat_ferret.ffmpeg.probe import ffprobe_video
 if TYPE_CHECKING:
     from stoat_ferret.api.services.thumbnail import ThumbnailService
     from stoat_ferret.api.websocket.manager import ConnectionManager
+    from stoat_ferret.jobs.queue import AsyncJobQueue
 
 logger = structlog.get_logger(__name__)
 
@@ -56,6 +57,7 @@ def make_scan_handler(
     repository: AsyncVideoRepository,
     thumbnail_service: ThumbnailService | None = None,
     ws_manager: ConnectionManager | None = None,
+    queue: AsyncJobQueue | None = None,
 ) -> Callable[[str, dict[str, Any]], Awaitable[Any]]:
     """Create a scan job handler bound to a repository.
 
@@ -63,6 +65,7 @@ def make_scan_handler(
         repository: Video repository for storing scan results.
         thumbnail_service: Optional thumbnail service for generating thumbnails.
         ws_manager: Optional WebSocket manager for broadcasting scan events.
+        queue: Optional job queue for progress reporting.
 
     Returns:
         Async handler function compatible with the job queue.
@@ -79,6 +82,14 @@ def make_scan_handler(
             Scan results as a dict.
         """
         scan_path = payload["path"]
+        job_id = payload.get("_job_id")
+
+        # Build progress callback if queue and job_id are available
+        progress_callback: Callable[[float], None] | None = None
+        if queue and job_id:
+
+            def progress_callback(value: float) -> None:
+                queue.set_progress(job_id, value)
 
         if ws_manager:
             await ws_manager.broadcast(build_event(EventType.SCAN_STARTED, {"path": scan_path}))
@@ -88,6 +99,7 @@ def make_scan_handler(
             recursive=payload.get("recursive", True),
             repository=repository,
             thumbnail_service=thumbnail_service,
+            progress_callback=progress_callback,
         )
 
         if ws_manager:
@@ -108,6 +120,8 @@ async def scan_directory(
     recursive: bool,
     repository: AsyncVideoRepository,
     thumbnail_service: ThumbnailService | None = None,
+    *,
+    progress_callback: Callable[[float], None] | None = None,
 ) -> ScanResponse:
     """Scan directory for video files.
 
@@ -120,6 +134,7 @@ async def scan_directory(
         recursive: Whether to scan subdirectories.
         repository: Video repository for storing results.
         thumbnail_service: Optional thumbnail service for generating thumbnails.
+        progress_callback: Optional callback invoked with progress 0.0-1.0 after each file.
 
     Returns:
         ScanResponse with counts of scanned, new, updated, skipped files and errors.
@@ -127,7 +142,7 @@ async def scan_directory(
     Raises:
         ValueError: If path is not a valid directory.
     """
-    scanned = 0
+    processed = 0
     new = 0
     updated = 0
     errors: list[ScanError] = []
@@ -137,13 +152,13 @@ async def scan_directory(
         raise ValueError(f"Not a directory: {path}")
 
     pattern = "**/*" if recursive else "*"
-    for file_path in root.glob(pattern):
-        if not file_path.is_file():
-            continue
-        if file_path.suffix.lower() not in VIDEO_EXTENSIONS:
-            continue
+    video_files = [
+        f for f in root.glob(pattern) if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS
+    ]
+    total_files = len(video_files)
 
-        scanned += 1
+    for file_path in video_files:
+        processed += 1
         str_path = str(file_path.absolute())
 
         try:
@@ -187,6 +202,10 @@ async def scan_directory(
         except Exception as e:
             errors.append(ScanError(path=str_path, error=str(e)))
 
+        if progress_callback:
+            progress_callback(processed / total_files)
+
+    scanned = processed
     skipped = scanned - new - updated - len(errors)
 
     return ScanResponse(

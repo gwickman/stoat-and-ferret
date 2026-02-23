@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from stoat_ferret.api.services.scan import make_scan_handler, scan_directory
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.ffmpeg.probe import VideoMetadata
 from tests.test_repository_contract import make_test_video
@@ -533,3 +534,83 @@ async def test_delete_video_file_already_missing(
     assert response.status_code == 204
 
     assert await video_repository.get(video.id) is None
+
+
+# --- Progress callback tests ---
+
+
+@pytest.mark.api
+async def test_scan_directory_calls_progress_callback(tmp_path: Path) -> None:
+    """scan_directory calls progress callback after each file."""
+    (tmp_path / "a.mp4").touch()
+    (tmp_path / "b.mp4").touch()
+    (tmp_path / "c.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+    repo = AsyncInMemoryVideoRepository()
+    progress_values: list[float] = []
+
+    def on_progress(value: float) -> None:
+        progress_values.append(value)
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
+        return_value=mock_metadata,
+    ):
+        result = await scan_directory(
+            path=str(tmp_path),
+            recursive=True,
+            repository=repo,
+            progress_callback=on_progress,
+        )
+
+    assert result.scanned == 3
+    assert len(progress_values) == 3
+    assert progress_values[-1] == pytest.approx(1.0)
+    # Each value should be scanned/total
+    for i, val in enumerate(progress_values, 1):
+        assert val == pytest.approx(i / 3)
+
+
+@pytest.mark.api
+async def test_scan_directory_no_callback_no_error(tmp_path: Path) -> None:
+    """scan_directory works fine without a progress callback."""
+    (tmp_path / "video.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+    repo = AsyncInMemoryVideoRepository()
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
+        return_value=mock_metadata,
+    ):
+        result = await scan_directory(
+            path=str(tmp_path),
+            recursive=True,
+            repository=repo,
+        )
+
+    assert result.scanned == 1
+
+
+@pytest.mark.api
+async def test_make_scan_handler_wires_progress_to_queue(tmp_path: Path) -> None:
+    """make_scan_handler creates progress callback that calls queue.set_progress."""
+    (tmp_path / "video.mp4").touch()
+
+    mock_metadata = _make_mock_metadata()
+    repo = AsyncInMemoryVideoRepository()
+    mock_queue = MagicMock()
+
+    handler = make_scan_handler(repo, queue=mock_queue)
+
+    with patch(
+        "stoat_ferret.api.services.scan.ffprobe_video",
+        new_callable=AsyncMock,
+        return_value=mock_metadata,
+    ):
+        await handler("scan", {"path": str(tmp_path), "_job_id": "test-job-123"})
+
+    mock_queue.set_progress.assert_called_with("test-job-123", 1.0)

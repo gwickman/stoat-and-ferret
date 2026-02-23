@@ -121,3 +121,19 @@ class TestConfigurableOutcomes:
         result = await queue.get_result(job_id)
 
         assert result.status == JobStatus.FAILED
+
+
+class TestSetProgress:
+    """Tests for set_progress() no-op."""
+
+    async def test_set_progress_is_noop(self) -> None:
+        """set_progress does not raise and has no effect."""
+        queue = InMemoryJobQueue()
+        job_id = await queue.submit("render", {})
+        # Should not raise
+        queue.set_progress(job_id, 0.5)
+
+    async def test_set_progress_unknown_job_is_noop(self) -> None:
+        """set_progress with unknown job_id does not raise."""
+        queue = InMemoryJobQueue()
+        queue.set_progress("nonexistent", 0.5)
