@@ -2,9 +2,9 @@
   "schema_version": "2.0",
   "version": "v010",
   "description": "Fix the P0 async blocking bug, add CI guardrails to prevent recurrence, then build user-facing job progress and cancellation on the working pipeline.",
-  "status": "running",
+  "status": "completed",
   "started_at": "2026-02-23T20:10:54.288720Z",
-  "completed_at": null,
+  "completed_at": "2026-02-23T23:20:44.883334Z",
   "themes": [
     {
       "number": 1,
@@ -27,7 +27,7 @@
       "skip_reason": null
     }
   ],
-  "current_theme": 3,
-  "current_feature": 1,
+  "current_theme": null,
+  "current_feature": null,
   "baseline_failures": []
 }
