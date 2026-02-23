@@ -1,10 +1,10 @@
 {
   "exploration_id": "rca-no-env-example-1771845812817",
   "results_folder": "rca-no-env-example",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10340,
   "started_at": "2026-02-23T11:23:32.817519",
-  "updated_at": "2026-02-23T11:23:32.817519",
+  "updated_at": "2026-02-23T11:23:34.893899",
   "completed_at": null,
   "error": null,
   "documents": [],
