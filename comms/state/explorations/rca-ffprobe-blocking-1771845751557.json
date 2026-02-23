@@ -1,14 +1,18 @@
 {
   "exploration_id": "rca-ffprobe-blocking-1771845751557",
   "results_folder": "rca-ffprobe-blocking",
-  "status": "running",
+  "status": "complete",
   "pid": 10340,
   "started_at": "2026-02-23T11:22:31.557512",
-  "updated_at": "2026-02-23T11:22:33.943138",
-  "completed_at": null,
+  "updated_at": "2026-02-23T11:26:31.644313",
+  "completed_at": "2026-02-23T11:26:31.644020",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "evidence-trail.md",
+    "recommendations.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/rca-ffprobe-blocking/prompt.md",
   "outbox_path": "comms/outbox/exploration/rca-ffprobe-blocking"
