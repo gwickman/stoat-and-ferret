@@ -1,6 +1,6 @@
 {
   "next_id": 80,
-  "updated_at": "2026-02-23T17:59:59.739995",
+  "updated_at": "2026-02-23T23:48:17.787138",
   "items": [
     {
       "id": "BL-001",
@@ -2751,10 +2751,10 @@
       "id": "BL-072",
       "title": "Fix blocking subprocess.run() in ffprobe freezing async event loop",
       "priority": "P0",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T10:21:08.828051",
-      "completed_at": null,
+      "completed_at": "2026-02-23T23:48:13.360956",
       "tags": [
         "bug",
         "async",
@@ -2787,18 +2787,18 @@
       ],
       "notes": null,
       "use_case": "When a user scans a media directory, the server must remain responsive so progress polling, cancellation, and other API calls continue working throughout the scan.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v010",
+      "implemented_in_theme": "async-pipeline-fix",
       "upvotes": 0
     },
     {
       "id": "BL-073",
       "title": "Add progress reporting to job queue and scan handler",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T10:21:20.060973",
-      "completed_at": null,
+      "completed_at": "2026-02-23T23:48:14.473100",
       "tags": [
         "jobs",
         "scan",
@@ -2831,18 +2831,18 @@
       ],
       "notes": null,
       "use_case": "During a directory scan that may take minutes, users need to see real progress to know the operation is working and estimate remaining time.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v010",
+      "implemented_in_theme": "job-controls",
       "upvotes": 0
     },
     {
       "id": "BL-074",
       "title": "Implement job cancellation support for scan and job queue",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-02-23T10:21:31.138401",
-      "completed_at": null,
+      "completed_at": "2026-02-23T23:48:15.561851",
       "tags": [
         "jobs",
         "scan",
@@ -2875,8 +2875,8 @@
       ],
       "notes": null,
       "use_case": "When a user accidentally scans the wrong directory or needs to stop a long-running scan, they need the cancel button to actually work rather than being forced to restart the application.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v010",
+      "implemented_in_theme": "job-controls",
       "upvotes": 0
     },
     {
@@ -2978,10 +2978,10 @@
       "id": "BL-077",
       "title": "Add CI quality gate for blocking calls in async context",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T16:28:45.639783",
-      "completed_at": null,
+      "completed_at": "2026-02-23T23:48:16.751126",
       "tags": [
         "ci",
         "quality-gates",
@@ -3014,18 +3014,18 @@
       ],
       "notes": "Depends on BL-072 (fix blocking ffprobe) being completed first, otherwise the check would immediately fail on the known bug.",
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v010",
+      "implemented_in_theme": "async-pipeline-fix",
       "upvotes": 0
     },
     {
       "id": "BL-078",
       "title": "Add event-loop responsiveness integration test for scan pipeline",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T16:28:57.593655",
-      "completed_at": null,
+      "completed_at": "2026-02-23T23:48:17.787135",
       "tags": [
         "testing",
         "integration",
@@ -3058,8 +3058,8 @@
       ],
       "notes": "Depends on BL-072 (fix blocking ffprobe) \u2014 this test validates the fix and prevents regression. Should be implemented alongside or after BL-072.",
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v010",
+      "implemented_in_theme": "async-pipeline-fix",
       "upvotes": 0
     },
     {
@@ -3093,6 +3093,6 @@
       "upvotes": 0
     }
   ],
-  "completed_count": 59,
+  "completed_count": 64,
   "cancelled_count": 0
 }

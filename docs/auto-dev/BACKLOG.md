@@ -1,33 +1,28 @@
 # Project Backlog
 
-*Last updated: 2026-02-23 17:59*
+*Last updated: 2026-02-23 23:48*
 
-**Total completed:** 59 | **Cancelled:** 0
+**Total completed:** 64 | **Cancelled:** 0
 
 ## Priority Summary
 
 | Priority | Name | Count |
 |----------|------|-------|
-| P0 | Critical | 1 |
-| P1 | High | 4 |
-| P2 | Medium | 6 |
+| P0 | Critical | 0 |
+| P1 | High | 2 |
+| P2 | Medium | 4 |
 | P3 | Low | 5 |
 
 ## Quick Reference
 
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
-| <a id="bl-072-ref"></a>[BL-072](#bl-072) | P0 | l | Fix blocking subprocess.run() in ffprobe freezing async event loop | The `ffprobe_video()` function in `src/stoat_ferret/ffmpe... |
-| <a id="bl-073-ref"></a>[BL-073](#bl-073) | P1 | l | Add progress reporting to job queue and scan handler | The job queue (`AsyncioJobQueue`), job result model (`Job... |
-| <a id="bl-074-ref"></a>[BL-074](#bl-074) | P1 | m | Implement job cancellation support for scan and job queue | The `AsyncioJobQueue` has no `cancel()` method, no cancel... |
 | <a id="bl-075-ref"></a>[BL-075](#bl-075) | P1 | l | Add clip management controls (Add/Edit/Delete) to project GUI | The GUI currently displays clips in a read-only table on ... |
 | <a id="bl-076-ref"></a>[BL-076](#bl-076) | P1 | l | Create IMPACT_ASSESSMENT.md with project-specific design checks | stoat-and-ferret has no IMPACT_ASSESSMENT.md, so the auto... |
 | <a id="bl-061-ref"></a>[BL-061](#bl-061) | P2 | l | Wire or remove execute_command() Rust-Python FFmpeg bridge | **Current state:** `execute_command()` was built in v002/... |
 | <a id="bl-069-ref"></a>[BL-069](#bl-069) | P2 | xl | Update C4 architecture documentation for v009 changes | C4 documentation was last generated for v008. v009 introd... |
 | <a id="bl-070-ref"></a>[BL-070](#bl-070) | P2 | m | Add Browse button for scan directory path selection | Currently the Scan Directory feature requires users to ma... |
 | <a id="bl-071-ref"></a>[BL-071](#bl-071) | P2 | m | Add .env.example file for environment configuration template | The project has no .env.example file to guide new develop... |
-| <a id="bl-077-ref"></a>[BL-077](#bl-077) | P2 | l | Add CI quality gate for blocking calls in async context | No automated check exists to detect synchronous blocking ... |
-| <a id="bl-078-ref"></a>[BL-078](#bl-078) | P2 | l | Add event-loop responsiveness integration test for scan pipeline | All current scan tests mock `ffprobe_video()`, making the... |
 | <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
 | <a id="bl-066-ref"></a>[BL-066](#bl-066) | P3 | l | Add transition support to Effect Workshop GUI | **Current state:** `POST /projects/{id}/effects/transitio... |
 | <a id="bl-067-ref"></a>[BL-067](#bl-067) | P3 | l | Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization) | **Current state:** Several Rust functions are exposed via... |
@@ -38,41 +33,31 @@
 
 | Tag | Count | Items |
 |-----|-------|-------|
-| user-feedback | 6 | BL-070, BL-071, BL-072, BL-073, ... |
-| gui | 5 | BL-066, BL-070, BL-073, BL-074, ... |
-| scan | 4 | BL-072, BL-073, BL-074, BL-078 |
-| rca | 4 | BL-076, BL-077, BL-078, BL-079 |
 | wiring-gap | 3 | BL-061, BL-066, BL-075 |
 | rust-python | 3 | BL-061, BL-067, BL-068 |
+| gui | 3 | BL-066, BL-070, BL-075 |
 | documentation | 3 | BL-069, BL-071, BL-079 |
-| async | 3 | BL-072, BL-077, BL-078 |
-| ffmpeg | 2 | BL-061, BL-072 |
+| user-feedback | 3 | BL-070, BL-071, BL-075 |
 | dead-code | 2 | BL-067, BL-068 |
 | api-surface | 2 | BL-067, BL-068 |
-| ux | 2 | BL-070, BL-073 |
-| jobs | 2 | BL-073, BL-074 |
+| rca | 2 | BL-076, BL-079 |
 | windows | 1 | BL-019 |
 | agents-md | 1 | BL-019 |
 | gitignore | 1 | BL-019 |
+| ffmpeg | 1 | BL-061 |
 | effects | 1 | BL-066 |
 | transitions | 1 | BL-066 |
 | architecture | 1 | BL-069 |
 | c4 | 1 | BL-069 |
+| ux | 1 | BL-070 |
 | library | 1 | BL-070 |
 | devex | 1 | BL-071 |
 | onboarding | 1 | BL-071 |
-| bug | 1 | BL-072 |
-| api | 1 | BL-074 |
 | clips | 1 | BL-075 |
 | crud | 1 | BL-075 |
 | process | 1 | BL-076 |
 | auto-dev | 1 | BL-076 |
 | impact-assessment | 1 | BL-076 |
-| ci | 1 | BL-077 |
-| quality-gates | 1 | BL-077 |
-| lint | 1 | BL-077 |
-| testing | 1 | BL-078 |
-| integration | 1 | BL-078 |
 | api-spec | 1 | BL-079 |
 
 ## Tag Conventions
@@ -128,63 +113,7 @@ Tags like `v070-tech-debt` are acceptable temporarily to group related items fro
 
 ## Item Details
 
-### P0: Critical
-
-#### 📋 BL-072: Fix blocking subprocess.run() in ffprobe freezing async event loop
-
-**Status:** open
-**Tags:** bug, async, ffmpeg, scan, user-feedback
-
-The `ffprobe_video()` function in `src/stoat_ferret/ffmpeg/probe.py` uses synchronous `subprocess.run()` with a 30s timeout per file. This is called from the async scan handler, which blocks the entire asyncio event loop for the duration of each ffprobe call. While blocked, the server cannot handle any HTTP requests — including job status polling — making the scan appear completely frozen. This also makes `asyncio.wait_for()` timeout unreliable since the event loop has no opportunity to check it between blocking calls. This is the primary cause of the "scan directory hangs forever" bug.
-
-**Use Case:** When a user scans a media directory, the server must remain responsive so progress polling, cancellation, and other API calls continue working throughout the scan.
-
-**Acceptance Criteria:**
-- [ ] ffprobe_video() uses asyncio.create_subprocess_exec() or asyncio.to_thread() instead of blocking subprocess.run()
-- [ ] HTTP status polling endpoint remains responsive during an active scan job
-- [ ] asyncio.wait_for() job timeout fires reliably at the configured threshold
-- [ ] Existing ffprobe tests pass with the async implementation
-- [ ] Scan of a directory with multiple video files completes without blocking other API requests
-
-[↑ Back to list](#bl-072-ref)
-
 ### P1: High
-
-#### 📋 BL-073: Add progress reporting to job queue and scan handler
-
-**Status:** open
-**Tags:** jobs, scan, gui, ux, user-feedback
-
-The job queue (`AsyncioJobQueue`), job result model (`JobResult`), and job status response (`JobStatusResponse`) have no progress field. The scan handler processes files in a loop but never reports intermediate progress. The frontend polls job status but always receives `null` for progress, so the progress bar is permanently stuck at 0%. Users have no visibility into how far along a scan is or whether it's actually working.
-
-**Use Case:** During a directory scan that may take minutes, users need to see real progress to know the operation is working and estimate remaining time.
-
-**Acceptance Criteria:**
-- [ ] _AsyncJobEntry includes a progress field (0.0-1.0 float or integer percentage)
-- [ ] AsyncioJobQueue exposes a set_progress(job_id, value) method callable from within job handlers
-- [ ] Scan handler calls set_progress after each file, reporting scanned_count/total_files
-- [ ] GET /api/v1/jobs/{id} response includes a populated progress field during active jobs
-- [ ] Frontend ScanModal progress bar reflects actual scan progress in real time
-
-[↑ Back to list](#bl-073-ref)
-
-#### 📋 BL-074: Implement job cancellation support for scan and job queue
-
-**Status:** open
-**Tags:** jobs, scan, api, gui, user-feedback
-
-The `AsyncioJobQueue` has no `cancel()` method, no cancellation flag mechanism, and no cancel API endpoint. The scan handler's file processing loop has no cancellation check point. The frontend cancel button exists in ScanModal but has nothing to call — once a scan starts, the only way to stop it is to restart the server. Users are stuck waiting for potentially long scans with no way to abort.
-
-**Use Case:** When a user accidentally scans the wrong directory or needs to stop a long-running scan, they need the cancel button to actually work rather than being forced to restart the application.
-
-**Acceptance Criteria:**
-- [ ] AsyncioJobQueue has a cancel(job_id) method that sets a cancellation flag on the running job
-- [ ] A cancel API endpoint exists (DELETE /api/v1/jobs/{id} or POST /api/v1/jobs/{id}/cancel) returning appropriate status
-- [ ] Scan handler checks the cancellation flag between file iterations and exits cleanly when cancelled
-- [ ] Cancelled jobs report status 'cancelled' with partial results (files scanned so far are retained)
-- [ ] Frontend ScanModal cancel button calls the cancel endpoint and updates UI to reflect cancellation
-
-[↑ Back to list](#bl-074-ref)
 
 #### 📋 BL-075: Add clip management controls (Add/Edit/Delete) to project GUI
 
@@ -311,42 +240,6 @@ The project has no .env.example file to guide new developers or users through en
 - [ ] README or setup documentation references .env.example as part of the getting-started workflow
 
 [↑ Back to list](#bl-071-ref)
-
-#### 📋 BL-077: Add CI quality gate for blocking calls in async context
-
-**Status:** open
-**Tags:** ci, quality-gates, async, lint, rca
-
-No automated check exists to detect synchronous blocking calls inside async code. Ruff, mypy, and pytest all pass despite `subprocess.run()` being called from an async scan handler, which froze the entire asyncio event loop. Two additional `subprocess.run()` calls exist in `src/` (executor.py:96, health.py:96) — one will cause the same problem when render jobs use the async job queue. A grep-based CI script (~20 lines) scanning for blocking calls in files containing `async def` would catch this entire class of bug at CI time.
-
-**Acceptance Criteria:**
-- [ ] A CI script or quality gate check exists that scans Python source files for blocking calls (subprocess.run, subprocess.call, subprocess.check_output, time.sleep) inside files that also contain async def
-- [ ] The check runs as part of the existing quality gates (alongside ruff, mypy, pytest)
-- [ ] The check fails with a clear error message identifying the file, line number, and the blocking call
-- [ ] The check passes on the current codebase after BL-072 is fixed (async ffprobe)
-- [ ] False positives for legitimate sync-only files are avoided by only flagging files containing async def
-
-**Notes:** Depends on BL-072 (fix blocking ffprobe) being completed first, otherwise the check would immediately fail on the known bug.
-
-[↑ Back to list](#bl-077-ref)
-
-#### 📋 BL-078: Add event-loop responsiveness integration test for scan pipeline
-
-**Status:** open
-**Tags:** testing, integration, async, scan, rca
-
-All current scan tests mock `ffprobe_video()`, making the blocking behavior that caused the "scan hangs forever" bug invisible to the test suite. No integration test verifies that the server remains responsive during a scan. An event-loop responsiveness test that uses real or simulated-slow subprocess calls (not mocks) would have caught the ffprobe blocking bug and would serve as a regression guard against future async/blocking issues in the scan pipeline.
-
-**Acceptance Criteria:**
-- [ ] An integration test exists that starts a directory scan with multiple files requiring real or simulated-slow processing
-- [ ] While the scan runs, the test verifies that GET /api/v1/jobs/{id} responds within 2 seconds
-- [ ] The test does NOT mock ffprobe_video — it must exercise real or simulated subprocess behavior to detect event-loop blocking
-- [ ] The test fails if the event loop is starved (i.e. if blocking subprocess calls prevent polling responses)
-- [ ] The test passes after BL-072 (async ffprobe) is implemented
-
-**Notes:** Depends on BL-072 (fix blocking ffprobe) — this test validates the fix and prevents regression. Should be implemented alongside or after BL-072.
-
-[↑ Back to list](#bl-078-ref)
 
 ### P3: Low
 
