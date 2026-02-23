@@ -1,10 +1,10 @@
 {
   "exploration_id": "rca-no-progress-1771845764563",
   "results_folder": "rca-no-progress",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10340,
   "started_at": "2026-02-23T11:22:44.563873",
-  "updated_at": "2026-02-23T11:22:44.563873",
+  "updated_at": "2026-02-23T11:22:46.496786",
   "completed_at": null,
   "error": null,
   "documents": [],

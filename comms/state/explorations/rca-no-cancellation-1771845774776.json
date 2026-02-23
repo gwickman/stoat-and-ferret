@@ -1,0 +1,15 @@
+{
+  "exploration_id": "rca-no-cancellation-1771845774776",
+  "results_folder": "rca-no-cancellation",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-23T11:22:54.776972",
+  "updated_at": "2026-02-23T11:22:54.776972",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/rca-no-cancellation/prompt.md",
+  "outbox_path": "comms/outbox/exploration/rca-no-cancellation"
+}
