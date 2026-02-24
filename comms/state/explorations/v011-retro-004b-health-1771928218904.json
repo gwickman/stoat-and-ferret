@@ -1,10 +1,10 @@
 {
   "exploration_id": "v011-retro-004b-health-1771928218904",
   "results_folder": "v011-retro-004b-health",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 7596,
   "started_at": "2026-02-24T10:16:58.904282",
-  "updated_at": "2026-02-24T10:16:58.904282",
+  "updated_at": "2026-02-24T10:17:01.002472",
   "completed_at": null,
   "error": null,
   "documents": [],
