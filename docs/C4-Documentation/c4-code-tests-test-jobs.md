@@ -4,70 +4,64 @@
 
 - **Name**: Job Queue Tests
 - **Description**: Tests for the AsyncioJobQueue and worker lifecycle integration with FastAPI lifespan
-- **Location**: [tests/test_jobs/](../../tests/test_jobs/)
+- **Location**: `tests/test_jobs/`
 - **Language**: Python (pytest, asyncio)
-- **Purpose**: Validates job submission, status tracking, completion, failure, timeout behavior, and worker lifecycle management
-- **Parent Component**: [Test Infrastructure](./c4-component-test-infrastructure.md)
+- **Purpose**: Validates job submission, status tracking, completion, failure, timeout, cancellation behavior, and worker lifecycle management
+- **Parent Component**: TBD
 
 ## Code Elements
 
-### Test Inventory
+### Test Inventory (25 tests across 2 files)
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| test_asyncio_queue.py | 10 | AsyncioJobQueue submit, status, completion, failure, timeout |
+| test_asyncio_queue.py | 21 | AsyncioJobQueue submit, status, completion, failure, timeout, cancellation, progress |
 | test_worker.py | 4 | Worker cancellation, lifespan integration |
-| **Total** | **14** | **Job queue infrastructure** |
 
 ### test_asyncio_queue.py
 
 #### Test Handlers (Test Fixtures)
-- `_success_handler(job_type: str, payload: dict[str, Any]) -> dict[str, str]` (line 16)
-  - Returns immediately with success response
-
-- `_slow_handler(job_type: str, payload: dict[str, Any]) -> str` (line 21)
-  - Sleeps 10 seconds to trigger timeout during testing
-
-- `_failing_handler(job_type: str, payload: dict[str, Any]) -> None` (line 27)
-  - Raises RuntimeError to test failure handling
+- `_success_handler(job_type: str, payload: dict[str, Any]) -> dict[str, str]` -- Returns immediately with success
+- `_slow_handler(job_type: str, payload: dict[str, Any]) -> str` -- Sleeps 10s to trigger timeout
+- `_failing_handler(job_type: str, payload: dict[str, Any]) -> None` -- Raises RuntimeError
 
 #### Test Classes
 
-**TestSubmitAndStatus** (5 tests, lines 32-70)
-- `test_submit_returns_job_id()` — Verifies submit returns non-empty string ID
-- `test_submit_generates_unique_ids()` — Each submit creates different job IDs
-- `test_initial_status_is_pending()` — New jobs start in PENDING status
-- `test_get_status_unknown_job_raises()` — Raises KeyError for unknown job
-- `test_get_result_unknown_job_raises()` — Raises KeyError for unknown result
+**TestSubmitAndStatus** (5 tests)
+- `test_submit_returns_job_id()` -- Verifies submit returns non-empty string ID
+- `test_submit_generates_unique_ids()` -- Each submit creates different job IDs
+- `test_initial_status_is_pending()` -- New jobs start in PENDING status
+- `test_get_status_unknown_job_raises()` -- Raises KeyError for unknown job
+- `test_get_result_unknown_job_raises()` -- Raises KeyError for unknown result
 
-**TestJobCompletion** (2 tests, lines 72-119)
-- `test_job_completes_successfully()` — Worker processes job to COMPLETE status with result
-- `test_multiple_jobs_processed_in_order()` — Sequential job processing maintains order
+**TestJobCompletion** (2 tests)
+- `test_job_completes_successfully()` -- Worker processes job to COMPLETE status with result
+- `test_multiple_jobs_processed_in_order()` -- Sequential job processing maintains order
 
-**TestJobFailure** (2 tests, lines 121-161)
-- `test_handler_exception_sets_failed_status()` — Exception produces FAILED status + error message
-- `test_no_handler_sets_failed_status()` — Missing handler produces FAILED status
+**TestJobFailure** (2 tests)
+- `test_handler_exception_sets_failed_status()` -- Exception produces FAILED status + error message
+- `test_no_handler_sets_failed_status()` -- Missing handler produces FAILED status
 
-**TestJobTimeout** (3 tests, lines 163-194)
-- `test_timeout_sets_timeout_status()` — Slow job exceeding timeout gets TIMEOUT status
-- `test_custom_timeout_is_used()` — Custom timeout value is stored and used
-- `test_default_timeout_is_300()` — Default timeout is 300 seconds (5 minutes)
+**TestJobTimeout** (3 tests)
+- `test_timeout_sets_timeout_status()` -- Slow job exceeding timeout gets TIMEOUT status
+- `test_custom_timeout_is_used()` -- Custom timeout value stored and used
+- `test_default_timeout_is_300()` -- Default timeout is 300 seconds
+
+**TestJobCancellation** (tests for cancel_event and CANCELLED status)
+
+**TestJobProgress** (tests for set_progress and progress reporting)
 
 ### test_worker.py
 
-#### Test Handler
-- `_noop_handler(job_type: str, payload: dict[str, Any]) -> str` (line 17)
-  - Minimal handler returning "ok" for worker lifecycle testing
-
 #### Test Classes
 
-**TestWorkerLifecycle** (2 tests, lines 22-53)
-- `test_worker_cancels_cleanly()` — Worker exits without error on cancellation signal
-- `test_worker_processes_job_then_cancels()` — Job completes before cancellation takes effect
+**TestWorkerLifecycle** (2 tests)
+- `test_worker_cancels_cleanly()` -- Worker exits without error on cancellation signal
+- `test_worker_processes_job_then_cancels()` -- Job completes before cancellation takes effect
 
-**TestLifespanIntegration** (2 tests, lines 55-70)
-- `test_app_with_injected_job_queue()` — DI injects queue into app.state
-- `test_app_without_injection_works()` — create_app() works without injection (production path)
+**TestLifespanIntegration** (2 tests)
+- `test_app_with_injected_job_queue()` -- DI injects queue into app.state
+- `test_app_without_injection_works()` -- create_app() works without injection (production path)
 
 ## Dependencies
 
@@ -76,7 +70,7 @@
 - `stoat_ferret.api.app` (create_app)
 
 ### External Dependencies
-- pytest (5.0+)
+- pytest
 - asyncio (Python standard library)
 
 ## Relationships
@@ -92,6 +86,8 @@ classDiagram
             +TestJobCompletion: 2 tests
             +TestJobFailure: 2 tests
             +TestJobTimeout: 3 tests
+            +TestJobCancellation
+            +TestJobProgress
         }
         class WorkerTests {
             +TestWorkerLifecycle: 2 tests
@@ -105,6 +101,8 @@ classDiagram
             +get_result(job_id)
             +process_jobs()
             +register_handler(job_type, fn)
+            +set_progress(job_id, value)
+            +cancel(job_id)
             -_timeout: float
         }
         class FastAPIApp {
@@ -124,6 +122,7 @@ classDiagram
 
 - All tests use `asyncio.create_task()` to run workers in background
 - Worker cancellation tests verify clean exit via `asyncio.CancelledError`
-- Timeout behavior tested with 0.05s custom timeout to avoid 300s waits
+- Timeout behavior tested with short custom timeouts to avoid long waits
 - DI pattern stores queue on `app.state.job_queue` for handler access
 - Test doubles (_success_handler, _slow_handler, _failing_handler) isolate queue logic
+- Cancellation and progress tests validate cooperative job control flow

@@ -6,7 +6,7 @@
 - **Location**: `gui/src/pages/`
 - **Language**: TypeScript (TSX)
 - **Purpose**: Each page implements a major application feature by orchestrating data fetching, state management, and component composition
-- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
+- **Parent Component**: TBD
 
 ## Code Elements
 
@@ -14,24 +14,29 @@
 
 #### `DashboardPage(): JSX.Element`
 - **Location**: `gui/src/pages/DashboardPage.tsx`
-- **Description**: Real-time monitoring dashboard composing HealthCards, MetricsCards, and ActivityLog. Polls health and metrics at 30-second intervals.
-- **State Management**: Uses `useHealth(30_000)` and `useMetrics(30_000)` for polling
+- **Description**: Real-time monitoring dashboard composing HealthCards, MetricsCards, and ActivityLog. Polls health and metrics at 30-second intervals. Connects to WebSocket for live activity feed.
+- **Internal Function**: `wsUrl(): string` -- constructs WebSocket URL from current window location (wss: for https:, ws: for http:)
+- **State Management**: Uses `useHealth(30_000)`, `useMetrics(30_000)`, and `useWebSocket(wsUrl())`
 - **Components Used**: `HealthCards`, `MetricsCards`, `ActivityLog`
 - **Test ID**: Renders as index route (`/`)
 
 #### `LibraryPage(): JSX.Element`
 - **Location**: `gui/src/pages/LibraryPage.tsx`
-- **Description**: Video library browser with search, sort, and pagination. Features directory scanning via modal dialog. Uses Zustand library store for search/sort state.
-- **State Management**: `useVideos()` for data, `libraryStore` for search/sort/page state
+- **Description**: Video library browser with debounced search, sort, and pagination. Features directory scanning via modal dialog with directory browser integration. Uses Zustand library store for search/sort/page state.
+- **State Management**: `useVideos(options)` for data (passes options from store), `useLibraryStore` for search/sort/page state, `useDebounce(searchQuery, 300)` for search
 - **Components Used**: `SearchBar`, `SortControls`, `VideoGrid`, `ScanModal`
-- **User Flows**: Search videos, change sort field/order, navigate pages, scan new directory
+- **Pagination**: Previous/Next buttons with page info, computed `totalPages` from total/pageSize
+- **User Flows**: Search videos (debounced), change sort field/order, navigate pages, scan new directory (with browse)
+- **Test IDs**: `library-page`, `scan-button`, `pagination`, `page-prev`, `page-info`, `page-next`
 
 #### `ProjectsPage(): JSX.Element`
 - **Location**: `gui/src/pages/ProjectsPage.tsx`
-- **Description**: Project management with list/detail views, create/delete modals, and clip count fetching. Switches between list view and detail view based on selection.
-- **State Management**: `useProjects()` for data, `projectStore` for modal/selection state, local state for clip counts
+- **Description**: Project management with list/detail views, create/delete modals, clip count fetching, and pagination. Switches between list view and detail view based on selection.
+- **State Management**: `useProjects({ page, pageSize })` for data, `useProjectStore` for modal/selection/pagination state, local state for clip counts and delete target
 - **Components Used**: `ProjectList`, `ProjectDetails`, `CreateProjectModal`, `DeleteConfirmation`
-- **User Flows**: Browse projects, create new project, view project details with clips, delete project with confirmation
+- **Pagination**: Previous/Next buttons with page info, uses store `page`/`pageSize`/`setPage`/`resetPage`
+- **User Flows**: Browse projects (paginated), create new project, view project details with clips (add/edit/delete), delete project with confirmation
+- **Test IDs**: `projects-page`, `btn-new-project`, `pagination`, `page-prev`, `page-info`, `page-next`
 
 #### `EffectsPage(): JSX.Element`
 - **Location**: `gui/src/pages/EffectsPage.tsx`
@@ -56,13 +61,13 @@
   - GET `/api/v1/projects/{id}/clips` -- fetch clips on project change
   - POST `/api/v1/projects/{id}/clips/{id}/effects` -- apply new effect
   - PATCH `/api/v1/projects/{id}/clips/{id}/effects/{idx}` -- update existing effect
-- **Test ID**: `effects-page`
+- **Test IDs**: `effects-page`, `project-select`, `apply-section`, `apply-effect-btn`, `cancel-edit-btn`, `apply-status`, `visual-preview-placeholder`
 
 ## Dependencies
 
 ### Internal Dependencies
 - `gui/src/components/` -- all UI components (HealthCards, MetricsCards, ActivityLog, SearchBar, SortControls, VideoGrid, ScanModal, ProjectList, ProjectDetails, CreateProjectModal, DeleteConfirmation, ClipSelector, EffectCatalog, EffectParameterForm, FilterPreview, EffectStack)
-- `gui/src/hooks/` -- useHealth, useMetrics, useVideos, useProjects, useEffects, useEffectPreview
+- `gui/src/hooks/` -- useHealth, useMetrics, useWebSocket, useDebounce, useVideos, useProjects, useEffects, useEffectPreview
 - `gui/src/stores/` -- libraryStore, projectStore, effectCatalogStore, effectFormStore, effectStackStore
 
 ### External Dependencies
@@ -76,16 +81,21 @@ classDiagram
         +DashboardPage() JSX
         useHealth(30s)
         useMetrics(30s)
+        useWebSocket(wsUrl)
     }
     class LibraryPage {
         +LibraryPage() JSX
-        useVideos()
+        useVideos(options)
+        useDebounce(query)
         libraryStore
+        pagination
     }
     class ProjectsPage {
         +ProjectsPage() JSX
-        useProjects()
+        useProjects(page, pageSize)
         projectStore
+        fetchClips for counts
+        pagination
     }
     class EffectsPage {
         +EffectsPage() JSX

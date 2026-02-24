@@ -5,8 +5,8 @@
 - **Description**: Vitest test suites validating all React UI components in the stoat-and-ferret GUI
 - **Location**: `gui/src/components/__tests__/`
 - **Language**: TypeScript (TSX)
-- **Purpose**: Unit tests for 20 React components covering rendering, user interactions, API calls, state management, and accessibility
-- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
+- **Purpose**: Unit tests for 24 React components covering rendering, user interactions, API calls, state management, and accessibility
+- **Parent Component**: TBD
 
 ## Code Elements
 
@@ -59,13 +59,31 @@
 - **Setup**: Resets `useActivityStore` state, `makeMessage()` helper
 - **Dependencies**: `ActivityLog`, `useActivityStore`
 
-#### `ScanModal.test.tsx` (5 tests)
+#### `ScanModal.test.tsx` (11 tests)
 - "does not render when closed"
 - "renders when open with directory input and submit button"
 - "submit button is disabled when directory is empty"
 - "triggers scan API call on submit" -- verifies POST /videos/scan and job polling
+- "shows abort button during active scan" -- verifies scan-abort test ID
+- "abort button calls cancel endpoint" -- verifies POST /api/v1/jobs/{id}/cancel
+- "shows cancelled state when scan is cancelled" -- verifies scan-cancelled message
+- "renders browse button when open" -- verifies scan-browse-button
+- "opens DirectoryBrowser when browse button clicked" -- verifies directory-browser-overlay
+- "populates path input when directory is selected from browser" -- integration with DirectoryBrowser
 - "shows error when scan request fails"
-- **Dependencies**: `ScanModal`
+- **Setup**: Mocked fetch with URL-based routing for scan/job/filesystem endpoints
+- **Dependencies**: `ScanModal`, `DirectoryBrowser`
+
+#### `DirectoryBrowser.test.tsx` (7 tests)
+- "renders loading state initially"
+- "renders directory list after loading" -- verifies directory-browser-entry count and names
+- "renders empty state when directory has no subdirectories" -- "No subdirectories" message
+- "calls onSelect with current path when Select button clicked"
+- "navigates into subdirectory on click, triggering new fetch" -- verifies path update and re-fetch
+- "calls onCancel when Cancel button clicked"
+- "shows error state on fetch failure" -- 403 with structured error message
+- **Setup**: Mocked fetch for `/api/v1/filesystem/directories`
+- **Dependencies**: `DirectoryBrowser`
 
 #### `SearchBar.test.tsx` (3 tests)
 - "renders with placeholder text"
@@ -106,13 +124,17 @@
 - "shows error when delete fails"
 - **Dependencies**: `DeleteConfirmation`
 
-#### `ProjectDetails.test.tsx` (4 tests)
+#### `ProjectDetails.test.tsx` (8 tests)
 - "displays project name and metadata" -- resolution + fps
 - "displays clip list with timeline positions" -- timecode formatting at 30fps
 - "shows empty state when no clips"
 - "shows error when clip fetch fails"
-- **Setup**: mockProject + mockClips fixtures
-- **Dependencies**: `ProjectDetails`, `Project` type
+- "renders Add Clip button"
+- "renders Edit and Delete buttons per clip row" -- btn-edit-clip-{id}, btn-delete-clip-{id}
+- "delete button triggers confirmation dialog" -- delete-clip-confirmation
+- "Add Clip button opens clip form modal" -- opens ClipFormModal
+- **Setup**: mockProject + mockClips fixtures, resets `useClipStore`
+- **Dependencies**: `ProjectDetails`, `Project` type, `useClipStore`
 
 #### `ProjectList.test.tsx` (4 tests)
 - "shows loading state"
@@ -121,6 +143,15 @@
 - "renders project cards with name, date, and clip count"
 - **Setup**: mockProjects + clipCounts fixtures
 - **Dependencies**: `ProjectList`, `Project` type
+
+#### `ClipFormModal.test.tsx` (5 tests)
+- "renders empty form for Add mode" -- source video select, in/out/timeline inputs
+- "renders pre-populated form for Edit mode" -- no source video select, values pre-filled
+- "validates required fields before submission" -- clip-form-error
+- "displays backend validation errors" -- 422 response error display
+- "disables submit button during submission" -- "Saving..." text, disabled state
+- **Setup**: mockVideos + mockClip fixtures, mocked fetch, resets `useClipStore`
+- **Dependencies**: `ClipFormModal`, `useClipStore`, `Clip` type
 
 #### `EffectCatalog.test.tsx` (10 tests)
 - "shows loading state"
@@ -197,8 +228,8 @@
 ## Dependencies
 
 ### Internal Dependencies
-- All 22 components from `gui/src/components/`
-- Zustand stores: `activityStore`, `effectCatalogStore`, `effectFormStore`, `effectPreviewStore`, `effectStackStore`
+- All 24 components from `gui/src/components/`
+- Zustand stores: `activityStore`, `effectCatalogStore`, `effectFormStore`, `effectPreviewStore`, `effectStackStore`, `clipStore`
 - Hooks: `useEffects` (mocked in EffectCatalog tests)
 - Types: `HealthState`, `Metrics`, `Video`, `Project`, `Clip`, `Effect`, `AppliedEffect`, `ParameterSchema`
 
@@ -218,20 +249,22 @@
 | HealthCards.test.tsx | 4 | HealthCards |
 | MetricsCards.test.tsx | 3 | MetricsCards |
 | ActivityLog.test.tsx | 5 | ActivityLog |
-| ScanModal.test.tsx | 5 | ScanModal |
+| ScanModal.test.tsx | 11 | ScanModal + DirectoryBrowser integration |
+| DirectoryBrowser.test.tsx | 7 | DirectoryBrowser |
 | SearchBar.test.tsx | 3 | SearchBar |
 | SortControls.test.tsx | 4 | SortControls |
 | VideoGrid.test.tsx | 4 | VideoGrid |
 | CreateProjectModal.test.tsx | 6 | CreateProjectModal |
 | DeleteConfirmation.test.tsx | 5 | DeleteConfirmation |
-| ProjectDetails.test.tsx | 4 | ProjectDetails |
+| ProjectDetails.test.tsx | 8 | ProjectDetails + ClipFormModal integration |
 | ProjectList.test.tsx | 4 | ProjectList |
+| ClipFormModal.test.tsx | 5 | ClipFormModal + clipStore |
 | EffectCatalog.test.tsx | 10 | EffectCatalog |
 | EffectParameterForm.test.tsx | 14 | EffectParameterForm + effectFormStore |
 | FilterPreview.test.tsx | 9 | FilterPreview + highlightFilter |
 | ClipSelector.test.tsx | 4 | ClipSelector |
 | EffectStack.test.tsx | 7 | EffectStack |
-| **Total** | **101** | **20 components + 2 stores/functions** |
+| **Total** | **129** | **24 components + 3 stores/functions** |
 
 ## Relationships
 
@@ -251,7 +284,8 @@ flowchart TD
     end
 
     subgraph Library["Library Tests"]
-        SCNT["ScanModal.test.tsx (5)"]
+        SCNT["ScanModal.test.tsx (11)"]
+        DBT["DirectoryBrowser.test.tsx (7)"]
         SRCH["SearchBar.test.tsx (3)"]
         SORT["SortControls.test.tsx (4)"]
         VGT["VideoGrid.test.tsx (4)"]
@@ -260,8 +294,9 @@ flowchart TD
     subgraph Projects["Project Tests"]
         CPT["CreateProjectModal.test.tsx (6)"]
         DCT["DeleteConfirmation.test.tsx (5)"]
-        PDT["ProjectDetails.test.tsx (4)"]
+        PDT["ProjectDetails.test.tsx (8)"]
         PLT["ProjectList.test.tsx (4)"]
+        CFT["ClipFormModal.test.tsx (5)"]
     end
 
     subgraph Effects["Effect Workshop Tests"]
@@ -277,12 +312,17 @@ flowchart TD
         ECS["effectCatalogStore"]
         EFS["effectFormStore"]
         EPS["effectPreviewStore"]
+        CS["clipStore"]
     end
 
     ALT --> AS
     ECT --> ECS
     EPT --> EFS
     FPT --> EPS
+    PDT --> CS
+    CFT --> CS
+
+    SCNT --> DBT
 
     subgraph TestUtils["Test Utilities"]
         RTL["@testing-library/react"]

@@ -5,8 +5,8 @@
 - **Description**: React UI components forming the presentation layer of the stoat-and-ferret video editor GUI
 - **Location**: `gui/src/components/`
 - **Language**: TypeScript (TSX)
-- **Purpose**: Provides reusable, testable UI building blocks for layout, health monitoring, library browsing, project management, and the effect workshop
-- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
+- **Purpose**: Provides reusable, testable UI building blocks for layout, health monitoring, library browsing, project management, clip CRUD, and the effect workshop
+- **Parent Component**: TBD
 
 ## Code Elements
 
@@ -83,8 +83,17 @@
 
 #### `ScanModal.tsx`
 - **Signature**: `ScanModal({ open, onClose, onScanComplete }): JSX.Element`
-- **Description**: Modal dialog for directory scanning. Submits POST to `/api/v1/videos/scan`, polls job status at 1s intervals, shows progress and completion/error states.
-- **Test IDs**: `scan-modal-overlay`, `scan-directory-input`, `scan-submit`, `scan-cancel`, `scan-complete`, `scan-error`
+- **Description**: Modal dialog for directory scanning with browse integration. Submits POST to `/api/v1/videos/scan`, polls job status at 1s intervals, shows progress bar, supports scan abort via POST `/api/v1/jobs/{id}/cancel`, and shows completion/cancelled/error states. Includes recursive scan checkbox and Browse button that opens DirectoryBrowser overlay.
+- **Internal State**: `ScanStatus` type (`'idle' | 'scanning' | 'cancelling' | 'cancelled' | 'complete' | 'error'`)
+- **Dependencies**: `DirectoryBrowser`
+- **Test IDs**: `scan-modal-overlay`, `scan-directory-input`, `scan-submit`, `scan-cancel`, `scan-complete`, `scan-error`, `scan-abort`, `scan-cancelled`, `scan-browse-button`, `scan-recursive`, `scan-progress`
+
+#### `DirectoryBrowser.tsx`
+- **Signature**: `DirectoryBrowser({ onSelect, onCancel, initialPath? }): JSX.Element`
+- **Description**: Server-side directory browser component. Fetches directory listings from GET `/api/v1/filesystem/directories?path=...`, supports navigation into subdirectories, "Up" button for parent navigation, and "Select This Directory" to confirm selection. Shows loading/error/empty states.
+- **Internal Types**: `DirectoryEntry { name: string, path: string }`, `DirectoryListResponse { path: string, directories: DirectoryEntry[] }`
+- **Internal Functions**: `fetchDirectories(path?)`, `handleNavigate(entry)`, `handleUp()`
+- **Test IDs**: `directory-browser-overlay`, `directory-browser-loading`, `directory-browser-list`, `directory-browser-entry`, `directory-browser-empty`, `directory-browser-error`, `directory-browser-path`, `directory-browser-up`, `directory-browser-select`, `directory-browser-cancel`
 
 ### Project Components
 
@@ -102,9 +111,10 @@
 
 #### `ProjectDetails.tsx`
 - **Signature**: `ProjectDetails({ project, onBack, onDelete }): JSX.Element`
-- **Description**: Project detail view with metadata (resolution, fps) and clips table. Clips show timeline position, in/out points, and duration (all formatted as timecodes at project fps).
-- **Dependencies**: `Project`, `Clip` types, `fetchClips` function from `useProjects`
-- **Test IDs**: `project-detail-name`, `project-metadata`, `clips-table`, `clips-empty`, `clips-error`, `clip-position-{id}`, `clip-in-{id}`, `clip-out-{id}`, `clip-duration-{id}`
+- **Description**: Project detail view with metadata (resolution, fps) and clips table. Clips show timeline position, in/out points, and duration (all formatted as timecodes at project fps). Includes Add Clip button, per-row Edit/Delete buttons, clip form modal for add/edit, and delete confirmation dialog. Uses `useClipStore` for clip CRUD operations.
+- **Internal Function**: `formatTimecode(frames: number, fps: number): string` -- converts frame count to M:SS.ff timecode
+- **Dependencies**: `Project`, `Clip` types from `useProjects`, `useClipStore`, `ClipFormModal`, `fetchClips`
+- **Test IDs**: `project-detail-name`, `project-metadata`, `clips-table`, `clips-empty`, `clips-error`, `clip-position-{id}`, `clip-in-{id}`, `clip-out-{id}`, `clip-duration-{id}`, `btn-add-clip`, `btn-edit-clip-{id}`, `btn-delete-clip-{id}`, `delete-clip-confirmation`, `btn-cancel-delete-clip`, `btn-confirm-delete-clip`
 
 #### `CreateProjectModal.tsx`
 - **Signature**: `CreateProjectModal({ open, onClose, onCreated }): JSX.Element`
@@ -115,6 +125,13 @@
 - **Signature**: `DeleteConfirmation({ open, projectId, projectName, onClose, onDeleted }): JSX.Element`
 - **Description**: Confirmation dialog for project deletion. Shows project name, calls DELETE `/api/v1/projects/{id}`.
 - **Test IDs**: `delete-confirmation`, `delete-project-name`, `btn-cancel-delete`, `btn-confirm-delete`, `delete-error`
+
+#### `ClipFormModal.tsx`
+- **Signature**: `ClipFormModal({ mode, clip?, projectId, onClose, onSaved }): JSX.Element`
+- **Description**: Modal form for clip add/edit with client-side validation. In add mode shows source video dropdown (fetched via `useVideos`). Fields: source video (add only), in point (frames), out point (frames), timeline position (frames). Validates non-negative numbers and out > in. Uses `useClipStore.createClip` or `updateClip` for submission.
+- **Props Interface**: `ClipFormModalProps { mode: 'add' | 'edit', clip?: Clip, projectId: string, onClose: () => void, onSaved: () => void }`
+- **Dependencies**: `Clip` type from `useProjects`, `useVideos`, `useClipStore`
+- **Test IDs**: `clip-form-modal`, `select-source-video`, `input-in-point`, `input-out-point`, `input-timeline-position`, `btn-clip-save`, `btn-clip-cancel`, `clip-form-error`
 
 ### Effect Workshop Components
 
@@ -156,16 +173,17 @@
 - `gui/src/hooks/useHealth` -- health polling
 - `gui/src/hooks/useWebSocket` -- WebSocket connection
 - `gui/src/hooks/useEffects` -- effect list and category derivation
-- `gui/src/hooks/useProjects` -- project/clip types
-- `gui/src/hooks/useVideos` -- video type
+- `gui/src/hooks/useProjects` -- project/clip types and API functions
+- `gui/src/hooks/useVideos` -- video type and fetching
 - `gui/src/stores/activityStore` -- activity log entries
+- `gui/src/stores/clipStore` -- clip CRUD operations
 - `gui/src/stores/effectCatalogStore` -- catalog search/filter/selection state
 - `gui/src/stores/effectFormStore` -- parameter form state and schema
 - `gui/src/stores/effectPreviewStore` -- filter preview state
 - `gui/src/stores/effectStackStore` -- applied effects state
 
 ### External Dependencies
-- `react` (useState, useEffect, useCallback)
+- `react` (useState, useEffect, useCallback, useRef)
 - `react-router-dom` (NavLink, Outlet)
 - Tailwind CSS (utility classes)
 
@@ -226,7 +244,12 @@ classDiagram
     class ScanModal {
         +ScanModal(open) JSX
         POST /videos/scan
-        job polling
+        job polling + abort
+    }
+    class DirectoryBrowser {
+        +DirectoryBrowser(onSelect, onCancel) JSX
+        GET /filesystem/directories
+        navigate + select
     }
 
     class ProjectList {
@@ -237,7 +260,8 @@ classDiagram
     }
     class ProjectDetails {
         +ProjectDetails(project) JSX
-        clips table
+        clips table + CRUD
+        formatTimecode()
     }
     class CreateProjectModal {
         +CreateProjectModal(open) JSX
@@ -246,14 +270,21 @@ classDiagram
     class DeleteConfirmation {
         +DeleteConfirmation(open) JSX
     }
+    class ClipFormModal {
+        +ClipFormModal(mode, clip?) JSX
+        add/edit modes
+        client validation
+    }
 
     Shell --> Navigation
     Shell --> HealthIndicator
     Shell --> StatusBar
 
     VideoGrid --> VideoCard
+    ScanModal --> DirectoryBrowser
 
     ProjectList --> ProjectCard
+    ProjectDetails --> ClipFormModal
 
     EffectStack ..> FilterPreview : uses highlightFilter
 
@@ -261,4 +292,6 @@ classDiagram
     EffectParameterForm ..> effectFormStore : reads/writes
     FilterPreview ..> effectPreviewStore : reads
     EffectStack ..> effectStackStore : reads
+    ProjectDetails ..> clipStore : reads/writes
+    ClipFormModal ..> clipStore : writes
 ```
