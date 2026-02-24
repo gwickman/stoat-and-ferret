@@ -1,6 +1,6 @@
 {
   "next_id": 80,
-  "updated_at": "2026-02-24T06:52:11.953592",
+  "updated_at": "2026-02-24T10:08:15.634240",
   "items": [
     {
       "id": "BL-001",
@@ -681,10 +681,10 @@
       "id": "BL-019",
       "title": "Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-06T20:37:40.867158",
-      "completed_at": null,
+      "completed_at": "2026-02-24T10:08:11.127923",
       "tags": [
         "windows",
         "agents-md",
@@ -711,8 +711,8 @@
       ],
       "notes": "The .gitignore half is already done (nul added to .gitignore). Remaining scope: add Windows bash /dev/null redirect guidance to AGENTS.md.",
       "use_case": "This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v011",
+      "implemented_in_theme": "developer-onboarding",
       "upvotes": 0
     },
     {
@@ -2690,10 +2690,10 @@
       "id": "BL-070",
       "title": "Add Browse button for scan directory path selection",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-02-23T10:02:50.779841",
-      "completed_at": null,
+      "completed_at": "2026-02-24T10:08:12.267589",
       "tags": [
         "gui",
         "ux",
@@ -2721,18 +2721,18 @@
       ],
       "notes": null,
       "use_case": "When a user wants to scan a media directory, they need to navigate to it visually rather than remembering and typing the full path, especially on systems with deep directory hierarchies.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v011",
+      "implemented_in_theme": "scan-and-clip-ux",
       "upvotes": 0
     },
     {
       "id": "BL-071",
       "title": "Add .env.example file for environment configuration template",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "m",
       "added": "2026-02-23T10:03:00.799713",
-      "completed_at": null,
+      "completed_at": "2026-02-24T10:08:13.415589",
       "tags": [
         "devex",
         "documentation",
@@ -2760,8 +2760,8 @@
       ],
       "notes": null,
       "use_case": "When a new developer or user clones the repo, they need a clear reference for what environment variables to configure before the application will start correctly.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v011",
+      "implemented_in_theme": "developer-onboarding",
       "upvotes": 0
     },
     {
@@ -2900,10 +2900,10 @@
       "id": "BL-075",
       "title": "Add clip management controls (Add/Edit/Delete) to project GUI",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T10:21:43.862781",
-      "completed_at": null,
+      "completed_at": "2026-02-24T10:08:14.580925",
       "tags": [
         "gui",
         "clips",
@@ -2940,18 +2940,18 @@
       ],
       "notes": null,
       "use_case": "When building a project in the GUI, users need to add video clips from their library, adjust clip boundaries, and remove clips without switching to API calls or external tools.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v011",
+      "implemented_in_theme": "scan-and-clip-ux",
       "upvotes": 0
     },
     {
       "id": "BL-076",
       "title": "Create IMPACT_ASSESSMENT.md with project-specific design checks",
       "priority": "P1",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T16:28:29.243036",
-      "completed_at": null,
+      "completed_at": "2026-02-24T10:08:15.634237",
       "tags": [
         "process",
         "auto-dev",
@@ -2987,8 +2987,8 @@
       ],
       "notes": "IMPACT_ASSESSMENT.md is project-specific, not an auto-dev process artifact. Treat as project code \u2014 the assessment criteria are tailored to stoat-and-ferret's architecture and design constraints.",
       "use_case": "During version design, the auto-dev impact assessment step reads this file and executes project-specific checks, catching recurring issue patterns before they reach implementation.",
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v011",
+      "implemented_in_theme": "developer-onboarding",
       "upvotes": 0
     },
     {
@@ -3110,6 +3110,6 @@
       "upvotes": 0
     }
   ],
-  "completed_count": 64,
+  "completed_count": 69,
   "cancelled_count": 0
 }
