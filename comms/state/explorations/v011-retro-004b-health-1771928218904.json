@@ -1,14 +1,16 @@
 {
   "exploration_id": "v011-retro-004b-health-1771928218904",
   "results_folder": "v011-retro-004b-health",
-  "status": "running",
+  "status": "complete",
   "pid": 7596,
   "started_at": "2026-02-24T10:16:58.904282",
-  "updated_at": "2026-02-24T10:17:01.002472",
-  "completed_at": null,
+  "updated_at": "2026-02-24T10:22:31.042378",
+  "completed_at": "2026-02-24T10:22:31.041753",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v011-retro-004b-health/prompt.md",
   "outbox_path": "comms/outbox/exploration/v011-retro-004b-health"
