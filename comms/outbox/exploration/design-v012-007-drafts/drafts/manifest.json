@@ -1,0 +1,62 @@
+{
+  "version": "v012",
+  "description": "API Surface & Bindings Cleanup",
+  "backlog_ids": ["BL-061", "BL-066", "BL-067", "BL-068", "BL-079"],
+  "context": {
+    "rationale": "Reduce technical debt in the Rust-Python boundary by removing dead code, wire remaining GUI gaps, and correct documentation inconsistencies.",
+    "constraints": [
+      "v011 must be deployed before v012 starts (confirmed complete)",
+      "All 5 backlog items are P2 or P3 — no P1 urgency",
+      "Phase 3 Composition Engine is deferred — removed bindings must have documented re-add triggers"
+    ],
+    "assumptions": [
+      "Re-adding PyO3 wrappers is mechanical (~5-10 lines per binding)",
+      "Rust-internal usage of removed binding functions is unaffected",
+      "Backend transition endpoint is functional and tested"
+    ],
+    "deferred_items": [
+      "BL-069 — C4 documentation update (deferred, not stoat-and-ferret code change)"
+    ]
+  },
+  "themes": [
+    {
+      "number": 1,
+      "slug": "rust-bindings-cleanup",
+      "goal": "Resolve the execute_command() wiring gap and remove unused PyO3 bindings from v001 and v006 that have zero production callers.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "execute-command-removal",
+          "goal": "Remove the dead execute_command() bridge function and its supporting code"
+        },
+        {
+          "number": 2,
+          "slug": "v001-bindings-trim",
+          "goal": "Remove 5 unused v001 PyO3 bindings (TimeRange ops, sanitization) and associated tests"
+        },
+        {
+          "number": 3,
+          "slug": "v006-bindings-trim",
+          "goal": "Remove 6 unused v006 PyO3 bindings (Expr, graph validation, composition) and associated parity tests"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "slug": "workshop-and-docs-polish",
+      "goal": "Close remaining polish gaps by wiring the transition API into the Effect Workshop GUI and correcting API specification documentation inconsistencies.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "transition-gui",
+          "goal": "Wire transition effects into the Effect Workshop GUI via the existing backend endpoint"
+        },
+        {
+          "number": 2,
+          "slug": "api-spec-corrections",
+          "goal": "Fix 5 documentation inconsistencies in API spec and manual for job status examples"
+        }
+      ]
+    }
+  ]
+}
