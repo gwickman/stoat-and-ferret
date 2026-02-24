@@ -125,12 +125,14 @@ Parse THEME_INDEX.md and compare against actual folder structure:
 
 Any mismatch is a BLOCKING FAILURE.
 
-### 14. No MCP Tool References in Feature Docs
+### 14. No State-Modifying MCP Tool References in Feature Docs
 
-Verify no feature requirements.md or implementation-plan.md instructs Claude to call MCP tools:
-- Scan for MCP tool function names (e.g., `save_learning`, `add_backlog_item`, `query_cli_sessions`)
-- Features execute with file-level tools only (Read/Write/Edit/Bash)
-- Any MCP tool instruction in feature docs is a BLOCKING FAILURE
+Verify no feature requirements.md or implementation-plan.md instructs Claude to call state-modifying MCP tools:
+- Define allowlist: `ALLOWED_FEATURE_TOOLS = {"get_project_info", "read_document"}`
+- Scan for MCP tool function names (e.g., `save_learning`, `add_backlog_item`, `query_cli_sessions`, `git_write`)
+- If a tool name is found and is NOT in the allowlist, it is a BLOCKING FAILURE
+- References to `get_project_info` and `read_document` in feature docs are explicitly allowed
+- Features execute with file-level tools (Read/Write/Edit/Bash) plus read-only MCP tools
 
 ### Backlog Cross-Referencing (all checks)
 
@@ -221,7 +223,7 @@ Then:
   - Status: [PASS/FAIL]
   - Notes: [findings]
 
-- [ ] **No MCP tool references** — Feature docs do not instruct MCP tool calls.
+- [ ] **No state-modifying MCP tool references** — Feature docs do not instruct state-modifying MCP tool calls.
   - Status: [PASS/FAIL]
   - Notes: [findings]
 

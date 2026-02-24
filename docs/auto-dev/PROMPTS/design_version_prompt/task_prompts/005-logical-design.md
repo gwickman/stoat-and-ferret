@@ -198,5 +198,5 @@ All identified risks and unknowns for Task 006:
 - Evidence must come from Task 004, not new assumptions
 - Reference the design artifact store by path, not by inlining
 - Keep the main logical design document under 300 lines
-- Feature execution environments have file-level tools only (Read/Write/Edit/Bash) — do not design features that require MCP tool calls at execution time
+- Feature execution environments have file-level tools only (Read/Write/Edit/Bash) — do not design features that require state-modifying MCP tool calls at execution time (read-only tools get_project_info and read_document are permitted)
 - Do NOT commit — the master prompt handles commits after Phase 2
