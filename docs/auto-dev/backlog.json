@@ -1,6 +1,6 @@
 {
   "next_id": 80,
-  "updated_at": "2026-02-24T00:02:35.431644",
+  "updated_at": "2026-02-24T06:52:11.953592",
   "items": [
     {
       "id": "BL-001",
@@ -682,7 +682,7 @@
       "title": "Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore",
       "priority": "P3",
       "status": "open",
-      "size": "m",
+      "size": "l",
       "added": "2026-02-06T20:37:40.867158",
       "completed_at": null,
       "tags": [
@@ -690,8 +690,25 @@
         "agents-md",
         "gitignore"
       ],
-      "description": "Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore. In bash contexts on Windows: Always use `/dev/null` for output redirection (Git Bash correctly translates this to the Windows null device). Never use bare `nul` which gets interpreted as a literal filename in MSYS/Git Bash environments. Correct: `command > /dev/null 2>&1`. Wrong: `command > nul 2>&1`.",
-      "acceptance_criteria": [],
+      "description": "Add Windows bash null redirect guidance to AGENTS.md. In bash contexts on Windows (Git Bash / MSYS2), /dev/null is correctly translated to the Windows null device. However, using bare 'nul' \u2014 the native Windows convention \u2014 creates a literal file named 'nul' in the working directory because MSYS interprets it as a filename rather than a device. This has already caused git noise in the project (nul was added to .gitignore as a workaround). AGENTS.md should document this pitfall so developers and AI agents avoid it. The .gitignore half is already done; this item covers only the AGENTS.md documentation.",
+      "acceptance_criteria": [
+        {
+          "text": "AGENTS.md contains a 'Windows (Git Bash)' section under Commands or a new top-level section",
+          "done": false
+        },
+        {
+          "text": "Section documents that /dev/null is correct for output redirection in Git Bash on Windows",
+          "done": false
+        },
+        {
+          "text": "Section warns against using bare 'nul' which creates a literal file in MSYS/Git Bash",
+          "done": false
+        },
+        {
+          "text": "Section includes correct and incorrect usage examples",
+          "done": false
+        }
+      ],
       "notes": "The .gitignore half is already done (nul added to .gitignore). Remaining scope: add Windows bash /dev/null redirect guidance to AGENTS.md.",
       "use_case": "This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.",
       "implemented_in_version": null,

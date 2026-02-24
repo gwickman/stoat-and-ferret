@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-24 00:02*
+*Last updated: 2026-02-24 06:52*
 
 **Total completed:** 64 | **Cancelled:** 0
 
@@ -23,7 +23,7 @@
 | <a id="bl-069-ref"></a>[BL-069](#bl-069) | P2 | xl | Update C4 architecture documentation for v009 changes | C4 documentation was last generated for v008. v009 introd... |
 | <a id="bl-070-ref"></a>[BL-070](#bl-070) | P2 | m | Add Browse button for scan directory path selection | Currently the Scan Directory feature requires users to ma... |
 | <a id="bl-071-ref"></a>[BL-071](#bl-071) | P2 | m | Add .env.example file for environment configuration template | The project has no .env.example file to guide new develop... |
-| <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | m | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md and ... |
+| <a id="bl-019-ref"></a>[BL-019](#bl-019) | P3 | l | Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore | Add Windows bash null redirect guidance to AGENTS.md. In ... |
 | <a id="bl-066-ref"></a>[BL-066](#bl-066) | P3 | l | Add transition support to Effect Workshop GUI | **Current state:** `POST /projects/{id}/effects/transitio... |
 | <a id="bl-067-ref"></a>[BL-067](#bl-067) | P3 | l | Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization) | **Current state:** Several Rust functions are exposed via... |
 | <a id="bl-068-ref"></a>[BL-068](#bl-068) | P3 | l | Audit and trim unused PyO3 bindings from v006 filter engine | **Current state:** Three v006 filter engine features (Exp... |
@@ -248,9 +248,15 @@ The project has no .env.example file to guide new developers or users through en
 **Status:** open
 **Tags:** windows, agents-md, gitignore
 
-Add Windows bash null redirect guidance to AGENTS.md and add `nul` to .gitignore. In bash contexts on Windows: Always use `/dev/null` for output redirection (Git Bash correctly translates this to the Windows null device). Never use bare `nul` which gets interpreted as a literal filename in MSYS/Git Bash environments. Correct: `command > /dev/null 2>&1`. Wrong: `command > nul 2>&1`.
+Add Windows bash null redirect guidance to AGENTS.md. In bash contexts on Windows (Git Bash / MSYS2), /dev/null is correctly translated to the Windows null device. However, using bare 'nul' — the native Windows convention — creates a literal file named 'nul' in the working directory because MSYS interprets it as a filename rather than a device. This has already caused git noise in the project (nul was added to .gitignore as a workaround). AGENTS.md should document this pitfall so developers and AI agents avoid it. The .gitignore half is already done; this item covers only the AGENTS.md documentation.
 
 **Use Case:** This feature addresses: Add Windows bash /dev/null guidance to AGENTS.md and nul to .gitignore. It improves the system by resolving the described requirement.
+
+**Acceptance Criteria:**
+- [ ] AGENTS.md contains a 'Windows (Git Bash)' section under Commands or a new top-level section
+- [ ] Section documents that /dev/null is correct for output redirection in Git Bash on Windows
+- [ ] Section warns against using bare 'nul' which creates a literal file in MSYS/Git Bash
+- [ ] Section includes correct and incorrect usage examples
 
 **Notes:** The .gitignore half is already done (nul added to .gitignore). Remaining scope: add Windows bash /dev/null redirect guidance to AGENTS.md.
 
