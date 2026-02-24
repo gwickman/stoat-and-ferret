@@ -1,14 +1,16 @@
 {
   "exploration_id": "design-v012-005-logical-1771943482447",
   "results_folder": "design-v012-005-logical",
-  "status": "running",
+  "status": "complete",
   "pid": 7596,
   "started_at": "2026-02-24T14:31:22.447461",
-  "updated_at": "2026-02-24T14:31:24.601603",
-  "completed_at": null,
+  "updated_at": "2026-02-24T14:35:48.721064",
+  "completed_at": "2026-02-24T14:35:48.720668",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v012-005-logical/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v012-005-logical"
