@@ -3,12 +3,12 @@
 > Bridge between strategic roadmap and auto-dev execution.
 >
 > Strategic Roadmap: `docs/design/01-roadmap.md`
-> Last Updated: 2026-02-22
+> Last Updated: 2026-02-24
 
 ## Current Focus
 
-**Recently Completed:** v009 (Observability & GUI Runtime)
-**Upcoming:** v010 (Async Pipeline & Job Controls)
+**Recently Completed:** v010 (Async Pipeline & Job Controls)
+**Upcoming:** v011 (GUI Usability & Developer Experience)
 
 ## Roadmap → Version Mapping
 
@@ -16,7 +16,7 @@
 |---------|-------------------|-------|--------|
 | v012 | Phase 2 cleanup | API Surface & Bindings Cleanup: wire/remove FFmpeg bridge, audit PyO3 bindings, transition GUI, API spec polish | 📋 planned |
 | v011 | Phase 1–2 gaps | GUI Usability & Developer Experience: browse button, clip CRUD, .env.example, IMPACT_ASSESSMENT.md | 📋 planned |
-| v010 | RCA + Phase 1 gaps | Async Pipeline & Job Controls: fix blocking ffprobe, CI async gate, progress reporting, job cancellation | 📋 planned |
+| v010 | RCA + Phase 1 gaps | Async Pipeline & Job Controls: fix blocking ffprobe, CI async gate, progress reporting, job cancellation | ✅ complete |
 | v009 | Wiring audit + Phase 2 gaps | Observability & GUI Runtime: FFmpeg metrics, audit logging, file logging, SPA routing, pagination, WebSocket broadcasts | ✅ complete |
 | v008 | Wiring audit | Startup Integrity & CI Stability: database startup, logging startup, orphaned settings, flaky E2E fix | ✅ complete |
 | v007 | Phase 2, M2.4–2.6, M2.8–2.9 | Effect Workshop GUI: audio mixing, transitions, effect registry, catalog UI, parameter forms, live preview | ✅ complete |
@@ -42,23 +42,6 @@ Track explorations that must complete before version design.
 | BL-051 | Preview thumbnail pipeline (frame extraction + effect application) | v007 | complete |
 
 ## Planned Versions
-
-### v010 — Async Pipeline & Job Controls
-
-**Goal:** Fix the P0 async blocking bug, add guardrails to prevent recurrence, then build user-facing job progress and cancellation on top of the working pipeline.
-
-**Theme 1: async-pipeline-fix**
-- 001-fix-blocking-ffprobe: Fix blocking subprocess.run() in ffprobe [BL-072, P0]
-- 002-async-blocking-ci-gate: Add CI lint rule flagging blocking calls inside async def [BL-077, P2]
-- 003-event-loop-responsiveness-test: Integration test verifying event loop stays responsive during scan [BL-078, P2]
-
-**Theme 2: job-controls**
-- 001-progress-reporting: Add progress percentage and status updates to job queue, wire through WebSocket [BL-073, P1]
-- 002-job-cancellation: Add cancel endpoint and cooperative cancellation to scan and job queue [BL-074, P1]
-
-**Backlog items:** BL-072, BL-073, BL-074, BL-077, BL-078 (5 items)
-**Dependencies:** Theme 2 depends on Theme 1 — progress/cancellation are meaningless if the event loop is frozen.
-**Risk:** BL-072 touches async subprocess layer affecting all FFmpeg/ffprobe interactions. BL-078 validates the fix; BL-077 prevents regression.
 
 ### v011 — GUI Usability & Developer Experience
 
@@ -97,6 +80,13 @@ Track explorations that must complete before version design.
 **Risk:** BL-061 has moderate risk if decision is "wire it" (new integration code). If "remove", safe deletion.
 
 ## Completed Versions
+
+### v010 - Async Pipeline & Job Controls (2026-02-23)
+- **Themes:** async-pipeline-fix, job-controls
+- **Features:** 5 completed across 2 themes
+- **Backlog Resolved:** BL-072, BL-073, BL-074, BL-077, BL-078
+- **Key Changes:** Async ffprobe with `asyncio.create_subprocess_exec()` replacing blocking `subprocess.run()`, Ruff ASYNC rules (ASYNC210/221/230) as CI gate for blocking-in-async detection, event-loop responsiveness integration test (<2s jitter), job progress reporting with per-file progress via WebSocket, cooperative job cancellation with `cancel_event` and per-file checkpoints saving partial results
+- **Deferred:** None
 
 ### v009 - Observability & GUI Runtime (2026-02-22)
 - **Themes:** observability-pipeline, gui-runtime-fixes
@@ -193,6 +183,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-24 | v010 complete: Async Pipeline & Job Controls delivered (2 themes, 5 features, 5 backlog items completed). Moved v010 from Planned to Completed. Updated Current Focus to v011. |
 | 2026-02-23 | Replanned v010–v012 from 14 open backlog items. v010: Async Pipeline & Job Controls (BL-072, BL-073, BL-074, BL-077, BL-078). v011: GUI Usability & Developer Experience (BL-019, BL-070, BL-071, BL-075, BL-076). v012: API Surface & Bindings Cleanup (BL-061, BL-066, BL-067, BL-068, BL-079). Excluded BL-069 (C4 docs) and PR-003 (auto-dev product request). Updated BL-076 notes: project-specific code, not auto-dev artifact. |
 | 2026-02-22 | v009 complete: Observability & GUI Runtime delivered (2 themes, 6 features, 6 backlog items completed). Moved v009 from Planned to Completed. Updated Current Focus to v010. |
 | 2026-02-22 | v008 complete: Startup Integrity & CI Stability delivered (2 themes, 4 features, 4 backlog items completed). Moved v008 from Planned to Completed. Updated Current Focus to v009. |

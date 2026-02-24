@@ -1,10 +1,10 @@
 {
   "exploration_id": "v010-retro-008-closure-1771892210722",
   "results_folder": "v010-retro-008-closure",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10344,
   "started_at": "2026-02-24T00:16:50.722809",
-  "updated_at": "2026-02-24T00:16:50.722809",
+  "updated_at": "2026-02-24T00:16:52.618380",
   "completed_at": null,
   "error": null,
   "documents": [],
