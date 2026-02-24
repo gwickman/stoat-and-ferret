@@ -1,0 +1,63 @@
+{
+  "version": "v011",
+  "description": "GUI Usability & Developer Experience — Close the biggest GUI interaction gaps and improve onboarding/process documentation.",
+  "backlog_ids": ["BL-019", "BL-070", "BL-071", "BL-075", "BL-076"],
+  "context": {
+    "rationale": "v010 delivered async ffprobe, progress reporting, and job cancellation. v011 addresses the remaining GUI gaps (clip CRUD wiring, directory browsing) and developer onboarding friction (.env.example, Windows guidance, impact assessment checks).",
+    "constraints": [
+      "v010 must be deployed (completed 2026-02-23)",
+      "No inter-theme dependencies — themes can execute in parallel",
+      "Backend clip CRUD endpoints already exist — BL-075 is frontend-only",
+      "showDirectoryPicker() not viable — Firefox/Safari lack support",
+      "No label field in clip schema — BL-075 AC3 reference is an error"
+    ],
+    "assumptions": [
+      "Empty allowed_scan_roots means all directories permitted (confirmed by LRN-017)",
+      "Simple <select> dropdown sufficient for video selection in clip form",
+      "Sequential await with isLoading guard sufficient for race condition mitigation",
+      "IMPACT_ASSESSMENT.md markdown format consumable by auto-dev Task 003 agent"
+    ],
+    "deferred_items": []
+  },
+  "themes": [
+    {
+      "number": 1,
+      "slug": "scan-and-clip-ux",
+      "goal": "Deliver the missing GUI interaction layer for media scanning and clip management.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "browse-directory",
+          "goal": "Add backend directory listing endpoint and frontend browse button to ScanModal."
+        },
+        {
+          "number": 2,
+          "slug": "clip-crud-controls",
+          "goal": "Add Add/Edit/Delete clip controls to ProjectDetails with form modals and state management."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "slug": "developer-onboarding",
+      "goal": "Reduce onboarding friction and establish project-specific design-time quality checks.",
+      "features": [
+        {
+          "number": 1,
+          "slug": "env-example",
+          "goal": "Create .env.example with all Settings fields documented."
+        },
+        {
+          "number": 2,
+          "slug": "windows-dev-guidance",
+          "goal": "Add Windows Git Bash /dev/null guidance to AGENTS.md."
+        },
+        {
+          "number": 3,
+          "slug": "impact-assessment",
+          "goal": "Create IMPACT_ASSESSMENT.md with 4 project-specific design checks."
+        }
+      ]
+    }
+  ]
+}
