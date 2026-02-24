@@ -7,15 +7,15 @@
 
 ## Current Focus
 
-**Recently Completed:** v010 (Async Pipeline & Job Controls)
-**Upcoming:** v011 (GUI Usability & Developer Experience)
+**Recently Completed:** v011 (GUI Usability & Developer Experience)
+**Upcoming:** v012 (API Surface & Bindings Cleanup)
 
 ## Roadmap → Version Mapping
 
 | Version | Roadmap Reference | Focus | Status |
 |---------|-------------------|-------|--------|
 | v012 | Phase 2 cleanup | API Surface & Bindings Cleanup: wire/remove FFmpeg bridge, audit PyO3 bindings, transition GUI, API spec polish | 📋 planned |
-| v011 | Phase 1–2 gaps | GUI Usability & Developer Experience: browse button, clip CRUD, .env.example, IMPACT_ASSESSMENT.md | 📋 planned |
+| v011 | Phase 1–2 gaps | GUI Usability & Developer Experience: browse button, clip CRUD, .env.example, IMPACT_ASSESSMENT.md | ✅ complete |
 | v010 | RCA + Phase 1 gaps | Async Pipeline & Job Controls: fix blocking ffprobe, CI async gate, progress reporting, job cancellation | ✅ complete |
 | v009 | Wiring audit + Phase 2 gaps | Observability & GUI Runtime: FFmpeg metrics, audit logging, file logging, SPA routing, pagination, WebSocket broadcasts | ✅ complete |
 | v008 | Wiring audit | Startup Integrity & CI Stability: database startup, logging startup, orphaned settings, flaky E2E fix | ✅ complete |
@@ -43,24 +43,6 @@ Track explorations that must complete before version design.
 
 ## Planned Versions
 
-### v011 — GUI Usability & Developer Experience
-
-**Goal:** Close the biggest GUI interaction gaps and improve onboarding/process documentation.
-**Depends on:** v010 deployed (progress reporting needed for scan UX improvements).
-
-**Theme 1: scan-and-clip-ux**
-- 001-browse-button: Add file/directory browser dialog for scan path selection [BL-070, P2]
-- 002-clip-management-controls: Add Add/Edit/Delete clip controls to project detail view [BL-075, P1]
-
-**Theme 2: developer-onboarding**
-- 001-env-example: Create .env.example with all Settings fields documented [BL-071, P2]
-- 002-windows-dev-guidance: Add /dev/null → nul guidance to AGENTS.md, add nul to .gitignore [BL-019, P3]
-- 003-impact-assessment: Create IMPACT_ASSESSMENT.md with async safety, settings docs, cross-version wiring, and GUI input mechanism checks [BL-076, P1]
-
-**Backlog items:** BL-019, BL-070, BL-071, BL-075, BL-076 (5 items)
-**Dependencies:** None between themes. Within Theme 2, .env.example before IMPACT_ASSESSMENT.md since the assessment checks for .env.example updates.
-**Risk:** BL-075 (clip CRUD GUI) touches multiple layers. Browse button validates GUI build pipeline first.
-
 ### v012 — API Surface & Bindings Cleanup
 
 **Goal:** Reduce technical debt in the Rust-Python boundary and close remaining polish items.
@@ -80,6 +62,13 @@ Track explorations that must complete before version design.
 **Risk:** BL-061 has moderate risk if decision is "wire it" (new integration code). If "remove", safe deletion.
 
 ## Completed Versions
+
+### v011 - GUI Usability & Developer Experience (2026-02-24)
+- **Themes:** scan-and-clip-ux, developer-onboarding
+- **Features:** 5 completed across 2 themes
+- **Backlog Resolved:** BL-019, BL-070, BL-071, BL-075, BL-076
+- **Key Changes:** Directory browser dialog for scan path selection with filesystem API endpoint, clip CRUD controls (Add/Edit/Delete) with ClipFormModal and clipStore, .env.example with all 11 Settings fields documented, Git Bash /dev/null guidance in AGENTS.md Windows section, IMPACT_ASSESSMENT.md with 4 design-time checks for recurring issue patterns
+- **Deferred:** None
 
 ### v010 - Async Pipeline & Job Controls (2026-02-23)
 - **Themes:** async-pipeline-fix, job-controls
@@ -166,7 +155,7 @@ Work categories:
 | `discovered` | Found during execution, not originally planned |
 | `blocked` | Waiting on external dependency |
 
-**Version-agnostic items:** None — all open items assigned to v010–v012.
+**Version-agnostic items:** None — all open items assigned to v012.
 **Excluded from versions:** BL-069 (C4 documentation update, deferred), PR-003 (auto-dev-mcp product request, not stoat-and-ferret code).
 
 Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
@@ -183,6 +172,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-24 | v011 complete: GUI Usability & Developer Experience delivered (2 themes, 5 features, 5 backlog items completed). Moved v011 from Planned to Completed. Updated Current Focus to v012. |
 | 2026-02-24 | v010 complete: Async Pipeline & Job Controls delivered (2 themes, 5 features, 5 backlog items completed). Moved v010 from Planned to Completed. Updated Current Focus to v011. |
 | 2026-02-23 | Replanned v010–v012 from 14 open backlog items. v010: Async Pipeline & Job Controls (BL-072, BL-073, BL-074, BL-077, BL-078). v011: GUI Usability & Developer Experience (BL-019, BL-070, BL-071, BL-075, BL-076). v012: API Surface & Bindings Cleanup (BL-061, BL-066, BL-067, BL-068, BL-079). Excluded BL-069 (C4 docs) and PR-003 (auto-dev product request). Updated BL-076 notes: project-specific code, not auto-dev artifact. |
 | 2026-02-22 | v009 complete: Observability & GUI Runtime delivered (2 themes, 6 features, 6 backlog items completed). Moved v009 from Planned to Completed. Updated Current Focus to v010. |
