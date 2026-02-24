@@ -1,10 +1,10 @@
 {
   "exploration_id": "v010-retro-011-cross-version-1771892882482",
   "results_folder": "v010-retro-011-cross-version",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10344,
   "started_at": "2026-02-24T00:28:02.482346",
-  "updated_at": "2026-02-24T00:28:02.482346",
+  "updated_at": "2026-02-24T00:28:04.421119",
   "completed_at": null,
   "error": null,
   "documents": [],
