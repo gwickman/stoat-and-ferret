@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v010-retro-008-closure-1771892210722",
+  "results_folder": "v010-retro-008-closure",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-24T00:16:50.722809",
+  "updated_at": "2026-02-24T00:16:50.722809",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v010-retro-008-closure/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v010-retro-008-closure"
+}
