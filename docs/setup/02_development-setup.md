@@ -9,7 +9,17 @@ git clone <repo-url> stoat-and-ferret
 cd stoat-and-ferret
 ```
 
-## 2. Install Python Dependencies
+## 2. Configure Environment
+
+Copy the example environment file and adjust values as needed:
+
+```bash
+cp .env.example .env
+```
+
+The defaults work for local development. See [Configuration](04_configuration.md) for all available settings.
+
+## 3. Install Python Dependencies
 
 Use `uv` to create a virtual environment and install all dependencies (including dev tools like pytest, ruff, mypy, and maturin):
 
@@ -19,7 +29,7 @@ uv sync
 
 This reads `pyproject.toml` and `uv.lock` to install deterministic, reproducible dependencies. The virtual environment is created at `.venv/` in the project root.
 
-## 3. Build the Rust Core Extension
+## 4. Build the Rust Core Extension
 
 The Rust core (`stoat_ferret_core`) provides filter generation, timeline calculations, FFmpeg command building, and input sanitization. Build it with maturin:
 
@@ -37,7 +47,7 @@ uv run python -c "from stoat_ferret_core import health_check; print(health_check
 
 This should print a health check message confirming the Rust extension loaded successfully. If you see `RuntimeError: stoat_ferret_core native extension not built`, the maturin build did not complete correctly -- see [Troubleshooting](05_troubleshooting.md).
 
-## 4. Install Frontend Dependencies
+## 5. Install Frontend Dependencies
 
 The GUI is a React/Vite/Tailwind application in the `gui/` directory:
 
@@ -62,7 +72,7 @@ Return to the project root:
 cd ..
 ```
 
-## 5. Initialize the Database
+## 6. Initialize the Database
 
 The project uses SQLite with Alembic for schema migrations. Initialize the database:
 
@@ -85,7 +95,7 @@ uv run alembic -x sqlalchemy.url=sqlite:///:memory: downgrade base
 uv run alembic -x sqlalchemy.url=sqlite:///:memory: upgrade head
 ```
 
-## 6. Start the Development Server
+## 7. Start the Development Server
 
 ```bash
 uv run uvicorn stoat_ferret.api.app:create_app --factory --reload
@@ -114,7 +124,7 @@ npm run dev
 
 This starts Vite's dev server (typically at `http://localhost:5173`). You will need to configure it to proxy API requests to the backend, or run the backend separately.
 
-## 7. Running Tests
+## 8. Running Tests
 
 ### Python Tests
 
@@ -163,7 +173,7 @@ npx playwright test
 
 Playwright is configured to start the backend server automatically (see `gui/playwright.config.ts`).
 
-## 8. Code Quality
+## 9. Code Quality
 
 ### Linting
 
