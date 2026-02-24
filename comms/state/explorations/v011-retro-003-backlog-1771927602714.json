@@ -1,14 +1,16 @@
 {
   "exploration_id": "v011-retro-003-backlog-1771927602714",
   "results_folder": "v011-retro-003-backlog",
-  "status": "running",
+  "status": "complete",
   "pid": 7596,
   "started_at": "2026-02-24T10:06:42.714849",
-  "updated_at": "2026-02-24T10:06:44.545321",
-  "completed_at": null,
+  "updated_at": "2026-02-24T10:12:14.125247",
+  "completed_at": "2026-02-24T10:12:14.124954",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v011-retro-003-backlog/prompt.md",
   "outbox_path": "comms/outbox/exploration/v011-retro-003-backlog"
