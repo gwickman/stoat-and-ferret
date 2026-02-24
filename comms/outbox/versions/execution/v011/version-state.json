@@ -1,0 +1,33 @@
+{
+  "schema_version": "2.0",
+  "version": "v011",
+  "description": "GUI Usability & Developer Experience — Close the biggest GUI interaction gaps and improve onboarding/process documentation.",
+  "status": "pending",
+  "started_at": "2026-02-24T07:30:28.233699Z",
+  "completed_at": null,
+  "themes": [
+    {
+      "number": 1,
+      "name": "scan-and-clip-ux",
+      "status": "pending",
+      "features_total": 2,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 2,
+      "name": "developer-onboarding",
+      "status": "pending",
+      "features_total": 3,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    }
+  ],
+  "current_theme": 1,
+  "current_feature": 1,
+  "baseline_failures": []
+}
