@@ -121,3 +121,54 @@ export async function fetchClips(projectId: string): Promise<{ clips: Clip[]; to
   const json: ClipListResponse = await res.json()
   return { clips: json.clips, total: json.total }
 }
+
+export async function createClip(
+  projectId: string,
+  data: {
+    source_video_id: string
+    in_point: number
+    out_point: number
+    timeline_position: number
+  },
+): Promise<Clip> {
+  const res = await fetch(`/api/v1/projects/${projectId}/clips`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null)
+    throw new Error(detail?.detail?.message || detail?.detail || `Create clip failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function updateClip(
+  projectId: string,
+  clipId: string,
+  data: {
+    in_point?: number
+    out_point?: number
+    timeline_position?: number
+  },
+): Promise<Clip> {
+  const res = await fetch(`/api/v1/projects/${projectId}/clips/${clipId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null)
+    throw new Error(detail?.detail?.message || detail?.detail || `Update clip failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteClip(projectId: string, clipId: string): Promise<void> {
+  const res = await fetch(`/api/v1/projects/${projectId}/clips/${clipId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    throw new Error(`Delete clip failed: ${res.status}`)
+  }
+}
