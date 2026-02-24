@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v011-retro-010-final-1771929770184",
+  "results_folder": "v011-retro-010-final",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-24T10:42:50.184253",
+  "updated_at": "2026-02-24T10:42:50.184253",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v011-retro-010-final/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v011-retro-010-final"
+}
