@@ -1106,7 +1106,64 @@
       "content_path": "docs/auto-dev/LEARNINGS/LRN-059-pre-collect-items-when-progress-reporting-needs-a-.md",
       "status": "active",
       "updated_at": null
+    },
+    {
+      "id": "LRN-060",
+      "title": "Wire Frontend to Existing Backend Endpoints Before Creating New Ones",
+      "tags": [
+        "pattern",
+        "frontend",
+        "api-design",
+        "planning",
+        "efficiency"
+      ],
+      "created": "2026-02-24T10:28:44.452116Z",
+      "source": "v011/01-scan-and-clip-ux retrospective, v011 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Prioritize wiring frontend to existing backend endpoints over creating new ones; mature API surfaces enable faster, lower-risk GUI feature delivery.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-060-wire-frontend-to-existing-backend-endpoints-before.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-061",
+      "title": "Documentation-Only Themes Are Low-Risk High-Value Process Investments",
+      "tags": [
+        "process",
+        "documentation",
+        "planning",
+        "risk-management",
+        "efficiency"
+      ],
+      "created": "2026-02-24T10:28:53.852505Z",
+      "source": "v011/02-developer-onboarding retrospective, v011 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Documentation-only themes execute with zero regressions and consistent quality gates; use them for process improvements and onboarding artifacts.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-061-documentation-only-themes-are-low-risk-high-value-.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-062",
+      "title": "Design-Time Impact Checks Shift Defect Detection Left from Implementation to Design",
+      "tags": [
+        "process",
+        "design",
+        "quality",
+        "failure-mode",
+        "institutional-knowledge"
+      ],
+      "created": "2026-02-24T10:29:02.903714Z",
+      "source": "v011/02-developer-onboarding/003-impact-assessment completion-report, v011 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Codify recurring issue patterns into structured design-time impact checks to catch defects during version design rather than implementation.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-062-design-time-impact-checks-shift-defect-detection-l.md",
+      "status": "active",
+      "updated_at": null
     }
   ],
-  "next_id": 60
+  "next_id": 63
 }
