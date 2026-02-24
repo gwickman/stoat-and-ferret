@@ -4,6 +4,42 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v011] - 2026-02-24
+
+GUI Usability & Developer Experience. Closes the biggest GUI interaction gaps with a directory browser for scan path selection and full clip CRUD controls, then improves developer onboarding with environment template, Windows guidance, and design-time impact assessment checks.
+
+### Added
+
+- **Directory Browser**
+  - `GET /api/v1/filesystem/directories` endpoint with `validate_scan_path()` security enforcement
+  - `DirectoryBrowser` overlay component in ScanModal for selecting scan paths
+  - Non-blocking filesystem access via `run_in_executor` for `os.scandir()`
+
+- **Clip CRUD Controls**
+  - Add/Edit/Delete clip controls on ProjectDetails page
+  - `ClipFormModal` with form validation for clip in/out points
+  - `clipStore` Zustand store following per-entity pattern (like `effectStackStore`)
+  - Wired to existing backend POST/PATCH/DELETE clip endpoints
+
+- **Environment Template**
+  - `.env.example` covering all 11 Settings fields with inline documentation
+  - Cross-references added to AGENTS.md, quickstart guide, and contributing docs
+
+- **Windows Developer Guidance**
+  - Git Bash `/dev/null` pitfall documentation added to AGENTS.md Windows section
+
+- **Impact Assessment**
+  - `IMPACT_ASSESSMENT.md` with 4 design-time checks: async safety, settings documentation, cross-version wiring, GUI input mechanisms (BL-076)
+  - Captures recurring issue patterns for early detection during version design
+
+### Changed
+
+- ScanModal now includes embedded DirectoryBrowser overlay for path selection instead of manual text entry only
+
+### Fixed
+
+- N/A
+
 ## [v010] - 2026-02-23
 
 Async Pipeline Fix & Job Controls. Fixes the P0 blocking subprocess.run() in ffprobe that froze the asyncio event loop during scans, adds CI guardrails and runtime regression tests to prevent recurrence, then builds user-facing job progress reporting and cooperative cancellation on the working pipeline.
