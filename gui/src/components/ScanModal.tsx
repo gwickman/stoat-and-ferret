@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import DirectoryBrowser from './DirectoryBrowser'
 
 interface ScanModalProps {
   open: boolean
@@ -26,6 +27,7 @@ export default function ScanModal({
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [progress, setProgress] = useState<number | null>(null)
+  const [showBrowser, setShowBrowser] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const jobIdRef = useRef<string | null>(null)
 
@@ -43,6 +45,7 @@ export default function ScanModal({
       setDirectory('')
       setErrorMessage('')
       setProgress(null)
+      setShowBrowser(false)
       jobIdRef.current = null
     }
   }, [open, cleanup])
@@ -139,16 +142,27 @@ export default function ScanModal({
             >
               Directory Path
             </label>
-            <input
-              id="scan-directory"
-              type="text"
-              value={directory}
-              onChange={(e) => setDirectory(e.target.value)}
-              placeholder="/path/to/videos"
-              disabled={isScanning}
-              className="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
-              data-testid="scan-directory-input"
-            />
+            <div className="flex gap-2">
+              <input
+                id="scan-directory"
+                type="text"
+                value={directory}
+                onChange={(e) => setDirectory(e.target.value)}
+                placeholder="/path/to/videos"
+                disabled={isScanning}
+                className="min-w-0 flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                data-testid="scan-directory-input"
+              />
+              <button
+                type="button"
+                onClick={() => setShowBrowser(true)}
+                disabled={isScanning}
+                className="shrink-0 rounded border border-gray-700 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+                data-testid="scan-browse-button"
+              >
+                Browse
+              </button>
+            </div>
           </div>
 
           <div className="mb-4">
@@ -242,6 +256,17 @@ export default function ScanModal({
           </div>
         </form>
       </div>
+
+      {showBrowser && (
+        <DirectoryBrowser
+          initialPath={directory || undefined}
+          onSelect={(path) => {
+            setDirectory(path)
+            setShowBrowser(false)
+          }}
+          onCancel={() => setShowBrowser(false)}
+        />
+      )}
     </div>
   )
 }

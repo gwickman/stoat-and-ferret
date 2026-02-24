@@ -18,7 +18,7 @@ from prometheus_client import make_asgi_app
 
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
-from stoat_ferret.api.routers import effects, health, jobs, projects, videos
+from stoat_ferret.api.routers import effects, filesystem, health, jobs, projects, videos
 from stoat_ferret.api.routers.ws import websocket_endpoint
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.services.thumbnail import ThumbnailService
@@ -184,6 +184,7 @@ def create_app(
     app.include_router(projects.router)
     app.include_router(jobs.router)
     app.include_router(effects.router)
+    app.include_router(filesystem.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)
