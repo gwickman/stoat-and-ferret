@@ -1,14 +1,17 @@
 {
   "exploration_id": "design-v012-007-drafts-1771944229924",
   "results_folder": "design-v012-007-drafts",
-  "status": "running",
+  "status": "complete",
   "pid": 7596,
   "started_at": "2026-02-24T14:43:49.924527",
-  "updated_at": "2026-02-24T14:43:51.785113",
-  "completed_at": null,
+  "updated_at": "2026-02-24T14:51:19.560561",
+  "completed_at": "2026-02-24T14:51:19.560166",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "draft-checklist.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/design-v012-007-drafts/prompt.md",
   "outbox_path": "comms/outbox/exploration/design-v012-007-drafts"
