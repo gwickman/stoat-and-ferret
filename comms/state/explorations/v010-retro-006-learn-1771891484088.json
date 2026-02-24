@@ -1,14 +1,16 @@
 {
   "exploration_id": "v010-retro-006-learn-1771891484088",
   "results_folder": "v010-retro-006-learn",
-  "status": "running",
+  "status": "complete",
   "pid": 10344,
   "started_at": "2026-02-24T00:04:44.088782",
-  "updated_at": "2026-02-24T00:04:46.091611",
-  "completed_at": null,
+  "updated_at": "2026-02-24T00:09:42.784298",
+  "completed_at": "2026-02-24T00:09:42.784000",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v010-retro-006-learn/prompt.md",
   "outbox_path": "comms/outbox/exploration/v010-retro-006-learn"
