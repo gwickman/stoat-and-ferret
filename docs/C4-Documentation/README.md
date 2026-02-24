@@ -1,7 +1,7 @@
 # C4 Architecture Documentation
 
-**Last Updated:** 2026-02-22 UTC
-**Generated for Version:** v008
+**Last Updated:** 2026-02-24 UTC
+**Generated for Version:** v011
 **Generation Mode:** delta
 **Generator:** auto-dev-mcp C4 documentation prompt
 
@@ -38,7 +38,7 @@
 | [c4-component-application-services.md](./c4-component-application-services.md) | Video scanning, thumbnail generation, FFmpeg execution, async job queue |
 | [c4-component-data-access.md](./c4-component-data-access.md) | SQLite repository pattern for Video, Project, Clip; domain models with effects/transitions as JSON; schema; audit logging; structured logging config |
 | [c4-component-web-gui.md](./c4-component-web-gui.md) | React SPA with dashboard, video library, project management, effect workshop (apply/edit/remove lifecycle), WCAG AA accessibility, and real-time monitoring |
-| [c4-component-test-infrastructure.md](./c4-component-test-infrastructure.md) | Unit, integration, contract, black-box, security, property-based, PyO3 binding parity, startup integration, and orphaned settings test suites |
+| [c4-component-test-infrastructure.md](./c4-component-test-infrastructure.md) | Unit, integration, contract, black-box, security, property-based, PyO3 binding parity, audio/transition builder parity, startup integration, and orphaned settings test suites |
 
 ### Code-Level Documents
 
@@ -56,10 +56,8 @@
 | [c4-code-stubs-stoat-ferret-core.md](./c4-code-stubs-stoat-ferret-core.md) | Python type stubs for Rust bindings |
 | [c4-code-scripts.md](./c4-code-scripts.md) | Scripts (stub verification) |
 | [c4-code-python-effects.md](./c4-code-python-effects.md) | Effects module: EffectDefinition, EffectRegistry, 9 built-in effects |
-| [c4-code-python-api.md](./c4-code-python-api.md) | Higher-level API layer overview with routers, schemas, services, and WebSocket |
-| [c4-code-python-schemas.md](./c4-code-python-schemas.md) | Schema definitions overview with effect and job schemas |
-| [c4-code-python-db.md](./c4-code-python-db.md) | SQLAlchemy ORM models, generic BaseRepository, async repositories |
 | [c4-code-stoat-ferret-api.md](./c4-code-stoat-ferret-api.md) | API application factory, settings (debug, ws_heartbeat_interval), lifespan with structured logging, entry point |
+| [c4-code-python-api.md](./c4-code-python-api.md) | Higher-level API layer overview with routers, schemas, services, and WebSocket |
 | [c4-code-stoat-ferret-api-routers.md](./c4-code-stoat-ferret-api-routers.md) | API route handlers (health, videos, projects, jobs, effects with CRUD, ws with configurable heartbeat) |
 | [c4-code-stoat-ferret-api-middleware.md](./c4-code-stoat-ferret-api-middleware.md) | API middleware (correlation ID, metrics) |
 | [c4-code-stoat-ferret-api-schemas.md](./c4-code-stoat-ferret-api-schemas.md) | API Pydantic request/response schemas |
@@ -76,6 +74,7 @@
 | [c4-code-gui-stores.md](./c4-code-gui-stores.md) | GUI Zustand stores (activity, library, project, effectCatalog, effectForm, effectPreview, effectStack) |
 | [c4-code-gui-components-tests.md](./c4-code-gui-components-tests.md) | GUI component tests (101 tests, 20 files) |
 | [c4-code-gui-hooks-tests.md](./c4-code-gui-hooks-tests.md) | GUI hook tests (30 tests, 6 files) |
+| [c4-code-gui-stores-tests.md](./c4-code-gui-stores-tests.md) | GUI store tests (clipStore CRUD, API error handling) |
 | [c4-code-gui-e2e.md](./c4-code-gui-e2e.md) | GUI E2E Playwright tests (15 tests) |
 | [c4-code-tests.md](./c4-code-tests.md) | Test suite root (~532 tests including startup integration and orphaned settings) |
 | [c4-code-tests-test-api.md](./c4-code-tests-test-api.md) | API integration tests |
@@ -95,6 +94,7 @@
 | v006 | delta | 2026-02-19 | Delta update for effects engine. Added c4-component-effects-engine.md. Updated 6 code-level files, 5 component files, container, context, API spec. Added 6 new code-level files for v006 modules. |
 | v007 | delta | 2026-02-19 | Delta update for v007: effect workshop GUI, quality validation, API spec update. Updated component files (web-gui, test-infrastructure, api-gateway), added GUI code-level files (e2e, components-tests, hooks-tests, stores, pages, hooks, components, src), added test code-level files, updated API spec to v0.7.0. 42 code-level files total. |
 | v008 | delta | 2026-02-22 | Delta update for v008: application startup wiring, CI stability, structured logging. Updated 6 code-level files (stoat-ferret, stoat-ferret-api, stoat-ferret-api-routers, stoat-ferret-db, gui-e2e, tests), 4 component files (api-gateway, data-access, test-infrastructure, web-gui), component index, container, context, and API spec. No new files added; 42 code-level files total. |
+| v011 | delta | 2026-02-24 | Delta update for v011: developer onboarding, scan-and-clip UX, impact assessment. Updated 19 code-level files, 2 component files (web-gui, test-infrastructure), component index, container, context, and API spec. Added 1 new code-level file (gui-stores-tests). 43 code-level files total. |
 
 ## Regeneration
 
