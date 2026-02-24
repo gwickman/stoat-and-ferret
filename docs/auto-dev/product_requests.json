@@ -44,8 +44,26 @@
       "upvotes": 0,
       "created": "2026-02-22T17:43:40.326476",
       "updated": "2026-02-22T17:43:40.326477"
+    },
+    {
+      "id": "PR-004",
+      "title": "Replace polling-based job progress with WebSocket/SSE real-time push",
+      "description": "Job progress is currently poll-based via `GET /api/v1/jobs/{id}`. The frontend ScanModal polls at a fixed interval to update the progress bar. WebSocket infrastructure already exists (BL-029, BL-065 completed) but is not wired for job progress events. Pushing progress updates over the existing WebSocket connection would eliminate polling overhead and provide smoother real-time progress feedback. Identified as deferred work in v010 Theme 02 (job-controls) completion reports for both 001-progress-reporting and 002-job-cancellation.",
+      "priority": "P3",
+      "status": "open",
+      "tags": [
+        "websocket",
+        "jobs",
+        "progress",
+        "ux",
+        "deferred-v010"
+      ],
+      "project": "stoat-and-ferret",
+      "upvotes": 0,
+      "created": "2026-02-24T00:14:27.686285",
+      "updated": "2026-02-24T00:14:27.686287"
     }
   ],
-  "next_id": 4,
-  "updated": "2026-02-22T17:43:40.326482"
+  "next_id": 5,
+  "updated": "2026-02-24T00:14:27.686292"
 }
