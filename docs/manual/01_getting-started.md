@@ -29,7 +29,13 @@ The server starts on `http://localhost:8000` by default. You can configure the h
 STOAT_API_HOST=0.0.0.0 STOAT_API_PORT=9000 python -m stoat_ferret.api
 ```
 
-All settings use the `STOAT_` prefix and can also be placed in a `.env` file. See [API Overview](02_api-overview.md) for the full settings reference.
+All settings use the `STOAT_` prefix and can also be placed in a `.env` file. A `.env.example` template is included in the project root — copy it to get started:
+
+```bash
+cp .env.example .env
+```
+
+See [API Overview](02_api-overview.md) for the full settings reference.
 
 ## Verify the Server is Running
 

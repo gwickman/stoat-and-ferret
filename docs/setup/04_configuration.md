@@ -26,6 +26,13 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | `STOAT_DEBUG` | `bool` | `false` | Enable debug mode. Accepts `true`, `false`, `1`, `0`, `yes`, `no`. |
 | `STOAT_LOG_LEVEL` | `str` | `INFO` | Logging level. One of: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 
+### Logging
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_LOG_BACKUP_COUNT` | `int` | `5` | Number of rotated log file backups to keep (0 = no backups). |
+| `STOAT_LOG_MAX_BYTES` | `int` | `10485760` | Maximum log file size in bytes before rotation (default 10 MB, 0 = no rotation). |
+
 ### Storage
 
 | Variable | Type | Default | Description |
@@ -72,7 +79,7 @@ STOAT_ALLOWED_SCAN_ROOTS=["/home/user/videos"]
 
 The `.env` file uses UTF-8 encoding. Environment variables set in the shell take precedence over values in `.env`.
 
-> **Note:** The `.env` file is not committed to version control. You may want to create a `.env.example` with sample values for other developers.
+> **Note:** The `.env` file is not committed to version control. Copy the provided `.env.example` template to get started: `cp .env.example .env`
 
 ## pydantic-settings Details
 
