@@ -7,7 +7,7 @@
 - **Location**: `tests/`
 - **Language**: Python (pytest, asyncio)
 - **Purpose**: Provides foundational test coverage for database repositories, domain models, FFmpeg execution, observable patterns, WebSocket endpoints, audit logging, Rust binding parity, shared test factories, and application startup
-- **Parent Component**: TBD
+- **Parent Component**: [Test Infrastructure](./c4-component-test-infrastructure.md)
 
 ## Code Elements
 

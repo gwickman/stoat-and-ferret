@@ -6,7 +6,7 @@
 - **Location**: `gui/src/pages/`
 - **Language**: TypeScript (TSX)
 - **Purpose**: Each page implements a major application feature by orchestrating data fetching, state management, and component composition
-- **Parent Component**: TBD
+- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
 

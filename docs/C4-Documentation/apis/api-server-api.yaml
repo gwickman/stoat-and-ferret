@@ -9,7 +9,7 @@ info:
     transition application between adjacent clips. The WebSocket heartbeat interval is
     configurable via the STOAT_WS_HEARTBEAT_INTERVAL environment variable. Structured
     logging (JSON or console) is initialised on application startup via configure_logging().
-  version: "0.8.0"
+  version: "0.11.0"
   license:
     name: MIT
 
@@ -363,11 +363,7 @@ paths:
         Poll status of an async job submitted via POST /api/v1/videos/scan.
       tags: [Jobs]
       parameters:
-        - name: job_id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/JobId"
       responses:
         "200":
           description: Job status
@@ -377,6 +373,74 @@ paths:
                 $ref: "#/components/schemas/JobStatusResponse"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /api/v1/jobs/{job_id}/cancel:
+    post:
+      operationId: cancelJob
+      summary: Request cancellation of a job
+      description: >
+        Sets the cancellation flag on a job. Returns 409 if the job is already
+        in a terminal state (COMPLETE, FAILED, TIMEOUT, CANCELLED).
+      tags: [Jobs]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job cancellation requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Job already in terminal state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/filesystem/directories:
+    get:
+      operationId: listDirectories
+      summary: List subdirectories within a path
+      description: >
+        Returns a flat list of immediate subdirectories. Hidden directories
+        (starting with '.') are excluded. Defaults to the first allowed scan
+        root or the user's home directory when no path is provided.
+      tags: [Filesystem]
+      parameters:
+        - name: path
+          in: query
+          description: Directory path to list. Defaults to a sensible starting location.
+          schema:
+            type: string
+            nullable: true
+      responses:
+        "200":
+          description: Directory listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryListResponse"
+        "400":
+          description: Path is not a directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Path not in allowed scan roots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Path does not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/v1/effects:
     get:
@@ -565,6 +629,12 @@ components:
         type: string
     ClipId:
       name: clip_id
+      in: path
+      required: true
+      schema:
+        type: string
+    JobId:
+      name: job_id
       in: path
       required: true
       schema:
@@ -820,7 +890,7 @@ components:
           type: string
         status:
           type: string
-          enum: [PENDING, RUNNING, COMPLETE, FAILED, TIMEOUT]
+          enum: [PENDING, RUNNING, COMPLETE, FAILED, TIMEOUT, CANCELLED]
         progress:
           type: number
           nullable: true
@@ -1014,6 +1084,30 @@ components:
           type: string
           description: Generated FFmpeg filter string for the transition
 
+    DirectoryEntry:
+      type: object
+      required: [name, path]
+      description: A subdirectory entry in a directory listing
+      properties:
+        name:
+          type: string
+          description: Directory display name
+        path:
+          type: string
+          description: Fully resolved absolute path
+
+    DirectoryListResponse:
+      type: object
+      required: [path, directories]
+      properties:
+        path:
+          type: string
+          description: The parent directory that was listed
+        directories:
+          type: array
+          items:
+            $ref: "#/components/schemas/DirectoryEntry"
+
     ErrorResponse:
       type: object
       required: [detail]
@@ -1037,6 +1131,9 @@ components:
                 - SAME_CLIP
                 - NOT_ADJACENT
                 - EMPTY_TIMELINE
+                - NOT_A_DIRECTORY
+                - PATH_NOT_FOUND
+                - ALREADY_TERMINAL
                 - UNSAFE_INPUT
                 - FFMPEG_ERROR
                 - RUST_CORE_ERROR

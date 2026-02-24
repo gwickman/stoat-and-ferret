@@ -7,7 +7,7 @@
 - **Location**: `tests/test_jobs/`
 - **Language**: Python (pytest, asyncio)
 - **Purpose**: Validates job submission, status tracking, completion, failure, timeout, cancellation behavior, and worker lifecycle management
-- **Parent Component**: TBD
+- **Parent Component**: [Test Infrastructure](./c4-component-test-infrastructure.md)
 
 ## Code Elements
 

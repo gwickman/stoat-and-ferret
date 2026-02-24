@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/api/schemas/`
 - **Language**: Python (Pydantic v2)
 - **Purpose**: Define typed request/response schemas for all REST API endpoints
-- **Parent Component**: TBD
+- **Parent Component**: [API Gateway](./c4-component-api-gateway.md)
 
 ## Code Elements
 

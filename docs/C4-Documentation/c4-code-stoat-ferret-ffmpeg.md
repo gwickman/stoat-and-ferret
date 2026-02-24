@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/ffmpeg/`
 - **Language**: Python
 - **Purpose**: Provide a testable abstraction layer for FFmpeg operations including execution, recording/replay for tests, metrics, and integration with Rust-built FFmpegCommand objects
-- **Parent Component**: TBD
+- **Parent Component**: [Application Services](./c4-component-application-services.md)
 
 ## Code Elements
 

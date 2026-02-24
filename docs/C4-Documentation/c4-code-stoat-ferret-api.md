@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/api/`
 - **Language**: Python (async/await)
 - **Purpose**: Configure and wire together all API components including routers, middleware, lifespan management, WebSocket support, Prometheus metrics, and static file serving
-- **Parent Component**: TBD
+- **Parent Component**: [API Gateway](./c4-component-api-gateway.md)
 
 ## Code Elements
 

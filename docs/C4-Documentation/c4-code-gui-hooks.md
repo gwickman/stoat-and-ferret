@@ -6,7 +6,7 @@
 - **Location**: `gui/src/hooks/`
 - **Language**: TypeScript
 - **Purpose**: Encapsulates side effects (API polling, WebSocket management, debouncing) and data fetching logic, keeping components focused on presentation
-- **Parent Component**: TBD
+- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
 

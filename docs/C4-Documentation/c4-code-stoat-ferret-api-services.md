@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/api/services/`
 - **Language**: Python
 - **Purpose**: Encapsulate domain logic for video scanning and thumbnail creation, decoupled from HTTP routing
-- **Parent Component**: TBD
+- **Parent Component**: [Application Services](./c4-component-application-services.md)
 
 ## Code Elements
 

@@ -7,7 +7,7 @@
 - **Location**: `tests/test_doubles/`
 - **Language**: Python (pytest, async)
 - **Purpose**: Ensures in-memory repository implementations provide proper data isolation (deepcopy on read/write) and that InMemoryJobQueue supports configurable outcomes for testing
-- **Parent Component**: TBD
+- **Parent Component**: [Test Infrastructure](./c4-component-test-infrastructure.md)
 
 ## Code Elements
 

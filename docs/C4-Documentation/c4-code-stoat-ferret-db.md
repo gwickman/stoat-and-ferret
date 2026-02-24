@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/db/`
 - **Language**: Python
 - **Purpose**: Provide data access abstractions (sync and async) for all domain entities with full CRUD, FTS5 search, and audit trail support
-- **Parent Component**: TBD
+- **Parent Component**: [Data Access Layer](./c4-component-data-access.md)
 
 ## Code Elements
 

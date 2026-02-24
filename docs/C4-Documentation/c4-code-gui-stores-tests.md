@@ -6,7 +6,7 @@
 - **Location**: `gui/src/stores/__tests__/`
 - **Language**: TypeScript
 - **Purpose**: Unit tests for Zustand stores covering CRUD operations, API interactions, state management, and error handling
-- **Parent Component**: TBD
+- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
 

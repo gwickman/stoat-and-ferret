@@ -16,12 +16,12 @@ The test infrastructure establishes key patterns used across all suites: contrac
 
 ## Software Features
 - **Repository Contract Tests**: Parametrized tests ensuring SQLite and InMemory implementations behave identically
-- **API Endpoint Tests**: 180 tests covering all REST endpoints including effects CRUD and transitions
+- **API Endpoint Tests**: 215 tests covering all REST endpoints including effects CRUD and transitions
 - **Black-Box E2E Tests**: 60 tests exercising complete workflows through HTTP
 - **FFmpeg Contract Tests**: Record/replay parity tests for Real/Recording/Fake executors
 - **Security Tests**: 32 tests for shell injection, null bytes, path traversal, whitelist bypass
-- **Job Queue Tests**: 14 tests for async job lifecycle, timeout, worker cancellation
-- **Test Double Validation**: 29 tests for deepcopy isolation, seed helpers, configurable outcomes
+- **Job Queue Tests**: 25 tests for async job lifecycle, timeout, cancellation, progress, worker lifecycle
+- **Test Double Validation**: 33 tests for deepcopy isolation, seed helpers, configurable outcomes, handler registration
 - **PyO3 Binding Parity**: ~154 tests verifying all Rust types, plus ~42 audio builder and ~46 transition builder parity tests
 - **Property-Based Tests**: Hypothesis-driven invariant testing for Video and Clip models
 - **Import Fallback Tests**: Graceful degradation when Rust extension unavailable
@@ -32,13 +32,13 @@ The test infrastructure establishes key patterns used across all suites: contrac
 ## Code Elements
 
 This component contains:
-- [c4-code-tests.md](./c4-code-tests.md) -- Root tests: conftest, factories, repo contracts, models, FFmpeg, WebSocket, logging, PyO3 bindings, audio/transition parity, startup integration, orphaned settings (~532 tests)
-- [c4-code-tests-test-api.md](./c4-code-tests-test-api.md) -- API endpoint tests with TestClient (180 tests)
+- [c4-code-tests.md](./c4-code-tests.md) -- Root tests: conftest, factories, repo contracts, models, FFmpeg, WebSocket, logging, PyO3 bindings, audio/transition parity, startup integration, orphaned settings (~606 tests)
+- [c4-code-tests-test-api.md](./c4-code-tests-test-api.md) -- API endpoint tests with TestClient (215 tests)
 - [c4-code-tests-test-blackbox.md](./c4-code-tests-test-blackbox.md) -- Black-box E2E workflow tests (60 tests)
 - [c4-code-tests-test-contract.md](./c4-code-tests-test-contract.md) -- FFmpeg executor and repository parity tests (37 tests)
 - [c4-code-tests-test-coverage.md](./c4-code-tests-test-coverage.md) -- Import fallback tests for Rust extension (6 tests)
-- [c4-code-tests-test-jobs.md](./c4-code-tests-test-jobs.md) -- AsyncioJobQueue and worker lifecycle tests (14 tests)
-- [c4-code-tests-test-doubles.md](./c4-code-tests-test-doubles.md) -- In-memory repository isolation and seed tests (29 tests)
+- [c4-code-tests-test-jobs.md](./c4-code-tests-test-jobs.md) -- AsyncioJobQueue and worker lifecycle tests (25 tests)
+- [c4-code-tests-test-doubles.md](./c4-code-tests-test-doubles.md) -- In-memory repository isolation, seed helpers, and configurable outcomes tests (33 tests)
 - [c4-code-tests-test-security.md](./c4-code-tests-test-security.md) -- Input sanitization and path validation tests (32 tests)
 - [c4-code-tests-examples.md](./c4-code-tests-examples.md) -- Hypothesis property-based test templates (4 tests)
 
@@ -80,13 +80,13 @@ C4Component
     title Component Diagram for Test Infrastructure
 
     Container_Boundary(tests, "Test Infrastructure") {
-        Component(root_tests, "Root Tests", "Python/pytest", "Repos, models, FFmpeg, WebSocket, bindings, audio/transition parity, startup, orphaned settings (~532)")
-        Component(api_tests, "API Tests", "Python/pytest", "REST endpoint tests with TestClient (180)")
+        Component(root_tests, "Root Tests", "Python/pytest", "Repos, models, FFmpeg, WebSocket, bindings, audio/transition parity, startup, orphaned settings (~606)")
+        Component(api_tests, "API Tests", "Python/pytest", "REST endpoint tests with TestClient (215)")
         Component(blackbox, "Black-Box Tests", "Python/pytest", "E2E workflow tests via HTTP (60)")
         Component(contract, "Contract Tests", "Python/pytest", "FFmpeg executor and repo parity (37)")
         Component(security, "Security Tests", "Python/pytest", "Sanitization, path traversal (32)")
-        Component(jobs_tests, "Job Queue Tests", "Python/pytest", "Async queue lifecycle (14)")
-        Component(doubles_tests, "Test Double Tests", "Python/pytest", "Isolation, seeds, outcomes (29)")
+        Component(jobs_tests, "Job Queue Tests", "Python/pytest", "Async queue lifecycle (25)")
+        Component(doubles_tests, "Test Double Tests", "Python/pytest", "Isolation, seeds, outcomes (33)")
         Component(coverage_tests, "Fallback Tests", "Python/pytest", "Import fallback stubs (6)")
         Component(examples, "Property Tests", "Python/Hypothesis", "Invariant-driven templates (4)")
     }

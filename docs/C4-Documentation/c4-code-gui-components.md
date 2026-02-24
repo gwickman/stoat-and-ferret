@@ -6,7 +6,7 @@
 - **Location**: `gui/src/components/`
 - **Language**: TypeScript (TSX)
 - **Purpose**: Provides reusable, testable UI building blocks for layout, health monitoring, library browsing, project management, clip CRUD, and the effect workshop
-- **Parent Component**: TBD
+- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
 

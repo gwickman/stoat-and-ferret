@@ -6,7 +6,7 @@
 - **Location**: `gui/src/components/__tests__/`
 - **Language**: TypeScript (TSX)
 - **Purpose**: Unit tests for 24 React components covering rendering, user interactions, API calls, state management, and accessibility
-- **Parent Component**: TBD
+- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
 

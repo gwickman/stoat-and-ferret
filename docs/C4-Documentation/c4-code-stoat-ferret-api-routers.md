@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/api/routers/`
 - **Language**: Python (async/await)
 - **Purpose**: Define all REST API and WebSocket endpoints, map HTTP requests to business logic via dependency injection
-- **Parent Component**: TBD
+- **Parent Component**: [API Gateway](./c4-component-api-gateway.md)
 
 ## Code Elements
 

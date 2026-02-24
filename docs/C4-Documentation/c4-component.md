@@ -10,7 +10,7 @@
 | API Gateway | FastAPI REST/WebSocket endpoints, configurable heartbeat, middleware, schemas, effects CRUD, and transition application | 7 files | [c4-component-api-gateway.md](./c4-component-api-gateway.md) |
 | Application Services | Video scanning, thumbnail generation, FFmpeg execution with Rust command bridge, async job queue | 3 files | [c4-component-application-services.md](./c4-component-application-services.md) |
 | Data Access Layer | SQLite repository pattern for Video, Project, Clip; domain models with effects/transitions as JSON; schema; audit logging; structured logging config | 3 files | [c4-component-data-access.md](./c4-component-data-access.md) |
-| Web GUI | React SPA with dashboard, video library, project management, effect workshop (apply/edit/remove lifecycle), WCAG AA accessibility, and real-time monitoring | 8 files | [c4-component-web-gui.md](./c4-component-web-gui.md) |
+| Web GUI | React SPA with dashboard, video library, project management, effect workshop (apply/edit/remove lifecycle), WCAG AA accessibility, and real-time monitoring | 9 files | [c4-component-web-gui.md](./c4-component-web-gui.md) |
 | Test Infrastructure | Unit, integration, contract, black-box, security, property-based, PyO3 binding parity, audio/transition builder parity, startup integration, and orphaned settings test suites | 9 files | [c4-component-test-infrastructure.md](./c4-component-test-infrastructure.md) |
 
 ## Component Relationships
@@ -27,7 +27,7 @@ C4Component
         Component(data, "Data Access Layer", "Python/SQLite", "Repositories for Video/Project/Clip, models, audit, logging config")
         Component(bindings, "Python Bindings", "Python", "Re-exports, type stubs, verification")
         Component(rust, "Rust Core Engine", "Rust/PyO3", "Timeline, validation, commands, filters, audio, transitions, sanitization")
-        Component(tests, "Test Infrastructure", "Python/pytest", "~532 Python tests across 9 suites including startup and orphaned settings")
+        Component(tests, "Test Infrastructure", "Python/pytest", "~606 root + 215 API + 60 blackbox + 37 contract + 25 jobs + 33 doubles + 32 security + 6 fallback + 4 property tests across 9 suites")
     }
 
     Rel(gui, api, "HTTP/REST + WebSocket")
@@ -80,6 +80,7 @@ C4Component
 | `c4-code-gui-hooks` | Web GUI |
 | `c4-code-gui-pages` | Web GUI |
 | `c4-code-gui-stores` | Web GUI |
+| `c4-code-gui-stores-tests` | Web GUI |
 | `c4-code-gui-components-tests` | Web GUI |
 | `c4-code-gui-hooks-tests` | Web GUI |
 | `c4-code-gui-e2e` | Web GUI |

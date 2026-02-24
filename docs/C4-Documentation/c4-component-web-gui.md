@@ -35,6 +35,7 @@ This component contains:
 - [c4-code-gui-stores.md](./c4-code-gui-stores.md) -- 7 Zustand stores: activityStore, libraryStore, projectStore, effectCatalogStore, effectFormStore, effectPreviewStore, effectStackStore
 - [c4-code-gui-components-tests.md](./c4-code-gui-components-tests.md) -- 101 component tests across 20 test files
 - [c4-code-gui-hooks-tests.md](./c4-code-gui-hooks-tests.md) -- 30 hook tests across 6 test files
+- [c4-code-gui-stores-tests.md](./c4-code-gui-stores-tests.md) -- 6 Zustand store tests: clipStore CRUD operations, API error handling
 - [c4-code-gui-e2e.md](./c4-code-gui-e2e.md) -- 15 Playwright E2E tests: navigation, scan, project creation, accessibility (WCAG AA, 5 tests), effect workshop lifecycle (7 tests covering apply/edit/remove and keyboard navigation)
 
 ## Interfaces
@@ -89,7 +90,7 @@ C4Component
         Component(components, "UI Components", "TypeScript/React", "22 components across layout, dashboard, library, projects, effects")
         Component(hooks, "Custom Hooks", "TypeScript/React", "useHealth, useWebSocket, useMetrics, useVideos, useProjects, useEffects, useEffectPreview, useDebounce")
         Component(stores, "State Stores", "TypeScript/Zustand", "7 stores: activity, library, project, effectCatalog, effectForm, effectPreview, effectStack")
-        Component(gui_tests, "Test Suites", "TypeScript/Vitest+Playwright", "131 unit + 15 E2E tests (including WCAG AA and effect lifecycle)")
+        Component(gui_tests, "Test Suites", "TypeScript/Vitest+Playwright", "137 unit + 15 E2E tests (including WCAG AA and effect lifecycle)")
     }
 
     Rel(app_root, pages, "routes to")

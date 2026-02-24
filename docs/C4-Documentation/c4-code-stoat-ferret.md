@@ -6,7 +6,7 @@
 - **Location**: `src/stoat_ferret/`
 - **Language**: Python
 - **Purpose**: Defines the package namespace, exports the version string, and provides centralized structured logging using structlog with JSON/console output modes and rotating file handler
-- **Parent Component**: TBD
+- **Parent Component**: [Data Access Layer](./c4-component-data-access.md)
 
 ## Code Elements
 

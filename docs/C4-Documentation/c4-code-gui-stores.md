@@ -6,7 +6,7 @@
 - **Location**: `gui/src/stores/`
 - **Language**: TypeScript
 - **Purpose**: Provides lightweight, hook-based global state management for UI concerns (search/sort/filter state, form state, clip CRUD, effect data) without prop drilling
-- **Parent Component**: TBD
+- **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
 

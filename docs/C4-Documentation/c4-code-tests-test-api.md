@@ -7,7 +7,7 @@
 - **Location**: `tests/test_api/`
 - **Language**: Python (pytest, async)
 - **Purpose**: Validates HTTP endpoint behavior, request/response contracts, middleware, DI wiring, settings, effects CRUD, transitions, filesystem browsing, SPA routing, WebSocket broadcasts, and static file serving
-- **Parent Component**: TBD
+- **Parent Component**: [Test Infrastructure](./c4-component-test-infrastructure.md)
 
 ## Code Elements
 

@@ -10,7 +10,7 @@ C4Container
 
     System_Boundary(system, "stoat-and-ferret") {
         Container(gui, "Web GUI", "TypeScript/React/Vite", "SPA: dashboard, video library, project management, effect workshop with apply/edit/remove lifecycle, WCAG AA")
-        Container(api, "API Server", "Python/FastAPI/uvicorn", "REST + WebSocket API, serves static GUI, runs background jobs, configurable heartbeat, structured logging")
+        Container(api, "API Server", "Python/FastAPI/uvicorn", "REST + WebSocket API, serves static GUI, runs background jobs, filesystem browser, configurable heartbeat, structured logging")
         Container(rust, "Rust Core Library", "Rust/PyO3", "Timeline math, clip validation, FFmpeg commands, filter graphs, 9 effect builders, transition builders, sanitization")
         ContainerDb(db, "SQLite Database", "SQLite/aiosqlite/Alembic", "Videos, projects, clips (with effects JSON), transitions, audit log, FTS5 index")
         Container(fs, "File Storage", "Local filesystem", "Source videos, thumbnails, database file")
@@ -33,14 +33,14 @@ C4Container
 ### API Server
 
 - **Name**: API Server
-- **Description**: The FastAPI backend that hosts the REST API, WebSocket endpoint, background job worker, effects registry with full CRUD, transition engine, and serves the built GUI as static files. This is the single running process for the application. Structured logging is wired into the application lifespan on startup, and the WebSocket heartbeat interval is configurable via the `ws_heartbeat_interval` setting.
+- **Description**: The FastAPI backend that hosts the REST API, WebSocket endpoint, background job worker, effects registry with full CRUD, transition engine, filesystem browser, and serves the built GUI as static files. This is the single running process for the application. Structured logging is wired into the application lifespan on startup, and the WebSocket heartbeat interval is configurable via the `ws_heartbeat_interval` setting.
 - **Type**: API / Web Application
 - **Technology**: Python 3.10+, FastAPI, uvicorn, Starlette, Pydantic, asyncio, structlog, prometheus-client, jsonschema
 - **Deployment**: `python -m stoat_ferret.api` (uvicorn on port 8000). Dockerfile available for containerized testing.
 
 #### Components Deployed
 
-- [API Gateway](./c4-component-api-gateway.md) -- REST/WebSocket endpoints, middleware, schemas, settings (`ws_heartbeat_interval`, `debug`, `allowed_scan_roots`), effects/transitions router
+- [API Gateway](./c4-component-api-gateway.md) -- REST/WebSocket endpoints, middleware, schemas, settings (`ws_heartbeat_interval`, `debug`, `allowed_scan_roots`), effects/transitions router, filesystem browser
 - [Effects Engine](./c4-component-effects-engine.md) -- EffectRegistry with 9 built-in effects (text overlay, speed, volume, audio fade, audio mix, audio ducking, video fade, crossfade, audio crossfade), JSON Schema validation, AI hints
 - [Application Services](./c4-component-application-services.md) -- Scan service, thumbnail generation, FFmpeg execution, job queue
 - [Data Access Layer](./c4-component-data-access.md) -- Repository pattern, domain models (effects/transitions as JSON), schema, audit logging, `configure_logging()` wired into lifespan
@@ -66,6 +66,8 @@ C4Container
   - `PATCH /api/v1/projects/{project_id}/clips/{clip_id}` -- Update clip
   - `DELETE /api/v1/projects/{project_id}/clips/{clip_id}` -- Delete clip
   - `GET /api/v1/jobs/{job_id}` -- Get job status
+  - `POST /api/v1/jobs/{job_id}/cancel` -- Cancel job (409 if terminal)
+  - `GET /api/v1/filesystem/directories` -- Browse subdirectories with security validation
   - `GET /api/v1/effects` -- List all 9 effects with parameter schemas and AI hints
   - `POST /api/v1/effects/preview` -- Preview filter string without applying
   - `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` -- Apply effect to clip
