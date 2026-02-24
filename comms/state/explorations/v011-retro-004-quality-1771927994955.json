@@ -1,10 +1,10 @@
 {
   "exploration_id": "v011-retro-004-quality-1771927994955",
   "results_folder": "v011-retro-004-quality",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 7596,
   "started_at": "2026-02-24T10:13:14.955187",
-  "updated_at": "2026-02-24T10:13:14.955187",
+  "updated_at": "2026-02-24T10:13:17.226124",
   "completed_at": null,
   "error": null,
   "documents": [],
