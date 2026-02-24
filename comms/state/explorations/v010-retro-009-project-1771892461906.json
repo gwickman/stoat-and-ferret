@@ -1,0 +1,15 @@
+{
+  "exploration_id": "v010-retro-009-project-1771892461906",
+  "results_folder": "v010-retro-009-project",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-24T00:21:01.906259",
+  "updated_at": "2026-02-24T00:21:01.906259",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/v010-retro-009-project/prompt.md",
+  "outbox_path": "comms/outbox/exploration/v010-retro-009-project"
+}
