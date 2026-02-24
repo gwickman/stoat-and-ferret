@@ -1,0 +1,15 @@
+{
+  "exploration_id": "design-v012-001-env-1771941893747",
+  "results_folder": "design-v012-001-env",
+  "status": "pending",
+  "pid": null,
+  "started_at": "2026-02-24T14:04:53.747571",
+  "updated_at": "2026-02-24T14:04:53.747571",
+  "completed_at": null,
+  "error": null,
+  "documents": [],
+  "committed": false,
+  "commit_error": null,
+  "prompt_path": "comms/inbox/exploration/design-v012-001-env/prompt.md",
+  "outbox_path": "comms/outbox/exploration/design-v012-001-env"
+}
