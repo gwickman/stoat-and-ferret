@@ -60,6 +60,7 @@ Authorization: Bearer <token>
 | `/clips` | Clip operations within projects |
 | `/effects` | Effect application, transitions, and discovery |
 | `/render` | Export job management |
+| `/filesystem` | Filesystem browsing (directory listing) |
 | `/health` | Health checks (liveness, readiness) |
 | `/system` | System information |
 | `/ws` | WebSocket endpoint for real-time events |
@@ -1085,6 +1086,40 @@ Removes an effect from a clip by index.
 
 **Error Responses:**
 - `404 NOT_FOUND`: Project, clip, or effect index not found
+
+---
+
+### Filesystem (Directory Browsing)
+
+#### List Directories
+```http
+GET /filesystem/directories
+```
+
+Lists subdirectories within a given path. Hidden directories (starting with `.`) are excluded. Uses `run_in_executor` for async-safe filesystem access.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | No | Directory path to list. Defaults to first `allowed_scan_roots` entry or user home |
+
+**Response:** `200 OK`
+```json
+{
+  "path": "/home/user/videos",
+  "directories": [
+    {"name": "Movies", "path": "/home/user/videos/Movies"},
+    {"name": "Clips", "path": "/home/user/videos/Clips"}
+  ]
+}
+```
+
+**Error Responses:**
+- `400 NOT_A_DIRECTORY`: Path is a file, not a directory
+- `403 PATH_NOT_ALLOWED`: Path is outside `allowed_scan_roots`
+- `404 PATH_NOT_FOUND`: Path does not exist
+
+**Security:** Validates paths against `allowed_scan_roots` using `validate_scan_path()`. Path traversal attempts are rejected via `Path.resolve()`.
 
 ---
 

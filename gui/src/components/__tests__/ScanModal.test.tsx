@@ -215,6 +215,76 @@ describe('ScanModal', () => {
     )
   })
 
+  it('renders browse button when open', () => {
+    render(
+      <ScanModal open={true} onClose={vi.fn()} onScanComplete={vi.fn()} />,
+    )
+
+    expect(screen.getByTestId('scan-browse-button')).toBeDefined()
+    expect(screen.getByTestId('scan-browse-button').textContent).toBe('Browse')
+  })
+
+  it('opens DirectoryBrowser when browse button clicked', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/filesystem/directories')) {
+        return new Response(
+          JSON.stringify({ path: '/home/user', directories: [] }),
+          { status: 200 },
+        )
+      }
+      return new Response('{}', { status: 200 })
+    })
+
+    render(
+      <ScanModal open={true} onClose={vi.fn()} onScanComplete={vi.fn()} />,
+    )
+
+    fireEvent.click(screen.getByTestId('scan-browse-button'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('directory-browser-overlay')).toBeDefined()
+    })
+  })
+
+  it('populates path input when directory is selected from browser', async () => {
+    const mockDirs = {
+      path: '/home/user',
+      directories: [
+        { name: 'Videos', path: '/home/user/Videos' },
+      ],
+    }
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/filesystem/directories')) {
+        return new Response(JSON.stringify(mockDirs), { status: 200 })
+      }
+      return new Response('{}', { status: 200 })
+    })
+
+    render(
+      <ScanModal open={true} onClose={vi.fn()} onScanComplete={vi.fn()} />,
+    )
+
+    // Open the browser
+    fireEvent.click(screen.getByTestId('scan-browse-button'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('directory-browser-overlay')).toBeDefined()
+    })
+
+    // Click "Select This Directory" to choose current path
+    fireEvent.click(screen.getByTestId('directory-browser-select'))
+
+    // Browser should close
+    await waitFor(() => {
+      expect(screen.queryByTestId('directory-browser-overlay')).toBeNull()
+    })
+
+    // Path input should be populated
+    const input = screen.getByTestId('scan-directory-input') as HTMLInputElement
+    expect(input.value).toBe('/home/user')
+  })
+
   it('shows error when scan request fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
