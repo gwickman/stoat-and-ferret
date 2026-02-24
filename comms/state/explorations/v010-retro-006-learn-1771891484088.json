@@ -1,10 +1,10 @@
 {
   "exploration_id": "v010-retro-006-learn-1771891484088",
   "results_folder": "v010-retro-006-learn",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 10344,
   "started_at": "2026-02-24T00:04:44.088782",
-  "updated_at": "2026-02-24T00:04:44.088782",
+  "updated_at": "2026-02-24T00:04:46.091611",
   "completed_at": null,
   "error": null,
   "documents": [],

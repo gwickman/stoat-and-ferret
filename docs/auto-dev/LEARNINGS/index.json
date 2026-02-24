@@ -972,7 +972,141 @@
       "content_path": "docs/auto-dev/LEARNINGS/LRN-052-run-formatter-before-linter-to-avoid-double-fix-cy.md",
       "status": "active",
       "updated_at": null
+    },
+    {
+      "id": "LRN-053",
+      "title": "Layered Defense-in-Depth for Critical Bug Fixes",
+      "tags": [
+        "process",
+        "bug-fixes",
+        "defense-in-depth",
+        "static-analysis",
+        "testing",
+        "decision-framework"
+      ],
+      "created": "2026-02-24T00:06:48.473417Z",
+      "source": "v010/01-async-pipeline-fix retrospective, v010 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Apply a three-layer defense-in-depth pattern for critical bug fixes: fix the bug, add static analysis prevention, add runtime regression detection.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-053-layered-defense-in-depth-for-critical-bug-fixes.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-054",
+      "title": "Use new_callable=AsyncMock for Cleaner Async Test Mocking",
+      "tags": [
+        "testing",
+        "async",
+        "mocking",
+        "pytest",
+        "pattern"
+      ],
+      "created": "2026-02-24T00:06:59.650674Z",
+      "source": "v010/01-async-pipeline-fix/001-fix-blocking-ffprobe completion-report, v010/01-async-pipeline-fix retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Use new_callable=AsyncMock in patch() calls for cleaner async test mocking instead of manually wrapping return values in coroutines.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-054-use-new-callable-asyncmock-for-cleaner-async-test-.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-055",
+      "title": "asyncio.to_thread() Bridges Legacy Sync Code in Async Contexts",
+      "tags": [
+        "pattern",
+        "async",
+        "asyncio",
+        "migration",
+        "subprocess"
+      ],
+      "created": "2026-02-24T00:07:10.121014Z",
+      "source": "v010/01-async-pipeline-fix/002-async-blocking-ci-gate completion-report, v010/01-async-pipeline-fix retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Use asyncio.to_thread() to wrap blocking sync calls in async contexts for low-frequency paths; reserve native async for hot paths.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-055-asyncio-to-thread-bridges-legacy-sync-code-in-asyn.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-056",
+      "title": "Use Production Implementations in Integration Tests for Async Concurrency",
+      "tags": [
+        "testing",
+        "async",
+        "integration-tests",
+        "concurrency",
+        "test-doubles"
+      ],
+      "created": "2026-02-24T00:07:19.512698Z",
+      "source": "v010/01-async-pipeline-fix/003-event-loop-responsiveness-test completion-report, v010/01-async-pipeline-fix retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Use production async implementations (not sync test doubles) in integration tests that verify concurrent behavior; sync stubs bypass async scheduling.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-056-use-production-implementations-in-integration-test.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-057",
+      "title": "Cooperative Cancellation via asyncio.Event with Checkpoint Pattern",
+      "tags": [
+        "pattern",
+        "async",
+        "cancellation",
+        "asyncio",
+        "api-design"
+      ],
+      "created": "2026-02-24T00:07:34.988389Z",
+      "source": "v010/02-job-controls/002-job-cancellation completion-report, v010/02-job-controls retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Use asyncio.Event as a cancellation signal with checkpoint checks at natural processing boundaries for clean, testable cooperative cancellation with partial results.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-057-cooperative-cancellation-via-asyncio-event-with-ch.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-058",
+      "title": "Payload Injection Extends Handler Interfaces Without Signature Changes",
+      "tags": [
+        "pattern",
+        "backward-compatibility",
+        "api-design",
+        "dependency-injection",
+        "job-queue"
+      ],
+      "created": "2026-02-24T00:07:45.595072Z",
+      "source": "v010/02-job-controls/001-progress-reporting completion-report, v010/02-job-controls retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Inject contextual information into payload dicts with underscore-prefixed keys to extend handler interfaces without breaking existing callers' signatures.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-058-payload-injection-extends-handler-interfaces-witho.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-059",
+      "title": "Pre-Collect Items When Progress Reporting Needs a Known Total",
+      "tags": [
+        "pattern",
+        "progress-reporting",
+        "ux",
+        "iteration",
+        "api-design"
+      ],
+      "created": "2026-02-24T00:07:56.109549Z",
+      "source": "v010/02-job-controls/001-progress-reporting completion-report, v010/02-job-controls retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Pre-collect items from lazy iterators into a list before processing to enable accurate progress reporting with known total counts.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-059-pre-collect-items-when-progress-reporting-needs-a-.md",
+      "status": "active",
+      "updated_at": null
     }
   ],
-  "next_id": 53
+  "next_id": 60
 }
