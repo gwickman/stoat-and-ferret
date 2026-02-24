@@ -1,0 +1,2 @@
+{"schema_version":"1.0","event_type":"state_transition","execution_id":"stoat-and-ferret-v012-exec-1771956130","timestamp":"2026-02-24T18:02:38.122771+00:00","from_status":"pending","to_status":"theme_running","reason":"Starting theme: rust-bindings-cleanup"}
+{"schema_version":"1.0","event_type":"state_transition","execution_id":"stoat-and-ferret-v012-exec-1771956130","timestamp":"2026-02-24T18:02:38.128916+00:00","from_status":"theme_running","to_status":"feature_running","reason":"Starting feature: execute-command-removal"}
