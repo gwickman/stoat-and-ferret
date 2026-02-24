@@ -1,0 +1,33 @@
+{
+  "schema_version": "2.0",
+  "version": "v012",
+  "description": "API Surface & Bindings Cleanup",
+  "status": "pending",
+  "started_at": "2026-02-24T14:54:04.427491Z",
+  "completed_at": null,
+  "themes": [
+    {
+      "number": 1,
+      "name": "rust-bindings-cleanup",
+      "status": "pending",
+      "features_total": 3,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    },
+    {
+      "number": 2,
+      "name": "workshop-and-docs-polish",
+      "status": "pending",
+      "features_total": 2,
+      "features_complete": 0,
+      "started_at": null,
+      "completed_at": null,
+      "skip_reason": null
+    }
+  ],
+  "current_theme": 1,
+  "current_feature": 1,
+  "baseline_failures": []
+}
