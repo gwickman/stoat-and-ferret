@@ -45,6 +45,20 @@ cargo run --bin stub_gen     # Generate baseline stubs to .generated-stubs/
 # Then verify: uv run python scripts/verify_stubs.py
 ```
 
+## Windows (Git Bash)
+
+In Git Bash (MSYS2) on Windows, always use `/dev/null` for output redirection — MSYS translates it to the Windows null device automatically. Do **not** use bare `nul` (the native Windows convention), because Git Bash interprets it as a literal filename and creates a file named `nul` in the working directory.
+
+```bash
+# Correct — /dev/null works in Git Bash on Windows
+command > /dev/null 2>&1
+
+# Wrong — creates a literal file named "nul"
+command > nul
+```
+
+The project `.gitignore` already includes a `nul` entry as a safety net, but avoid creating it in the first place.
+
 ## Type Stubs
 
 Python type stubs for the Rust PyO3 bindings are maintained in `stubs/stoat_ferret_core/`.
