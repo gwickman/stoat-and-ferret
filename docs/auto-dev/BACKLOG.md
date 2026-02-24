@@ -1,6 +1,6 @@
 # Project Backlog
 
-*Last updated: 2026-02-23 23:48*
+*Last updated: 2026-02-24 00:02*
 
 **Total completed:** 64 | **Cancelled:** 0
 
@@ -203,7 +203,7 @@ The version retrospective also notes C4 regeneration was attempted but failed fo
 - [ ] C4 API Gateway component reflects ObservableFFmpegExecutor and AuditLogger as DI-managed lifespan components
 - [ ] C4 container/context docs reflect that WebSocket broadcast events are actively wired (not just defined)
 
-**Notes:** size: l — C4 regeneration following established process, auto-estimate inflated by detailed description listing all 5 drift areas with code evidence
+**Notes:** Additional drift from v010:\n\n1. **ffprobe_video() converted to async**: C4 documents it as sync using subprocess. Now uses `async def ffprobe_video()` with `asyncio.create_subprocess_exec()` + 30s timeout + process cleanup. Evidence: src/stoat_ferret/ffmpeg/probe.py:45-83.\n\n2. **AsyncJobQueue Protocol expanded with set_progress() and cancel()**: C4 lists only submit/get_status/get_result. Protocol now includes `set_progress(job_id, value)` and `cancel(job_id)`. Evidence: src/stoat_ferret/jobs/queue.py:102-117.\n\n3. **New CANCELLED job status**: C4 lists PENDING/RUNNING/COMPLETE/FAILED/TIMEOUT. Code now includes CANCELLED. Evidence: src/stoat_ferret/jobs/queue.py:25.\n\n4. **JobResult includes progress field**: C4 lists job_id/status/result/error. Code adds `progress: float | None`. Evidence: src/stoat_ferret/jobs/queue.py:52.\n\n5. **New REST endpoint POST /api/v1/jobs/{id}/cancel**: Returns 200/404/409. Not in C4 container API interfaces. Evidence: src/stoat_ferret/api/routers/jobs.py:51.\n\n6. **scan_directory() expanded with progress_callback and cancel_event kwargs**: C4 shows only path/recursive/repository/thumbnail_service params. Evidence: src/stoat_ferret/api/services/scan.py:121-128.\n\n7. **make_scan_handler() expanded with ws_manager and queue kwargs**: C4 shows only repository and thumbnail_service. Evidence: src/stoat_ferret/api/services/scan.py:57-62.\n\n8. **_check_ffmpeg() converted to async**: C4 lists it as sync. Now uses asyncio.to_thread(subprocess.run). Evidence: src/stoat_ferret/api/routers/health.py:86-97.\n\n9. **AsyncioJobQueue.process_jobs() injects _job_id and _cancel_event into handler payload**: Undocumented dispatch pattern. Evidence: src/stoat_ferret/jobs/queue.py:464-469.\n\n10. **Frontend ScanModal includes cancel button**: C4 GUI component doesn't mention scan cancellation. Evidence: gui/src/components/ScanModal.tsx:58.\n\n11. **C4 context Async Job Processing feature description outdated**: Lists statuses without cancelled, doesn't mention progress or cancellation capabilities.
 
 [↑ Back to list](#bl-069-ref)
 
