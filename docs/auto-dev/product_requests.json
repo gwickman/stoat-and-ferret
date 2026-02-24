@@ -119,7 +119,7 @@
       "title": "BL-019 stale for 5 versions \u2014 schedule or cancel",
       "description": "BL-019 (\"Add Windows bash /dev/null guidance to AGENTS.md\") has been open since v005 era (Feb 6, 2026) and has survived through v006, v007, v008, v009, and v010 without being scheduled into a theme. It was listed as an outstanding item in v006's and v007's backlog reports. Despite being tagged for v010 at one point, it was never included in a theme.\n\n**Evidence:**\n- Created: 2026-02-06 (during v005 period)\n- v006 backlog report: listed as open\n- v007 backlog report: listed as open, originally P1\n- Current priority: P3 \u2014 shows priority drift from P1 to P3 over 5 versions\n- Never included in any version theme across v006-v010\n- The item represents a documentation fix that should take minimal effort\n\n**Suggested action:** Either schedule BL-019 in the next version (it's a trivial documentation change) or cancel it if the guidance is no longer needed. Items open for 5+ versions without scheduling indicate either low actual value or planning oversight.",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "tags": [
         "cross-version-retro",
         "backlog-hygiene",
@@ -128,9 +128,27 @@
       "project": "stoat-and-ferret",
       "upvotes": 0,
       "created": "2026-02-24T00:32:10.225241",
-      "updated": "2026-02-24T00:32:10.225242"
+      "updated": "2026-02-24T10:33:35.473018"
+    },
+    {
+      "id": "PR-009",
+      "title": "Add pagination to filesystem directory listing endpoint",
+      "description": "The `GET /api/v1/filesystem/directories` endpoint (added in v011 feature 001-browse-directory) returns all subdirectories without any limit. For directories containing hundreds or thousands of subdirectories, this could cause slow response times and large payloads. The handoff-to-next.md for this feature explicitly noted: \"No limit on number of entries returned; future features may want to add pagination for very large directories.\" Adding a `limit` and `offset` parameter (consistent with other paginated endpoints in the API) would prevent performance degradation when browsing directories with many entries.",
+      "priority": "P3",
+      "status": "open",
+      "tags": [
+        "api",
+        "filesystem",
+        "pagination",
+        "performance",
+        "deferred-v011"
+      ],
+      "project": "stoat-and-ferret",
+      "upvotes": 0,
+      "created": "2026-02-24T10:33:30.434799",
+      "updated": "2026-02-24T10:33:30.434800"
     }
   ],
-  "next_id": 9,
-  "updated": "2026-02-24T00:32:10.225244"
+  "next_id": 10,
+  "updated": "2026-02-24T10:33:35.473023"
 }

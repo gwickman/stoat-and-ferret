@@ -1,6 +1,6 @@
 # Product Requests
 
-*Last updated: 2026-02-24 00:32*
+*Last updated: 2026-02-24 10:33*
 
 | ID | Priority | Title | Upvotes | Tags |
 |----|----------|-------|---------|------|
@@ -9,7 +9,7 @@
 | PR-005 | P2 | High Edit tool error rate (11.7%) indicates persistent sub-agent workflow issue | 0 | cross-version-retro, tooling, sub-agents, error-rate |
 | PR-006 | P2 | WebFetch tool 58.3% error rate wastes API round-trips across versions | 0 | cross-version-retro, tooling, webfetch, error-rate |
 | PR-007 | P1 | C4 architecture documentation drift accumulating across v009-v010 | 0 | cross-version-retro, architecture, documentation, drift |
-| PR-008 | P2 | BL-019 stale for 5 versions — schedule or cancel | 0 | cross-version-retro, backlog-hygiene, stale-item |
+| PR-009 | P3 | Add pagination to filesystem directory listing endpoint | 0 | api, filesystem, pagination, performance, deferred-v011 |
 
 ## PR-003: Session health: Excessive context compaction across 27 sessions
 
@@ -77,20 +77,10 @@ C4 architecture documentation has been falling behind implementation across v009
 
 **Suggested action:** Re-establish the dedicated architecture documentation feature pattern from v006/v007. BL-069 should be scheduled as a high-priority item in the next version before drift compounds further.
 
-## PR-008: BL-019 stale for 5 versions — schedule or cancel
+## PR-009: Add pagination to filesystem directory listing endpoint
 
-**Priority:** P2 | **Status:** open | **Upvotes:** 0
+**Priority:** P3 | **Status:** open | **Upvotes:** 0
 **Project:** stoat-and-ferret
-**Tags:** cross-version-retro, backlog-hygiene, stale-item
+**Tags:** api, filesystem, pagination, performance, deferred-v011
 
-BL-019 ("Add Windows bash /dev/null guidance to AGENTS.md") has been open since v005 era (Feb 6, 2026) and has survived through v006, v007, v008, v009, and v010 without being scheduled into a theme. It was listed as an outstanding item in v006's and v007's backlog reports. Despite being tagged for v010 at one point, it was never included in a theme.
-
-**Evidence:**
-- Created: 2026-02-06 (during v005 period)
-- v006 backlog report: listed as open
-- v007 backlog report: listed as open, originally P1
-- Current priority: P3 — shows priority drift from P1 to P3 over 5 versions
-- Never included in any version theme across v006-v010
-- The item represents a documentation fix that should take minimal effort
-
-**Suggested action:** Either schedule BL-019 in the next version (it's a trivial documentation change) or cancel it if the guidance is no longer needed. Items open for 5+ versions without scheduling indicate either low actual value or planning oversight.
+The `GET /api/v1/filesystem/directories` endpoint (added in v011 feature 001-browse-directory) returns all subdirectories without any limit. For directories containing hundreds or thousands of subdirectories, this could cause slow response times and large payloads. The handoff-to-next.md for this feature explicitly noted: "No limit on number of entries returned; future features may want to add pagination for very large directories." Adding a `limit` and `offset` parameter (consistent with other paginated endpoints in the API) would prevent performance degradation when browsing directories with many entries.
