@@ -9,25 +9,25 @@
     {
       "number": 1,
       "name": "scan-and-clip-ux",
-      "status": "in_progress",
+      "status": "completed",
       "features_total": 2,
       "features_complete": 2,
       "started_at": "2026-02-24T08:43:40.005929Z",
-      "completed_at": null,
+      "completed_at": "2026-02-24T09:06:50.744906Z",
       "skip_reason": null
     },
     {
       "number": 2,
       "name": "developer-onboarding",
-      "status": "pending",
+      "status": "in_progress",
       "features_total": 3,
-      "features_complete": 0,
-      "started_at": null,
+      "features_complete": 2,
+      "started_at": "2026-02-24T09:06:50.750084Z",
       "completed_at": null,
       "skip_reason": null
     }
   ],
-  "current_theme": 1,
-  "current_feature": 2,
+  "current_theme": 2,
+  "current_feature": 3,
   "baseline_failures": []
 }
