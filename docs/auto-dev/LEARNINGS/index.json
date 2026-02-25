@@ -1163,7 +1163,102 @@
       "content_path": "docs/auto-dev/LEARNINGS/LRN-062-design-time-impact-checks-shift-defect-detection-l.md",
       "status": "active",
       "updated_at": null
+    },
+    {
+      "id": "LRN-063",
+      "title": "Zero-Caller Verification Before Code Removal Eliminates Regression Risk",
+      "tags": [
+        "pattern",
+        "code-removal",
+        "risk-management",
+        "refactoring",
+        "verification"
+      ],
+      "created": "2026-02-25T11:47:12.046147Z",
+      "source": "v012/01-rust-bindings-cleanup retrospective, v012 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Grep the entire codebase for production callers before deleting code; zero matches outside tests converts risky deletion into safe mechanical operation.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-063-zero-caller-verification-before-code-removal-elimi.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-064",
+      "title": "Group Cleanup Removals by Origin Era for Cohesive PRs",
+      "tags": [
+        "pattern",
+        "code-removal",
+        "refactoring",
+        "planning",
+        "pr-strategy"
+      ],
+      "created": "2026-02-25T11:47:23.294789Z",
+      "source": "v012/01-rust-bindings-cleanup retrospective, v012 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Group cleanup items by their origin phase and remove oldest first; creates cohesive PRs and builds confidence progressively from simple to complex.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-064-group-cleanup-removals-by-origin-era-for-cohesive-.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-065",
+      "title": "Preserve Internal Implementations When Removing Public API Surface",
+      "tags": [
+        "pattern",
+        "architecture",
+        "api-design",
+        "code-removal",
+        "tech-debt"
+      ],
+      "created": "2026-02-25T11:47:35.363987Z",
+      "source": "v012/01-rust-bindings-cleanup retrospective, v012/01-rust-bindings-cleanup/002-v001-bindings-trim completion-report, v012/01-rust-bindings-cleanup/003-v006-bindings-trim completion-report",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "When removing public API wrappers, preserve internal implementations and document re-add triggers; makes future re-exposure a cheap mechanical operation.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-065-preserve-internal-implementations-when-removing-pu.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-066",
+      "title": "Optional Props Pattern Extends UI Components Without Breaking Existing Callers",
+      "tags": [
+        "pattern",
+        "gui",
+        "react",
+        "backward-compatibility",
+        "component-design"
+      ],
+      "created": "2026-02-25T11:47:47.203867Z",
+      "source": "v012/02-workshop-and-docs-polish/001-transition-gui completion-report, v012/02-workshop-and-docs-polish retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Extend UI components with optional props that default to preserving existing behavior; avoids component forking and enables reuse across feature contexts.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-066-optional-props-pattern-extends-ui-components-witho.md",
+      "status": "active",
+      "updated_at": null
+    },
+    {
+      "id": "LRN-067",
+      "title": "Execution Metadata Requires Same Automation as Code Artifacts",
+      "tags": [
+        "process",
+        "failure-mode",
+        "automation",
+        "execution-tracking",
+        "metadata"
+      ],
+      "created": "2026-02-25T11:48:00.244737Z",
+      "source": "v012/01-rust-bindings-cleanup retrospective, v012/02-workshop-and-docs-polish retrospective, v012 version retrospective",
+      "source_type": "manual",
+      "related_backlog": null,
+      "summary": "Execution metadata (progress files, state files) consistently drifts when requiring manual updates; either automate updates or remove the requirement.",
+      "content_path": "docs/auto-dev/LEARNINGS/LRN-067-execution-metadata-requires-same-automation-as-cod.md",
+      "status": "active",
+      "updated_at": null
     }
   ],
-  "next_id": 63
+  "next_id": 68
 }
