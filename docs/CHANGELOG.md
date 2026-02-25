@@ -6,7 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [v012] - 2026-02-25
 
-Rust Bindings Cleanup. Removes dead code from the FFmpeg integration module to reduce maintenance surface before Phase 3 work begins.
+API Surface & Bindings Cleanup. Removes 11 unused PyO3 bindings and 1 dead bridge function from the Rust-Python boundary, wires transition effects into the Effect Workshop GUI, and corrects misleading API specification examples.
+
+### Added
+
+- **Transition GUI in Effect Workshop**
+  - Transitions tab on EffectsPage with clip-pair selection mode
+  - `transitionStore` Zustand store for transition state management
+  - `TransitionPanel` component with schema-driven parameter forms via `EffectParameterForm` reuse
+  - `ClipSelector` extended with optional pair-mode props for two-clip selection flow
+  - Non-adjacent-clip error feedback from existing `POST /api/v1/effects/transition` endpoint
 
 ### Removed
 
@@ -40,7 +49,11 @@ Rust Bindings Cleanup. Removes dead code from the FFmpeg integration module to r
 
 ### Fixed
 
-- N/A
+- **API Spec Documentation Corrections**
+  - Fixed 6 job status example values in API specification and manual to use 0.0–1.0 normalized floats matching actual code behavior
+  - Corrected running, complete, cancel, failed, and timeout progress examples
+  - Fixed manual range documentation for progress field
+  - Added `cancelled` status to documented job status values
 
 ## [v011] - 2026-02-24
 

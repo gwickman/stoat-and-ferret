@@ -3,7 +3,7 @@
 **PROJECT CONFIGURATION:**
 ```
 PROJECT=stoat-and-ferret
-VERSION=v008
+VERSION=v012
 MODE=auto
 PUSH=true        # Set to false to commit locally without pushing
 ```
