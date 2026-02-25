@@ -1,10 +1,10 @@
 {
   "exploration_id": "v012-retro-009-project-1772020826115",
   "results_folder": "v012-retro-009-project",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 9040,
   "started_at": "2026-02-25T12:00:26.115902",
-  "updated_at": "2026-02-25T12:00:26.115902",
+  "updated_at": "2026-02-25T12:00:28.835691",
   "completed_at": null,
   "error": null,
   "documents": [],
