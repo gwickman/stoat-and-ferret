@@ -7,7 +7,6 @@ from stoat_ferret.ffmpeg.executor import (
     RealFFmpegExecutor,
     RecordingFFmpegExecutor,
 )
-from stoat_ferret.ffmpeg.integration import CommandExecutionError, execute_command
 from stoat_ferret.ffmpeg.metrics import (
     ffmpeg_active_processes,
     ffmpeg_execution_duration_seconds,
@@ -17,7 +16,6 @@ from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
 from stoat_ferret.ffmpeg.probe import FFprobeError, VideoMetadata, ffprobe_video
 
 __all__ = [
-    "CommandExecutionError",
     "ExecutionResult",
     "FakeFFmpegExecutor",
     "FFmpegExecutor",
@@ -26,7 +24,6 @@ __all__ = [
     "RealFFmpegExecutor",
     "RecordingFFmpegExecutor",
     "VideoMetadata",
-    "execute_command",
     "ffmpeg_active_processes",
     "ffmpeg_execution_duration_seconds",
     "ffmpeg_executions_total",
