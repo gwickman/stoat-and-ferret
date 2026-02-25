@@ -574,7 +574,7 @@ Get the status of an asynchronous job (e.g., a video scan).
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "complete",
-  "progress": null,
+  "progress": 1.0,
   "result": {
     "scanned": 15,
     "new": 12,
@@ -595,6 +595,7 @@ Get the status of an asynchronous job (e.g., a video scan).
 | `complete` | Job finished successfully (`result` field populated) |
 | `failed` | Job encountered an error (`error` field populated) |
 | `timeout` | Job exceeded its time limit |
+| `cancelled` | Job was cancelled by the user |
 
 **Errors:**
 
@@ -980,7 +981,7 @@ ReDoc -- clean, readable API documentation.
 | Field | Type | Description |
 |-------|------|-------------|
 | `job_id` | string | Unique job identifier |
-| `status` | string | `pending`, `running`, `complete`, `failed`, or `timeout` |
-| `progress` | float or null | Progress percentage (0-100) |
+| `status` | string | `pending`, `running`, `complete`, `failed`, `timeout`, or `cancelled` |
+| `progress` | float or null | Normalized progress (0.0-1.0) |
 | `result` | any or null | Job result when complete |
 | `error` | string or null | Error message when failed |
