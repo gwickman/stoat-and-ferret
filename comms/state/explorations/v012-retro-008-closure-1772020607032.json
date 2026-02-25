@@ -1,14 +1,16 @@
 {
   "exploration_id": "v012-retro-008-closure-1772020607032",
   "results_folder": "v012-retro-008-closure",
-  "status": "running",
+  "status": "complete",
   "pid": 9040,
   "started_at": "2026-02-25T11:56:47.032712",
-  "updated_at": "2026-02-25T11:56:49.136429",
-  "completed_at": null,
+  "updated_at": "2026-02-25T11:59:27.213067",
+  "completed_at": "2026-02-25T11:59:27.212766",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/v012-retro-008-closure/prompt.md",
   "outbox_path": "comms/outbox/exploration/v012-retro-008-closure"
