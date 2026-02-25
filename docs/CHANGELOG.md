@@ -4,6 +4,27 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v012] - 2026-02-25
+
+Rust Bindings Cleanup. Removes dead code from the FFmpeg integration module to reduce maintenance surface before Phase 3 work begins.
+
+### Removed
+
+- **Dead `execute_command()` Bridge Function**
+  - Removed `execute_command()` function and `CommandExecutionError` class from `stoat_ferret.ffmpeg.integration`
+  - Removed exports from `stoat_ferret.ffmpeg` package `__init__.py`
+  - Deleted `tests/test_integration.py` (13 tests covering only the removed function)
+  - Zero production callers — `ThumbnailService` calls `executor.run()` directly
+  - **Re-add trigger:** Phase 3 Composition Engine or any future render/export endpoint needing Rust command building (LRN-029)
+
+### Changed
+
+- N/A
+
+### Fixed
+
+- N/A
+
 ## [v011] - 2026-02-24
 
 GUI Usability & Developer Experience. Closes the biggest GUI interaction gaps with a directory browser for scan path selection and full clip CRUD controls, then improves developer onboarding with environment template, Windows guidance, and design-time impact assessment checks.
