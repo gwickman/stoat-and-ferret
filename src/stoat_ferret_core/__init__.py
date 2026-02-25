@@ -22,10 +22,6 @@ Speed Control
 -------------
 - SpeedControl: Speed adjustment builder with setpts and atempo auto-chaining
 
-Expression Engine
------------------
-- Expr: Type-safe FFmpeg filter expression builder
-
 FFmpeg Command Building
 -----------------------
 - FFmpegCommand: Type-safe builder for FFmpeg command arguments
@@ -62,7 +58,6 @@ try:
         DrawtextBuilder,
         DuckingPattern,
         Duration,
-        Expr,
         FadeBuilder,
         FFmpegCommand,
         Filter,
@@ -120,7 +115,6 @@ except ImportError:
     FadeBuilder = _not_built  # type: ignore[misc,assignment]
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
     AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
-    Expr = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
     FilterChain = _not_built  # type: ignore[misc,assignment]
@@ -166,8 +160,6 @@ __all__ = [
     "FadeBuilder",
     "XfadeBuilder",
     "AcrossfadeBuilder",
-    # Expression engine
-    "Expr",
     # FFmpeg command building
     "FFmpegCommand",
     "Filter",

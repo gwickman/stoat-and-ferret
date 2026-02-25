@@ -26,6 +26,14 @@ Rust Bindings Cleanup. Removes dead code from the FFmpeg integration module to r
   - Rust-internal implementations preserved; zero production callers
   - **Re-add triggers:** TimeRange ops: Phase 3 Composition Engine; sanitization: Python-level standalone validation need
 
+- **Unused v006 PyO3 Bindings (BL-068)**
+  - Removed `Expr` (PyExpr) PyO3 wrapper from `ffmpeg/expression.rs`
+  - Removed `validated_to_string`, `compose_chain`, `compose_branch`, `compose_merge` PyO3 wrappers from `ffmpeg/filter.rs`
+  - Removed 6 bindings from Python module registration, imports, stubs, and `__all__`
+  - Removed `TestExpr` class (~16 tests) and `TestFilterComposition` class (~15 tests) from `tests/test_pyo3_bindings.py`
+  - Rust-internal implementations preserved; zero production callers
+  - **Re-add triggers:** Expr: Python-level expression building for custom filter effects; compose: Python-level filter graph composition outside Rust builders
+
 ### Changed
 
 - N/A
