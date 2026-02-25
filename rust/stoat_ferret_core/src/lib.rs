@@ -73,9 +73,6 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ffmpeg::filter::py_scale_filter, m)?)?;
     m.add_function(wrap_pyfunction!(ffmpeg::filter::py_concat_filter, m)?)?;
 
-    // Register expression types
-    m.add_class::<ffmpeg::expression::PyExpr>()?;
-
     // Register drawtext builder
     m.add_class::<ffmpeg::drawtext::DrawtextBuilder>()?;
 
