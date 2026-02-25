@@ -1,10 +1,10 @@
 {
   "exploration_id": "v012-retro-002-docs-1772018518091",
   "results_folder": "v012-retro-002-docs",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 9040,
   "started_at": "2026-02-25T11:21:58.091396",
-  "updated_at": "2026-02-25T11:21:58.091396",
+  "updated_at": "2026-02-25T11:21:59.958027",
   "completed_at": null,
   "error": null,
   "documents": [],
