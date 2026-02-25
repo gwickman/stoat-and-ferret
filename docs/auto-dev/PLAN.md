@@ -3,18 +3,18 @@
 > Bridge between strategic roadmap and auto-dev execution.
 >
 > Strategic Roadmap: `docs/design/01-roadmap.md`
-> Last Updated: 2026-02-24
+> Last Updated: 2026-02-25
 
 ## Current Focus
 
-**Recently Completed:** v011 (GUI Usability & Developer Experience)
-**Upcoming:** v012 (API Surface & Bindings Cleanup)
+**Recently Completed:** v012 (API Surface & Bindings Cleanup)
+**Upcoming:** No versions currently planned — all 12 versions delivered.
 
 ## Roadmap → Version Mapping
 
 | Version | Roadmap Reference | Focus | Status |
 |---------|-------------------|-------|--------|
-| v012 | Phase 2 cleanup | API Surface & Bindings Cleanup: wire/remove FFmpeg bridge, audit PyO3 bindings, transition GUI, API spec polish | 📋 planned |
+| v012 | Phase 2 cleanup | API Surface & Bindings Cleanup: wire/remove FFmpeg bridge, audit PyO3 bindings, transition GUI, API spec polish | ✅ complete |
 | v011 | Phase 1–2 gaps | GUI Usability & Developer Experience: browse button, clip CRUD, .env.example, IMPACT_ASSESSMENT.md | ✅ complete |
 | v010 | RCA + Phase 1 gaps | Async Pipeline & Job Controls: fix blocking ffprobe, CI async gate, progress reporting, job cancellation | ✅ complete |
 | v009 | Wiring audit + Phase 2 gaps | Observability & GUI Runtime: FFmpeg metrics, audit logging, file logging, SPA routing, pagination, WebSocket broadcasts | ✅ complete |
@@ -41,27 +41,14 @@ Track explorations that must complete before version design.
 | BL-047 | Effect registry schema and builder protocol design | v007 | complete |
 | BL-051 | Preview thumbnail pipeline (frame extraction + effect application) | v007 | complete |
 
-## Planned Versions
-
-### v012 — API Surface & Bindings Cleanup
-
-**Goal:** Reduce technical debt in the Rust-Python boundary and close remaining polish items.
-**Depends on:** v011 deployed.
-
-**Theme 1: rust-bindings-audit**
-- 001-execute-command-resolution: Decide wire vs remove for execute_command(), implement the decision [BL-061, P2]
-- 002-v001-bindings-audit: Audit and trim unused v001 PyO3 bindings (TimeRange ops, sanitization) [BL-067, P3]
-- 003-v006-bindings-audit: Audit and trim unused v006 PyO3 bindings (Expr, graph validation, composition) [BL-068, P3]
-
-**Theme 2: workshop-and-docs-polish**
-- 001-transition-support: Wire transition effects into the Effect Workshop GUI [BL-066, P3]
-- 002-api-spec-progress-examples: Update API spec examples with realistic progress values for running jobs [BL-079, P3]
-
-**Backlog items:** BL-061, BL-066, BL-067, BL-068, BL-079 (5 items)
-**Dependencies:** BL-061 should precede BL-067/BL-068 — the execute_command decision may affect what counts as "unused". BL-079 benefits from v010's progress reporting being complete.
-**Risk:** BL-061 has moderate risk if decision is "wire it" (new integration code). If "remove", safe deletion.
-
 ## Completed Versions
+
+### v012 - API Surface & Bindings Cleanup (2026-02-25)
+- **Themes:** rust-bindings-audit, workshop-and-docs-polish
+- **Features:** 5 completed across 2 themes
+- **Backlog Resolved:** BL-061, BL-066, BL-067, BL-068, BL-079
+- **Key Changes:** Removed dead `execute_command()` bridge function, trimmed 5 unused v001 PyO3 bindings (find_gaps, merge_ranges, total_coverage, validate_crf, validate_speed), trimmed 6 unused v006 PyO3 bindings (Expr/PyExpr, validated_to_string, compose_chain, compose_branch, compose_merge), wired transition effects into Effect Workshop GUI with TransitionPanel and clip-pair selection, fixed 6 misleading API spec progress examples to use normalized 0.0–1.0 floats
+- **Deferred:** None
 
 ### v011 - GUI Usability & Developer Experience (2026-02-24)
 - **Themes:** scan-and-clip-ux, developer-onboarding
@@ -155,7 +142,7 @@ Work categories:
 | `discovered` | Found during execution, not originally planned |
 | `blocked` | Waiting on external dependency |
 
-**Version-agnostic items:** None — all open items assigned to v012.
+**Version-agnostic items:** BL-069 (C4 documentation update, deferred).
 **Excluded from versions:** BL-069 (C4 documentation update, deferred), PR-003 (auto-dev-mcp product request, not stoat-and-ferret code).
 
 Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
@@ -172,6 +159,7 @@ Query: `list_backlog_items(project="stoat-and-ferret", status="open")`
 
 | Date | Change |
 |------|--------|
+| 2026-02-25 | v012 complete: API Surface & Bindings Cleanup delivered (2 themes, 5 features, 5 backlog items completed). Moved v012 from Planned to Completed. Updated Current Focus to reflect no upcoming versions. |
 | 2026-02-24 | v011 complete: GUI Usability & Developer Experience delivered (2 themes, 5 features, 5 backlog items completed). Moved v011 from Planned to Completed. Updated Current Focus to v012. |
 | 2026-02-24 | v010 complete: Async Pipeline & Job Controls delivered (2 themes, 5 features, 5 backlog items completed). Moved v010 from Planned to Completed. Updated Current Focus to v011. |
 | 2026-02-23 | Replanned v010–v012 from 14 open backlog items. v010: Async Pipeline & Job Controls (BL-072, BL-073, BL-074, BL-077, BL-078). v011: GUI Usability & Developer Experience (BL-019, BL-070, BL-071, BL-075, BL-076). v012: API Surface & Bindings Cleanup (BL-061, BL-066, BL-067, BL-068, BL-079). Excluded BL-069 (C4 docs) and PR-003 (auto-dev product request). Updated BL-076 notes: project-specific code, not auto-dev artifact. |
