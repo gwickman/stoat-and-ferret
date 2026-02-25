@@ -17,6 +17,15 @@ Rust Bindings Cleanup. Removes dead code from the FFmpeg integration module to r
   - Zero production callers — `ThumbnailService` calls `executor.run()` directly
   - **Re-add trigger:** Phase 3 Composition Engine or any future render/export endpoint needing Rust command building (LRN-029)
 
+- **Unused v001 PyO3 Bindings (BL-067)**
+  - Removed `find_gaps`, `merge_ranges`, `total_coverage` PyO3 wrappers from `timeline/range.rs`
+  - Removed `validate_crf`, `validate_speed` PyO3 wrappers from `sanitize/mod.rs`
+  - Removed 5 functions from Python module registration, imports, stubs, and `__all__`
+  - Removed `TestRangeListOperations` class (~15 tests) and `TestSanitization` crf/speed tests (~4 tests) from `tests/test_pyo3_bindings.py`
+  - Deleted `benchmarks/bench_ranges.py` (3 benchmarks referencing removed bindings)
+  - Rust-internal implementations preserved; zero production callers
+  - **Re-add triggers:** TimeRange ops: Phase 3 Composition Engine; sanitization: Python-level standalone validation need
+
 ### Changed
 
 - N/A

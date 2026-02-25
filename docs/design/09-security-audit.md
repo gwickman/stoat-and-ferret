@@ -62,7 +62,7 @@ business-logic constraints (directory allowlists).
 
 | Attribute | Detail |
 |-----------|--------|
-| **File** | `rust/stoat_ferret_core/src/sanitize/mod.rs:267-278` |
+| **File** | `rust/stoat_ferret_core/src/sanitize/mod.rs` |
 | **Attack vector** | Resource exhaustion via extreme encoding parameters |
 | **Coverage** | Complete |
 | **Finding** | No issues |
@@ -70,13 +70,17 @@ business-logic constraints (directory allowlists).
 **Analysis:** Validates 0–51 range. Uses `u8` type, making negative values
 impossible at the type level.
 
-**Verdict:** Secure.
+**Note (v012):** PyO3 binding removed — this function is now Rust-internal only.
+Validation still occurs within `FFmpegCommand.build()`. Re-add trigger: Python-level
+standalone validation need.
+
+**Verdict:** Secure (Rust-internal).
 
 ### 4. `validate_speed` — Speed Multiplier Bounds
 
 | Attribute | Detail |
 |-----------|--------|
-| **File** | `rust/stoat_ferret_core/src/sanitize/mod.rs:306-317` |
+| **File** | `rust/stoat_ferret_core/src/sanitize/mod.rs` |
 | **Attack vector** | Resource exhaustion, DoS via extreme speed values |
 | **Coverage** | Complete |
 | **Finding** | No issues |
@@ -84,7 +88,11 @@ impossible at the type level.
 **Analysis:** Validates 0.25–4.0 range. Rejects zero, negative, and extreme
 values. NaN and infinity are rejected by the range check.
 
-**Verdict:** Secure.
+**Note (v012):** PyO3 binding removed — this function is now Rust-internal only.
+Validation still occurs within `SpeedControl.new()`. Re-add trigger: Python-level
+standalone validation need.
+
+**Verdict:** Secure (Rust-internal).
 
 ### 5. `validate_volume` — Volume Multiplier Bounds
 
@@ -170,8 +178,8 @@ backwards-compatibility.
 |----------|---------------|----------|--------|
 | `escape_filter_text` | FFmpeg syntax injection, UTF-8 | Complete | Pass |
 | `validate_path` | Null byte, empty path | Partial (by design) | Pass |
-| `validate_crf` | Bounds overflow | Complete | Pass |
-| `validate_speed` | Extreme values, zero, negative | Complete | Pass |
+| `validate_crf` | Bounds overflow | Complete | Pass (Rust-internal, v012) |
+| `validate_speed` | Extreme values, zero, negative | Complete | Pass (Rust-internal, v012) |
 | `validate_volume` | Extreme amplification, negative | Complete | Pass |
 | `validate_video_codec` | Injection, case bypass | Complete | Pass |
 | `validate_audio_codec` | Injection, case bypass | Complete | Pass |

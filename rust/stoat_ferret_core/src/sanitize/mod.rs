@@ -542,46 +542,6 @@ pub fn py_validate_path(path: &str) -> PyResult<()> {
     validate_path(path).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
-/// Validates a CRF (Constant Rate Factor) value.
-///
-/// # Arguments
-///
-/// * `crf` - The CRF value to validate (0-51)
-///
-/// # Returns
-///
-/// The validated CRF value.
-///
-/// # Raises
-///
-/// ValueError: If the value is out of range.
-#[gen_stub_pyfunction]
-#[pyfunction]
-#[pyo3(name = "validate_crf")]
-pub fn py_validate_crf(crf: u8) -> PyResult<u8> {
-    validate_crf(crf).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
-}
-
-/// Validates a speed multiplier for video playback.
-///
-/// # Arguments
-///
-/// * `speed` - The speed multiplier to validate (0.25-4.0)
-///
-/// # Returns
-///
-/// The validated speed value.
-///
-/// # Raises
-///
-/// ValueError: If the value is out of range.
-#[gen_stub_pyfunction]
-#[pyfunction]
-#[pyo3(name = "validate_speed")]
-pub fn py_validate_speed(speed: f64) -> PyResult<f64> {
-    validate_speed(speed).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
-}
-
 /// Validates an audio volume multiplier.
 ///
 /// # Arguments

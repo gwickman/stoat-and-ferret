@@ -27,9 +27,6 @@ All benchmarks run without external dependencies (no FFmpeg, no network).
 | Position.from_secs (seconds to frames) | 1000x10 | 12.4ms | 1.7ms | 0.13x | Python (7.5x) |
 | Position.as_secs (frames to seconds) | 1000x10 | 5.0ms | 0.5ms | 0.10x | Python (10.1x) |
 | escape_filter_text (string escaping) | 1000x10 | 13.3ms | 25.0ms | 1.88x | **Rust (1.9x)** |
-| merge_ranges (100 ranges) | 500x10 | 23.7ms | 5.0ms | 0.21x | Python (4.8x) |
-| merge_ranges (500 ranges) | 200x10 | 41.7ms | 11.7ms | 0.28x | Python (3.5x) |
-| find_gaps (100 ranges) | 500x10 | 23.2ms | 6.9ms | 0.30x | Python (3.4x) |
 | validate_path | 1000x10 | 2.6ms | 0.3ms | 0.12x | Python (8.3x) |
 
 ### Detailed Analysis
@@ -63,22 +60,16 @@ ranged from 40 to 500 characters with 0-50% special character density.
 FFI overhead nearly eliminates the benefit. The Rust implementation is justified
 primarily for safety (guaranteed correct escaping) rather than performance.
 
-#### 3. Range List Operations (merge_ranges, find_gaps)
+#### 3. Range List Operations (merge_ranges, find_gaps) — Removed in v012
 
-**Result: Python is 3.4-4.8x faster**
+The `merge_ranges`, `find_gaps`, and `total_coverage` PyO3 bindings were removed in
+v012 (zero production callers). The Rust-internal implementations are preserved.
+Benchmark data is retained here for reference.
 
-`merge_ranges` and `find_gaps` involve O(n log n) sorting followed by linear merging.
-The Python implementations work with lightweight tuples `(start, end)`, while the
-Rust versions must convert lists of `TimeRange` Python objects into Rust types at the
-FFI boundary. This conversion overhead dominates the actual sort+merge computation.
+Previous results showed Python was 3.4-4.8x faster due to FFI boundary conversion
+overhead dominating the O(n log n) sort+merge computation.
 
-Notably, the Rust disadvantage shrinks slightly at larger input sizes (4.8x at 100
-ranges vs 3.5x at 500 ranges), suggesting the Rust sort+merge is faster in isolation,
-but the conversion overhead still outweighs it at these scales.
-
-**Verdict**: Rust range operations are justified by type safety and correctness
-guarantees (e.g., preventing invalid ranges), not by performance. For pure speed
-with Python-native data, pure Python is faster at these scales.
+**Re-add trigger:** Phase 3 Composition Engine.
 
 #### 4. Path Validation
 

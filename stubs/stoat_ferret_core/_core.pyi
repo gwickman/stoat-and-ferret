@@ -508,54 +508,6 @@ class TimeRange:
     def __eq__(self, other: object) -> bool: ...
 
 
-# ========== TimeRange List Operations ==========
-
-
-def find_gaps(ranges: list[TimeRange]) -> list[TimeRange]:
-    """Finds gaps between non-overlapping portions of the given ranges.
-
-    The ranges are sorted by start position and merged, then gaps
-    between merged ranges are returned.
-
-    Args:
-        ranges: List of TimeRange objects to find gaps between.
-
-    Returns:
-        List of TimeRange objects representing the gaps between input ranges.
-    """
-    ...
-
-
-def merge_ranges(ranges: list[TimeRange]) -> list[TimeRange]:
-    """Merges overlapping and adjacent ranges into non-overlapping ranges.
-
-    The result is a minimal set of non-overlapping, non-adjacent ranges
-    that cover the same time as the input ranges.
-
-    Args:
-        ranges: List of TimeRange objects to merge.
-
-    Returns:
-        List of merged TimeRange objects with no overlaps or adjacencies.
-    """
-    ...
-
-
-def total_coverage(ranges: list[TimeRange]) -> Duration:
-    """Calculates the total duration covered by the given ranges.
-
-    Overlapping ranges are merged before calculating the total,
-    so overlapping portions are only counted once.
-
-    Args:
-        ranges: List of TimeRange objects to calculate coverage for.
-
-    Returns:
-        Duration representing the total time covered by all ranges.
-    """
-    ...
-
-
 # ========== FFmpeg Command Building ==========
 
 class FFmpegCommand:
@@ -1672,36 +1624,6 @@ def validate_path(path: str) -> None:
 
     Raises:
         ValueError: If the path is empty or contains null bytes.
-    """
-    ...
-
-
-def validate_crf(crf: int) -> int:
-    """Validates a CRF (Constant Rate Factor) value.
-
-    Args:
-        crf: The CRF value to validate (0-51).
-
-    Returns:
-        The validated CRF value.
-
-    Raises:
-        ValueError: If the value is out of range.
-    """
-    ...
-
-
-def validate_speed(speed: float) -> float:
-    """Validates a speed multiplier for video playback.
-
-    Args:
-        speed: The speed multiplier to validate (0.25-4.0).
-
-    Returns:
-        The validated speed value.
-
-    Raises:
-        ValueError: If the value is out of range.
     """
     ...
 

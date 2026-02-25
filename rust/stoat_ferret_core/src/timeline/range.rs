@@ -5,7 +5,7 @@
 //! overlap detection, gap calculation, and set operations.
 
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use super::{Duration, Position};
 
@@ -532,59 +532,6 @@ pub fn total_coverage(ranges: &[TimeRange]) -> Duration {
     let merged = merge_ranges(ranges);
     let total_frames: u64 = merged.iter().map(|r| r.duration().frames()).sum();
     Duration::from_frames(total_frames)
-}
-
-// PyO3 wrapper functions for Python exposure
-
-/// Finds gaps between non-overlapping portions of the given ranges.
-///
-/// The ranges are sorted by start position and merged, then gaps
-/// between merged ranges are returned.
-///
-/// Args:
-///     ranges: List of TimeRange objects to find gaps between.
-///
-/// Returns:
-///     List of TimeRange objects representing the gaps between input ranges.
-#[gen_stub_pyfunction]
-#[pyfunction]
-#[pyo3(name = "find_gaps")]
-pub fn py_find_gaps(ranges: Vec<TimeRange>) -> Vec<TimeRange> {
-    find_gaps(&ranges)
-}
-
-/// Merges overlapping and adjacent ranges into non-overlapping ranges.
-///
-/// The result is a minimal set of non-overlapping, non-adjacent ranges
-/// that cover the same time as the input ranges.
-///
-/// Args:
-///     ranges: List of TimeRange objects to merge.
-///
-/// Returns:
-///     List of merged TimeRange objects with no overlaps or adjacencies.
-#[gen_stub_pyfunction]
-#[pyfunction]
-#[pyo3(name = "merge_ranges")]
-pub fn py_merge_ranges(ranges: Vec<TimeRange>) -> Vec<TimeRange> {
-    merge_ranges(&ranges)
-}
-
-/// Calculates the total duration covered by the given ranges.
-///
-/// Overlapping ranges are merged before calculating the total,
-/// so overlapping portions are only counted once.
-///
-/// Args:
-///     ranges: List of TimeRange objects to calculate coverage for.
-///
-/// Returns:
-///     Duration representing the total time covered by all ranges.
-#[gen_stub_pyfunction]
-#[pyfunction]
-#[pyo3(name = "total_coverage")]
-pub fn py_total_coverage(ranges: Vec<TimeRange>) -> Duration {
-    total_coverage(&ranges)
 }
 
 #[cfg(test)]

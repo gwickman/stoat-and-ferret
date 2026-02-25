@@ -545,38 +545,6 @@ class TestSanitization:
         with pytest.raises(ValueError, match="empty"):
             validate_path("")
 
-    def test_validate_crf_valid(self) -> None:
-        """Test CRF validation accepts valid values."""
-        from stoat_ferret_core import validate_crf
-
-        assert validate_crf(0) == 0
-        assert validate_crf(23) == 23
-        assert validate_crf(51) == 51
-
-    def test_validate_crf_invalid(self) -> None:
-        """Test CRF validation rejects out-of-range values."""
-        from stoat_ferret_core import validate_crf
-
-        with pytest.raises(ValueError, match="range"):
-            validate_crf(52)
-
-    def test_validate_speed_valid(self) -> None:
-        """Test speed validation accepts valid values."""
-        from stoat_ferret_core import validate_speed
-
-        assert validate_speed(0.25) == 0.25
-        assert validate_speed(1.0) == 1.0
-        assert validate_speed(4.0) == 4.0
-
-    def test_validate_speed_invalid(self) -> None:
-        """Test speed validation rejects out-of-range values."""
-        from stoat_ferret_core import validate_speed
-
-        with pytest.raises(ValueError, match="range"):
-            validate_speed(0.1)
-        with pytest.raises(ValueError, match="range"):
-            validate_speed(5.0)
-
     def test_validate_volume_valid(self) -> None:
         """Test volume validation accepts valid values."""
         from stoat_ferret_core import validate_volume
@@ -783,173 +751,6 @@ class TestClipValidation:
         assert 0 not in indices
 
 
-class TestRangeListOperations:
-    """Tests for TimeRange list operations (find_gaps, merge_ranges, total_coverage)."""
-
-    def test_find_gaps_basic(self) -> None:
-        """Test find_gaps returns gaps between non-overlapping ranges."""
-        from stoat_ferret_core import Position, TimeRange, find_gaps
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(20), Position(30)),
-        ]
-        gaps = find_gaps(ranges)
-        assert len(gaps) == 1
-        assert gaps[0].start.frames == 10
-        assert gaps[0].end.frames == 20
-
-    def test_find_gaps_empty(self) -> None:
-        """Test find_gaps with empty list returns empty list."""
-        from stoat_ferret_core import find_gaps
-
-        gaps = find_gaps([])
-        assert gaps == []
-
-    def test_find_gaps_single_range(self) -> None:
-        """Test find_gaps with single range returns empty list."""
-        from stoat_ferret_core import Position, TimeRange, find_gaps
-
-        ranges = [TimeRange(Position(0), Position(10))]
-        gaps = find_gaps(ranges)
-        assert gaps == []
-
-    def test_find_gaps_overlapping(self) -> None:
-        """Test find_gaps with overlapping ranges returns no gaps."""
-        from stoat_ferret_core import Position, TimeRange, find_gaps
-
-        ranges = [
-            TimeRange(Position(0), Position(15)),
-            TimeRange(Position(10), Position(20)),
-        ]
-        gaps = find_gaps(ranges)
-        assert gaps == []
-
-    def test_find_gaps_multiple(self) -> None:
-        """Test find_gaps with multiple gaps."""
-        from stoat_ferret_core import Position, TimeRange, find_gaps
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(20), Position(30)),
-            TimeRange(Position(50), Position(60)),
-        ]
-        gaps = find_gaps(ranges)
-        assert len(gaps) == 2
-        assert gaps[0].start.frames == 10
-        assert gaps[0].end.frames == 20
-        assert gaps[1].start.frames == 30
-        assert gaps[1].end.frames == 50
-
-    def test_merge_ranges_overlapping(self) -> None:
-        """Test merge_ranges combines overlapping ranges."""
-        from stoat_ferret_core import Position, TimeRange, merge_ranges
-
-        ranges = [
-            TimeRange(Position(0), Position(15)),
-            TimeRange(Position(10), Position(25)),
-        ]
-        merged = merge_ranges(ranges)
-        assert len(merged) == 1
-        assert merged[0].start.frames == 0
-        assert merged[0].end.frames == 25
-
-    def test_merge_ranges_adjacent(self) -> None:
-        """Test merge_ranges combines adjacent ranges."""
-        from stoat_ferret_core import Position, TimeRange, merge_ranges
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(10), Position(20)),
-        ]
-        merged = merge_ranges(ranges)
-        assert len(merged) == 1
-        assert merged[0].start.frames == 0
-        assert merged[0].end.frames == 20
-
-    def test_merge_ranges_disjoint(self) -> None:
-        """Test merge_ranges keeps disjoint ranges separate."""
-        from stoat_ferret_core import Position, TimeRange, merge_ranges
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(20), Position(30)),
-        ]
-        merged = merge_ranges(ranges)
-        assert len(merged) == 2
-
-    def test_merge_ranges_empty(self) -> None:
-        """Test merge_ranges with empty list returns empty list."""
-        from stoat_ferret_core import merge_ranges
-
-        merged = merge_ranges([])
-        assert merged == []
-
-    def test_merge_ranges_unsorted(self) -> None:
-        """Test merge_ranges handles unsorted input."""
-        from stoat_ferret_core import Position, TimeRange, merge_ranges
-
-        ranges = [
-            TimeRange(Position(20), Position(30)),
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(5), Position(15)),
-        ]
-        merged = merge_ranges(ranges)
-        assert len(merged) == 2
-        assert merged[0].start.frames == 0
-        assert merged[0].end.frames == 15
-        assert merged[1].start.frames == 20
-        assert merged[1].end.frames == 30
-
-    def test_total_coverage_with_overlap(self) -> None:
-        """Test total_coverage counts overlapping regions once."""
-        from stoat_ferret_core import Position, TimeRange, total_coverage
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(5), Position(15)),  # overlaps by 5
-        ]
-        total = total_coverage(ranges)
-        assert total.frames == 15  # 0-15, not 20
-
-    def test_total_coverage_empty(self) -> None:
-        """Test total_coverage with empty list returns zero duration."""
-        from stoat_ferret_core import total_coverage
-
-        total = total_coverage([])
-        assert total.frames == 0
-
-    def test_total_coverage_single_range(self) -> None:
-        """Test total_coverage with single range."""
-        from stoat_ferret_core import Position, TimeRange, total_coverage
-
-        ranges = [TimeRange(Position(0), Position(10))]
-        total = total_coverage(ranges)
-        assert total.frames == 10
-
-    def test_total_coverage_disjoint(self) -> None:
-        """Test total_coverage sums disjoint ranges."""
-        from stoat_ferret_core import Position, TimeRange, total_coverage
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(20), Position(30)),
-        ]
-        total = total_coverage(ranges)
-        assert total.frames == 20  # 10 + 10
-
-    def test_total_coverage_duplicate_ranges(self) -> None:
-        """Test total_coverage doesn't double-count duplicate ranges."""
-        from stoat_ferret_core import Position, TimeRange, total_coverage
-
-        ranges = [
-            TimeRange(Position(0), Position(10)),
-            TimeRange(Position(0), Position(10)),  # Same range twice
-        ]
-        total = total_coverage(ranges)
-        assert total.frames == 10
-
-
 class TestModuleExports:
     """Tests verifying module exports are correct."""
 
@@ -969,10 +770,6 @@ class TestModuleExports:
             "Position",
             "Duration",
             "TimeRange",
-            # TimeRange list operations
-            "find_gaps",
-            "merge_ranges",
-            "total_coverage",
             # Drawtext builder
             "DrawtextBuilder",
             # Speed control builder
@@ -988,8 +785,6 @@ class TestModuleExports:
             "concat_filter",
             "escape_filter_text",
             "validate_path",
-            "validate_crf",
-            "validate_speed",
             "validate_volume",
             "validate_video_codec",
             "validate_audio_codec",

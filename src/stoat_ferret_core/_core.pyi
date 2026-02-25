@@ -491,50 +491,6 @@ class TimeRange:
     def __repr__(self) -> str: ...
     def __eq__(self, other: object) -> bool: ...
 
-# ========== TimeRange List Operations ==========
-
-def find_gaps(ranges: list[TimeRange]) -> list[TimeRange]:
-    """Finds gaps between non-overlapping portions of the given ranges.
-
-    The ranges are sorted by start position and merged, then gaps
-    between merged ranges are returned.
-
-    Args:
-        ranges: List of TimeRange objects to find gaps between.
-
-    Returns:
-        List of TimeRange objects representing the gaps between input ranges.
-    """
-    ...
-
-def merge_ranges(ranges: list[TimeRange]) -> list[TimeRange]:
-    """Merges overlapping and adjacent ranges into non-overlapping ranges.
-
-    The result is a minimal set of non-overlapping, non-adjacent ranges
-    that cover the same time as the input ranges.
-
-    Args:
-        ranges: List of TimeRange objects to merge.
-
-    Returns:
-        List of merged TimeRange objects with no overlaps or adjacencies.
-    """
-    ...
-
-def total_coverage(ranges: list[TimeRange]) -> Duration:
-    """Calculates the total duration covered by the given ranges.
-
-    Overlapping ranges are merged before calculating the total,
-    so overlapping portions are only counted once.
-
-    Args:
-        ranges: List of TimeRange objects to calculate coverage for.
-
-    Returns:
-        Duration representing the total time covered by all ranges.
-    """
-    ...
-
 # ========== FFmpeg Command Building ==========
 
 class FFmpegCommand:
@@ -616,35 +572,18 @@ class FFmpegCommand:
 class DrawtextBuilder:
     """Type-safe builder for FFmpeg drawtext filters.
 
-    Constructs drawtext filters with position presets, font styling,
-    shadow effects, box backgrounds, and alpha animation via the
-    expression engine.
-
-    Example::
-
-        from stoat_ferret_core import DrawtextBuilder
-
-        f = (
-            DrawtextBuilder("Hello World")
-            .font("monospace")
-            .fontsize(24)
-            .fontcolor("white")
-            .position("center")
-            .shadow(2, 2, "black")
-            .build()
-        )
+    Builds drawtext filters with position presets, font styling, shadow,
+    box background, and alpha animation via the expression engine.
     """
 
     def __new__(cls, text: str) -> DrawtextBuilder:
         """Creates a new drawtext builder with the given text.
 
-        The text is automatically escaped for FFmpeg drawtext syntax.
+        The text is automatically escaped for FFmpeg drawtext syntax,
+        including ``%`` -> ``%%`` for text expansion mode.
 
         Args:
             text: The text to display.
-
-        Returns:
-            A new DrawtextBuilder instance.
         """
         ...
 
@@ -653,9 +592,6 @@ class DrawtextBuilder:
 
         Args:
             name: The fontconfig font name (e.g., "monospace", "Sans").
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
@@ -664,35 +600,22 @@ class DrawtextBuilder:
 
         Args:
             path: Path to the font file.
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
     def fontsize(self, size: int) -> DrawtextBuilder:
-        """Sets the font size in pixels.
-
-        Default is 16.
+        """Sets the font size in pixels. Default is 16.
 
         Args:
             size: Font size in pixels.
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
     def fontcolor(self, color: str) -> DrawtextBuilder:
-        """Sets the font color.
-
-        Default is "black". Accepts FFmpeg color names or hex values.
+        """Sets the font color. Default is "black".
 
         Args:
-            color: Font color (e.g., "white", "red", "#FF0000", "white@0.5").
-
-        Returns:
-            Self for method chaining.
+            color: Font color (e.g., "white", "#FF0000", "white@0.5").
         """
         ...
 
@@ -702,17 +625,14 @@ class DrawtextBuilder:
         Preset names: "center", "bottom_center", "top_left", "top_right",
         "bottom_left", "bottom_right", "absolute".
 
-        For presets with margin, pass the margin parameter (default: 10).
-        For absolute positioning, pass x and y coordinates.
+        For margin-based presets, pass the margin parameter.
+        For absolute positioning, use preset="absolute" with x and y.
 
         Args:
             preset: Position preset name.
-            margin: Margin in pixels for corner/edge presets.
-            x: X coordinate for absolute positioning.
-            y: Y coordinate for absolute positioning.
-
-        Returns:
-            Self for method chaining.
+            margin: Margin in pixels for margin-based presets (default: 10).
+            x: X coordinate for absolute positioning (default: 0).
+            y: Y coordinate for absolute positioning (default: 0).
 
         Raises:
             ValueError: If preset name is unknown.
@@ -726,9 +646,6 @@ class DrawtextBuilder:
             x_offset: Horizontal shadow offset in pixels.
             y_offset: Vertical shadow offset in pixels.
             color: Shadow color.
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
@@ -738,20 +655,14 @@ class DrawtextBuilder:
         Args:
             color: Box background color (e.g., "black@0.5").
             borderw: Box border width in pixels.
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
     def alpha(self, value: float) -> DrawtextBuilder:
-        """Sets a static alpha value (0.0 to 1.0).
+        """Sets a static alpha value.
 
         Args:
             value: Alpha value between 0.0 (transparent) and 1.0 (opaque).
-
-        Returns:
-            Self for method chaining.
 
         Raises:
             ValueError: If alpha is not in [0.0, 1.0].
@@ -761,18 +672,13 @@ class DrawtextBuilder:
     def alpha_fade(
         self, start_time: float, fade_in: float, end_time: float, fade_out: float
     ) -> DrawtextBuilder:
-        """Sets an alpha fade animation.
-
-        Generates a fade-in/fade-out expression using the expression engine.
+        """Sets an alpha fade animation using the expression engine.
 
         Args:
             start_time: When the text first appears (seconds).
             fade_in: Duration of fade in (seconds).
             end_time: When the text starts fading out (seconds).
             fade_out: Duration of fade out (seconds).
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
@@ -781,9 +687,6 @@ class DrawtextBuilder:
 
         Args:
             expr: An FFmpeg expression string for the enable parameter.
-
-        Returns:
-            Self for method chaining.
         """
         ...
 
@@ -798,19 +701,11 @@ class DrawtextBuilder:
     def __repr__(self) -> str: ...
 
 class SpeedControl:
-    """Type-safe speed control builder for FFmpeg video and audio speed adjustment.
+    """Speed control builder for FFmpeg video and audio speed adjustment.
 
-    Generates `setpts` filters for video and `atempo` filters for audio.
+    Generates setpts filters for video and atempo filters for audio.
     The atempo builder automatically chains instances to keep each within
     the [0.5, 2.0] quality range.
-
-    Example::
-
-        from stoat_ferret_core import SpeedControl
-
-        ctrl = SpeedControl(2.0)
-        video = ctrl.setpts_filter()
-        audio = ctrl.atempo_filters()
     """
 
     def __new__(cls, factor: float) -> SpeedControl:
@@ -828,23 +723,21 @@ class SpeedControl:
         """Sets whether to drop audio instead of speed-adjusting it.
 
         When enabled, atempo_filters() returns an empty list.
+        Useful for timelapse-style effects.
 
         Args:
-            drop: Whether to drop audio.
-
-        Returns:
-            Self for method chaining.
+            drop: True to drop audio, False to speed-adjust it.
         """
         ...
 
     @property
     def speed_factor(self) -> float:
-        """Returns the speed factor."""
+        """The speed multiplier."""
         ...
 
     @property
     def drop_audio_enabled(self) -> bool:
-        """Returns whether audio will be dropped."""
+        """Whether audio will be dropped."""
         ...
 
     def setpts_filter(self) -> Filter:
@@ -866,93 +759,68 @@ class SpeedControl:
 
     def __repr__(self) -> str: ...
 
-# ========== Audio Mixing Builders ==========
-
 class VolumeBuilder:
-    """Type-safe builder for FFmpeg `volume` audio filter.
+    """Type-safe builder for FFmpeg volume audio filter.
 
-    Supports linear (float) and dB (string like "3dB") modes, plus precision
-    control. Validates volume range 0.0-10.0.
-
-    Example::
-
-        from stoat_ferret_core import VolumeBuilder
-
-        f = VolumeBuilder(0.5).build()
-        assert str(f) == "volume=volume=0.5"
-
-        f = VolumeBuilder.from_db("3dB").build()
-        assert str(f) == "volume=volume=3dB"
+    Supports linear (float) and dB (string like "3dB") modes, plus
+    precision control. Validates volume range 0.0-10.0.
     """
 
-    def __new__(cls, level: float) -> VolumeBuilder:
-        """Creates a new volume builder with a linear level.
+    def __new__(cls, volume: float) -> VolumeBuilder:
+        """Creates a new VolumeBuilder with a linear volume value.
 
         Args:
-            level: Volume level in range [0.0, 10.0].
+            volume: Volume multiplier in range [0.0, 10.0].
 
         Raises:
-            ValueError: If level is outside [0.0, 10.0].
+            ValueError: If volume is outside [0.0, 10.0].
         """
         ...
 
     @staticmethod
     def from_db(db_str: str) -> VolumeBuilder:
-        """Creates a volume builder from a dB string.
+        """Creates a VolumeBuilder from a dB string (e.g., "3dB", "-6dB").
 
         Args:
-            db_str: Volume in dB format (e.g., "3dB", "-6dB").
-
-        Returns:
-            A new VolumeBuilder instance.
+            db_str: Volume in dB format.
 
         Raises:
-            ValueError: If the dB string is invalid.
+            ValueError: If the string format is invalid.
         """
         ...
 
     def precision(self, precision: str) -> VolumeBuilder:
-        """Sets the volume precision mode.
+        """Sets the precision mode ("fixed", "float", or "double").
 
         Args:
-            precision: Precision mode ("fixed", "float", or "double").
-
-        Returns:
-            Self for method chaining.
+            precision: Precision mode.
 
         Raises:
-            ValueError: If precision is not a valid mode.
+            ValueError: If precision is not one of the valid values.
         """
         ...
 
     def build(self) -> Filter:
-        """Builds the volume filter.
+        """Builds the volume Filter.
 
         Returns:
-            A Filter instance.
+            A Filter with the volume syntax.
         """
         ...
 
     def __repr__(self) -> str: ...
 
 class AfadeBuilder:
-    """Type-safe builder for FFmpeg `afade` audio filter.
+    """Type-safe builder for FFmpeg afade audio filter.
 
     Supports fade in/out with configurable duration, start time, and curve type.
-
-    Example::
-
-        from stoat_ferret_core import AfadeBuilder
-
-        f = AfadeBuilder("in", 3.0).build()
-        assert str(f) == "afade=t=in:d=3"
     """
 
     def __new__(cls, fade_type: str, duration: float) -> AfadeBuilder:
-        """Creates a new fade builder.
+        """Creates a new AfadeBuilder.
 
         Args:
-            fade_type: Either "in" or "out".
+            fade_type: "in" or "out".
             duration: Fade duration in seconds (must be > 0).
 
         Raises:
@@ -960,60 +828,50 @@ class AfadeBuilder:
         """
         ...
 
-    def start_time(self, time: float) -> AfadeBuilder:
-        """Sets the start time of the fade.
+    def start_time(self, start_time: float) -> AfadeBuilder:
+        """Sets the start time for the fade in seconds.
 
         Args:
-            time: Start time in seconds.
-
-        Returns:
-            Self for method chaining.
+            start_time: Start time in seconds.
         """
         ...
 
     def curve(self, curve: str) -> AfadeBuilder:
         """Sets the fade curve type.
 
-        Args:
-            curve: Curve name. Valid: "tri", "qsin", "hsin", "esin", "log",
-                "ipar", "qua", "cub", "squ", "cbr", "par".
+        Valid curves: tri, qsin, hsin, esin, log, ipar, qua, cub, squ, cbr, par.
 
-        Returns:
-            Self for method chaining.
+        Args:
+            curve: Curve type name.
 
         Raises:
-            ValueError: If curve name is not recognized.
+            ValueError: If curve name is invalid.
         """
         ...
 
     def build(self) -> Filter:
-        """Builds the afade filter.
+        """Builds the afade Filter.
 
         Returns:
-            A Filter instance.
+            A Filter with the afade syntax.
         """
         ...
 
     def __repr__(self) -> str: ...
 
 class AmixBuilder:
-    """Type-safe builder for FFmpeg `amix` audio mixing filter.
+    """Type-safe builder for FFmpeg amix audio mixing filter.
 
-    Mixes multiple audio inputs into a single output.
-
-    Example::
-
-        from stoat_ferret_core import AmixBuilder
-
-        f = AmixBuilder(4).build()
-        assert str(f) == "amix=inputs=4"
+    Mixes multiple audio input streams into a single output. Supports
+    configurable input count (2-32), duration mode, per-input weights,
+    and normalization.
     """
 
     def __new__(cls, inputs: int) -> AmixBuilder:
-        """Creates a new amix builder.
+        """Creates a new AmixBuilder with the given input count.
 
         Args:
-            inputs: Number of input streams (2-32).
+            inputs: Number of audio inputs (2-32).
 
         Raises:
             ValueError: If inputs is outside [2, 32].
@@ -1021,46 +879,37 @@ class AmixBuilder:
         ...
 
     def duration_mode(self, mode: str) -> AmixBuilder:
-        """Sets the duration mode.
+        """Sets the duration mode ("longest", "shortest", or "first").
 
         Args:
-            mode: Duration mode ("longest", "shortest", or "first").
-
-        Returns:
-            Self for method chaining.
+            mode: Duration mode.
 
         Raises:
-            ValueError: If mode is not recognized.
+            ValueError: If mode is not one of the valid values.
         """
         ...
 
     def weights(self, weights: list[float]) -> AmixBuilder:
-        """Sets per-input weights.
+        """Sets per-input weights as a list of floats.
 
         Args:
-            weights: List of float weights, one per input.
-
-        Returns:
-            Self for method chaining.
+            weights: List of weight values.
         """
         ...
 
-    def normalize(self, enable: bool) -> AmixBuilder:
-        """Sets whether to normalize output volume.
+    def normalize(self, normalize: bool) -> AmixBuilder:
+        """Sets the normalize flag.
 
         Args:
-            enable: Whether to enable normalization.
-
-        Returns:
-            Self for method chaining.
+            normalize: Whether to normalize the output.
         """
         ...
 
     def build(self) -> Filter:
-        """Builds the amix filter.
+        """Builds the amix Filter.
 
         Returns:
-            A Filter instance.
+            A Filter with the amix syntax.
         """
         ...
 
@@ -1070,88 +919,68 @@ class DuckingPattern:
     """Builds a ducking pattern that lowers music volume during speech.
 
     Uses FFmpeg's sidechaincompress filter in a FilterGraph composition.
-
-    Example::
-
-        from stoat_ferret_core import DuckingPattern
-
-        graph = DuckingPattern().build()
-        s = str(graph)
-        assert "asplit" in s
-        assert "sidechaincompress" in s
     """
 
     def __new__(cls) -> DuckingPattern:
-        """Creates a new ducking pattern with default parameters."""
-        ...
+        """Creates a new DuckingPattern with default parameters.
 
-    def threshold(self, value: float) -> DuckingPattern:
-        """Sets the compression threshold (0.0-1.0).
-
-        Args:
-            value: Threshold value.
-
-        Returns:
-            Self for method chaining.
-
-        Raises:
-            ValueError: If value is outside [0.0, 1.0].
+        Defaults: threshold=0.125, ratio=2, attack=20, release=250.
         """
         ...
 
-    def ratio(self, value: float) -> DuckingPattern:
-        """Sets the compression ratio (1.0-20.0).
+    def threshold(self, threshold: float) -> DuckingPattern:
+        """Sets the detection threshold (0.00097563-1.0).
 
         Args:
-            value: Ratio value.
-
-        Returns:
-            Self for method chaining.
+            threshold: Detection threshold.
 
         Raises:
-            ValueError: If value is outside [1.0, 20.0].
+            ValueError: If threshold is out of range.
         """
         ...
 
-    def attack(self, value: float) -> DuckingPattern:
-        """Sets the attack time in milliseconds (0.01-2000.0).
+    def ratio(self, ratio: float) -> DuckingPattern:
+        """Sets the compression ratio (1-20).
 
         Args:
-            value: Attack time in ms.
-
-        Returns:
-            Self for method chaining.
+            ratio: Compression ratio.
 
         Raises:
-            ValueError: If value is outside [0.01, 2000.0].
+            ValueError: If ratio is out of range.
         """
         ...
 
-    def release(self, value: float) -> DuckingPattern:
-        """Sets the release time in milliseconds (0.01-9000.0).
+    def attack(self, attack: float) -> DuckingPattern:
+        """Sets the attack time in milliseconds (0.01-2000).
 
         Args:
-            value: Release time in ms.
-
-        Returns:
-            Self for method chaining.
+            attack: Attack time in ms.
 
         Raises:
-            ValueError: If value is outside [0.01, 9000.0].
+            ValueError: If attack is out of range.
+        """
+        ...
+
+    def release(self, release: float) -> DuckingPattern:
+        """Sets the release time in milliseconds (0.01-9000).
+
+        Args:
+            release: Release time in ms.
+
+        Raises:
+            ValueError: If release is out of range.
         """
         ...
 
     def build(self) -> FilterGraph:
-        """Builds the ducking filter graph.
+        """Builds the ducking FilterGraph.
 
         Returns:
-            A FilterGraph containing the ducking pattern.
+            A FilterGraph implementing the ducking pattern.
         """
         ...
 
     def __repr__(self) -> str: ...
-
-# ========== Transition Builders ==========
 
 class TransitionType:
     """All FFmpeg xfade transition variants.
@@ -1380,7 +1209,7 @@ class AcrossfadeBuilder:
         """Sets the overlap toggle.
 
         Args:
-            overlap: Whether inputs overlap (True) or not (False).
+            overlap: Whether inputs overlap (default: enabled).
         """
         ...
 
@@ -1466,35 +1295,57 @@ class FilterGraph:
         """Adds a filter chain to the graph."""
         ...
 
-    def compose_chain(self, input: str, filters: list[Filter]) -> str:
-        """Compose filters sequentially on a single stream.
+    def validate(self) -> None:
+        """Validates the filter graph structure.
 
-        Connects filters in order with auto-generated intermediate labels.
-
-        Args:
-            input: The input pad label to start the chain from.
-            filters: One or more filters to apply sequentially.
-
-        Returns:
-            The output pad label of the final filter.
+        Checks for duplicate output labels, unconnected input pads, and cycles.
 
         Raises:
-            ValueError: If filters is empty.
+            ValueError: If any validation errors are found.
+        """
+        ...
+
+    def validated_to_string(self) -> str:
+        """Validates the graph and returns the filter string if valid.
+
+        Convenience method that validates first, then serializes.
+
+        Raises:
+            ValueError: If any validation errors are found.
+        """
+        ...
+
+    def compose_chain(self, input: str, filters: list[Filter]) -> str:
+        """Composes a chain of filters applied sequentially to an input stream.
+
+        Creates intermediate pad labels automatically. Returns the output label
+        of the final filter in the chain.
+
+        Args:
+            input: The input pad label (e.g., "0:v").
+            filters: A list of filters to apply in order.
+
+        Returns:
+            The output pad label.
+
+        Raises:
+            ValueError: If filters list is empty.
         """
         ...
 
     def compose_branch(self, input: str, count: int, audio: bool = False) -> list[str]:
-        """Split a stream into multiple branches.
+        """Splits one stream into multiple output streams.
 
-        Uses ``split`` for video or ``asplit`` for audio.
+        Uses the FFmpeg split (video) or asplit (audio) filter to duplicate
+        the input stream.
 
         Args:
-            input: The input pad label to split.
-            count: Number of output branches (must be >= 2).
-            audio: If True, use ``asplit`` instead of ``split``.
+            input: The input pad label.
+            count: Number of output streams (must be >= 2).
+            audio: If True, uses asplit instead of split.
 
         Returns:
-            List of output pad labels, one per branch.
+            A list of output pad labels.
 
         Raises:
             ValueError: If count < 2.
@@ -1502,17 +1353,20 @@ class FilterGraph:
         ...
 
     def compose_merge(self, inputs: list[str], merge_filter: Filter) -> str:
-        """Merge multiple streams through a single filter.
+        """Merges multiple input streams using a specified filter.
+
+        Wires the given input labels into a single filter and returns
+        the output label.
 
         Args:
-            inputs: Input pad labels to merge (must be >= 2).
-            merge_filter: The filter to merge through (e.g. overlay, amix, concat).
+            inputs: List of input pad labels.
+            merge_filter: The filter to use for merging.
 
         Returns:
             The output pad label.
 
         Raises:
-            ValueError: If fewer than 2 inputs provided.
+            ValueError: If fewer than 2 inputs are provided.
         """
         ...
 
@@ -1728,34 +1582,6 @@ def validate_path(path: str) -> None:
 
     Raises:
         ValueError: If the path is empty or contains null bytes.
-    """
-    ...
-
-def validate_crf(crf: int) -> int:
-    """Validates a CRF (Constant Rate Factor) value.
-
-    Args:
-        crf: The CRF value to validate (0-51).
-
-    Returns:
-        The validated CRF value.
-
-    Raises:
-        ValueError: If the value is out of range.
-    """
-    ...
-
-def validate_speed(speed: float) -> float:
-    """Validates a speed multiplier for video playback.
-
-    Args:
-        speed: The speed multiplier to validate (0.25-4.0).
-
-    Returns:
-        The validated speed value.
-
-    Raises:
-        ValueError: If the value is out of range.
     """
     ...
 
