@@ -30,7 +30,7 @@ All passed on finalization run:
 
 ## Commit
 
-Closure changes committed in this finalization task. Pre-finalization HEAD: 3819b59.
+Closure commit: 745c00b (4 files changed, 112 insertions). Pre-finalization HEAD: 3819b59.
 
 ## Version Status
 
