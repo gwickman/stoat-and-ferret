@@ -56,22 +56,12 @@ from stoat_ferret_core._core import (
     escape_filter_text as escape_filter_text,
 )
 from stoat_ferret_core._core import (
-    # TimeRange list operations
-    find_gaps as find_gaps,
-)
-from stoat_ferret_core._core import (
     # Utility
     health_check as health_check,
 )
 from stoat_ferret_core._core import (
-    merge_ranges as merge_ranges,
-)
-from stoat_ferret_core._core import (
     # Filter helpers
     scale_filter as scale_filter,
-)
-from stoat_ferret_core._core import (
-    total_coverage as total_coverage,
 )
 from stoat_ferret_core._core import (
     validate_audio_codec as validate_audio_codec,
@@ -83,16 +73,10 @@ from stoat_ferret_core._core import (
     validate_clips as validate_clips,
 )
 from stoat_ferret_core._core import (
-    validate_crf as validate_crf,
-)
-from stoat_ferret_core._core import (
     validate_path as validate_path,
 )
 from stoat_ferret_core._core import (
     validate_preset as validate_preset,
-)
-from stoat_ferret_core._core import (
-    validate_speed as validate_speed,
 )
 from stoat_ferret_core._core import (
     validate_video_codec as validate_video_codec,
@@ -114,10 +98,6 @@ __all__ = [
     "Position",
     "Duration",
     "TimeRange",
-    # TimeRange list operations
-    "find_gaps",
-    "merge_ranges",
-    "total_coverage",
     # FFmpeg command building
     "FFmpegCommand",
     "Filter",
@@ -129,8 +109,6 @@ __all__ = [
     # Sanitization functions
     "escape_filter_text",
     "validate_path",
-    "validate_crf",
-    "validate_speed",
     "validate_volume",
     "validate_video_codec",
     "validate_audio_codec",

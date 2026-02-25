@@ -10,7 +10,6 @@ import platform
 import sys
 
 from benchmarks.bench_filter_escape import run_all as run_filter_escape
-from benchmarks.bench_ranges import run_all as run_ranges
 from benchmarks.bench_timeline import run_all as run_timeline
 from benchmarks.bench_validation import run_all as run_validation
 from benchmarks.timing import BenchmarkResult, print_result
@@ -63,19 +62,15 @@ def main() -> None:
     all_results: list[BenchmarkResult] = []
 
     # Timeline arithmetic
-    print("  [1/4] Timeline position arithmetic...")
+    print("  [1/3] Timeline position arithmetic...")
     all_results.extend(run_timeline())
 
     # Filter text escaping
-    print("  [2/4] Filter text escaping...")
+    print("  [2/3] Filter text escaping...")
     all_results.extend(run_filter_escape())
 
-    # Range operations
-    print("  [3/4] Range list operations...")
-    all_results.extend(run_ranges())
-
     # Path validation
-    print("  [4/4] Path validation...")
+    print("  [3/3] Path validation...")
     all_results.extend(run_validation())
 
     # Print individual results
