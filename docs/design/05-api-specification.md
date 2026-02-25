@@ -296,7 +296,7 @@ Poll the status of an asynchronous job submitted via endpoints like `POST /video
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "running",
-  "progress": null,
+  "progress": 0.45,
   "result": null,
   "error": null
 }
@@ -307,7 +307,7 @@ Poll the status of an asynchronous job submitted via endpoints like `POST /video
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "complete",
-  "progress": null,
+  "progress": 1.0,
   "result": {
     "scanned": 47,
     "new": 12,
@@ -324,7 +324,7 @@ Poll the status of an asynchronous job submitted via endpoints like `POST /video
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "failed",
-  "progress": null,
+  "progress": 0.72,
   "result": null,
   "error": "Scan failed: permission denied"
 }
@@ -335,7 +335,7 @@ Poll the status of an asynchronous job submitted via endpoints like `POST /video
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "timeout",
-  "progress": null,
+  "progress": 0.38,
   "result": null,
   "error": "Job timed out after 300.0s"
 }
@@ -375,8 +375,8 @@ Request cooperative cancellation of a running job. The job will stop at its next
 ```json
 {
   "job_id": "a1b2c3d4-...",
-  "status": "pending",
-  "progress": 0.3,
+  "status": "cancelled",
+  "progress": 0.30,
   "result": null,
   "error": null
 }
