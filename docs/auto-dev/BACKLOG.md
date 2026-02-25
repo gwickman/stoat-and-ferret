@@ -1,8 +1,8 @@
 # Project Backlog
 
-*Last updated: 2026-02-24 10:25*
+*Last updated: 2026-02-25 11:26*
 
-**Total completed:** 69 | **Cancelled:** 0
+**Total completed:** 74 | **Cancelled:** 0
 
 ## Priority Summary
 
@@ -10,37 +10,22 @@
 |----------|------|-------|
 | P0 | Critical | 0 |
 | P1 | High | 0 |
-| P2 | Medium | 2 |
-| P3 | Low | 4 |
+| P2 | Medium | 1 |
+| P3 | Low | 0 |
 
 ## Quick Reference
 
 | ID | Pri | Size | Title | Description |
 |----|-----|------|-------|-------------|
-| <a id="bl-061-ref"></a>[BL-061](#bl-061) | P2 | l | Wire or remove execute_command() Rust-Python FFmpeg bridge | **Current state:** `execute_command()` was built in v002/... |
 | <a id="bl-069-ref"></a>[BL-069](#bl-069) | P2 | xl | Update C4 architecture documentation for v009 changes | C4 documentation was last generated for v008. v009 introd... |
-| <a id="bl-066-ref"></a>[BL-066](#bl-066) | P3 | l | Add transition support to Effect Workshop GUI | **Current state:** `POST /projects/{id}/effects/transitio... |
-| <a id="bl-067-ref"></a>[BL-067](#bl-067) | P3 | l | Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization) | **Current state:** Several Rust functions are exposed via... |
-| <a id="bl-068-ref"></a>[BL-068](#bl-068) | P3 | l | Audit and trim unused PyO3 bindings from v006 filter engine | **Current state:** Three v006 filter engine features (Exp... |
-| <a id="bl-079-ref"></a>[BL-079](#bl-079) | P3 | l | Fix API spec examples to show realistic progress values for running jobs | The API specification at `docs/design/05-api-specificatio... |
 
 ## Tags Summary
 
 | Tag | Count | Items |
 |-----|-------|-------|
-| rust-python | 3 | BL-061, BL-067, BL-068 |
-| wiring-gap | 2 | BL-061, BL-066 |
-| dead-code | 2 | BL-067, BL-068 |
-| api-surface | 2 | BL-067, BL-068 |
-| documentation | 2 | BL-069, BL-079 |
-| ffmpeg | 1 | BL-061 |
-| gui | 1 | BL-066 |
-| effects | 1 | BL-066 |
-| transitions | 1 | BL-066 |
 | architecture | 1 | BL-069 |
 | c4 | 1 | BL-069 |
-| api-spec | 1 | BL-079 |
-| rca | 1 | BL-079 |
+| documentation | 1 | BL-069 |
 
 ## Tag Conventions
 
@@ -97,24 +82,6 @@ Tags like `v070-tech-debt` are acceptable temporarily to group related items fro
 
 ### P2: Medium
 
-#### 📋 BL-061: Wire or remove execute_command() Rust-Python FFmpeg bridge
-
-**Status:** open
-**Tags:** wiring-gap, ffmpeg, rust-python
-
-**Current state:** `execute_command()` was built in v002/04-ffmpeg-integration as the bridge between the Rust command builder and the Python FFmpeg executor. It has zero callers in production code.
-
-**Gap:** The function exists and is tested in isolation but is never used in any render or export workflow.
-
-**Impact:** The Rust-to-Python FFmpeg pipeline has no integration point. Either the bridge needs wiring into a real workflow, or it's dead code that should be removed to reduce maintenance burden.
-
-**Acceptance Criteria:**
-- [ ] execute_command() is called by at least one render/export code path connecting Rust command builder output to Python FFmpeg executor
-- [ ] Render workflow produces a working output file via the Rust→Python bridge
-- [ ] If execute_command() is genuinely unnecessary, it is removed along with its tests
-
-[↑ Back to list](#bl-061-ref)
-
 #### 📋 BL-069: Update C4 architecture documentation for v009 changes
 
 **Status:** open
@@ -146,72 +113,3 @@ The version retrospective also notes C4 regeneration was attempted but failed fo
 **Notes:** Additional drift from v010:\n\n1. **ffprobe_video() converted to async**: C4 documents it as sync using subprocess. Now uses `async def ffprobe_video()` with `asyncio.create_subprocess_exec()` + 30s timeout + process cleanup. Evidence: src/stoat_ferret/ffmpeg/probe.py:45-83.\n\n2. **AsyncJobQueue Protocol expanded with set_progress() and cancel()**: C4 lists only submit/get_status/get_result. Protocol now includes `set_progress(job_id, value)` and `cancel(job_id)`. Evidence: src/stoat_ferret/jobs/queue.py:102-117.\n\n3. **New CANCELLED job status**: C4 lists PENDING/RUNNING/COMPLETE/FAILED/TIMEOUT. Code now includes CANCELLED. Evidence: src/stoat_ferret/jobs/queue.py:25.\n\n4. **JobResult includes progress field**: C4 lists job_id/status/result/error. Code adds `progress: float | None`. Evidence: src/stoat_ferret/jobs/queue.py:52.\n\n5. **New REST endpoint POST /api/v1/jobs/{id}/cancel**: Returns 200/404/409. Not in C4 container API interfaces. Evidence: src/stoat_ferret/api/routers/jobs.py:51.\n\n6. **scan_directory() expanded with progress_callback and cancel_event kwargs**: C4 shows only path/recursive/repository/thumbnail_service params. Evidence: src/stoat_ferret/api/services/scan.py:121-128.\n\n7. **make_scan_handler() expanded with ws_manager and queue kwargs**: C4 shows only repository and thumbnail_service. Evidence: src/stoat_ferret/api/services/scan.py:57-62.\n\n8. **_check_ffmpeg() converted to async**: C4 lists it as sync. Now uses asyncio.to_thread(subprocess.run). Evidence: src/stoat_ferret/api/routers/health.py:86-97.\n\n9. **AsyncioJobQueue.process_jobs() injects _job_id and _cancel_event into handler payload**: Undocumented dispatch pattern. Evidence: src/stoat_ferret/jobs/queue.py:464-469.\n\n10. **Frontend ScanModal includes cancel button**: C4 GUI component doesn't mention scan cancellation. Evidence: gui/src/components/ScanModal.tsx:58.\n\n11. **C4 context Async Job Processing feature description outdated**: Lists statuses without cancelled, doesn't mention progress or cancellation capabilities.\n\nAdditional count drift from v011 (C4 regenerated but higher-level summaries not updated):\n\n12. **Component count stale at higher C4 levels**: c4-component-web-gui.md and c4-container.md say "22 React components" but there are 24 (DirectoryBrowser and ClipFormModal added in v011). Code-level docs (c4-code-gui-components.md) document both correctly, but component/container-level summary counts were not updated during delta regeneration. Evidence: gui/src/components/ contains 24 .tsx files.\n\n13. **Store count stale at higher C4 levels**: c4-component-web-gui.md and c4-container.md say "7 Zustand stores" but there are 8 (clipStore added in v011). Code-level docs (c4-code-gui-stores.md) document clipStore correctly, but component/container-level summary counts and lists were not updated. Evidence: gui/src/stores/ contains 8 .ts files.\n\n14. **Component name list incomplete in c4-component-web-gui.md**: Line 32 explicitly lists 22 component names, omitting DirectoryBrowser and ClipFormModal.\n\n15. **Store name list incomplete in c4-component-web-gui.md**: Line 35 explicitly lists 7 store names, omitting clipStore.
 
 [↑ Back to list](#bl-069-ref)
-
-### P3: Low
-
-#### 📋 BL-066: Add transition support to Effect Workshop GUI
-
-**Status:** open
-**Tags:** wiring-gap, gui, effects, transitions
-
-**Current state:** `POST /projects/{id}/effects/transition` endpoint is implemented and functional, but the Effect Workshop GUI only handles per-clip effects. There is no GUI surface for the transition API.
-
-**Gap:** The transition API was built in v007/02-effect-registry-api but the Effect Workshop GUI in v007/03 was scoped to per-clip effects only.
-
-**Impact:** Transitions are only accessible via direct API calls. Users have no way to discover or apply transitions through the GUI.
-
-**Acceptance Criteria:**
-- [ ] Effect Workshop GUI includes a transition section or mode for applying transitions between clips
-- [ ] GUI calls POST /projects/{id}/effects/transition endpoint
-- [ ] User can preview and apply at least one transition type through the GUI
-
-[↑ Back to list](#bl-066-ref)
-
-#### 📋 BL-067: Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization)
-
-**Status:** open
-**Tags:** dead-code, rust-python, api-surface
-
-**Current state:** Several Rust functions are exposed via PyO3 but have zero production callers in Python. TimeRange list operations (find_gaps, merge_ranges, total_coverage) are design-ahead code for future timeline editing. Input sanitization functions (validate_crf, validate_speed) overlap with internal Rust validation in FFmpegCommand.build().
-
-**Gap:** Functions were exposed "just in case" in v001 without a consuming code path. They're tested but unused.
-
-**Impact:** Inflated public API surface increases maintenance burden and PyO3 binding complexity. Unclear to consumers which functions are intended for use vs aspirational.
-
-**Acceptance Criteria:**
-- [ ] TimeRange list operations (find_gaps, merge_ranges, total_coverage) are either used by a production code path or removed from PyO3 bindings
-- [ ] Input sanitization functions (validate_crf, validate_speed, etc.) are either called from Python production code or removed from PyO3 bindings if Rust-internal validation covers the same checks
-- [ ] Stub file reflects the final public API surface
-
-[↑ Back to list](#bl-067-ref)
-
-#### 📋 BL-068: Audit and trim unused PyO3 bindings from v006 filter engine
-
-**Status:** open
-**Tags:** dead-code, rust-python, api-surface
-
-**Current state:** Three v006 filter engine features (Expression Engine, Graph Validation, Filter Composition) expose Python bindings via PyO3 that are only used in parity tests, never in production code. The Rust code uses these capabilities internally (e.g., DrawtextBuilder uses Expr for alpha fades, DuckingPattern uses composition).
-
-**Gap:** PyO3 bindings were created in v006/01-filter-engine for all three features but no Python production code consumes them. The Rust-internal usage works fine without the Python bindings.
-
-**Impact:** Six unused Python binding functions inflate the public API surface. Maintaining PyO3 wrappers for internally-consumed Rust code adds build complexity without value.
-
-**Acceptance Criteria:**
-- [ ] Expression Engine (Expr), Graph Validation (validate, validated_to_string), and Filter Composition (compose_chain, compose_branch, compose_merge) PyO3 bindings are either used by Python production code or removed from the public API
-- [ ] If bindings are retained for future use, they are documented as such in the stub file
-- [ ] Parity tests are updated to reflect any binding changes
-
-[↑ Back to list](#bl-068-ref)
-
-#### 📋 BL-079: Fix API spec examples to show realistic progress values for running jobs
-
-**Status:** open
-**Tags:** documentation, api-spec, rca
-
-The API specification at `docs/design/05-api-specification.md` (lines 280-361) shows `"progress": null` in the running-state job status example. This normalized null progress as the correct behavior for running jobs, making it appear correct to implementors when the field was never actually populated. The spec examples should show realistic values for all states to set correct implementor expectations.
-
-**Acceptance Criteria:**
-- [ ] The running-state job example in docs/design/05-api-specification.md shows a realistic progress value (e.g. 0.45) instead of null
-- [ ] All job status examples across the spec show realistic field values for their respective states
-
-[↑ Back to list](#bl-079-ref)

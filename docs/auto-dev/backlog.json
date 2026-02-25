@@ -1,6 +1,6 @@
 {
   "next_id": 80,
-  "updated_at": "2026-02-24T10:25:33.510814",
+  "updated_at": "2026-02-25T11:26:16.364745",
   "items": [
     {
       "id": "BL-001",
@@ -2371,10 +2371,10 @@
       "id": "BL-061",
       "title": "Wire or remove execute_command() Rust-Python FFmpeg bridge",
       "priority": "P2",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:29:48.053602",
-      "completed_at": null,
+      "completed_at": "2026-02-25T11:26:11.367189",
       "tags": [
         "wiring-gap",
         "ffmpeg",
@@ -2397,8 +2397,8 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v012",
+      "implemented_in_theme": "rust-bindings-cleanup",
       "upvotes": 0
     },
     {
@@ -2545,10 +2545,10 @@
       "id": "BL-066",
       "title": "Add transition support to Effect Workshop GUI",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:30:37.704660",
-      "completed_at": null,
+      "completed_at": "2026-02-25T11:26:12.806003",
       "tags": [
         "wiring-gap",
         "gui",
@@ -2572,18 +2572,18 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v012",
+      "implemented_in_theme": "workshop-and-docs-polish",
       "upvotes": 0
     },
     {
       "id": "BL-067",
       "title": "Audit and trim unused PyO3 bindings from v001 (TimeRange ops, input sanitization)",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:30:51.088167",
-      "completed_at": null,
+      "completed_at": "2026-02-25T11:26:13.904215",
       "tags": [
         "dead-code",
         "rust-python",
@@ -2606,18 +2606,18 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v012",
+      "implemented_in_theme": "rust-bindings-cleanup",
       "upvotes": 0
     },
     {
       "id": "BL-068",
       "title": "Audit and trim unused PyO3 bindings from v006 filter engine",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-21T17:31:01.421347",
-      "completed_at": null,
+      "completed_at": "2026-02-25T11:26:15.069962",
       "tags": [
         "dead-code",
         "rust-python",
@@ -2640,8 +2640,8 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v012",
+      "implemented_in_theme": "rust-bindings-cleanup",
       "upvotes": 0
     },
     {
@@ -3083,10 +3083,10 @@
       "id": "BL-079",
       "title": "Fix API spec examples to show realistic progress values for running jobs",
       "priority": "P3",
-      "status": "open",
+      "status": "completed",
       "size": "l",
       "added": "2026-02-23T16:29:09.762859",
-      "completed_at": null,
+      "completed_at": "2026-02-25T11:26:16.364742",
       "tags": [
         "documentation",
         "api-spec",
@@ -3105,11 +3105,11 @@
       ],
       "notes": null,
       "use_case": null,
-      "implemented_in_version": null,
-      "implemented_in_theme": null,
+      "implemented_in_version": "v012",
+      "implemented_in_theme": "workshop-and-docs-polish",
       "upvotes": 0
     }
   ],
-  "completed_count": 69,
+  "completed_count": 74,
   "cancelled_count": 0
 }
