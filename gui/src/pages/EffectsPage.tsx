@@ -4,6 +4,7 @@ import EffectCatalog from '../components/EffectCatalog'
 import EffectParameterForm from '../components/EffectParameterForm'
 import EffectStack from '../components/EffectStack'
 import FilterPreview from '../components/FilterPreview'
+import TransitionPanel from '../components/TransitionPanel'
 import { useEffectPreview } from '../hooks/useEffectPreview'
 import { useEffects } from '../hooks/useEffects'
 import type { Clip } from '../hooks/useProjects'
@@ -13,6 +14,8 @@ import type { ParameterSchema } from '../stores/effectFormStore'
 import { useEffectFormStore } from '../stores/effectFormStore'
 import type { AppliedEffect } from '../stores/effectStackStore'
 import { useEffectStackStore } from '../stores/effectStackStore'
+
+type WorkshopTab = 'effects' | 'transitions'
 
 export default function EffectsPage() {
   const { effects } = useEffects()
@@ -34,6 +37,7 @@ export default function EffectsPage() {
   const [clips, setClips] = useState<Clip[]>([])
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
   const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<WorkshopTab>('effects')
 
   // Auto-select first project
   useEffect(() => {
@@ -166,7 +170,7 @@ export default function EffectsPage() {
 
   return (
     <div className="p-6" data-testid="effects-page">
-      <h2 className="mb-4 text-2xl font-semibold">Effects</h2>
+      <h2 className="mb-4 text-2xl font-semibold">Effect Workshop</h2>
 
       {/* Project selector */}
       {projects.length > 1 && (
@@ -194,69 +198,107 @@ export default function EffectsPage() {
         </div>
       )}
 
-      {/* Clip selector */}
-      <ClipSelector
-        clips={clips}
-        selectedClipId={selectedClipId}
-        onSelect={handleClipSelect}
-      />
+      {/* Tab toggle */}
+      <div className="mb-4 flex gap-1 rounded-lg border border-gray-700 bg-gray-900 p-1" data-testid="workshop-tabs">
+        <button
+          type="button"
+          data-testid="tab-effects"
+          onClick={() => setActiveTab('effects')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'effects'
+              ? 'bg-gray-700 text-white'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          Effects
+        </button>
+        <button
+          type="button"
+          data-testid="tab-transitions"
+          onClick={() => setActiveTab('transitions')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'transitions'
+              ? 'bg-gray-700 text-white'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          Transitions
+        </button>
+      </div>
 
-      {/* Effect catalog + form + preview */}
-      <EffectCatalog />
-      <EffectParameterForm />
-      <FilterPreview />
+      {/* Effects tab content */}
+      {activeTab === 'effects' && (
+        <>
+          {/* Clip selector */}
+          <ClipSelector
+            clips={clips}
+            selectedClipId={selectedClipId}
+            onSelect={handleClipSelect}
+          />
 
-      {/* Apply button */}
-      {selectedClipId && selectedEffect && (
-        <div className="mt-4" data-testid="apply-section">
-          <button
-            type="button"
-            data-testid="apply-effect-btn"
-            onClick={handleApply}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
-          >
-            {editIndex !== null ? 'Update Effect' : 'Apply to Clip'}
-          </button>
-          {editIndex !== null && (
-            <button
-              type="button"
-              data-testid="cancel-edit-btn"
-              onClick={() => {
-                setEditIndex(null)
-                selectEffect(null)
-                resetForm()
-              }}
-              className="ml-2 rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
-            >
-              Cancel Edit
-            </button>
+          {/* Effect catalog + form + preview */}
+          <EffectCatalog />
+          <EffectParameterForm />
+          <FilterPreview />
+
+          {/* Apply button */}
+          {selectedClipId && selectedEffect && (
+            <div className="mt-4" data-testid="apply-section">
+              <button
+                type="button"
+                data-testid="apply-effect-btn"
+                onClick={handleApply}
+                className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              >
+                {editIndex !== null ? 'Update Effect' : 'Apply to Clip'}
+              </button>
+              {editIndex !== null && (
+                <button
+                  type="button"
+                  data-testid="cancel-edit-btn"
+                  onClick={() => {
+                    setEditIndex(null)
+                    selectEffect(null)
+                    resetForm()
+                  }}
+                  className="ml-2 rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                >
+                  Cancel Edit
+                </button>
+              )}
+              {applyStatus && (
+                <span
+                  data-testid="apply-status"
+                  className={`ml-3 text-sm ${applyStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}
+                >
+                  {applyStatus}
+                </span>
+              )}
+            </div>
           )}
-          {applyStatus && (
-            <span
-              data-testid="apply-status"
-              className={`ml-3 text-sm ${applyStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}
-            >
-              {applyStatus}
-            </span>
+
+          {/* Visual preview placeholder */}
+          {selectedClipId && (
+            <p className="mt-2 text-xs text-gray-500" data-testid="visual-preview-placeholder">
+              Visual preview coming in a future version
+            </p>
           )}
-        </div>
+
+          {/* Effect stack for selected clip */}
+          {selectedClipId && (
+            <EffectStack
+              effects={stackEffects}
+              isLoading={stackLoading}
+              onEdit={handleEdit}
+              onRemove={handleRemove}
+            />
+          )}
+        </>
       )}
 
-      {/* Visual preview placeholder */}
-      {selectedClipId && (
-        <p className="mt-2 text-xs text-gray-500" data-testid="visual-preview-placeholder">
-          Visual preview coming in a future version
-        </p>
-      )}
-
-      {/* Effect stack for selected clip */}
-      {selectedClipId && (
-        <EffectStack
-          effects={stackEffects}
-          isLoading={stackLoading}
-          onEdit={handleEdit}
-          onRemove={handleRemove}
-        />
+      {/* Transitions tab content */}
+      {activeTab === 'transitions' && selectedProjectId && (
+        <TransitionPanel projectId={selectedProjectId} clips={clips} />
       )}
     </div>
   )
