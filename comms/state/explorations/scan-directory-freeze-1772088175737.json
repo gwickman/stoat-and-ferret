@@ -1,10 +1,10 @@
 {
   "exploration_id": "scan-directory-freeze-1772088175737",
   "results_folder": "scan-directory-freeze",
-  "status": "pending",
-  "pid": null,
+  "status": "running",
+  "pid": 9040,
   "started_at": "2026-02-26T06:42:55.737132",
-  "updated_at": "2026-02-26T06:42:55.737132",
+  "updated_at": "2026-02-26T06:42:58.330581",
   "completed_at": null,
   "error": null,
   "documents": [],
