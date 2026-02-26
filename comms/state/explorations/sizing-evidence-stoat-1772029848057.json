@@ -1,14 +1,17 @@
 {
   "exploration_id": "sizing-evidence-stoat-1772029848057",
   "results_folder": "sizing-evidence-stoat",
-  "status": "running",
+  "status": "complete",
   "pid": 9040,
   "started_at": "2026-02-25T14:30:48.057028",
-  "updated_at": "2026-02-25T14:30:50.621405",
-  "completed_at": null,
+  "updated_at": "2026-02-25T14:34:57.857650",
+  "completed_at": "2026-02-25T14:34:57.856425",
   "error": null,
-  "documents": [],
-  "committed": false,
+  "documents": [
+    "README.md",
+    "sizing-evidence.md"
+  ],
+  "committed": true,
   "commit_error": null,
   "prompt_path": "comms/inbox/exploration/sizing-evidence-stoat/prompt.md",
   "outbox_path": "comms/outbox/exploration/sizing-evidence-stoat"
