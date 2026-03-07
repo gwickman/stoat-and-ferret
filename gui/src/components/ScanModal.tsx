@@ -11,7 +11,7 @@ type ScanStatus = 'idle' | 'scanning' | 'cancelling' | 'cancelled' | 'complete' 
 
 interface JobStatus {
   job_id: string
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  status: 'pending' | 'running' | 'complete' | 'failed' | 'cancelled'
   progress: number | null
   result: Record<string, unknown> | null
   error: string | null
@@ -95,7 +95,7 @@ export default function ScanModal({
 
           setProgress(status.progress)
 
-          if (status.status === 'completed') {
+          if (status.status === 'complete') {
             cleanup()
             setScanStatus('complete')
             onScanComplete()

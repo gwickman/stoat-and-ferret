@@ -39,7 +39,7 @@ describe('ScanModal', () => {
     const onScanComplete = vi.fn()
     const completedJob = {
       job_id: 'job-1',
-      status: 'completed',
+      status: 'complete',
       progress: 1.0,
       result: { scanned: 5 },
       error: null,
@@ -283,6 +283,71 @@ describe('ScanModal', () => {
     // Path input should be populated
     const input = screen.getByTestId('scan-directory-input') as HTMLInputElement
     expect(input.value).toBe('/home/user')
+  })
+
+  it('completes scan flow: polls running then complete, fires onScanComplete', async () => {
+    const onScanComplete = vi.fn()
+    let pollCount = 0
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/videos/scan')) {
+        return new Response(JSON.stringify({ job_id: 'job-2' }), {
+          status: 202,
+        })
+      }
+      pollCount++
+      if (pollCount <= 1) {
+        return new Response(
+          JSON.stringify({
+            job_id: 'job-2',
+            status: 'running',
+            progress: 0.5,
+            result: null,
+            error: null,
+          }),
+          { status: 200 },
+        )
+      }
+      return new Response(
+        JSON.stringify({
+          job_id: 'job-2',
+          status: 'complete',
+          progress: 1.0,
+          result: { scanned: 3 },
+          error: null,
+        }),
+        { status: 200 },
+      )
+    })
+
+    render(
+      <ScanModal
+        open={true}
+        onClose={vi.fn()}
+        onScanComplete={onScanComplete}
+      />,
+    )
+
+    const input = screen.getByTestId('scan-directory-input')
+    fireEvent.change(input, { target: { value: '/videos' } })
+    fireEvent.click(screen.getByTestId('scan-submit'))
+
+    // Wait for completion state
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('scan-complete')).toBeDefined()
+      },
+      { timeout: 5000 },
+    )
+
+    // onScanComplete callback should have fired
+    expect(onScanComplete).toHaveBeenCalled()
+
+    // Submit button should be gone (complete state)
+    expect(screen.queryByTestId('scan-submit')).toBeNull()
+
+    // Close button should show "Close" text
+    expect(screen.getByTestId('scan-cancel').textContent).toBe('Close')
   })
 
   it('shows error when scan request fails', async () => {
