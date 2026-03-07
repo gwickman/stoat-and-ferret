@@ -350,6 +350,104 @@ describe('ScanModal', () => {
     expect(screen.getByTestId('scan-cancel').textContent).toBe('Close')
   })
 
+  it('shows error with backend message when scan times out', async () => {
+    let pollCount = 0
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/videos/scan')) {
+        return new Response(JSON.stringify({ job_id: 'job-1' }), {
+          status: 202,
+        })
+      }
+      pollCount++
+      if (pollCount <= 1) {
+        return new Response(
+          JSON.stringify({
+            job_id: 'job-1',
+            status: 'running',
+            progress: 0.5,
+            result: null,
+            error: null,
+          }),
+          { status: 200 },
+        )
+      }
+      return new Response(
+        JSON.stringify({
+          job_id: 'job-1',
+          status: 'timeout',
+          progress: 0.5,
+          result: null,
+          error: 'Job timed out after 300.0s',
+        }),
+        { status: 200 },
+      )
+    })
+
+    render(
+      <ScanModal open={true} onClose={vi.fn()} onScanComplete={vi.fn()} />,
+    )
+
+    const input = screen.getByTestId('scan-directory-input')
+    fireEvent.change(input, { target: { value: '/videos' } })
+    fireEvent.click(screen.getByTestId('scan-submit'))
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('scan-error')).toBeDefined()
+      },
+      { timeout: 5000 },
+    )
+
+    expect(screen.getByTestId('scan-error').textContent).toBe(
+      'Job timed out after 300.0s',
+    )
+  })
+
+  it('stops polling after receiving timeout status', async () => {
+    let pollCount = 0
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/videos/scan')) {
+        return new Response(JSON.stringify({ job_id: 'job-1' }), {
+          status: 202,
+        })
+      }
+      pollCount++
+      return new Response(
+        JSON.stringify({
+          job_id: 'job-1',
+          status: 'timeout',
+          progress: 0.5,
+          result: null,
+          error: 'Job timed out after 300.0s',
+        }),
+        { status: 200 },
+      )
+    })
+
+    render(
+      <ScanModal open={true} onClose={vi.fn()} onScanComplete={vi.fn()} />,
+    )
+
+    const input = screen.getByTestId('scan-directory-input')
+    fireEvent.change(input, { target: { value: '/videos' } })
+    fireEvent.click(screen.getByTestId('scan-submit'))
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('scan-error')).toBeDefined()
+      },
+      { timeout: 5000 },
+    )
+
+    // Record the poll count after error is shown
+    const pollCountAfterError = pollCount
+
+    // Wait a bit to ensure no more polls happen
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    expect(pollCount).toBe(pollCountAfterError)
+  })
+
   it('shows error when scan request fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(

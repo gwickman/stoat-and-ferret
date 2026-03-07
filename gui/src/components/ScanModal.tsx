@@ -11,7 +11,7 @@ type ScanStatus = 'idle' | 'scanning' | 'cancelling' | 'cancelled' | 'complete' 
 
 interface JobStatus {
   job_id: string
-  status: 'pending' | 'running' | 'complete' | 'failed' | 'cancelled'
+  status: 'pending' | 'running' | 'complete' | 'failed' | 'timeout' | 'cancelled'
   progress: number | null
   result: Record<string, unknown> | null
   error: string | null
@@ -106,6 +106,10 @@ export default function ScanModal({
             cleanup()
             setScanStatus('error')
             setErrorMessage(status.error ?? 'Scan failed')
+          } else if (status.status === 'timeout') {
+            cleanup()
+            setScanStatus('error')
+            setErrorMessage(status.error ?? 'Scan timed out')
           }
         } catch {
           // polling error, keep trying
