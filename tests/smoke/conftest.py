@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 import pytest
 
-from stoat_ferret.api.app import create_app
+from stoat_ferret.api.app import create_app, lifespan
 from stoat_ferret.api.settings import get_settings
 
 VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos"
@@ -132,10 +132,16 @@ async def smoke_client(tmp_path: Path) -> httpx.AsyncClient:
 
     app = create_app()
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app),
-        base_url="http://testserver",
-    ) as client:
+    # Manually invoke the lifespan to initialise app.state (db, job_queue, etc.).
+    # httpx ASGITransport does not send ASGI lifespan events, so the app's
+    # startup/shutdown hooks would never run otherwise.
+    async with (
+        lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
         yield client
 
     # Restore original env vars
