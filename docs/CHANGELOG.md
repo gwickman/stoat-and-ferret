@@ -4,6 +4,41 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v014] - 2026-03-09
+
+Phase 2 Smoke Test. API-level smoke test suite exercising the full backend stack (HTTP → FastAPI → Services → PyO3/Rust → SQLite) with real video files, providing a verified Phase 2 baseline before Phase 3 begins.
+
+### Added
+
+- **Smoke Test Infrastructure**
+  - `tests/smoke/` directory with `conftest.py` containing `EXPECTED_VIDEOS` dict, 5 fixtures (`videos_dir`, `smoke_client`, `sample_project`, etc.), and 3 async helpers
+  - 6 real MP4 video files committed to git for deterministic, cross-platform test inputs
+  - Lifespan-aware `smoke_client` fixture wrapping `httpx.AsyncClient` inside `async with lifespan(app)`
+  - Per-test DB isolation via `tmp_path` for independent, parallelizable smoke tests
+  - Default exclusion via `--ignore=tests/smoke` in pytest addopts to keep fast unit test loop unaffected
+
+- **Core Workflow Smoke Tests**
+  - 7 use cases across 4 test files covering scan, library, project, and clip workflows
+  - Full-stack validation: HTTP → FastAPI → Services → PyO3/Rust → SQLite
+
+- **Effects, Transitions & Health Smoke Tests**
+  - 5 use cases across 3 test files covering effect catalog/apply, effect update/delete, fade transitions, health endpoints, and speed control + stacking
+  - Full-stack exercise through Rust PyO3 filter builders validating filter-string output shape
+
+- **CI Integration & Maintenance**
+  - CI `smoke-tests` job running on 3 OS × Python 3.12 matrix
+  - `pytest-timeout` dependency for smoke test time bounds
+  - `IMPACT_ASSESSMENT.md` updated with 3 maintenance checks using grep-pattern approach
+  - AGENTS.md quality gates updated with smoke test guidance
+
+### Changed
+
+- `--no-cov` flag used for smoke tests to avoid coverage threshold failures on integration-focused tests
+
+### Fixed
+
+- N/A
+
 ## [v013] - 2026-03-07
 
 Scan Dialog Freeze Fix. Fixes the P0 scan dialog freeze where the progress bar reached 100% but the completion branch never fired, and adds timeout status handling so timed-out scans show an error instead of polling indefinitely.
