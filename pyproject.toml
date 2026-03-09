@@ -43,6 +43,7 @@ dev = [
     "mypy>=1.10",
     "maturin>=1.0",
     "types-jsonschema>=4.26.0.20260202",
+    "pytest-timeout>=2.0",
 ]
 
 [tool.ruff]
