@@ -1557,37 +1557,32 @@ jobs:
 
 ### Smoke Tests
 
+Smoke tests run in-process using `httpx.ASGITransport` — no TCP port binding needed.
+Each test gets a fresh SQLite database via `tmp_path` for full isolation.
+
 ```python
-# tests/smoke/test_smoke.py
+# tests/smoke/conftest.py — per-test fixture (simplified)
 
-BASE_URL = os.environ.get("SMOKE_TEST_URL", "http://localhost:8000")
+@pytest.fixture()
+async def smoke_client(tmp_path):
+    os.environ["STOAT_DATABASE_PATH"] = str(tmp_path / "smoke_test.db")
+    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    get_settings.cache_clear()
 
-def test_health_check(client):
-    """Service is running and healthy."""
-    response = client.get("/health/ready")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] in ("ok", "degraded")
-    # Rust core must be healthy
-    assert data["checks"]["rust_core"]["status"] == "ok"
+    app = create_app()
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        yield client
 
-def test_effects_discoverable(client):
-    """Effect discovery endpoint works (uses Rust core)."""
-    response = client.get("/effects")
-    assert response.status_code == 200
-    effects = response.json()["effects"]
-    assert len(effects) > 0
-    # Verify Rust-generated flag
-    assert all(e.get("rust_generated") for e in effects)
+# tests/smoke/test_health.py
 
-def test_filter_preview_works(client):
-    """Filter preview endpoint (Rust core) responds."""
-    response = client.post("/effects/preview", json={
-        "type": "text_overlay",
-        "params": {"text": "Test", "position": "center", "font_size": 48, "start": 0, "duration": 5}
-    })
-    assert response.status_code == 200
-    assert "filter_string" in response.json()
+async def test_uc08_health_live(smoke_client):
+    """GET /health/live returns status ok."""
+    resp = await smoke_client.get("/health/live")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
 ```
 
 ---
