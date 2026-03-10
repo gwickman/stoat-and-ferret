@@ -103,9 +103,12 @@ fn bench_fade(c: &mut Criterion) {
 
 fn bench_xfade(c: &mut Criterion) {
     c.bench_function("xfade_fade", |b| {
-        let builder =
-            XfadeBuilder::new(black_box(TransitionType::Fade), black_box(1.0), black_box(5.0))
-                .unwrap();
+        let builder = XfadeBuilder::new(
+            black_box(TransitionType::Fade),
+            black_box(1.0),
+            black_box(5.0),
+        )
+        .unwrap();
         b.iter(|| builder.build());
     });
 
