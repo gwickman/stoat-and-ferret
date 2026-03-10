@@ -3,9 +3,7 @@
 This module contains the actual PyO3 bindings from Rust.
 """
 
-
 # ========== Custom Exception Types ==========
-
 
 class ValidationError(Exception):
     """Raised when validation of input parameters fails.
@@ -18,7 +16,6 @@ class ValidationError(Exception):
 
     ...
 
-
 class CommandError(Exception):
     """Raised when FFmpeg command building fails.
 
@@ -29,7 +26,6 @@ class CommandError(Exception):
     """
 
     ...
-
 
 class SanitizationError(Exception):
     """Raised when input sanitization fails.
@@ -42,7 +38,6 @@ class SanitizationError(Exception):
 
     ...
 
-
 class LayoutError(Exception):
     """Raised when layout validation fails.
 
@@ -51,7 +46,6 @@ class LayoutError(Exception):
     """
 
     ...
-
 
 # ========== Utility Functions ==========
 
@@ -63,9 +57,7 @@ def health_check() -> str:
     """
     ...
 
-
 # ========== Clip Types ==========
-
 
 class Clip:
     """A video clip representing a segment of a source media file.
@@ -124,7 +116,6 @@ class Clip:
 
     def __repr__(self) -> str: ...
 
-
 class ClipValidationError:
     """A validation error with detailed information about what went wrong.
 
@@ -168,9 +159,7 @@ class ClipValidationError:
         ...
 
     @staticmethod
-    def with_values_py(
-        field: str, message: str, actual: str, expected: str
-    ) -> ClipValidationError:
+    def with_values_py(field: str, message: str, actual: str, expected: str) -> ClipValidationError:
         """Creates a validation error with actual and expected values.
 
         Args:
@@ -186,7 +175,6 @@ class ClipValidationError:
 
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
-
 
 def validate_clip(clip: Clip) -> list[ClipValidationError]:
     """Validates a single clip and returns all validation errors.
@@ -205,7 +193,6 @@ def validate_clip(clip: Clip) -> list[ClipValidationError]:
     """
     ...
 
-
 def validate_clips(clips: list[Clip]) -> list[tuple[int, ClipValidationError]]:
     """Validates a list of clips and returns all validation errors.
 
@@ -219,7 +206,6 @@ def validate_clips(clips: list[Clip]) -> list[tuple[int, ClipValidationError]]:
         A list of tuples containing (clip_index, validation_error) for each error found.
     """
     ...
-
 
 # ========== Timeline Types ==========
 
@@ -287,7 +273,6 @@ class FrameRate:
 
     def __repr__(self) -> str: ...
     def __eq__(self, other: object) -> bool: ...
-
 
 class Position:
     """A position on a timeline represented as a frame count."""
@@ -373,7 +358,6 @@ class Position:
     def __add__(self, other: Duration) -> Position: ...
     def __sub__(self, other: Duration) -> Position: ...
 
-
 class Duration:
     """A duration on a timeline represented as a frame count."""
 
@@ -452,7 +436,6 @@ class Duration:
     def __ge__(self, other: Duration) -> bool: ...
     def __add__(self, other: Duration) -> Duration: ...
 
-
 class TimeRange:
     """A contiguous time range represented as a half-open interval [start, end)."""
 
@@ -516,7 +499,6 @@ class TimeRange:
 
     def __repr__(self) -> str: ...
     def __eq__(self, other: object) -> bool: ...
-
 
 # ========== FFmpeg Command Building ==========
 
@@ -596,7 +578,6 @@ class FFmpegCommand:
 
     def __repr__(self) -> str: ...
 
-
 class DrawtextBuilder:
     """Type-safe builder for FFmpeg drawtext filters.
 
@@ -647,9 +628,7 @@ class DrawtextBuilder:
         """
         ...
 
-    def position(
-        self, preset: str, margin: int = 10, x: int = 0, y: int = 0
-    ) -> DrawtextBuilder:
+    def position(self, preset: str, margin: int = 10, x: int = 0, y: int = 0) -> DrawtextBuilder:
         """Sets the text position using a preset name.
 
         Preset names: "center", "bottom_center", "top_left", "top_right",
@@ -730,7 +709,6 @@ class DrawtextBuilder:
 
     def __repr__(self) -> str: ...
 
-
 class SpeedControl:
     """Speed control builder for FFmpeg video and audio speed adjustment.
 
@@ -790,7 +768,6 @@ class SpeedControl:
 
     def __repr__(self) -> str: ...
 
-
 class VolumeBuilder:
     """Type-safe builder for FFmpeg volume audio filter.
 
@@ -842,7 +819,6 @@ class VolumeBuilder:
 
     def __repr__(self) -> str: ...
 
-
 class AfadeBuilder:
     """Type-safe builder for FFmpeg afade audio filter.
 
@@ -891,7 +867,6 @@ class AfadeBuilder:
         ...
 
     def __repr__(self) -> str: ...
-
 
 class AmixBuilder:
     """Type-safe builder for FFmpeg amix audio mixing filter.
@@ -948,7 +923,6 @@ class AmixBuilder:
         ...
 
     def __repr__(self) -> str: ...
-
 
 class DuckingPattern:
     """Builds a ducking pattern that lowers music volume during speech.
@@ -1016,7 +990,6 @@ class DuckingPattern:
         ...
 
     def __repr__(self) -> str: ...
-
 
 class TransitionType:
     """All FFmpeg xfade transition variants.
@@ -1106,7 +1079,6 @@ class TransitionType:
     def __eq__(self, other: object) -> bool: ...
     def __hash__(self) -> int: ...
 
-
 class FadeBuilder:
     """Type-safe builder for FFmpeg fade video filter.
 
@@ -1168,7 +1140,6 @@ class FadeBuilder:
 
     def __repr__(self) -> str: ...
 
-
 class XfadeBuilder:
     """Type-safe builder for FFmpeg xfade video crossfade filter.
 
@@ -1176,9 +1147,7 @@ class XfadeBuilder:
     Duration is validated in range 0.0-60.0 seconds.
     """
 
-    def __new__(
-        cls, transition: TransitionType, duration: float, offset: float
-    ) -> XfadeBuilder:
+    def __new__(cls, transition: TransitionType, duration: float, offset: float) -> XfadeBuilder:
         """Creates a new XfadeBuilder.
 
         Args:
@@ -1200,7 +1169,6 @@ class XfadeBuilder:
         ...
 
     def __repr__(self) -> str: ...
-
 
 class AcrossfadeBuilder:
     """Type-safe builder for FFmpeg acrossfade audio crossfade filter.
@@ -1264,7 +1232,6 @@ class AcrossfadeBuilder:
 
     def __repr__(self) -> str: ...
 
-
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 
@@ -1304,7 +1271,6 @@ class Filter:
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 
-
 class FilterChain:
     """A chain of filters connected in sequence."""
 
@@ -1326,7 +1292,6 @@ class FilterChain:
 
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
-
 
 class FilterGraph:
     """A complete filter graph composed of multiple filter chains."""
@@ -1352,7 +1317,6 @@ class FilterGraph:
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 
-
 # ========== Filter Helper Functions ==========
 
 def scale_filter(width: int, height: int) -> Filter:
@@ -1367,7 +1331,6 @@ def scale_filter(width: int, height: int) -> Filter:
     """
     ...
 
-
 def concat_filter(n: int, v: int, a: int) -> Filter:
     """Creates a concat filter for concatenating multiple inputs.
 
@@ -1381,9 +1344,7 @@ def concat_filter(n: int, v: int, a: int) -> Filter:
     """
     ...
 
-
 # ========== Layout Types ==========
-
 
 class LayoutPosition:
     """A layout position using normalized coordinates (0.0-1.0).
@@ -1400,7 +1361,6 @@ class LayoutPosition:
 
     @x.setter
     def x(self, value: float) -> None: ...
-
     @property
     def y(self) -> float:
         """The normalized y coordinate."""
@@ -1408,7 +1368,6 @@ class LayoutPosition:
 
     @y.setter
     def y(self, value: float) -> None: ...
-
     @property
     def width(self) -> float:
         """The normalized width."""
@@ -1416,7 +1375,6 @@ class LayoutPosition:
 
     @width.setter
     def width(self, value: float) -> None: ...
-
     @property
     def height(self) -> float:
         """The normalized height."""
@@ -1424,7 +1382,6 @@ class LayoutPosition:
 
     @height.setter
     def height(self, value: float) -> None: ...
-
     @property
     def z_index(self) -> int:
         """The stacking order index."""
@@ -1432,7 +1389,6 @@ class LayoutPosition:
 
     @z_index.setter
     def z_index(self, value: int) -> None: ...
-
     def __new__(
         cls, x: float, y: float, width: float, height: float, z_index: int
     ) -> LayoutPosition:
@@ -1474,7 +1430,6 @@ class LayoutPosition:
 
     def __repr__(self) -> str: ...
 
-
 class LayoutPreset:
     """Predefined layout configurations for multi-stream composition.
 
@@ -1505,7 +1460,6 @@ class LayoutPreset:
         """
         ...
 
-
 # ========== Composition Functions ==========
 
 def build_overlay_filter(
@@ -1532,7 +1486,6 @@ def build_overlay_filter(
     """
     ...
 
-
 def build_scale_for_layout(
     position: LayoutPosition,
     output_w: int,
@@ -1555,9 +1508,7 @@ def build_scale_for_layout(
     """
     ...
 
-
 # ========== Composition Timeline Types ==========
-
 
 class CompositionClip:
     """A clip positioned on the composition timeline.
@@ -1614,7 +1565,6 @@ class CompositionClip:
         """Returns the duration of this clip in seconds."""
         ...
 
-
 class TransitionSpec:
     """Specifies a transition between two adjacent clips.
 
@@ -1626,9 +1576,7 @@ class TransitionSpec:
     duration: float
     offset: float
 
-    def __init__(
-        self, transition_type: TransitionType, duration: float, offset: float
-    ) -> None:
+    def __init__(self, transition_type: TransitionType, duration: float, offset: float) -> None:
         """Creates a new TransitionSpec.
 
         Args:
@@ -1637,7 +1585,6 @@ class TransitionSpec:
             offset: Offset adjustment for transition timing.
         """
         ...
-
 
 def calculate_composition_positions(
     clips: list[CompositionClip],
@@ -1657,7 +1604,6 @@ def calculate_composition_positions(
     """
     ...
 
-
 def calculate_timeline_duration(
     clips: list[CompositionClip],
     transitions: list[TransitionSpec],
@@ -1673,7 +1619,6 @@ def calculate_timeline_duration(
     """
     ...
 
-
 # ========== Sanitization Functions ==========
 
 def escape_filter_text(input: str) -> str:
@@ -1687,7 +1632,6 @@ def escape_filter_text(input: str) -> str:
     """
     ...
 
-
 def validate_path(path: str) -> None:
     """Validates that a file path is safe to use.
 
@@ -1698,7 +1642,6 @@ def validate_path(path: str) -> None:
         ValueError: If the path is empty or contains null bytes.
     """
     ...
-
 
 def validate_volume(volume: float) -> float:
     """Validates an audio volume multiplier.
@@ -1714,7 +1657,6 @@ def validate_volume(volume: float) -> float:
     """
     ...
 
-
 def validate_video_codec(codec: str) -> str:
     """Validates a video codec name.
 
@@ -1729,7 +1671,6 @@ def validate_video_codec(codec: str) -> str:
     """
     ...
 
-
 def validate_audio_codec(codec: str) -> str:
     """Validates an audio codec name.
 
@@ -1743,7 +1684,6 @@ def validate_audio_codec(codec: str) -> str:
         ValueError: If the codec is not in the allowed list.
     """
     ...
-
 
 def validate_preset(preset: str) -> str:
     """Validates an encoding preset name.
