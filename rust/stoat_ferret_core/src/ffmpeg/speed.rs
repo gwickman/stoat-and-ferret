@@ -589,4 +589,100 @@ mod tests {
             prop_assert!(result.is_err());
         }
     }
+
+    // ========== Additional coverage tests ==========
+
+    #[test]
+    fn test_repr() {
+        let ctrl = SpeedControl::new(2.0).unwrap();
+        let repr = ctrl.__repr__();
+        assert!(repr.contains("SpeedControl"));
+        assert!(repr.contains("2"));
+        assert!(repr.contains("false"));
+    }
+
+    #[test]
+    fn test_repr_with_drop_audio() {
+        let ctrl = SpeedControl::new(1.5).unwrap().with_drop_audio(true);
+        let repr = ctrl.__repr__();
+        assert!(repr.contains("true"));
+    }
+
+    #[test]
+    fn test_format_tempo_value_edge_cases() {
+        assert_eq!(format_tempo_value(0.25), "0.25");
+        assert_eq!(format_tempo_value(0.333), "0.333");
+    }
+
+    #[test]
+    fn test_atempo_chain_0_3x() {
+        let chain = atempo_chain(0.3);
+        assert!(!chain.is_empty());
+        let product: f64 = chain.iter().product();
+        assert!((product - 0.3).abs() < 1e-6);
+        for val in &chain {
+            assert!(*val >= 0.5 - f64::EPSILON && *val <= 2.0 + f64::EPSILON);
+        }
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_speed_control() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let sc = Bound::new(py, SpeedControl::new(2.0).unwrap()).unwrap();
+
+            // Test drop_audio method
+            sc.call_method1("drop_audio", (false,)).unwrap();
+
+            // Test getters
+            let factor: f64 = sc.getattr("speed_factor").unwrap().extract().unwrap();
+            assert!((factor - 2.0).abs() < f64::EPSILON);
+            let drop: bool = sc.getattr("drop_audio_enabled").unwrap().extract().unwrap();
+            assert!(!drop);
+
+            // Test setpts_filter
+            let filter: String = sc
+                .call_method0("setpts_filter")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("setpts="));
+
+            // Test atempo_filters
+            let filters: Vec<PyObject> = sc
+                .call_method0("atempo_filters")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(!filters.is_empty());
+
+            // Test repr
+            let repr: String = sc.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("SpeedControl"));
+
+            // Test py_new error
+            assert!(SpeedControl::py_new(0.1).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_speed_drop_audio() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let sc = Bound::new(py, SpeedControl::new(2.0).unwrap()).unwrap();
+            sc.call_method1("drop_audio", (true,)).unwrap();
+            let filters: Vec<PyObject> = sc
+                .call_method0("atempo_filters")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filters.is_empty());
+        });
+    }
 }

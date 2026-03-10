@@ -1174,4 +1174,189 @@ mod tests {
         assert!(err.contains("wipeleft"));
         assert!(err.contains("dissolve"));
     }
+
+    // ========== Additional coverage tests ==========
+
+    #[test]
+    fn test_fade_with_alpha_false() {
+        let filter = FadeBuilder::new("in", 1.0)
+            .unwrap()
+            .with_alpha(false)
+            .build();
+        let s = filter.to_string();
+        assert!(!s.contains("alpha="));
+    }
+
+    #[test]
+    fn test_fade_with_all_and_nb_frames() {
+        let filter = FadeBuilder::new("out", 2.0)
+            .unwrap()
+            .with_start_time(5.0)
+            .with_color("white")
+            .with_alpha(true)
+            .with_nb_frames(60)
+            .build();
+        let s = filter.to_string();
+        assert!(s.contains("nb_frames=60"));
+        assert!(!s.contains("d=2"));
+        assert!(s.contains("st=5"));
+        assert!(s.contains("c=white"));
+        assert!(s.contains("alpha=1"));
+    }
+
+    #[test]
+    fn test_format_value_integer() {
+        assert_eq!(format_value(5.0), "5");
+        assert_eq!(format_value(0.0), "0");
+    }
+
+    #[test]
+    fn test_format_value_decimal() {
+        assert_eq!(format_value(2.5), "2.5");
+        assert_eq!(format_value(0.333), "0.333");
+    }
+
+    #[test]
+    fn test_acrossfade_max_duration() {
+        let filter = AcrossfadeBuilder::new(60.0).unwrap().build();
+        assert!(filter.to_string().contains("d=60"));
+    }
+
+    #[test]
+    fn test_acrossfade_fractional_duration() {
+        let filter = AcrossfadeBuilder::new(0.5).unwrap().build();
+        assert_eq!(filter.to_string(), "acrossfade=d=0.5");
+    }
+
+    #[test]
+    fn test_xfade_fractional_offset() {
+        let filter = XfadeBuilder::new(TransitionType::Fade, 1.0, 3.5)
+            .unwrap()
+            .build();
+        assert!(filter.to_string().contains("offset=3.5"));
+    }
+
+    #[test]
+    fn test_fade_repr() {
+        let builder = FadeBuilder::new("in", 2.0).unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("FadeBuilder"));
+        assert!(repr.contains("in"));
+    }
+
+    #[test]
+    fn test_xfade_repr() {
+        let builder = XfadeBuilder::new(TransitionType::Wipeleft, 2.0, 5.0).unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("XfadeBuilder"));
+        assert!(repr.contains("wipeleft"));
+    }
+
+    #[test]
+    fn test_acrossfade_repr() {
+        let builder = AcrossfadeBuilder::new(2.0).unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("AcrossfadeBuilder"));
+    }
+
+    #[test]
+    fn test_transition_type_repr() {
+        let tt = TransitionType::Dissolve;
+        let repr = tt.__repr__();
+        assert!(repr.contains("Dissolve"));
+        assert_eq!(tt.__str__(), "dissolve");
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_fade_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let fb = Bound::new(py, FadeBuilder::new("in", 2.0).unwrap()).unwrap();
+            fb.call_method1("start_time", (5.0f64,)).unwrap();
+            fb.call_method1("color", ("white",)).unwrap();
+            fb.call_method1("alpha", (true,)).unwrap();
+            fb.call_method1("nb_frames", (30u64,)).unwrap();
+            let filter: String = fb
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("fade="));
+            let repr: String = fb.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("FadeBuilder"));
+
+            // Test py_new error
+            assert!(FadeBuilder::py_new("bad", 1.0).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_xfade_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let xf = Bound::new(
+                py,
+                XfadeBuilder::new(TransitionType::Wipeleft, 2.0, 5.0).unwrap(),
+            )
+            .unwrap();
+            let filter: String = xf
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("xfade="));
+            let repr: String = xf.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("XfadeBuilder"));
+
+            // Test py_new error
+            assert!(XfadeBuilder::py_new(TransitionType::Fade, 100.0, 0.0).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_acrossfade_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let acf = Bound::new(py, AcrossfadeBuilder::new(2.0).unwrap()).unwrap();
+            acf.call_method1("curve1", ("qsin",)).unwrap();
+            acf.call_method1("curve2", ("log",)).unwrap();
+            acf.call_method1("overlap", (false,)).unwrap();
+            let filter: String = acf
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("acrossfade="));
+            let repr: String = acf.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("AcrossfadeBuilder"));
+
+            // Test curve error
+            let acf2 = Bound::new(py, AcrossfadeBuilder::new(1.0).unwrap()).unwrap();
+            assert!(acf2.call_method1("curve1", ("invalid",)).is_err());
+            assert!(acf2.call_method1("curve2", ("invalid",)).is_err());
+
+            // Test py_new error
+            assert!(AcrossfadeBuilder::py_new(0.0).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_transition_type() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|_py| {
+            let tt = TransitionType::py_from_str("dissolve").unwrap();
+            assert_eq!(tt.py_as_str(), "dissolve");
+            assert!(TransitionType::py_from_str("invalid").is_err());
+        });
+    }
 }

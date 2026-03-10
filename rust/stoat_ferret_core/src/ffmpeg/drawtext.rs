@@ -1036,4 +1036,192 @@ mod tests {
             }
         }
     }
+
+    // ========== Additional coverage tests ==========
+
+    #[test]
+    fn test_escape_drawtext_carriage_return() {
+        assert_eq!(escape_drawtext("a\rb"), "a\\rb");
+    }
+
+    #[test]
+    fn test_escape_drawtext_backslash() {
+        assert_eq!(escape_drawtext("path\\to"), "path\\\\to");
+    }
+
+    #[test]
+    fn test_escape_drawtext_brackets() {
+        assert_eq!(escape_drawtext("[test]"), "\\[test\\]");
+    }
+
+    #[test]
+    fn test_escape_drawtext_semicolon() {
+        assert_eq!(escape_drawtext("a;b"), "a\\;b");
+    }
+
+    #[test]
+    fn test_escape_drawtext_quote() {
+        assert_eq!(escape_drawtext("it's"), "it'\\''s");
+    }
+
+    #[test]
+    fn test_build_no_position() {
+        let filter = DrawtextBuilder::new("hello").build();
+        let s = filter.to_string();
+        assert!(!s.contains("x="));
+        assert!(!s.contains("y="));
+    }
+
+    #[test]
+    fn test_build_no_shadow() {
+        let filter = DrawtextBuilder::new("hello").build();
+        let s = filter.to_string();
+        assert!(!s.contains("shadowx="));
+    }
+
+    #[test]
+    fn test_build_no_box() {
+        let filter = DrawtextBuilder::new("hello").build();
+        let s = filter.to_string();
+        assert!(!s.contains("box="));
+    }
+
+    #[test]
+    fn test_build_no_alpha() {
+        let filter = DrawtextBuilder::new("hello").build();
+        let s = filter.to_string();
+        assert!(!s.contains("alpha="));
+    }
+
+    #[test]
+    fn test_build_no_enable() {
+        let filter = DrawtextBuilder::new("hello").build();
+        let s = filter.to_string();
+        assert!(!s.contains("enable="));
+    }
+
+    #[test]
+    fn test_repr() {
+        let builder = DrawtextBuilder::new("test");
+        assert_eq!(builder.__repr__(), "DrawtextBuilder(text=...)");
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_drawtext_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let dt = Bound::new(py, DrawtextBuilder::new("Hello")).unwrap();
+            dt.call_method1("font", ("monospace",)).unwrap();
+            dt.call_method1("fontsize", (32u32,)).unwrap();
+            dt.call_method1("fontcolor", ("white",)).unwrap();
+            dt.call_method1("position", ("center", 10u32, 0i32, 0i32))
+                .unwrap();
+            dt.call_method1("shadow", (2i32, 2i32, "black")).unwrap();
+            dt.call_method1("box_background", ("black@0.5", 5u32))
+                .unwrap();
+            dt.call_method1("alpha", (0.8f64,)).unwrap();
+            dt.call_method1("enable", ("between(t,1,5)",)).unwrap();
+            let filter: String = dt
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("drawtext="));
+            let repr: String = dt.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("DrawtextBuilder"));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_drawtext_fontfile() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let dt = Bound::new(py, DrawtextBuilder::new("test")).unwrap();
+            dt.call_method1("fontfile", ("/path/to/font.ttf",)).unwrap();
+            let filter: String = dt
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("fontfile="));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_drawtext_all_positions() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            for preset in &[
+                "center",
+                "bottom_center",
+                "top_left",
+                "top_right",
+                "bottom_left",
+                "bottom_right",
+                "absolute",
+            ] {
+                let dt = Bound::new(py, DrawtextBuilder::new("test")).unwrap();
+                dt.call_method1("position", (*preset, 10u32, 50i32, 50i32))
+                    .unwrap();
+            }
+            // Test invalid position
+            let dt = Bound::new(py, DrawtextBuilder::new("test")).unwrap();
+            assert!(dt
+                .call_method1("position", ("invalid", 10u32, 0i32, 0i32))
+                .is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_drawtext_alpha_error() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let dt = Bound::new(py, DrawtextBuilder::new("test")).unwrap();
+            assert!(dt.call_method1("alpha", (1.5f64,)).is_err());
+            assert!(dt.call_method1("alpha", (-0.1f64,)).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_drawtext_alpha_fade() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let dt = Bound::new(py, DrawtextBuilder::new("test")).unwrap();
+            dt.call_method1("alpha_fade", (1.0f64, 0.5f64, 5.0f64, 0.5f64))
+                .unwrap();
+            let filter: String = dt
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("alpha="));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_drawtext_alpha_integer() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let dt = Bound::new(py, DrawtextBuilder::new("test")).unwrap();
+            dt.call_method1("alpha", (1.0f64,)).unwrap();
+            let filter: String = dt
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.contains("alpha='1'"));
+        });
+    }
 }

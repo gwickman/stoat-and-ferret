@@ -899,4 +899,204 @@ mod tests {
         // The codec should be ignored since there was no output to attach it to
         assert!(cmd.outputs[0].video_codec.is_none());
     }
+
+    // ========== Rust API coverage tests ==========
+
+    #[test]
+    fn test_full_command_all_options() {
+        let args = FFmpegCommand::new()
+            .overwrite(true)
+            .loglevel("warning")
+            .input("input1.mp4")
+            .seek(5.0)
+            .duration(10.0)
+            .stream_loop(2)
+            .input("input2.mp4")
+            .output("output.mp4")
+            .video_codec("libx264")
+            .audio_codec("aac")
+            .preset("fast")
+            .crf(23)
+            .format("mp4")
+            .filter_complex("[0:v]scale=1280:720[out]")
+            .map("[out]")
+            .map("0:a")
+            .build()
+            .unwrap();
+        assert!(args.contains(&"-y".to_string()));
+        assert!(args.contains(&"-loglevel".to_string()));
+        assert!(args.contains(&"warning".to_string()));
+        assert!(args.contains(&"-ss".to_string()));
+        assert!(args.contains(&"-t".to_string()));
+        assert!(args.contains(&"-stream_loop".to_string()));
+        assert!(args.contains(&"2".to_string()));
+        assert!(args.contains(&"-c:v".to_string()));
+        assert!(args.contains(&"libx264".to_string()));
+        assert!(args.contains(&"-c:a".to_string()));
+        assert!(args.contains(&"aac".to_string()));
+        assert!(args.contains(&"-preset".to_string()));
+        assert!(args.contains(&"fast".to_string()));
+        assert!(args.contains(&"-crf".to_string()));
+        assert!(args.contains(&"23".to_string()));
+        assert!(args.contains(&"-f".to_string()));
+        assert!(args.contains(&"mp4".to_string()));
+        assert!(args.contains(&"-filter_complex".to_string()));
+        assert!(args.contains(&"-map".to_string()));
+    }
+
+    #[test]
+    fn test_validation_no_inputs() {
+        let result = FFmpegCommand::new().output("out.mp4").build();
+        assert!(matches!(result, Err(CommandError::NoInputs)));
+    }
+
+    #[test]
+    fn test_validation_no_outputs() {
+        let result = FFmpegCommand::new().input("in.mp4").build();
+        assert!(matches!(result, Err(CommandError::NoOutputs)));
+    }
+
+    #[test]
+    fn test_validation_empty_input_path() {
+        let result = FFmpegCommand::new().input("").output("out.mp4").build();
+        assert!(matches!(result, Err(CommandError::EmptyPath)));
+    }
+
+    #[test]
+    fn test_validation_empty_output_path() {
+        let result = FFmpegCommand::new().input("in.mp4").output("").build();
+        assert!(matches!(result, Err(CommandError::EmptyPath)));
+    }
+
+    #[test]
+    fn test_validation_invalid_crf() {
+        let result = FFmpegCommand::new()
+            .input("in.mp4")
+            .output("out.mp4")
+            .crf(52)
+            .build();
+        assert!(matches!(result, Err(CommandError::InvalidCrf(52))));
+    }
+
+    #[test]
+    fn test_validation_max_crf_valid() {
+        let result = FFmpegCommand::new()
+            .input("in.mp4")
+            .output("out.mp4")
+            .crf(51)
+            .build();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_duration_without_input_is_noop() {
+        let cmd = FFmpegCommand::new().duration(5.0).input("in.mp4");
+        assert!(cmd.inputs[0].duration.is_none());
+    }
+
+    #[test]
+    fn test_stream_loop_without_input_is_noop() {
+        let cmd = FFmpegCommand::new().stream_loop(3).input("in.mp4");
+        assert!(cmd.inputs[0].stream_loop.is_none());
+    }
+
+    #[test]
+    fn test_audio_codec_without_output_is_noop() {
+        let cmd = FFmpegCommand::new()
+            .audio_codec("aac")
+            .input("in.mp4")
+            .output("out.mp4");
+        assert!(cmd.outputs[0].audio_codec.is_none());
+    }
+
+    #[test]
+    fn test_preset_without_output_is_noop() {
+        let cmd = FFmpegCommand::new()
+            .preset("fast")
+            .input("in.mp4")
+            .output("out.mp4");
+        assert!(cmd.outputs[0].preset.is_none());
+    }
+
+    #[test]
+    fn test_crf_without_output_is_noop() {
+        let cmd = FFmpegCommand::new()
+            .crf(23)
+            .input("in.mp4")
+            .output("out.mp4");
+        assert!(cmd.outputs[0].crf.is_none());
+    }
+
+    #[test]
+    fn test_format_without_output_is_noop() {
+        let cmd = FFmpegCommand::new()
+            .format("mp4")
+            .input("in.mp4")
+            .output("out.mp4");
+        assert!(cmd.outputs[0].format.is_none());
+    }
+
+    #[test]
+    fn test_map_without_output_is_noop() {
+        let cmd = FFmpegCommand::new()
+            .map("0:v")
+            .input("in.mp4")
+            .output("out.mp4");
+        assert!(cmd.outputs[0].maps.is_empty());
+    }
+
+    #[test]
+    fn test_filter_complex_preserved() {
+        let cmd = FFmpegCommand::new()
+            .filter_complex("[0:v]scale[out]")
+            .input("in.mp4")
+            .output("out.mp4");
+        assert_eq!(cmd.filter_complex.as_deref(), Some("[0:v]scale[out]"));
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_command_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let cmd = Bound::new(py, FFmpegCommand::new()).unwrap();
+            cmd.call_method1("overwrite", (true,)).unwrap();
+            cmd.call_method1("loglevel", ("warning".to_string(),))
+                .unwrap();
+            cmd.call_method1("input", ("input.mp4".to_string(),))
+                .unwrap();
+            cmd.call_method1("seek", (5.0f64,)).unwrap();
+            cmd.call_method1("duration", (10.0f64,)).unwrap();
+            cmd.call_method1("stream_loop", (2i32,)).unwrap();
+            cmd.call_method1("output", ("output.mp4".to_string(),))
+                .unwrap();
+            cmd.call_method1("video_codec", ("libx264".to_string(),))
+                .unwrap();
+            cmd.call_method1("audio_codec", ("aac".to_string(),))
+                .unwrap();
+            cmd.call_method1("preset", ("fast".to_string(),)).unwrap();
+            cmd.call_method1("crf", (23u8,)).unwrap();
+            cmd.call_method1("format", ("mp4".to_string(),)).unwrap();
+            cmd.call_method1("filter_complex", ("graph".to_string(),))
+                .unwrap();
+            cmd.call_method1("map", ("0:v".to_string(),)).unwrap();
+            let result: Vec<String> = cmd.call_method0("build").unwrap().extract().unwrap();
+            assert!(result.contains(&"-y".to_string()));
+            let repr: String = cmd.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("FFmpegCommand"));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_build_validation_error() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let cmd = Bound::new(py, FFmpegCommand::new()).unwrap();
+            let result = cmd.call_method0("build");
+            assert!(result.is_err());
+        });
+    }
 }

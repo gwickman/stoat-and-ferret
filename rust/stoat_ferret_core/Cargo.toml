@@ -13,3 +13,4 @@ pyo3-stub-gen = "0.17"
 
 [dev-dependencies]
 proptest = "1.0"
+pyo3 = { version = "0.26", features = ["auto-initialize"] }

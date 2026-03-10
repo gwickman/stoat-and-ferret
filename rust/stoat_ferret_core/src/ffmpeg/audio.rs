@@ -1279,4 +1279,239 @@ mod tests {
         assert_eq!(format_duration_value(1.5), "1.5");
         assert_eq!(format_duration_value(2.5), "2.5");
     }
+
+    // ========== Additional error path tests ==========
+
+    #[test]
+    fn test_volume_builder_db_no_suffix() {
+        let result = VolumeBuilder::new_db("3");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("dB"));
+    }
+
+    #[test]
+    fn test_volume_builder_db_invalid_numeric() {
+        let result = VolumeBuilder::new_db("abcdB");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("invalid dB"));
+    }
+
+    #[test]
+    fn test_ducking_threshold_below_min() {
+        let result = DuckingPattern::new().unwrap().with_threshold(0.0001);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ducking_ratio_below_min() {
+        let result = DuckingPattern::new().unwrap().with_ratio(0.5);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ducking_attack_below_min() {
+        let result = DuckingPattern::new().unwrap().with_attack(0.001);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ducking_release_below_min() {
+        let result = DuckingPattern::new().unwrap().with_release(0.001);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ducking_boundary_values_valid() {
+        // Minimum valid values
+        let d = DuckingPattern::new()
+            .unwrap()
+            .with_threshold(0.00097563)
+            .unwrap()
+            .with_ratio(1.0)
+            .unwrap()
+            .with_attack(0.01)
+            .unwrap()
+            .with_release(0.01)
+            .unwrap();
+        let graph = d.build();
+        assert!(!graph.to_string().is_empty());
+
+        // Maximum valid values
+        let d = DuckingPattern::new()
+            .unwrap()
+            .with_threshold(1.0)
+            .unwrap()
+            .with_ratio(20.0)
+            .unwrap()
+            .with_attack(2000.0)
+            .unwrap()
+            .with_release(9000.0)
+            .unwrap();
+        let graph = d.build();
+        assert!(!graph.to_string().is_empty());
+    }
+
+    #[test]
+    fn test_volume_repr() {
+        let builder = VolumeBuilder::new(0.5).unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("VolumeBuilder"));
+        assert!(repr.contains("0.5"));
+    }
+
+    #[test]
+    fn test_afade_repr() {
+        let builder = AfadeBuilder::new("in", 2.0).unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("AfadeBuilder"));
+        assert!(repr.contains("in"));
+    }
+
+    #[test]
+    fn test_amix_repr() {
+        let builder = AmixBuilder::new(3).unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("AmixBuilder"));
+        assert!(repr.contains("3"));
+    }
+
+    #[test]
+    fn test_ducking_repr() {
+        let pattern = DuckingPattern::new().unwrap();
+        let repr = pattern.__repr__();
+        assert!(repr.contains("DuckingPattern"));
+        assert!(repr.contains("0.125"));
+    }
+
+    #[test]
+    fn test_amix_zero_inputs() {
+        let result = AmixBuilder::new(0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_format_volume_value_precision() {
+        assert_eq!(format_volume_value(0.333), "0.333");
+        assert_eq!(format_volume_value(2.0), "2");
+        assert_eq!(format_volume_value(0.125), "0.125");
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_volume_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            // Test py_new (valid)
+            let vb = Bound::new(py, VolumeBuilder::new(0.5).unwrap()).unwrap();
+            vb.call_method1("precision", ("float",)).unwrap();
+            let _filter: String = vb
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let repr: String = vb.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("VolumeBuilder"));
+
+            // Test py_precision error
+            let vb2 = Bound::new(py, VolumeBuilder::new(1.0).unwrap()).unwrap();
+            assert!(vb2.call_method1("precision", ("invalid",)).is_err());
+
+            // Test from_db
+            let vb3 = VolumeBuilder::py_from_db("3dB").unwrap();
+            assert!(vb3.__repr__().contains("3dB"));
+            assert!(VolumeBuilder::py_from_db("bad").is_err());
+
+            // Test py_new error
+            let result = VolumeBuilder::py_new(-1.0);
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_afade_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let ab = Bound::new(py, AfadeBuilder::new("in", 2.0).unwrap()).unwrap();
+            ab.call_method1("start_time", (5.0f64,)).unwrap();
+            ab.call_method1("curve", ("qsin",)).unwrap();
+            let _filter: String = ab
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let repr: String = ab.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("AfadeBuilder"));
+
+            // Test curve error
+            let ab2 = Bound::new(py, AfadeBuilder::new("out", 1.0).unwrap()).unwrap();
+            assert!(ab2.call_method1("curve", ("invalid",)).is_err());
+
+            // Test py_new error
+            assert!(AfadeBuilder::py_new("bad", 1.0).is_err());
+            assert!(AfadeBuilder::py_new("in", 0.0).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_amix_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let am = Bound::new(py, AmixBuilder::new(3).unwrap()).unwrap();
+            am.call_method1("duration_mode", ("longest",)).unwrap();
+            am.call_method1("weights", (vec![1.0f64, 0.5, 0.5],))
+                .unwrap();
+            am.call_method1("normalize", (true,)).unwrap();
+            let _filter: String = am
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let repr: String = am.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("AmixBuilder"));
+
+            // Test duration_mode error
+            let am2 = Bound::new(py, AmixBuilder::new(2).unwrap()).unwrap();
+            assert!(am2.call_method1("duration_mode", ("invalid",)).is_err());
+
+            // Test py_new error
+            assert!(AmixBuilder::py_new(1).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_ducking_pattern() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let dp = Bound::new(py, DuckingPattern::new().unwrap()).unwrap();
+            dp.call_method1("threshold", (0.5f64,)).unwrap();
+            dp.call_method1("ratio", (4.0f64,)).unwrap();
+            dp.call_method1("attack", (50.0f64,)).unwrap();
+            dp.call_method1("release", (500.0f64,)).unwrap();
+            let _graph: String = dp
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let repr: String = dp.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("DuckingPattern"));
+
+            // Test error paths
+            let dp2 = Bound::new(py, DuckingPattern::new().unwrap()).unwrap();
+            assert!(dp2.call_method1("threshold", (2.0f64,)).is_err());
+            assert!(dp2.call_method1("ratio", (25.0f64,)).is_err());
+            assert!(dp2.call_method1("attack", (3000.0f64,)).is_err());
+            assert!(dp2.call_method1("release", (10000.0f64,)).is_err());
+        });
+    }
 }

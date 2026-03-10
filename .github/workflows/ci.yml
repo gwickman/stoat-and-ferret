@@ -135,6 +135,34 @@ jobs:
           --lcov --output-path rust-lcov.info
           --fail-under-lines 75
 
+      - name: Filter builder coverage (>95% per module)
+        run: |
+          cargo llvm-cov \
+            --manifest-path rust/stoat_ferret_core/Cargo.toml \
+            --lib --tests --json \
+          | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          files = data.get('data', [{}])[0].get('files', [])
+          failed = False
+          for f in sorted(files, key=lambda x: x['filename']):
+              fn = f['filename']
+              if '/src/ffmpeg/' not in fn:
+                  continue
+              lines = f['summary']['lines']
+              covered = lines['covered']
+              total = lines['count']
+              pct = (covered / total * 100) if total > 0 else 0
+              status = 'PASS' if pct >= 95 else 'FAIL'
+              print(f'{status} {fn}: {covered}/{total} = {pct:.1f}%')
+              if pct < 95:
+                  failed = True
+          if failed:
+              print('ERROR: One or more src/ffmpeg/ modules below 95% line coverage')
+              sys.exit(1)
+          print('All src/ffmpeg/ modules at or above 95% line coverage')
+          "
+
       - name: Upload Rust coverage report
         if: always()
         uses: actions/upload-artifact@v4

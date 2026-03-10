@@ -1764,4 +1764,145 @@ mod tests {
         let s = graph.to_string();
         assert!(s.contains("[final]"));
     }
+
+    // ========== Additional coverage tests ==========
+
+    #[test]
+    fn test_py_scale_filter() {
+        let f = py_scale_filter(1280, 720);
+        assert_eq!(f.to_string(), "scale=w=1280:h=720");
+    }
+
+    #[test]
+    fn test_py_concat_filter() {
+        let f = py_concat_filter(3, 1, 1);
+        assert_eq!(f.to_string(), "concat=n=3:v=1:a=1");
+    }
+
+    #[test]
+    fn test_filter_graph_repr() {
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .input("0:v")
+                .filter(Filter::new("null"))
+                .output("out"),
+        );
+        let repr = graph.__repr__();
+        assert!(repr.contains("FilterGraph"));
+        assert!(repr.contains("1"));
+    }
+
+    #[test]
+    fn test_filter_graph_str() {
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .input("0:v")
+                .filter(scale(1280, 720))
+                .output("out"),
+        );
+        assert_eq!(graph.__str__(), "[0:v]scale=w=1280:h=720[out]");
+    }
+
+    #[test]
+    fn test_filter_chain_repr() {
+        let chain = FilterChain::new()
+            .input("0:v")
+            .filter(Filter::new("null"))
+            .output("out");
+        let repr = chain.__repr__();
+        assert!(repr.contains("FilterChain"));
+        assert!(repr.contains("inputs=1"));
+        assert!(repr.contains("filters=1"));
+        assert!(repr.contains("outputs=1"));
+    }
+
+    #[test]
+    fn test_filter_chain_str() {
+        let chain = FilterChain::new()
+            .input("0:v")
+            .filter(scale(1280, 720))
+            .output("out");
+        assert_eq!(chain.__str__(), "[0:v]scale=w=1280:h=720[out]");
+    }
+
+    #[test]
+    fn test_filter_repr() {
+        let f = Filter::new("scale").param("w", 1920);
+        let repr = f.__repr__();
+        assert!(repr.contains("Filter"));
+    }
+
+    #[test]
+    fn test_filter_str() {
+        let f = Filter::new("scale").param("w", 1920);
+        assert_eq!(f.__str__(), "scale=w=1920");
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_filter_chain() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let chain = Bound::new(py, FilterChain::new()).unwrap();
+            chain.call_method1("input", ("0:v".to_string(),)).unwrap();
+            let f = Bound::new(py, scale(1280, 720)).unwrap();
+            chain.call_method1("filter", (f,)).unwrap();
+            chain.call_method1("output", ("out".to_string(),)).unwrap();
+            let s: String = chain.call_method0("__str__").unwrap().extract().unwrap();
+            assert!(s.contains("[0:v]"));
+            let repr: String = chain.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("FilterChain"));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_filter_graph() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let graph = Bound::new(py, FilterGraph::new()).unwrap();
+            let chain = FilterChain::new()
+                .input("0:v")
+                .filter(scale(1280, 720))
+                .output("out");
+            let chain_bound = Bound::new(py, chain).unwrap();
+            graph.call_method1("chain", (chain_bound,)).unwrap();
+            graph.call_method0("validate").unwrap();
+            let s: String = graph.call_method0("__str__").unwrap().extract().unwrap();
+            assert!(s.contains("scale="));
+            let repr: String = graph.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("FilterGraph"));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_filter_graph_validate_error() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let graph = Bound::new(py, FilterGraph::new()).unwrap();
+            let chain = FilterChain::new()
+                .input("missing")
+                .filter(Filter::new("null"))
+                .output("out");
+            let chain_bound = Bound::new(py, chain).unwrap();
+            graph.call_method1("chain", (chain_bound,)).unwrap();
+            assert!(graph.call_method0("validate").is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_filter_param() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let f = Bound::new(py, Filter::new("scale")).unwrap();
+            f.call_method1("param", ("w".to_string(), "1920".to_string()))
+                .unwrap();
+            let s: String = f.call_method0("__str__").unwrap().extract().unwrap();
+            assert!(s.contains("w=1920"));
+            let repr: String = f.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("Filter"));
+        });
+    }
 }
