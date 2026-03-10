@@ -25,10 +25,7 @@ impl fmt::Display for LayoutError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LayoutError::OutOfRange { field, value } => {
-                write!(
-                    f,
-                    "{field} must be in range 0.0-1.0, got {value}"
-                )
+                write!(f, "{field} must be in range 0.0-1.0, got {value}")
             }
         }
     }
