@@ -1556,6 +1556,124 @@ def build_scale_for_layout(
     ...
 
 
+# ========== Composition Timeline Types ==========
+
+
+class CompositionClip:
+    """A clip positioned on the composition timeline.
+
+    Represents a single input clip with its calculated timeline position,
+    track assignment, and z-ordering for multi-layer composition.
+    """
+
+    @property
+    def input_index(self) -> int:
+        """Index of the input source (0-based)."""
+        ...
+
+    @property
+    def timeline_start(self) -> float:
+        """Start time on the composition timeline in seconds."""
+        ...
+
+    @property
+    def timeline_end(self) -> float:
+        """End time on the composition timeline in seconds."""
+        ...
+
+    @property
+    def track_index(self) -> int:
+        """Track index for multi-track layouts."""
+        ...
+
+    @property
+    def z_index(self) -> int:
+        """Z-order for layering (higher = on top)."""
+        ...
+
+    def __init__(
+        self,
+        input_index: int,
+        timeline_start: float,
+        timeline_end: float,
+        track_index: int,
+        z_index: int,
+    ) -> None:
+        """Creates a new CompositionClip.
+
+        Args:
+            input_index: Index of the input source (0-based).
+            timeline_start: Start time in seconds.
+            timeline_end: End time in seconds.
+            track_index: Track index for multi-track layouts.
+            z_index: Z-order for layering.
+        """
+        ...
+
+    def duration(self) -> float:
+        """Returns the duration of this clip in seconds."""
+        ...
+
+
+class TransitionSpec:
+    """Specifies a transition between two adjacent clips.
+
+    The transition duration defines how much the clips overlap on the timeline.
+    Duration is clamped during calculation to prevent negative-duration clips.
+    """
+
+    transition_type: TransitionType
+    duration: float
+    offset: float
+
+    def __init__(
+        self, transition_type: TransitionType, duration: float, offset: float
+    ) -> None:
+        """Creates a new TransitionSpec.
+
+        Args:
+            transition_type: The type of transition effect.
+            duration: Duration of the transition overlap in seconds.
+            offset: Offset adjustment for transition timing.
+        """
+        ...
+
+
+def calculate_composition_positions(
+    clips: list[CompositionClip],
+    transitions: list[TransitionSpec],
+) -> list[CompositionClip]:
+    """Calculates composition positions for clips with transition overlaps.
+
+    For each adjacent pair of clips, the transition duration creates an overlap.
+    Transition durations are clamped to min(clip_n.duration, clip_n+1.duration).
+
+    Args:
+        clips: List of CompositionClip objects with input positions.
+        transitions: List of TransitionSpec objects for adjacent pairs.
+
+    Returns:
+        List of CompositionClip with adjusted timeline positions.
+    """
+    ...
+
+
+def calculate_timeline_duration(
+    clips: list[CompositionClip],
+    transitions: list[TransitionSpec],
+) -> float:
+    """Calculates total timeline duration accounting for transition overlaps.
+
+    Args:
+        clips: List of CompositionClip objects.
+        transitions: List of TransitionSpec objects for adjacent pairs.
+
+    Returns:
+        Total duration in seconds.
+    """
+    ...
+
+
 # ========== Sanitization Functions ==========
 
 def escape_filter_text(input: str) -> str:

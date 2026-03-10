@@ -109,6 +109,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register compose overlay/scale functions
     compose::overlay::register(m)?;
 
+    // Register composition timeline types and functions
+    compose::timeline::register(m)?;
+
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_path, m)?)?;
