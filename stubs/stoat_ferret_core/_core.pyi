@@ -1506,6 +1506,56 @@ class LayoutPreset:
         ...
 
 
+# ========== Composition Functions ==========
+
+def build_overlay_filter(
+    position: LayoutPosition,
+    output_w: int,
+    output_h: int,
+    start: float,
+    end: float,
+) -> str:
+    """Builds an FFmpeg overlay filter string from a LayoutPosition.
+
+    Converts normalized coordinates to pixel positions and generates an
+    overlay filter with time-based enable expression.
+
+    Args:
+        position: Layout position with normalized coordinates (0.0-1.0).
+        output_w: Output canvas width in pixels.
+        output_h: Output canvas height in pixels.
+        start: Start time in seconds for the overlay.
+        end: End time in seconds for the overlay.
+
+    Returns:
+        FFmpeg overlay filter string.
+    """
+    ...
+
+
+def build_scale_for_layout(
+    position: LayoutPosition,
+    output_w: int,
+    output_h: int,
+    preserve_aspect: bool,
+) -> str:
+    """Builds an FFmpeg scale filter string from a LayoutPosition.
+
+    Converts normalized dimensions to pixel values with even-number
+    enforcement and optional aspect ratio preservation.
+
+    Args:
+        position: Layout position with normalized coordinates (0.0-1.0).
+        output_w: Output canvas width in pixels.
+        output_h: Output canvas height in pixels.
+        preserve_aspect: If true, preserves original aspect ratio.
+
+    Returns:
+        FFmpeg scale filter string.
+    """
+    ...
+
+
 # ========== Sanitization Functions ==========
 
 def escape_filter_text(input: str) -> str:

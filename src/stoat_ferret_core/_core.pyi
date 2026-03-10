@@ -38,6 +38,15 @@ class SanitizationError(Exception):
 
     ...
 
+class LayoutError(Exception):
+    """Raised when layout validation fails.
+
+    This exception is raised when:
+    - Coordinate fields (x, y, width, height) are outside the valid 0.0-1.0 range
+    """
+
+    ...
+
 # ========== Utility Functions ==========
 
 def health_check() -> str:
@@ -1332,6 +1341,170 @@ def concat_filter(n: int, v: int, a: int) -> Filter:
 
     Returns:
         A Filter instance.
+    """
+    ...
+
+# ========== Layout Types ==========
+
+class LayoutPosition:
+    """A layout position using normalized coordinates (0.0-1.0).
+
+    All coordinate fields (x, y, width, height) are normalized to the range
+    0.0-1.0, representing fractions of the output dimensions. The z_index
+    field controls stacking order (higher values are drawn on top).
+    """
+
+    @property
+    def x(self) -> float:
+        """The normalized x coordinate."""
+        ...
+
+    @x.setter
+    def x(self, value: float) -> None: ...
+    @property
+    def y(self) -> float:
+        """The normalized y coordinate."""
+        ...
+
+    @y.setter
+    def y(self, value: float) -> None: ...
+    @property
+    def width(self) -> float:
+        """The normalized width."""
+        ...
+
+    @width.setter
+    def width(self, value: float) -> None: ...
+    @property
+    def height(self) -> float:
+        """The normalized height."""
+        ...
+
+    @height.setter
+    def height(self, value: float) -> None: ...
+    @property
+    def z_index(self) -> int:
+        """The stacking order index."""
+        ...
+
+    @z_index.setter
+    def z_index(self, value: int) -> None: ...
+    def __new__(
+        cls, x: float, y: float, width: float, height: float, z_index: int
+    ) -> LayoutPosition:
+        """Creates a new LayoutPosition.
+
+        Args:
+            x: Normalized x coordinate (0.0-1.0).
+            y: Normalized y coordinate (0.0-1.0).
+            width: Normalized width (0.0-1.0).
+            height: Normalized height (0.0-1.0).
+            z_index: Stacking order (higher values drawn on top).
+
+        Returns:
+            A new LayoutPosition instance.
+        """
+        ...
+
+    def to_pixels(self, output_width: int, output_height: int) -> tuple[int, int, int, int]:
+        """Converts normalized coordinates to pixel values.
+
+        Returns a tuple of (x, y, width, height) in pixels.
+
+        Args:
+            output_width: Output width in pixels.
+            output_height: Output height in pixels.
+
+        Returns:
+            A tuple of (x, y, width, height) in pixels.
+        """
+        ...
+
+    def validate(self) -> None:
+        """Validates that all coordinates are in the 0.0-1.0 range.
+
+        Raises:
+            LayoutError: If any coordinate is out of range.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class LayoutPreset:
+    """Predefined layout configurations for multi-stream composition.
+
+    Each variant produces a set of LayoutPosition values when
+    ``positions()`` is called.
+
+    PIP presets place a full-screen base layer (z_index=0) with a smaller
+    overlay in one corner (z_index=1). Tiling presets divide the output
+    into non-overlapping regions, all at z_index=0.
+    """
+
+    PipTopLeft: LayoutPreset
+    PipTopRight: LayoutPreset
+    PipBottomLeft: LayoutPreset
+    PipBottomRight: LayoutPreset
+    SideBySide: LayoutPreset
+    TopBottom: LayoutPreset
+    Grid2x2: LayoutPreset
+
+    def positions(self, input_count: int) -> list[LayoutPosition]:
+        """Returns the layout positions for this preset.
+
+        Args:
+            input_count: Number of inputs (reserved for future use).
+
+        Returns:
+            A list of LayoutPosition objects defining the composition layout.
+        """
+        ...
+
+# ========== Composition Functions ==========
+
+def build_overlay_filter(
+    position: LayoutPosition,
+    output_w: int,
+    output_h: int,
+    start: float,
+    end: float,
+) -> str:
+    """Builds an FFmpeg overlay filter string from a LayoutPosition.
+
+    Converts normalized coordinates to pixel positions and generates an
+    overlay filter with time-based enable expression.
+
+    Args:
+        position: Layout position with normalized coordinates (0.0-1.0).
+        output_w: Output canvas width in pixels.
+        output_h: Output canvas height in pixels.
+        start: Start time in seconds for the overlay.
+        end: End time in seconds for the overlay.
+
+    Returns:
+        FFmpeg overlay filter string.
+    """
+    ...
+
+def build_scale_for_layout(
+    position: LayoutPosition,
+    output_w: int,
+    output_h: int,
+    preserve_aspect: bool,
+) -> str:
+    """Builds an FFmpeg scale filter string from a LayoutPosition.
+
+    Converts normalized dimensions to pixel values with even-number
+    enforcement and optional aspect ratio preservation.
+
+    Args:
+        position: Layout position with normalized coordinates (0.0-1.0).
+        output_w: Output canvas width in pixels.
+        output_h: Output canvas height in pixels.
+        preserve_aspect: If true, preserves original aspect ratio.
+
+    Returns:
+        FFmpeg scale filter string.
     """
     ...
 

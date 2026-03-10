@@ -735,3 +735,101 @@ class TestErrorConsistency:
 
         assert result.returncode == 1
         assert result.stderr == b"error output"
+
+
+# ---------------------------------------------------------------------------
+# Stage 9: Overlay and scale filter contract tests (requires FFmpeg)
+# ---------------------------------------------------------------------------
+
+
+@requires_ffmpeg
+@pytest.mark.contract
+class TestOverlayScaleContract:
+    """Verify overlay and scale filter builders output is accepted by real FFmpeg."""
+
+    def test_overlay_pip(self) -> None:
+        """Overlay filter from PIP position executes without error."""
+        from stoat_ferret_core import LayoutPosition, build_overlay_filter, build_scale_for_layout
+
+        # PIP at bottom-right quarter
+        pos = LayoutPosition(0.5, 0.5, 0.25, 0.25, 1)
+        scale_str = build_scale_for_layout(pos, 320, 240, False)
+        overlay_str = build_overlay_filter(pos, 320, 240, 0.0, 1.0)
+
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=320x240:d=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:s=320x240:d=1",
+                "-filter_complex",
+                f"[1:v]{scale_str}[pip];[0:v][pip]{overlay_str}",
+                "-frames:v",
+                "1",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected overlay+scale: {result.stderr}"
+
+    def test_scale_with_aspect_preservation(self) -> None:
+        """Scale filter with aspect ratio preservation executes without error."""
+        from stoat_ferret_core import LayoutPosition, build_scale_for_layout
+
+        pos = LayoutPosition(0.0, 0.0, 0.5, 0.5, 0)
+        scale_str = build_scale_for_layout(pos, 320, 240, True)
+
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=blue:s=320x240:d=0.1",
+                "-vf",
+                scale_str,
+                "-frames:v",
+                "1",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected scale filter: {result.stderr}"
+
+    def test_overlay_full_screen(self) -> None:
+        """Full-screen overlay filter executes without error."""
+        from stoat_ferret_core import LayoutPosition, build_overlay_filter
+
+        pos = LayoutPosition(0.0, 0.0, 1.0, 1.0, 0)
+        overlay_str = build_overlay_filter(pos, 320, 240, 0.0, 1.0)
+
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=320x240:d=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=green:s=320x240:d=1",
+                "-filter_complex",
+                f"[0:v][1:v]{overlay_str}",
+                "-frames:v",
+                "1",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected full-screen overlay: {result.stderr}"

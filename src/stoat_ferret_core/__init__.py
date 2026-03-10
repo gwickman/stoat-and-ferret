@@ -64,6 +64,7 @@ try:
         FilterChain,
         FilterGraph,
         FrameRate,
+        LayoutPosition,
         Position,
         SanitizationError,
         SpeedControl,
@@ -72,6 +73,8 @@ try:
         ValidationError,
         VolumeBuilder,
         XfadeBuilder,
+        build_overlay_filter,
+        build_scale_for_layout,
         concat_filter,
         escape_filter_text,
         health_check,
@@ -119,6 +122,9 @@ except ImportError:
     Filter = _not_built  # type: ignore[misc,assignment]
     FilterChain = _not_built  # type: ignore[misc,assignment]
     FilterGraph = _not_built  # type: ignore[misc,assignment]
+    LayoutPosition = _not_built  # type: ignore[misc,assignment]
+    build_overlay_filter = _not_built
+    build_scale_for_layout = _not_built
     scale_filter = _not_built
     concat_filter = _not_built
     escape_filter_text = _not_built
@@ -165,6 +171,11 @@ __all__ = [
     "Filter",
     "FilterChain",
     "FilterGraph",
+    # Layout types
+    "LayoutPosition",
+    # Composition functions
+    "build_overlay_filter",
+    "build_scale_for_layout",
     # Filter helpers
     "scale_filter",
     "concat_filter",
