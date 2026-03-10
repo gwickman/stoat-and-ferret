@@ -177,20 +177,14 @@ mod tests {
         // PIP at bottom-right quarter: x=0.5, y=0.5
         let pos = LayoutPosition::new(0.5, 0.5, 0.25, 0.25, 1);
         let result = build_overlay_filter(&pos, 1920, 1080, 0.0, 5.0);
-        assert_eq!(
-            result,
-            "overlay=x=960:y=540:enable='between(t,0,5)'"
-        );
+        assert_eq!(result, "overlay=x=960:y=540:enable='between(t,0,5)'");
     }
 
     #[test]
     fn overlay_full_screen() {
         let pos = LayoutPosition::new(0.0, 0.0, 1.0, 1.0, 0);
         let result = build_overlay_filter(&pos, 1920, 1080, 1.5, 10.0);
-        assert_eq!(
-            result,
-            "overlay=x=0:y=0:enable='between(t,1.5,10)'"
-        );
+        assert_eq!(result, "overlay=x=0:y=0:enable='between(t,1.5,10)'");
     }
 
     #[test]
@@ -198,20 +192,14 @@ mod tests {
         // Center of a 1280x720 canvas
         let pos = LayoutPosition::new(0.25, 0.25, 0.5, 0.5, 0);
         let result = build_overlay_filter(&pos, 1280, 720, 0.0, 3.0);
-        assert_eq!(
-            result,
-            "overlay=x=320:y=180:enable='between(t,0,3)'"
-        );
+        assert_eq!(result, "overlay=x=320:y=180:enable='between(t,0,3)'");
     }
 
     #[test]
     fn overlay_4k_resolution() {
         let pos = LayoutPosition::new(0.75, 0.75, 0.25, 0.25, 0);
         let result = build_overlay_filter(&pos, 3840, 2160, 2.0, 8.0);
-        assert_eq!(
-            result,
-            "overlay=x=2880:y=1620:enable='between(t,2,8)'"
-        );
+        assert_eq!(result, "overlay=x=2880:y=1620:enable='between(t,2,8)'");
     }
 
     // -- build_scale_for_layout tests --
@@ -253,8 +241,20 @@ mod tests {
         let pos = LayoutPosition::new(0.0, 0.0, 0.33, 0.33, 0);
         let result = build_scale_for_layout(&pos, 1920, 1080, false);
         // Extract w and h from the filter string
-        let w_part = result.split("w=").nth(1).unwrap().split(':').next().unwrap();
-        let h_part = result.split("h=").nth(1).unwrap().split(':').next().unwrap();
+        let w_part = result
+            .split("w=")
+            .nth(1)
+            .unwrap()
+            .split(':')
+            .next()
+            .unwrap();
+        let h_part = result
+            .split("h=")
+            .nth(1)
+            .unwrap()
+            .split(':')
+            .next()
+            .unwrap();
         let w: u32 = w_part.parse().unwrap();
         let h: u32 = h_part.parse().unwrap();
         assert_eq!(w % 2, 0, "Width {w} must be even");
