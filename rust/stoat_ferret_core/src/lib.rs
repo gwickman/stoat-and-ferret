@@ -9,12 +9,14 @@
 //! - [`clip`] - Video clip representation and validation
 //! - [`ffmpeg`] - FFmpeg command building and argument construction
 //! - [`sanitize`] - Input sanitization and validation for FFmpeg commands
+//! - [`layout`] - Layout positioning for composition features
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub mod clip;
 pub mod ffmpeg;
+pub mod layout;
 pub mod sanitize;
 pub mod timeline;
 
@@ -32,6 +34,13 @@ pyo3::create_exception!(
 pyo3::create_exception!(
     stoat_ferret_core,
     SanitizationError,
+    pyo3::exceptions::PyException
+);
+// Note: This Python exception is distinct from layout::position::LayoutError (Rust enum).
+// In position.rs, the exception is referenced via crate::LayoutError.
+pyo3::create_exception!(
+    stoat_ferret_core,
+    LayoutError,
     pyo3::exceptions::PyException
 );
 
@@ -91,6 +100,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::transitions::XfadeBuilder>()?;
     m.add_class::<ffmpeg::transitions::AcrossfadeBuilder>()?;
 
+    // Register layout types
+    m.add_class::<layout::position::LayoutPosition>()?;
+
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_path, m)?)?;
@@ -104,6 +116,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add("ValidationError", m.py().get_type::<ValidationError>())?;
     m.add("CommandError", m.py().get_type::<CommandError>())?;
     m.add("SanitizationError", m.py().get_type::<SanitizationError>())?;
+    m.add("LayoutError", m.py().get_type::<LayoutError>())?;
 
     Ok(())
 }
