@@ -384,6 +384,325 @@ class TestDrawtextContract:
 
 
 # ---------------------------------------------------------------------------
+# Stage 6: SpeedControl contract tests (requires FFmpeg)
+# ---------------------------------------------------------------------------
+
+
+@requires_ffmpeg
+@pytest.mark.contract
+class TestSpeedControlContract:
+    """Verify SpeedControl output is accepted by real FFmpeg."""
+
+    def test_normal_speed(self, sample_video_path: Path) -> None:
+        """1.5x speed factor executes without error."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(1.5)
+        video_filter = str(ctrl.setpts_filter())
+        audio_filters = [str(f) for f in ctrl.atempo_filters()]
+
+        real = RealFFmpegExecutor()
+        # Apply video speed filter
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-vf",
+                video_filter,
+                "-af",
+                ",".join(audio_filters),
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected 1.5x speed: {result.stderr}"
+
+    def test_extreme_slow_speed(self, sample_video_path: Path) -> None:
+        """0.25x speed factor (minimum supported) executes without error."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(0.25)
+        video_filter = str(ctrl.setpts_filter())
+        audio_filters = [str(f) for f in ctrl.atempo_filters()]
+
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-vf",
+                video_filter,
+                "-af",
+                ",".join(audio_filters),
+                "-t",
+                "2",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected 0.25x speed: {result.stderr}"
+
+    def test_extreme_fast_speed(self, sample_video_path: Path) -> None:
+        """4.0x speed factor (maximum supported) executes without error."""
+        from stoat_ferret_core import SpeedControl
+
+        ctrl = SpeedControl(4.0)
+        video_filter = str(ctrl.setpts_filter())
+        audio_filters = [str(f) for f in ctrl.atempo_filters()]
+
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-vf",
+                video_filter,
+                "-af",
+                ",".join(audio_filters),
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected 4.0x speed: {result.stderr}"
+
+
+# ---------------------------------------------------------------------------
+# Stage 7: Audio builder contract tests (requires FFmpeg)
+# ---------------------------------------------------------------------------
+
+
+@requires_ffmpeg
+@pytest.mark.contract
+class TestAudioBuilderContract:
+    """Verify audio filter builders output is accepted by real FFmpeg."""
+
+    def test_volume_linear(self, sample_video_path: Path) -> None:
+        """VolumeBuilder with linear volume executes without error."""
+        from stoat_ferret_core import VolumeBuilder
+
+        f = VolumeBuilder(0.5).build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-af",
+                str(f),
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected volume filter: {result.stderr}"
+
+    def test_volume_db(self, sample_video_path: Path) -> None:
+        """VolumeBuilder with dB volume executes without error."""
+        from stoat_ferret_core import VolumeBuilder
+
+        f = VolumeBuilder.from_db("-6dB").build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-af",
+                str(f),
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected volume dB filter: {result.stderr}"
+
+    def test_afade_in(self, sample_video_path: Path) -> None:
+        """AfadeBuilder fade-in executes without error."""
+        from stoat_ferret_core import AfadeBuilder
+
+        f = AfadeBuilder("in", 0.5).build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-af",
+                str(f),
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected afade in: {result.stderr}"
+
+    def test_afade_out(self, sample_video_path: Path) -> None:
+        """AfadeBuilder fade-out executes without error."""
+        from stoat_ferret_core import AfadeBuilder
+
+        f = AfadeBuilder("out", 0.5).start_time(0.3).build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-af",
+                str(f),
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected afade out: {result.stderr}"
+
+    def test_amix(self, sample_video_path: Path) -> None:
+        """AmixBuilder with two inputs executes without error."""
+        from stoat_ferret_core import AmixBuilder
+
+        f = AmixBuilder(2).duration_mode("shortest").build()
+        real = RealFFmpegExecutor()
+        # Use the same video as both inputs for amix
+        result = real.run(
+            [
+                "-i",
+                str(sample_video_path),
+                "-i",
+                str(sample_video_path),
+                "-filter_complex",
+                f"[0:a][1:a]{f}",
+                "-vn",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected amix filter: {result.stderr}"
+
+
+# ---------------------------------------------------------------------------
+# Stage 8: Transition contract tests (requires FFmpeg)
+# ---------------------------------------------------------------------------
+
+
+@requires_ffmpeg
+@pytest.mark.contract
+class TestTransitionContract:
+    """Verify transition filter builders output is accepted by real FFmpeg."""
+
+    def test_xfade(self) -> None:
+        """XfadeBuilder with two color sources executes without error."""
+        from stoat_ferret_core import TransitionType, XfadeBuilder
+
+        f = XfadeBuilder(TransitionType.Fade, 0.5, 0.5).build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=320x240:d=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:s=320x240:d=1",
+                "-filter_complex",
+                f"[0:v][1:v]{f}",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected xfade filter: {result.stderr}"
+
+    def test_xfade_wipeleft(self) -> None:
+        """XfadeBuilder with wipeleft transition executes without error."""
+        from stoat_ferret_core import TransitionType, XfadeBuilder
+
+        f = XfadeBuilder(TransitionType.Wipeleft, 0.5, 0.5).build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=320x240:d=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:s=320x240:d=1",
+                "-filter_complex",
+                f"[0:v][1:v]{f}",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected wipeleft xfade: {result.stderr}"
+
+    def test_acrossfade(self) -> None:
+        """AcrossfadeBuilder with two audio sources executes without error."""
+        from stoat_ferret_core import AcrossfadeBuilder
+
+        f = AcrossfadeBuilder(0.5).build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=880:duration=1",
+                "-filter_complex",
+                f"[0:a][1:a]{f}",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected acrossfade: {result.stderr}"
+
+    def test_acrossfade_with_curves(self) -> None:
+        """AcrossfadeBuilder with custom curves executes without error."""
+        from stoat_ferret_core import AcrossfadeBuilder
+
+        f = AcrossfadeBuilder(0.5).curve1("log").curve2("log").build()
+        real = RealFFmpegExecutor()
+        result = real.run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=880:duration=1",
+                "-filter_complex",
+                f"[0:a][1:a]{f}",
+                "-y",
+                "-f",
+                "null",
+                "-",
+            ]
+        )
+        assert result.returncode == 0, f"FFmpeg rejected acrossfade with curves: {result.stderr}"
+
+
+# ---------------------------------------------------------------------------
 # Error consistency tests
 # ---------------------------------------------------------------------------
 
