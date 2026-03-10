@@ -43,6 +43,16 @@ class SanitizationError(Exception):
     ...
 
 
+class LayoutError(Exception):
+    """Raised when layout validation fails.
+
+    This exception is raised when:
+    - Coordinate fields (x, y, width, height) are outside the valid 0.0-1.0 range
+    """
+
+    ...
+
+
 # ========== Utility Functions ==========
 
 def health_check() -> str:
@@ -1370,6 +1380,99 @@ def concat_filter(n: int, v: int, a: int) -> Filter:
         A Filter instance.
     """
     ...
+
+
+# ========== Layout Types ==========
+
+
+class LayoutPosition:
+    """A layout position using normalized coordinates (0.0-1.0).
+
+    All coordinate fields (x, y, width, height) are normalized to the range
+    0.0-1.0, representing fractions of the output dimensions. The z_index
+    field controls stacking order (higher values are drawn on top).
+    """
+
+    @property
+    def x(self) -> float:
+        """The normalized x coordinate."""
+        ...
+
+    @x.setter
+    def x(self, value: float) -> None: ...
+
+    @property
+    def y(self) -> float:
+        """The normalized y coordinate."""
+        ...
+
+    @y.setter
+    def y(self, value: float) -> None: ...
+
+    @property
+    def width(self) -> float:
+        """The normalized width."""
+        ...
+
+    @width.setter
+    def width(self, value: float) -> None: ...
+
+    @property
+    def height(self) -> float:
+        """The normalized height."""
+        ...
+
+    @height.setter
+    def height(self, value: float) -> None: ...
+
+    @property
+    def z_index(self) -> int:
+        """The stacking order index."""
+        ...
+
+    @z_index.setter
+    def z_index(self, value: int) -> None: ...
+
+    def __new__(
+        cls, x: float, y: float, width: float, height: float, z_index: int
+    ) -> LayoutPosition:
+        """Creates a new LayoutPosition.
+
+        Args:
+            x: Normalized x coordinate (0.0-1.0).
+            y: Normalized y coordinate (0.0-1.0).
+            width: Normalized width (0.0-1.0).
+            height: Normalized height (0.0-1.0).
+            z_index: Stacking order (higher values drawn on top).
+
+        Returns:
+            A new LayoutPosition instance.
+        """
+        ...
+
+    def to_pixels(self, output_width: int, output_height: int) -> tuple[int, int, int, int]:
+        """Converts normalized coordinates to pixel values.
+
+        Returns a tuple of (x, y, width, height) in pixels.
+
+        Args:
+            output_width: Output width in pixels.
+            output_height: Output height in pixels.
+
+        Returns:
+            A tuple of (x, y, width, height) in pixels.
+        """
+        ...
+
+    def validate(self) -> None:
+        """Validates that all coordinates are in the 0.0-1.0 range.
+
+        Raises:
+            LayoutError: If any coordinate is out of range.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
 
 
 # ========== Sanitization Functions ==========
