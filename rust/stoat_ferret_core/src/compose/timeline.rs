@@ -73,7 +73,13 @@ impl CompositionClip {
         track_index: u32,
         z_index: i32,
     ) -> Self {
-        Self::new(input_index, timeline_start, timeline_end, track_index, z_index)
+        Self::new(
+            input_index,
+            timeline_start,
+            timeline_end,
+            track_index,
+            z_index,
+        )
     }
 
     /// Returns the duration of this clip in seconds.
@@ -151,7 +157,11 @@ impl TransitionSpec {
 }
 
 /// Clamps a transition duration so it doesn't exceed either adjacent clip's duration.
-fn clamp_transition_duration(transition_duration: f64, clip_a_duration: f64, clip_b_duration: f64) -> f64 {
+fn clamp_transition_duration(
+    transition_duration: f64,
+    clip_a_duration: f64,
+    clip_b_duration: f64,
+) -> f64 {
     transition_duration
         .min(clip_a_duration)
         .min(clip_b_duration)
@@ -475,9 +485,7 @@ mod proptests {
     use proptest::prelude::*;
 
     fn arb_clip(index: usize) -> impl Strategy<Value = CompositionClip> {
-        (0.1f64..=300.0).prop_map(move |duration| {
-            CompositionClip::new(index, 0.0, duration, 0, 0)
-        })
+        (0.1f64..=300.0).prop_map(move |duration| CompositionClip::new(index, 0.0, duration, 0, 0))
     }
 
     fn arb_clips(min: usize, max: usize) -> impl Strategy<Value = Vec<CompositionClip>> {
