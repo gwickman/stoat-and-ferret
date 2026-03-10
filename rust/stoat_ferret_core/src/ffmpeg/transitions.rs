@@ -4,7 +4,7 @@
 //!
 //! - [`FadeBuilder`] - Video fade in/out with configurable duration and color
 //! - [`XfadeBuilder`] - Video crossfade with selectable transition effects
-//! - [`TransitionType`] - All 64 FFmpeg xfade transition variants
+//! - [`TransitionType`] - All 59 FFmpeg xfade transition variants
 //! - [`AcrossfadeBuilder`] - Audio crossfade between two inputs
 //!
 //! All builders follow the fluent pattern: construct, configure, then `.build()`.
@@ -40,7 +40,7 @@ fn format_value(value: f64) -> String {
 
 // ========== TransitionType Enum ==========
 
-/// All 64 FFmpeg xfade transition variants.
+/// All 59 FFmpeg xfade transition variants.
 ///
 /// Each variant maps to an FFmpeg xfade `transition` parameter value.
 #[pyclass(eq, eq_int)]
@@ -1265,6 +1265,113 @@ mod tests {
         let repr = tt.__repr__();
         assert!(repr.contains("Dissolve"));
         assert_eq!(tt.__str__(), "dissolve");
+    }
+
+    // ========== Proptest ==========
+
+    use proptest::prelude::*;
+
+    fn arb_transition_type() -> impl Strategy<Value = TransitionType> {
+        prop_oneof![
+            Just(TransitionType::Fade),
+            Just(TransitionType::Fadeblack),
+            Just(TransitionType::Fadewhite),
+            Just(TransitionType::Fadegrays),
+            Just(TransitionType::Fadefast),
+            Just(TransitionType::Fadeslow),
+            Just(TransitionType::Wipeleft),
+            Just(TransitionType::Wiperight),
+            Just(TransitionType::Wipeup),
+            Just(TransitionType::Wipedown),
+            Just(TransitionType::Wipetl),
+            Just(TransitionType::Wipetr),
+            Just(TransitionType::Wipebl),
+            Just(TransitionType::Wipebr),
+            Just(TransitionType::Slideleft),
+            Just(TransitionType::Slideright),
+            Just(TransitionType::Slideup),
+            Just(TransitionType::Slidedown),
+            Just(TransitionType::Smoothleft),
+            Just(TransitionType::Smoothright),
+            Just(TransitionType::Smoothup),
+            Just(TransitionType::Smoothdown),
+            Just(TransitionType::Circlecrop),
+            Just(TransitionType::Rectcrop),
+            Just(TransitionType::Circleopen),
+            Just(TransitionType::Circleclose),
+            Just(TransitionType::Radial),
+            Just(TransitionType::Vertopen),
+            Just(TransitionType::Vertclose),
+            Just(TransitionType::Horzopen),
+            Just(TransitionType::Horzclose),
+            Just(TransitionType::Dissolve),
+            Just(TransitionType::Pixelize),
+            Just(TransitionType::Distance),
+            Just(TransitionType::Hblur),
+            Just(TransitionType::Diagtl),
+            Just(TransitionType::Diagtr),
+            Just(TransitionType::Diagbl),
+            Just(TransitionType::Diagbr),
+            Just(TransitionType::Hlslice),
+            Just(TransitionType::Hrslice),
+            Just(TransitionType::Vuslice),
+            Just(TransitionType::Vdslice),
+            Just(TransitionType::Squeezeh),
+            Just(TransitionType::Squeezev),
+            Just(TransitionType::Zoomin),
+            Just(TransitionType::Hlwind),
+            Just(TransitionType::Hrwind),
+            Just(TransitionType::Vuwind),
+            Just(TransitionType::Vdwind),
+            Just(TransitionType::Coverleft),
+            Just(TransitionType::Coverright),
+            Just(TransitionType::Coverup),
+            Just(TransitionType::Coverdown),
+            Just(TransitionType::Revealleft),
+            Just(TransitionType::Revealright),
+            Just(TransitionType::Revealup),
+            Just(TransitionType::Revealdown),
+            Just(TransitionType::Custom),
+        ]
+    }
+
+    proptest! {
+        /// Property: all valid fade durations produce valid fade filter strings.
+        #[test]
+        fn fade_builder_valid(duration in 0.01f64..=60.0) {
+            let fade_type = if duration.to_bits() % 2 == 0 { "in" } else { "out" };
+            let builder = FadeBuilder::new(fade_type, duration).unwrap();
+            let filter = builder.build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("fade="), "Got: {}", s);
+            prop_assert!(s.contains("t="), "Missing type param: {}", s);
+        }
+
+        /// Property: all transition types with valid durations produce valid xfade filter strings.
+        #[test]
+        fn xfade_builder_valid(
+            tt in arb_transition_type(),
+            duration in 0.01f64..=60.0,
+            offset in 0.0f64..=300.0,
+        ) {
+            let builder = XfadeBuilder::new(tt, duration, offset).unwrap();
+            let filter = builder.build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("xfade="), "Got: {}", s);
+            prop_assert!(s.contains(&format!("transition={}", tt.as_str())), "Missing transition: {}", s);
+            prop_assert!(s.contains("duration="), "Missing duration: {}", s);
+            prop_assert!(s.contains("offset="), "Missing offset: {}", s);
+        }
+
+        /// Property: all valid durations produce valid acrossfade filter strings.
+        #[test]
+        fn acrossfade_builder_valid(duration in 0.01f64..=60.0) {
+            let builder = AcrossfadeBuilder::new(duration).unwrap();
+            let filter = builder.build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("acrossfade="), "Got: {}", s);
+            prop_assert!(s.contains("d="), "Missing duration param: {}", s);
+        }
     }
 
     // ========== PyO3 binding tests ==========

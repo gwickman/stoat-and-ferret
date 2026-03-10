@@ -1035,6 +1035,42 @@ mod tests {
                 }
             }
         }
+
+        /// Property: Unicode text produces valid drawtext filter strings.
+        #[test]
+        fn drawtext_unicode_text(text in "[\\p{L}\\p{N}\\p{P} ]{0,100}") {
+            let filter = DrawtextBuilder::new(&text).build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("drawtext="), "Got: {}", s);
+            prop_assert!(s.contains("text="), "Missing text param: {}", s);
+        }
+
+        /// Property: text with special drawtext chars produces valid output.
+        #[test]
+        fn drawtext_special_chars(text in r#"[:;'\"\\\[\]%\n\r]{0,30}"#) {
+            let filter = DrawtextBuilder::new(&text).build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("drawtext="), "Got: {}", s);
+            prop_assert!(!s.is_empty());
+        }
+
+        /// Property: max-length strings produce valid filter output.
+        #[test]
+        fn drawtext_max_length(text in ".{500,1000}") {
+            let filter = DrawtextBuilder::new(&text).build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("drawtext="), "Got: {}", s);
+            prop_assert!(s.contains("text="), "Missing text param: {}", s);
+        }
+
+        /// Property: empty string produces valid filter output.
+        #[test]
+        fn drawtext_empty_text(_dummy in 0..1u8) {
+            let filter = DrawtextBuilder::new("").build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("drawtext="), "Got: {}", s);
+            prop_assert!(s.contains("text="), "Missing text param: {}", s);
+        }
     }
 
     // ========== Additional coverage tests ==========

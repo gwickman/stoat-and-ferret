@@ -582,11 +582,34 @@ mod tests {
             }
         }
 
-        /// Property: out-of-range speeds are rejected.
+        /// Property: out-of-range speeds below minimum are rejected.
         #[test]
         fn invalid_speed_rejected(speed in -100.0f64..0.249) {
             let result = SpeedControl::new(speed);
             prop_assert!(result.is_err());
+        }
+
+        /// Property: out-of-range speeds above maximum are rejected.
+        #[test]
+        fn invalid_speed_above_max_rejected(speed in 4.001f64..=100.0) {
+            let result = SpeedControl::new(speed);
+            prop_assert!(result.is_err());
+        }
+
+        /// Property: full range 0.01..=100.0 is either accepted (valid) or rejected (invalid) without panics.
+        #[test]
+        fn speed_full_range_no_panic(speed in 0.01f64..=100.0) {
+            let result = SpeedControl::new(speed);
+            if (0.25..=4.0).contains(&speed) {
+                prop_assert!(result.is_ok(), "Valid speed {} rejected", speed);
+                let ctrl = result.unwrap();
+                let filter = ctrl.setpts_filter();
+                let s = filter.to_string();
+                prop_assert!(s.starts_with("setpts="), "Got: {}", s);
+                prop_assert!(s.contains("*PTS"), "Missing PTS: {}", s);
+            } else {
+                prop_assert!(result.is_err(), "Invalid speed {} accepted", speed);
+            }
         }
     }
 

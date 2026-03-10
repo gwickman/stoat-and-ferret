@@ -1396,6 +1396,44 @@ mod tests {
         assert_eq!(format_volume_value(0.125), "0.125");
     }
 
+    // ========== Proptest ==========
+
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Property: all valid volumes produce valid filter strings.
+        #[test]
+        fn volume_builder_valid(volume in 0.0f64..=10.0) {
+            let builder = VolumeBuilder::new(volume).unwrap();
+            let filter = builder.build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("volume="), "Got: {}", s);
+            prop_assert!(s.contains("volume="), "Missing volume param: {}", s);
+        }
+
+        /// Property: all valid fade durations produce valid afade filter strings.
+        #[test]
+        fn afade_builder_valid(duration in 0.01f64..=300.0) {
+            let fade_type = if duration.to_bits() % 2 == 0 { "in" } else { "out" };
+            let builder = AfadeBuilder::new(fade_type, duration).unwrap();
+            let filter = builder.build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("afade="), "Got: {}", s);
+            prop_assert!(s.contains("t="), "Missing type param: {}", s);
+            prop_assert!(s.contains("d="), "Missing duration param: {}", s);
+        }
+
+        /// Property: all valid input counts produce valid amix filter strings.
+        #[test]
+        fn amix_builder_valid(inputs in 2usize..=8) {
+            let builder = AmixBuilder::new(inputs).unwrap();
+            let filter = builder.build();
+            let s = filter.to_string();
+            prop_assert!(s.starts_with("amix="), "Got: {}", s);
+            prop_assert!(s.contains("inputs="), "Missing inputs param: {}", s);
+        }
+    }
+
     // ========== PyO3 binding tests ==========
 
     use pyo3::prelude::*;
