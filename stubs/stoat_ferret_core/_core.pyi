@@ -1475,6 +1475,37 @@ class LayoutPosition:
     def __repr__(self) -> str: ...
 
 
+class LayoutPreset:
+    """Predefined layout configurations for multi-stream composition.
+
+    Each variant produces a set of LayoutPosition values when
+    ``positions()`` is called.
+
+    PIP presets place a full-screen base layer (z_index=0) with a smaller
+    overlay in one corner (z_index=1). Tiling presets divide the output
+    into non-overlapping regions, all at z_index=0.
+    """
+
+    PipTopLeft: LayoutPreset
+    PipTopRight: LayoutPreset
+    PipBottomLeft: LayoutPreset
+    PipBottomRight: LayoutPreset
+    SideBySide: LayoutPreset
+    TopBottom: LayoutPreset
+    Grid2x2: LayoutPreset
+
+    def positions(self, input_count: int) -> list[LayoutPosition]:
+        """Returns the layout positions for this preset.
+
+        Args:
+            input_count: Number of inputs (reserved for future use).
+
+        Returns:
+            A list of LayoutPosition objects defining the composition layout.
+        """
+        ...
+
+
 # ========== Sanitization Functions ==========
 
 def escape_filter_text(input: str) -> str:
