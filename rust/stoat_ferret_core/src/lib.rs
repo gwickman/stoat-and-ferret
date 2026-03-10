@@ -10,11 +10,13 @@
 //! - [`ffmpeg`] - FFmpeg command building and argument construction
 //! - [`sanitize`] - Input sanitization and validation for FFmpeg commands
 //! - [`layout`] - Layout positioning for composition features
+//! - [`compose`] - Overlay and scale filter builders for multi-stream composition
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub mod clip;
+pub mod compose;
 pub mod ffmpeg;
 pub mod layout;
 pub mod sanitize;
@@ -103,6 +105,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register layout types
     m.add_class::<layout::position::LayoutPosition>()?;
     m.add_class::<layout::preset::LayoutPreset>()?;
+
+    // Register compose overlay/scale functions
+    compose::overlay::register(m)?;
 
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
