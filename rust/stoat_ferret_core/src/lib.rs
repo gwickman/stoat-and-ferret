@@ -102,6 +102,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register layout types
     m.add_class::<layout::position::LayoutPosition>()?;
+    m.add_class::<layout::preset::LayoutPreset>()?;
 
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
