@@ -57,6 +57,28 @@ class ClipValidationError(Exception):
 
 
 @dataclass
+class Track:
+    """Timeline track within a project.
+
+    Represents a video, audio, or text track that clips are assigned to.
+    Tracks define the layering order (z_index) and can be muted or locked.
+    """
+
+    id: str
+    project_id: str
+    track_type: str  # "video", "audio", "text"
+    label: str
+    z_index: int = 0
+    muted: bool = False
+    locked: bool = False
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a track."""
+        return str(uuid.uuid4())
+
+
+@dataclass
 class Clip:
     """Video clip within a project.
 
@@ -73,6 +95,9 @@ class Clip:
     created_at: datetime
     updated_at: datetime
     effects: list[dict[str, Any]] | None = field(default=None)
+    track_id: str | None = field(default=None)
+    timeline_start: float | None = field(default=None)
+    timeline_end: float | None = field(default=None)
 
     @staticmethod
     def new_id() -> str:

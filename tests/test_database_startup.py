@@ -17,7 +17,7 @@ class TestCreateTablesAsync:
     """Unit tests for create_tables_async()."""
 
     async def test_creates_all_ddl_objects(self) -> None:
-        """create_tables_async() creates all 12 expected DDL objects."""
+        """create_tables_async() creates all expected DDL objects."""
         db = await aiosqlite.connect(":memory:")
         try:
             await create_tables_async(db)
@@ -34,12 +34,14 @@ class TestCreateTablesAsync:
             assert "audit_log" in names
             assert "projects" in names
             assert "clips" in names
+            assert "tracks" in names
 
             # Indexes
             assert "idx_videos_path" in names
             assert "idx_audit_log_entity" in names
             assert "idx_clips_project" in names
             assert "idx_clips_timeline" in names
+            assert "idx_tracks_project" in names
 
             # FTS virtual table
             assert "videos_fts" in names
@@ -90,6 +92,7 @@ class TestLifespanSchemaCreation:
                 assert "projects" in tables
                 assert "clips" in tables
                 assert "audit_log" in tables
+                assert "tracks" in tables
             finally:
                 await db.close()
         finally:

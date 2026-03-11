@@ -12,6 +12,7 @@ TABLE_VIDEOS_FTS = "videos_fts"
 TABLE_AUDIT_LOG = "audit_log"
 TABLE_PROJECTS = "projects"
 TABLE_CLIPS = "clips"
+TABLE_TRACKS = "tracks"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -118,6 +119,46 @@ CLIPS_TIMELINE_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_clips_timeline ON clips(project_id, timeline_position);
 """
 
+TRACKS_TABLE = """
+CREATE TABLE IF NOT EXISTS tracks (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    track_type TEXT NOT NULL,
+    label TEXT NOT NULL,
+    z_index INTEGER NOT NULL DEFAULT 0,
+    muted INTEGER NOT NULL DEFAULT 0,
+    locked INTEGER NOT NULL DEFAULT 0
+);
+"""
+
+TRACKS_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_tracks_project ON tracks(project_id);
+"""
+
+# Columns to add to clips table for timeline positioning.
+# Each entry is (column_name, column_type).
+CLIPS_TIMELINE_COLUMNS = [
+    ("track_id", "TEXT"),
+    ("timeline_start", "REAL"),
+    ("timeline_end", "REAL"),
+]
+
+
+def _alter_clips_add_timeline_columns(conn: sqlite3.Connection) -> None:
+    """Add timeline columns to clips table idempotently.
+
+    Uses try/except per column so re-running is safe on existing databases.
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in CLIPS_TIMELINE_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
 
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
@@ -142,7 +183,26 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(CLIPS_TABLE)
     cursor.execute(CLIPS_PROJECT_INDEX)
     cursor.execute(CLIPS_TIMELINE_INDEX)
+    cursor.execute(TRACKS_TABLE)
+    cursor.execute(TRACKS_PROJECT_INDEX)
+    _alter_clips_add_timeline_columns(conn)
     conn.commit()
+
+
+async def _alter_clips_add_timeline_columns_async(db: aiosqlite.Connection) -> None:
+    """Add timeline columns to clips table idempotently (async).
+
+    Uses try/except per column so re-running is safe on existing databases.
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in CLIPS_TIMELINE_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
 
 
 async def create_tables_async(db: aiosqlite.Connection) -> None:
@@ -166,4 +226,7 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(CLIPS_TABLE)
     await db.execute(CLIPS_PROJECT_INDEX)
     await db.execute(CLIPS_TIMELINE_INDEX)
+    await db.execute(TRACKS_TABLE)
+    await db.execute(TRACKS_PROJECT_INDEX)
+    await _alter_clips_add_timeline_columns_async(db)
     await db.commit()

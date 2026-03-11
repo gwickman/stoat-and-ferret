@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from stoat_ferret.db.models import Clip, ClipValidationError
+from stoat_ferret.db.models import Clip, ClipValidationError, Track
 
 
 def make_clip(**kwargs) -> Clip:
@@ -165,3 +165,93 @@ class TestClipDataclass:
         assert clip.effects is not None
         assert len(clip.effects) == 1
         assert clip.effects[0]["effect_type"] == "text_overlay"
+
+    def test_clip_timeline_fields_default_to_none(self) -> None:
+        """Clip timeline fields default to None for backward compatibility."""
+        clip = make_clip()
+        assert clip.track_id is None
+        assert clip.timeline_start is None
+        assert clip.timeline_end is None
+
+    def test_clip_with_timeline_fields(self) -> None:
+        """Clip can be created with timeline fields."""
+        clip = make_clip(
+            track_id="track-1",
+            timeline_start=0.0,
+            timeline_end=5.5,
+        )
+        assert clip.track_id == "track-1"
+        assert clip.timeline_start == 0.0
+        assert clip.timeline_end == 5.5
+
+    def test_clip_without_new_fields_works_unchanged(self) -> None:
+        """Existing Clip creation without new fields works unchanged."""
+        now = datetime.now(timezone.utc)
+        clip = Clip(
+            id="clip-1",
+            project_id="project-1",
+            source_video_id="video-1",
+            in_point=0,
+            out_point=100,
+            timeline_position=50,
+            created_at=now,
+            updated_at=now,
+        )
+        assert clip.id == "clip-1"
+        assert clip.track_id is None
+        assert clip.timeline_start is None
+        assert clip.timeline_end is None
+
+
+class TestTrackDataclass:
+    """Tests for Track dataclass."""
+
+    def test_track_instantiation_with_all_fields(self) -> None:
+        """Track can be instantiated with all fields."""
+        track = Track(
+            id="track-1",
+            project_id="project-1",
+            track_type="video",
+            label="Video 1",
+            z_index=0,
+            muted=False,
+            locked=False,
+        )
+        assert track.id == "track-1"
+        assert track.project_id == "project-1"
+        assert track.track_type == "video"
+        assert track.label == "Video 1"
+        assert track.z_index == 0
+        assert track.muted is False
+        assert track.locked is False
+
+    def test_track_type_supports_video_audio_text(self) -> None:
+        """Track supports video, audio, and text track types."""
+        for track_type in ("video", "audio", "text"):
+            track = Track(
+                id=Track.new_id(),
+                project_id="project-1",
+                track_type=track_type,
+                label=f"{track_type.title()} 1",
+            )
+            assert track.track_type == track_type
+
+    def test_track_defaults(self) -> None:
+        """Track defaults z_index=0, muted=False, locked=False."""
+        track = Track(
+            id="track-1",
+            project_id="project-1",
+            track_type="audio",
+            label="Audio 1",
+        )
+        assert track.z_index == 0
+        assert track.muted is False
+        assert track.locked is False
+
+    def test_track_new_id_returns_uuid(self) -> None:
+        """Track.new_id() returns unique UUID strings."""
+        id1 = Track.new_id()
+        id2 = Track.new_id()
+        assert len(id1) == 36
+        assert id1.count("-") == 4
+        assert id1 != id2

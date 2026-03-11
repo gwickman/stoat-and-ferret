@@ -167,9 +167,15 @@ class AsyncSQLiteClipRepository:
         return cursor.rowcount > 0
 
     def _row_to_clip(self, row: Any) -> Clip:
-        """Convert a database row to a Clip object."""
+        """Convert a database row to a Clip object.
+
+        Uses dict-style .get() for timeline columns so that rows from
+        databases that have not yet been migrated still work.
+        """
         effects_raw = row["effects_json"]
         effects = json.loads(effects_raw) if effects_raw is not None else None
+        # Convert aiosqlite.Row to dict for safe .get() access on new columns
+        row_dict = dict(row)
         return Clip(
             id=row["id"],
             project_id=row["project_id"],
@@ -180,6 +186,9 @@ class AsyncSQLiteClipRepository:
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             effects=effects,
+            track_id=row_dict.get("track_id"),
+            timeline_start=row_dict.get("timeline_start"),
+            timeline_end=row_dict.get("timeline_end"),
         )
 
 

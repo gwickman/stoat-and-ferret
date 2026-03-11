@@ -8,6 +8,7 @@ from collections.abc import Generator
 import pytest
 
 from stoat_ferret.db.schema import (
+    TABLE_TRACKS,
     TABLE_VIDEOS,
     TABLE_VIDEOS_FTS,
     create_tables,
@@ -171,3 +172,64 @@ def test_clips_table_has_effects_json_column(db_conn: sqlite3.Connection) -> Non
     columns = {row[1] for row in cursor.fetchall()}
 
     assert "effects_json" in columns
+
+
+def test_tracks_table_created(db_conn: sqlite3.Connection) -> None:
+    """Verify that the tracks table is created."""
+    cursor = db_conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = {row[0] for row in cursor.fetchall()}
+
+    assert TABLE_TRACKS in tables
+
+
+def test_tracks_table_has_correct_columns(db_conn: sqlite3.Connection) -> None:
+    """Verify the tracks table has all required columns."""
+    cursor = db_conn.cursor()
+    cursor.execute("PRAGMA table_info(tracks)")
+    columns = {row[1] for row in cursor.fetchall()}
+
+    expected_columns = {
+        "id",
+        "project_id",
+        "track_type",
+        "label",
+        "z_index",
+        "muted",
+        "locked",
+    }
+    assert columns == expected_columns
+
+
+def test_tracks_project_index_created(db_conn: sqlite3.Connection) -> None:
+    """Verify the tracks(project_id) index is created."""
+    cursor = db_conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='index'")
+    indexes = {row[0] for row in cursor.fetchall()}
+
+    assert "idx_tracks_project" in indexes
+
+
+def test_clips_table_has_timeline_columns(db_conn: sqlite3.Connection) -> None:
+    """Verify clips table has new timeline columns after migration."""
+    cursor = db_conn.cursor()
+    cursor.execute("PRAGMA table_info(clips)")
+    columns = {row[1] for row in cursor.fetchall()}
+
+    assert "track_id" in columns
+    assert "timeline_start" in columns
+    assert "timeline_end" in columns
+
+
+def test_migration_idempotent_alter_table(db_conn: sqlite3.Connection) -> None:
+    """Running migration twice produces no errors (idempotent ALTER TABLE)."""
+    # create_tables was already called by fixture; call again
+    create_tables(db_conn)
+
+    cursor = db_conn.cursor()
+    cursor.execute("PRAGMA table_info(clips)")
+    columns = {row[1] for row in cursor.fetchall()}
+
+    assert "track_id" in columns
+    assert "timeline_start" in columns
+    assert "timeline_end" in columns

@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from stoat_ferret.db.models import Clip, Project, Video
+from stoat_ferret.db.models import Clip, Project, Track, Video
 
 # ---------------------------------------------------------------------------
 # Video factory (simple function — mirrors existing make_test_video)
@@ -44,6 +44,33 @@ def make_test_video(**kwargs: object) -> Video:
     }
     defaults.update(kwargs)
     return Video(**defaults)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Track factory
+# ---------------------------------------------------------------------------
+
+
+def make_test_track(**kwargs: object) -> Track:
+    """Create a test Track with sensible defaults.
+
+    Args:
+        **kwargs: Override any Track field.
+
+    Returns:
+        A Track instance with defaults merged with overrides.
+    """
+    defaults: dict[str, object] = {
+        "id": Track.new_id(),
+        "project_id": "project-1",
+        "track_type": "video",
+        "label": "Video 1",
+        "z_index": 0,
+        "muted": False,
+        "locked": False,
+    }
+    defaults.update(kwargs)
+    return Track(**defaults)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
