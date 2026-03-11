@@ -11,10 +11,12 @@
 //! - [`sanitize`] - Input sanitization and validation for FFmpeg commands
 //! - [`layout`] - Layout positioning for composition features
 //! - [`compose`] - Overlay and scale filter builders for multi-stream composition
+//! - [`batch`] - Batch render progress aggregation
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+pub mod batch;
 pub mod clip;
 pub mod compose;
 pub mod ffmpeg;
@@ -113,6 +115,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register composition timeline types and functions
     compose::timeline::register(m)?;
+
+    // Register batch progress types and functions
+    batch::register(m)?;
 
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;

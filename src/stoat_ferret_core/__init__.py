@@ -53,6 +53,8 @@ try:
         AfadeBuilder,
         AmixBuilder,
         AudioMixSpec,
+        BatchJobStatus,
+        BatchProgress,
         Clip,
         ClipValidationError,
         CommandError,
@@ -77,6 +79,7 @@ try:
         XfadeBuilder,
         build_overlay_filter,
         build_scale_for_layout,
+        calculate_batch_progress,
         concat_filter,
         escape_filter_text,
         health_check,
@@ -102,6 +105,9 @@ except ImportError:
 
     health_check = _not_built
     # Callable stub replacing typed classes (intentional fallback)
+    BatchJobStatus = _not_built  # type: ignore[misc,assignment]
+    BatchProgress = _not_built  # type: ignore[misc,assignment]
+    calculate_batch_progress = _not_built
     Clip = _not_built  # type: ignore[misc,assignment]
     ClipValidationError = _not_built  # type: ignore[misc,assignment]
     validate_clip = _not_built
@@ -146,6 +152,10 @@ except ImportError:
 __all__ = [
     # Utility
     "health_check",
+    # Batch progress types
+    "BatchJobStatus",
+    "BatchProgress",
+    "calculate_batch_progress",
     # Clip types
     "Clip",
     "ClipValidationError",
