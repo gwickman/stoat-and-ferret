@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from stoat_ferret.api.schemas.timeline import (
+    AdjustedClipPosition,
     TimelineClipCreate,
     TimelineClipResponse,
     TimelineClipUpdate,
     TimelineResponse,
     TrackCreate,
     TrackResponse,
+    TransitionCreate,
+    TransitionResponse,
 )
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Track
@@ -487,3 +491,287 @@ async def remove_timeline_clip(
     await clip_repo.update(clip)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# POST /projects/{project_id}/timeline/transitions
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{project_id}/timeline/transitions",
+    response_model=TransitionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_transition(
+    project_id: str,
+    request: TransitionCreate,
+    project_repo: ProjectRepoDep,
+    clip_repo: ClipRepoDep,
+) -> TransitionResponse:
+    """Apply a transition between two adjacent clips.
+
+    Validates clip adjacency, delegates offset computation to Rust core's
+    calculate_composition_positions(), and returns the computed filter_string
+    and timeline_offset.
+
+    Args:
+        project_id: The unique project identifier.
+        request: Transition creation request with clip IDs, type, and duration.
+        project_repo: Project repository dependency.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        Transition response with filter_string and computed timeline_offset.
+
+    Raises:
+        HTTPException: 404 if project or clips not found.
+            422 if clips are not adjacent.
+    """
+    from stoat_ferret_core import (
+        CompositionClip,
+        TransitionSpec,
+        TransitionType,
+        build_composition_graph,
+        calculate_composition_positions,
+    )
+
+    project = await project_repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    clip_a = await clip_repo.get(request.clip_a_id)
+    if clip_a is None or clip_a.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {request.clip_a_id} not found"},
+        )
+
+    clip_b = await clip_repo.get(request.clip_b_id)
+    if clip_b is None or clip_b.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {request.clip_b_id} not found"},
+        )
+
+    # Validate adjacency: same track, clip_a ends where clip_b starts (or overlaps)
+    if clip_a.track_id is None or clip_b.track_id is None or clip_a.track_id != clip_b.track_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "CLIPS_NOT_ADJACENT",
+                "message": "Clips must be on the same track to apply a transition",
+            },
+        )
+
+    if (
+        clip_a.timeline_end is None
+        or clip_b.timeline_start is None
+        or clip_a.timeline_start is None
+        or clip_b.timeline_end is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "CLIPS_NOT_ADJACENT",
+                "message": "Clips must have timeline positions to apply a transition",
+            },
+        )
+
+    # Narrow types after None check above
+    a_start: float = clip_a.timeline_start
+    a_end: float = clip_a.timeline_end
+    b_start: float = clip_b.timeline_start
+    b_end: float = clip_b.timeline_end
+
+    # Ensure clip_a comes before clip_b; swap if needed
+    if a_start > b_start:
+        clip_a, clip_b = clip_b, clip_a
+        a_start, a_end, b_start, b_end = b_start, b_end, a_start, a_end
+
+    if a_end != b_start:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "CLIPS_NOT_ADJACENT",
+                "message": "Clips must be adjacent (clip_a must end where clip_b starts)",
+            },
+        )
+
+    # Construct Rust types and call calculate_composition_positions
+    comp_clip_a = CompositionClip(0, a_start, a_end, 0, 0)
+    comp_clip_b = CompositionClip(1, b_start, b_end, 0, 0)
+    transition_type = TransitionType.from_str(request.transition_type)
+    transition_spec = TransitionSpec(transition_type, request.duration, 0.0)
+
+    adjusted = calculate_composition_positions([comp_clip_a, comp_clip_b], [transition_spec])
+
+    # Compute timeline_offset: the shift applied to clip_b
+    timeline_offset = adjusted[1].timeline_start - comp_clip_b.timeline_start
+
+    # Build filter graph to get filter_string
+    graph = build_composition_graph(
+        adjusted,
+        [transition_spec],
+        None,
+        None,
+        project.output_width,
+        project.output_height,
+    )
+    filter_string = str(graph)
+
+    # Store transition in project
+    transition_id = str(uuid.uuid4())
+    transition_data = {
+        "id": transition_id,
+        "clip_a_id": request.clip_a_id,
+        "clip_b_id": request.clip_b_id,
+        "transition_type": request.transition_type,
+        "duration": request.duration,
+    }
+    if project.transitions is None:
+        project.transitions = []
+    project.transitions.append(transition_data)
+    project.updated_at = datetime.now(timezone.utc)
+    await project_repo.update(project)
+
+    adjusted_positions = [
+        AdjustedClipPosition(
+            input_index=c.input_index,
+            timeline_start=c.timeline_start,
+            timeline_end=c.timeline_end,
+        )
+        for c in adjusted
+    ]
+
+    return TransitionResponse(
+        id=transition_id,
+        transition_type=request.transition_type,
+        duration=request.duration,
+        filter_string=filter_string,
+        timeline_offset=timeline_offset,
+        clips=adjusted_positions,
+    )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /projects/{project_id}/timeline/transitions/{transition_id}
+# ---------------------------------------------------------------------------
+
+
+@router.delete(
+    "/{project_id}/timeline/transitions/{transition_id}",
+    response_model=TimelineResponse,
+)
+async def delete_transition(
+    project_id: str,
+    transition_id: str,
+    project_repo: ProjectRepoDep,
+    timeline_repo: TimelineRepoDep,
+    clip_repo: ClipRepoDep,
+) -> TimelineResponse:
+    """Remove a transition and recalculate timeline duration.
+
+    Args:
+        project_id: The unique project identifier.
+        transition_id: The unique transition identifier.
+        project_repo: Project repository dependency.
+        timeline_repo: Timeline repository dependency.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        Updated timeline state with recalculated duration.
+
+    Raises:
+        HTTPException: 404 if project or transition not found.
+    """
+    from stoat_ferret_core import (
+        CompositionClip,
+        TransitionSpec,
+        TransitionType,
+        calculate_timeline_duration,
+    )
+
+    project = await project_repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    # Find and remove the transition
+    if project.transitions is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Transition {transition_id} not found",
+            },
+        )
+
+    original_len = len(project.transitions)
+    project.transitions = [t for t in project.transitions if t.get("id") != transition_id]
+    if len(project.transitions) == original_len:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Transition {transition_id} not found",
+            },
+        )
+
+    project.updated_at = datetime.now(timezone.utc)
+    await project_repo.update(project)
+
+    # Recalculate timeline duration using remaining transitions
+    tracks = await timeline_repo.get_tracks_by_project(project_id)
+    clips_by_track = await _get_clips_by_track(clip_repo, project_id)
+
+    # Build composition clips and remaining transition specs for duration calc
+    all_comp_clips: list[CompositionClip] = []
+    all_transitions: list[TransitionSpec] = []
+
+    for track in tracks:
+        track_clips = clips_by_track.get(track.id, [])
+        for i, clip in enumerate(track_clips):
+            if clip.timeline_start is not None and clip.timeline_end is not None:
+                all_comp_clips.append(
+                    CompositionClip(i, clip.timeline_start, clip.timeline_end, 0, 0)
+                )
+
+    # Build transition specs from remaining stored transitions
+    for t in project.transitions:
+        t_type = TransitionType.from_str(t["transition_type"])
+        all_transitions.append(TransitionSpec(t_type, t["duration"], 0.0))
+
+    # Calculate duration considering remaining transitions
+    if all_comp_clips:
+        duration = calculate_timeline_duration(all_comp_clips, all_transitions)
+    else:
+        duration = 0.0
+
+    track_responses = []
+    for track in tracks:
+        track_clips = clips_by_track.get(track.id, [])
+        track_responses.append(
+            TrackResponse(
+                id=track.id,
+                project_id=track.project_id,
+                track_type=track.track_type,
+                label=track.label,
+                z_index=track.z_index,
+                muted=track.muted,
+                locked=track.locked,
+                clips=track_clips,
+            )
+        )
+
+    return TimelineResponse(
+        project_id=project_id,
+        tracks=track_responses,
+        duration=duration,
+        version=1,
+    )

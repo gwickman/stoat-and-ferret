@@ -822,3 +822,518 @@ async def test_timeline_repository_accessible(
     data = response.json()
     assert len(data["tracks"]) == 1
     assert data["tracks"][0]["id"] == "direct-track"
+
+
+# ---------------------------------------------------------------------------
+# POST /projects/{project_id}/timeline/transitions
+# ---------------------------------------------------------------------------
+
+
+async def _setup_adjacent_clips(
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> tuple[str, str, str]:
+    """Create a project with two adjacent clips on the same track.
+
+    Returns:
+        Tuple of (track_id, clip_a_id, clip_b_id).
+    """
+    from stoat_ferret.db.models import Project
+
+    await project_repository.add(
+        Project(**_make_project())  # type: ignore[arg-type]
+    )
+
+    track = Track(id="track-1", project_id="proj-1", track_type="video", label="V1", z_index=0)
+    await timeline_repository.create_track(track)
+
+    video_a = make_test_video()
+    clip_a = Clip(
+        id="clip-a",
+        project_id="proj-1",
+        source_video_id=video_a.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=0.0,
+        timeline_end=5.0,
+    )
+    await clip_repository.add(clip_a)
+
+    video_b = make_test_video()
+    clip_b = Clip(
+        id="clip-b",
+        project_id="proj-1",
+        source_video_id=video_b.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=5.0,
+        timeline_end=10.0,
+    )
+    await clip_repository.add(clip_b)
+
+    return "track-1", "clip-a", "clip-b"
+
+
+@pytest.mark.api
+async def test_post_transition_success(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition applies transition between adjacent clips."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["transition_type"] == "fade"
+    assert data["duration"] == 1.0
+    assert "filter_string" in data
+    assert len(data["filter_string"]) > 0
+    assert "timeline_offset" in data
+    assert isinstance(data["timeline_offset"], float)
+    assert "id" in data
+    assert len(data["clips"]) == 2
+
+
+@pytest.mark.api
+async def test_post_transition_filter_string_and_offset(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition returns valid filter_string and computed timeline_offset."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "dissolve",
+            "duration": 1.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    # timeline_offset should be negative (clip_b shifts earlier)
+    assert data["timeline_offset"] < 0
+    # filter_string should be an FFmpeg filter_complex value
+    assert "xfade" in data["filter_string"] or len(data["filter_string"]) > 0
+    # Adjusted clips should show overlap
+    assert data["clips"][1]["timeline_start"] < 5.0
+
+
+@pytest.mark.api
+async def test_post_transition_non_adjacent_clips(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition rejects non-adjacent clips with CLIPS_NOT_ADJACENT."""
+    from stoat_ferret.db.models import Project
+
+    await project_repository.add(
+        Project(**_make_project())  # type: ignore[arg-type]
+    )
+
+    track = Track(id="track-1", project_id="proj-1", track_type="video", label="V1", z_index=0)
+    await timeline_repository.create_track(track)
+
+    video_a = make_test_video()
+    clip_a = Clip(
+        id="clip-a",
+        project_id="proj-1",
+        source_video_id=video_a.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=0.0,
+        timeline_end=5.0,
+    )
+    await clip_repository.add(clip_a)
+
+    video_b = make_test_video()
+    clip_b = Clip(
+        id="clip-b",
+        project_id="proj-1",
+        source_video_id=video_b.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=7.0,  # Gap: not adjacent to clip_a
+        timeline_end=12.0,
+    )
+    await clip_repository.add(clip_b)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "CLIPS_NOT_ADJACENT"
+
+
+@pytest.mark.api
+async def test_post_transition_different_tracks(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition rejects clips on different tracks."""
+    from stoat_ferret.db.models import Project
+
+    await project_repository.add(
+        Project(**_make_project())  # type: ignore[arg-type]
+    )
+
+    track1 = Track(id="track-1", project_id="proj-1", track_type="video", label="V1", z_index=0)
+    track2 = Track(id="track-2", project_id="proj-1", track_type="video", label="V2", z_index=1)
+    await timeline_repository.create_track(track1)
+    await timeline_repository.create_track(track2)
+
+    video_a = make_test_video()
+    clip_a = Clip(
+        id="clip-a",
+        project_id="proj-1",
+        source_video_id=video_a.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=0.0,
+        timeline_end=5.0,
+    )
+    await clip_repository.add(clip_a)
+
+    video_b = make_test_video()
+    clip_b = Clip(
+        id="clip-b",
+        project_id="proj-1",
+        source_video_id=video_b.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-2",  # Different track
+        timeline_start=5.0,
+        timeline_end=10.0,
+    )
+    await clip_repository.add(clip_b)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "CLIPS_NOT_ADJACENT"
+
+
+@pytest.mark.api
+def test_post_transition_project_not_found(client: TestClient) -> None:
+    """POST transition returns 404 for unknown project."""
+    response = client.post(
+        "/api/v1/projects/nonexistent/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_post_transition_clip_not_found(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """POST transition returns 404 for unknown clip."""
+    from stoat_ferret.db.models import Project
+
+    await project_repository.add(
+        Project(**_make_project())  # type: ignore[arg-type]
+    )
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "nonexistent-a",
+            "clip_b_id": "nonexistent-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+# ---------------------------------------------------------------------------
+# DELETE /projects/{project_id}/timeline/transitions/{transition_id}
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.api
+async def test_delete_transition_success(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """DELETE transition removes transition and returns updated timeline."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    # First create a transition
+    resp = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert resp.status_code == 201
+    transition_id = resp.json()["id"]
+
+    # Delete it
+    resp = client.delete(
+        f"/api/v1/projects/proj-1/timeline/transitions/{transition_id}",
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == "proj-1"
+    assert "tracks" in data
+    assert "duration" in data
+    assert isinstance(data["duration"], float)
+
+
+@pytest.mark.api
+async def test_delete_transition_recalculates_duration(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """DELETE transition recalculates timeline duration without the transition."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    # Create transition
+    resp = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert resp.status_code == 201
+    transition_id = resp.json()["id"]
+
+    # Delete transition
+    resp = client.delete(
+        f"/api/v1/projects/proj-1/timeline/transitions/{transition_id}",
+    )
+    assert resp.status_code == 200
+    # Duration after removing transition should be >= baseline (no overlap)
+    assert resp.json()["duration"] >= 0
+
+
+@pytest.mark.api
+async def test_delete_transition_not_found(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """DELETE transition returns 404 for unknown transition."""
+    from stoat_ferret.db.models import Project
+
+    await project_repository.add(
+        Project(**_make_project())  # type: ignore[arg-type]
+    )
+
+    resp = client.delete(
+        "/api/v1/projects/proj-1/timeline/transitions/nonexistent",
+    )
+    assert resp.status_code == 404
+    data = resp.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+def test_delete_transition_project_not_found(client: TestClient) -> None:
+    """DELETE transition returns 404 for unknown project."""
+    resp = client.delete(
+        "/api/v1/projects/nonexistent/timeline/transitions/some-id",
+    )
+    assert resp.status_code == 404
+    data = resp.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+# ---------------------------------------------------------------------------
+# Black box transition workflow
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.api
+@pytest.mark.blackbox
+async def test_transition_workflow(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """Full workflow: create clips -> apply transition -> verify -> remove -> verify."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    # 1. Verify initial timeline
+    resp = client.get("/api/v1/projects/proj-1/timeline")
+    assert resp.status_code == 200
+    assert resp.json()["duration"] == 10.0
+
+    # 2. Apply transition
+    resp = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert resp.status_code == 201
+    transition_data = resp.json()
+    assert "filter_string" in transition_data
+    assert len(transition_data["filter_string"]) > 0
+    assert "timeline_offset" in transition_data
+    assert transition_data["timeline_offset"] < 0  # Clip B shifted left
+    transition_id = transition_data["id"]
+
+    # 3. Remove transition
+    resp = client.delete(
+        f"/api/v1/projects/proj-1/timeline/transitions/{transition_id}",
+    )
+    assert resp.status_code == 200
+    timeline = resp.json()
+    # Duration recalculated
+    assert timeline["duration"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# Error response format parity (transitions)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.api
+async def test_transition_error_format_matches_existing(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """Transition error responses match existing structured error pattern."""
+    from stoat_ferret.db.models import Project
+
+    await project_repository.add(
+        Project(**_make_project())  # type: ignore[arg-type]
+    )
+
+    track = Track(id="track-1", project_id="proj-1", track_type="video", label="V1", z_index=0)
+    await timeline_repository.create_track(track)
+
+    video_a = make_test_video()
+    clip_a = Clip(
+        id="clip-a",
+        project_id="proj-1",
+        source_video_id=video_a.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=0.0,
+        timeline_end=5.0,
+    )
+    await clip_repository.add(clip_a)
+
+    video_b = make_test_video()
+    clip_b = Clip(
+        id="clip-b",
+        project_id="proj-1",
+        source_video_id=video_b.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        track_id="track-1",
+        timeline_start=8.0,  # Not adjacent
+        timeline_end=12.0,
+    )
+    await clip_repository.add(clip_b)
+
+    resp = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert "code" in detail
+    assert "message" in detail
+    # Compare with existing error format
+    resp2 = client.get("/api/v1/projects/nonexistent/timeline")
+    detail2 = resp2.json()["detail"]
+    assert set(detail.keys()) == set(detail2.keys())

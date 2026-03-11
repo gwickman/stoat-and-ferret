@@ -1169,3 +1169,127 @@ class TestExceptions:
         from stoat_ferret_core import SanitizationError
 
         assert issubclass(SanitizationError, Exception)
+
+
+class TestCompositionTimeline:
+    """Integration tests for CompositionClip, TransitionSpec, and position calculation."""
+
+    def test_composition_clip_construction(self) -> None:
+        """Test CompositionClip construction and properties."""
+        from stoat_ferret_core import CompositionClip
+
+        clip = CompositionClip(0, 0.0, 5.0, 0, 0)
+        assert clip.input_index == 0
+        assert clip.timeline_start == 0.0
+        assert clip.timeline_end == 5.0
+        assert clip.track_index == 0
+        assert clip.z_index == 0
+
+    def test_composition_clip_duration(self) -> None:
+        """Test CompositionClip.duration() method."""
+        from stoat_ferret_core import CompositionClip
+
+        clip = CompositionClip(0, 2.0, 7.0, 0, 0)
+        assert clip.duration() == 5.0
+
+    def test_transition_spec_construction(self) -> None:
+        """Test TransitionSpec construction with TransitionType."""
+        from stoat_ferret_core import TransitionSpec, TransitionType
+
+        t_type = TransitionType.from_str("fade")
+        spec = TransitionSpec(t_type, 1.0, 0.0)
+        assert spec.duration == 1.0
+        assert spec.offset == 0.0
+
+    def test_calculate_composition_positions(self) -> None:
+        """Test calculate_composition_positions adjusts clip positions for overlap."""
+        from stoat_ferret_core import (
+            CompositionClip,
+            TransitionSpec,
+            TransitionType,
+            calculate_composition_positions,
+        )
+
+        clip_a = CompositionClip(0, 0.0, 5.0, 0, 0)
+        clip_b = CompositionClip(1, 5.0, 10.0, 0, 0)
+        t_type = TransitionType.from_str("fade")
+        spec = TransitionSpec(t_type, 1.0, 0.0)
+
+        adjusted = calculate_composition_positions([clip_a, clip_b], [spec])
+        assert len(adjusted) == 2
+        # First clip should remain at original position
+        assert adjusted[0].timeline_start == 0.0
+        assert adjusted[0].timeline_end == 5.0
+        # Second clip should shift earlier by transition duration
+        assert adjusted[1].timeline_start < 5.0
+        assert adjusted[1].timeline_start == 4.0  # Shifted left by 1.0s
+
+    def test_calculate_composition_positions_clamping(self) -> None:
+        """Test that transition duration is clamped to clip durations."""
+        from stoat_ferret_core import (
+            CompositionClip,
+            TransitionSpec,
+            TransitionType,
+            calculate_composition_positions,
+        )
+
+        # Short clips (2s each), long transition (5s) should be clamped
+        clip_a = CompositionClip(0, 0.0, 2.0, 0, 0)
+        clip_b = CompositionClip(1, 2.0, 4.0, 0, 0)
+        t_type = TransitionType.from_str("dissolve")
+        spec = TransitionSpec(t_type, 5.0, 0.0)
+
+        adjusted = calculate_composition_positions([clip_a, clip_b], [spec])
+        assert len(adjusted) == 2
+        # Clip B should not have negative start
+        assert adjusted[1].timeline_start >= 0.0
+
+    def test_calculate_timeline_duration(self) -> None:
+        """Test calculate_timeline_duration with transitions."""
+        from stoat_ferret_core import (
+            CompositionClip,
+            TransitionSpec,
+            TransitionType,
+            calculate_timeline_duration,
+        )
+
+        clip_a = CompositionClip(0, 0.0, 5.0, 0, 0)
+        clip_b = CompositionClip(1, 5.0, 10.0, 0, 0)
+        t_type = TransitionType.from_str("fade")
+        spec = TransitionSpec(t_type, 1.0, 0.0)
+
+        duration = calculate_timeline_duration([clip_a, clip_b], [spec])
+        # With 1s overlap, total should be 9s (5 + 5 - 1)
+        assert duration == 9.0
+
+    def test_calculate_timeline_duration_no_transitions(self) -> None:
+        """Test calculate_timeline_duration without transitions."""
+        from stoat_ferret_core import (
+            CompositionClip,
+            calculate_timeline_duration,
+        )
+
+        clip_a = CompositionClip(0, 0.0, 5.0, 0, 0)
+        clip_b = CompositionClip(1, 5.0, 10.0, 0, 0)
+
+        duration = calculate_timeline_duration([clip_a, clip_b], [])
+        assert duration == 10.0
+
+    def test_transition_type_from_str(self) -> None:
+        """Test TransitionType.from_str with various types."""
+        from stoat_ferret_core import TransitionType
+
+        fade = TransitionType.from_str("fade")
+        dissolve = TransitionType.from_str("dissolve")
+        wipeleft = TransitionType.from_str("wipeleft")
+
+        assert fade.as_str() == "fade"
+        assert dissolve.as_str() == "dissolve"
+        assert wipeleft.as_str() == "wipeleft"
+
+    def test_transition_type_invalid(self) -> None:
+        """Test TransitionType.from_str rejects invalid types."""
+        from stoat_ferret_core import TransitionType
+
+        with pytest.raises(ValueError):
+            TransitionType.from_str("not_a_real_transition")
