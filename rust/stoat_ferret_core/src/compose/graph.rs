@@ -33,9 +33,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::compose::timeline::{
-    calculate_composition_positions, CompositionClip, TransitionSpec,
-};
+use crate::compose::timeline::{calculate_composition_positions, CompositionClip, TransitionSpec};
 use crate::ffmpeg::audio::AudioMixSpec;
 use crate::ffmpeg::filter::{concat, Filter, FilterChain, FilterGraph};
 use crate::layout::position::LayoutPosition;
@@ -238,19 +236,13 @@ fn build_concat_graph(clips: &[CompositionClip]) -> FilterGraph {
             .input(format!("{}:v", clip.input_index))
             .input(format!("{}:a", clip.input_index));
     }
-    chain = chain
-        .filter(concat(n, 1, 1))
-        .output("outv")
-        .output("outa");
+    chain = chain.filter(concat(n, 1, 1)).output("outv").output("outa");
 
     FilterGraph::new().chain(chain)
 }
 
 /// Builds an xfade/acrossfade graph for sequential composition with transitions.
-fn build_xfade_graph(
-    clips: &[CompositionClip],
-    transitions: &[TransitionSpec],
-) -> FilterGraph {
+fn build_xfade_graph(clips: &[CompositionClip], transitions: &[TransitionSpec]) -> FilterGraph {
     let mut graph = FilterGraph::new();
     let adjusted = calculate_composition_positions(clips, transitions);
 
@@ -317,10 +309,7 @@ fn build_xfade_graph(
             FilterChain::new()
                 .input(audio_in_a)
                 .input(format!("{}:a", clips[i + 1].input_index))
-                .filter(
-                    Filter::new("acrossfade")
-                        .param("d", format_value(clamped_dur)),
-                )
+                .filter(Filter::new("acrossfade").param("d", format_value(clamped_dur)))
                 .output(audio_out),
         );
 
@@ -343,10 +332,7 @@ fn build_layout_graph(
     let mut graph = FilterGraph::new();
 
     // Calculate canvas duration from clips
-    let max_end = clips
-        .iter()
-        .map(|c| c.timeline_end)
-        .fold(0.0_f64, f64::max);
+    let max_end = clips.iter().map(|c| c.timeline_end).fold(0.0_f64, f64::max);
     let min_start = clips
         .iter()
         .map(|c| c.timeline_start)
@@ -414,19 +400,14 @@ fn build_layout_graph(
             FilterChain::new()
                 .input(base_label)
                 .input(format!("s{idx}"))
-                .filter(
-                    Filter::new("overlay")
-                        .param("x", px)
-                        .param("y", py)
-                        .param(
-                            "enable",
-                            format!(
-                                "'between(t,{},{})'",
-                                format_value(clip.timeline_start),
-                                format_value(clip.timeline_end),
-                            ),
-                        ),
-                )
+                .filter(Filter::new("overlay").param("x", px).param("y", py).param(
+                    "enable",
+                    format!(
+                        "'between(t,{},{})'",
+                        format_value(clip.timeline_start),
+                        format_value(clip.timeline_end),
+                    ),
+                ))
                 .output(out_label),
         );
     }
@@ -450,9 +431,7 @@ fn add_audio_mix(mut graph: FilterGraph, audio_mix: &AudioMixSpec) -> FilterGrap
 
         // Volume filter (skip if unity gain)
         if (track.volume - 1.0).abs() > 1e-9 {
-            filters.push(
-                Filter::new("volume").param("volume", format_value(track.volume)),
-            );
+            filters.push(Filter::new("volume").param("volume", format_value(track.volume)));
         }
 
         // Fade-in filter (skip if 0.0)
@@ -638,7 +617,10 @@ mod tests {
         let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
         let s = graph.to_string();
         assert!(s.contains("xfade="), "Should use xfade: {s}");
-        assert!(s.contains("transition=fade"), "Should have fade transition: {s}");
+        assert!(
+            s.contains("transition=fade"),
+            "Should have fade transition: {s}"
+        );
         assert!(s.contains("duration=1"), "Should have 1s duration: {s}");
         assert!(s.contains("offset=4"), "Offset should be 5-1=4: {s}");
         assert!(s.contains("acrossfade="), "Should use acrossfade: {s}");
@@ -669,13 +651,22 @@ mod tests {
         let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
         let s = graph.to_string();
         // First xfade: [0:v][1:v]xfade=...offset=4[xv0]
-        assert!(s.contains("[xv0]"), "Should have intermediate xv0 label: {s}");
+        assert!(
+            s.contains("[xv0]"),
+            "Should have intermediate xv0 label: {s}"
+        );
         // Second xfade: [xv0][2:v]xfade=...offset=8[outv]
         assert!(s.contains("[xv0][2:v]xfade="), "Should chain xfade: {s}");
         assert!(s.contains("[outv]"), "Should output video: {s}");
         // Audio chain
-        assert!(s.contains("[xa0]"), "Should have intermediate xa0 label: {s}");
-        assert!(s.contains("[xa0][2:a]acrossfade="), "Should chain acrossfade: {s}");
+        assert!(
+            s.contains("[xa0]"),
+            "Should have intermediate xa0 label: {s}"
+        );
+        assert!(
+            s.contains("[xa0][2:a]acrossfade="),
+            "Should chain acrossfade: {s}"
+        );
         assert!(s.contains("[outa]"), "Should output audio: {s}");
     }
 
@@ -701,7 +692,7 @@ mod tests {
     fn two_clips_pip_layout() {
         let clips = vec![make_clip(0, 0.0, 10.0), make_clip(1, 0.0, 10.0)];
         let positions = vec![
-            LayoutPosition::new(0.0, 0.0, 1.0, 1.0, 0),   // full-screen base
+            LayoutPosition::new(0.0, 0.0, 1.0, 1.0, 0), // full-screen base
             LayoutPosition::new(0.73, 0.02, 0.25, 0.25, 1), // PIP overlay
         ];
         let layout = LayoutSpec::new(positions).unwrap();
@@ -870,7 +861,10 @@ mod tests {
         let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
         let s = graph.to_string();
         // Clamped to min(2, 3) = 2, offset = 2-2 = 0
-        assert!(s.contains("duration=2"), "Duration should be clamped to 2: {s}");
+        assert!(
+            s.contains("duration=2"),
+            "Duration should be clamped to 2: {s}"
+        );
         assert!(s.contains("offset=0"), "Offset should be 0: {s}");
     }
 
