@@ -23,6 +23,11 @@ from stoat_ferret.db.repository import (
     VideoRepository,
 )
 from stoat_ferret.db.schema import create_tables, create_tables_async
+from stoat_ferret.db.timeline_repository import (
+    AsyncInMemoryTimelineRepository,
+    AsyncSQLiteTimelineRepository,
+    AsyncTimelineRepository,
+)
 
 __all__ = [
     "AuditEntry",
@@ -43,6 +48,9 @@ __all__ = [
     "AsyncProjectRepository",
     "AsyncSQLiteProjectRepository",
     "AsyncInMemoryProjectRepository",
+    "AsyncTimelineRepository",
+    "AsyncSQLiteTimelineRepository",
+    "AsyncInMemoryTimelineRepository",
     "create_tables",
     "create_tables_async",
 ]
