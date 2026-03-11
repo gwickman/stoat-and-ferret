@@ -842,6 +842,266 @@ impl DuckingPattern {
     }
 }
 
+// ========== TrackAudioConfig ==========
+
+/// Per-track audio configuration for multi-track mixing.
+///
+/// Specifies volume level and fade durations for a single audio track
+/// within an [`AudioMixSpec`] composition.
+///
+/// # Fields
+///
+/// * `volume` - Volume multiplier in business range [0.0, 2.0]
+/// * `fade_in` - Fade-in duration in seconds (0.0 = no fade)
+/// * `fade_out` - Fade-out duration in seconds (0.0 = no fade)
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct TrackAudioConfig {
+    /// Volume multiplier in range [0.0, 2.0].
+    #[pyo3(get)]
+    pub volume: f64,
+    /// Fade-in duration in seconds (0.0 = no fade).
+    #[pyo3(get)]
+    pub fade_in: f64,
+    /// Fade-out duration in seconds (0.0 = no fade).
+    #[pyo3(get)]
+    pub fade_out: f64,
+}
+
+#[pymethods]
+impl TrackAudioConfig {
+    /// Creates a new TrackAudioConfig.
+    ///
+    /// Args:
+    ///     volume: Volume multiplier in range [0.0, 2.0].
+    ///     fade_in: Fade-in duration in seconds (>= 0.0).
+    ///     fade_out: Fade-out duration in seconds (>= 0.0).
+    ///
+    /// Raises:
+    ///     ValueError: If volume is outside [0.0, 2.0] or fade durations are negative.
+    #[new]
+    fn py_new(volume: f64, fade_in: f64, fade_out: f64) -> PyResult<Self> {
+        Self::new(volume, fade_in, fade_out).map_err(PyValueError::new_err)
+    }
+
+    /// Returns a string representation of the config.
+    fn __repr__(&self) -> String {
+        format!(
+            "TrackAudioConfig(volume={}, fade_in={}, fade_out={})",
+            format_volume_value(self.volume),
+            format_duration_value(self.fade_in),
+            format_duration_value(self.fade_out),
+        )
+    }
+}
+
+impl TrackAudioConfig {
+    /// Creates a new TrackAudioConfig with validation.
+    ///
+    /// # Arguments
+    ///
+    /// * `volume` - Volume multiplier in range [0.0, 2.0]
+    /// * `fade_in` - Fade-in duration in seconds (>= 0.0)
+    /// * `fade_out` - Fade-out duration in seconds (>= 0.0)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if volume is outside [0.0, 2.0] or fade durations are negative.
+    pub fn new(volume: f64, fade_in: f64, fade_out: f64) -> Result<Self, String> {
+        if !(0.0..=2.0).contains(&volume) {
+            return Err(format!(
+                "track volume must be in range [0.0, 2.0], got {volume}"
+            ));
+        }
+        if fade_in < 0.0 {
+            return Err(format!("fade_in duration must be >= 0.0, got {fade_in}"));
+        }
+        if fade_out < 0.0 {
+            return Err(format!("fade_out duration must be >= 0.0, got {fade_out}"));
+        }
+        Ok(Self {
+            volume,
+            fade_in,
+            fade_out,
+        })
+    }
+}
+
+// ========== AudioMixSpec ==========
+
+/// Coordinated multi-track audio mixing specification.
+///
+/// Wraps existing [`AmixBuilder`], [`VolumeBuilder`], and [`AfadeBuilder`] to
+/// compose a complete filter chain for multi-track audio mixing with per-track
+/// volume, fade-in, and fade-out.
+///
+/// # Business Constraints
+///
+/// * Volume range: [0.0, 2.0] (tighter than VolumeBuilder's [0.0, 10.0])
+/// * Track count: [2, 8]
+/// * Fade durations: >= 0.0 (0.0 = no fade, skips AfadeBuilder)
+///
+/// # Examples
+///
+/// ```
+/// use stoat_ferret_core::ffmpeg::audio::{AudioMixSpec, TrackAudioConfig};
+///
+/// let tracks = vec![
+///     TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap(),
+///     TrackAudioConfig::new(0.5, 0.0, 0.0).unwrap(),
+/// ];
+/// let spec = AudioMixSpec::new(tracks).unwrap();
+/// let chain = spec.build_filter_chain();
+/// assert!(chain.contains("volume="));
+/// assert!(chain.contains("amix="));
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct AudioMixSpec {
+    /// Per-track audio configurations.
+    tracks: Vec<TrackAudioConfig>,
+}
+
+impl AudioMixSpec {
+    /// Creates a new AudioMixSpec with validation.
+    ///
+    /// # Arguments
+    ///
+    /// * `tracks` - List of per-track audio configurations (2-8 tracks)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if track count is outside [2, 8].
+    pub fn new(tracks: Vec<TrackAudioConfig>) -> Result<Self, String> {
+        if tracks.len() < 2 {
+            return Err(format!(
+                "AudioMixSpec requires 2-8 tracks, got {}",
+                tracks.len()
+            ));
+        }
+        if tracks.len() > 8 {
+            return Err(format!(
+                "AudioMixSpec requires 2-8 tracks, got {}",
+                tracks.len()
+            ));
+        }
+        Ok(Self { tracks })
+    }
+
+    /// Builds a filter chain string for multi-track audio mixing.
+    ///
+    /// Composes per-track volume and fade filters followed by amix:
+    /// - Creates VolumeBuilder per track (skipped if volume == 1.0)
+    /// - Creates AfadeBuilder per track for fade_in/fade_out (skipped if duration == 0.0)
+    /// - Creates AmixBuilder with the track count
+    ///
+    /// Returns the composed filter chain as a string.
+    #[must_use]
+    pub fn build_filter_chain(&self) -> String {
+        let mut parts: Vec<String> = Vec::new();
+
+        for (i, track) in self.tracks.iter().enumerate() {
+            let mut track_filters: Vec<String> = Vec::new();
+
+            // Volume filter (skip if 1.0 = unity gain)
+            if (track.volume - 1.0).abs() > 1e-9 {
+                let vol = VolumeBuilder::new(track.volume)
+                    .expect("volume pre-validated in TrackAudioConfig");
+                track_filters.push(vol.build().to_string());
+            }
+
+            // Fade-in filter (skip if 0.0)
+            if track.fade_in > 0.0 {
+                let fade =
+                    AfadeBuilder::new("in", track.fade_in).expect("fade_in pre-validated as > 0");
+                track_filters.push(fade.build().to_string());
+            }
+
+            // Fade-out filter (skip if 0.0)
+            if track.fade_out > 0.0 {
+                let fade = AfadeBuilder::new("out", track.fade_out)
+                    .expect("fade_out pre-validated as > 0");
+                track_filters.push(fade.build().to_string());
+            }
+
+            if !track_filters.is_empty() {
+                parts.push(format!(
+                    "[{i}:a]{filters}[a{i}]",
+                    filters = track_filters.join(",")
+                ));
+            }
+        }
+
+        // AmixBuilder for combining all tracks
+        let amix =
+            AmixBuilder::new(self.tracks.len()).expect("track count pre-validated in range [2, 8]");
+
+        // Build amix input labels
+        let amix_inputs: Vec<String> = (0..self.tracks.len())
+            .map(|i| {
+                // Use labeled output if track had filters, otherwise use raw input
+                let has_filters = {
+                    let t = &self.tracks[i];
+                    (t.volume - 1.0).abs() > 1e-9 || t.fade_in > 0.0 || t.fade_out > 0.0
+                };
+                if has_filters {
+                    format!("[a{i}]")
+                } else {
+                    format!("[{i}:a]")
+                }
+            })
+            .collect();
+
+        let amix_str = format!("{}{}", amix_inputs.join(""), amix.build());
+
+        if parts.is_empty() {
+            amix_str
+        } else {
+            parts.push(amix_str);
+            parts.join(";")
+        }
+    }
+}
+
+// ========== AudioMixSpec PyO3 bindings ==========
+
+#[pymethods]
+impl AudioMixSpec {
+    /// Creates a new AudioMixSpec from a list of TrackAudioConfig.
+    ///
+    /// Args:
+    ///     tracks: List of TrackAudioConfig (2-8 tracks).
+    ///
+    /// Raises:
+    ///     ValueError: If track count is outside [2, 8].
+    #[new]
+    fn py_new(tracks: Vec<TrackAudioConfig>) -> PyResult<Self> {
+        Self::new(tracks).map_err(PyValueError::new_err)
+    }
+
+    /// Builds the filter chain string for multi-track audio mixing.
+    ///
+    /// Returns:
+    ///     A string containing the composed FFmpeg filter chain.
+    #[pyo3(name = "build_filter_chain")]
+    fn py_build_filter_chain(&self) -> String {
+        self.build_filter_chain()
+    }
+
+    /// Returns the number of tracks.
+    #[pyo3(name = "track_count")]
+    fn py_track_count(&self) -> usize {
+        self.tracks.len()
+    }
+
+    /// Returns a string representation of the spec.
+    fn __repr__(&self) -> String {
+        format!("AudioMixSpec(tracks={})", self.tracks.len())
+    }
+}
+
 // ========== Tests ==========
 
 #[cfg(test)]
@@ -1550,6 +1810,358 @@ mod tests {
             assert!(dp2.call_method1("ratio", (25.0f64,)).is_err());
             assert!(dp2.call_method1("attack", (3000.0f64,)).is_err());
             assert!(dp2.call_method1("release", (10000.0f64,)).is_err());
+        });
+    }
+
+    // ========== TrackAudioConfig tests ==========
+
+    #[test]
+    fn test_track_config_valid() {
+        let config = TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap();
+        assert!((config.volume - 0.8).abs() < 1e-9);
+        assert!((config.fade_in - 1.0).abs() < 1e-9);
+        assert!((config.fade_out - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_track_config_zero_volume() {
+        let config = TrackAudioConfig::new(0.0, 0.0, 0.0).unwrap();
+        assert!((config.volume).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_track_config_max_volume() {
+        let config = TrackAudioConfig::new(2.0, 0.0, 0.0).unwrap();
+        assert!((config.volume - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_track_config_volume_below_range() {
+        let result = TrackAudioConfig::new(-0.1, 0.0, 0.0);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("[0.0, 2.0]"));
+    }
+
+    #[test]
+    fn test_track_config_volume_above_range() {
+        let result = TrackAudioConfig::new(2.1, 0.0, 0.0);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("[0.0, 2.0]"));
+    }
+
+    #[test]
+    fn test_track_config_negative_fade_in() {
+        let result = TrackAudioConfig::new(1.0, -0.1, 0.0);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("fade_in"));
+    }
+
+    #[test]
+    fn test_track_config_negative_fade_out() {
+        let result = TrackAudioConfig::new(1.0, 0.0, -0.1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("fade_out"));
+    }
+
+    #[test]
+    fn test_track_config_no_fade() {
+        let config = TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap();
+        assert!((config.fade_in).abs() < 1e-9);
+        assert!((config.fade_out).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_track_config_repr() {
+        let config = TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap();
+        let repr = config.__repr__();
+        assert!(repr.contains("TrackAudioConfig"));
+        assert!(repr.contains("0.8"));
+    }
+
+    // ========== AudioMixSpec tests ==========
+
+    #[test]
+    fn test_audio_mix_spec_two_tracks() {
+        let tracks = vec![
+            TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap(),
+            TrackAudioConfig::new(0.5, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        assert!(chain.contains("volume="), "Missing volume in: {chain}");
+        assert!(chain.contains("amix=inputs=2"), "Missing amix in: {chain}");
+    }
+
+    #[test]
+    fn test_audio_mix_spec_eight_tracks() {
+        let tracks: Vec<TrackAudioConfig> = (0..8)
+            .map(|i| TrackAudioConfig::new(0.5 + (i as f64) * 0.1, 0.0, 0.0).unwrap())
+            .collect();
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        assert!(chain.contains("amix=inputs=8"), "Missing amix in: {chain}");
+    }
+
+    #[test]
+    fn test_audio_mix_spec_single_track_rejected() {
+        let tracks = vec![TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap()];
+        let result = AudioMixSpec::new(tracks);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("2-8"));
+    }
+
+    #[test]
+    fn test_audio_mix_spec_nine_tracks_rejected() {
+        let tracks: Vec<TrackAudioConfig> = (0..9)
+            .map(|_| TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap())
+            .collect();
+        let result = AudioMixSpec::new(tracks);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("2-8"));
+    }
+
+    #[test]
+    fn test_audio_mix_spec_muted_tracks() {
+        let tracks = vec![
+            TrackAudioConfig::new(0.0, 0.0, 0.0).unwrap(),
+            TrackAudioConfig::new(0.0, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        assert!(
+            chain.contains("volume=0"),
+            "Missing muted volume in: {chain}"
+        );
+        assert!(chain.contains("amix="), "Missing amix in: {chain}");
+    }
+
+    #[test]
+    fn test_audio_mix_spec_unity_volume_skip() {
+        // When volume is 1.0, no volume filter should be generated
+        let tracks = vec![
+            TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
+            TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        assert!(
+            !chain.contains("volume="),
+            "Unity volume should be skipped: {chain}"
+        );
+        assert!(chain.contains("amix=inputs=2"), "Missing amix in: {chain}");
+    }
+
+    #[test]
+    fn test_audio_mix_spec_fade_in_out() {
+        let tracks = vec![
+            TrackAudioConfig::new(1.0, 2.0, 1.5).unwrap(),
+            TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        assert!(
+            chain.contains("afade=t=in:d=2"),
+            "Missing fade-in in: {chain}"
+        );
+        assert!(
+            chain.contains("afade=t=out:d=1.5"),
+            "Missing fade-out in: {chain}"
+        );
+    }
+
+    #[test]
+    fn test_audio_mix_spec_zero_fade_skip() {
+        // When fade is 0.0, no afade filter should be generated
+        let tracks = vec![
+            TrackAudioConfig::new(0.8, 0.0, 0.0).unwrap(),
+            TrackAudioConfig::new(0.5, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        assert!(
+            !chain.contains("afade="),
+            "Zero fade should be skipped: {chain}"
+        );
+    }
+
+    #[test]
+    fn test_audio_mix_spec_all_features() {
+        let tracks = vec![
+            TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap(),
+            TrackAudioConfig::new(0.5, 2.0, 1.0).unwrap(),
+            TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let chain = spec.build_filter_chain();
+        // Track 0: volume + fade_in + fade_out
+        assert!(
+            chain.contains("volume=0.8"),
+            "Missing track 0 volume: {chain}"
+        );
+        assert!(
+            chain.contains("afade=t=in:d=1"),
+            "Missing track 0 fade-in: {chain}"
+        );
+        assert!(
+            chain.contains("afade=t=out:d=0.5"),
+            "Missing track 0 fade-out: {chain}"
+        );
+        // Track 1: volume + fade_in + fade_out
+        assert!(
+            chain.contains("volume=0.5"),
+            "Missing track 1 volume: {chain}"
+        );
+        // Track 2: unity volume, no fades — uses raw input
+        assert!(
+            chain.contains("[2:a]"),
+            "Missing raw track 2 input: {chain}"
+        );
+        // amix
+        assert!(chain.contains("amix=inputs=3"), "Missing amix: {chain}");
+    }
+
+    #[test]
+    fn test_audio_mix_spec_repr() {
+        let tracks = vec![
+            TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
+            TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
+        ];
+        let spec = AudioMixSpec::new(tracks).unwrap();
+        let repr = spec.__repr__();
+        assert!(repr.contains("AudioMixSpec"));
+        assert!(repr.contains("2"));
+    }
+
+    // ========== AudioMixSpec proptest ==========
+
+    proptest! {
+        /// Property: valid volumes [0.0, 2.0] always accepted by TrackAudioConfig.
+        #[test]
+        fn track_config_valid_volume(volume in 0.0f64..=2.0) {
+            let config = TrackAudioConfig::new(volume, 0.0, 0.0);
+            prop_assert!(config.is_ok(), "Valid volume {} rejected", volume);
+        }
+
+        /// Property: volumes outside [0.0, 2.0] always rejected by TrackAudioConfig.
+        #[test]
+        fn track_config_invalid_volume_below(volume in -100.0f64..0.0) {
+            // Exclude exact 0.0 since that's valid
+            if volume < 0.0 {
+                let config = TrackAudioConfig::new(volume, 0.0, 0.0);
+                prop_assert!(config.is_err(), "Invalid volume {} accepted", volume);
+            }
+        }
+
+        /// Property: volumes above 2.0 always rejected by TrackAudioConfig.
+        #[test]
+        fn track_config_invalid_volume_above(volume in 2.001f64..100.0) {
+            let config = TrackAudioConfig::new(volume, 0.0, 0.0);
+            prop_assert!(config.is_err(), "Invalid volume {} accepted", volume);
+        }
+
+        /// Property: valid fade durations [0.0, 300.0] always accepted.
+        #[test]
+        fn track_config_valid_fade(fade_in in 0.0f64..=300.0, fade_out in 0.0f64..=300.0) {
+            let config = TrackAudioConfig::new(1.0, fade_in, fade_out);
+            prop_assert!(config.is_ok(), "Valid fades ({}, {}) rejected", fade_in, fade_out);
+        }
+
+        /// Property: negative fade durations always rejected.
+        #[test]
+        fn track_config_negative_fade_in(fade_in in -100.0f64..-0.001) {
+            let config = TrackAudioConfig::new(1.0, fade_in, 0.0);
+            prop_assert!(config.is_err(), "Negative fade_in {} accepted", fade_in);
+        }
+
+        /// Property: negative fade_out durations always rejected.
+        #[test]
+        fn track_config_negative_fade_out(fade_out in -100.0f64..-0.001) {
+            let config = TrackAudioConfig::new(1.0, 0.0, fade_out);
+            prop_assert!(config.is_err(), "Negative fade_out {} accepted", fade_out);
+        }
+
+        /// Property: AudioMixSpec with valid track counts [2, 8] always succeeds.
+        #[test]
+        fn audio_mix_spec_valid_count(count in 2usize..=8) {
+            let tracks: Vec<TrackAudioConfig> = (0..count)
+                .map(|_| TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap())
+                .collect();
+            let spec = AudioMixSpec::new(tracks);
+            prop_assert!(spec.is_ok(), "Valid count {} rejected", count);
+        }
+
+        /// Property: AudioMixSpec with random valid configs always produces non-empty filter chain.
+        #[test]
+        fn audio_mix_spec_produces_output(
+            vol0 in 0.0f64..=2.0,
+            vol1 in 0.0f64..=2.0,
+            fade_in0 in 0.0f64..=5.0,
+            fade_out0 in 0.0f64..=5.0,
+        ) {
+            let tracks = vec![
+                TrackAudioConfig::new(vol0, fade_in0, fade_out0).unwrap(),
+                TrackAudioConfig::new(vol1, 0.0, 0.0).unwrap(),
+            ];
+            let spec = AudioMixSpec::new(tracks).unwrap();
+            let chain = spec.build_filter_chain();
+            prop_assert!(!chain.is_empty(), "Empty filter chain");
+            prop_assert!(chain.contains("amix="), "Missing amix in: {}", chain);
+        }
+    }
+
+    // ========== AudioMixSpec PyO3 binding tests ==========
+
+    #[test]
+    fn test_pyo3_audio_mix_spec() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            // Create TrackAudioConfigs
+            let t0 = Bound::new(py, TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap()).unwrap();
+            let t1 = Bound::new(py, TrackAudioConfig::new(0.5, 0.0, 0.0).unwrap()).unwrap();
+
+            // Test TrackAudioConfig getters
+            let vol: f64 = t0.getattr("volume").unwrap().extract().unwrap();
+            assert!((vol - 0.8).abs() < 1e-9);
+            let fi: f64 = t0.getattr("fade_in").unwrap().extract().unwrap();
+            assert!((fi - 1.0).abs() < 1e-9);
+            let fo: f64 = t0.getattr("fade_out").unwrap().extract().unwrap();
+            assert!((fo - 0.5).abs() < 1e-9);
+
+            // Test TrackAudioConfig repr
+            let repr: String = t0.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("TrackAudioConfig"));
+
+            // Create AudioMixSpec
+            let tracks = vec![
+                TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap(),
+                TrackAudioConfig::new(0.5, 0.0, 0.0).unwrap(),
+            ];
+            let spec = Bound::new(py, AudioMixSpec::new(tracks).unwrap()).unwrap();
+
+            // Test build_filter_chain
+            let chain: String = spec
+                .call_method0("build_filter_chain")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(chain.contains("amix="), "Missing amix in: {chain}");
+
+            // Test track_count
+            let count: usize = spec.call_method0("track_count").unwrap().extract().unwrap();
+            assert_eq!(count, 2);
+
+            // Test repr
+            let repr: String = spec.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("AudioMixSpec"));
+            assert!(repr.contains("2"));
+
+            // Test py_new error (too few tracks)
+            let result = AudioMixSpec::py_new(vec![TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap()]);
+            assert!(result.is_err());
+
+            // Test TrackAudioConfig py_new error
+            let result = TrackAudioConfig::py_new(3.0, 0.0, 0.0);
+            assert!(result.is_err());
         });
     }
 }

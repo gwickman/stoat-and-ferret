@@ -95,6 +95,8 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::audio::AfadeBuilder>()?;
     m.add_class::<ffmpeg::audio::AmixBuilder>()?;
     m.add_class::<ffmpeg::audio::DuckingPattern>()?;
+    m.add_class::<ffmpeg::audio::TrackAudioConfig>()?;
+    m.add_class::<ffmpeg::audio::AudioMixSpec>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;

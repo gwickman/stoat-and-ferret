@@ -991,6 +991,76 @@ class DuckingPattern:
 
     def __repr__(self) -> str: ...
 
+class TrackAudioConfig:
+    """Per-track audio configuration for multi-track mixing.
+
+    Specifies volume level and fade durations for a single audio track
+    within an AudioMixSpec composition.
+    """
+
+    @property
+    def volume(self) -> float:
+        """Volume multiplier in range [0.0, 2.0]."""
+        ...
+
+    @property
+    def fade_in(self) -> float:
+        """Fade-in duration in seconds (0.0 = no fade)."""
+        ...
+
+    @property
+    def fade_out(self) -> float:
+        """Fade-out duration in seconds (0.0 = no fade)."""
+        ...
+
+    def __new__(cls, volume: float, fade_in: float, fade_out: float) -> TrackAudioConfig:
+        """Creates a new TrackAudioConfig.
+
+        Args:
+            volume: Volume multiplier in range [0.0, 2.0].
+            fade_in: Fade-in duration in seconds (>= 0.0).
+            fade_out: Fade-out duration in seconds (>= 0.0).
+
+        Raises:
+            ValueError: If volume is outside [0.0, 2.0] or fade durations are negative.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class AudioMixSpec:
+    """Coordinated multi-track audio mixing specification.
+
+    Wraps AmixBuilder, VolumeBuilder, and AfadeBuilder to compose a complete
+    filter chain for multi-track audio mixing with per-track volume, fade-in,
+    and fade-out.
+    """
+
+    def __new__(cls, tracks: list[TrackAudioConfig]) -> AudioMixSpec:
+        """Creates a new AudioMixSpec from a list of TrackAudioConfig.
+
+        Args:
+            tracks: List of TrackAudioConfig (2-8 tracks).
+
+        Raises:
+            ValueError: If track count is outside [2, 8].
+        """
+        ...
+
+    def build_filter_chain(self) -> str:
+        """Builds the filter chain string for multi-track audio mixing.
+
+        Returns:
+            A string containing the composed FFmpeg filter chain.
+        """
+        ...
+
+    def track_count(self) -> int:
+        """Returns the number of tracks."""
+        ...
+
+    def __repr__(self) -> str: ...
+
 class TransitionType:
     """All FFmpeg xfade transition variants.
 
