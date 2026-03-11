@@ -8,61 +8,63 @@ import typing
 class AcrossfadeBuilder:
     r"""
     Type-safe builder for FFmpeg `acrossfade` audio crossfade filter.
-    
+
     Creates a two-input audio crossfade with configurable duration,
     curve types, and overlap toggle.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::transitions::AcrossfadeBuilder;
-    
+
     let filter = AcrossfadeBuilder::new(2.0).unwrap().build();
     assert_eq!(filter.to_string(), "acrossfade=d=2");
     ```
     """
+
     ...
 
 @typing.final
 class AfadeBuilder:
     r"""
     Type-safe builder for FFmpeg `afade` audio filter.
-    
+
     Supports fade in/out with configurable duration, start time, and curve type.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::audio::AfadeBuilder;
-    
+
     let filter = AfadeBuilder::new("in", 3.0).unwrap().build();
     assert_eq!(filter.to_string(), "afade=t=in:d=3");
-    
+
     let filter = AfadeBuilder::new("out", 2.0).unwrap()
         .with_start_time(10.0)
         .build();
     assert_eq!(filter.to_string(), "afade=t=out:d=2:st=10");
     ```
     """
+
     ...
 
 @typing.final
 class AmixBuilder:
     r"""
     Type-safe builder for FFmpeg `amix` audio mixing filter.
-    
+
     Mixes multiple audio input streams into a single output. Supports
     configurable input count (2-32), duration mode, per-input weights,
     and normalization.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::audio::AmixBuilder;
-    
+
     let filter = AmixBuilder::new(4).unwrap().build();
     assert_eq!(filter.to_string(), "amix=inputs=4");
-    
+
     let filter = AmixBuilder::new(2).unwrap()
         .with_duration_mode("longest")
         .with_weights(&[0.8, 0.2])
@@ -73,28 +75,29 @@ class AmixBuilder:
     assert!(s.contains("weights=0.8 0.2"));
     ```
     """
+
     ...
 
 @typing.final
 class AudioMixSpec:
     r"""
     Coordinated multi-track audio mixing specification.
-    
+
     Wraps existing [`AmixBuilder`], [`VolumeBuilder`], and [`AfadeBuilder`] to
     compose a complete filter chain for multi-track audio mixing with per-track
     volume, fade-in, and fade-out.
-    
+
     # Business Constraints
-    
+
     * Volume range: [0.0, 2.0] (tighter than VolumeBuilder's [0.0, 10.0])
     * Track count: [2, 8]
     * Fade durations: >= 0.0 (0.0 = no fade, skips AfadeBuilder)
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::audio::{AudioMixSpec, TrackAudioConfig};
-    
+
     let tracks = vec![
         TrackAudioConfig::new(0.8, 1.0, 0.5).unwrap(),
         TrackAudioConfig::new(0.5, 0.0, 0.0).unwrap(),
@@ -105,23 +108,25 @@ class AudioMixSpec:
     assert!(chain.contains("amix="));
     ```
     """
+
     ...
 
 @typing.final
 class BatchJobStatus:
     r"""
     PyO3-friendly wrapper for [`BatchJobStatus`].
-    
+
     Since Rust enums with data cannot use `#[pyclass(eq, eq_int)]`,
     this struct wraps the internal enum and exposes factory methods.
     """
+
     ...
 
 @typing.final
 class BatchProgress:
     r"""
     Aggregated progress for a batch of render jobs.
-    
+
     Reports counts and an overall progress value computed as the mean
     of individual job progress values.
     """
@@ -150,30 +155,30 @@ class BatchProgress:
 class Clip:
     r"""
     A video clip representing a segment of a source media file.
-    
+
     A clip defines a portion of a source video through in and out points,
     and optionally includes the source file's total duration for bounds validation.
-    
+
     # Fields
-    
+
     - `source_path` - Path to the source media file
     - `in_point` - Start position within the source file (inclusive)
     - `out_point` - End position within the source file (exclusive)
     - `source_duration` - Total duration of the source file (optional, for validation)
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::clip::Clip;
     use stoat_ferret_core::timeline::{Position, Duration};
-    
+
     let clip = Clip::new(
         "/path/to/video.mp4".to_string(),
         Position::from_frames(24),   // Start at frame 24
         Position::from_frames(72),   // End at frame 72
         Some(Duration::from_frames(100)),  // Source is 100 frames long
     );
-    
+
     assert_eq!(clip.duration().unwrap().frames(), 48);
     ```
     """
@@ -202,23 +207,23 @@ class Clip:
 class ClipValidationError:
     r"""
     A validation error with detailed information about what went wrong.
-    
+
     Each error includes the field name, a human-readable message, and optionally
     the actual and expected values to help users understand and fix the problem.
-    
+
     Note: This is distinct from the `ValidationError` exception type in the module root.
     This struct provides detailed validation failure information as data.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::clip::validation::ValidationError;
-    
+
     // Error with just a message
     let err = ValidationError::new("source_path", "Source path cannot be empty");
     assert_eq!(err.field, "source_path");
     assert!(err.actual.is_none());
-    
+
     // Error with actual and expected values
     let err = ValidationError::with_values(
         "out_point",
@@ -255,7 +260,7 @@ class ClipValidationError:
 class CompositionClip:
     r"""
     A clip positioned on the composition timeline.
-    
+
     Represents a single input clip with its calculated timeline position,
     track assignment, and z-ordering for multi-layer composition.
     """
@@ -289,21 +294,21 @@ class CompositionClip:
 class DrawtextBuilder:
     r"""
     A type-safe builder for FFmpeg drawtext filters.
-    
+
     Text is mandatory and set at construction time. All other parameters
     are optional with sensible defaults.
-    
+
     # Defaults
-    
+
     - `fontsize`: 16
     - `fontcolor`: "black"
     - Position: not set (FFmpeg defaults to 0,0)
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::drawtext::{DrawtextBuilder, Position};
-    
+
     let filter = DrawtextBuilder::new("Score: 100%")
         .font("monospace")
         .fontsize(32)
@@ -311,29 +316,30 @@ class DrawtextBuilder:
         .position(Position::BottomCenter { margin: 10 })
         .box_background("black@0.5", 5)
         .build();
-    
+
     let s = filter.to_string();
     assert!(s.contains("text=Score\\: 100%%"));
     assert!(s.contains("font=monospace"));
     ```
     """
+
     ...
 
 @typing.final
 class DuckingPattern:
     r"""
     Builds a ducking pattern that lowers music volume during speech.
-    
+
     Uses FFmpeg's `sidechaincompress` filter in a FilterGraph composition:
     - Splits the audio input using `asplit`
     - Applies `sidechaincompress` to one branch (keyed by the other)
     - Passes the compressed output through `anull` for labeling
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::audio::DuckingPattern;
-    
+
     let pattern = DuckingPattern::new().unwrap();
     let graph = pattern.build();
     let s = graph.to_string();
@@ -342,29 +348,30 @@ class DuckingPattern:
     assert!(s.contains("anull"));
     ```
     """
+
     ...
 
 @typing.final
 class Duration:
     r"""
     A duration on the timeline represented as a frame count.
-    
+
     Using frame counts as the internal representation ensures frame-accurate
     durations without floating-point precision issues. Conversions to/from
     seconds are available when needed for display or user input.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::{Duration, Position, FrameRate};
-    
+
     let fps = FrameRate::FPS_24;
-    
+
     // Create duration from frames
     let dur = Duration::from_frames(48);
     assert_eq!(dur.frames(), 48);
     assert_eq!(dur.to_seconds(fps), 2.0);
-    
+
     // Calculate duration between two positions
     let start = Position::from_frames(10);
     let end = Position::from_frames(34);
@@ -372,24 +379,25 @@ class Duration:
     assert_eq!(dur.frames(), 24);
     ```
     """
+
     ...
 
 @typing.final
 class FFmpegCommand:
     r"""
     A type-safe builder for constructing FFmpeg command arguments.
-    
+
     This builder creates argument arrays suitable for passing to `std::process::Command`
     without requiring shell escaping.
-    
+
     # Builder Pattern
-    
+
     Input and output specifications are added sequentially, with options applying
     to the most recently added input or output:
-    
+
     ```
     use stoat_ferret_core::ffmpeg::FFmpegCommand;
-    
+
     let args = FFmpegCommand::new()
         .input("first.mp4")
         .seek(5.0)          // applies to first.mp4
@@ -400,33 +408,34 @@ class FFmpegCommand:
         .build()
         .expect("Valid command");
     ```
-    
+
     # Validation
-    
+
     The builder validates commands on `build()`:
     - At least one input is required
     - At least one output is required
     - Paths must be non-empty
     - CRF must be in range 0-51
     """
+
     ...
 
 @typing.final
 class FadeBuilder:
     r"""
     Type-safe builder for FFmpeg `fade` video filter.
-    
+
     Supports fade in/out with configurable duration, color, alpha mode,
     start time, and nb_frames alternative.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::transitions::FadeBuilder;
-    
+
     let filter = FadeBuilder::new("in", 3.0).unwrap().build();
     assert_eq!(filter.to_string(), "fade=t=in:d=3");
-    
+
     let filter = FadeBuilder::new("out", 2.0).unwrap()
         .with_color("white")
         .with_start_time(10.0)
@@ -434,70 +443,73 @@ class FadeBuilder:
     assert_eq!(filter.to_string(), "fade=t=out:d=2:st=10:c=white");
     ```
     """
+
     ...
 
 @typing.final
 class Filter:
     r"""
     A single FFmpeg filter with optional parameters.
-    
+
     Filters are the building blocks of FFmpeg filtergraphs. Each filter has a name
     and zero or more key-value parameters.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::filter::Filter;
-    
+
     let filter = Filter::new("scale")
         .param("w", 1920)
         .param("h", 1080);
-    
+
     assert_eq!(filter.to_string(), "scale=w=1920:h=1080");
     ```
     """
+
     ...
 
 @typing.final
 class FilterChain:
     r"""
     A chain of filters connected in sequence.
-    
+
     Filter chains have optional input labels, one or more filters, and optional
     output labels. Within a chain, filters are connected with commas.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::filter::{FilterChain, scale, format};
-    
+
     let chain = FilterChain::new()
         .input("0:v")
         .filter(scale(1280, 720))
         .filter(format("yuv420p"))
         .output("scaled");
-    
+
     assert_eq!(
         chain.to_string(),
         "[0:v]scale=w=1280:h=720,format=pix_fmts=yuv420p[scaled]"
     );
     ```
     """
+
     ...
 
 @typing.final
 class FilterGraph:
     r"""
     A complete filter graph composed of multiple filter chains.
-    
+
     Filter graphs are used with FFmpeg's `-filter_complex` argument. Multiple
     chains are separated by semicolons.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::filter::{FilterGraph, FilterChain, scale, concat};
-    
+
     // Scale two inputs and concatenate them
     let graph = FilterGraph::new()
         .chain(
@@ -519,111 +531,115 @@ class FilterGraph:
                 .filter(concat(2, 1, 0))
                 .output("outv")
         );
-    
+
     let expected = "[0:v]scale=w=1280:h=720[v0];[1:v]scale=w=1280:h=720[v1];[v0][v1]concat=n=2:v=1:a=0[outv]";
     assert_eq!(graph.to_string(), expected);
     ```
     """
+
     ...
 
 @typing.final
 class FrameRate:
     r"""
     A frame rate represented as a rational number (numerator/denominator).
-    
+
     Using rational representation allows for exact arithmetic without
     floating-point precision loss. Common frame rates like 23.976 and 29.97
     are represented exactly as 24000/1001 and 30000/1001 respectively.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::FrameRate;
-    
+
     // Use predefined constants for common rates
     let fps_24 = FrameRate::FPS_24;
     assert_eq!(fps_24.frames_per_second(), 24.0);
-    
+
     // Create custom frame rates
     let custom = FrameRate::new(48, 1).unwrap();
     assert_eq!(custom.frames_per_second(), 48.0);
     ```
     """
+
     ...
 
 @typing.final
 class LayoutPosition:
     r"""
     A layout position using normalized coordinates (0.0-1.0).
-    
+
     All coordinate fields (x, y, width, height) are normalized to the range
     0.0-1.0, representing fractions of the output dimensions. The `z_index`
     field controls stacking order (higher values are drawn on top).
-    
+
     # Pixel Conversion
-    
+
     [`LayoutPosition::to_pixels`] converts normalized coordinates to integer
     pixel values using `round()`. At odd output resolutions, this may produce
     1-pixel asymmetry — this is expected behavior.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::layout::position::LayoutPosition;
-    
+
     // Full-screen position
     let pos = LayoutPosition::new(0.0, 0.0, 1.0, 1.0, 0);
     assert_eq!(pos.to_pixels(1920, 1080), (0, 0, 1920, 1080));
-    
+
     // Quarter-screen top-left
     let pos = LayoutPosition::new(0.0, 0.0, 0.5, 0.5, 0);
     assert_eq!(pos.to_pixels(1920, 1080), (0, 0, 960, 540));
     ```
     """
+
     ...
 
 @typing.final
 class Position:
     r"""
     A position on the timeline represented as a frame count.
-    
+
     Using frame counts as the internal representation ensures frame-accurate
     positioning without floating-point precision issues. Conversions to/from
     seconds are available when needed for display or user input.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::{Position, FrameRate};
-    
+
     let fps = FrameRate::FPS_24;
-    
+
     // Create position from frames
     let pos = Position::from_frames(48);
     assert_eq!(pos.frames(), 48);
     assert_eq!(pos.to_seconds(fps), 2.0);
-    
+
     // Create position from seconds
     let pos = Position::from_seconds(2.0, fps);
     assert_eq!(pos.frames(), 48);
     ```
     """
+
     ...
 
 @typing.final
 class SpeedControl:
     r"""
     Type-safe speed control builder for FFmpeg video and audio speed adjustment.
-    
+
     Generates `setpts` filters for video and `atempo` filters for audio.
     The atempo builder automatically chains instances to keep each within
     the [0.5, 2.0] quality range.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::speed::SpeedControl;
-    
+
     let ctrl = SpeedControl::new(2.0).unwrap()
         .with_drop_audio(true);
     let video = ctrl.setpts_filter();
@@ -631,44 +647,46 @@ class SpeedControl:
     assert!(ctrl.atempo_filters().is_empty()); // audio dropped
     ```
     """
+
     ...
 
 @typing.final
 class TimeRange:
     r"""
     A contiguous time range represented as a half-open interval [start, end).
-    
+
     The range includes the start position but excludes the end position.
     This representation is standard for video editing as it allows ranges
     to be concatenated without overlap or gaps.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::timeline::{TimeRange, Position};
-    
+
     // Create a range from frame 10 to frame 20
     let start = Position::from_frames(10);
     let end = Position::from_frames(20);
     let range = TimeRange::new(start, end).unwrap();
-    
+
     assert_eq!(range.start().frames(), 10);
     assert_eq!(range.end().frames(), 20);
     assert_eq!(range.duration().frames(), 10);
     ```
     """
+
     ...
 
 @typing.final
 class TrackAudioConfig:
     r"""
     Per-track audio configuration for multi-track mixing.
-    
+
     Specifies volume level and fade durations for a single audio track
     within an [`AudioMixSpec`] composition.
-    
+
     # Fields
-    
+
     * `volume` - Volume multiplier in business range [0.0, 2.0]
     * `fade_in` - Fade-in duration in seconds (0.0 = no fade)
     * `fade_out` - Fade-out duration in seconds (0.0 = no fade)
@@ -693,74 +711,87 @@ class TrackAudioConfig:
 class VolumeBuilder:
     r"""
     Type-safe builder for FFmpeg `volume` audio filter.
-    
+
     Supports linear (float) and dB (string like "3dB") modes, plus precision
     control. Validates volume range 0.0-10.0 via [`sanitize::validate_volume`].
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::audio::VolumeBuilder;
-    
+
     let filter = VolumeBuilder::new(0.5).unwrap().build();
     assert_eq!(filter.to_string(), "volume=volume=0.5");
-    
+
     let filter = VolumeBuilder::new_db("3dB").unwrap().build();
     assert_eq!(filter.to_string(), "volume=volume=3dB");
     ```
     """
+
     ...
 
 @typing.final
 class XfadeBuilder:
     r"""
     Type-safe builder for FFmpeg `xfade` video crossfade filter.
-    
+
     Creates a two-input crossfade with a selectable transition effect.
     Duration is validated in range 0.0-60.0 seconds.
-    
+
     # Examples
-    
+
     ```
     use stoat_ferret_core::ffmpeg::transitions::{XfadeBuilder, TransitionType};
-    
+
     let filter = XfadeBuilder::new(TransitionType::Wipeleft, 2.0, 5.0).unwrap().build();
     assert_eq!(filter.to_string(), "xfade=transition=wipeleft:duration=2:offset=5");
     ```
     """
+
     ...
 
-def build_overlay_filter(position: LayoutPosition, output_w: builtins.int, output_h: builtins.int, start: builtins.float, end: builtins.float) -> builtins.str:
+def build_overlay_filter(
+    position: LayoutPosition,
+    output_w: builtins.int,
+    output_h: builtins.int,
+    start: builtins.float,
+    end: builtins.float,
+) -> builtins.str:
     r"""
     Builds an FFmpeg overlay filter string from a LayoutPosition.
-    
+
     Converts normalized coordinates to pixel positions and generates an
     overlay filter with time-based enable expression.
-    
+
     Args:
         position: Layout position with normalized coordinates (0.0-1.0).
         output_w: Output canvas width in pixels.
         output_h: Output canvas height in pixels.
         start: Start time in seconds for the overlay.
         end: End time in seconds for the overlay.
-    
+
     Returns:
         FFmpeg overlay filter string.
     """
 
-def build_scale_for_layout(position: LayoutPosition, output_w: builtins.int, output_h: builtins.int, preserve_aspect: builtins.bool) -> builtins.str:
+def build_scale_for_layout(
+    position: LayoutPosition,
+    output_w: builtins.int,
+    output_h: builtins.int,
+    preserve_aspect: builtins.bool,
+) -> builtins.str:
     r"""
     Builds an FFmpeg scale filter string from a LayoutPosition.
-    
+
     Converts normalized dimensions to pixel values with even-number
     enforcement and optional aspect ratio preservation.
-    
+
     Args:
         position: Layout position with normalized coordinates (0.0-1.0).
         output_w: Output canvas width in pixels.
         output_h: Output canvas height in pixels.
         preserve_aspect: If true, preserves original aspect ratio.
-    
+
     Returns:
         FFmpeg scale filter string.
     """
@@ -773,23 +804,23 @@ def concat_filter(n: builtins.int, v: builtins.int, a: builtins.int) -> Filter:
 def escape_filter_text(input: builtins.str) -> builtins.str:
     r"""
     Escapes special characters in text for use in FFmpeg filter parameters.
-    
+
     FFmpeg filter syntax uses several characters with special meaning.
     This function escapes them so they are treated as literal characters.
-    
+
     # Arguments
-    
+
     * `input` - The text to escape
-    
+
     # Returns
-    
+
     The escaped text safe for use in FFmpeg filter parameters.
     """
 
 def health_check() -> builtins.str:
     r"""
     Performs a health check to verify the Rust module is loaded correctly.
-    
+
     Returns a status string indicating the module is operational.
     """
 
@@ -801,116 +832,117 @@ def scale_filter(width: builtins.int, height: builtins.int) -> Filter:
 def validate_audio_codec(codec: builtins.str) -> builtins.str:
     r"""
     Validates an audio codec name.
-    
+
     # Arguments
-    
+
     * `codec` - The codec name to validate
-    
+
     # Returns
-    
+
     The validated codec name.
-    
+
     # Raises
-    
+
     ValueError: If the codec is not in the allowed list.
     """
 
 def validate_clip(clip: Clip) -> builtins.list[ClipValidationError]:
     r"""
     Validates a single clip and returns all validation errors (Python wrapper).
-    
+
     This function checks:
     - Source path is non-empty
     - Out point is greater than in point
     - In point is within source duration (if source duration is known)
     - Out point is within source duration (if source duration is known)
-    
+
     # Arguments
-    
+
     * `clip` - The clip to validate
-    
+
     # Returns
-    
+
     A list of validation errors. Empty if the clip is valid.
     """
 
-def validate_clips(clips: typing.Sequence[Clip]) -> builtins.list[tuple[builtins.int, ClipValidationError]]:
+def validate_clips(
+    clips: typing.Sequence[Clip],
+) -> builtins.list[tuple[builtins.int, ClipValidationError]]:
     r"""
     Validates a list of clips and returns all validation errors (Python wrapper).
-    
+
     Unlike single-clip validation, this function collects errors from all clips
     and reports which clip index each error belongs to.
-    
+
     # Arguments
-    
+
     * `clips` - A list of clips to validate
-    
+
     # Returns
-    
+
     A list of tuples containing (clip_index, validation_error) for each error found.
     """
 
 def validate_path(path: builtins.str) -> None:
     r"""
     Validates that a file path is safe to use.
-    
+
     # Arguments
-    
+
     * `path` - The path to validate
-    
+
     # Raises
-    
+
     ValueError: If the path is empty or contains null bytes.
     """
 
 def validate_preset(preset: builtins.str) -> builtins.str:
     r"""
     Validates an encoding preset name.
-    
+
     # Arguments
-    
+
     * `preset` - The preset name to validate
-    
+
     # Returns
-    
+
     The validated preset name.
-    
+
     # Raises
-    
+
     ValueError: If the preset is not in the allowed list.
     """
 
 def validate_video_codec(codec: builtins.str) -> builtins.str:
     r"""
     Validates a video codec name.
-    
+
     # Arguments
-    
+
     * `codec` - The codec name to validate
-    
+
     # Returns
-    
+
     The validated codec name.
-    
+
     # Raises
-    
+
     ValueError: If the codec is not in the allowed list.
     """
 
 def validate_volume(volume: builtins.float) -> builtins.float:
     r"""
     Validates an audio volume multiplier.
-    
+
     # Arguments
-    
+
     * `volume` - The volume multiplier to validate (0.0-10.0)
-    
+
     # Returns
-    
+
     The validated volume value.
-    
+
     # Raises
-    
+
     ValueError: If the value is out of range.
     """
-
