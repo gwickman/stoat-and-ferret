@@ -918,9 +918,7 @@ impl TrackAudioConfig {
             return Err(format!("fade_in duration must be >= 0.0, got {fade_in}"));
         }
         if fade_out < 0.0 {
-            return Err(format!(
-                "fade_out duration must be >= 0.0, got {fade_out}"
-            ));
+            return Err(format!("fade_out duration must be >= 0.0, got {fade_out}"));
         }
         Ok(Self {
             volume,
@@ -1016,8 +1014,8 @@ impl AudioMixSpec {
 
             // Fade-in filter (skip if 0.0)
             if track.fade_in > 0.0 {
-                let fade = AfadeBuilder::new("in", track.fade_in)
-                    .expect("fade_in pre-validated as > 0");
+                let fade =
+                    AfadeBuilder::new("in", track.fade_in).expect("fade_in pre-validated as > 0");
                 track_filters.push(fade.build().to_string());
             }
 
@@ -1037,8 +1035,8 @@ impl AudioMixSpec {
         }
 
         // AmixBuilder for combining all tracks
-        let amix = AmixBuilder::new(self.tracks.len())
-            .expect("track count pre-validated in range [2, 8]");
+        let amix =
+            AmixBuilder::new(self.tracks.len()).expect("track count pre-validated in range [2, 8]");
 
         // Build amix input labels
         let amix_inputs: Vec<String> = (0..self.tracks.len())
@@ -1930,7 +1928,10 @@ mod tests {
         ];
         let spec = AudioMixSpec::new(tracks).unwrap();
         let chain = spec.build_filter_chain();
-        assert!(chain.contains("volume=0"), "Missing muted volume in: {chain}");
+        assert!(
+            chain.contains("volume=0"),
+            "Missing muted volume in: {chain}"
+        );
         assert!(chain.contains("amix="), "Missing amix in: {chain}");
     }
 
@@ -1943,7 +1944,10 @@ mod tests {
         ];
         let spec = AudioMixSpec::new(tracks).unwrap();
         let chain = spec.build_filter_chain();
-        assert!(!chain.contains("volume="), "Unity volume should be skipped: {chain}");
+        assert!(
+            !chain.contains("volume="),
+            "Unity volume should be skipped: {chain}"
+        );
         assert!(chain.contains("amix=inputs=2"), "Missing amix in: {chain}");
     }
 
@@ -1955,8 +1959,14 @@ mod tests {
         ];
         let spec = AudioMixSpec::new(tracks).unwrap();
         let chain = spec.build_filter_chain();
-        assert!(chain.contains("afade=t=in:d=2"), "Missing fade-in in: {chain}");
-        assert!(chain.contains("afade=t=out:d=1.5"), "Missing fade-out in: {chain}");
+        assert!(
+            chain.contains("afade=t=in:d=2"),
+            "Missing fade-in in: {chain}"
+        );
+        assert!(
+            chain.contains("afade=t=out:d=1.5"),
+            "Missing fade-out in: {chain}"
+        );
     }
 
     #[test]
@@ -1968,7 +1978,10 @@ mod tests {
         ];
         let spec = AudioMixSpec::new(tracks).unwrap();
         let chain = spec.build_filter_chain();
-        assert!(!chain.contains("afade="), "Zero fade should be skipped: {chain}");
+        assert!(
+            !chain.contains("afade="),
+            "Zero fade should be skipped: {chain}"
+        );
     }
 
     #[test]
@@ -1981,13 +1994,28 @@ mod tests {
         let spec = AudioMixSpec::new(tracks).unwrap();
         let chain = spec.build_filter_chain();
         // Track 0: volume + fade_in + fade_out
-        assert!(chain.contains("volume=0.8"), "Missing track 0 volume: {chain}");
-        assert!(chain.contains("afade=t=in:d=1"), "Missing track 0 fade-in: {chain}");
-        assert!(chain.contains("afade=t=out:d=0.5"), "Missing track 0 fade-out: {chain}");
+        assert!(
+            chain.contains("volume=0.8"),
+            "Missing track 0 volume: {chain}"
+        );
+        assert!(
+            chain.contains("afade=t=in:d=1"),
+            "Missing track 0 fade-in: {chain}"
+        );
+        assert!(
+            chain.contains("afade=t=out:d=0.5"),
+            "Missing track 0 fade-out: {chain}"
+        );
         // Track 1: volume + fade_in + fade_out
-        assert!(chain.contains("volume=0.5"), "Missing track 1 volume: {chain}");
+        assert!(
+            chain.contains("volume=0.5"),
+            "Missing track 1 volume: {chain}"
+        );
         // Track 2: unity volume, no fades — uses raw input
-        assert!(chain.contains("[2:a]"), "Missing raw track 2 input: {chain}");
+        assert!(
+            chain.contains("[2:a]"),
+            "Missing raw track 2 input: {chain}"
+        );
         // amix
         assert!(chain.contains("amix=inputs=3"), "Missing amix: {chain}");
     }
@@ -2119,11 +2147,7 @@ mod tests {
             assert!(chain.contains("amix="), "Missing amix in: {chain}");
 
             // Test track_count
-            let count: usize = spec
-                .call_method0("track_count")
-                .unwrap()
-                .extract()
-                .unwrap();
+            let count: usize = spec.call_method0("track_count").unwrap().extract().unwrap();
             assert_eq!(count, 2);
 
             // Test repr
@@ -2132,9 +2156,7 @@ mod tests {
             assert!(repr.contains("2"));
 
             // Test py_new error (too few tracks)
-            let result = AudioMixSpec::py_new(vec![
-                TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap(),
-            ]);
+            let result = AudioMixSpec::py_new(vec![TrackAudioConfig::new(1.0, 0.0, 0.0).unwrap()]);
             assert!(result.is_err());
 
             // Test TrackAudioConfig py_new error
