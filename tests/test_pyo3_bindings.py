@@ -1032,6 +1032,123 @@ class TestSpeedControl:
         assert str(filters[0]) == "atempo=0.5"
 
 
+class TestBatchProgress:
+    """Tests for BatchProgress and BatchJobStatus PyO3 bindings."""
+
+    def test_batch_job_status_pending(self) -> None:
+        """Test BatchJobStatus.pending() factory."""
+        from stoat_ferret_core import BatchJobStatus
+
+        s = BatchJobStatus.pending()
+        assert s.progress() == 0.0
+
+    def test_batch_job_status_in_progress(self) -> None:
+        """Test BatchJobStatus.in_progress() factory."""
+        from stoat_ferret_core import BatchJobStatus
+
+        s = BatchJobStatus.in_progress(0.5)
+        assert s.progress() == 0.5
+
+    def test_batch_job_status_completed(self) -> None:
+        """Test BatchJobStatus.completed() factory."""
+        from stoat_ferret_core import BatchJobStatus
+
+        s = BatchJobStatus.completed()
+        assert s.progress() == 1.0
+
+    def test_batch_job_status_failed(self) -> None:
+        """Test BatchJobStatus.failed() factory."""
+        from stoat_ferret_core import BatchJobStatus
+
+        s = BatchJobStatus.failed()
+        assert s.progress() == 0.0
+
+    def test_batch_job_status_repr(self) -> None:
+        """Test BatchJobStatus repr output."""
+        from stoat_ferret_core import BatchJobStatus
+
+        assert "pending" in repr(BatchJobStatus.pending())
+        assert "in_progress" in repr(BatchJobStatus.in_progress(0.5))
+        assert "completed" in repr(BatchJobStatus.completed())
+        assert "failed" in repr(BatchJobStatus.failed())
+
+    def test_calculate_batch_progress_mixed(self) -> None:
+        """Test calculate_batch_progress with mixed job states."""
+        from stoat_ferret_core import BatchJobStatus, calculate_batch_progress
+
+        jobs = [
+            BatchJobStatus.pending(),
+            BatchJobStatus.in_progress(0.5),
+            BatchJobStatus.completed(),
+        ]
+        result = calculate_batch_progress(jobs)
+        assert result.total_jobs == 3
+        assert result.completed_jobs == 1
+        assert result.failed_jobs == 0
+        assert abs(result.overall_progress - 0.5) < 1e-9
+
+    def test_calculate_batch_progress_empty(self) -> None:
+        """Test calculate_batch_progress with empty list."""
+        from stoat_ferret_core import calculate_batch_progress
+
+        result = calculate_batch_progress([])
+        assert result.total_jobs == 0
+        assert result.completed_jobs == 0
+        assert result.failed_jobs == 0
+        assert result.overall_progress == 0.0
+
+    def test_calculate_batch_progress_all_completed(self) -> None:
+        """Test calculate_batch_progress with all completed."""
+        from stoat_ferret_core import BatchJobStatus, calculate_batch_progress
+
+        jobs = [BatchJobStatus.completed() for _ in range(5)]
+        result = calculate_batch_progress(jobs)
+        assert result.total_jobs == 5
+        assert result.completed_jobs == 5
+        assert result.failed_jobs == 0
+        assert abs(result.overall_progress - 1.0) < 1e-9
+
+    def test_calculate_batch_progress_all_failed(self) -> None:
+        """Test calculate_batch_progress with all failed."""
+        from stoat_ferret_core import BatchJobStatus, calculate_batch_progress
+
+        jobs = [BatchJobStatus.failed() for _ in range(3)]
+        result = calculate_batch_progress(jobs)
+        assert result.total_jobs == 3
+        assert result.completed_jobs == 0
+        assert result.failed_jobs == 3
+        assert result.overall_progress == 0.0
+
+    def test_calculate_batch_progress_single_job(self) -> None:
+        """Test calculate_batch_progress with a single in-progress job."""
+        from stoat_ferret_core import BatchJobStatus, calculate_batch_progress
+
+        result = calculate_batch_progress([BatchJobStatus.in_progress(0.75)])
+        assert result.total_jobs == 1
+        assert result.completed_jobs == 0
+        assert result.failed_jobs == 0
+        assert abs(result.overall_progress - 0.75) < 1e-9
+
+    def test_batch_progress_repr(self) -> None:
+        """Test BatchProgress repr output."""
+        from stoat_ferret_core import BatchJobStatus, calculate_batch_progress
+
+        result = calculate_batch_progress([BatchJobStatus.completed()])
+        r = repr(result)
+        assert "BatchProgress" in r
+        assert "total=1" in r
+
+    def test_batch_progress_constructor(self) -> None:
+        """Test BatchProgress direct construction."""
+        from stoat_ferret_core import BatchProgress
+
+        bp = BatchProgress(10, 5, 2, 0.65)
+        assert bp.total_jobs == 10
+        assert bp.completed_jobs == 5
+        assert bp.failed_jobs == 2
+        assert abs(bp.overall_progress - 0.65) < 1e-9
+
+
 class TestExceptions:
     """Tests for custom exception types."""
 
