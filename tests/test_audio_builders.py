@@ -359,3 +359,175 @@ class TestEdgeCases:
 
         f = AfadeBuilder("in", 999.0).build()
         assert "d=999" in str(f)
+
+
+class TestTrackAudioConfigParity:
+    """Parity tests for TrackAudioConfig."""
+
+    def test_basic_construction(self) -> None:
+        """Test basic TrackAudioConfig construction."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        config = TrackAudioConfig(0.8, 1.0, 0.5)
+        assert abs(config.volume - 0.8) < 1e-9
+        assert abs(config.fade_in - 1.0) < 1e-9
+        assert abs(config.fade_out - 0.5) < 1e-9
+
+    def test_zero_volume(self) -> None:
+        """Test muted track (volume=0.0)."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        config = TrackAudioConfig(0.0, 0.0, 0.0)
+        assert abs(config.volume) < 1e-9
+
+    def test_max_volume(self) -> None:
+        """Test maximum business volume (2.0)."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        config = TrackAudioConfig(2.0, 0.0, 0.0)
+        assert abs(config.volume - 2.0) < 1e-9
+
+    def test_volume_below_range(self) -> None:
+        """Test volume below range raises ValueError."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        with pytest.raises(ValueError, match="0.0, 2.0"):
+            TrackAudioConfig(-0.1, 0.0, 0.0)
+
+    def test_volume_above_range(self) -> None:
+        """Test volume above range raises ValueError."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        with pytest.raises(ValueError, match="0.0, 2.0"):
+            TrackAudioConfig(2.1, 0.0, 0.0)
+
+    def test_negative_fade_in(self) -> None:
+        """Test negative fade_in raises ValueError."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        with pytest.raises(ValueError, match="fade_in"):
+            TrackAudioConfig(1.0, -0.1, 0.0)
+
+    def test_negative_fade_out(self) -> None:
+        """Test negative fade_out raises ValueError."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        with pytest.raises(ValueError, match="fade_out"):
+            TrackAudioConfig(1.0, 0.0, -0.1)
+
+    def test_no_fade(self) -> None:
+        """Test zero fade durations (no fade)."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        config = TrackAudioConfig(1.0, 0.0, 0.0)
+        assert abs(config.fade_in) < 1e-9
+        assert abs(config.fade_out) < 1e-9
+
+    def test_repr(self) -> None:
+        """Test __repr__ contains class name."""
+        from stoat_ferret_core import TrackAudioConfig
+
+        config = TrackAudioConfig(0.8, 1.0, 0.5)
+        assert "TrackAudioConfig" in repr(config)
+
+
+class TestAudioMixSpecParity:
+    """Parity tests for AudioMixSpec."""
+
+    def test_two_tracks(self) -> None:
+        """Test basic two-track mix."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(0.8, 1.0, 0.5), TrackAudioConfig(0.5, 0.0, 0.0)]
+        spec = AudioMixSpec(tracks)
+        chain = spec.build_filter_chain()
+        assert "volume=" in chain
+        assert "amix=inputs=2" in chain
+
+    def test_eight_tracks(self) -> None:
+        """Test maximum track count (8)."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(0.5 + i * 0.1, 0.0, 0.0) for i in range(8)]
+        spec = AudioMixSpec(tracks)
+        chain = spec.build_filter_chain()
+        assert "amix=inputs=8" in chain
+
+    def test_single_track_rejected(self) -> None:
+        """Test single track raises ValueError."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        with pytest.raises(ValueError, match="2-8"):
+            AudioMixSpec([TrackAudioConfig(1.0, 0.0, 0.0)])
+
+    def test_nine_tracks_rejected(self) -> None:
+        """Test nine tracks raises ValueError."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        with pytest.raises(ValueError, match="2-8"):
+            AudioMixSpec([TrackAudioConfig(1.0, 0.0, 0.0) for _ in range(9)])
+
+    def test_unity_volume_skip(self) -> None:
+        """Test unity volume (1.0) skips volume filter."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(1.0, 0.0, 0.0), TrackAudioConfig(1.0, 0.0, 0.0)]
+        spec = AudioMixSpec(tracks)
+        chain = spec.build_filter_chain()
+        assert "volume=" not in chain
+        assert "amix=inputs=2" in chain
+
+    def test_fade_in_out(self) -> None:
+        """Test fade-in and fade-out appear in filter chain."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(1.0, 2.0, 1.5), TrackAudioConfig(1.0, 0.0, 0.0)]
+        spec = AudioMixSpec(tracks)
+        chain = spec.build_filter_chain()
+        assert "afade=t=in:d=2" in chain
+        assert "afade=t=out:d=1.5" in chain
+
+    def test_zero_fade_skip(self) -> None:
+        """Test zero fade durations skip afade filter."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(0.8, 0.0, 0.0), TrackAudioConfig(0.5, 0.0, 0.0)]
+        spec = AudioMixSpec(tracks)
+        chain = spec.build_filter_chain()
+        assert "afade=" not in chain
+
+    def test_track_count(self) -> None:
+        """Test track_count method."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(1.0, 0.0, 0.0), TrackAudioConfig(1.0, 0.0, 0.0)]
+        spec = AudioMixSpec(tracks)
+        assert spec.track_count() == 2
+
+    def test_repr(self) -> None:
+        """Test __repr__ contains class name and count."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [TrackAudioConfig(1.0, 0.0, 0.0), TrackAudioConfig(1.0, 0.0, 0.0)]
+        spec = AudioMixSpec(tracks)
+        r = repr(spec)
+        assert "AudioMixSpec" in r
+        assert "2" in r
+
+    def test_all_features(self) -> None:
+        """Test mix with volume, fade_in, fade_out across tracks."""
+        from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
+
+        tracks = [
+            TrackAudioConfig(0.8, 1.0, 0.5),
+            TrackAudioConfig(0.5, 2.0, 1.0),
+            TrackAudioConfig(1.0, 0.0, 0.0),
+        ]
+        spec = AudioMixSpec(tracks)
+        chain = spec.build_filter_chain()
+        assert "volume=0.8" in chain
+        assert "volume=0.5" in chain
+        assert "afade=t=in:d=1" in chain
+        assert "afade=t=out:d=0.5" in chain
+        assert "[2:a]" in chain
+        assert "amix=inputs=3" in chain

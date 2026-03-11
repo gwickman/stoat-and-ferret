@@ -52,6 +52,7 @@ try:
         AcrossfadeBuilder,
         AfadeBuilder,
         AmixBuilder,
+        AudioMixSpec,
         Clip,
         ClipValidationError,
         CommandError,
@@ -69,6 +70,7 @@ try:
         SanitizationError,
         SpeedControl,
         TimeRange,
+        TrackAudioConfig,
         TransitionType,
         ValidationError,
         VolumeBuilder,
@@ -114,6 +116,8 @@ except ImportError:
     AfadeBuilder = _not_built  # type: ignore[misc,assignment]
     AmixBuilder = _not_built  # type: ignore[misc,assignment]
     DuckingPattern = _not_built  # type: ignore[misc,assignment]
+    TrackAudioConfig = _not_built  # type: ignore[misc,assignment]
+    AudioMixSpec = _not_built  # type: ignore[misc,assignment]
     TransitionType = _not_built  # type: ignore[misc,assignment]
     FadeBuilder = _not_built  # type: ignore[misc,assignment]
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
@@ -161,6 +165,8 @@ __all__ = [
     "AfadeBuilder",
     "AmixBuilder",
     "DuckingPattern",
+    "TrackAudioConfig",
+    "AudioMixSpec",
     # Transition builders
     "TransitionType",
     "FadeBuilder",
