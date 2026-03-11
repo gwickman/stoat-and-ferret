@@ -62,6 +62,34 @@ class TimelineClipResponse(BaseModel):
     out_point: int
 
 
+class TransitionCreate(BaseModel):
+    """Create transition between adjacent clips."""
+
+    clip_a_id: str
+    clip_b_id: str
+    transition_type: str = Field(..., min_length=1)
+    duration: float = Field(..., gt=0)
+
+
+class AdjustedClipPosition(BaseModel):
+    """Clip position after transition offset adjustment."""
+
+    input_index: int
+    timeline_start: float
+    timeline_end: float
+
+
+class TransitionResponse(BaseModel):
+    """Transition response with computed offsets."""
+
+    id: str
+    transition_type: str
+    duration: float
+    filter_string: str
+    timeline_offset: float
+    clips: list[AdjustedClipPosition]
+
+
 class TimelineResponse(BaseModel):
     """Full timeline response."""
 
