@@ -58,6 +58,7 @@ try:
         Clip,
         ClipValidationError,
         CommandError,
+        CompositionClip,
         DrawtextBuilder,
         DuckingPattern,
         Duration,
@@ -68,18 +69,24 @@ try:
         FilterGraph,
         FrameRate,
         LayoutPosition,
+        LayoutPreset,
+        LayoutSpec,
         Position,
         SanitizationError,
         SpeedControl,
         TimeRange,
         TrackAudioConfig,
+        TransitionSpec,
         TransitionType,
         ValidationError,
         VolumeBuilder,
         XfadeBuilder,
+        build_composition_graph,
         build_overlay_filter,
         build_scale_for_layout,
         calculate_batch_progress,
+        calculate_composition_positions,
+        calculate_timeline_duration,
         concat_filter,
         escape_filter_text,
         health_check,
@@ -133,8 +140,15 @@ except ImportError:
     FilterChain = _not_built  # type: ignore[misc,assignment]
     FilterGraph = _not_built  # type: ignore[misc,assignment]
     LayoutPosition = _not_built  # type: ignore[misc,assignment]
+    LayoutPreset = _not_built  # type: ignore[misc,assignment]
+    LayoutSpec = _not_built  # type: ignore[misc,assignment]
+    TransitionSpec = _not_built  # type: ignore[misc,assignment]
+    build_composition_graph = _not_built
     build_overlay_filter = _not_built
     build_scale_for_layout = _not_built
+    calculate_composition_positions = _not_built
+    calculate_timeline_duration = _not_built
+    CompositionClip = _not_built  # type: ignore[misc,assignment]
     scale_filter = _not_built
     concat_filter = _not_built
     escape_filter_text = _not_built
@@ -189,6 +203,15 @@ __all__ = [
     "FilterGraph",
     # Layout types
     "LayoutPosition",
+    "LayoutPreset",
+    "LayoutSpec",
+    # Composition timeline
+    "CompositionClip",
+    "TransitionSpec",
+    "calculate_composition_positions",
+    "calculate_timeline_duration",
+    # Composition graph builder
+    "build_composition_graph",
     # Composition functions
     "build_overlay_filter",
     "build_scale_for_layout",

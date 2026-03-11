@@ -965,6 +965,12 @@ pub struct AudioMixSpec {
 }
 
 impl AudioMixSpec {
+    /// Returns the per-track audio configurations.
+    #[must_use]
+    pub fn tracks(&self) -> &[TrackAudioConfig] {
+        &self.tracks
+    }
+
     /// Creates a new AudioMixSpec with validation.
     ///
     /// # Arguments

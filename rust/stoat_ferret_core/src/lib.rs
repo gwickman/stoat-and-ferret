@@ -116,6 +116,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register composition timeline types and functions
     compose::timeline::register(m)?;
 
+    // Register composition graph builder types and functions
+    compose::graph::register(m)?;
+
     // Register batch progress types and functions
     batch::register(m)?;
 

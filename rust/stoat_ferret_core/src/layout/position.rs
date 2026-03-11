@@ -88,6 +88,12 @@ impl LayoutPosition {
         }
     }
 
+    /// Returns the z-index stacking order value.
+    #[must_use]
+    pub fn z_index(&self) -> i32 {
+        self.z_index
+    }
+
     /// Converts normalized coordinates to pixel values.
     ///
     /// Returns `(x, y, width, height)` in pixels, computed by multiplying

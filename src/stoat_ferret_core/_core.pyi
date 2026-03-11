@@ -1689,6 +1689,63 @@ def calculate_timeline_duration(
     """
     ...
 
+# ========== Composition Graph Builder ==========
+
+class LayoutSpec:
+    """Layout specification for multi-stream composition.
+
+    Contains a list of LayoutPosition values that define where each
+    input stream is placed on the output canvas.
+    """
+
+    def __init__(self, positions: list[LayoutPosition]) -> None:
+        """Creates a new LayoutSpec.
+
+        Args:
+            positions: List of LayoutPosition (at least 1 required).
+
+        Raises:
+            ValueError: If positions is empty.
+        """
+        ...
+
+    def positions(self) -> list[LayoutPosition]:
+        """Returns the layout positions."""
+        ...
+
+    def position_count(self) -> int:
+        """Returns the number of positions."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+def build_composition_graph(
+    clips: list[CompositionClip],
+    transitions: list[TransitionSpec],
+    layout: LayoutSpec | None,
+    audio_mix: AudioMixSpec | None,
+    output_width: int,
+    output_height: int,
+) -> FilterGraph:
+    """Builds a complete FilterGraph for multi-clip composition.
+
+    This is the primary composition entry point. Builds either sequential
+    (concat/xfade) or spatial (overlay/scale) filter graphs depending on
+    whether a layout is provided.
+
+    Args:
+        clips: List of CompositionClip objects with timeline positions.
+        transitions: List of TransitionSpec for adjacent clip pairs.
+        layout: Optional LayoutSpec for spatial composition.
+        audio_mix: Optional AudioMixSpec for multi-track audio mixing.
+        output_width: Output canvas width in pixels.
+        output_height: Output canvas height in pixels.
+
+    Returns:
+        A FilterGraph ready for FFmpeg's -filter_complex argument.
+    """
+    ...
+
 # ========== Sanitization Functions ==========
 
 def escape_filter_text(input: str) -> str:
