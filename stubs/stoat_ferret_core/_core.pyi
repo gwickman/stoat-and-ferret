@@ -1770,3 +1770,104 @@ def validate_preset(preset: str) -> str:
         ValueError: If the preset is not in the allowed list.
     """
     ...
+
+# ========== Batch Progress Types ==========
+
+class BatchJobStatus:
+    """Status of an individual batch render job.
+
+    Use the static factory methods to create instances:
+    - BatchJobStatus.pending()
+    - BatchJobStatus.in_progress(0.5)
+    - BatchJobStatus.completed()
+    - BatchJobStatus.failed()
+    """
+
+    @staticmethod
+    def pending() -> BatchJobStatus:
+        """Creates a Pending job status."""
+        ...
+
+    @staticmethod
+    def in_progress(progress: float) -> BatchJobStatus:
+        """Creates an InProgress job status with the given progress (0.0-1.0).
+
+        Args:
+            progress: Current progress value between 0.0 and 1.0.
+        """
+        ...
+
+    @staticmethod
+    def completed() -> BatchJobStatus:
+        """Creates a Completed job status."""
+        ...
+
+    @staticmethod
+    def failed() -> BatchJobStatus:
+        """Creates a Failed job status."""
+        ...
+
+    def progress(self) -> float:
+        """Returns the progress value for this status."""
+        ...
+
+class BatchProgress:
+    """Aggregated progress for a batch of render jobs.
+
+    Reports counts and an overall progress value computed as the mean
+    of individual job progress values.
+    """
+
+    @property
+    def total_jobs(self) -> int:
+        """Total number of jobs in the batch."""
+        ...
+
+    @property
+    def completed_jobs(self) -> int:
+        """Number of jobs that completed successfully."""
+        ...
+
+    @property
+    def failed_jobs(self) -> int:
+        """Number of jobs that failed."""
+        ...
+
+    @property
+    def overall_progress(self) -> float:
+        """Overall progress as mean of individual job progress values (0.0-1.0)."""
+        ...
+
+    def __init__(
+        self,
+        total_jobs: int,
+        completed_jobs: int,
+        failed_jobs: int,
+        overall_progress: float,
+    ) -> None:
+        """Creates a new BatchProgress.
+
+        Args:
+            total_jobs: Total number of jobs.
+            completed_jobs: Number of completed jobs.
+            failed_jobs: Number of failed jobs.
+            overall_progress: Overall progress (0.0-1.0).
+        """
+        ...
+
+def calculate_batch_progress(jobs: list[BatchJobStatus]) -> BatchProgress:
+    """Calculates aggregated batch progress from individual job statuses.
+
+    The overall progress is the mean of individual job progress values:
+    - Pending: 0.0
+    - InProgress(p): p (clamped to [0.0, 1.0])
+    - Completed: 1.0
+    - Failed: 0.0
+
+    Args:
+        jobs: List of BatchJobStatus objects representing individual job states.
+
+    Returns:
+        BatchProgress with total_jobs, completed_jobs, failed_jobs, and overall_progress.
+    """
+    ...
