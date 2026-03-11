@@ -1013,9 +1013,7 @@ class TrackAudioConfig:
         """Fade-out duration in seconds (0.0 = no fade)."""
         ...
 
-    def __new__(
-        cls, volume: float, fade_in: float, fade_out: float
-    ) -> TrackAudioConfig:
+    def __new__(cls, volume: float, fade_in: float, fade_out: float) -> TrackAudioConfig:
         """Creates a new TrackAudioConfig.
 
         Args:
