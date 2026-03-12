@@ -19,6 +19,7 @@ from prometheus_client import make_asgi_app
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import (
+    compose,
     effects,
     filesystem,
     health,
@@ -196,6 +197,7 @@ def create_app(
     app.include_router(projects.router)
     app.include_router(jobs.router)
     app.include_router(effects.router)
+    app.include_router(compose.router)
     app.include_router(filesystem.router)
     app.include_router(timeline.router)
     app.add_websocket_route("/ws", websocket_endpoint)
