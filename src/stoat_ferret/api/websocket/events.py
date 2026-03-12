@@ -17,6 +17,10 @@ class EventType(str, Enum):
     SCAN_COMPLETED = "scan_completed"
     PROJECT_CREATED = "project_created"
     HEARTBEAT = "heartbeat"
+    TIMELINE_UPDATED = "timeline_updated"
+    LAYOUT_APPLIED = "layout_applied"
+    AUDIO_MIX_CHANGED = "audio_mix_changed"
+    TRANSITION_APPLIED = "transition_applied"
 
 
 def build_event(

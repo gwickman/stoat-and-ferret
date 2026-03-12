@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
@@ -19,6 +19,8 @@ from stoat_ferret.api.schemas.timeline import (
     TransitionCreate,
     TransitionResponse,
 )
+from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Track
 from stoat_ferret.db.project_repository import (
@@ -90,6 +92,24 @@ async def get_clip_repository(request: Request) -> AsyncClipRepository:
 TimelineRepoDep = Annotated[AsyncTimelineRepository, Depends(get_timeline_repository)]
 ProjectRepoDep = Annotated[AsyncProjectRepository, Depends(get_project_repository)]
 ClipRepoDep = Annotated[AsyncClipRepository, Depends(get_clip_repository)]
+
+
+# ---------------------------------------------------------------------------
+# Broadcast helper
+# ---------------------------------------------------------------------------
+
+
+async def _broadcast(request: Request, event_type: EventType, payload: dict[str, Any]) -> None:
+    """Broadcast a WebSocket event if ws_manager is available.
+
+    Args:
+        request: The FastAPI request (used to access app state).
+        event_type: The event type to broadcast.
+        payload: Event-specific data.
+    """
+    ws_manager: ConnectionManager | None = getattr(request.app.state, "ws_manager", None)
+    if ws_manager:
+        await ws_manager.broadcast(build_event(event_type, payload))
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +202,7 @@ async def _get_clips_by_track(
 async def put_timeline(
     project_id: str,
     tracks_data: list[TrackCreate],
+    request: Request,
     project_repo: ProjectRepoDep,
     timeline_repo: TimelineRepoDep,
     clip_repo: ClipRepoDep,
@@ -231,7 +252,9 @@ async def put_timeline(
         new_tracks.append(track)
 
     clips_by_track = await _get_clips_by_track(clip_repo, project_id)
-    return _build_timeline_response(project_id, new_tracks, clips_by_track)
+    response = _build_timeline_response(project_id, new_tracks, clips_by_track)
+    await _broadcast(request, EventType.TIMELINE_UPDATED, {"project_id": project_id})
+    return response
 
 
 @router.get("/{project_id}/timeline", response_model=TimelineResponse)
@@ -277,6 +300,7 @@ async def get_timeline(
 async def add_timeline_clip(
     project_id: str,
     request: TimelineClipCreate,
+    http_request: Request,
     project_repo: ProjectRepoDep,
     timeline_repo: TimelineRepoDep,
     clip_repo: ClipRepoDep,
@@ -340,7 +364,7 @@ async def add_timeline_clip(
     clip.updated_at = datetime.now(timezone.utc)
     await clip_repo.update(clip)
 
-    return TimelineClipResponse(
+    response = TimelineClipResponse(
         id=clip.id,
         project_id=clip.project_id,
         source_video_id=clip.source_video_id,
@@ -350,6 +374,10 @@ async def add_timeline_clip(
         in_point=clip.in_point,
         out_point=clip.out_point,
     )
+    await _broadcast(
+        http_request, EventType.TIMELINE_UPDATED, {"project_id": project_id, "clip_id": clip.id}
+    )
+    return response
 
 
 @router.patch(
@@ -360,6 +388,7 @@ async def update_timeline_clip(
     project_id: str,
     clip_id: str,
     request: TimelineClipUpdate,
+    http_request: Request,
     project_repo: ProjectRepoDep,
     timeline_repo: TimelineRepoDep,
     clip_repo: ClipRepoDep,
@@ -430,7 +459,7 @@ async def update_timeline_clip(
     clip.updated_at = datetime.now(timezone.utc)
     await clip_repo.update(clip)
 
-    return TimelineClipResponse(
+    response = TimelineClipResponse(
         id=clip.id,
         project_id=clip.project_id,
         source_video_id=clip.source_video_id,
@@ -440,6 +469,10 @@ async def update_timeline_clip(
         in_point=clip.in_point,
         out_point=clip.out_point,
     )
+    await _broadcast(
+        http_request, EventType.TIMELINE_UPDATED, {"project_id": project_id, "clip_id": clip_id}
+    )
+    return response
 
 
 @router.delete(
@@ -449,6 +482,7 @@ async def update_timeline_clip(
 async def remove_timeline_clip(
     project_id: str,
     clip_id: str,
+    request: Request,
     project_repo: ProjectRepoDep,
     clip_repo: ClipRepoDep,
 ) -> Response:
@@ -490,6 +524,9 @@ async def remove_timeline_clip(
     clip.updated_at = datetime.now(timezone.utc)
     await clip_repo.update(clip)
 
+    await _broadcast(
+        request, EventType.TIMELINE_UPDATED, {"project_id": project_id, "clip_id": clip_id}
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -506,6 +543,7 @@ async def remove_timeline_clip(
 async def add_transition(
     project_id: str,
     request: TransitionCreate,
+    http_request: Request,
     project_repo: ProjectRepoDep,
     clip_repo: ClipRepoDep,
 ) -> TransitionResponse:
@@ -647,7 +685,7 @@ async def add_transition(
         for c in adjusted
     ]
 
-    return TransitionResponse(
+    response = TransitionResponse(
         id=transition_id,
         transition_type=request.transition_type,
         duration=request.duration,
@@ -655,6 +693,12 @@ async def add_transition(
         timeline_offset=timeline_offset,
         clips=adjusted_positions,
     )
+    await _broadcast(
+        http_request,
+        EventType.TRANSITION_APPLIED,
+        {"project_id": project_id, "transition_id": transition_id},
+    )
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -669,6 +713,7 @@ async def add_transition(
 async def delete_transition(
     project_id: str,
     transition_id: str,
+    request: Request,
     project_repo: ProjectRepoDep,
     timeline_repo: TimelineRepoDep,
     clip_repo: ClipRepoDep,
@@ -769,9 +814,15 @@ async def delete_transition(
             )
         )
 
-    return TimelineResponse(
+    response = TimelineResponse(
         project_id=project_id,
         tracks=track_responses,
         duration=duration,
         version=1,
     )
+    await _broadcast(
+        request,
+        EventType.TRANSITION_APPLIED,
+        {"project_id": project_id, "transition_id": transition_id},
+    )
+    return response

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret_core import LayoutPreset, build_overlay_filter
 
 #: All 7 layout preset names that must be returned.
@@ -403,3 +407,32 @@ def test_layout_response_round_trip() -> None:
     data = resp.model_dump()
     restored = LayoutResponse.model_validate(data)
     assert restored == resp
+
+
+# ---- Broadcast wiring tests ----
+
+
+@pytest.mark.api
+def test_apply_layout_broadcasts_layout_applied(app: FastAPI, client: TestClient) -> None:
+    """POST layout broadcasts layout_applied event via ws_manager."""
+    mock_manager = AsyncMock(spec=ConnectionManager)
+    app.state.ws_manager = mock_manager
+
+    client.post(LAYOUT_URL, json={"preset": "PipTopLeft"})
+
+    mock_manager.broadcast.assert_awaited_once()
+    event = mock_manager.broadcast.call_args[0][0]
+    assert event["type"] == "layout_applied"
+    assert event["payload"]["project_id"] == "test-project"
+    assert event["payload"]["preset"] == "PipTopLeft"
+
+
+@pytest.mark.api
+def test_apply_layout_no_broadcast_without_ws_manager(app: FastAPI, client: TestClient) -> None:
+    """POST layout does not fail when ws_manager is not available."""
+    # Ensure no ws_manager is set
+    if hasattr(app.state, "ws_manager"):
+        delattr(app.state, "ws_manager")
+
+    response = client.post(LAYOUT_URL, json={"preset": "PipTopLeft"})
+    assert response.status_code == 200

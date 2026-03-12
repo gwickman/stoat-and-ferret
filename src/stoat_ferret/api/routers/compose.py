@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import structlog
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from stoat_ferret.api.schemas.compose import (
     LayoutPresetListResponse,
@@ -13,6 +13,8 @@ from stoat_ferret.api.schemas.compose import (
     LayoutResponsePosition,
     PositionModel,
 )
+from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret_core import LayoutPosition, LayoutPreset, build_overlay_filter
 
 logger = structlog.get_logger(__name__)
@@ -136,6 +138,7 @@ _PRESET_BY_NAME: dict[str, tuple[LayoutPreset, int]] = {
 async def apply_layout(
     project_id: str,
     request: LayoutRequest,
+    http_request: Request,
 ) -> LayoutResponse:
     """Apply a layout preset or custom positions and preview the filter chain.
 
@@ -185,6 +188,15 @@ async def apply_layout(
         preset=request.preset,
         position_count=len(positions),
     )
+
+    ws_manager: ConnectionManager | None = getattr(http_request.app.state, "ws_manager", None)
+    if ws_manager:
+        await ws_manager.broadcast(
+            build_event(
+                EventType.LAYOUT_APPLIED,
+                {"project_id": project_id, "preset": request.preset},
+            )
+        )
 
     return LayoutResponse(positions=response_positions, filter_preview=filter_preview)
 

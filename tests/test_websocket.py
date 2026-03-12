@@ -115,6 +115,14 @@ class TestEventTypes:
         assert EventType.SCAN_COMPLETED.value == "scan_completed"
         assert EventType.PROJECT_CREATED.value == "project_created"
         assert EventType.HEARTBEAT.value == "heartbeat"
+        assert EventType.TIMELINE_UPDATED.value == "timeline_updated"
+        assert EventType.LAYOUT_APPLIED.value == "layout_applied"
+        assert EventType.AUDIO_MIX_CHANGED.value == "audio_mix_changed"
+        assert EventType.TRANSITION_APPLIED.value == "transition_applied"
+
+    def test_event_type_count(self) -> None:
+        """EventType should have exactly 9 members."""
+        assert len(EventType) == 9
 
     def test_build_event_schema(self) -> None:
         """build_event should return dict with type, payload, correlation_id, timestamp."""
@@ -159,3 +167,43 @@ class TestEventTypes:
             event = build_event(EventType.HEARTBEAT)
 
         assert event["correlation_id"] is None
+
+    def test_build_event_timeline_updated(self) -> None:
+        """build_event with TIMELINE_UPDATED produces correct event."""
+        event = build_event(
+            EventType.TIMELINE_UPDATED,
+            {"project_id": "p1"},
+            correlation_id="corr-1",
+        )
+        assert event["type"] == "timeline_updated"
+        assert event["payload"]["project_id"] == "p1"
+
+    def test_build_event_layout_applied(self) -> None:
+        """build_event with LAYOUT_APPLIED produces correct event."""
+        event = build_event(
+            EventType.LAYOUT_APPLIED,
+            {"project_id": "p1", "preset": "PipTopLeft"},
+            correlation_id="corr-2",
+        )
+        assert event["type"] == "layout_applied"
+        assert event["payload"]["preset"] == "PipTopLeft"
+
+    def test_build_event_audio_mix_changed(self) -> None:
+        """build_event with AUDIO_MIX_CHANGED produces correct event."""
+        event = build_event(
+            EventType.AUDIO_MIX_CHANGED,
+            {"project_id": "p1", "tracks_configured": 3},
+            correlation_id="corr-3",
+        )
+        assert event["type"] == "audio_mix_changed"
+        assert event["payload"]["tracks_configured"] == 3
+
+    def test_build_event_transition_applied(self) -> None:
+        """build_event with TRANSITION_APPLIED produces correct event."""
+        event = build_event(
+            EventType.TRANSITION_APPLIED,
+            {"project_id": "p1", "transition_id": "t1"},
+            correlation_id="corr-4",
+        )
+        assert event["type"] == "transition_applied"
+        assert event["payload"]["transition_id"] == "t1"

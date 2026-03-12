@@ -13,6 +13,8 @@ from stoat_ferret.api.schemas.audio import (
     AudioMixResponse,
     TrackConfig,
 )
+from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
@@ -124,6 +126,7 @@ def _build_filter_preview(request: AudioMixRequest) -> str:
 async def configure_audio_mix(
     project_id: str,
     request: AudioMixRequest,
+    http_request: Request,
     project_repo: ProjectRepoDep,
 ) -> AudioMixResponse:
     """Configure audio mix for a project.
@@ -184,6 +187,15 @@ async def configure_audio_mix(
         project_id=project_id,
         tracks_configured=len(request.tracks),
     )
+
+    ws_manager: ConnectionManager | None = getattr(http_request.app.state, "ws_manager", None)
+    if ws_manager:
+        await ws_manager.broadcast(
+            build_event(
+                EventType.AUDIO_MIX_CHANGED,
+                {"project_id": project_id, "tracks_configured": len(request.tracks)},
+            )
+        )
 
     return AudioMixResponse(
         filter_preview=filter_preview,

@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.models import Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 
@@ -408,3 +411,56 @@ def test_audio_mix_response_round_trip() -> None:
     data = resp.model_dump()
     restored = AudioMixResponse.model_validate(data)
     assert restored == resp
+
+
+# ---- Broadcast wiring tests ----
+
+
+@pytest.mark.api
+async def test_put_audio_mix_broadcasts_audio_mix_changed(
+    app: FastAPI,
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """PUT /projects/{id}/audio/mix broadcasts audio_mix_changed event."""
+    project = _make_project()
+    await project_repository.add(project)
+
+    mock_manager = AsyncMock(spec=ConnectionManager)
+    app.state.ws_manager = mock_manager
+
+    client.put(_mix_url("proj-1"), json=_valid_request())
+
+    mock_manager.broadcast.assert_awaited_once()
+    event = mock_manager.broadcast.call_args[0][0]
+    assert event["type"] == "audio_mix_changed"
+    assert event["payload"]["project_id"] == "proj-1"
+    assert event["payload"]["tracks_configured"] == 2
+
+
+@pytest.mark.api
+async def test_put_audio_mix_no_broadcast_without_ws_manager(
+    app: FastAPI,
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """PUT /projects/{id}/audio/mix does not fail without ws_manager."""
+    project = _make_project()
+    await project_repository.add(project)
+
+    if hasattr(app.state, "ws_manager"):
+        delattr(app.state, "ws_manager")
+
+    response = client.put(_mix_url("proj-1"), json=_valid_request())
+    assert response.status_code == 200
+
+
+@pytest.mark.api
+def test_preview_does_not_broadcast(app: FastAPI, client: TestClient) -> None:
+    """POST /audio/mix/preview does not broadcast any events."""
+    mock_manager = AsyncMock(spec=ConnectionManager)
+    app.state.ws_manager = mock_manager
+
+    client.post(PREVIEW_URL, json=_valid_request())
+
+    mock_manager.broadcast.assert_not_awaited()
