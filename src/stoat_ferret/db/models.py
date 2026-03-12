@@ -147,6 +147,7 @@ class Project:
     created_at: datetime
     updated_at: datetime
     transitions: list[dict[str, Any]] | None = field(default=None)
+    audio_mix: dict[str, Any] | None = field(default=None)
 
     @staticmethod
     def new_id() -> str:

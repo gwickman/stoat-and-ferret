@@ -110,14 +110,15 @@ class AsyncSQLiteProjectRepository:
         transitions_json = (
             json.dumps(project.transitions) if project.transitions is not None else None
         )
+        audio_mix_json = json.dumps(project.audio_mix) if project.audio_mix is not None else None
         try:
             await self._conn.execute(
                 """
                 INSERT INTO projects (
                     id, name, output_width, output_height, output_fps,
-                    transitions_json, created_at, updated_at
+                    transitions_json, audio_mix_json, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     project.id,
@@ -126,6 +127,7 @@ class AsyncSQLiteProjectRepository:
                     project.output_height,
                     project.output_fps,
                     transitions_json,
+                    audio_mix_json,
                     project.created_at.isoformat(),
                     project.updated_at.isoformat(),
                 ),
@@ -155,6 +157,7 @@ class AsyncSQLiteProjectRepository:
         transitions_json = (
             json.dumps(project.transitions) if project.transitions is not None else None
         )
+        audio_mix_json = json.dumps(project.audio_mix) if project.audio_mix is not None else None
         cursor = await self._conn.execute(
             """
             UPDATE projects SET
@@ -163,6 +166,7 @@ class AsyncSQLiteProjectRepository:
                 output_height = ?,
                 output_fps = ?,
                 transitions_json = ?,
+                audio_mix_json = ?,
                 updated_at = ?
             WHERE id = ?
             """,
@@ -172,6 +176,7 @@ class AsyncSQLiteProjectRepository:
                 project.output_height,
                 project.output_fps,
                 transitions_json,
+                audio_mix_json,
                 project.updated_at.isoformat(),
                 project.id,
             ),
@@ -198,6 +203,8 @@ class AsyncSQLiteProjectRepository:
         """Convert a database row to a Project object."""
         transitions_raw = row["transitions_json"]
         transitions = json.loads(transitions_raw) if transitions_raw is not None else None
+        audio_mix_raw = row["audio_mix_json"]
+        audio_mix = json.loads(audio_mix_raw) if audio_mix_raw is not None else None
         return Project(
             id=row["id"],
             name=row["name"],
@@ -207,6 +214,7 @@ class AsyncSQLiteProjectRepository:
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             transitions=transitions,
+            audio_mix=audio_mix,
         )
 
 

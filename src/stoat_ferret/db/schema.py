@@ -144,6 +144,26 @@ CLIPS_TIMELINE_COLUMNS = [
 ]
 
 
+# Columns to add to projects table for audio mix.
+PROJECTS_AUDIO_MIX_COLUMNS = [
+    ("audio_mix_json", "TEXT"),
+]
+
+
+def _alter_projects_add_audio_mix_column(conn: sqlite3.Connection) -> None:
+    """Add audio_mix_json column to projects table idempotently.
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
 def _alter_clips_add_timeline_columns(conn: sqlite3.Connection) -> None:
     """Add timeline columns to clips table idempotently.
 
@@ -186,7 +206,24 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(TRACKS_TABLE)
     cursor.execute(TRACKS_PROJECT_INDEX)
     _alter_clips_add_timeline_columns(conn)
+    _alter_projects_add_audio_mix_column(conn)
     conn.commit()
+
+
+async def _alter_projects_add_audio_mix_column_async(
+    db: aiosqlite.Connection,
+) -> None:
+    """Add audio_mix_json column to projects table idempotently (async).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
 
 
 async def _alter_clips_add_timeline_columns_async(db: aiosqlite.Connection) -> None:
@@ -229,4 +266,5 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(TRACKS_TABLE)
     await db.execute(TRACKS_PROJECT_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
+    await _alter_projects_add_audio_mix_column_async(db)
     await db.commit()
