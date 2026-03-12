@@ -4,6 +4,60 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v016] - 2026-03-11
+
+Composition Graph + Timeline API. First full Phase 3 version delivering the Rust composition graph builder, multi-track audio mixing specification, batch progress calculator, timeline data layer with persistent storage, and complete timeline REST API with transition support.
+
+### Added
+
+- **AudioMixSpec & TrackAudioConfig (Rust)**
+  - `AudioMixSpec` for coordinated multi-track audio mixing with per-track volume, fade-in/fade-out
+  - `TrackAudioConfig` for individual track audio parameters
+  - PyO3 bindings with proptest coverage for parameter validation
+
+- **Batch Progress Calculator (Rust)**
+  - `BatchJobStatus` enum with wrapper pyclass pattern for enum variant data
+  - `BatchProgress` struct for batch render progress aggregation
+  - `calculate_batch_progress()` pure function with PyO3 bindings
+
+- **Composition Graph Builder (Rust)**
+  - `build_composition_graph()` integrating overlay, scale, transitions, and audio mix into complete `FilterGraph` output
+  - Sequential and layout composition modes with universal canvas base
+  - PyO3 bindings with Python parity tests
+
+- **Track & Clip Data Models (Python)**
+  - `Track` dataclass for multi-track timeline representation
+  - Extended `Clip` with nullable timeline fields: `track_id`, `timeline_start`, `timeline_end`
+  - Database migration for `tracks` table and ALTER TABLE for clip timeline columns
+
+- **Timeline Repository (Python)**
+  - `AsyncTimelineRepository` with async CRUD for tracks and timeline-aware clip queries
+  - `AsyncSQLiteTimelineRepository` and `InMemoryTimelineRepository` implementations
+  - DI wiring via `create_app()` kwargs following established patterns
+
+- **Timeline API Endpoints (Python)**
+  - `PUT /api/v1/projects/{id}/timeline` — Initialize/replace timeline
+  - `GET /api/v1/projects/{id}/timeline` — Get timeline with tracks and clips
+  - `POST /api/v1/projects/{id}/timeline/clips` — Add clip to timeline
+  - `PATCH /api/v1/projects/{id}/timeline/clips/{id}` — Update timeline clip
+  - `DELETE /api/v1/projects/{id}/timeline/clips/{id}` — Remove clip from timeline
+  - 6 Pydantic request/response schemas for timeline operations
+
+- **Timeline Transition Endpoints (Python)**
+  - `POST /api/v1/projects/{id}/timeline/transitions` — Create transition between adjacent clips
+  - `DELETE /api/v1/projects/{id}/timeline/transitions/{id}` — Remove transition
+  - Rust core integration via `calculate_composition_positions()` for offset calculation
+  - Adjacency validation guard before Rust delegation
+
+### Changed
+
+- Clip model extended with nullable timeline fields for track assignment and timeline positioning
+- Database schema extended with `tracks` table and clip timeline columns
+
+### Fixed
+
+- N/A
+
 ## [v015] - 2026-03-10
 
 Phase 2 Quality Debt + Rust Layout/Composition Core. Retires all Phase 2 quality debt (coverage enforcement, property testing, FFmpeg contract tests, performance benchmarks) and builds the foundational Rust layout and composition modules for Phase 3.
