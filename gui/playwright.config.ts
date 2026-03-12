@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "cd .. && uv run uvicorn src.stoat_ferret.api.app:create_app --factory",
+    command: "cd .. && uv run uvicorn src.stoat_ferret.api.app:create_app --factory --port 8765",
     url: "http://localhost:8765/health/live",
     reuseExistingServer: !process.env.CI,
   },
