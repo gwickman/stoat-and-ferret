@@ -33,7 +33,7 @@ This API specification describes the FastAPI-based REST interface for the AI-dri
 ## Base URL
 
 ```
-http://localhost:8000/api/v1
+http://localhost:8765/api/v1
 ```
 
 ---
@@ -1266,7 +1266,7 @@ GET /render/jobs
 
 #### Connect to WebSocket
 ```
-ws://localhost:8000/ws
+ws://localhost:8765/ws
 ```
 
 Establishes a WebSocket connection for receiving real-time server events. The server sends a heartbeat message at a configurable interval (default 30s, set via `STOAT_WS_HEARTBEAT_INTERVAL`) to keep the connection alive.

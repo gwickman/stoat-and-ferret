@@ -29,7 +29,7 @@ uv run pytest                # Test
 # Frontend
 cd gui
 npm install                  # Install dependencies
-npm run dev                  # Dev server (proxies API to :8000)
+npm run dev                  # Dev server (proxies API to :8765)
 npm run build                # Production build to gui/dist/
 npx vitest run               # Run tests
 

@@ -8,13 +8,13 @@ A standalone Python script that creates the "Running Montage" sample project by 
 
 ```bash
 # Basic usage — seed against local server
-python scripts/seed_sample_project.py http://localhost:8000
+python scripts/seed_sample_project.py http://localhost:8765
 
 # Specify a custom videos directory
-python scripts/seed_sample_project.py http://localhost:8000 --videos-dir ./videos
+python scripts/seed_sample_project.py http://localhost:8765 --videos-dir ./videos
 
 # Force recreate if the sample project already exists
-python scripts/seed_sample_project.py http://localhost:8000 --force
+python scripts/seed_sample_project.py http://localhost:8765 --force
 ```
 
 ## Argument Parsing: `parse_args()`
@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "base_url",
-        help="Base URL of the running stoat-and-ferret instance (e.g., http://localhost:8000)",
+        help="Base URL of the running stoat-and-ferret instance (e.g., http://localhost:8765)",
     )
     parser.add_argument(
         "--videos-dir",

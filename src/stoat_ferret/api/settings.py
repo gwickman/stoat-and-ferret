@@ -39,7 +39,7 @@ class Settings(BaseSettings):
         description="API server host",
     )
     api_port: int = Field(
-        default=8000,
+        default=8765,
         ge=1,
         le=65535,
         description="API server port",

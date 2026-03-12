@@ -37,6 +37,6 @@ uv run alembic upgrade head
 uv run uvicorn stoat_ferret.api.app:create_app --factory --reload
 ```
 
-The API is then available at `http://127.0.0.1:8000/api/v1/` and the GUI at `http://127.0.0.1:8000/gui/`.
+The API is then available at `http://127.0.0.1:8765/api/v1/` and the GUI at `http://127.0.0.1:8765/gui/`.
 
 For detailed instructions, start with [Prerequisites](01_prerequisites.md) and then follow [Development Setup](02_development-setup.md).

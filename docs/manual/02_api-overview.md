@@ -5,15 +5,15 @@ Stoat & Ferret exposes a REST API built with FastAPI, designed for both human de
 ## Base URL
 
 ```
-http://localhost:8000
+http://localhost:8765
 ```
 
-The default host is `127.0.0.1` and port is `8000`. Configure via environment variables:
+The default host is `127.0.0.1` and port is `8765`. Configure via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `STOAT_API_HOST` | `127.0.0.1` | Server bind address |
-| `STOAT_API_PORT` | `8000` | Server port |
+| `STOAT_API_PORT` | `8765` | Server port |
 | `STOAT_DATABASE_PATH` | `data/stoat.db` | SQLite database file path |
 | `STOAT_THUMBNAIL_DIR` | `data/thumbnails` | Thumbnail storage directory |
 | `STOAT_GUI_STATIC_PATH` | `gui/dist` | Path to built frontend assets |
@@ -50,7 +50,7 @@ List endpoints support pagination with `limit` and `offset` query parameters:
 Example:
 
 ```bash
-curl "http://localhost:8000/api/v1/videos?limit=10&offset=20"
+curl "http://localhost:8765/api/v1/videos?limit=10&offset=20"
 ```
 
 List responses include a `total` field indicating the total number of items available.
@@ -113,9 +113,9 @@ Validation errors from the effects system may include an additional `errors` arr
 
 The API is fully documented via OpenAPI 3.x:
 
-- **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs) -- interactive explorer with "Try it out" functionality
-- **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc) -- clean, readable documentation
-- **OpenAPI JSON:** [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json) -- machine-readable schema for code generation
+- **Swagger UI:** [http://localhost:8765/docs](http://localhost:8765/docs) -- interactive explorer with "Try it out" functionality
+- **ReDoc:** [http://localhost:8765/redoc](http://localhost:8765/redoc) -- clean, readable documentation
+- **OpenAPI JSON:** [http://localhost:8765/openapi.json](http://localhost:8765/openapi.json) -- machine-readable schema for code generation
 
 ## Correlation IDs
 
@@ -129,7 +129,7 @@ Use correlation IDs to trace requests through logs when debugging.
 
 ## WebSocket Events
 
-Connect to `ws://localhost:8000/ws` for real-time events. The server sends:
+Connect to `ws://localhost:8765/ws` for real-time events. The server sends:
 
 - **Heartbeat** messages every 30 seconds (configurable)
 - Event notifications for scan operations and project creation

@@ -18,7 +18,7 @@ class TestSettings:
         settings = Settings()
         assert settings.database_path == "data/stoat.db"
         assert settings.api_host == "127.0.0.1"
-        assert settings.api_port == 8000
+        assert settings.api_port == 8765
         assert settings.debug is False
         assert settings.log_level == "INFO"
 

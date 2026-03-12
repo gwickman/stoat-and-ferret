@@ -14,25 +14,25 @@ Stoat & Ferret is designed from the ground up for AI-driven control. The API, ef
 The full API specification is available at:
 
 ```
-http://localhost:8000/openapi.json
+http://localhost:8765/openapi.json
 ```
 
 AI agents can fetch this schema to discover all available endpoints, request/response formats, and validation constraints. Many AI frameworks support loading OpenAPI specs directly to generate API bindings.
 
 ```bash
-curl http://localhost:8000/openapi.json
+curl http://localhost:8765/openapi.json
 ```
 
 Interactive documentation is also available:
-- **Swagger UI:** `http://localhost:8000/docs`
-- **ReDoc:** `http://localhost:8000/redoc`
+- **Swagger UI:** `http://localhost:8765/docs`
+- **ReDoc:** `http://localhost:8765/redoc`
 
 ## Effect Discovery with AI Hints
 
 The `GET /api/v1/effects` endpoint returns metadata specifically designed for AI consumption. Each effect includes an `ai_hints` dictionary with per-parameter guidance:
 
 ```bash
-curl http://localhost:8000/api/v1/effects
+curl http://localhost:8765/api/v1/effects
 ```
 
 Example response (truncated):
@@ -86,7 +86,7 @@ Here is a complete workflow using Python and `httpx` to scan videos, create a pr
 ```python
 import httpx
 
-BASE = "http://localhost:8000"
+BASE = "http://localhost:8765"
 client = httpx.Client(base_url=BASE, timeout=30.0)
 
 # Step 1: Scan a directory for videos
@@ -200,7 +200,7 @@ import httpx
 import asyncio
 
 async def create_edit():
-    async with httpx.AsyncClient(base_url="http://localhost:8000") as client:
+    async with httpx.AsyncClient(base_url="http://localhost:8765") as client:
         # Create project
         resp = await client.post("/api/v1/projects", json={
             "name": "Async Edit",
@@ -253,7 +253,7 @@ import json
 import websockets
 
 async def monitor_events():
-    async with websockets.connect("ws://localhost:8000/ws") as ws:
+    async with websockets.connect("ws://localhost:8765/ws") as ws:
         while True:
             message = json.loads(await ws.recv())
             event_type = message["type"]

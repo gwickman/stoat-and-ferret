@@ -23,7 +23,7 @@ Launch the API server with:
 python -m stoat_ferret.api
 ```
 
-The server starts on `http://localhost:8000` by default. You can configure the host and port using environment variables:
+The server starts on `http://localhost:8765` by default. You can configure the host and port using environment variables:
 
 ```bash
 STOAT_API_HOST=0.0.0.0 STOAT_API_PORT=9000 python -m stoat_ferret.api
@@ -42,7 +42,7 @@ See [API Overview](02_api-overview.md) for the full settings reference.
 Check the liveness endpoint:
 
 ```bash
-curl http://localhost:8000/health/live
+curl http://localhost:8765/health/live
 ```
 
 Expected response:
@@ -54,7 +54,7 @@ Expected response:
 Check that all dependencies (database and FFmpeg) are healthy:
 
 ```bash
-curl http://localhost:8000/health/ready
+curl http://localhost:8765/health/ready
 ```
 
 Expected response:
@@ -74,7 +74,7 @@ Expected response:
 Open your browser and navigate to:
 
 ```
-http://localhost:8000/gui/
+http://localhost:8765/gui/
 ```
 
 The GUI provides a Dashboard, Library browser, Projects page, and Effect Workshop. See the [GUI Guide](06_gui-guide.md) for details.
@@ -90,7 +90,7 @@ The typical workflow is: scan videos into the library, create a project, add cli
 Submit a scan job to discover video files in a directory:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/videos/scan \
+curl -X POST http://localhost:8765/api/v1/videos/scan \
   -H "Content-Type: application/json" \
   -d '{"path": "/path/to/your/videos", "recursive": true}'
 ```
@@ -104,7 +104,7 @@ Response (HTTP 202):
 The scan runs asynchronously. Poll the job status:
 
 ```bash
-curl http://localhost:8000/api/v1/jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+curl http://localhost:8765/api/v1/jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
 Response when complete:
@@ -122,7 +122,7 @@ Response when complete:
 List all discovered videos:
 
 ```bash
-curl http://localhost:8000/api/v1/videos?limit=5
+curl http://localhost:8765/api/v1/videos?limit=5
 ```
 
 Response:
@@ -156,7 +156,7 @@ Response:
 Search for specific videos:
 
 ```bash
-curl "http://localhost:8000/api/v1/videos/search?q=interview"
+curl "http://localhost:8765/api/v1/videos/search?q=interview"
 ```
 
 ### Step 3: Create a Project
@@ -164,7 +164,7 @@ curl "http://localhost:8000/api/v1/videos/search?q=interview"
 Create a new editing project with output settings:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects \
+curl -X POST http://localhost:8765/api/v1/projects \
   -H "Content-Type: application/json" \
   -d '{"name": "My First Edit", "output_width": 1920, "output_height": 1080, "output_fps": 30}'
 ```
@@ -188,7 +188,7 @@ Response (HTTP 201):
 Add a video clip to your project. All time values are in **frames**, not seconds:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-xyz789/clips \
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips \
   -H "Content-Type: application/json" \
   -d '{
     "source_video_id": "vid-abc123",
@@ -221,7 +221,7 @@ Response (HTTP 201):
 Add a text overlay to the clip:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-xyz789/clips/clip-def456/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "text_overlay",
@@ -246,9 +246,9 @@ Response (HTTP 201):
 
 ## Explore the API
 
-- **Swagger UI** at `http://localhost:8000/docs` -- interactive API explorer
-- **ReDoc** at `http://localhost:8000/redoc` -- readable API documentation
-- **OpenAPI JSON** at `http://localhost:8000/openapi.json` -- machine-readable schema
+- **Swagger UI** at `http://localhost:8765/docs` -- interactive API explorer
+- **ReDoc** at `http://localhost:8765/redoc` -- readable API documentation
+- **OpenAPI JSON** at `http://localhost:8765/openapi.json` -- machine-readable schema
 
 ## Next Steps
 

@@ -101,15 +101,15 @@ uv run alembic -x sqlalchemy.url=sqlite:///:memory: upgrade head
 uv run uvicorn stoat_ferret.api.app:create_app --factory --reload
 ```
 
-The server starts at `http://127.0.0.1:8000` by default. Key endpoints:
+The server starts at `http://127.0.0.1:8765` by default. Key endpoints:
 
 | URL | Description |
 |-----|-------------|
-| `http://127.0.0.1:8000/api/v1/health/live` | Health check (liveness) |
-| `http://127.0.0.1:8000/gui/` | Frontend GUI |
-| `http://127.0.0.1:8000/docs` | FastAPI auto-generated API docs (Swagger UI) |
-| `http://127.0.0.1:8000/metrics` | Prometheus metrics |
-| `ws://127.0.0.1:8000/ws` | WebSocket endpoint |
+| `http://127.0.0.1:8765/api/v1/health/live` | Health check (liveness) |
+| `http://127.0.0.1:8765/gui/` | Frontend GUI |
+| `http://127.0.0.1:8765/docs` | FastAPI auto-generated API docs (Swagger UI) |
+| `http://127.0.0.1:8765/metrics` | Prometheus metrics |
+| `ws://127.0.0.1:8765/ws` | WebSocket endpoint |
 
 The `--reload` flag watches for Python file changes and restarts the server automatically. Note that changes to Rust code require re-running `uv run maturin develop` and restarting the server.
 

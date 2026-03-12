@@ -570,9 +570,9 @@ COPY --from=gui-builder /gui/dist /app/static/gui
 RUN useradd -m -U appuser
 USER appuser
 
-EXPOSE 8000
-HEALTHCHECK CMD curl -f http://localhost:8000/health/live || exit 1
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 8765
+HEALTHCHECK CMD curl -f http://localhost:8765/health/live || exit 1
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8765"]
 ```
 
 ---

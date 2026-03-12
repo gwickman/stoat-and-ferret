@@ -17,7 +17,7 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `STOAT_API_HOST` | `str` | `127.0.0.1` | Host address the API server binds to. Use `0.0.0.0` to listen on all interfaces. |
-| `STOAT_API_PORT` | `int` | `8000` | Port number for the API server (valid range: 1-65535). |
+| `STOAT_API_PORT` | `int` | `8765` | Port number for the API server (valid range: 1-65535). |
 
 ### Development
 

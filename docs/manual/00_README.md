@@ -28,11 +28,11 @@ Stoat & Ferret is an AI-driven programmatic video editor built on a hybrid Pytho
 
 ## Quick Links
 
-- **Swagger UI:** `http://localhost:8000/docs`
-- **ReDoc:** `http://localhost:8000/redoc`
-- **OpenAPI JSON:** `http://localhost:8000/openapi.json`
-- **Web GUI:** `http://localhost:8000/gui/`
-- **Prometheus Metrics:** `http://localhost:8000/metrics`
+- **Swagger UI:** `http://localhost:8765/docs`
+- **ReDoc:** `http://localhost:8765/redoc`
+- **OpenAPI JSON:** `http://localhost:8765/openapi.json`
+- **Web GUI:** `http://localhost:8765/gui/`
+- **Prometheus Metrics:** `http://localhost:8765/metrics`
 
 ## Prerequisites
 

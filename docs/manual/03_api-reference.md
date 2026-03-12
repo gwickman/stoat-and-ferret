@@ -1,6 +1,6 @@
 # API Reference
 
-Complete endpoint reference for the Stoat & Ferret REST API. All endpoints use `http://localhost:8000` as the base URL. See [API Overview](02_api-overview.md) for conventions, error format, and pagination.
+Complete endpoint reference for the Stoat & Ferret REST API. All endpoints use `http://localhost:8765` as the base URL. See [API Overview](02_api-overview.md) for conventions, error format, and pagination.
 
 ---
 
@@ -19,7 +19,7 @@ Liveness probe. Returns 200 if the server process is running. No dependency chec
 **Example:**
 
 ```bash
-curl http://localhost:8000/health/live
+curl http://localhost:8765/health/live
 ```
 
 ---
@@ -55,7 +55,7 @@ Readiness probe. Checks database connectivity and FFmpeg availability.
 **Example:**
 
 ```bash
-curl http://localhost:8000/health/ready
+curl http://localhost:8765/health/ready
 ```
 
 ---
@@ -104,7 +104,7 @@ List all videos in the library with pagination.
 **Example:**
 
 ```bash
-curl "http://localhost:8000/api/v1/videos?limit=10&offset=0"
+curl "http://localhost:8765/api/v1/videos?limit=10&offset=0"
 ```
 
 ---
@@ -150,7 +150,7 @@ Search videos by filename or path.
 **Example:**
 
 ```bash
-curl "http://localhost:8000/api/v1/videos/search?q=interview&limit=5"
+curl "http://localhost:8765/api/v1/videos/search?q=interview&limit=5"
 ```
 
 ---
@@ -193,7 +193,7 @@ Get a single video by its ID.
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/videos/vid-abc123
+curl http://localhost:8765/api/v1/videos/vid-abc123
 ```
 
 ---
@@ -217,7 +217,7 @@ Get the thumbnail image for a video. Returns a JPEG image. If no thumbnail has b
 **Example:**
 
 ```bash
-curl -o thumbnail.jpg http://localhost:8000/api/v1/videos/vid-abc123/thumbnail
+curl -o thumbnail.jpg http://localhost:8765/api/v1/videos/vid-abc123/thumbnail
 ```
 
 ---
@@ -247,7 +247,7 @@ Submit an asynchronous directory scan job. The server discovers video files usin
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/videos/scan \
+curl -X POST http://localhost:8765/api/v1/videos/scan \
   -H "Content-Type: application/json" \
   -d '{"path": "/media/videos", "recursive": true}'
 ```
@@ -282,10 +282,10 @@ Remove a video from the library. Optionally delete the source file from disk.
 
 ```bash
 # Remove from library only
-curl -X DELETE http://localhost:8000/api/v1/videos/vid-abc123
+curl -X DELETE http://localhost:8765/api/v1/videos/vid-abc123
 
 # Remove from library and delete file
-curl -X DELETE "http://localhost:8000/api/v1/videos/vid-abc123?delete_file=true"
+curl -X DELETE "http://localhost:8765/api/v1/videos/vid-abc123?delete_file=true"
 ```
 
 ---
@@ -325,7 +325,7 @@ List all projects with pagination.
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/projects
+curl http://localhost:8765/api/v1/projects
 ```
 
 ---
@@ -360,7 +360,7 @@ Create a new editing project.
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects \
+curl -X POST http://localhost:8765/api/v1/projects \
   -H "Content-Type: application/json" \
   -d '{"name": "My Edit", "output_width": 1920, "output_height": 1080, "output_fps": 30}'
 ```
@@ -392,7 +392,7 @@ Get a project by ID.
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/projects/proj-xyz789
+curl http://localhost:8765/api/v1/projects/proj-xyz789
 ```
 
 ---
@@ -410,7 +410,7 @@ Delete a project.
 **Example:**
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/projects/proj-xyz789
+curl -X DELETE http://localhost:8765/api/v1/projects/proj-xyz789
 ```
 
 ---
@@ -453,7 +453,7 @@ List all clips in a project, ordered by timeline position.
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/projects/proj-xyz789/clips
+curl http://localhost:8765/api/v1/projects/proj-xyz789/clips
 ```
 
 ---
@@ -495,7 +495,7 @@ Add a clip to a project's timeline. All time values are in **frames** (integers)
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-xyz789/clips \
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips \
   -H "Content-Type: application/json" \
   -d '{
     "source_video_id": "vid-abc123",
@@ -531,7 +531,7 @@ Returns the updated `ClipResponse` object.
 **Example:**
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/projects/proj-xyz789/clips/clip-def456 \
+curl -X PATCH http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456 \
   -H "Content-Type: application/json" \
   -d '{"in_point": 150, "out_point": 1050}'
 ```
@@ -551,7 +551,7 @@ Remove a clip from a project.
 **Example:**
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/projects/proj-xyz789/clips/clip-def456
+curl -X DELETE http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456
 ```
 
 ---
@@ -604,7 +604,7 @@ Get the status of an asynchronous job (e.g., a video scan).
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+curl http://localhost:8765/api/v1/jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
 ---
@@ -654,7 +654,7 @@ List all available effects with their metadata, JSON parameter schemas, AI hints
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/effects
+curl http://localhost:8765/api/v1/effects
 ```
 
 ---
@@ -687,7 +687,7 @@ Preview the FFmpeg filter string that would be generated for an effect, without 
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/effects/preview \
+curl -X POST http://localhost:8765/api/v1/effects/preview \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "text_overlay",
@@ -727,7 +727,7 @@ Apply an effect to a clip. The effect is appended to the clip's effect stack.
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-xyz789/clips/clip-def456/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/effects \
   -H "Content-Type: application/json" \
   -d '{"effect_type": "video_fade", "parameters": {"fade_type": "in", "duration": 1.5}}'
 ```
@@ -768,7 +768,7 @@ Update an effect at a specific index in the clip's effect stack. The effect type
 **Example:**
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/projects/proj-xyz789/clips/clip-def456/effects/0 \
+curl -X PATCH http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/effects/0 \
   -H "Content-Type: application/json" \
   -d '{"parameters": {"fade_type": "in", "duration": 2.0}}'
 ```
@@ -795,7 +795,7 @@ Remove an effect at a specific index from the clip's effect stack. Remaining eff
 **Example:**
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/projects/proj-xyz789/clips/clip-def456/effects/0
+curl -X DELETE http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/effects/0
 ```
 
 ---
@@ -837,7 +837,7 @@ Apply a transition between two adjacent clips in the project timeline. The sourc
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-xyz789/effects/transition \
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/effects/transition \
   -H "Content-Type: application/json" \
   -d '{
     "source_clip_id": "clip-001",
@@ -858,7 +858,7 @@ Connect to the WebSocket endpoint for real-time event notifications.
 **Connection:**
 
 ```
-ws://localhost:8000/ws
+ws://localhost:8765/ws
 ```
 
 **Events sent by server:**
@@ -889,7 +889,7 @@ import asyncio
 import websockets
 
 async def listen():
-    async with websockets.connect("ws://localhost:8000/ws") as ws:
+    async with websockets.connect("ws://localhost:8765/ws") as ws:
         while True:
             message = await ws.recv()
             print(message)
@@ -908,7 +908,7 @@ Prometheus-compatible metrics endpoint. Exposes request counts, latencies, effec
 **Example:**
 
 ```bash
-curl http://localhost:8000/metrics
+curl http://localhost:8765/metrics
 ```
 
 ---

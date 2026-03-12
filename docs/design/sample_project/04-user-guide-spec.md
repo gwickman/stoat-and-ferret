@@ -30,10 +30,10 @@ Contents:
 Commands to show:
 ```bash
 # Seed the sample project
-python scripts/seed_sample_project.py http://localhost:8000
+python scripts/seed_sample_project.py http://localhost:8765
 
 # Open the GUI to see the result
-# Navigate to: http://localhost:8000/gui/projects
+# Navigate to: http://localhost:8765/gui/projects
 ```
 
 Include sample terminal output showing the summary message (project ID, counts, output settings).
@@ -78,22 +78,22 @@ How-to instructions for:
 - Viewing the project in the GUI: navigate to Projects page, click "Running Montage"
 - Inspecting clips via API:
   ```bash
-  curl http://localhost:8000/api/v1/projects | python -m json.tool
+  curl http://localhost:8765/api/v1/projects | python -m json.tool
   # Find the project ID, then:
-  curl http://localhost:8000/api/v1/projects/{id}/clips | python -m json.tool
+  curl http://localhost:8765/api/v1/projects/{id}/clips | python -m json.tool
   ```
 - Viewing effects on a clip: examine the `effects` array in the clip response
-- Viewing the effect catalog: `curl http://localhost:8000/api/v1/effects`
+- Viewing the effect catalog: `curl http://localhost:8765/api/v1/effects`
 
 ### 6. Resetting the Sample Project
 
 Commands to show:
 ```bash
 # Delete and recreate
-python scripts/seed_sample_project.py http://localhost:8000 --force
+python scripts/seed_sample_project.py http://localhost:8765 --force
 
 # Manual deletion via API
-curl -X DELETE http://localhost:8000/api/v1/projects/{id}
+curl -X DELETE http://localhost:8765/api/v1/projects/{id}
 ```
 
 Note: Scanned videos persist in the library after project deletion. Only the project, its clips, and their effects are removed.

@@ -1497,10 +1497,10 @@ RUN pip install /tmp/*.whl
 RUN useradd -m -U appuser
 USER appuser
 
-EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=10s CMD curl -f http://localhost:8000/health/live || exit 1
+EXPOSE 8765
+HEALTHCHECK --interval=30s --timeout=10s CMD curl -f http://localhost:8765/health/live || exit 1
 
-CMD ["uvicorn", "video_editor.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "video_editor.api:app", "--host", "0.0.0.0", "--port", "8765"]
 ```
 
 **CI Pipeline:**

@@ -1127,22 +1127,22 @@ cd gui && npm run dev
 
 ```bash
 # Health check (includes Rust core)
-curl http://localhost:8000/health/ready
+curl http://localhost:8765/health/ready
 
 # System info (shows versions)
-curl http://localhost:8000/system/info
+curl http://localhost:8765/system/info
 
 # Discover effects (for AI integration)
-curl http://localhost:8000/effects
+curl http://localhost:8765/effects
 
 # Scan videos (async - returns job ID)
-curl -X POST http://localhost:8000/videos/scan \
+curl -X POST http://localhost:8765/videos/scan \
   -H "Content-Type: application/json" \
   -d '{"path": "/path/to/videos"}'
 # Returns: {"job_id": "..."}
 
 # Poll for scan results
-curl http://localhost:8000/jobs/{job_id}
+curl http://localhost:8765/jobs/{job_id}
 ```
 
 ---

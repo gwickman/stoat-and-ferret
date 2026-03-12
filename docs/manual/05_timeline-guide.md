@@ -33,7 +33,7 @@ All edits are non-destructive. Source video files are never modified. Clips refe
 Before you can add clips to a project, you need to scan video files into the library:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/videos/scan \
+curl -X POST http://localhost:8765/api/v1/videos/scan \
   -H "Content-Type: application/json" \
   -d '{"path": "/path/to/media", "recursive": true}'
 ```
@@ -48,7 +48,7 @@ The scan runs asynchronously. It:
 Poll the job status:
 
 ```bash
-curl http://localhost:8000/api/v1/jobs/{job_id}
+curl http://localhost:8765/api/v1/jobs/{job_id}
 ```
 
 When complete, the result shows how many files were processed:
@@ -76,19 +76,19 @@ When configured, scan requests for paths outside these roots receive a `PATH_NOT
 List all videos:
 
 ```bash
-curl "http://localhost:8000/api/v1/videos?limit=20&offset=0"
+curl "http://localhost:8765/api/v1/videos?limit=20&offset=0"
 ```
 
 Search by filename or path:
 
 ```bash
-curl "http://localhost:8000/api/v1/videos/search?q=interview"
+curl "http://localhost:8765/api/v1/videos/search?q=interview"
 ```
 
 Get details for a specific video:
 
 ```bash
-curl http://localhost:8000/api/v1/videos/vid-abc123
+curl http://localhost:8765/api/v1/videos/vid-abc123
 ```
 
 The `VideoResponse` includes all probed metadata:
@@ -117,13 +117,13 @@ The `VideoResponse` includes all probed metadata:
 Remove from the library database only:
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/videos/vid-abc123
+curl -X DELETE http://localhost:8765/api/v1/videos/vid-abc123
 ```
 
 Remove from the library and delete the source file from disk:
 
 ```bash
-curl -X DELETE "http://localhost:8000/api/v1/videos/vid-abc123?delete_file=true"
+curl -X DELETE "http://localhost:8765/api/v1/videos/vid-abc123?delete_file=true"
 ```
 
 ## Projects
@@ -133,7 +133,7 @@ A project defines output settings and contains a timeline of clips. Create a pro
 ### Creating a Project
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects \
+curl -X POST http://localhost:8765/api/v1/projects \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Conference Highlights",
@@ -166,19 +166,19 @@ Choose output settings that match your target delivery format. Common presets:
 List all projects:
 
 ```bash
-curl http://localhost:8000/api/v1/projects
+curl http://localhost:8765/api/v1/projects
 ```
 
 Get a specific project:
 
 ```bash
-curl http://localhost:8000/api/v1/projects/proj-xyz789
+curl http://localhost:8765/api/v1/projects/proj-xyz789
 ```
 
 Delete a project:
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/projects/proj-xyz789
+curl -X DELETE http://localhost:8765/api/v1/projects/proj-xyz789
 ```
 
 ## Clips
@@ -188,7 +188,7 @@ Clips are the building blocks of a timeline. Each clip references a source video
 ### Adding Clips
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-xyz789/clips \
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips \
   -H "Content-Type: application/json" \
   -d '{
     "source_video_id": "vid-abc123",
@@ -235,17 +235,17 @@ Here is an example of building a timeline with three clips:
 
 ```bash
 # Clip 1: Intro (frames 0-900 of video A, starting at timeline position 0)
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips \
   -H "Content-Type: application/json" \
   -d '{"source_video_id": "vid-A", "in_point": 0, "out_point": 900, "timeline_position": 0}'
 
 # Clip 2: Main content (frames 150-4500 of video B, starting at position 900)
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips \
   -H "Content-Type: application/json" \
   -d '{"source_video_id": "vid-B", "in_point": 150, "out_point": 4500, "timeline_position": 900}'
 
 # Clip 3: Outro (frames 0-600 of video C, starting at position 5250)
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips \
   -H "Content-Type: application/json" \
   -d '{"source_video_id": "vid-C", "in_point": 0, "out_point": 600, "timeline_position": 5250}'
 ```
@@ -261,12 +261,12 @@ Update any combination of `in_point`, `out_point`, and `timeline_position`:
 
 ```bash
 # Trim the start of clip 2
-curl -X PATCH http://localhost:8000/api/v1/projects/proj-1/clips/clip-002 \
+curl -X PATCH http://localhost:8765/api/v1/projects/proj-1/clips/clip-002 \
   -H "Content-Type: application/json" \
   -d '{"in_point": 300}'
 
 # Move clip 3 to a new timeline position
-curl -X PATCH http://localhost:8000/api/v1/projects/proj-1/clips/clip-003 \
+curl -X PATCH http://localhost:8765/api/v1/projects/proj-1/clips/clip-003 \
   -H "Content-Type: application/json" \
   -d '{"timeline_position": 5400}'
 ```
@@ -278,7 +278,7 @@ Only provided fields are modified. The update is re-validated against the source
 View all clips in a project:
 
 ```bash
-curl http://localhost:8000/api/v1/projects/proj-1/clips
+curl http://localhost:8765/api/v1/projects/proj-1/clips
 ```
 
 Response:
@@ -316,7 +316,7 @@ Response:
 ### Removing Clips
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/projects/proj-1/clips/clip-002
+curl -X DELETE http://localhost:8765/api/v1/projects/proj-1/clips/clip-002
 ```
 
 Returns 204 No Content on success.

@@ -17,7 +17,7 @@ Each effect produces an FFmpeg filter string (e.g., `drawtext=text='Hello':fonts
 The discovery endpoint returns everything an AI agent or developer needs to use an effect:
 
 ```bash
-curl http://localhost:8000/api/v1/effects
+curl http://localhost:8765/api/v1/effects
 ```
 
 Each effect entry includes:
@@ -53,7 +53,7 @@ Add text overlays to video with customizable font, position, and styling. Uses F
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "text_overlay",
@@ -88,7 +88,7 @@ Adjust video and audio playback speed. Uses FFmpeg's `setpts` filter for video a
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "speed_control",
@@ -117,7 +117,7 @@ Adjust audio volume with linear or dB control. Uses FFmpeg's `volume` filter.
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "volume",
@@ -143,7 +143,7 @@ Apply fade in or fade out to audio. Uses FFmpeg's `afade` filter.
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "audio_fade",
@@ -170,7 +170,7 @@ Apply fade in or fade out to video. Uses FFmpeg's `fade` filter.
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "video_fade",
@@ -196,7 +196,7 @@ Mix multiple audio input streams into a single output. Uses FFmpeg's `amix` filt
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "audio_mix",
@@ -222,7 +222,7 @@ Automatically lower music volume during speech using sidechain compression. Uses
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "audio_ducking",
@@ -249,7 +249,7 @@ Crossfade between two video inputs with a selectable transition effect. Uses FFm
 **Example (applied as a transition between clips):**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/effects/transition \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -H "Content-Type: application/json" \
   -d '{
     "source_clip_id": "clip-001",
@@ -279,7 +279,7 @@ Crossfade between two audio inputs with configurable fade curves. Uses FFmpeg's 
 **Example (applied as a transition between clips):**
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/effects/transition \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -H "Content-Type: application/json" \
   -d '{
     "source_clip_id": "clip-001",
@@ -296,7 +296,7 @@ curl -X POST http://localhost:8000/api/v1/projects/proj-1/effects/transition \
 Before applying an effect, you can preview the generated filter string:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/effects/preview \
+curl -X POST http://localhost:8765/api/v1/effects/preview \
   -H "Content-Type: application/json" \
   -d '{
     "effect_type": "speed_control",
@@ -322,7 +322,7 @@ Each clip maintains an ordered list of effects (the "effect stack"). Effects are
 ### View a Clip's Effects
 
 ```bash
-curl http://localhost:8000/api/v1/projects/proj-1/clips/clip-1
+curl http://localhost:8765/api/v1/projects/proj-1/clips/clip-1
 ```
 
 The `effects` field in the response contains the full stack:
@@ -341,7 +341,7 @@ The `effects` field in the response contains the full stack:
 Change the parameters of effect at index 0:
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects/0 \
+curl -X PATCH http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects/0 \
   -H "Content-Type: application/json" \
   -d '{"parameters": {"fade_type": "in", "duration": 2.0}}'
 ```
@@ -353,7 +353,7 @@ The effect type is preserved -- only parameters are updated. The filter string i
 Delete effect at index 1:
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/projects/proj-1/clips/clip-1/effects/1
+curl -X DELETE http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects/1
 ```
 
 After deletion, remaining effects shift down to fill the gap.
@@ -363,7 +363,7 @@ After deletion, remaining effects shift down to fill the gap.
 Transitions connect two adjacent clips with a crossfade effect. Use the transition endpoint:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects/proj-1/effects/transition \
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -H "Content-Type: application/json" \
   -d '{
     "source_clip_id": "clip-001",

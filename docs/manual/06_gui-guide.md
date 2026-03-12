@@ -7,7 +7,7 @@ Stoat & Ferret includes a web-based GUI built with React. It provides a visual i
 Start the server and open your browser to:
 
 ```
-http://localhost:8000/gui/
+http://localhost:8765/gui/
 ```
 
 The GUI is served as static files from the `gui/dist` directory. The path is configurable via the `STOAT_GUI_STATIC_PATH` environment variable.
