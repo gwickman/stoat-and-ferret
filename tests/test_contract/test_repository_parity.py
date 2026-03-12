@@ -34,6 +34,7 @@ from stoat_ferret.db.schema import (
     CLIPS_PROJECT_INDEX,
     CLIPS_TABLE,
     CLIPS_TIMELINE_INDEX,
+    PROJECTS_AUDIO_MIX_COLUMNS,
     PROJECTS_TABLE,
     VIDEOS_FTS,
     VIDEOS_FTS_DELETE_TRIGGER,
@@ -58,6 +59,9 @@ async def create_all_tables(conn: aiosqlite.Connection) -> None:
     await conn.execute(CLIPS_TABLE)
     await conn.execute(CLIPS_PROJECT_INDEX)
     await conn.execute(CLIPS_TIMELINE_INDEX)
+    # Apply migrations for columns added after initial schema
+    for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
+        await conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
     await conn.commit()
 
 
@@ -249,7 +253,7 @@ class TestClipParity:
         # Insert FK references for SQLite
         await sqlite_conn.execute(
             "INSERT INTO projects VALUES "
-            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01')"
+            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01',NULL)"
         )
         await sqlite_conn.execute(
             "INSERT INTO videos VALUES ('video-1','/t.mp4','t.mp4',1000,24,1,1920,1080,"
@@ -276,7 +280,7 @@ class TestClipParity:
         """Both implementations return clips in the same timeline order."""
         await sqlite_conn.execute(
             "INSERT INTO projects VALUES "
-            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01')"
+            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01',NULL)"
         )
         await sqlite_conn.execute(
             "INSERT INTO videos VALUES ('video-1','/t.mp4','t.mp4',1000,24,1,1920,1080,"
