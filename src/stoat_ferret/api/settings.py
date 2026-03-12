@@ -86,6 +86,20 @@ class Settings(BaseSettings):
         description="Maximum log file size in bytes before rotation (default 10MB)",
     )
 
+    # Batch rendering
+    batch_parallel_limit: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Maximum number of batch render jobs to execute in parallel",
+    )
+    batch_max_jobs: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum number of jobs allowed in a single batch request",
+    )
+
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,
