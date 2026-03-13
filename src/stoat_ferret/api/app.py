@@ -20,6 +20,7 @@ from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import (
     audio,
+    batch,
     compose,
     effects,
     filesystem,
@@ -202,6 +203,7 @@ def create_app(
     app.include_router(audio.router)
     app.include_router(filesystem.router)
     app.include_router(timeline.router)
+    app.include_router(batch.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)
