@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import TimelineCanvas from '../components/TimelineCanvas'
 import { useComposeStore } from '../stores/composeStore'
 import { useTimelineStore } from '../stores/timelineStore'
 
@@ -49,20 +50,9 @@ export default function TimelinePage() {
         </p>
       ) : (
         <div data-testid="timeline-content">
-          {tracks.length > 0 && (
-            <div data-testid="timeline-tracks">
-              <h3 className="mb-2 text-lg font-medium">
-                Tracks ({tracks.length}) &middot; {duration.toFixed(1)}s
-              </h3>
-              <ul className="space-y-1">
-                {tracks.map((track) => (
-                  <li key={track.id} className="rounded bg-gray-800 px-3 py-2 text-sm">
-                    {track.label} ({track.track_type}) &middot; {track.clips.length} clips
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div data-testid="timeline-tracks">
+            <TimelineCanvas tracks={tracks} duration={duration} />
+          </div>
           {presets.length > 0 && (
             <div className="mt-4" data-testid="timeline-presets">
               <h3 className="mb-2 text-lg font-medium">Layout Presets ({presets.length})</h3>
