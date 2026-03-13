@@ -23,13 +23,26 @@ Detailed documentation of individual source modules organized by component:
 
 Eight component documents synthesizing code-level details into architectural component descriptions with interfaces, responsibilities, and inter-component relationships.
 
-### Container Level
+### Container Level (`Container/`)
 
-See [docs/ARCHITECTURE.md](../ARCHITECTURE.md) for container-level architecture.
+Two documents describing deployment containers, their hosted components, and inter-container interfaces:
 
-### Context Level
+| File | Description |
+|------|-------------|
+| `containers.md` | Container diagram, container descriptions, component mapping, WebSocket events |
+| `interfaces.md` | Detailed inter-container interface documentation (REST API, WebSocket, database, FFmpeg) |
 
-See [docs/design/02-architecture.md](../design/02-architecture.md) for system context.
+See also [docs/ARCHITECTURE.md](../ARCHITECTURE.md) for a high-level architecture overview.
+
+### Context Level (`Context/`)
+
+System context showing the system boundary, personas, capabilities, and external dependencies:
+
+| File | Description |
+|------|-------------|
+| `system-context.md` | System context diagram, personas, capability summary, external dependencies |
+
+See also [docs/design/02-architecture.md](../design/02-architecture.md) for detailed architecture specification.
 
 ## Version History
 
