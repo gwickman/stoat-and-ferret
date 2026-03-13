@@ -4,6 +4,61 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v017] - 2026-03-13
+
+Composition & Audio API + Batch. Delivers composition layout API with preset discovery and filter preview, audio mix configuration endpoints, WebSocket broadcast events for composition mutations, batch rendering with semaphore concurrency, and project version persistence with save/restore/list operations.
+
+### Added
+
+- **Configurable Server Port**
+  - Default port changed from 8000 to 8765 to avoid conflicts
+  - Wired through pydantic-settings with `SF_PORT` environment variable override
+  - Updated 6 code/config files and 17 documentation files
+
+- **Composition Layout API**
+  - `GET /api/v1/compose/presets` endpoint returning all 7 Rust LayoutPreset variants with metadata
+  - `POST /api/v1/projects/{id}/compose/layout` accepting preset or custom positions
+  - FFmpeg filter preview generation via Rust `build_overlay_filter()` delegation
+  - 30 tests across preset discovery and layout application
+
+- **Audio Mix Configuration**
+  - `PUT /api/v1/projects/{id}/audio/mix` for persisting audio mix settings
+  - `POST /api/v1/projects/{id}/audio/mix/preview` for FFmpeg filter preview
+  - Per-track volume, fade-in/fade-out, master volume, and normalize controls
+  - Rust `AudioMixSpec` filter generation with `VolumeBuilder` semicolon concatenation
+  - `audio_mix_json` column for JSON persistence following `transitions_json` pattern
+
+- **Composition WebSocket Events**
+  - 4 new `EventType` enums: `TIMELINE_UPDATED`, `LAYOUT_APPLIED`, `AUDIO_MIX_CHANGED`, `TRANSITION_APPLIED`
+  - Broadcast wired into 8 mutation routes across timeline, compose, and audio routers
+  - DRY `_broadcast()` helper pattern for consistent event dispatch
+
+- **Batch Render Endpoint**
+  - `POST /api/v1/render/batch` with `asyncio.Semaphore` concurrency control
+  - `GET /api/v1/render/batch/{batch_id}` for batch status polling
+  - Configurable `batch_parallel_limit` and `batch_max_jobs` settings with bounded ranges
+
+- **Version Persistence**
+  - `project_versions` table with SHA-256 checksum integrity verification
+  - `AsyncVersionRepository` with SQLite and in-memory implementations
+  - Contract tests ensuring parity between both repository backends
+  - Non-destructive restore pattern (creates new version, preserves full history)
+
+- **Version API Endpoints**
+  - `GET /api/v1/projects/{id}/versions` with pagination support
+  - `POST /api/v1/projects/{id}/versions/{version}/restore` with checksum validation
+
+### Changed
+
+- Default API port from 8000 to 8765 across all configuration and documentation
+- Project model extended with `audio_mix_json` column for audio mix persistence
+- Database schema extended with `project_versions` table for version storage
+- Timeline, compose, and audio routers extended with WebSocket broadcast calls
+
+### Fixed
+
+- Clip repository SQL for timeline fields (`track_id`, `timeline_start`, `timeline_end`) now correctly included in UPDATE statements
+
 ## [v016] - 2026-03-11
 
 Composition Graph + Timeline API. First full Phase 3 version delivering the Rust composition graph builder, multi-track audio mixing specification, batch progress calculator, timeline data layer with persistent storage, and complete timeline REST API with transition support.
