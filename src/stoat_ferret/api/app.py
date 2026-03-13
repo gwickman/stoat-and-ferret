@@ -44,6 +44,7 @@ from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.db.timeline_repository import AsyncTimelineRepository
+from stoat_ferret.db.version_repository import AsyncVersionRepository
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
 from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
@@ -132,6 +133,7 @@ def create_app(
     project_repository: AsyncProjectRepository | None = None,
     clip_repository: AsyncClipRepository | None = None,
     timeline_repository: AsyncTimelineRepository | None = None,
+    version_repository: AsyncVersionRepository | None = None,
     job_queue: AsyncioJobQueue | None = None,
     ws_manager: ConnectionManager | None = None,
     effect_registry: EffectRegistry | None = None,
@@ -150,6 +152,7 @@ def create_app(
         project_repository: Optional project repository for dependency injection.
         clip_repository: Optional clip repository for dependency injection.
         timeline_repository: Optional timeline repository for dependency injection.
+        version_repository: Optional version repository for dependency injection.
         job_queue: Optional job queue for dependency injection.
         ws_manager: Optional WebSocket connection manager for dependency injection.
         effect_registry: Optional effect registry for dependency injection.
@@ -180,6 +183,7 @@ def create_app(
         app.state.project_repository = project_repository
         app.state.clip_repository = clip_repository
         app.state.timeline_repository = timeline_repository
+        app.state.version_repository = version_repository
         app.state.job_queue = job_queue
 
     if audit_logger is not None:

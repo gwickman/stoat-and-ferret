@@ -101,8 +101,9 @@ class AsyncSQLiteClipRepository:
             await self._conn.execute(
                 """
                 INSERT INTO clips (id, project_id, source_video_id, in_point, out_point,
-                                  timeline_position, effects_json, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  timeline_position, effects_json, created_at, updated_at,
+                                  track_id, timeline_start, timeline_end)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     clip.id,
@@ -114,6 +115,9 @@ class AsyncSQLiteClipRepository:
                     effects_json,
                     clip.created_at.isoformat(),
                     clip.updated_at.isoformat(),
+                    clip.track_id,
+                    clip.timeline_start,
+                    clip.timeline_end,
                 ),
             )
             await self._conn.commit()
@@ -143,7 +147,8 @@ class AsyncSQLiteClipRepository:
             """
             UPDATE clips SET
                 in_point = ?, out_point = ?, timeline_position = ?,
-                effects_json = ?, updated_at = ?
+                effects_json = ?, updated_at = ?,
+                track_id = ?, timeline_start = ?, timeline_end = ?
             WHERE id = ?
             """,
             (
@@ -152,6 +157,9 @@ class AsyncSQLiteClipRepository:
                 clip.timeline_position,
                 effects_json,
                 clip.updated_at.isoformat(),
+                clip.track_id,
+                clip.timeline_start,
+                clip.timeline_end,
                 clip.id,
             ),
         )

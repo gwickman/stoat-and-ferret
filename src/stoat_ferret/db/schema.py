@@ -13,6 +13,7 @@ TABLE_AUDIT_LOG = "audit_log"
 TABLE_PROJECTS = "projects"
 TABLE_CLIPS = "clips"
 TABLE_TRACKS = "tracks"
+TABLE_PROJECT_VERSIONS = "project_versions"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -135,6 +136,23 @@ TRACKS_PROJECT_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_tracks_project ON tracks(project_id);
 """
 
+PROJECT_VERSIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS project_versions (
+    id INTEGER PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    timeline_json TEXT NOT NULL,
+    checksum TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(project_id, version_number)
+);
+"""
+
+PROJECT_VERSIONS_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_project_versions_project
+    ON project_versions(project_id, version_number);
+"""
+
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
 CLIPS_TIMELINE_COLUMNS = [
@@ -205,6 +223,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(CLIPS_TIMELINE_INDEX)
     cursor.execute(TRACKS_TABLE)
     cursor.execute(TRACKS_PROJECT_INDEX)
+    cursor.execute(PROJECT_VERSIONS_TABLE)
+    cursor.execute(PROJECT_VERSIONS_PROJECT_INDEX)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     conn.commit()
@@ -265,6 +285,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(CLIPS_TIMELINE_INDEX)
     await db.execute(TRACKS_TABLE)
     await db.execute(TRACKS_PROJECT_INDEX)
+    await db.execute(PROJECT_VERSIONS_TABLE)
+    await db.execute(PROJECT_VERSIONS_PROJECT_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await db.commit()

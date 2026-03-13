@@ -218,3 +218,47 @@ class TestAsyncClipDelete:
         """Deleting nonexistent clip returns False."""
         result = await clip_repository.delete("nonexistent")
         assert result is False
+
+
+@pytest.mark.contract
+class TestAsyncClipTimelineFields:
+    """Regression tests for track_id, timeline_start, timeline_end persistence."""
+
+    async def test_add_persists_timeline_fields(
+        self, clip_repository: AsyncClipRepositoryType
+    ) -> None:
+        """add() persists track_id, timeline_start, timeline_end."""
+        clip = make_test_clip(
+            track_id="track-1",
+            timeline_start=1.5,
+            timeline_end=3.0,
+        )
+        await clip_repository.add(clip)
+        retrieved = await clip_repository.get(clip.id)
+
+        assert retrieved is not None
+        assert retrieved.track_id == "track-1"
+        assert retrieved.timeline_start == 1.5
+        assert retrieved.timeline_end == 3.0
+
+    async def test_update_persists_timeline_fields(
+        self, clip_repository: AsyncClipRepositoryType
+    ) -> None:
+        """update() persists track_id, timeline_start, timeline_end."""
+        clip = make_test_clip()
+        await clip_repository.add(clip)
+
+        updated = replace(
+            clip,
+            track_id="track-2",
+            timeline_start=5.0,
+            timeline_end=10.0,
+            updated_at=datetime.now(timezone.utc),
+        )
+        await clip_repository.update(updated)
+        retrieved = await clip_repository.get(clip.id)
+
+        assert retrieved is not None
+        assert retrieved.track_id == "track-2"
+        assert retrieved.timeline_start == 5.0
+        assert retrieved.timeline_end == 10.0
