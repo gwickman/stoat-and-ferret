@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
 import TimelineCanvas from '../components/TimelineCanvas'
+import LayoutSelector from '../components/LayoutSelector'
+import LayoutPreview from '../components/LayoutPreview'
+import LayerStack from '../components/LayerStack'
 import { useComposeStore } from '../stores/composeStore'
 import { useTimelineStore } from '../stores/timelineStore'
 
@@ -55,14 +58,16 @@ export default function TimelinePage() {
           </div>
           {presets.length > 0 && (
             <div className="mt-4" data-testid="timeline-presets">
-              <h3 className="mb-2 text-lg font-medium">Layout Presets ({presets.length})</h3>
-              <ul className="space-y-1">
-                {presets.map((preset) => (
-                  <li key={preset.name} className="rounded bg-gray-800 px-3 py-2 text-sm">
-                    {preset.name} &mdash; {preset.description}
-                  </li>
-                ))}
-              </ul>
+              <h3 className="mb-2 text-lg font-medium">Layout</h3>
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="lg:col-span-2 space-y-4">
+                  <LayoutSelector />
+                  <LayoutPreview />
+                </div>
+                <div>
+                  <LayerStack />
+                </div>
+              </div>
             </div>
           )}
         </div>

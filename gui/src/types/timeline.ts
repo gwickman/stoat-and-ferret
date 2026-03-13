@@ -32,6 +32,15 @@ export interface TimelineResponse {
   version: number
 }
 
+/** A normalized position for a video element in a layout. */
+export interface LayoutPosition {
+  x: number
+  y: number
+  width: number
+  height: number
+  z_index: number
+}
+
 /** A layout preset from the compose API. */
 export interface LayoutPreset {
   name: string
