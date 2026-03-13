@@ -52,19 +52,24 @@ Authorization: Bearer <token>
 
 ### Endpoint Group Summary
 
-| Group | Purpose |
-|-------|---------|
-| `/videos` | Library management (CRUD, scan, search) |
-| `/jobs` | Async job status polling |
-| `/projects` | Project/timeline management |
-| `/clips` | Clip operations within projects |
-| `/effects` | Effect application, transitions, and discovery |
-| `/render` | Export job management |
-| `/filesystem` | Filesystem browsing (directory listing) |
-| `/health` | Health checks (liveness, readiness) |
-| `/system` | System information |
-| `/ws` | WebSocket endpoint for real-time events |
-| `/gui` | Static file serving for React frontend |
+| Group | Purpose | Phase |
+|-------|---------|-------|
+| `/videos` | Library management (CRUD, scan, search) | 1 |
+| `/jobs` | Async job status polling | 1 |
+| `/projects` | Project/timeline management | 1 |
+| `/clips` | Clip operations within projects | 1 |
+| `/effects` | Effect application, transitions, and discovery | 2 |
+| `/render` | Export job management | 1 |
+| `/filesystem` | Filesystem browsing (directory listing) | 1 |
+| `/health` | Health checks (liveness, readiness) | 1 |
+| `/system` | System information | 1 |
+| `/ws` | WebSocket endpoint for real-time events | 1 |
+| `/gui` | Static file serving for React frontend | 1 |
+| `/projects/{id}/timeline` | Timeline track and clip management | 3 |
+| `/compose` | Layout presets and spatial composition | 3 |
+| `/projects/{id}/audio/mix` | Audio mix configuration | 3 |
+| `/render/batch` | Batch render job submission and progress | 3 |
+| `/projects/{id}/versions` | Project version history and restore | 3 |
 
 ---
 
@@ -1262,6 +1267,460 @@ GET /render/jobs
 
 ---
 
+### Timeline (Phase 3 — Composition)
+
+Timeline endpoints manage multi-track composition within a project. Tracks contain clips positioned on a timeline with Z-ordering. Transitions can be applied between adjacent clips.
+
+#### Create or Replace Timeline
+```http
+PUT /projects/{project_id}/timeline
+```
+
+**Request Body:**
+```json
+{
+  "tracks": [
+    {
+      "track_type": "video",
+      "label": "Video Track 1",
+      "z_index": 0,
+      "muted": false,
+      "locked": false
+    },
+    {
+      "track_type": "text",
+      "label": "Text Overlay",
+      "z_index": 1,
+      "muted": false,
+      "locked": false
+    },
+    {
+      "track_type": "audio",
+      "label": "Audio Track",
+      "z_index": 0,
+      "muted": false,
+      "locked": false
+    }
+  ]
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "project_id": "proj_abc123",
+  "tracks": [
+    {
+      "id": "track_001",
+      "track_type": "video",
+      "label": "Video Track 1",
+      "z_index": 0,
+      "muted": false,
+      "locked": false,
+      "clips": []
+    }
+  ],
+  "duration": 0.0,
+  "version": 1
+}
+```
+
+**WebSocket Event:** `TIMELINE_UPDATED`
+
+---
+
+#### Get Timeline
+```http
+GET /projects/{project_id}/timeline
+```
+
+**Response:** `200 OK`
+Returns the full timeline with all tracks and embedded clips.
+
+---
+
+#### Add Clip to Timeline
+```http
+POST /projects/{project_id}/timeline/clips
+```
+
+**Request Body:**
+```json
+{
+  "clip_id": "clip_001",
+  "track_id": "track_001",
+  "timeline_start": 0.0,
+  "timeline_end": 15.0
+}
+```
+
+**Response:** `201 Created`
+
+**Note:** Position calculations delegate to Rust core's `calculate_composition_positions()`.
+
+---
+
+#### Update Clip Position
+```http
+PATCH /projects/{project_id}/timeline/clips/{clip_id}
+```
+
+**Request Body (partial update):**
+```json
+{
+  "timeline_start": 5.0,
+  "timeline_end": 20.0,
+  "track_id": "track_002"
+}
+```
+
+**Response:** `200 OK`
+
+---
+
+#### Remove Clip from Timeline
+```http
+DELETE /projects/{project_id}/timeline/clips/{clip_id}
+```
+
+**Response:** `204 No Content`
+
+---
+
+#### Apply Transition
+```http
+POST /projects/{project_id}/timeline/transitions
+```
+
+**Request Body:**
+```json
+{
+  "clip_a_id": "clip_001",
+  "clip_b_id": "clip_002",
+  "transition_type": "crossfade",
+  "duration": 1.0
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "trans_001",
+  "transition_type": "crossfade",
+  "duration": 1.0,
+  "filter_string": "xfade=transition=fade:duration=1.0:offset=14.0",
+  "timeline_offset": 14.0,
+  "clips": ["clip_001", "clip_002"]
+}
+```
+
+**Validation:** Clips must be adjacent on the same track. Error code: `CLIPS_NOT_ADJACENT`.
+
+**WebSocket Event:** `TRANSITION_APPLIED`
+
+---
+
+#### Remove Transition
+```http
+DELETE /projects/{project_id}/timeline/transitions/{transition_id}
+```
+
+**Response:** `204 No Content`
+
+---
+
+### Compose (Phase 3 — Layout Presets)
+
+Layout composition endpoints for PIP, split-screen, and grid arrangements. Positions use normalized coordinates (0.0-1.0 range) converted to pixels per output resolution.
+
+#### List Layout Presets
+```http
+GET /compose/presets
+```
+
+**Response:** `200 OK`
+```json
+{
+  "presets": [
+    {
+      "name": "PipTopLeft",
+      "description": "Picture-in-picture, overlay top-left",
+      "ai_hint": "Use for commentary overlay or webcam insert",
+      "min_inputs": 2,
+      "max_inputs": 2
+    },
+    {
+      "name": "PipTopRight",
+      "description": "Picture-in-picture, overlay top-right",
+      "ai_hint": "Use for commentary overlay or webcam insert",
+      "min_inputs": 2,
+      "max_inputs": 2
+    },
+    {
+      "name": "SideBySide",
+      "description": "Two inputs side-by-side",
+      "ai_hint": "Use for comparison or before/after views",
+      "min_inputs": 2,
+      "max_inputs": 2
+    },
+    {
+      "name": "TopBottom",
+      "description": "Two inputs stacked vertically",
+      "ai_hint": "Use for vertical split comparison",
+      "min_inputs": 2,
+      "max_inputs": 2
+    },
+    {
+      "name": "Grid2x2",
+      "description": "Four inputs in 2x2 grid",
+      "ai_hint": "Use for multi-camera or surveillance-style view",
+      "min_inputs": 4,
+      "max_inputs": 4
+    }
+  ],
+  "total": 7
+}
+```
+
+**Available presets:** `PipTopLeft`, `PipTopRight`, `PipBottomLeft`, `PipBottomRight`, `SideBySide`, `TopBottom`, `Grid2x2`
+
+---
+
+#### Apply Layout
+```http
+POST /projects/{project_id}/compose/layout
+```
+
+**Request Body (preset):**
+```json
+{
+  "preset": "SideBySide",
+  "input_count": 2,
+  "output_width": 1920,
+  "output_height": 1080
+}
+```
+
+**Request Body (custom positions):**
+```json
+{
+  "positions": [
+    {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},
+    {"x": 0.7, "y": 0.05, "width": 0.25, "height": 0.25}
+  ],
+  "input_count": 2,
+  "output_width": 1920,
+  "output_height": 1080
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "positions": [
+    {"x": 0, "y": 0, "width": 960, "height": 1080, "z_index": 0},
+    {"x": 960, "y": 0, "width": 960, "height": 1080, "z_index": 1}
+  ],
+  "filter_preview": "[0:v]scale=960:1080[v0];[1:v]scale=960:1080[v1];[v0][v1]overlay=x=960:y=0"
+}
+```
+
+**Note:** Position validation and overlay filter generation handled by Rust core. Error code: `INVALID_LAYOUT_POSITION`.
+
+**WebSocket Event:** `LAYOUT_APPLIED`
+
+---
+
+### Audio Mix (Phase 3 — Multi-Track Audio)
+
+Audio mixing endpoints for configuring multi-track volume, fades, and normalization.
+
+#### Configure Audio Mix
+```http
+PUT /projects/{project_id}/audio/mix
+```
+
+**Request Body:**
+```json
+{
+  "tracks": [
+    {"volume": 1.0, "fade_in": 0.0, "fade_out": 0.0},
+    {"volume": 0.5, "fade_in": 1.0, "fade_out": 2.0}
+  ],
+  "master_volume": 1.0,
+  "normalize": true
+}
+```
+
+**Validation:**
+- Volume: 0.0-2.0 range
+- Tracks: 2-8 tracks required
+- Fade durations: non-negative seconds
+
+**Response:** `200 OK`
+```json
+{
+  "filter_preview": "amix=inputs=2:duration=longest,volume=1.0",
+  "tracks_configured": 2
+}
+```
+
+**Note:** Filter chain built by Rust `AudioMixSpec` and `VolumeBuilder`. Persists mix config on the project.
+
+**WebSocket Event:** `AUDIO_MIX_CHANGED`
+
+---
+
+#### Preview Audio Mix
+```http
+POST /audio/mix/preview
+```
+
+Same request body as PUT. Returns filter preview without persisting.
+
+**Response:** `200 OK`
+```json
+{
+  "filter_preview": "amix=inputs=2:duration=longest,volume=1.0",
+  "tracks_configured": 2
+}
+```
+
+---
+
+### Batch Render (Phase 3 — Multi-Job Rendering)
+
+Batch render endpoints for submitting multiple render jobs and tracking aggregate progress.
+
+#### Submit Batch
+```http
+POST /render/batch
+```
+
+**Request Body:**
+```json
+{
+  "jobs": [
+    {
+      "project_id": "proj_abc123",
+      "output_path": "/output/video1.mp4",
+      "quality": "high"
+    },
+    {
+      "project_id": "proj_def456",
+      "output_path": "/output/video2.mp4",
+      "quality": "medium"
+    }
+  ]
+}
+```
+
+**Response:** `202 Accepted`
+```json
+{
+  "batch_id": "batch_001",
+  "jobs_queued": 2,
+  "status": "queued"
+}
+```
+
+**Note:** Parallel execution limited by `batch_parallel_limit` setting. Jobs converted to Rust `BatchJobStatus` for progress calculation.
+
+---
+
+#### Get Batch Progress
+```http
+GET /render/batch/{batch_id}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "batch_id": "batch_001",
+  "overall_progress": 0.5,
+  "completed_jobs": 1,
+  "failed_jobs": 0,
+  "total_jobs": 2,
+  "jobs": [
+    {
+      "job_id": "job_001",
+      "project_id": "proj_abc123",
+      "status": "complete",
+      "progress": 1.0,
+      "error": null
+    },
+    {
+      "job_id": "job_002",
+      "project_id": "proj_def456",
+      "status": "running",
+      "progress": 0.45,
+      "error": null
+    }
+  ]
+}
+```
+
+**Note:** Aggregate progress calculated by Rust `calculate_batch_progress()`.
+
+---
+
+### Versions (Phase 3 — Project History)
+
+Project versioning endpoints for browsing history and restoring previous versions. Each version stores a snapshot with SHA-256 checksum for integrity validation.
+
+#### List Versions
+```http
+GET /projects/{project_id}/versions
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | int | 20 | Results per page (1-100) |
+| `offset` | int | 0 | Pagination offset |
+
+**Response:** `200 OK`
+```json
+{
+  "total": 5,
+  "limit": 20,
+  "offset": 0,
+  "versions": [
+    {
+      "version_number": 5,
+      "created_at": "2024-01-15T14:00:00Z",
+      "checksum": "sha256:abc123..."
+    },
+    {
+      "version_number": 4,
+      "created_at": "2024-01-15T13:00:00Z",
+      "checksum": "sha256:def456..."
+    }
+  ]
+}
+```
+
+---
+
+#### Restore Version
+```http
+POST /projects/{project_id}/versions/{version}/restore
+```
+
+**Response:** `200 OK`
+```json
+{
+  "restored_version": 3,
+  "new_version": 6,
+  "message": "Restored version 3 as new version 6"
+}
+```
+
+**Note:** Restore is non-destructive — creates a new version with the old version's data rather than overwriting history.
+
+---
+
 ### WebSocket (Real-Time Events)
 
 #### Connect to WebSocket
@@ -1290,6 +1749,10 @@ Establishes a WebSocket connection for receiving real-time server events. The se
 | `scan.completed` | Scan finished | `{"scanned": 47}` |
 | `project.created` | New project created | `{"project_id": "..."}` |
 | `health.status` | Health check event | `{"status": "ok"}` |
+| `TIMELINE_UPDATED` | Timeline tracks/clips changed | `{"project_id": "..."}` |
+| `TRANSITION_APPLIED` | Transition added between clips | `{"project_id": "...", "transition_id": "..."}` |
+| `LAYOUT_APPLIED` | Layout preset applied | `{"project_id": "..."}` |
+| `AUDIO_MIX_CHANGED` | Audio mix configuration updated | `{"project_id": "..."}` |
 
 ---
 

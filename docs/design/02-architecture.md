@@ -31,6 +31,11 @@ This document describes the architecture of an AI-driven video editing system de
 │  │  │  /videos   │ │ /projects  │ │  /effects  │ │  /render   │         │  │
 │  │  │  /search   │ │  /clips    │ │  /compose  │ │  /preview  │         │  │
 │  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘         │  │
+│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐        │  │
+│  │  │ /timeline  │ │  /audio    │ │ /versions  │ │ /render/   │        │  │
+│  │  │(tracks,    │ │   /mix     │ │(history,   │ │   batch    │        │  │
+│  │  │ clips)     │ │            │ │ restore)   │ │            │        │  │
+│  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘        │  │
 │  │  ┌────────────┐ ┌────────────┐                                       │  │
 │  │  │  /ws       │ │ /gui       │                                       │  │
 │  │  │ (WebSocket)│ │ (static)   │                                       │  │
@@ -46,6 +51,11 @@ This document describes the architecture of an AI-driven video editing system de
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
 │  │   Library    │  │   Timeline   │  │   Effects    │  │   Render     │    │
 │  │   Service    │  │   Service    │  │   Service    │  │   Service    │    │
+│  │  (injected)  │  │  (injected)  │  │  (injected)  │  │  (injected)  │    │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │  Compose     │  │  Audio Mix   │  │   Batch      │  │   Version    │    │
+│  │  Service     │  │  Service     │  │   Service    │  │   Service    │    │
 │  │  (injected)  │  │  (injected)  │  │  (injected)  │  │  (injected)  │    │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
 └─────────┼─────────────────┼─────────────────┼─────────────────┼────────────┘
@@ -68,6 +78,21 @@ This document describes the architecture of an AI-driven video editing system de
 │  │  │ Sanitizer  │ │   Engine   │ │ Detection  │ │    ETA     │        │  │
 │  │  │ (security) │ │ (geometry) │ │  (encode)  │ │   (calc)   │        │  │
 │  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘        │  │
+│  │  ┌──────────────────────────────────────────────────────────┐        │  │
+│  │  │              Composition Engine (Phase 3)                 │        │  │
+│  │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐           │        │  │
+│  │  │  │ Composition│ │  Overlay   │ │  Audio Mix │           │        │  │
+│  │  │  │   Graph    │ │  Builder   │ │   Builder  │           │        │  │
+│  │  │  │(timeline,  │ │(PIP, scale,│ │ (volume,   │           │        │  │
+│  │  │  │ transitions│ │ positions) │ │  fades)    │           │        │  │
+│  │  │  └────────────┘ └────────────┘ └────────────┘           │        │  │
+│  │  │  ┌────────────┐ ┌────────────┐                          │        │  │
+│  │  │  │   Batch    │ │  Layout    │                          │        │  │
+│  │  │  │  Progress  │ │  Presets   │                          │        │  │
+│  │  │  │(aggregation│ │(PIP, grid, │                          │        │  │
+│  │  │  │  calc)     │ │ split)     │                          │        │  │
+│  │  │  └────────────┘ └────────────┘                          │        │  │
+│  │  └──────────────────────────────────────────────────────────┘        │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────┬────────────────────────────────────────┘
                                      │

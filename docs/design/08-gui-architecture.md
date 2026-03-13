@@ -48,12 +48,13 @@ The GUI is served as static files from the FastAPI application:
 
 The React app uses `react-router-dom` with `BrowserRouter` rooted at `/gui`:
 
-| URL | Page Component | Description |
-|-----|----------------|-------------|
-| `/gui/` | `DashboardPage` | Operations dashboard with health and metrics |
-| `/gui/library` | `LibraryPage` | Video library browser with search |
-| `/gui/projects` | `ProjectsPage` | Project list and management |
-| `/gui/effects` | `EffectsPage` | Effect Workshop with full CRUD workflow |
+| URL | Page Component | Description | Phase |
+|-----|----------------|-------------|-------|
+| `/gui/` | `DashboardPage` | Operations dashboard with health and metrics | 1 |
+| `/gui/library` | `LibraryPage` | Video library browser with search | 1 |
+| `/gui/projects` | `ProjectsPage` | Project list and management | 1 |
+| `/gui/effects` | `EffectsPage` | Effect Workshop with full CRUD workflow | 2 |
+| `/gui/timeline` | `TimelinePage` | Timeline canvas with multi-track composition | 3 |
 
 Navigation tabs are dynamically shown/hidden based on backend endpoint availability checks.
 
@@ -301,9 +302,9 @@ Interactive effect builder with live preview, accessible at `/gui/effects`:
 - Effect stack visualization with inline edit and two-step-confirm removal
 - Full CRUD: apply (POST), update (PATCH), remove (DELETE) effects
 
-### 6. Timeline Canvas (Phase 3)
+### 6. Timeline Canvas (Phase 3) — Implemented
 
-Visual timeline for multi-track composition:
+Visual timeline for multi-track composition, accessible at `/gui/timeline`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -326,19 +327,47 @@ Visual timeline for multi-track composition:
 │           └─ Original audio ─────────────────────────────────────────┘  │
 │  ─────────────────────────────────────────────────────────────────────  │
 │                                                                          │
+│  ┌──────────────────────────────────┐  ┌──────────────────────────────┐ │
+│  │  Layout Presets                   │  │  Layout Preview (16:9)      │ │
+│  │  [PipTL] [PipTR] [PipBL] [PipBR]│  │  ┌────────────────────────┐ │ │
+│  │  [SideBySide] [TopBottom]        │  │  │ ┌──┐                   │ │ │
+│  │  [Grid2x2]                       │  │  │ │2 │     1             │ │ │
+│  │                                   │  │  │ └──┘                   │ │ │
+│  └──────────────────────────────────┘  │  └────────────────────────┘ │ │
+│                                         └──────────────────────────────┘ │
+│                                                                          │
 │  Selected: beach_sunset.mp4                                              │
 │  Duration: 15s | Effects: Text Overlay (1) | Position: 0s - 15s         │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Implemented Components:**
+
+| Component | File | Props / Behavior |
+|-----------|------|------------------|
+| `TimelinePage` | `pages/TimelinePage.tsx` | Orchestrator — uses `useTimelineStore` and `useComposeStore`, renders canvas + layout panels |
+| `TimelineCanvas` | `components/TimelineCanvas.tsx` | `tracks: Track[], duration: number` — renders time ruler, tracks, playhead; zoom 0.1-10x with scroll |
+| `TimelineClip` | `components/TimelineClip.tsx` | `clip, zoom, scrollOffset, isSelected, onSelect` — positioned via `timeToPixel()`, blue border on selection |
+| `LayoutPreview` | `components/LayoutPreview.tsx` | Uses `useComposeStore` — renders 16:9 preview with colored rectangles for each layout position, Z-index aware |
+| `LayoutSelector` | `components/LayoutSelector.tsx` | Uses `useComposeStore` — grid of preset buttons (PIP corners, SideBySide, TopBottom, Grid2x2) |
+
+**Zustand Stores:**
+
+| Store | File | State |
+|-------|------|-------|
+| `useTimelineStore` | `stores/timelineStore.ts` | `tracks`, `duration`, `version`, `isLoading`, `error`, `selectedClipId`, `playheadPosition` |
+| `useComposeStore` | `stores/composeStore.ts` | `presets`, `selectedPreset`, `customPositions`, `isLoading`, `error` |
+
 **Features:**
-- Horizontal scrolling timeline
-- Multiple tracks (video, text, audio)
-- Clip selection and properties
-- Drag-and-drop reordering (future)
-- Zoom controls
+- Horizontal scrolling timeline with time ruler
+- Multiple tracks (video, text, audio) with clip visualization
+- Clip selection with properties display
+- Zoom controls (in/out/reset, range 0.1x-10x)
 - Playhead position indicator
+- Layout preset selector with 7 presets
+- Layout preview canvas showing normalized positions as colored rectangles
+- Drag-and-drop reordering (future)
 
 ### 7. Preview Player (Phase 4)
 
@@ -568,19 +597,19 @@ interface PreviewUpdateEvent {
 - [x] Build "Apply to Clip" workflow
 - [x] Show effect stack per clip
 
-### Phase 3: Timeline Canvas
+### Phase 3: Timeline Canvas — Implemented
 
 **GUI Milestone 3.1: Visual Timeline**
-- [ ] Build horizontal timeline component
-- [ ] Implement track rendering (video, text, audio)
-- [ ] Add clip selection and properties panel
-- [ ] Create zoom and scroll controls
-- [ ] Show playhead position
+- [x] Build horizontal timeline component with time ruler
+- [x] Implement track rendering (video, text, audio)
+- [x] Add clip selection and properties panel
+- [x] Create zoom and scroll controls (0.1x-10x)
+- [x] Show playhead position indicator
 
 **GUI Milestone 3.2: Composition Preview**
-- [ ] Add layout preview for PIP/split-screen
-- [ ] Show layer ordering visualization
-- [ ] Implement preset selection UI
+- [x] Add layout preview canvas for PIP/split-screen (16:9, Z-index aware)
+- [x] Show layer ordering visualization with colored rectangles
+- [x] Implement preset selection UI (7 presets: PIP corners, SideBySide, TopBottom, Grid2x2)
 
 ### Phase 4: Preview & Theater Mode
 
@@ -677,11 +706,11 @@ stoat-and-ferret/
 │   │   │   │   ├── ClipSelector.tsx
 │   │   │   │   └── FilterPreview.tsx
 │   │   │   │
-│   │   │   ├── timeline/
-│   │   │   │   ├── TimelineCanvas.tsx
-│   │   │   │   ├── Track.tsx
-│   │   │   │   ├── Clip.tsx
-│   │   │   │   └── Playhead.tsx
+│   │   │   ├── timeline/              # Phase 3 (implemented)
+│   │   │   │   ├── TimelineCanvas.tsx  # Multi-track canvas with zoom/scroll
+│   │   │   │   ├── TimelineClip.tsx    # Individual clip with selection
+│   │   │   │   ├── LayoutPreview.tsx   # 16:9 layout visualization
+│   │   │   │   └── LayoutSelector.tsx  # Preset grid selector
 │   │   │   │
 │   │   │   ├── preview/
 │   │   │   │   ├── PreviewPlayer.tsx
@@ -713,6 +742,8 @@ stoat-and-ferret/
 │   │   │   ├── effectFormStore.ts
 │   │   │   ├── effectPreviewStore.ts
 │   │   │   ├── effectStackStore.ts
+│   │   │   ├── timelineStore.ts        # Phase 3: tracks, clips, playhead
+│   │   │   ├── composeStore.ts         # Phase 3: presets, positions
 │   │   │   └── theaterStore.ts
 │   │   │
 │   │   ├── api/
@@ -721,6 +752,9 @@ stoat-and-ferret/
 │   │   │   ├── projects.ts
 │   │   │   ├── effects.ts
 │   │   │   └── render.ts
+│   │   │
+│   │   ├── data/
+│   │   │   └── presetPositions.ts  # Phase 3: client-side preset position data
 │   │   │
 │   │   └── types/
 │   │       ├── api.ts

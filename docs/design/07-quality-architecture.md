@@ -1754,6 +1754,47 @@ Each subsequent phase must maintain and extend quality infrastructure:
 - **Black box tests for each new workflow/feature**
 - **Recording fakes updated for new external interactions**
 
+### Phase 3 (Composition) Quality Patterns
+
+Phase 3 introduced composition contract tests that validate Rust-generated filter chains against real FFmpeg execution. These tests are in `tests/test_contract/test_composition_contract.py`.
+
+**Contract Test Pattern:**
+
+All composition contract tests follow the same pattern:
+1. Build filter chains using Rust core functions (e.g., `build_overlay_filter()`, `build_composition_graph()`, `AudioMixSpec`)
+2. Construct FFmpeg commands with `lavfi` synthetic inputs (color sources, sine wave generators)
+3. Execute real FFmpeg to validate the generated filter string produces valid output
+4. Assert FFmpeg exit code 0
+
+This ensures Rust-generated filters are valid FFmpeg syntax, not just syntactically plausible strings.
+
+**Test Categories:**
+
+| Category | Class | What It Validates |
+|----------|-------|-------------------|
+| Overlay filters | `TestOverlayFilterContract` | `build_overlay_filter()` + `build_scale_for_layout()` produce valid overlay positioning and time-windowed overlays |
+| Composition graphs | `TestCompositionGraphContract` | `build_composition_graph()` generates valid sequential (concat/xfade) and spatial (overlay-based layout) filter graphs |
+| Audio mixing | `TestAudioMixContract` | `AudioMixSpec.build_filter_chain()` produces valid multi-track mix filters with volume and fades |
+
+**Example — Overlay Contract Test:**
+```python
+@requires_ffmpeg
+@pytest.mark.contract
+class TestOverlayFilterContract:
+    def test_overlay_pip_position(self):
+        position = LayoutPosition(x=0.7, y=0.05, width=0.25, height=0.25)
+        overlay = build_overlay_filter(position, 1920, 1080)
+        scale = build_scale_for_layout(position, 1920, 1080, True)
+        # Execute with real FFmpeg using lavfi color inputs
+        # Assert exit code 0
+```
+
+**Smoke Tests:**
+
+Basic smoke tests in `tests/test_smoke.py` verify the Rust core is importable and healthy:
+- `test_import_stoat_ferret_core()` — Rust bindings load correctly
+- `test_stoat_ferret_core_health_check()` — Core health check function works
+
 ---
 
 ## Quality Metrics
