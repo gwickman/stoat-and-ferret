@@ -28,6 +28,7 @@ from stoat_ferret.api.routers import (
     jobs,
     projects,
     timeline,
+    versions,
     videos,
 )
 from stoat_ferret.api.routers.ws import websocket_endpoint
@@ -208,6 +209,7 @@ def create_app(
     app.include_router(filesystem.router)
     app.include_router(timeline.router)
     app.include_router(batch.router)
+    app.include_router(versions.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)
