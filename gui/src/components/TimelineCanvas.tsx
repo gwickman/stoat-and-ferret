@@ -2,7 +2,9 @@ import { useState, useRef, useCallback } from 'react'
 import type { Track as TrackType } from '../types/timeline'
 import TimeRuler from './TimeRuler'
 import Track from './Track'
+import Playhead from './Playhead'
 import ZoomControls from './ZoomControls'
+import { useTimelineStore } from '../stores/timelineStore'
 
 interface TimelineCanvasProps {
   tracks: TrackType[]
@@ -18,6 +20,9 @@ export default function TimelineCanvas({ tracks, duration }: TimelineCanvasProps
   const [zoom, setZoom] = useState(1)
   const [scrollOffset, setScrollOffset] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const selectedClipId = useTimelineStore((s) => s.selectedClipId)
+  const selectClip = useTimelineStore((s) => s.selectClip)
+  const playheadPosition = useTimelineStore((s) => s.playheadPosition)
 
   const handleScroll = useCallback(() => {
     if (scrollRef.current) {
@@ -68,22 +73,30 @@ export default function TimelineCanvas({ tracks, duration }: TimelineCanvasProps
         className="overflow-x-auto"
         onScroll={handleScroll}
       >
-        <div style={{ minWidth: `${duration * 100 * zoom}px` }}>
+        <div className="relative" style={{ minWidth: `${duration * 100 * zoom}px` }}>
           <TimeRuler
             duration={duration}
             zoom={zoom}
             scrollOffset={scrollOffset}
             canvasWidth={scrollRef.current?.clientWidth ?? 800}
           />
-          <div className="flex flex-col" data-testid="canvas-tracks">
+          <div className="relative flex flex-col" data-testid="canvas-tracks">
             {sortedTracks.map((track) => (
               <Track
                 key={track.id}
                 track={track}
                 zoom={zoom}
                 scrollOffset={scrollOffset}
+                selectedClipId={selectedClipId}
+                onSelectClip={selectClip}
               />
             ))}
+            <Playhead
+              position={playheadPosition}
+              zoom={zoom}
+              scrollOffset={scrollOffset}
+              height={sortedTracks.length * 48}
+            />
           </div>
         </div>
       </div>

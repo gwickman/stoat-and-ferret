@@ -1,13 +1,16 @@
 import type { Track as TrackType } from '../types/timeline'
+import TimelineClip from './TimelineClip'
 
 interface TrackProps {
   track: TrackType
   zoom: number
   scrollOffset: number
+  selectedClipId: string | null
+  onSelectClip: (clipId: string) => void
 }
 
-/** Renders a single timeline track with label and clip placeholder area. */
-export default function Track({ track, zoom: _zoom, scrollOffset: _scrollOffset }: TrackProps) {
+/** Renders a single timeline track with label and clips. */
+export default function Track({ track, zoom, scrollOffset, selectedClipId, onSelectClip }: TrackProps) {
   return (
     <div
       data-testid={`track-${track.id}`}
@@ -34,7 +37,16 @@ export default function Track({ track, zoom: _zoom, scrollOffset: _scrollOffset 
         data-testid={`track-content-${track.id}`}
         className="relative flex-1 bg-gray-900"
       >
-        {/* Clip rendering handled by Feature 003 */}
+        {track.clips.map((clip) => (
+          <TimelineClip
+            key={clip.id}
+            clip={clip}
+            zoom={zoom}
+            scrollOffset={scrollOffset}
+            isSelected={clip.id === selectedClipId}
+            onSelect={onSelectClip}
+          />
+        ))}
       </div>
     </div>
   )

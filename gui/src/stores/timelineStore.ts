@@ -12,9 +12,17 @@ interface TimelineStoreState {
   isLoading: boolean
   /** Error from the last API call. */
   error: string | null
+  /** ID of the currently selected clip, or null if none selected. */
+  selectedClipId: string | null
+  /** Current playhead position in seconds. */
+  playheadPosition: number
 
   /** Fetch timeline for a project. */
   fetchTimeline: (projectId: string) => Promise<void>
+  /** Set the selected clip by ID (null to deselect). */
+  selectClip: (clipId: string | null) => void
+  /** Set the playhead position in seconds. */
+  setPlayheadPosition: (position: number) => void
   /** Reset store state. */
   reset: () => void
 }
@@ -25,6 +33,8 @@ export const useTimelineStore = create<TimelineStoreState>((set) => ({
   version: 0,
   isLoading: false,
   error: null,
+  selectedClipId: null,
+  playheadPosition: 0,
 
   fetchTimeline: async (projectId) => {
     set({ isLoading: true, error: null })
@@ -49,5 +59,18 @@ export const useTimelineStore = create<TimelineStoreState>((set) => ({
     }
   },
 
-  reset: () => set({ tracks: [], duration: 0, version: 0, isLoading: false, error: null }),
+  selectClip: (clipId) => set({ selectedClipId: clipId }),
+
+  setPlayheadPosition: (position) => set({ playheadPosition: position }),
+
+  reset: () =>
+    set({
+      tracks: [],
+      duration: 0,
+      version: 0,
+      isLoading: false,
+      error: null,
+      selectedClipId: null,
+      playheadPosition: 0,
+    }),
 }))

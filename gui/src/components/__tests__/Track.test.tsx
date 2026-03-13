@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import Track from '../Track'
 import type { Track as TrackType } from '../../types/timeline'
+
+const noop = vi.fn()
 
 const makeTrack = (overrides: Partial<TrackType> = {}): TrackType => ({
   id: 'track-1',
@@ -17,32 +19,32 @@ const makeTrack = (overrides: Partial<TrackType> = {}): TrackType => ({
 
 describe('Track', () => {
   it('renders with label', () => {
-    render(<Track track={makeTrack()} zoom={1} scrollOffset={0} />)
+    render(<Track track={makeTrack()} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />)
 
     expect(screen.getByTestId('track-track-1')).toBeDefined()
     expect(screen.getByTestId('track-label-track-1').textContent).toContain('Video 1')
   })
 
   it('renders content area', () => {
-    render(<Track track={makeTrack()} zoom={1} scrollOffset={0} />)
+    render(<Track track={makeTrack()} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />)
 
     expect(screen.getByTestId('track-content-track-1')).toBeDefined()
   })
 
   it('shows muted indicator when muted', () => {
-    render(<Track track={makeTrack({ muted: true })} zoom={1} scrollOffset={0} />)
+    render(<Track track={makeTrack({ muted: true })} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />)
 
     expect(screen.getByTestId('track-muted-track-1')).toBeDefined()
   })
 
   it('does not show muted indicator when not muted', () => {
-    render(<Track track={makeTrack({ muted: false })} zoom={1} scrollOffset={0} />)
+    render(<Track track={makeTrack({ muted: false })} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />)
 
     expect(screen.queryByTestId('track-muted-track-1')).toBeNull()
   })
 
   it('shows locked indicator when locked', () => {
-    render(<Track track={makeTrack({ locked: true })} zoom={1} scrollOffset={0} />)
+    render(<Track track={makeTrack({ locked: true })} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />)
 
     expect(screen.getByTestId('track-locked-track-1')).toBeDefined()
   })
@@ -50,9 +52,9 @@ describe('Track', () => {
   it('uses z_index for ordering', () => {
     render(
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <Track track={makeTrack({ id: 'a', z_index: 2 })} zoom={1} scrollOffset={0} />
-        <Track track={makeTrack({ id: 'b', z_index: 0 })} zoom={1} scrollOffset={0} />
-        <Track track={makeTrack({ id: 'c', z_index: 1 })} zoom={1} scrollOffset={0} />
+        <Track track={makeTrack({ id: 'a', z_index: 2 })} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />
+        <Track track={makeTrack({ id: 'b', z_index: 0 })} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />
+        <Track track={makeTrack({ id: 'c', z_index: 1 })} zoom={1} scrollOffset={0} selectedClipId={null} onSelectClip={noop} />
       </div>,
     )
 
