@@ -12,6 +12,7 @@ const TABS: TabDef[] = [
   { label: 'Library', path: '/library', checkUrl: '/api/v1/videos' },
   { label: 'Projects', path: '/projects', checkUrl: '/api/v1/projects' },
   { label: 'Effects', path: '/effects', checkUrl: '/api/v1/effects' },
+  { label: 'Timeline', path: '/timeline', checkUrl: '/api/v1/compose/presets' },
 ]
 
 export default function Navigation() {
