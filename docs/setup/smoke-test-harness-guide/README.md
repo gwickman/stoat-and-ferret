@@ -24,17 +24,24 @@ The project has comprehensive per-layer quality gates:
 
 Smoke tests close this gap by making real HTTP requests to a real FastAPI app backed by a real SQLite database and real Rust core, scanning real video files.
 
-## Two-Phase Strategy
+## Three-Phase Strategy
 
-### Phase 1: Python + httpx (API-level) — Current Design
+### Phase 1: Core API Smoke Tests — Implemented (v014)
 
 - **Technology:** `httpx.AsyncClient` with `ASGITransport`, running in-process via pytest
-- **Scope:** All implemented API endpoints exercised through 12 use cases
+- **Scope:** Core API endpoints exercised through 12 use cases (UC-01 to UC-12)
 - **Speed:** Sub-10 seconds for the full suite
 - **Dependencies:** Zero new dependencies (httpx and pytest-asyncio already installed)
 - **Confidence:** Validates full backend stack including Rust core; does not test browser rendering
+- **Test files:** 8 files covering scan, library, project CRUD, clip CRUD, effects, transitions, health
 
-### Phase 2: Playwright (browser E2E) — Future
+### Phase 2: Expanded API Coverage — Implemented (v018–v019)
+
+- **Scope:** Timeline CRUD, composition layouts, audio mixing, batch operations, version management, filesystem browsing, video detail/thumbnail/delete, and negative-path validation
+- **Test files:** 7 additional files (test_timeline.py, test_compose.py, test_audio.py, test_batch.py, test_versions.py, test_filesystem.py, test_negative_paths.py) plus extensions to existing test_library.py
+- **Helpers:** New `create_adjacent_clips_timeline()` helper and `create_version_repo()` factory in conftest.py
+
+### Phase 3: Playwright (browser E2E) — Future
 
 - **Technology:** Playwright with `@playwright/test` runner
 - **Scope:** 9 browser-level use cases exercising the React GUI
@@ -43,7 +50,7 @@ Smoke tests close this gap by making real HTTP requests to a real FastAPI app ba
 
 ## Current Status
 
-Phase 1 is **designed but not yet built**. This document set contains the complete specification for implementation.
+Phase 1 (core API smoke tests) is **implemented** as of v014. Phase 2 (expanded API coverage) is **implemented** as of v019, adding timeline, composition, audio, batch, version, filesystem, and negative-path smoke tests. Phase 3 (Playwright browser E2E) remains a future design.
 
 ## Files in This Folder
 
@@ -54,4 +61,4 @@ Phase 1 is **designed but not yet built**. This document set contains the comple
 | [03-test-cases.md](./03-test-cases.md) | All 12 test case specifications with exact HTTP calls and assertions |
 | [04-ci-integration.md](./04-ci-integration.md) | GitHub Actions job, timeout strategy, flakiness mitigation |
 | [05-maintenance.md](./05-maintenance.md) | Trigger table, sync strategy, impact assessment checks |
-| [06-phase2-playwright.md](./06-phase2-playwright.md) | Phase 2 Playwright design, 9 use cases, CI job |
+| [06-phase2-playwright.md](./06-phase2-playwright.md) | Phase 3 Playwright design, 9 use cases, CI job |

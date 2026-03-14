@@ -484,3 +484,140 @@ test_uc11 (speed control)   — scan + project + clip within test body
 | UC-10 | Within test | Within test | Within test | — | Validates clip update/delete |
 | UC-11 | Within test | Within test | Within test | Within test | Validates speed + stacking |
 | UC-12 | Within test | — | — | — | Validates cancel race |
+
+---
+
+## Phase 2 Expanded Use Cases (v018–v019)
+
+Phase 2 smoke tests extend API coverage beyond the original 12 use cases, adding timeline CRUD, composition, audio, batch, version management, filesystem, video detail operations, and negative-path validation.
+
+### Timeline CRUD (`test_timeline.py`, v018)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_timeline_create_add_clip_retrieve` | PUT timeline tracks, POST timeline clips, GET timeline |
+| `test_timeline_clip_patch_position` | PATCH timeline clip position (timeline_start/end) |
+| `test_timeline_clip_patch_track` | PATCH timeline clip to move between tracks |
+| `test_timeline_clip_delete` | DELETE timeline clip |
+| `test_timeline_transition_create` | POST timeline transition between adjacent clips |
+| `test_timeline_transition_delete` | DELETE timeline transition |
+
+### Composition Layout (`test_compose.py`, v018)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_compose_list_presets` | GET composition presets catalog |
+| `test_compose_layout_apply_preset` | POST apply layout preset to project |
+| `test_compose_layout_invalid_preset` | POST invalid preset returns error |
+
+### Audio Mixing (`test_audio.py`, v018)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_audio_mix_configure` | POST audio mix configuration |
+| `test_audio_mix_preview` | POST audio mix preview (filter string) |
+
+### Batch Operations (`test_batch.py`, v018)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_batch_submit_and_poll` | POST batch submit, poll until terminal |
+
+### Video Detail, Thumbnail, and Delete (`test_library.py`, v019)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_video_detail` | GET /api/v1/videos/{id} |
+| `test_video_detail_not_found` | GET /api/v1/videos/{id} for nonexistent video |
+| `test_video_thumbnail` | GET /api/v1/videos/{id}/thumbnail |
+| `test_video_delete` | DELETE /api/v1/videos/{id} |
+
+### Version Management (`test_versions.py`, v019)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_version_list_empty_project` | GET versions for project with no versions |
+| `test_version_list_nonexistent_project` | GET versions for nonexistent project |
+| `test_version_restore` | POST version restore with repo factory helper |
+| `test_version_restore_not_found` | POST restore nonexistent version |
+| `test_version_restore_nonexistent_project` | POST restore for nonexistent project |
+
+### Filesystem (`test_filesystem.py`, v019)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_filesystem_directories` | GET /api/v1/filesystem/directories |
+| `test_filesystem_directories_not_found` | GET directory listing for nonexistent path |
+| `test_filesystem_directories_hidden_excluded` | Hidden files excluded from directory listing |
+
+### Negative Paths (`test_negative_paths.py`, v019)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_timeline_invalid_track_type` | PUT timeline with invalid track type |
+| `test_timeline_nonexistent_track` | POST timeline clip to nonexistent track |
+| `test_timeline_nonexistent_clip` | POST timeline clip with nonexistent clip ID |
+| `test_audio_empty_tracks` | POST audio mix with empty tracks |
+| `test_batch_nonexistent_batch` | GET nonexistent batch |
+| `test_compose_insufficient_inputs` | POST compose with insufficient inputs |
+
+---
+
+## Endpoint Coverage Map
+
+Shows which endpoints are tested by which test file. Endpoints without smoke test coverage are listed at the bottom.
+
+| Endpoint | Test File(s) |
+|----------|-------------|
+| `POST /api/v1/videos/scan` | test_scan_workflow.py |
+| `GET /api/v1/videos` | test_scan_workflow.py, test_library.py |
+| `GET /api/v1/videos/search` | test_library.py |
+| `GET /api/v1/videos/{id}` | test_library.py |
+| `GET /api/v1/videos/{id}/thumbnail` | test_library.py |
+| `DELETE /api/v1/videos/{id}` | test_library.py |
+| `GET /api/v1/jobs/{id}` | test_scan_workflow.py (via poll helper) |
+| `POST /api/v1/jobs/{id}/cancel` | test_scan_workflow.py |
+| `POST /api/v1/projects` | test_project_workflow.py, test_clip_workflow.py, test_effects.py, test_timeline.py |
+| `GET /api/v1/projects` | test_project_workflow.py |
+| `GET /api/v1/projects/{id}` | test_project_workflow.py |
+| `DELETE /api/v1/projects/{id}` | test_project_workflow.py |
+| `POST /api/v1/projects/{id}/clips` | test_clip_workflow.py, test_effects.py, test_timeline.py |
+| `GET /api/v1/projects/{id}/clips` | test_clip_workflow.py, test_effects.py |
+| `PATCH /api/v1/projects/{id}/clips/{id}` | test_clip_workflow.py |
+| `DELETE /api/v1/projects/{id}/clips/{id}` | test_clip_workflow.py |
+| `POST /api/v1/projects/{id}/clips/{id}/effects` | test_effects.py |
+| `PATCH /api/v1/projects/{id}/clips/{id}/effects/{idx}` | test_effects.py |
+| `DELETE /api/v1/projects/{id}/clips/{id}/effects/{idx}` | test_effects.py |
+| `GET /api/v1/effects` | test_effects.py |
+| `POST /api/v1/effects/preview` | test_effects.py |
+| `POST /api/v1/projects/{id}/effects/transition` | test_transitions.py |
+| `GET /health/live` | test_health.py |
+| `GET /health/ready` | test_health.py |
+| `PUT /api/v1/projects/{id}/timeline` | test_timeline.py |
+| `GET /api/v1/projects/{id}/timeline` | test_timeline.py |
+| `POST /api/v1/projects/{id}/timeline/clips` | test_timeline.py |
+| `PATCH /api/v1/projects/{id}/timeline/clips/{id}` | test_timeline.py |
+| `DELETE /api/v1/projects/{id}/timeline/clips/{id}` | test_timeline.py |
+| `POST /api/v1/projects/{id}/timeline/transitions` | test_timeline.py |
+| `DELETE /api/v1/projects/{id}/timeline/transitions/{id}` | test_timeline.py |
+| `GET /api/v1/compose/presets` | test_compose.py |
+| `POST /api/v1/projects/{id}/compose/layout` | test_compose.py |
+| `POST /api/v1/projects/{id}/audio/mix` | test_audio.py |
+| `POST /api/v1/audio/preview` | test_audio.py |
+| `POST /api/v1/batch` | test_batch.py |
+| `GET /api/v1/batch/{id}` | test_batch.py |
+| `GET /api/v1/projects/{id}/versions` | test_versions.py |
+| `POST /api/v1/projects/{id}/versions/{id}/restore` | test_versions.py |
+| `GET /api/v1/filesystem/directories` | test_filesystem.py |
+
+### Residual Coverage Gaps
+
+The following endpoints/features do not have smoke test coverage:
+
+| Gap | Notes |
+|-----|-------|
+| `DELETE /api/v1/projects/{id}/effects/transition` | Transition deletion via the effects-based endpoint (timeline-based deletion is tested) |
+| Effect type: AUDIO_DUCKING | Not exercised in smoke tests |
+| Effect type: AUDIO_FADE | Not exercised in smoke tests |
+| Effect type: VIDEO_FADE | Not exercised in smoke tests |
+| Effect type: ACROSSFADE | Not exercised in smoke tests |

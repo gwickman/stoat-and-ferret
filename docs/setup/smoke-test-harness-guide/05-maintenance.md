@@ -14,8 +14,16 @@ When a change matches one of the triggers below, the corresponding smoke test up
 | Video files change metadata (re-encoded with different codec/resolution) | Update `EXPECTED_VIDEOS` dict values for affected files |
 | Clip schema fields change (new required field, renamed field) | Update clip creation/assertion code in `test_clip_workflow.py` and helpers |
 | Health check adds new check (e.g., Redis check) | Update `test_health.py` assertions to verify the new check key |
-| WebSocket event types change | Update WebSocket tests when implemented (Phase 2) |
+| WebSocket event types change | Update WebSocket tests when implemented (Phase 3 Playwright) |
 | Effect parameter schema changes (renamed param, new required param) | Update effect test bodies that reference specific parameter names/values |
+| Timeline track schema changes (new track types, field renames) | Update `test_timeline.py` and `create_adjacent_clips_timeline()` helper |
+| Timeline clip CRUD endpoint changes (PUT/POST/PATCH/DELETE) | Update `test_timeline.py` assertions and conftest helper |
+| Filesystem endpoint changes (`/api/v1/filesystem/`) | Update `test_filesystem.py` assertions |
+| Video detail/thumbnail/delete endpoint changes | Update `test_library.py` (video detail, thumbnail, delete tests) |
+| Version restore endpoint changes (`/versions/{id}/restore`) | Update `test_versions.py` and `create_version_repo()` factory |
+| Composition preset schema changes | Update `test_compose.py` assertions |
+| Audio mix endpoint changes | Update `test_audio.py` assertions |
+| Batch endpoint changes | Update `test_batch.py` assertions |
 
 ## Keeping `EXPECTED_VIDEOS` in Sync
 
@@ -49,7 +57,7 @@ The "Test Video Fixture Assumptions" impact assessment check (see below) flags c
 
 Convention: when a new API endpoint is added or an existing endpoint's contract changes:
 
-1. **If the endpoint corresponds to an existing use case (UC-1 through UC-12):** Update the relevant smoke test in the appropriate test file.
+1. **If the endpoint corresponds to an existing use case:** Update the relevant smoke test in the appropriate test file. Refer to the endpoint coverage map in `03-test-cases.md` to identify which file(s) cover the endpoint.
 2. **If the endpoint introduces new functionality:** Add a new smoke test function in the appropriate file, or create a new test file if the domain is new.
 3. **Document in the PR:** Include a note: "Smoke test updated for [endpoint]" or "Smoke test added for [endpoint]" or "No smoke test needed: [reason]".
 

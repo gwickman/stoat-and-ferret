@@ -33,12 +33,20 @@ Pages not yet implemented: Timeline (Phase 3), Preview Player (Phase 4), AI Thea
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 1 | Foundation + Rust Core | ~85% complete |
-| Phase 2 | Effects Engine | ~90% complete |
-| Phase 3 | Composition Engine (PIP, split-screen, visual timeline) | Not started |
+| Phase 1 | Foundation + Rust Core | Implemented |
+| Phase 2 | Effects Engine | Implemented |
+| Phase 3 | Composition Engine (PIP, split-screen, visual timeline) | Implemented (v015–v017) |
 | Phase 4 | Preview & Playback (proxy gen, preview server, Theater Mode) | Not started |
 | Phase 5 | Export & Production (render coordinator, HW acceleration) | Not started |
 | Phase 6 | Deployability & AI Integration | Not started |
+
+## Smoke Test Implementation Status
+
+| Smoke Test Phase | Scope | Status |
+|------------------|-------|--------|
+| Phase 1 — Core API | 12 use cases across scan, library, project, clip, effects, transitions, health | Implemented (v014) |
+| Phase 2 — Expanded API | Timeline CRUD, composition, audio, batch, versions, filesystem, video detail/thumbnail/delete, negative paths | Implemented (v018–v019) |
+| Phase 3 — Playwright E2E | 9 browser-level use cases exercising the React GUI | Future (design complete) |
 
 ## Why API-Level Smoke Tests Are the Right Phase 1 Choice
 

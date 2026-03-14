@@ -7,16 +7,25 @@ tests/
   smoke/
     __init__.py
     conftest.py              # Smoke-test-specific fixtures and helpers
+    # Phase 1 — Core API (v014)
     test_scan_workflow.py    # UC-1 (scan), UC-12 (cancel scan)
-    test_library.py          # UC-2 (search/browse)
+    test_library.py          # UC-2 (search/browse), video detail/thumbnail/delete (v019)
     test_project_workflow.py # UC-3 (create project), UC-9 (delete project)
     test_clip_workflow.py    # UC-4 (add clips), UC-10 (modify clip timing)
     test_effects.py          # UC-5 (apply effect), UC-6 (edit/remove), UC-11 (speed control)
     test_transitions.py      # UC-7 (apply transition)
     test_health.py           # UC-8 (health check)
+    # Phase 2 — Expanded API (v018–v019)
+    test_timeline.py         # Timeline CRUD, clip position/track changes, transitions
+    test_compose.py          # Composition layout presets
+    test_audio.py            # Audio mixing configure and preview
+    test_batch.py            # Batch operation submit and poll
+    test_versions.py         # Version list, restore, error paths
+    test_filesystem.py       # Filesystem directory listing
+    test_negative_paths.py   # Negative-path validation across domains
 ```
 
-Naming convention: files are `test_<domain>.py`, functions are `test_uc<NN>_<short_description>`.
+Naming convention: Phase 1 files use `test_uc<NN>_<short_description>` functions. Phase 2 files use `test_<domain>_<action>` functions.
 
 ## conftest.py Design
 
@@ -327,6 +336,44 @@ async def sample_project(smoke_client, videos_dir):
 ```
 
 This fixture is not used by UC-1 through UC-12 (which create their own independent data), but is available for future render/export tests that need a fully-configured project.
+
+### `create_adjacent_clips_timeline()` Helper (v018)
+
+```python
+async def create_adjacent_clips_timeline(
+    client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> dict[str, Any]:
+    """Create a project with two adjacent clips on the same timeline track.
+
+    Scans videos, creates a project, sets up a timeline with one video track,
+    and adds two clips positioned so that clip_a.timeline_end == clip_b.timeline_start.
+
+    Returns:
+        Dict with keys: project_id, track_id, clip_a_id, clip_b_id.
+    """
+```
+
+This helper encapsulates the multi-step setup needed for timeline transition tests (BL-119). It creates a project, scans videos, creates two clips from the same video, sets up a timeline with a video track via `PUT /api/v1/projects/{id}/timeline`, adds both clips to the track at adjacent positions (0.0–5.0 and 5.0–10.0), and verifies adjacency.
+
+### `create_version_repo()` Factory (v019)
+
+```python
+def create_version_repo(
+    client: httpx.AsyncClient,
+) -> AsyncSQLiteVersionRepository:
+    """Create an AsyncSQLiteVersionRepository from the live ASGI transport DB.
+
+    Extracts the database connection from the ASGI transport's app.state.db,
+    enabling direct version creation in smoke tests (no HTTP endpoint exists
+    for creating versions — only listing and restoring).
+
+    Returns:
+        An AsyncSQLiteVersionRepository backed by the live test database.
+    """
+```
+
+This factory is needed because version creation is an internal operation (triggered by timeline changes) with no public HTTP endpoint. Smoke tests for version restore (BL-122) use this to insert version records directly into the database before testing the restore endpoint.
 
 ### WebSocket Testing Note
 
