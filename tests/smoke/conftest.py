@@ -17,6 +17,7 @@ import pytest
 
 from stoat_ferret.api.app import create_app, lifespan
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.db.version_repository import AsyncSQLiteVersionRepository
 
 VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos"
 
@@ -156,6 +157,25 @@ async def smoke_client(tmp_path: Path) -> httpx.AsyncClient:
         os.environ["STOAT_THUMBNAIL_DIR"] = orig_thumb
 
     get_settings.cache_clear()
+
+
+def create_version_repo(
+    client: httpx.AsyncClient,
+) -> AsyncSQLiteVersionRepository:
+    """Create an AsyncSQLiteVersionRepository from the live ASGI transport DB.
+
+    Extracts the database connection from the ASGI transport's app.state.db,
+    enabling direct version creation in smoke tests (no HTTP endpoint exists).
+
+    Args:
+        client: The httpx async client connected via ASGITransport.
+
+    Returns:
+        An AsyncSQLiteVersionRepository backed by the live test database.
+    """
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    return AsyncSQLiteVersionRepository(db)
 
 
 async def poll_job_until_terminal(
