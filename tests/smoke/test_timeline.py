@@ -12,7 +12,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from tests.smoke.conftest import scan_videos_and_wait
+from tests.smoke.conftest import create_adjacent_clips_timeline, scan_videos_and_wait
 
 
 @pytest.mark.usefixtures("videos_dir")
@@ -302,3 +302,91 @@ async def test_timeline_clip_delete(
     assert resp.status_code == 200
     track = resp.json()["tracks"][0]
     assert all(c["id"] != clip_id for c in track["clips"])
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_timeline_transition_create(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST transition between adjacent clips returns 201 with filter_string."""
+    client = smoke_client
+    setup = await create_adjacent_clips_timeline(client, videos_dir)
+    project_id = setup["project_id"]
+
+    # POST transition between the two adjacent clips
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/transitions",
+        json={
+            "clip_a_id": setup["clip_a_id"],
+            "clip_b_id": setup["clip_b_id"],
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["transition_type"] == "fade"
+    assert data["duration"] == 1.0
+    assert "filter_string" in data
+    assert len(data["filter_string"]) > 0
+    assert "timeline_offset" in data
+    assert isinstance(data["timeline_offset"], float)
+    assert "id" in data
+
+    # GET timeline confirms transition data is present
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    timeline = resp.json()
+    assert timeline["project_id"] == project_id
+    assert len(timeline["tracks"]) >= 1
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_timeline_transition_delete(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """DELETE transition removes it and returns updated TimelineResponse."""
+    client = smoke_client
+    setup = await create_adjacent_clips_timeline(client, videos_dir)
+    project_id = setup["project_id"]
+
+    # Create a transition first
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/transitions",
+        json={
+            "clip_a_id": setup["clip_a_id"],
+            "clip_b_id": setup["clip_b_id"],
+            "transition_type": "fade",
+            "duration": 1.0,
+        },
+    )
+    assert resp.status_code == 201
+    transition_id = resp.json()["id"]
+
+    # Record duration with transition applied
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    duration_with_transition = resp.json()["duration"]
+
+    # DELETE the transition
+    resp = await client.delete(
+        f"/api/v1/projects/{project_id}/timeline/transitions/{transition_id}",
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["project_id"] == project_id
+    assert "tracks" in data
+    assert "duration" in data
+    assert isinstance(data["duration"], float)
+
+    # Duration should be recalculated (>= duration with transition, since
+    # removing overlap restores original length)
+    assert data["duration"] >= duration_with_transition
+
+    # GET confirms transition is gone and duration recalculated
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    timeline = resp.json()
+    assert timeline["duration"] >= duration_with_transition
