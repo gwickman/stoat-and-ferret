@@ -1,7 +1,8 @@
 """Smoke tests for timeline CRUD operations.
 
 Validates creating a timeline with tracks, adding clips to tracks,
-and retrieving the full timeline through the HTTP stack with real Rust core.
+updating clip positions/track assignments, and removing clips from the
+timeline through the HTTP stack with real Rust core.
 """
 
 from __future__ import annotations
@@ -89,3 +90,215 @@ async def test_timeline_create_add_clip_retrieve(
     assert len(track["clips"]) == 1
     assert track["clips"][0]["id"] == clip_id
     assert timeline["duration"] == pytest.approx(3.33)
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_timeline_clip_patch_position(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """PATCH a clip's timeline_start/timeline_end and verify via GET."""
+    client = smoke_client
+
+    # Setup: scan videos, create project, clip, timeline, track, add clip to timeline
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=1")
+    assert resp.status_code == 200
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Patch Position Smoke Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_id,
+            "track_id": track_id,
+            "timeline_start": 0.0,
+            "timeline_end": 3.33,
+        },
+    )
+    assert resp.status_code == 201
+
+    # PATCH: update position
+    resp = await client.patch(
+        f"/api/v1/projects/{project_id}/timeline/clips/{clip_id}",
+        json={"timeline_start": 5.0, "timeline_end": 10.0},
+    )
+    assert resp.status_code == 200
+    patched = resp.json()
+    assert patched["timeline_start"] == pytest.approx(5.0)
+    assert patched["timeline_end"] == pytest.approx(10.0)
+
+    # Verify via GET
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    track = resp.json()["tracks"][0]
+    clip_on_tl = next(c for c in track["clips"] if c["id"] == clip_id)
+    assert clip_on_tl["timeline_start"] == pytest.approx(5.0)
+    assert clip_on_tl["timeline_end"] == pytest.approx(10.0)
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_timeline_clip_patch_track(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """PATCH a clip's track_id to a second track and verify via GET."""
+    client = smoke_client
+
+    # Setup: scan videos, create project, clip, timeline with TWO tracks
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=1")
+    assert resp.status_code == 200
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Patch Track Smoke Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[
+            {"track_type": "video", "label": "V1"},
+            {"track_type": "video", "label": "V2"},
+        ],
+    )
+    assert resp.status_code == 200
+    tracks = resp.json()["tracks"]
+    track_1_id = tracks[0]["id"]
+    track_2_id = tracks[1]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_id,
+            "track_id": track_1_id,
+            "timeline_start": 0.0,
+            "timeline_end": 3.33,
+        },
+    )
+    assert resp.status_code == 201
+
+    # PATCH: reassign to track 2
+    resp = await client.patch(
+        f"/api/v1/projects/{project_id}/timeline/clips/{clip_id}",
+        json={"track_id": track_2_id},
+    )
+    assert resp.status_code == 200
+    patched = resp.json()
+    assert patched["track_id"] == track_2_id
+
+    # Verify via GET: clip should be on track 2, not track 1
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    timeline = resp.json()
+    track_1 = next(t for t in timeline["tracks"] if t["id"] == track_1_id)
+    track_2 = next(t for t in timeline["tracks"] if t["id"] == track_2_id)
+    assert all(c["id"] != clip_id for c in track_1["clips"])
+    assert any(c["id"] == clip_id for c in track_2["clips"])
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_timeline_clip_delete(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """DELETE a clip from timeline and verify it is absent via GET."""
+    client = smoke_client
+
+    # Setup: scan videos, create project, clip, timeline, track, add clip
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=1")
+    assert resp.status_code == 200
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Delete Clip Smoke Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_id,
+            "track_id": track_id,
+            "timeline_start": 0.0,
+            "timeline_end": 3.33,
+        },
+    )
+    assert resp.status_code == 201
+
+    # DELETE clip from timeline
+    resp = await client.delete(
+        f"/api/v1/projects/{project_id}/timeline/clips/{clip_id}",
+    )
+    assert resp.status_code == 204
+
+    # Verify via GET: clip should no longer appear on the track
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    track = resp.json()["tracks"][0]
+    assert all(c["id"] != clip_id for c in track["clips"])
