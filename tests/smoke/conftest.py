@@ -475,17 +475,17 @@ async def sample_project(
         clip_ids.append(resp.json()["id"])
 
     # Apply effects
-    effect_ids = []
+    effects_applied = []
     for clip_idx, effect_type, params in SAMPLE_EFFECT_DEFS:
         resp = await client.post(
             f"/api/v1/projects/{project_id}/clips/{clip_ids[clip_idx]}/effects",
             json={"effect_type": effect_type, "parameters": params},
         )
         assert resp.status_code == 201
-        effect_ids.append(resp.json()["id"])
+        effects_applied.append(resp.json())
 
     # Apply transitions
-    transition_ids = []
+    transitions_applied = []
     for src_idx, tgt_idx, trans_type, params in SAMPLE_TRANSITION_DEFS:
         resp = await client.post(
             f"/api/v1/projects/{project_id}/effects/transition",
@@ -497,13 +497,13 @@ async def sample_project(
             },
         )
         assert resp.status_code == 201
-        transition_ids.append(resp.json()["id"])
+        transitions_applied.append(resp.json())
 
     return {
         "project": project,
         "project_id": project_id,
         "video_ids": video_ids,
         "clip_ids": clip_ids,
-        "effects_applied": effect_ids,
-        "transitions_applied": transition_ids,
+        "effects_applied": effects_applied,
+        "transitions_applied": transitions_applied,
     }
