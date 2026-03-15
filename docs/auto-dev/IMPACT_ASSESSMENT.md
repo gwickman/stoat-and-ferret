@@ -72,3 +72,19 @@ grep -rn 'TrackType\|LayoutPosition\|LayoutPreset\|AudioMixSpec\|BatchProgress\|
 ```
 
 **Action:** Compare output. When composition model types or identifiers change, verify that smoke tests and contract tests still exercise the updated interfaces. New composition types should have corresponding test coverage.
+
+## Sample Project Artifact Sync
+
+**Trigger:** Changes to any of the three sample project artifacts:
+- `scripts/seed_sample_project.py` — constants: `CLIP_DEFS`, `EFFECT_DEFS`, `TRANSITION_DEFS`, `SAMPLE_VIDEOS`
+- `tests/smoke/conftest.py` — `sample_project` fixture values
+- `docs/setup/guides/sample-project.md` — documented values shown to users
+
+**Detection:**
+
+```bash
+# Check if any sample project artifact was modified
+git diff --name-only HEAD~1 | grep -E 'scripts/seed_sample_project\.py|tests/smoke/conftest\.py|docs/setup/guides/sample-project\.md'
+```
+
+**Action:** When any of the three artifacts changes, verify the changed values match across all three. Check that clip frame values (in/out points, timeline positions), effect type names and parameters, transition type names and parameters, video filenames, and output settings are identical in the seed script constants, the smoke test fixture, and the user guide content.
