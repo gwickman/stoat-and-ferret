@@ -21,6 +21,21 @@ from stoat_ferret.db.version_repository import AsyncSQLiteVersionRepository
 
 VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos"
 
+# Effects: (clip_index, effect_type, parameters)
+# Uses registered API effect names, not FFmpeg filter names
+SAMPLE_EFFECT_DEFS = [
+    (0, "video_fade", {"fade_type": "in", "start_time": 0.0, "duration": 1.0}),
+    (0, "text_overlay", {"text": "Running Montage", "fontsize": 64, "fontcolor": "white"}),
+    (1, "speed_control", {"factor": 0.75}),
+    (3, "text_overlay", {"text": "The End", "fontsize": 48, "fontcolor": "white"}),
+    (3, "video_fade", {"fade_type": "out", "start_time": 8.0, "duration": 2.0}),
+]
+
+# Transitions: (source_clip_index, target_clip_index, transition_type, parameters)
+SAMPLE_TRANSITION_DEFS = [
+    (1, 2, "xfade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
+]
+
 EXPECTED_VIDEOS: dict[str, dict[str, Any]] = {
     "120449-720880553_medium.mp4": {
         "duration_seconds": 35.84,
@@ -395,17 +410,18 @@ async def sample_project(
     smoke_client: httpx.AsyncClient,
     videos_dir: Path,
 ) -> dict[str, Any]:
-    """Create the 'Running Montage' sample project with clips.
+    """Create the 'Running Montage' sample project with clips, effects, and transition.
 
-    Scans videos, creates a project at 1280x720 @ 30fps, and adds 4 clips.
-    Returns a dict with project, clip_ids, and video_ids for test scenarios.
+    Scans videos, creates a project at 1280x720 @ 30fps, adds 4 clips,
+    applies 5 effects and 1 crossfade transition.
 
     Args:
         smoke_client: The per-test async client fixture.
         videos_dir: Path to the videos directory.
 
     Returns:
-        Dict with keys: project, project_id, video_ids, clip_ids.
+        Dict with keys: project, project_id, video_ids, clip_ids,
+        effects_applied, transitions_applied.
     """
     client = smoke_client
 
@@ -458,9 +474,36 @@ async def sample_project(
         )
         clip_ids.append(resp.json()["id"])
 
+    # Apply effects
+    effect_ids = []
+    for clip_idx, effect_type, params in SAMPLE_EFFECT_DEFS:
+        resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips/{clip_ids[clip_idx]}/effects",
+            json={"effect_type": effect_type, "parameters": params},
+        )
+        assert resp.status_code == 201
+        effect_ids.append(resp.json()["id"])
+
+    # Apply transitions
+    transition_ids = []
+    for src_idx, tgt_idx, trans_type, params in SAMPLE_TRANSITION_DEFS:
+        resp = await client.post(
+            f"/api/v1/projects/{project_id}/effects/transition",
+            json={
+                "source_clip_id": clip_ids[src_idx],
+                "target_clip_id": clip_ids[tgt_idx],
+                "transition_type": trans_type,
+                "parameters": params,
+            },
+        )
+        assert resp.status_code == 201
+        transition_ids.append(resp.json()["id"])
+
     return {
         "project": project,
         "project_id": project_id,
         "video_ids": video_ids,
         "clip_ids": clip_ids,
+        "effects_applied": effect_ids,
+        "transitions_applied": transition_ids,
     }
