@@ -599,7 +599,7 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 | `PATCH /api/v1/projects/{id}/timeline/clips/{id}` | test_timeline.py |
 | `DELETE /api/v1/projects/{id}/timeline/clips/{id}` | test_timeline.py |
 | `POST /api/v1/projects/{id}/timeline/transitions` | test_timeline.py |
-| `DELETE /api/v1/projects/{id}/timeline/transitions/{id}` | test_timeline.py |
+| `DELETE /api/v1/projects/{id}/timeline/transitions/{id}` | test_timeline.py, test_transitions.py |
 | `GET /api/v1/compose/presets` | test_compose.py |
 | `POST /api/v1/projects/{id}/compose/layout` | test_compose.py |
 | `POST /api/v1/projects/{id}/audio/mix` | test_audio.py |
@@ -612,12 +612,12 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 
 ### Residual Coverage Gaps
 
-The following endpoints/features do not have smoke test coverage:
+All previously identified gaps have been addressed:
 
-| Gap | Notes |
-|-----|-------|
-| `DELETE /api/v1/projects/{id}/effects/transition` | Transition deletion via the effects-based endpoint (timeline-based deletion is tested) |
-| Effect type: AUDIO_DUCKING | Not exercised in smoke tests |
-| Effect type: AUDIO_FADE | Not exercised in smoke tests |
-| Effect type: VIDEO_FADE | Not exercised in smoke tests |
-| Effect type: ACROSSFADE | Not exercised in smoke tests |
+| Gap | Resolution |
+|-----|------------|
+| `DELETE /api/v1/projects/{id}/timeline/transitions/{id}` | Covered in test_transitions.py (`test_transition_delete`) |
+| Effect type: AUDIO_DUCKING | Covered in test_effects.py (`test_create_effect_type[audio_ducking]`) |
+| Effect type: AUDIO_FADE | Covered in test_effects.py (`test_create_effect_type[audio_fade]`) |
+| Effect type: VIDEO_FADE | Covered in test_effects.py (`test_create_effect_type[video_fade]`) |
+| Effect type: ACROSSFADE | Covered in test_effects.py (`test_create_effect_type[acrossfade]`) |
