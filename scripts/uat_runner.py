@@ -15,14 +15,16 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import signal
 import subprocess
 import sys
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import httpx
 
@@ -46,6 +48,20 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     204: [],
 }
 
+# Human-readable journey names for screenshot directories and reports
+JOURNEY_NAMES: dict[int, str] = {
+    201: "scan-library",
+    202: "preview-clip",
+    203: "timeline-edit",
+    204: "export-project",
+}
+
+# Known benign console error patterns to exclude from reports
+BENIGN_CONSOLE_PATTERNS: list[str] = [
+    "favicon.ico",
+    "favicon",
+]
+
 
 # ---------------------------------------------------------------------------
 # Data types
@@ -58,6 +74,21 @@ class JourneyResult(NamedTuple):
     journey_id: int
     status: str  # "passed", "failed", "skipped"
     message: str
+
+
+@dataclass
+class JourneyReport:
+    """Detailed report for a single journey, including step and error data."""
+
+    journey_id: int
+    name: str
+    status: str  # "passed", "failed", "skipped"
+    message: str
+    steps_total: int = 0
+    steps_passed: int = 0
+    steps_failed: int = 0
+    console_errors: list[str] = field(default_factory=list)
+    issues: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +460,89 @@ def execute_journeys(journeys: list[int], output_dir: Path, headed: bool) -> lis
 
 
 # ---------------------------------------------------------------------------
+# Screenshot infrastructure
+# ---------------------------------------------------------------------------
+
+
+def take_screenshot(
+    page: Any,
+    output_dir: Path,
+    journey_name: str,
+    step_number: int,
+    description: str,
+    *,
+    failed: bool = False,
+) -> Path:
+    """Capture a screenshot with the structured naming convention.
+
+    Screenshots are saved as ``{journey_name}/{NN}_{description}.png``.
+    Failed steps use a ``FAIL_`` prefix: ``{journey_name}/{NN}_FAIL_{description}.png``.
+
+    Args:
+        page: Playwright Page object.
+        output_dir: Root output directory for this UAT run.
+        journey_name: Journey name (e.g. ``"scan-library"``).
+        step_number: Step number within the journey.
+        description: Brief description used in the filename.
+        failed: If True, prefix the description with ``FAIL_``.
+
+    Returns:
+        Path to the saved screenshot file.
+    """
+    journey_dir = output_dir / journey_name
+    journey_dir.mkdir(parents=True, exist_ok=True)
+    prefix = "FAIL_" if failed else ""
+    filename = f"{step_number:02d}_{prefix}{description}.png"
+    path = journey_dir / filename
+    page.screenshot(path=str(path))
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Console error capture
+# ---------------------------------------------------------------------------
+
+
+class ConsoleErrorCollector:
+    """Collect and filter browser console errors during a journey.
+
+    Attaches to a Playwright page via :meth:`attach` and captures console
+    errors, filtering out known benign patterns (e.g. favicon 404s).
+
+    Usage::
+
+        collector = ConsoleErrorCollector()
+        collector.attach(page)
+        # ... run journey steps ...
+        errors = collector.errors
+    """
+
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+
+    def handler(self, msg: Any) -> None:
+        """Console message handler. Captures error-level messages only.
+
+        Args:
+            msg: Playwright ConsoleMessage object.
+        """
+        if msg.type != "error":
+            return
+        text = msg.text
+        if any(pattern in text.lower() for pattern in BENIGN_CONSOLE_PATTERNS):
+            return
+        self.errors.append(text)
+
+    def attach(self, page: Any) -> None:
+        """Register this collector as a console handler on a page.
+
+        Args:
+            page: Playwright Page object.
+        """
+        page.on("console", self.handler)
+
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -482,6 +596,168 @@ def find_root_causes(failed: list[JourneyResult], all_results: list[JourneyResul
             root_causes.append(r.journey_id)
 
     return sorted(root_causes)
+
+
+# ---------------------------------------------------------------------------
+# Report generation
+# ---------------------------------------------------------------------------
+
+
+def build_journey_reports(results: list[JourneyResult], output_dir: Path) -> list[JourneyReport]:
+    """Build detailed JourneyReport objects from execution results.
+
+    Checks for structured ``journey_result.json`` files written by journey
+    scripts.  Falls back to basic data from JourneyResult when no structured
+    output exists.
+
+    Args:
+        results: Journey results from :func:`execute_journeys`.
+        output_dir: Output directory for this run.
+
+    Returns:
+        List of JourneyReport with available detail.
+    """
+    reports: list[JourneyReport] = []
+    for result in results:
+        name = JOURNEY_NAMES.get(result.journey_id, f"journey-{result.journey_id}")
+
+        # Check for structured result JSON written by a journey script
+        result_file = output_dir / name / "journey_result.json"
+        if result_file.exists():
+            data = json.loads(result_file.read_text(encoding="utf-8"))
+            reports.append(
+                JourneyReport(
+                    journey_id=result.journey_id,
+                    name=data.get("name", name),
+                    status=result.status,
+                    message=result.message,
+                    steps_total=data.get("steps_total", 0),
+                    steps_passed=data.get("steps_passed", 0),
+                    steps_failed=data.get("steps_failed", 0),
+                    console_errors=data.get("console_errors", []),
+                    issues=data.get("issues", []),
+                )
+            )
+        else:
+            reports.append(
+                JourneyReport(
+                    journey_id=result.journey_id,
+                    name=name,
+                    status=result.status,
+                    message=result.message,
+                )
+            )
+    return reports
+
+
+def generate_json_report(
+    reports: list[JourneyReport],
+    output_dir: Path,
+    mode: str,
+    duration_seconds: float,
+) -> Path:
+    """Generate ``uat-report.json`` with structured test results.
+
+    Args:
+        reports: Journey report objects.
+        output_dir: Output directory for this run.
+        mode: ``"headed"`` or ``"headless"``.
+        duration_seconds: Total run duration in seconds.
+
+    Returns:
+        Path to the generated JSON report.
+    """
+    any_failed = any(r.status == "failed" for r in reports)
+
+    data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "mode": mode,
+        "duration_seconds": round(duration_seconds, 2),
+        "overall_status": "fail" if any_failed else "pass",
+        "journeys": [
+            {
+                "name": r.name,
+                "journey_id": r.journey_id,
+                "status": r.status,
+                "steps_total": r.steps_total,
+                "steps_passed": r.steps_passed,
+                "steps_failed": r.steps_failed,
+                "console_errors": r.console_errors,
+                "issues": r.issues,
+            }
+            for r in reports
+        ],
+    }
+
+    path = output_dir / "uat-report.json"
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def generate_markdown_report(
+    reports: list[JourneyReport],
+    output_dir: Path,
+    mode: str,
+    duration_seconds: float,
+) -> Path:
+    """Generate ``uat-report.md`` with human-readable test results.
+
+    Args:
+        reports: Journey report objects.
+        output_dir: Output directory for this run.
+        mode: ``"headed"`` or ``"headless"``.
+        duration_seconds: Total run duration in seconds.
+
+    Returns:
+        Path to the generated markdown report.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    passed = sum(1 for r in reports if r.status == "passed")
+    failed = sum(1 for r in reports if r.status == "failed")
+    skipped = sum(1 for r in reports if r.status == "skipped")
+
+    lines: list[str] = [
+        "# UAT Report",
+        "",
+        f"**Timestamp:** {timestamp}",
+        f"**Mode:** {mode}",
+        f"**Duration:** {duration_seconds:.1f}s",
+        f"**Result:** {passed} passed, {failed} failed, {skipped} skipped",
+        "",
+        "## Journey Summary",
+        "",
+        "| Journey | Status | Steps |",
+        "|---------|--------|-------|",
+    ]
+
+    for r in reports:
+        status_badge = {"passed": "PASS", "failed": "FAIL", "skipped": "SKIP"}[r.status]
+        steps = f"{r.steps_passed}/{r.steps_total}" if r.steps_total > 0 else "—"
+        lines.append(f"| {r.name} | {status_badge} | {steps} |")
+
+    # Detailed sections for failed journeys
+    failed_reports = [r for r in reports if r.status == "failed"]
+    if failed_reports:
+        lines.extend(["", "## Failed Journeys", ""])
+        for r in failed_reports:
+            lines.append(f"### {r.name}")
+            lines.append("")
+            if r.issues:
+                for issue in r.issues:
+                    lines.append(f"- {issue}")
+            else:
+                lines.append(f"- {r.message}")
+            if r.console_errors:
+                lines.append("")
+                lines.append("**Console errors:**")
+                for err in r.console_errors:
+                    lines.append(f"- `{err}`")
+            lines.append("")
+
+    lines.append("")
+    path = output_dir / "uat-report.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -544,10 +820,20 @@ def main(argv: list[str] | None = None) -> int:
 
         # 5. Run journeys
         print("\n[Journey Phase]")
+        run_start = time.monotonic()
         journeys = get_journeys_to_run(args.journey)
         results = execute_journeys(journeys, output_dir, headed)
+        duration = time.monotonic() - run_start
 
-        # 6. Summary
+        # 6. Generate reports
+        mode = "headed" if headed else "headless"
+        journey_reports = build_journey_reports(results, output_dir)
+        json_path = generate_json_report(journey_reports, output_dir, mode, duration)
+        md_path = generate_markdown_report(journey_reports, output_dir, mode, duration)
+        print(f"\n  Reports: {json_path}")
+        print(f"           {md_path}")
+
+        # 7. Summary
         print_summary(results, output_dir)
 
         # Exit code
