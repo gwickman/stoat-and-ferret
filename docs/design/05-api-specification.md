@@ -1452,40 +1452,29 @@ GET /compose/presets
       "description": "Picture-in-picture, overlay top-left",
       "ai_hint": "Use for commentary overlay or webcam insert",
       "min_inputs": 2,
-      "max_inputs": 2
-    },
-    {
-      "name": "PipTopRight",
-      "description": "Picture-in-picture, overlay top-right",
-      "ai_hint": "Use for commentary overlay or webcam insert",
-      "min_inputs": 2,
-      "max_inputs": 2
+      "max_inputs": 2,
+      "positions": [
+        {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0, "z_index": 0},
+        {"x": 0.02, "y": 0.02, "width": 0.25, "height": 0.25, "z_index": 1}
+      ]
     },
     {
       "name": "SideBySide",
       "description": "Two inputs side-by-side",
       "ai_hint": "Use for comparison or before/after views",
       "min_inputs": 2,
-      "max_inputs": 2
-    },
-    {
-      "name": "TopBottom",
-      "description": "Two inputs stacked vertically",
-      "ai_hint": "Use for vertical split comparison",
-      "min_inputs": 2,
-      "max_inputs": 2
-    },
-    {
-      "name": "Grid2x2",
-      "description": "Four inputs in 2x2 grid",
-      "ai_hint": "Use for multi-camera or surveillance-style view",
-      "min_inputs": 4,
-      "max_inputs": 4
+      "max_inputs": 2,
+      "positions": [
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": 1.0, "z_index": 0},
+        {"x": 0.5, "y": 0.0, "width": 0.5, "height": 1.0, "z_index": 0}
+      ]
     }
   ],
   "total": 7
 }
 ```
+
+Each preset includes a `positions` array with the default layout positions from the Rust layout engine. Each position contains `x`, `y`, `width`, `height` (normalized 0.0-1.0) and `z_index` (stacking order).
 
 **Available presets:** `PipTopLeft`, `PipTopRight`, `PipBottomLeft`, `PipBottomRight`, `SideBySide`, `TopBottom`, `Grid2x2`
 

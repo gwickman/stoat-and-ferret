@@ -23,7 +23,7 @@ EXPECTED_PRESET_NAMES = {
 }
 
 #: Required metadata fields on each preset response.
-REQUIRED_FIELDS = {"name", "description", "ai_hint", "min_inputs", "max_inputs"}
+REQUIRED_FIELDS = {"name", "description", "ai_hint", "min_inputs", "max_inputs", "positions"}
 
 
 # ---- Endpoint integration tests ----
@@ -126,6 +126,103 @@ def test_endpoint_accessible_without_auth(client: TestClient) -> None:
     assert response.status_code == 200
 
 
+# ---- Preset position tests ----
+
+
+@pytest.mark.api
+def test_list_presets_includes_positions(client: TestClient) -> None:
+    """GET /compose/presets includes positions field per preset."""
+    response = client.get("/api/v1/compose/presets")
+    data = response.json()
+    for preset in data["presets"]:
+        assert "positions" in preset, f"Preset {preset['name']} missing positions"
+        assert isinstance(preset["positions"], list)
+        assert len(preset["positions"]) > 0
+
+
+@pytest.mark.api
+def test_position_entries_contain_required_fields(client: TestClient) -> None:
+    """Each position entry contains x, y, width, height, z_index."""
+    response = client.get("/api/v1/compose/presets")
+    data = response.json()
+    required = {"x", "y", "width", "height", "z_index"}
+    for preset in data["presets"]:
+        for i, pos in enumerate(preset["positions"]):
+            assert set(pos.keys()) >= required, (
+                f"Preset {preset['name']} position {i} missing: {required - set(pos.keys())}"
+            )
+
+
+@pytest.mark.api
+def test_pip_top_left_positions_match_rust(client: TestClient) -> None:
+    """PipTopLeft positions match known Rust PresetPosition values."""
+    response = client.get("/api/v1/compose/presets")
+    data = response.json()
+    preset = next(p for p in data["presets"] if p["name"] == "PipTopLeft")
+    positions = preset["positions"]
+    assert len(positions) == 2
+    # Base layer: full screen
+    assert positions[0] == {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0, "z_index": 0}
+    # Overlay: top-left corner
+    assert positions[1]["x"] == pytest.approx(0.02)
+    assert positions[1]["y"] == pytest.approx(0.02)
+    assert positions[1]["width"] == pytest.approx(0.25)
+    assert positions[1]["height"] == pytest.approx(0.25)
+    assert positions[1]["z_index"] == 1
+
+
+@pytest.mark.api
+def test_side_by_side_positions_match_rust(client: TestClient) -> None:
+    """SideBySide positions match known Rust PresetPosition values."""
+    response = client.get("/api/v1/compose/presets")
+    data = response.json()
+    preset = next(p for p in data["presets"] if p["name"] == "SideBySide")
+    positions = preset["positions"]
+    assert len(positions) == 2
+    assert positions[0] == {"x": 0.0, "y": 0.0, "width": 0.5, "height": 1.0, "z_index": 0}
+    assert positions[1] == {"x": 0.5, "y": 0.0, "width": 0.5, "height": 1.0, "z_index": 0}
+
+
+@pytest.mark.api
+def test_grid2x2_positions_match_rust(client: TestClient) -> None:
+    """Grid2x2 positions match known Rust PresetPosition values."""
+    response = client.get("/api/v1/compose/presets")
+    data = response.json()
+    preset = next(p for p in data["presets"] if p["name"] == "Grid2x2")
+    positions = preset["positions"]
+    assert len(positions) == 4
+    assert positions[0] == {"x": 0.0, "y": 0.0, "width": 0.5, "height": 0.5, "z_index": 0}
+    assert positions[1] == {"x": 0.5, "y": 0.0, "width": 0.5, "height": 0.5, "z_index": 0}
+    assert positions[2] == {"x": 0.0, "y": 0.5, "width": 0.5, "height": 0.5, "z_index": 0}
+    assert positions[3] == {"x": 0.5, "y": 0.5, "width": 0.5, "height": 0.5, "z_index": 0}
+
+
+@pytest.mark.api
+def test_all_preset_positions_match_rust_parity() -> None:
+    """Position values from API match Rust output for all 7 presets."""
+    from stoat_ferret.api.routers.compose import _PRESET_METADATA
+
+    for variant, meta in _PRESET_METADATA:
+        name = repr(variant).split(".")[-1]
+        max_inputs = int(meta["max_inputs"])
+        rust_positions = variant.positions(max_inputs)
+
+        from stoat_ferret.api.routers.compose import _build_preset_list
+
+        preset_list = _build_preset_list()
+        api_preset = next(p for p in preset_list if p.name == name)
+
+        assert len(api_preset.positions) == len(rust_positions), f"{name}: position count mismatch"
+        for i, (api_pos, rust_pos) in enumerate(
+            zip(api_preset.positions, rust_positions, strict=True)
+        ):
+            assert api_pos.x == pytest.approx(rust_pos.x), f"{name}[{i}].x"
+            assert api_pos.y == pytest.approx(rust_pos.y), f"{name}[{i}].y"
+            assert api_pos.width == pytest.approx(rust_pos.width), f"{name}[{i}].width"
+            assert api_pos.height == pytest.approx(rust_pos.height), f"{name}[{i}].height"
+            assert api_pos.z_index == rust_pos.z_index, f"{name}[{i}].z_index"
+
+
 # ---- Parity test: preset count matches Rust enum ----
 
 
@@ -156,7 +253,7 @@ def test_preset_count_matches_rust_enum() -> None:
 @pytest.mark.api
 def test_layout_preset_response_round_trip() -> None:
     """LayoutPresetResponse serializes and deserializes correctly."""
-    from stoat_ferret.api.schemas.compose import LayoutPresetResponse
+    from stoat_ferret.api.schemas.compose import LayoutPresetResponse, LayoutResponsePosition
 
     preset = LayoutPresetResponse(
         name="SideBySide",
@@ -164,6 +261,10 @@ def test_layout_preset_response_round_trip() -> None:
         ai_hint="Use for comparisons",
         min_inputs=2,
         max_inputs=2,
+        positions=[
+            LayoutResponsePosition(x=0.0, y=0.0, width=0.5, height=1.0, z_index=0),
+            LayoutResponsePosition(x=0.5, y=0.0, width=0.5, height=1.0, z_index=0),
+        ],
     )
     data = preset.model_dump()
     restored = LayoutPresetResponse.model_validate(data)

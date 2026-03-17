@@ -2,9 +2,44 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import LayerStack from '../LayerStack'
 import { useComposeStore } from '../../stores/composeStore'
+import type { LayoutPreset } from '../../types/timeline'
+
+const TEST_PRESETS: LayoutPreset[] = [
+  {
+    name: 'PipTopLeft', description: '', ai_hint: '', min_inputs: 2, max_inputs: 2,
+    positions: [
+      { x: 0, y: 0, width: 1, height: 1, z_index: 0 },
+      { x: 0.02, y: 0.02, width: 0.25, height: 0.25, z_index: 1 },
+    ],
+  },
+  {
+    name: 'PipBottomRight', description: '', ai_hint: '', min_inputs: 2, max_inputs: 2,
+    positions: [
+      { x: 0, y: 0, width: 1, height: 1, z_index: 0 },
+      { x: 0.73, y: 0.73, width: 0.25, height: 0.25, z_index: 1 },
+    ],
+  },
+  {
+    name: 'SideBySide', description: '', ai_hint: '', min_inputs: 2, max_inputs: 2,
+    positions: [
+      { x: 0, y: 0, width: 0.5, height: 1, z_index: 0 },
+      { x: 0.5, y: 0, width: 0.5, height: 1, z_index: 0 },
+    ],
+  },
+  {
+    name: 'Grid2x2', description: '', ai_hint: '', min_inputs: 4, max_inputs: 4,
+    positions: [
+      { x: 0, y: 0, width: 0.5, height: 0.5, z_index: 0 },
+      { x: 0.5, y: 0, width: 0.5, height: 0.5, z_index: 0 },
+      { x: 0, y: 0.5, width: 0.5, height: 0.5, z_index: 0 },
+      { x: 0.5, y: 0.5, width: 0.5, height: 0.5, z_index: 0 },
+    ],
+  },
+]
 
 beforeEach(() => {
   useComposeStore.getState().reset()
+  useComposeStore.setState({ presets: TEST_PRESETS })
 })
 
 describe('LayerStack', () => {

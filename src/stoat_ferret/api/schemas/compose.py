@@ -5,11 +5,21 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class LayoutResponsePosition(BaseModel):
+    """A positioned element in the layout response."""
+
+    x: float
+    y: float
+    width: float
+    height: float
+    z_index: int
+
+
 class LayoutPresetResponse(BaseModel):
     """Response schema for a single layout preset.
 
     Contains the preset metadata including name, description,
-    AI hint, and input count requirements.
+    AI hint, input count requirements, and default positions.
     """
 
     name: str
@@ -17,6 +27,7 @@ class LayoutPresetResponse(BaseModel):
     ai_hint: str
     min_inputs: int
     max_inputs: int
+    positions: list[LayoutResponsePosition]
 
 
 class LayoutPresetListResponse(BaseModel):
@@ -57,16 +68,6 @@ class LayoutRequest(BaseModel):
     input_count: int = Field(default=2, ge=1, description="Number of inputs for the layout")
     output_width: int = Field(default=1920, ge=1, description="Output width in pixels")
     output_height: int = Field(default=1080, ge=1, description="Output height in pixels")
-
-
-class LayoutResponsePosition(BaseModel):
-    """A positioned element in the layout response."""
-
-    x: float
-    y: float
-    width: float
-    height: float
-    z_index: int
 
 
 class LayoutResponse(BaseModel):

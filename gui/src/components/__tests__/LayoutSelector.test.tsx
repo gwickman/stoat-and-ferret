@@ -3,14 +3,17 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import LayoutSelector from '../LayoutSelector'
 import { useComposeStore } from '../../stores/composeStore'
 
+const POS_FULL = { x: 0, y: 0, width: 1, height: 1, z_index: 0 }
+const POS_HALF = { x: 0, y: 0, width: 0.5, height: 0.5, z_index: 0 }
+
 const ALL_PRESETS = [
-  { name: 'PipTopLeft', description: 'PIP top-left overlay', ai_hint: '', min_inputs: 2, max_inputs: 2 },
-  { name: 'PipTopRight', description: 'PIP top-right overlay', ai_hint: '', min_inputs: 2, max_inputs: 2 },
-  { name: 'PipBottomLeft', description: 'PIP bottom-left overlay', ai_hint: '', min_inputs: 2, max_inputs: 2 },
-  { name: 'PipBottomRight', description: 'PIP bottom-right overlay', ai_hint: '', min_inputs: 2, max_inputs: 2 },
-  { name: 'SideBySide', description: 'Side-by-side split', ai_hint: '', min_inputs: 2, max_inputs: 2 },
-  { name: 'TopBottom', description: 'Top-bottom split', ai_hint: '', min_inputs: 2, max_inputs: 2 },
-  { name: 'Grid2x2', description: '2x2 grid layout', ai_hint: '', min_inputs: 2, max_inputs: 4 },
+  { name: 'PipTopLeft', description: 'PIP top-left overlay', ai_hint: '', min_inputs: 2, max_inputs: 2, positions: [POS_FULL, { x: 0.02, y: 0.02, width: 0.25, height: 0.25, z_index: 1 }] },
+  { name: 'PipTopRight', description: 'PIP top-right overlay', ai_hint: '', min_inputs: 2, max_inputs: 2, positions: [POS_FULL, { x: 0.73, y: 0.02, width: 0.25, height: 0.25, z_index: 1 }] },
+  { name: 'PipBottomLeft', description: 'PIP bottom-left overlay', ai_hint: '', min_inputs: 2, max_inputs: 2, positions: [POS_FULL, { x: 0.02, y: 0.73, width: 0.25, height: 0.25, z_index: 1 }] },
+  { name: 'PipBottomRight', description: 'PIP bottom-right overlay', ai_hint: '', min_inputs: 2, max_inputs: 2, positions: [POS_FULL, { x: 0.73, y: 0.73, width: 0.25, height: 0.25, z_index: 1 }] },
+  { name: 'SideBySide', description: 'Side-by-side split', ai_hint: '', min_inputs: 2, max_inputs: 2, positions: [{ x: 0, y: 0, width: 0.5, height: 1, z_index: 0 }, { x: 0.5, y: 0, width: 0.5, height: 1, z_index: 0 }] },
+  { name: 'TopBottom', description: 'Top-bottom split', ai_hint: '', min_inputs: 2, max_inputs: 2, positions: [{ x: 0, y: 0, width: 1, height: 0.5, z_index: 0 }, { x: 0, y: 0.5, width: 1, height: 0.5, z_index: 0 }] },
+  { name: 'Grid2x2', description: '2x2 grid layout', ai_hint: '', min_inputs: 2, max_inputs: 4, positions: [POS_HALF, { x: 0.5, y: 0, width: 0.5, height: 0.5, z_index: 0 }, { x: 0, y: 0.5, width: 0.5, height: 0.5, z_index: 0 }, { x: 0.5, y: 0.5, width: 0.5, height: 0.5, z_index: 0 }] },
 ]
 
 beforeEach(() => {
