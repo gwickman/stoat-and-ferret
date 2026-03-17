@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { LayoutPosition, LayoutPreset, LayoutPresetListResponse } from '../types/timeline'
-import { PRESET_POSITIONS } from '../data/presetPositions'
 
 interface ComposeStoreState {
   /** Available layout presets. */
@@ -54,11 +53,12 @@ export const useComposeStore = create<ComposeStoreState>((set, get) => ({
   },
 
   selectPreset: (name: string) => {
-    const positions = PRESET_POSITIONS[name]
-    if (positions) {
+    const { presets } = get()
+    const preset = presets.find((p) => p.name === name)
+    if (preset) {
       set({
         selectedPreset: name,
-        customPositions: positions.map((p) => ({ ...p })),
+        customPositions: preset.positions.map((p) => ({ ...p })),
       })
     }
   },
@@ -78,9 +78,12 @@ export const useComposeStore = create<ComposeStoreState>((set, get) => ({
   },
 
   getActivePositions: () => {
-    const { selectedPreset, customPositions } = get()
-    if (selectedPreset && PRESET_POSITIONS[selectedPreset]) {
-      return PRESET_POSITIONS[selectedPreset]
+    const { selectedPreset, presets, customPositions } = get()
+    if (selectedPreset) {
+      const preset = presets.find((p) => p.name === selectedPreset)
+      if (preset) {
+        return preset.positions
+      }
     }
     return customPositions
   },

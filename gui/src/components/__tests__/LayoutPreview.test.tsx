@@ -2,10 +2,95 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import LayoutPreview from '../LayoutPreview'
 import { useComposeStore } from '../../stores/composeStore'
-import { PRESET_POSITIONS } from '../../data/presetPositions'
+import type { LayoutPreset } from '../../types/timeline'
+
+/** Test preset data matching Rust LayoutPreset definitions. */
+const TEST_PRESETS: LayoutPreset[] = [
+  {
+    name: 'PipTopLeft',
+    description: 'PIP top-left',
+    ai_hint: '',
+    min_inputs: 2,
+    max_inputs: 2,
+    positions: [
+      { x: 0.0, y: 0.0, width: 1.0, height: 1.0, z_index: 0 },
+      { x: 0.02, y: 0.02, width: 0.25, height: 0.25, z_index: 1 },
+    ],
+  },
+  {
+    name: 'PipTopRight',
+    description: 'PIP top-right',
+    ai_hint: '',
+    min_inputs: 2,
+    max_inputs: 2,
+    positions: [
+      { x: 0.0, y: 0.0, width: 1.0, height: 1.0, z_index: 0 },
+      { x: 0.73, y: 0.02, width: 0.25, height: 0.25, z_index: 1 },
+    ],
+  },
+  {
+    name: 'PipBottomLeft',
+    description: 'PIP bottom-left',
+    ai_hint: '',
+    min_inputs: 2,
+    max_inputs: 2,
+    positions: [
+      { x: 0.0, y: 0.0, width: 1.0, height: 1.0, z_index: 0 },
+      { x: 0.02, y: 0.73, width: 0.25, height: 0.25, z_index: 1 },
+    ],
+  },
+  {
+    name: 'PipBottomRight',
+    description: 'PIP bottom-right',
+    ai_hint: '',
+    min_inputs: 2,
+    max_inputs: 2,
+    positions: [
+      { x: 0.0, y: 0.0, width: 1.0, height: 1.0, z_index: 0 },
+      { x: 0.73, y: 0.73, width: 0.25, height: 0.25, z_index: 1 },
+    ],
+  },
+  {
+    name: 'SideBySide',
+    description: 'Side by side',
+    ai_hint: '',
+    min_inputs: 2,
+    max_inputs: 2,
+    positions: [
+      { x: 0.0, y: 0.0, width: 0.5, height: 1.0, z_index: 0 },
+      { x: 0.5, y: 0.0, width: 0.5, height: 1.0, z_index: 0 },
+    ],
+  },
+  {
+    name: 'TopBottom',
+    description: 'Top bottom',
+    ai_hint: '',
+    min_inputs: 2,
+    max_inputs: 2,
+    positions: [
+      { x: 0.0, y: 0.0, width: 1.0, height: 0.5, z_index: 0 },
+      { x: 0.0, y: 0.5, width: 1.0, height: 0.5, z_index: 0 },
+    ],
+  },
+  {
+    name: 'Grid2x2',
+    description: '2x2 grid',
+    ai_hint: '',
+    min_inputs: 4,
+    max_inputs: 4,
+    positions: [
+      { x: 0.0, y: 0.0, width: 0.5, height: 0.5, z_index: 0 },
+      { x: 0.5, y: 0.0, width: 0.5, height: 0.5, z_index: 0 },
+      { x: 0.0, y: 0.5, width: 0.5, height: 0.5, z_index: 0 },
+      { x: 0.5, y: 0.5, width: 0.5, height: 0.5, z_index: 0 },
+    ],
+  },
+]
 
 beforeEach(() => {
   useComposeStore.getState().reset()
+  // Populate presets so selectPreset can look up positions from API data
+  useComposeStore.setState({ presets: TEST_PRESETS })
 })
 
 describe('LayoutPreview', () => {
@@ -90,18 +175,17 @@ describe('LayoutPreview', () => {
   })
 
   it('renders rectangles for all 7 presets', () => {
-    for (const presetName of Object.keys(PRESET_POSITIONS)) {
-      useComposeStore.getState().selectPreset(presetName)
+    for (const preset of TEST_PRESETS) {
+      useComposeStore.getState().selectPreset(preset.name)
 
       const { unmount } = render(<LayoutPreview />)
-      const positions = PRESET_POSITIONS[presetName]
 
-      for (let i = 0; i < positions.length; i++) {
+      for (let i = 0; i < preset.positions.length; i++) {
         const rect = screen.getByTestId(`preview-rect-${i}`)
-        expect(rect.style.left).toBe(`${positions[i].x * 100}%`)
-        expect(rect.style.top).toBe(`${positions[i].y * 100}%`)
-        expect(rect.style.width).toBe(`${positions[i].width * 100}%`)
-        expect(rect.style.height).toBe(`${positions[i].height * 100}%`)
+        expect(rect.style.left).toBe(`${preset.positions[i].x * 100}%`)
+        expect(rect.style.top).toBe(`${preset.positions[i].y * 100}%`)
+        expect(rect.style.width).toBe(`${preset.positions[i].width * 100}%`)
+        expect(rect.style.height).toBe(`${preset.positions[i].height * 100}%`)
       }
 
       unmount()

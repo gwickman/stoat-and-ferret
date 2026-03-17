@@ -94,20 +94,33 @@ def _build_preset_list() -> list[LayoutPresetResponse]:
     """Build the preset response list from the Rust LayoutPreset enum.
 
     Returns:
-        List of LayoutPresetResponse objects for all known presets.
+        List of LayoutPresetResponse objects for all known presets,
+        including default positions from the Rust layout engine.
     """
     presets = []
     for variant, meta in _PRESET_METADATA:
         # Derive the name from the Rust enum variant's repr
         # LayoutPreset.PipTopLeft -> "PipTopLeft"
         name = repr(variant).split(".")[-1]
+        max_inputs = int(meta["max_inputs"])
+        rust_positions = variant.positions(max_inputs)
         presets.append(
             LayoutPresetResponse(
                 name=name,
                 description=str(meta["description"]),
                 ai_hint=str(meta["ai_hint"]),
                 min_inputs=int(meta["min_inputs"]),
-                max_inputs=int(meta["max_inputs"]),
+                max_inputs=max_inputs,
+                positions=[
+                    LayoutResponsePosition(
+                        x=pos.x,
+                        y=pos.y,
+                        width=pos.width,
+                        height=pos.height,
+                        z_index=pos.z_index,
+                    )
+                    for pos in rust_positions
+                ],
             )
         )
     return presets

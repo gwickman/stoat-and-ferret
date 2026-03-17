@@ -9,6 +9,10 @@ const mockPresets = {
       ai_hint: 'Use for commentary overlays',
       min_inputs: 2,
       max_inputs: 2,
+      positions: [
+        { x: 0, y: 0, width: 1, height: 1, z_index: 0 },
+        { x: 0.02, y: 0.02, width: 0.25, height: 0.25, z_index: 1 },
+      ],
     },
     {
       name: 'SideBySide',
@@ -16,6 +20,10 @@ const mockPresets = {
       ai_hint: 'Use for comparisons',
       min_inputs: 2,
       max_inputs: 2,
+      positions: [
+        { x: 0, y: 0, width: 0.5, height: 1, z_index: 0 },
+        { x: 0.5, y: 0, width: 0.5, height: 1, z_index: 0 },
+      ],
     },
   ],
   total: 2,

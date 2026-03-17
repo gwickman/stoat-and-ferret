@@ -48,6 +48,7 @@ export interface LayoutPreset {
   ai_hint: string
   min_inputs: number
   max_inputs: number
+  positions: LayoutPosition[]
 }
 
 /** Response from GET /api/v1/compose/presets. */
