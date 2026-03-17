@@ -51,7 +51,7 @@ JOURNEY_DEPS: dict[int, list[int]] = {
 # Human-readable journey names for screenshot directories and reports
 JOURNEY_NAMES: dict[int, str] = {
     201: "scan-library",
-    202: "preview-clip",
+    202: "project-clip",
     203: "timeline-edit",
     204: "export-project",
 }
