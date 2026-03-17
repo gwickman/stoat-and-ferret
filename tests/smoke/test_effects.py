@@ -2,12 +2,14 @@
 
 Validates the deepest stack path: API -> EffectRegistry -> Rust PyO3
 filter builders -> filter string generation. Covers effects catalog,
-apply/update/delete, and speed control with effect stacking.
+apply/update/delete, speed control with effect stacking, and untested
+effect types (audio_ducking, audio_fade, video_fade, acrossfade).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -220,3 +222,105 @@ async def test_uc11_speed_control_and_stacking(
     clips = resp.json()["clips"]
     clip = next(c for c in clips if c["id"] == clip_id)
     assert len(clip["effects"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Effect type gap-fill tests (BL-146)
+# ---------------------------------------------------------------------------
+
+
+async def _setup_project_with_clip(
+    client: httpx.AsyncClient,
+    videos_dir: Path,
+    project_name: str,
+) -> tuple[str, str]:
+    """Scan videos, create a project, and add one clip.
+
+    Returns:
+        Tuple of (project_id, clip_id).
+    """
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=1")
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": project_name},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    return project_id, clip_id
+
+
+@pytest.mark.usefixtures("videos_dir")
+@pytest.mark.parametrize(
+    ("effect_type", "parameters", "filter_keyword"),
+    [
+        pytest.param(
+            "audio_ducking",
+            {"threshold": 0.125, "ratio": 2.0, "attack": 20.0, "release": 250.0},
+            "sidechaincompress",
+            id="audio_ducking",
+        ),
+        pytest.param(
+            "audio_fade",
+            {"fade_type": "in", "duration": 1.0},
+            "afade",
+            id="audio_fade",
+        ),
+        pytest.param(
+            "video_fade",
+            {"fade_type": "in", "start_time": 0.0, "duration": 1.0},
+            "fade",
+            id="video_fade",
+        ),
+        pytest.param(
+            "acrossfade",
+            {"duration": 1.0},
+            "acrossfade",
+            id="acrossfade",
+        ),
+    ],
+)
+async def test_create_effect_type(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+    effect_type: str,
+    parameters: dict[str, Any],
+    filter_keyword: str,
+) -> None:
+    """Create an effect of the given type and verify 201 with filter string."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, f"Effect Test: {effect_type}"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={"effect_type": effect_type, "parameters": parameters},
+    )
+    assert resp.status_code == 201
+    effect = resp.json()
+    assert effect["effect_type"] == effect_type
+    assert filter_keyword in effect["filter_string"]
+
+    # Verify effect appears on the clip
+    resp = await client.get(f"/api/v1/projects/{project_id}/clips")
+    assert resp.status_code == 200
+    clips = resp.json()["clips"]
+    clip = next(c for c in clips if c["id"] == clip_id)
+    assert any(e["effect_type"] == effect_type for e in clip["effects"])
