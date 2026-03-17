@@ -8,6 +8,9 @@ const mockDirectories = {
     { name: 'Documents', path: '/home/user/Documents' },
     { name: 'Videos', path: '/home/user/Videos' },
   ],
+  total: 2,
+  limit: 100,
+  offset: 0,
 }
 
 beforeEach(() => {
@@ -49,7 +52,7 @@ describe('DirectoryBrowser', () => {
   it('renders empty state when directory has no subdirectories', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ path: '/home/user/empty', directories: [] }),
+        JSON.stringify({ path: '/home/user/empty', directories: [], total: 0, limit: 100, offset: 0 }),
         { status: 200 },
       ),
     )
@@ -95,6 +98,9 @@ describe('DirectoryBrowser', () => {
       directories: [
         { name: 'Movies', path: '/home/user/Videos/Movies' },
       ],
+      total: 1,
+      limit: 100,
+      offset: 0,
     }
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
@@ -153,6 +159,23 @@ describe('DirectoryBrowser', () => {
 
     fireEvent.click(screen.getByTestId('directory-browser-cancel'))
     expect(onCancel).toHaveBeenCalled()
+  })
+
+  it('passes limit=100 in API call', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockDirectories), { status: 200 }),
+    )
+
+    render(
+      <DirectoryBrowser onSelect={vi.fn()} onCancel={vi.fn()} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('directory-browser-list')).toBeDefined()
+    })
+
+    const url = fetchSpy.mock.calls[0][0] as string
+    expect(url).toContain('limit=100')
   })
 
   it('shows error state on fetch failure', async () => {

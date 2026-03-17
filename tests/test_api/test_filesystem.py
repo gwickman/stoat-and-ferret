@@ -156,3 +156,89 @@ def test_list_directories_empty(client: TestClient, tmp_path: os.PathLike) -> No
 
     assert response.status_code == 200
     assert response.json()["directories"] == []
+
+
+@pytest.mark.api
+def test_list_directories_default_pagination(client: TestClient, tmp_path: os.PathLike) -> None:
+    """GET without pagination params returns at most 20 items with metadata."""
+    # Create 25 subdirectories
+    for i in range(25):
+        (tmp_path / f"dir_{i:03d}").mkdir()
+
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["directories"]) == 20
+    assert data["total"] == 25
+    assert data["limit"] == 20
+    assert data["offset"] == 0
+
+
+@pytest.mark.api
+def test_list_directories_custom_pagination(client: TestClient, tmp_path: os.PathLike) -> None:
+    """GET with limit=5&offset=10 returns correct slice."""
+    # Create 20 subdirectories (sorted: dir_00, dir_01, ..., dir_19)
+    for i in range(20):
+        (tmp_path / f"dir_{i:02d}").mkdir()
+
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path), "limit": 5, "offset": 10},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["directories"]) == 5
+    assert data["total"] == 20
+    assert data["limit"] == 5
+    assert data["offset"] == 10
+    # Should be dir_10 through dir_14
+    names = [d["name"] for d in data["directories"]]
+    assert names == ["dir_10", "dir_11", "dir_12", "dir_13", "dir_14"]
+
+
+@pytest.mark.api
+def test_list_directories_pagination_boundary_invalid(
+    client: TestClient, tmp_path: os.PathLike
+) -> None:
+    """limit=0 or limit=101 returns 422 validation error."""
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+
+        response_zero = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path), "limit": 0},
+        )
+        assert response_zero.status_code == 422
+
+        response_over = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path), "limit": 101},
+        )
+        assert response_over.status_code == 422
+
+
+@pytest.mark.api
+def test_list_directories_offset_beyond_total(client: TestClient, tmp_path: os.PathLike) -> None:
+    """Offset beyond total returns empty list with correct total."""
+    (tmp_path / "only_dir").mkdir()
+
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path), "offset": 100},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["directories"] == []
+    assert data["total"] == 1
