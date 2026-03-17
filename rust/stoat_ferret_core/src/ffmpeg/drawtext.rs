@@ -988,6 +988,201 @@ mod tests {
         assert!(s.contains("[text_out]"));
     }
 
+    // ========== FFmpeg text expansion injection tests (BL-085) ==========
+
+    #[test]
+    fn test_escape_drawtext_percent_expr_injection() {
+        // %{expr:...} is FFmpeg's expression evaluation — must be neutralized
+        assert_eq!(escape_drawtext("%{expr:1+1}"), "%%{expr\\:1+1}");
+    }
+
+    #[test]
+    fn test_escape_drawtext_percent_metadata_injection() {
+        // %{metadata:key} reads stream metadata — must be neutralized
+        assert_eq!(escape_drawtext("%{metadata:key}"), "%%{metadata\\:key}");
+    }
+
+    #[test]
+    fn test_escape_drawtext_percent_localtime_injection() {
+        // %{localtime} expands to system time — must be neutralized
+        assert_eq!(escape_drawtext("%{localtime}"), "%%{localtime}");
+    }
+
+    #[test]
+    fn test_escape_drawtext_percent_pts_injection() {
+        // %{pts} expands to presentation timestamp
+        assert_eq!(escape_drawtext("%{pts}"), "%%{pts}");
+    }
+
+    #[test]
+    fn test_escape_drawtext_nested_percent_expansion() {
+        // Multiple expansion attempts in one string
+        assert_eq!(
+            escape_drawtext("Time: %{localtime} Frame: %{n}"),
+            "Time\\: %%{localtime} Frame\\: %%{n}"
+        );
+    }
+
+    #[test]
+    fn test_escape_drawtext_percent_eif_injection() {
+        // %{eif:expr:d} evaluates and formats expressions
+        assert_eq!(escape_drawtext("%{eif:n:d}"), "%%{eif\\:n\\:d}");
+    }
+
+    // ========== Unicode edge case tests (BL-085) ==========
+
+    #[test]
+    fn test_escape_drawtext_unicode_zero_width_space() {
+        // U+200B zero-width space — must pass through without corruption
+        let input = "hello\u{200B}world";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "hello\u{200B}world");
+        // Verify it produces valid filter string
+        let filter = DrawtextBuilder::new(input).build();
+        let s = filter.to_string();
+        assert!(s.starts_with("drawtext="));
+        assert!(s.contains("\u{200B}"));
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_bom() {
+        // U+FEFF byte order mark / zero-width no-break space
+        let input = "\u{FEFF}text";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "\u{FEFF}text");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_zwj() {
+        // U+200D zero-width joiner (used in emoji sequences)
+        let input = "face\u{200D}hair";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "face\u{200D}hair");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_rtl_mark() {
+        // U+200F right-to-left mark
+        let input = "hello\u{200F}مرحبا";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "hello\u{200F}مرحبا");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_rle() {
+        // U+202B right-to-left embedding
+        let input = "\u{202B}embedded text";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "\u{202B}embedded text");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_rlo() {
+        // U+202E right-to-left override — potential display spoofing
+        let input = "normal\u{202E}desrever";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "normal\u{202E}desrever");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_combining_acute() {
+        // U+0301 combining acute accent (e + ́ = é)
+        let input = "e\u{0301}";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "e\u{0301}");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_combining_diaeresis() {
+        // U+0308 combining diaeresis (u + ̈ = ü)
+        let input = "u\u{0308}";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "u\u{0308}");
+    }
+
+    #[test]
+    fn test_escape_drawtext_unicode_with_special_chars() {
+        // Unicode combined with FFmpeg special characters — both must be handled
+        let input = "\u{200B}key:value%{expr}\u{200F}";
+        let escaped = escape_drawtext(input);
+        assert_eq!(escaped, "\u{200B}key\\:value%%{expr}\u{200F}");
+    }
+
+    // ========== Expression context breakout tests (BL-085) ==========
+
+    #[test]
+    fn test_enable_expression_single_quote_wrapping() {
+        // enable() wraps the expression in single quotes: enable='expr'
+        let filter = DrawtextBuilder::new("test")
+            .enable("between(t,3,5)")
+            .build();
+        let s = filter.to_string();
+        assert!(s.contains("enable='between(t,3,5)'"));
+    }
+
+    #[test]
+    fn test_alpha_fade_expression_single_quote_wrapping() {
+        // alpha_fade() produces an expression wrapped in single quotes
+        let filter = DrawtextBuilder::new("test")
+            .alpha_fade(1.0, 0.5, 5.0, 0.5)
+            .build();
+        let s = filter.to_string();
+        // The alpha expression must be wrapped in single quotes
+        assert!(s.contains("alpha='if(lt(t,"));
+        // Verify the expression ends with a closing single quote
+        let alpha_start = s.find("alpha='").unwrap();
+        let alpha_rest = &s[alpha_start + 7..]; // skip "alpha='"
+                                                // Find the closing quote
+        assert!(
+            alpha_rest.contains("'"),
+            "alpha expression must have closing single quote"
+        );
+    }
+
+    #[test]
+    fn test_alpha_fade_expression_no_raw_single_quotes() {
+        // The expression engine should not produce single quotes inside the expression
+        let filter = DrawtextBuilder::new("test")
+            .alpha_fade(0.0, 1.0, 10.0, 2.0)
+            .build();
+        let s = filter.to_string();
+        // Extract alpha expression between the wrapping quotes
+        let alpha_start = s.find("alpha='").unwrap() + 7;
+        let alpha_end = s[alpha_start..].find('\'').unwrap() + alpha_start;
+        let expr = &s[alpha_start..alpha_end];
+        // The expression itself must not contain single quotes
+        assert!(
+            !expr.contains('\''),
+            "Expression engine must not produce single quotes inside expression: {expr}"
+        );
+    }
+
+    #[test]
+    fn test_text_with_single_quote_does_not_break_enable() {
+        // Single quotes in text are escaped, so they don't interfere with enable expression
+        let filter = DrawtextBuilder::new("it's a test")
+            .enable("between(t,1,5)")
+            .build();
+        let s = filter.to_string();
+        // Text escaping uses shell-style quote escaping: ' -> '\''
+        assert!(s.contains("text=it'\\''s a test"));
+        // Enable expression should still be intact
+        assert!(s.contains("enable='between(t,1,5)'"));
+    }
+
+    #[test]
+    fn test_text_with_percent_does_not_affect_expression() {
+        // Percent escaping in text should not affect alpha/enable expressions
+        let filter = DrawtextBuilder::new("100% done")
+            .alpha(0.5)
+            .enable("between(t,0,10)")
+            .build();
+        let s = filter.to_string();
+        assert!(s.contains("text=100%% done"));
+        assert!(s.contains("alpha='0.5'"));
+        assert!(s.contains("enable='between(t,0,10)'"));
+    }
+
     // ========== Proptest ==========
 
     use proptest::prelude::*;
