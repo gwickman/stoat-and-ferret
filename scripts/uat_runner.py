@@ -52,7 +52,7 @@ JOURNEY_DEPS: dict[int, list[int]] = {
 JOURNEY_NAMES: dict[int, str] = {
     201: "scan-library",
     202: "project-clip",
-    203: "timeline-edit",
+    203: "effects-timeline",
     204: "export-project",
 }
 
