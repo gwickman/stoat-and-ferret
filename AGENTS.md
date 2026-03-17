@@ -39,6 +39,12 @@ cargo clippy -- -D warnings  # Lint
 cargo test                   # Test
 maturin develop              # Build Python extension
 
+# UAT (User Acceptance Testing)
+uv pip install -e ".[uat]"                          # Install UAT dependencies
+playwright install chromium                          # Download Chromium binary
+python scripts/uat_runner.py --headless              # Run UAT headless (full build)
+python scripts/uat_runner.py --headless --skip-build # Run UAT against running server
+
 # Type Stubs
 cd rust/stoat_ferret_core
 cargo run --bin stub_gen     # Generate baseline stubs to .generated-stubs/
