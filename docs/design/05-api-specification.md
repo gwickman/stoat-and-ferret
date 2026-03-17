@@ -1101,12 +1101,14 @@ Removes an effect from a clip by index.
 GET /filesystem/directories
 ```
 
-Lists subdirectories within a given path. Hidden directories (starting with `.`) are excluded. Uses `run_in_executor` for async-safe filesystem access.
+Lists subdirectories within a given path with pagination. Hidden directories (starting with `.`) are excluded. Uses `run_in_executor` for async-safe filesystem access.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | No | Directory path to list. Defaults to first `allowed_scan_roots` entry or user home |
+| `limit` | integer | No | Maximum entries to return (1-100, default 20) |
+| `offset` | integer | No | Number of entries to skip (>= 0, default 0) |
 
 **Response:** `200 OK`
 ```json
@@ -1115,7 +1117,10 @@ Lists subdirectories within a given path. Hidden directories (starting with `.`)
   "directories": [
     {"name": "Movies", "path": "/home/user/videos/Movies"},
     {"name": "Clips", "path": "/home/user/videos/Clips"}
-  ]
+  ],
+  "total": 2,
+  "limit": 20,
+  "offset": 0
 }
 ```
 

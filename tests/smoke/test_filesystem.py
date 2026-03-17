@@ -43,6 +43,11 @@ async def test_filesystem_directories(
     names = [d["name"] for d in body["directories"]]
     assert names == ["alpha", "beta", "gamma"]
 
+    # Verify pagination metadata
+    assert body["total"] == 3
+    assert body["limit"] == 20
+    assert body["offset"] == 0
+
 
 async def test_filesystem_directories_not_found(
     smoke_client: httpx.AsyncClient,

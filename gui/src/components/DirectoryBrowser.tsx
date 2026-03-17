@@ -8,6 +8,9 @@ interface DirectoryEntry {
 interface DirectoryListResponse {
   path: string
   directories: DirectoryEntry[]
+  total: number
+  limit: number
+  offset: number
 }
 
 interface DirectoryBrowserProps {
@@ -30,7 +33,10 @@ export default function DirectoryBrowser({
     setIsLoading(true)
     setError('')
     try {
-      const params = path ? `?path=${encodeURIComponent(path)}` : ''
+      const query = new URLSearchParams()
+      if (path) query.set('path', path)
+      query.set('limit', '100')
+      const params = query.toString() ? `?${query.toString()}` : ''
       const res = await fetch(`/api/v1/filesystem/directories${params}`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: { message: `Error: ${res.status}` } }))

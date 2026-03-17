@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -41,10 +42,12 @@ def _list_dirs(path: str) -> list[DirectoryEntry]:
 @router.get("/directories", response_model=DirectoryListResponse)
 async def list_directories(
     path: str | None = Query(default=None, description="Directory path to list"),
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> DirectoryListResponse:
-    """List subdirectories within a given path.
+    """List subdirectories within a given path with pagination.
 
-    Returns a flat list of immediate subdirectories. Hidden directories
+    Returns a paginated list of immediate subdirectories. Hidden directories
     (starting with '.') are excluded. Uses run_in_executor for async-safe
     filesystem access.
 
@@ -53,9 +56,11 @@ async def list_directories(
 
     Args:
         path: Directory path to list. Defaults to a sensible starting location.
+        limit: Maximum number of entries to return (1-100, default 20).
+        offset: Number of entries to skip (default 0).
 
     Returns:
-        Directory listing with parent path and subdirectory entries.
+        Paginated directory listing with metadata.
 
     Raises:
         HTTPException: 400 if path is not a directory, 403 if outside allowed roots,
@@ -93,6 +98,15 @@ async def list_directories(
 
     # List directories in executor to avoid blocking the event loop
     loop = asyncio.get_event_loop()
-    directories = await loop.run_in_executor(None, _list_dirs, resolved)
+    all_directories = await loop.run_in_executor(None, _list_dirs, resolved)
 
-    return DirectoryListResponse(path=resolved, directories=directories)
+    total = len(all_directories)
+    page = all_directories[offset : offset + limit]
+
+    return DirectoryListResponse(
+        path=resolved,
+        directories=page,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

@@ -16,10 +16,14 @@ class DirectoryEntry(BaseModel):
 
 
 class DirectoryListResponse(BaseModel):
-    """Response for a directory listing request.
+    """Paginated response for a directory listing request.
 
-    Contains the parent path and list of subdirectories within it.
+    Contains the parent path, list of subdirectories within it,
+    and pagination metadata.
     """
 
     path: str
     directories: list[DirectoryEntry]
+    total: int
+    limit: int
+    offset: int
