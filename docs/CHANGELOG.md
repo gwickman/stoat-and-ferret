@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v021] - 2026-03-17
+
+Quality & API Completeness. Verifies the BL-138 timeline persistence fix, performs a formal DrawtextBuilder security review, fills five smoke test coverage gaps, and completes the API surface with version creation, filesystem pagination, and layout preset position endpoints.
+
+### Added
+
+- **Version Creation Endpoint**
+  - `POST /projects/{id}/versions` returning 201 with auto-incremented version number and SHA-256 checksum
+
+- **Filesystem Pagination**
+  - `limit`/`offset` pagination on `GET /filesystem/directories` with `total`, `limit`, `offset` response metadata
+  - Updated `DirectoryBrowser.tsx` to use paginated API
+
+- **Preset Positions API**
+  - Augmented `GET /compose/presets` with `positions` field served from Rust single source of truth
+  - Deleted duplicated `presetPositions.ts` client-side constants
+
+- **Smoke Test Gap Fill**
+  - 5 new smoke tests: transition DELETE, audio_ducking, audio_fade, video_fade, acrossfade effect types
+
+- **DrawtextBuilder Security Review**
+  - 20 new Rust tests and 10 new Python tests for `escape_drawtext()` injection and Unicode handling
+  - Formal security review document confirming no vulnerabilities
+
+- **Timeline Persistence Integration Test**
+  - SQLite close/reopen integration test verifying `track_id`, `timeline_start`, `timeline_end` survive DB round-trip (BL-138)
+
 ## [v020] - 2026-03-15
 
 Sample Project: Running Montage. Delivers the complete sample project infrastructure for the Running Montage example, including a CLI seed script, smoke test fixture with effects and transitions, regression test, developer-facing user guide, and cross-artifact sync check in IMPACT_ASSESSMENT.
