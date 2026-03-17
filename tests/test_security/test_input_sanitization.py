@@ -5,6 +5,7 @@ Tests cover:
 - Null byte injection in filter text
 - Whitelist bypass for codecs, presets, and format values
 - FFmpeg filter syntax injection
+- DrawtextBuilder Unicode edge cases through PyO3 (BL-085)
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import pytest
 
 from stoat_ferret_core import (
+    DrawtextBuilder,
     escape_filter_text,
     validate_audio_codec,
     validate_path,
@@ -156,3 +158,84 @@ class TestWhitelistBypass:
         """Preset with embedded null byte is rejected (not in whitelist)."""
         with pytest.raises(ValueError):
             validate_preset("fast\x00")
+
+
+class TestDrawtextUnicodeEdgeCases:
+    """Verify Unicode edge cases pass through DrawtextBuilder via PyO3 correctly.
+
+    Tests the full path: Python input -> Rust escape_drawtext() -> FFmpeg filter string.
+    These characters should pass through without corruption and produce valid filter output.
+    """
+
+    def test_zero_width_space(self) -> None:
+        """U+200B zero-width space passes through DrawtextBuilder."""
+        dt = DrawtextBuilder("hello\u200bworld")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u200b" in result
+
+    def test_byte_order_mark(self) -> None:
+        """U+FEFF BOM/ZWNBSP passes through DrawtextBuilder."""
+        dt = DrawtextBuilder("\ufefftext")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\ufeff" in result
+
+    def test_zero_width_joiner(self) -> None:
+        """U+200D zero-width joiner (emoji sequences) passes through."""
+        dt = DrawtextBuilder("a\u200db")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u200d" in result
+
+    def test_rtl_mark(self) -> None:
+        """U+200F right-to-left mark passes through."""
+        dt = DrawtextBuilder("hello\u200f\u0645\u0631\u062d\u0628\u0627")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u200f" in result
+
+    def test_rtl_embedding(self) -> None:
+        """U+202B right-to-left embedding passes through."""
+        dt = DrawtextBuilder("\u202bembedded")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u202b" in result
+
+    def test_rtl_override(self) -> None:
+        """U+202E right-to-left override passes through."""
+        dt = DrawtextBuilder("normal\u202edesrever")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u202e" in result
+
+    def test_combining_acute_accent(self) -> None:
+        """U+0301 combining acute accent passes through."""
+        dt = DrawtextBuilder("e\u0301")  # e + combining acute = é
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u0301" in result
+
+    def test_combining_diaeresis(self) -> None:
+        """U+0308 combining diaeresis passes through."""
+        dt = DrawtextBuilder("u\u0308")  # u + combining diaeresis = ü
+        result = str(dt.build())
+        assert "drawtext=" in result
+        assert "\u0308" in result
+
+    def test_unicode_with_special_chars_full_path(self) -> None:
+        """Unicode combined with FFmpeg special chars through full Python->Rust path."""
+        dt = DrawtextBuilder("\u200bkey:value%{expr}\u200f")
+        result = str(dt.build())
+        assert "drawtext=" in result
+        # Colon and percent must be escaped, Unicode must pass through
+        assert "\\:" in result
+        assert "%%" in result
+        assert "\u200b" in result
+        assert "\u200f" in result
+
+    def test_percent_expansion_neutralized(self) -> None:
+        """FFmpeg %{...} text expansion is neutralized through Python API."""
+        dt = DrawtextBuilder("%{localtime}")
+        result = str(dt.build())
+        assert "%%{localtime}" in result
