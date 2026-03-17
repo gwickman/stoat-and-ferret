@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,27 +63,30 @@ async def ffprobe_video(path: str, ffprobe_path: str = "ffprobe") -> VideoMetada
         raise FileNotFoundError(f"Video file not found: {path}")
 
     try:
-        proc = await asyncio.create_subprocess_exec(
-            ffprobe_path,
-            "-v",
-            "quiet",
-            "-print_format",
-            "json",
-            "-show_format",
-            "-show_streams",
-            path,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [
+                ffprobe_path,
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+                path,
+            ],
+            capture_output=True,
+            timeout=30,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
     except FileNotFoundError:
         raise FFprobeError(f"ffprobe not found at: {ffprobe_path}. Is FFmpeg installed?") from None
-    except asyncio.TimeoutError:
-        proc.kill()
-        await proc.communicate()
+    except subprocess.TimeoutExpired:
         raise FFprobeError(f"ffprobe timed out reading: {path}") from None
 
-    if proc.returncode != 0:
+    stdout = result.stdout
+    stderr = result.stderr
+
+    if result.returncode != 0:
         stderr_text = stderr.decode(errors="replace")
         raise FFprobeError(f"ffprobe failed for {path}: {stderr_text}")
 
