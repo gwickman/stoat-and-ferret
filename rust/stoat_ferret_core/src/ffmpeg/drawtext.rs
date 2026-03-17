@@ -993,19 +993,13 @@ mod tests {
     #[test]
     fn test_escape_drawtext_percent_expr_injection() {
         // %{expr:...} is FFmpeg's expression evaluation — must be neutralized
-        assert_eq!(
-            escape_drawtext("%{expr:1+1}"),
-            "%%{expr\\:1+1}"
-        );
+        assert_eq!(escape_drawtext("%{expr:1+1}"), "%%{expr\\:1+1}");
     }
 
     #[test]
     fn test_escape_drawtext_percent_metadata_injection() {
         // %{metadata:key} reads stream metadata — must be neutralized
-        assert_eq!(
-            escape_drawtext("%{metadata:key}"),
-            "%%{metadata\\:key}"
-        );
+        assert_eq!(escape_drawtext("%{metadata:key}"), "%%{metadata\\:key}");
     }
 
     #[test]
@@ -1032,10 +1026,7 @@ mod tests {
     #[test]
     fn test_escape_drawtext_percent_eif_injection() {
         // %{eif:expr:d} evaluates and formats expressions
-        assert_eq!(
-            escape_drawtext("%{eif:n:d}"),
-            "%%{eif\\:n\\:d}"
-        );
+        assert_eq!(escape_drawtext("%{eif:n:d}"), "%%{eif\\:n\\:d}");
     }
 
     // ========== Unicode edge case tests (BL-085) ==========
@@ -1141,7 +1132,7 @@ mod tests {
         // Verify the expression ends with a closing single quote
         let alpha_start = s.find("alpha='").unwrap();
         let alpha_rest = &s[alpha_start + 7..]; // skip "alpha='"
-        // Find the closing quote
+                                                // Find the closing quote
         assert!(
             alpha_rest.contains("'"),
             "alpha expression must have closing single quote"
