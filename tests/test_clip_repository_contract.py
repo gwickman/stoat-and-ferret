@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from dataclasses import replace
 from datetime import datetime, timezone
+from pathlib import Path
 
 import aiosqlite
 import pytest
@@ -257,6 +258,52 @@ class TestAsyncClipTimelineFields:
         )
         await clip_repository.update(updated)
         retrieved = await clip_repository.get(clip.id)
+
+        assert retrieved is not None
+        assert retrieved.track_id == "track-2"
+        assert retrieved.timeline_start == 5.0
+        assert retrieved.timeline_end == 10.0
+
+
+async def _setup_sqlite_repo(db_path: Path) -> AsyncSQLiteClipRepository:
+    """Create a SQLite clip repository with schema and test data."""
+    conn = await aiosqlite.connect(str(db_path))
+    await create_tables_async(conn)
+    await insert_test_project_and_video(conn)
+    return AsyncSQLiteClipRepository(conn)
+
+
+class TestSQLiteTimelinePersistenceAcrossRestart:
+    """Integration test: timeline fields survive a connection close/reopen cycle."""
+
+    async def test_sqlite_timeline_persistence_across_restart(self, tmp_path: Path) -> None:
+        """Timeline fields persist after closing and reopening the SQLite database."""
+        db_path = tmp_path / "test_timeline.db"
+
+        # Write a clip with timeline fields
+        repo = await _setup_sqlite_repo(db_path)
+        clip = make_test_clip(
+            track_id="track-1",
+            timeline_start=2.5,
+            timeline_end=7.0,
+        )
+        await repo.add(clip)
+
+        updated = replace(
+            clip,
+            track_id="track-2",
+            timeline_start=5.0,
+            timeline_end=10.0,
+            updated_at=datetime.now(timezone.utc),
+        )
+        await repo.update(updated)
+        await repo._conn.close()
+
+        # Reopen the database and verify
+        conn2 = await aiosqlite.connect(str(db_path))
+        repo2 = AsyncSQLiteClipRepository(conn2)
+        retrieved = await repo2.get(clip.id)
+        await conn2.close()
 
         assert retrieved is not None
         assert retrieved.track_id == "track-2"
