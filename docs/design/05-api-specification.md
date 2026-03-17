@@ -1703,6 +1703,37 @@ GET /projects/{project_id}/versions
 
 ---
 
+#### Create Version
+```http
+POST /projects/{project_id}/versions
+```
+
+**Request Body:**
+```json
+{
+  "timeline_json": "{\"clips\": [1, 2, 3]}"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `timeline_json` | string | Yes | Serialized timeline data to snapshot |
+
+**Response:** `201 Created`
+```json
+{
+  "version_number": 6,
+  "created_at": "2024-01-15T15:00:00Z",
+  "checksum": "a1b2c3d4..."
+}
+```
+
+**Errors:**
+- `404 Not Found` — Project does not exist
+- `422 Unprocessable Entity` — Missing or invalid request body
+
+---
+
 #### Restore Version
 ```http
 POST /projects/{project_id}/versions/{version}/restore

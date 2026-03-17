@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from stoat_ferret.api.schemas.version import (
     RestoreResponse,
+    VersionCreateRequest,
     VersionListResponse,
     VersionResponse,
 )
@@ -104,6 +105,46 @@ async def list_versions(
             )
             for v in page
         ],
+    )
+
+
+@router.post(
+    "/projects/{project_id}/versions",
+    response_model=VersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_version(
+    project_id: str,
+    request: VersionCreateRequest,
+    project_repo: ProjectRepoDep,
+    version_repo: VersionRepoDep,
+) -> VersionResponse:
+    """Create a new version snapshot of a project timeline.
+
+    Args:
+        project_id: The unique project identifier.
+        request: Version creation request with timeline JSON data.
+        project_repo: Project repository dependency.
+        version_repo: Version repository dependency.
+
+    Returns:
+        The created version with auto-incremented version number and checksum.
+
+    Raises:
+        HTTPException: 404 if project not found.
+    """
+    project = await project_repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    record = await version_repo.save(project_id, request.timeline_json)
+    return VersionResponse(
+        version_number=record.version_number,
+        created_at=record.created_at.isoformat(),
+        checksum=record.checksum,
     )
 
 

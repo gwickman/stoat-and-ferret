@@ -5,6 +5,16 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
+class VersionCreateRequest(BaseModel):
+    """Request body for creating a new version snapshot.
+
+    Attributes:
+        timeline_json: Serialized timeline data to snapshot.
+    """
+
+    timeline_json: str
+
+
 class VersionResponse(BaseModel):
     """Single version entry in a project's history.
 
