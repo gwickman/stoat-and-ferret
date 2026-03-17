@@ -1,18 +1,12 @@
-"""Smoke tests for project version listing and restore.
+"""Smoke tests for project version listing, creation, and restore.
 
-Validates listing and restoring project versions through the full HTTP stack.
-
-Note: The version API exposes list and restore endpoints. Version records
-are created internally via version_repo.save() — there is no HTTP endpoint
-for creating a version directly. Tests that need a version pre-populated
-use the ``create_version_repo`` helper from conftest.
+Validates listing, creating, and restoring project versions through the
+full HTTP stack.
 """
 
 from __future__ import annotations
 
 import httpx
-
-from tests.smoke.conftest import create_version_repo
 
 
 async def test_version_list_empty_project(smoke_client: httpx.AsyncClient) -> None:
@@ -37,6 +31,39 @@ async def test_version_list_empty_project(smoke_client: httpx.AsyncClient) -> No
     assert body["offset"] == 0
 
 
+async def test_version_create_and_list(smoke_client: httpx.AsyncClient) -> None:
+    """POST creates a version snapshot, verify via subsequent GET in the version list."""
+    client = smoke_client
+
+    # Create a project
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Version Create Smoke Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    # Create a version via POST
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/versions",
+        json={"timeline_json": '{"clips": [1, 2, 3]}'},
+    )
+    assert resp.status_code == 201
+    version_data = resp.json()
+    assert version_data["version_number"] == 1
+    assert "checksum" in version_data
+    assert "created_at" in version_data
+
+    # Verify the version appears in GET list
+    resp = await client.get(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert len(body["versions"]) == 1
+    assert body["versions"][0]["version_number"] == 1
+    assert body["versions"][0]["checksum"] == version_data["checksum"]
+
+
 async def test_version_list_nonexistent_project(smoke_client: httpx.AsyncClient) -> None:
     """GET /api/v1/projects/{id}/versions returns 404 for nonexistent project."""
     resp = await smoke_client.get("/api/v1/projects/nonexistent-id/versions")
@@ -55,9 +82,12 @@ async def test_version_restore(smoke_client: httpx.AsyncClient) -> None:
     assert resp.status_code == 201
     project_id = resp.json()["id"]
 
-    # Create a version via the repo (no HTTP endpoint for version creation)
-    version_repo = create_version_repo(client)
-    await version_repo.save(project_id, '{"timeline": "test"}')
+    # Create a version via POST endpoint
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/versions",
+        json={"timeline_json": '{"timeline": "test"}'},
+    )
+    assert resp.status_code == 201
 
     # Restore version 1
     resp = await client.post(

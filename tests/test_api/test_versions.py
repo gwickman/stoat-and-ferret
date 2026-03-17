@@ -89,6 +89,71 @@ async def test_list_versions_pagination(
 
 
 @pytest.mark.api
+async def test_create_version(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """POST with valid timeline_json returns 201 with VersionResponse."""
+    project_id = await _seed_project(project_repository)
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/versions",
+        json={"timeline_json": '{"clips": [1, 2]}'},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["version_number"] == 1
+    assert "created_at" in data
+    assert "checksum" in data
+    assert len(data["checksum"]) == 64  # SHA-256 hex digest
+
+
+@pytest.mark.api
+def test_create_version_project_not_found(client: TestClient) -> None:
+    """POST with non-existent project ID returns 404."""
+    response = client.post(
+        "/api/v1/projects/nonexistent/versions",
+        json={"timeline_json": '{"clips": []}'},
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+def test_create_version_missing_body(client: TestClient) -> None:
+    """POST with missing timeline_json returns 422."""
+    response = client.post(
+        "/api/v1/projects/some-project/versions",
+        json={},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+async def test_create_version_incrementing(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Two sequential POSTs produce incrementing version numbers."""
+    project_id = await _seed_project(project_repository)
+
+    resp1 = client.post(
+        f"/api/v1/projects/{project_id}/versions",
+        json={"timeline_json": '{"clips": [1]}'},
+    )
+    assert resp1.status_code == 201
+    assert resp1.json()["version_number"] == 1
+
+    resp2 = client.post(
+        f"/api/v1/projects/{project_id}/versions",
+        json={"timeline_json": '{"clips": [1, 2]}'},
+    )
+    assert resp2.status_code == 201
+    assert resp2.json()["version_number"] == 2
+
+
+@pytest.mark.api
 def test_list_versions_project_not_found(client: TestClient) -> None:
     """List returns 404 for non-existent project."""
     response = client.get("/api/v1/projects/nonexistent/versions")
