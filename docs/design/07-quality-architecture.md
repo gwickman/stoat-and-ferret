@@ -38,19 +38,21 @@ This document defines how quality attributes are built into the video editor fro
 │                    Hybrid Testability Pyramid                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│                           ┌─────────┐                                    │
-│                           │   E2E   │  Few, slow, high confidence        │
-│                         ┌─┴─────────┴─┐                                  │
-│                         │ Integration │  Python + Rust + FFmpeg          │
-│                       ┌─┴─────────────┴─┐                                │
-│                       │   Rust proptest  │  Property-based, fast         │
-│                     ┌─┴─────────────────┴─┐                              │
-│                     │  Rust Unit Tests    │  Pure functions, isolated    │
-│                   ┌─┴───────────────────────┴─┐                          │
-│                   │    Python Unit Tests       │  Service mocks           │
-│                 ┌─┴─────────────────────────────┴─┐                      │
-│                 │      Static Analysis             │  mypy + clippy       │
-│                 └───────────────────────────────────┘                    │
+│                            ┌─────────┐                                    │
+│                            │   UAT   │  Browser journeys, Playwright     │
+│                          ┌─┴─────────┴─┐                                  │
+│                          │ Smoke Tests │  In-process, fast feedback       │
+│                        ┌─┴─────────────┴─┐                                │
+│                        │   Integration   │  Python + Rust + FFmpeg        │
+│                      ┌─┴─────────────────┴─┐                              │
+│                      │    Rust proptest    │  Property-based, fast        │
+│                    ┌─┴─────────────────────┴─┐                            │
+│                    │    Rust Unit Tests      │  Pure functions, isolated  │
+│                  ┌─┴─────────────────────────┴─┐                          │
+│                  │     Python Unit Tests       │  Service mocks           │
+│                ┌─┴─────────────────────────────┴─┐                        │
+│                │       Static Analysis           │  mypy + clippy         │
+│                └─────────────────────────────────┘                        │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1554,6 +1556,21 @@ jobs:
       - name: Run contract tests
         run: pytest tests/contract -m contract
 ```
+
+### UAT Acceptance Tests
+
+UAT (User Acceptance Testing) sits above smoke tests in the testing pyramid.
+Browser-based Playwright journeys validate complete user workflows against a
+live server instance.
+
+- **Scope:** End-to-end user journeys (library scan, clip preview, timeline
+  edit, export) exercised through a real browser.
+- **Runner:** `scripts/uat_runner.py` — manages build, server boot, journey
+  execution, and teardown.
+- **Evidence:** Screenshots and a JSON report are written to
+  `uat-evidence/{timestamp}/`.
+- **When to run:** During version closure and manual exploration. Not part of
+  CI (see `docs/auto-dev/VERSION_CLOSURE.md`).
 
 ### Smoke Tests
 
