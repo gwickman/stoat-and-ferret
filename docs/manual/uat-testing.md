@@ -42,7 +42,7 @@ Headed mode opens a visible browser window so you can watch each journey execute
 This builds everything, starts the server, seeds sample data, runs all journeys, then tears down:
 
 ```bash
-python scripts/uat_runner.py --headed
+uv run python scripts/uat_runner.py --headed
 ```
 
 ### Against a running server
@@ -50,7 +50,7 @@ python scripts/uat_runner.py --headed
 If the server is already running on port 8765, skip the build/boot phases:
 
 ```bash
-python scripts/uat_runner.py --headed --skip-build
+uv run python scripts/uat_runner.py --headed --skip-build
 ```
 
 ### Run a single journey
@@ -58,13 +58,13 @@ python scripts/uat_runner.py --headed --skip-build
 To run only one journey (e.g. journey 201):
 
 ```bash
-python scripts/uat_runner.py --headed --journey 201
+uv run python scripts/uat_runner.py --headed --journey 201
 ```
 
 Combine with `--skip-build` if the server is already up:
 
 ```bash
-python scripts/uat_runner.py --headed --journey 201 --skip-build
+uv run python scripts/uat_runner.py --headed --journey 201 --skip-build
 ```
 
 ## Running UAT tests headlessly
@@ -74,13 +74,13 @@ Headless mode runs the browser without a visible window. Use this for CI pipelin
 ### Full build-boot-test cycle
 
 ```bash
-python scripts/uat_runner.py --headless
+uv run python scripts/uat_runner.py --headless
 ```
 
 ### Against a running server
 
 ```bash
-python scripts/uat_runner.py --headless --skip-build
+uv run python scripts/uat_runner.py --headless --skip-build
 ```
 
 ### Custom output directory
@@ -88,7 +88,7 @@ python scripts/uat_runner.py --headless --skip-build
 By default, results are written to `uat-evidence/` in the project root. Override with:
 
 ```bash
-python scripts/uat_runner.py --headless --output-dir ./my-results
+uv run python scripts/uat_runner.py --headless --output-dir ./my-results
 ```
 
 ## Understanding the results
@@ -191,7 +191,7 @@ When a UAT failure reveals a bug:
 After fixing the underlying issue, re-run the relevant journey to confirm:
 
 ```bash
-python scripts/uat_runner.py --headless --skip-build --journey 201
+uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 ```
 
 ## Available journey scripts
