@@ -18,10 +18,10 @@ uv pip install -e ".[uat]"
 
 ### 2. Install the Chromium browser binary
 
-Playwright requires a browser binary. Install Chromium:
+Playwright requires a browser binary. Install Chromium via uv (do not call `playwright` directly — it is inside uv's virtual environment and won't be on your PATH):
 
 ```bash
-playwright install chromium
+uv run playwright install chromium
 ```
 
 ### 3. Build the application
