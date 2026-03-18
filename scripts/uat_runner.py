@@ -53,7 +53,7 @@ JOURNEY_NAMES: dict[int, str] = {
     201: "scan-library",
     202: "project-clip",
     203: "effects-timeline",
-    204: "export-project",
+    204: "export-render",
 }
 
 # Known benign console error patterns to exclude from reports
