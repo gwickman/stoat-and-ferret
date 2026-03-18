@@ -181,11 +181,15 @@ def run_build_steps() -> None:
     Raises:
         SystemExit: If any build step fails.
     """
+    # On Windows, npm is a .cmd batch file and cannot be found by subprocess
+    # without shell=True unless the .cmd extension is included explicitly.
+    npm = "npm.cmd" if sys.platform == "win32" else "npm"
+
     steps: list[tuple[str, list[str], Path | None]] = [
         ("Building Rust core (maturin develop)", ["maturin", "develop"], PROJECT_ROOT),
         ("Installing Python package", ["pip", "install", "-e", "."], PROJECT_ROOT),
-        ("Installing GUI dependencies (npm ci)", ["npm", "ci"], PROJECT_ROOT / "gui"),
-        ("Building GUI (npm run build)", ["npm", "run", "build"], PROJECT_ROOT / "gui"),
+        ("Installing GUI dependencies (npm ci)", [npm, "ci"], PROJECT_ROOT / "gui"),
+        ("Building GUI (npm run build)", [npm, "run", "build"], PROJECT_ROOT / "gui"),
     ]
 
     for description, cmd, cwd in steps:
@@ -195,6 +199,8 @@ def run_build_steps() -> None:
             cwd=cwd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
         if result.returncode != 0:
             print(f"  FAILED: {description}", file=sys.stderr)
