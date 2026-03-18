@@ -111,7 +111,7 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
     resp.raise_for_status()
     job_id = resp.json()["job_id"]
 
-    for _ in range(60):  # 30 seconds max (60 * 0.5s)
+    for _ in range(120):  # 60 seconds max (120 * 0.5s)
         status_resp = client.get(f"/api/v1/jobs/{job_id}")
         status_resp.raise_for_status()
         status = status_resp.json()["status"].lower()
@@ -251,7 +251,7 @@ def main() -> None:
     base_url = args.base_url.rstrip("/")
     videos_dir = str(Path(args.videos_dir).resolve())
 
-    with httpx.Client(base_url=base_url, timeout=60.0) as client:
+    with httpx.Client(base_url=base_url, timeout=120.0) as client:
         # 1. Health check
         try:
             resp = client.get("/health/live")

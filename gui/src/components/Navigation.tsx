@@ -25,7 +25,7 @@ export default function Navigation() {
       const results = await Promise.all(
         TABS.map(async (tab) => {
           try {
-            const res = await fetch(tab.checkUrl, { method: 'HEAD' })
+            const res = await fetch(tab.checkUrl, { method: 'GET' })
             return { tab, available: res.ok || res.status === 405 }
           } catch {
             return { tab, available: false }

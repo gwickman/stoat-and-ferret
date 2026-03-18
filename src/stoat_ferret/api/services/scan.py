@@ -182,7 +182,9 @@ async def scan_directory(
             # Generate thumbnail if service is available
             thumbnail_path: str | None = None
             if thumbnail_service is not None:
-                thumbnail_path = thumbnail_service.generate(str_path, video_id)
+                thumbnail_path = await asyncio.to_thread(
+                    thumbnail_service.generate, str_path, video_id
+                )
 
             video = Video(
                 id=video_id,
