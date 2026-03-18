@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v022] - 2026-03-18
+
+UAT (User Acceptance Testing) Framework. Browser-based UAT that validates complete user journeys against a live application instance, closing the end-user UX validation gap between API-level smoke tests and real-world usage.
+
+### Added
+
+- **UAT Runner Harness**
+  - `scripts/uat_runner.py` with CLI (`--headed`/`--headless`, `--journey`, `--skip-build`, `--output-dir`)
+  - Full build-boot-test-teardown lifecycle with health polling and sample data seeding
+  - Dependency-aware fail-fast journey execution (graph: 201->202->203, 204 independent)
+  - `uat` optional dependency group in `pyproject.toml`
+
+- **Screenshot & Report Infrastructure**
+  - `take_screenshot()` helper with naming convention and `FAIL_` prefix for failures
+  - `ConsoleErrorCollector` class for filtered browser console error capture
+  - JSON (`uat-report.json`) and markdown (`uat-report.md`) structured report generation
+
+- **Auto-Dev Integration**
+  - `docs/auto-dev/VERSION_CLOSURE.md` with tiered UAT automation (Tier 1: headless Playwright, Tier 2: manual fallback)
+  - UAT acceptance tier added to testing pyramid in `docs/design/07-quality-architecture.md`
+
+- **UAT Journey Scripts**
+  - `uat_journey_201.py` — scan, browse, and FTS5 search workflow (5 steps, 5+ screenshots)
+  - `uat_journey_202.py` — project creation, clip addition with in/out points, clips table verification (~290 lines)
+  - `uat_journey_203.py` — effects apply/edit/remove, timeline canvas, layout presets (3 sub-journeys, 9 steps)
+  - `uat_journey_204.py` — self-seeding Running Montage validation across clips, effects, and timeline pages (~280 lines)
+
 ## [v021] - 2026-03-17
 
 Quality & API Completeness. Verifies the BL-138 timeline persistence fix, performs a formal DrawtextBuilder security review, fills five smoke test coverage gaps, and completes the API surface with version creation, filesystem pagination, and layout preset position endpoints.
