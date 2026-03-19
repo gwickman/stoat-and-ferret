@@ -1,0 +1,12 @@
+{
+  "name": "export-render",
+  "journey_id": 204,
+  "steps_total": 0,
+  "steps_passed": 0,
+  "steps_failed": 1,
+  "console_errors": [],
+  "issues": [
+    "Seed failed: Seed script failed (exit 1): b.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\grant\\Documents\\projects\\stoat-and-ferret\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py\", line 118, in map_httpcore_exceptions\n    raise mapped_exc(message) from exc\nhttpx.ReadTimeout: timed out\n"
+  ],
+  "duration_seconds": 122.3
+}

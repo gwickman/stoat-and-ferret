@@ -55,6 +55,11 @@ class ConnectionManager:
         Args:
             message: JSON-serializable dict to send to all clients.
         """
+        logger.debug(
+            "ws_broadcast",
+            event_type=message.get("type", "unknown"),
+            client_count=len(self._connections),
+        )
         async with self._lock:
             dead: list[WebSocket] = []
             for ws in self._connections:

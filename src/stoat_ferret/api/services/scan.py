@@ -85,6 +85,7 @@ def make_scan_handler(
         scan_path = payload["path"]
         job_id = payload.get("_job_id")
         cancel_event: asyncio.Event | None = payload.get("_cancel_event")
+        logger.info("scan_handler_started", job_id=str(job_id), path=str(scan_path))
 
         # Build progress callback if queue and job_id are available
         progress_callback: Callable[[float], None] | None = None
@@ -94,6 +95,7 @@ def make_scan_handler(
                 queue.set_progress(job_id, value)
 
         if ws_manager:
+            logger.info("scan_broadcast_started", path=str(scan_path))
             await ws_manager.broadcast(build_event(EventType.SCAN_STARTED, {"path": scan_path}))
 
         result = await scan_directory(
@@ -106,6 +108,7 @@ def make_scan_handler(
         )
 
         if ws_manager:
+            logger.info("scan_broadcast_completed", path=str(scan_path))
             await ws_manager.broadcast(
                 build_event(
                     EventType.SCAN_COMPLETED,
@@ -161,6 +164,12 @@ async def scan_directory(
         f for f in root.glob(pattern) if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS
     ]
     total_files = len(video_files)
+    logger.info(
+        "scan_files_enumerated",
+        path=str(root),
+        file_count=total_files,
+        recursive=recursive,
+    )
 
     for file_path in video_files:
         if cancel_event and cancel_event.is_set():
@@ -169,6 +178,12 @@ async def scan_directory(
 
         processed += 1
         str_path = str(file_path.absolute())
+        logger.debug(
+            "scan_probing_file",
+            file=str_path,
+            index=processed,
+            total=total_files,
+        )
 
         try:
             # Check if already exists
@@ -206,11 +221,14 @@ async def scan_directory(
             if existing:
                 await repository.update(video)
                 updated += 1
+                logger.info("scan_video_updated", video_id=str(video_id), file=file_path.name)
             else:
                 await repository.add(video)
                 new += 1
+                logger.info("scan_video_added", video_id=str(video_id), file=file_path.name)
 
         except Exception as e:
+            logger.error("scan_file_error", file=str_path, error=str(e), exc_info=True)
             errors.append(ScanError(path=str_path, error=str(e)))
 
         if progress_callback:
@@ -218,6 +236,14 @@ async def scan_directory(
 
     scanned = processed
     skipped = scanned - new - updated - len(errors)
+    logger.info(
+        "scan_directory_complete",
+        path=str(root),
+        scanned=scanned,
+        new=new,
+        updated=updated,
+        error_count=len(errors),
+    )
 
     return ScanResponse(
         scanned=scanned,

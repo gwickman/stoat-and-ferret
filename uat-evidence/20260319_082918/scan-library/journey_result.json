@@ -1,0 +1,13 @@
+{
+  "name": "scan-library",
+  "journey_id": 201,
+  "steps_total": 5,
+  "steps_passed": 3,
+  "steps_failed": 2,
+  "console_errors": [],
+  "issues": [
+    "Step 3 failed: Page.wait_for_selector: Timeout 90000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"scan-complete\\\"]\") to be visible\n",
+    "Step 5 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"video-grid\\\"]\") to be visible\n"
+  ],
+  "duration_seconds": 107.51
+}

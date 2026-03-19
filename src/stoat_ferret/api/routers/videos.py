@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse
 
@@ -23,6 +24,8 @@ from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
 )
+
+logger = structlog.get_logger(__name__)
 
 _PLACEHOLDER_PATH = (
     Path(__file__).resolve().parent.parent.parent / "static" / "placeholder-thumb.jpg"
@@ -185,6 +188,7 @@ async def scan_videos(
         HTTPException: 400 if path is not a valid directory.
     """
     path = scan_request.path
+    logger.info("scan_requested", path=path, recursive=scan_request.recursive)
     if not os.path.isdir(path):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -204,6 +208,7 @@ async def scan_videos(
         SCAN_JOB_TYPE,
         {"path": path, "recursive": scan_request.recursive},
     )
+    logger.info("scan_job_queued", job_id=str(job_id), path=path)
     return JobSubmitResponse(job_id=job_id)
 
 
