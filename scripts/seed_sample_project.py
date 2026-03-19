@@ -122,8 +122,16 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
             return
         time.sleep(0.5)
 
-    print("ERROR: Scan timed out after 30 seconds", file=sys.stderr)
+    print("ERROR: Scan timed out after 60 seconds", file=sys.stderr)
     sys.exit(1)
+
+
+def videos_already_scanned(client: httpx.Client, filenames: list[str]) -> bool:
+    """Check whether all expected video filenames are already in the library."""
+    resp = client.get("/api/v1/videos", params={"limit": 100})
+    resp.raise_for_status()
+    existing = {v["filename"] for v in resp.json()["videos"]}
+    return all(fn in existing for fn in filenames)
 
 
 def resolve_video_ids(client: httpx.Client, filenames: list[str]) -> list[str]:
@@ -274,9 +282,12 @@ def main() -> None:
                 )
                 sys.exit(0)
 
-        # 3. Scan videos
-        print(f"Scanning videos from {videos_dir}...")
-        scan_and_wait(client, videos_dir)
+        # 3. Scan videos (skip if already scanned)
+        if videos_already_scanned(client, SAMPLE_VIDEOS):
+            print("Videos already scanned — skipping scan_and_wait().")
+        else:
+            print(f"Scanning videos from {videos_dir}...")
+            scan_and_wait(client, videos_dir)
 
         # 4. Resolve video IDs
         video_ids = resolve_video_ids(client, SAMPLE_VIDEOS)

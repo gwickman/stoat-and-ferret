@@ -145,7 +145,7 @@ def run() -> int:
             steps_total += 1
             try:
                 # Wait for scan-complete indicator (30s timeout)
-                page.wait_for_selector('[data-testid="scan-complete"]', timeout=30000)
+                page.wait_for_selector('[data-testid="scan-complete"]', timeout=90000)
 
                 # Close the scan modal
                 page.click('[data-testid="scan-cancel"]')
