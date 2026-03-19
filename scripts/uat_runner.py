@@ -214,13 +214,24 @@ def run_build_steps() -> None:
 # ---------------------------------------------------------------------------
 
 
-def start_server() -> subprocess.Popen[str]:
+def start_server(
+    output_dir: Path,
+) -> tuple[subprocess.Popen[str], list[Any]]:
     """Start the uvicorn server as a background subprocess.
 
+    Redirects stdout and stderr to log files in *output_dir* to avoid OS pipe
+    buffer deadlocks (the parent never reads from PIPE, so the buffer fills and
+    blocks the server).
+
+    Args:
+        output_dir: UAT evidence directory for this run.
+
     Returns:
-        The Popen handle for the server process.
+        Tuple of (Popen handle, list of open file handles to close at teardown).
     """
     print(f"  Starting server on port {SERVER_PORT}...")
+    stdout_fh = open(output_dir / "server-stdout.log", "w", encoding="utf-8")
+    stderr_fh = open(output_dir / "server-stderr.log", "w", encoding="utf-8")
     # Use uvicorn module directly for cross-platform compatibility
     proc = subprocess.Popen(
         [
@@ -235,11 +246,11 @@ def start_server() -> subprocess.Popen[str]:
             str(SERVER_PORT),
         ],
         cwd=PROJECT_ROOT,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_fh,
+        stderr=stderr_fh,
         text=True,
     )
-    return proc
+    return proc, [stdout_fh, stderr_fh]
 
 
 def wait_for_healthy(timeout: float = HEALTH_POLL_TIMEOUT) -> None:
@@ -288,16 +299,22 @@ def run_seed_script() -> None:
             print(f"  stderr: {result.stderr[-300:]}", file=sys.stderr)
 
 
-def teardown_server(proc: subprocess.Popen[str]) -> None:
+def teardown_server(
+    proc: subprocess.Popen[str],
+    log_handles: list[Any] | None = None,
+) -> None:
     """Gracefully shut down the server subprocess.
 
     Sends SIGTERM (or TerminateProcess on Windows), waits up to TEARDOWN_GRACE_SECONDS,
-    then falls back to SIGKILL if the process hasn't exited.
+    then falls back to SIGKILL if the process hasn't exited.  Closes any open log file
+    handles that were used to capture server output.
 
     Args:
         proc: The server Popen handle.
+        log_handles: Optional list of open file handles to close.
     """
     if proc.poll() is not None:
+        _close_handles(log_handles)
         return  # Already exited
 
     print("  Shutting down server...")
@@ -319,6 +336,19 @@ def teardown_server(proc: subprocess.Popen[str]) -> None:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
+
+    _close_handles(log_handles)
+
+
+def _close_handles(handles: list[Any] | None) -> None:
+    """Close a list of file handles, ignoring errors."""
+    if not handles:
+        return
+    for fh in handles:
+        try:
+            fh.close()
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -792,6 +822,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nOutput directory: {output_dir}")
 
     server_proc: subprocess.Popen[str] | None = None
+    server_log_handles: list[Any] | None = None
 
     try:
         # 2. Build (unless --skip-build)
@@ -801,7 +832,7 @@ def main(argv: list[str] | None = None) -> int:
 
             # 3. Start server
             print("\n[Boot Phase]")
-            server_proc = start_server()
+            server_proc, server_log_handles = start_server(output_dir)
             wait_for_healthy()
 
             # 4. Seed data
@@ -853,7 +884,7 @@ def main(argv: list[str] | None = None) -> int:
         # 7. Teardown
         if server_proc is not None:
             print("\n[Teardown Phase]")
-            teardown_server(server_proc)
+            teardown_server(server_proc, server_log_handles)
 
 
 if __name__ == "__main__":
