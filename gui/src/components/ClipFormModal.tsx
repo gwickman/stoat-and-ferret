@@ -32,7 +32,7 @@ export default function ClipFormModal({
     sortField: 'name',
     sortOrder: 'asc',
     page: 0,
-    pageSize: 1000,
+    pageSize: 100,
   })
 
   const createClip = useClipStore((s) => s.createClip)

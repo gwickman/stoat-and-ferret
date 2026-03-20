@@ -144,7 +144,7 @@ def run_effects_sub_journey(
         # Verify effect stack shows 1 entry
         stack = page.locator('[data-testid="effect-stack"]')
         stack.wait_for(timeout=5000)
-        stack_items = page.locator('[data-testid^="effect-stack-item-"]')
+        stack_items = page.locator('[data-testid^="effect-entry-"]')
         stack_count = stack_items.count()
         if stack_count != 1:
             raise AssertionError(f"Expected 1 effect in stack after apply, found {stack_count}")
@@ -208,7 +208,7 @@ def run_effects_sub_journey(
         page.wait_for_timeout(1000)
 
         # Verify stack count = 2
-        stack_items = page.locator('[data-testid^="effect-stack-item-"]')
+        stack_items = page.locator('[data-testid^="effect-entry-"]')
         stack_count = stack_items.count()
         if stack_count != 2:
             raise AssertionError(
@@ -241,7 +241,7 @@ def run_effects_sub_journey(
         page.wait_for_timeout(1000)
 
         # Verify stack count = 1
-        stack_items = page.locator('[data-testid^="effect-stack-item-"]')
+        stack_items = page.locator('[data-testid^="effect-entry-"]')
         stack_count = stack_items.count()
         if stack_count != 1:
             raise AssertionError(f"Expected 1 effect in stack after removal, found {stack_count}")

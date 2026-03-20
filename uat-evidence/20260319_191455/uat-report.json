@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-03-19T19:16:21.594059+00:00",
+  "mode": "headed",
+  "duration_seconds": 61.29,
+  "overall_status": "fail",
+  "journeys": [
+    {
+      "name": "scan-library",
+      "journey_id": 201,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "project-clip",
+      "journey_id": 202,
+      "status": "failed",
+      "steps_total": 5,
+      "steps_passed": 3,
+      "steps_failed": 2,
+      "console_errors": [
+        "Failed to load resource: the server responded with a status of 422 (Unprocessable Content)"
+      ],
+      "issues": [
+        "Step 4 failed: Page.wait_for_function: Timeout 10000ms exceeded.",
+        "Step 5 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"clips-table\\\"]\") to be visible\n"
+      ]
+    },
+    {
+      "name": "effects-timeline",
+      "journey_id": 203,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "export-render",
+      "journey_id": 204,
+      "status": "failed",
+      "steps_total": 5,
+      "steps_passed": 2,
+      "steps_failed": 3,
+      "console_errors": [],
+      "issues": [
+        "Step 3 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"effect-stack\\\"]\") to be visible\n",
+        "Step 4 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"timeline-canvas\\\"]\") to be visible\n",
+        "Step 5 failed: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"timeline-canvas\\\"]\") to be visible\n"
+      ]
+    }
+  ]
+}

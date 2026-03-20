@@ -299,10 +299,16 @@ def run() -> int:
 
                 page.wait_for_timeout(1000)  # Allow effects to load
 
+                # Select first clip so EffectStack mounts
+                first_clip = page.locator('[data-testid^="clip-option-"]').first
+                first_clip.wait_for(timeout=5000)
+                first_clip.click()
+                page.wait_for_timeout(1000)
+
                 # Verify effect stack shows effects
                 stack = page.locator('[data-testid="effect-stack"]')
                 stack.wait_for(timeout=5000)
-                stack_items = page.locator('[data-testid^="effect-stack-item-"]')
+                stack_items = page.locator('[data-testid^="effect-entry-"]')
                 stack_count = stack_items.count()
                 if stack_count < 1:
                     raise AssertionError(f"Expected effects in stack, found {stack_count}")

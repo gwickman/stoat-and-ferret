@@ -44,6 +44,15 @@ export default function TimelinePage() {
 
   const isEmpty = tracks.length === 0 && presets.length === 0
 
+  console.debug('[TimelinePage] render', {
+    trackCount: tracks.length,
+    duration,
+    presetsCount: presets.length,
+    isEmpty,
+    isLoading,
+    error,
+  })
+
   return (
     <div className="p-6" data-testid="timeline-page">
       <h2 className="mb-4 text-2xl font-semibold">Timeline</h2>

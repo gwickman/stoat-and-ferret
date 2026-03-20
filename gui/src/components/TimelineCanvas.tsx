@@ -43,8 +43,20 @@ export default function TimelineCanvas({ tracks, duration }: TimelineCanvasProps
   }, [])
 
   const sortedTracks = [...tracks].sort((a, b) => a.z_index - b.z_index)
+  const totalClipCount = tracks.reduce((sum, t) => sum + (t.clips?.length ?? 0), 0)
+
+  console.debug('[TimelineCanvas] render', {
+    trackCount: tracks.length,
+    clipCount: totalClipCount,
+    duration,
+    zoom,
+  })
 
   if (tracks.length === 0) {
+    console.debug('[TimelineCanvas] empty state triggered — no tracks', {
+      trackCount: 0,
+      duration,
+    })
     return (
       <div data-testid="timeline-canvas-empty" className="rounded border border-gray-700 p-8 text-center">
         <p className="text-gray-400">No tracks on the timeline. Add clips to get started.</p>

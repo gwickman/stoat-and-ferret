@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from stoat_ferret.api.schemas.timeline import (
@@ -31,6 +32,8 @@ from stoat_ferret.db.timeline_repository import (
     AsyncSQLiteTimelineRepository,
     AsyncTimelineRepository,
 )
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/projects", tags=["timeline"])
 
@@ -289,6 +292,13 @@ async def get_timeline(
 
     tracks = await timeline_repo.get_tracks_by_project(project_id)
     clips_by_track = await _get_clips_by_track(clip_repo, project_id)
+    total_clips = sum(len(clips) for clips in clips_by_track.values())
+    logger.debug(
+        "timeline_data_requested",
+        project_id=project_id,
+        track_count=len(tracks),
+        clip_count=total_clips,
+    )
     return _build_timeline_response(project_id, tracks, clips_by_track)
 
 

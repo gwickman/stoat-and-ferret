@@ -1,0 +1,15 @@
+{
+  "name": "project-clip",
+  "journey_id": 202,
+  "steps_total": 5,
+  "steps_passed": 3,
+  "steps_failed": 2,
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 422 (Unprocessable Content)"
+  ],
+  "issues": [
+    "Step 4 failed: Page.wait_for_function: Timeout 10000ms exceeded.",
+    "Step 5 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"clips-table\\\"]\") to be visible\n"
+  ],
+  "duration_seconds": 23.77
+}
