@@ -1,0 +1,22 @@
+{
+  "name": "effects-timeline",
+  "journey_id": 203,
+  "steps_total": 9,
+  "steps_passed": 1,
+  "steps_failed": 8,
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+  ],
+  "issues": [
+    "Step 2 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"effect-stack\\\"]\") to be visible\n",
+    "Step 3 failed: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid^=\\\"edit-effect-\\\"]\").first\n",
+    "Step 4 failed: Expected 2 effects in stack after second add, found 0",
+    "Step 5 failed: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid^=\\\"remove-effect-\\\"]\").first\n",
+    "Step 6 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"timeline-canvas\\\"]\") to be visible\n",
+    "Step 7 failed: Page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"zoom-in\\\"]\")\n",
+    "Step 8 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"canvas-scroll-area\\\"]\") to be visible\n",
+    "Step 9 failed: Page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"preset-side-by-side\\\"]\")\n"
+  ],
+  "duration_seconds": 146.82
+}

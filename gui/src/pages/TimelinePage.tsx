@@ -3,19 +3,40 @@ import TimelineCanvas from '../components/TimelineCanvas'
 import LayoutSelector from '../components/LayoutSelector'
 import LayoutPreview from '../components/LayoutPreview'
 import LayerStack from '../components/LayerStack'
+import { useProjects } from '../hooks/useProjects'
 import { useComposeStore } from '../stores/composeStore'
+import { useProjectStore } from '../stores/projectStore'
 import { useTimelineStore } from '../stores/timelineStore'
 
 export default function TimelinePage() {
+  const { projects } = useProjects()
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId)
+  const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId)
+
   const tracks = useTimelineStore((s) => s.tracks)
   const duration = useTimelineStore((s) => s.duration)
   const timelineLoading = useTimelineStore((s) => s.isLoading)
   const timelineError = useTimelineStore((s) => s.error)
+  const fetchTimeline = useTimelineStore((s) => s.fetchTimeline)
 
   const presets = useComposeStore((s) => s.presets)
   const presetsLoading = useComposeStore((s) => s.isLoading)
   const presetsError = useComposeStore((s) => s.error)
   const fetchPresets = useComposeStore((s) => s.fetchPresets)
+
+  // Auto-select first project if none selected
+  useEffect(() => {
+    if (projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id)
+    }
+  }, [projects, selectedProjectId, setSelectedProjectId])
+
+  // Fetch timeline when project changes
+  useEffect(() => {
+    if (selectedProjectId) {
+      fetchTimeline(selectedProjectId)
+    }
+  }, [selectedProjectId, fetchTimeline])
 
   useEffect(() => {
     fetchPresets()

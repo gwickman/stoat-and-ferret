@@ -127,7 +127,7 @@ def run_effects_sub_journey(
             fontsize_input.first.fill("24")
 
         # Apply the effect
-        apply_btn = page.locator('[data-testid="btn-apply-effect"]')
+        apply_btn = page.locator('[data-testid="apply-effect-btn"]')
         if apply_btn.count() > 0:
             apply_btn.first.click()
         page.wait_for_timeout(1000)
@@ -174,7 +174,7 @@ def run_effects_sub_journey(
             text_input.first.fill("UAT Edited Overlay")
 
         # Save changes
-        save_btn = page.locator('[data-testid="btn-apply-effect"]')
+        save_btn = page.locator('[data-testid="apply-effect-btn"]')
         if save_btn.count() > 0:
             save_btn.first.click()
         page.wait_for_timeout(1000)
@@ -202,7 +202,7 @@ def run_effects_sub_journey(
         if text_input.count() > 0:
             text_input.first.fill("Second Overlay")
 
-        apply_btn = page.locator('[data-testid="btn-apply-effect"]')
+        apply_btn = page.locator('[data-testid="apply-effect-btn"]')
         if apply_btn.count() > 0:
             apply_btn.first.click()
         page.wait_for_timeout(1000)

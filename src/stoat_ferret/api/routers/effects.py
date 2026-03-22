@@ -146,6 +146,11 @@ async def preview_effect(
     validation_errors = registry.validate(request.effect_type, request.parameters)
     if validation_errors:
         messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
+        logger.warning(
+            "effect_preview_validation_failed",
+            effect_type=request.effect_type,
+            validation_errors=messages,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={

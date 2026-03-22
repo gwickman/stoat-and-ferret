@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useDebounce } from './useDebounce'
 import { useEffectCatalogStore } from '../stores/effectCatalogStore'
 import { useEffectFormStore } from '../stores/effectFormStore'
+import type { ParameterSchema } from '../stores/effectFormStore'
 import { useEffectPreviewStore } from '../stores/effectPreviewStore'
 
 /**
@@ -11,9 +12,22 @@ import { useEffectPreviewStore } from '../stores/effectPreviewStore'
  * at 300ms, then calls the preview API to get the generated FFmpeg
  * filter string.
  */
+/** Check whether all required schema fields are present and non-empty. */
+function hasRequiredFields(
+  schema: ParameterSchema | null,
+  params: Record<string, unknown>,
+): boolean {
+  if (!schema?.required || schema.required.length === 0) return true
+  return schema.required.every((field) => {
+    const val = params[field]
+    return val !== undefined && val !== null && val !== ''
+  })
+}
+
 export function useEffectPreview(): void {
   const selectedEffect = useEffectCatalogStore((s) => s.selectedEffect)
   const parameters = useEffectFormStore((s) => s.parameters)
+  const schema = useEffectFormStore((s) => s.schema)
   const { setFilterString, setLoading, setError, reset } =
     useEffectPreviewStore()
 
@@ -22,6 +36,12 @@ export function useEffectPreview(): void {
 
   useEffect(() => {
     if (!selectedEffect) {
+      reset()
+      return
+    }
+
+    // Skip preview when required schema fields are missing or empty
+    if (!hasRequiredFields(schema, debouncedParams)) {
       reset()
       return
     }
@@ -61,5 +81,5 @@ export function useEffectPreview(): void {
     return () => {
       active = false
     }
-  }, [selectedEffect, debouncedParams, setFilterString, setLoading, setError, reset])
+  }, [selectedEffect, debouncedParams, schema, setFilterString, setLoading, setError, reset])
 }
