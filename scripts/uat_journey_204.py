@@ -75,8 +75,9 @@ def seed_sample_project(server_url: str) -> None:
     Raises:
         RuntimeError: If the seed script fails.
     """
+    seed_script = str(PROJECT_ROOT / "scripts" / "seed_sample_project.py")
     result = subprocess.run(
-        [sys.executable, str(PROJECT_ROOT / "scripts" / "seed_sample_project.py"), server_url],
+        [sys.executable, seed_script, server_url, "--force"],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
@@ -333,7 +334,7 @@ def run() -> int:
                 # Verify clip blocks on canvas
                 tracks = page.locator('[data-testid="canvas-tracks"]')
                 tracks.wait_for(timeout=5000)
-                clip_blocks = tracks.locator('[data-testid^="clip-block-"]')
+                clip_blocks = tracks.locator('[data-testid^="clip-"]')
                 block_count = clip_blocks.count()
                 if block_count < 1:
                     raise AssertionError(f"Expected clip blocks on timeline, found {block_count}")

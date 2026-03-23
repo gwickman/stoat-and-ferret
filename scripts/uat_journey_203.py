@@ -347,7 +347,7 @@ def run_timeline_sub_journey(
         # Verify canvas-tracks contains clip blocks
         tracks = page.locator('[data-testid="canvas-tracks"]')
         tracks.wait_for(timeout=5000)
-        clip_blocks = tracks.locator('[data-testid^="clip-block-"]')
+        clip_blocks = tracks.locator('[data-testid^="clip-"]')
         block_count = clip_blocks.count()
         if block_count < 1:
             raise AssertionError(
@@ -448,7 +448,7 @@ def run_layout_sub_journey(
         presets.wait_for(timeout=5000)
 
         # Side-by-Side preset
-        page.click('[data-testid="preset-side-by-side"]')
+        page.click('[data-testid="preset-SideBySide"]')
         page.wait_for_timeout(500)
         preview = page.locator('[data-testid="layout-preview"]')
         preview.wait_for(timeout=5000)
@@ -458,7 +458,7 @@ def run_layout_sub_journey(
         print(f"    Side-by-Side: {sbs_count} rectangles")
 
         # PIP preset
-        page.click('[data-testid="preset-pip"]')
+        page.click('[data-testid="preset-PipTopLeft"]')
         page.wait_for_timeout(500)
         pip_rects = page.locator('[data-testid^="preview-rect-"]')
         pip_count = pip_rects.count()
@@ -466,7 +466,7 @@ def run_layout_sub_journey(
         print(f"    PIP: {pip_count} rectangles")
 
         # Grid preset
-        page.click('[data-testid="preset-grid"]')
+        page.click('[data-testid="preset-Grid2x2"]')
         page.wait_for_timeout(500)
         grid_rects = page.locator('[data-testid^="preview-rect-"]')
         grid_count = grid_rects.count()

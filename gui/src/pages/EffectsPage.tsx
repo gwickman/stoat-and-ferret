@@ -183,7 +183,9 @@ export default function EffectsPage() {
             data-testid="project-select"
             value={selectedProjectId ?? ''}
             onChange={(e) => {
-              setSelectedProjectId(e.target.value)
+              const newId = e.target.value
+              if (newId === selectedProjectId) return
+              setSelectedProjectId(newId)
               stackSelectClip(null)
               setClips([])
             }}
