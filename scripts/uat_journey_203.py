@@ -131,20 +131,21 @@ def run_effects_sub_journey(
         if fontsize_input.count() > 0:
             fontsize_input.first.fill("24")
 
+        # Verify filter preview shows FFmpeg filter string (before apply,
+        # since apply clears the selected effect and resets the preview)
+        preview = page.locator('[data-testid="filter-preview"]')
+        preview.wait_for(timeout=5000)
+        preview_text = preview.text_content() or ""
+        if not preview_text.strip():
+            raise AssertionError("Filter preview is empty after filling parameters")
+
+        screenshot(page, journey_dir, step, "effect_applied_filter_preview")
+
         # Apply the effect
         apply_btn = page.locator('[data-testid="apply-effect-btn"]')
         if apply_btn.count() > 0:
             apply_btn.first.click()
         page.wait_for_timeout(1000)
-
-        # Verify filter preview shows FFmpeg filter string
-        preview = page.locator('[data-testid="filter-preview"]')
-        preview.wait_for(timeout=5000)
-        preview_text = preview.text_content() or ""
-        if not preview_text.strip():
-            raise AssertionError("Filter preview is empty after applying effect")
-
-        screenshot(page, journey_dir, step, "effect_applied_filter_preview")
 
         # Verify effect stack shows 1 entry
         stack = page.locator('[data-testid="effect-stack"]')

@@ -1,0 +1,12 @@
+{
+  "name": "effects-timeline",
+  "journey_id": 203,
+  "steps_total": 9,
+  "steps_passed": 8,
+  "steps_failed": 1,
+  "console_errors": [],
+  "issues": [
+    "Step 2 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"filter-preview\\\"]\") to be visible\n"
+  ],
+  "duration_seconds": 18.59
+}

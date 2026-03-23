@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-23T22:04:12.328659+00:00",
+  "mode": "headed",
+  "duration_seconds": 44.47,
+  "overall_status": "fail",
+  "journeys": [
+    {
+      "name": "scan-library",
+      "journey_id": 201,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "project-clip",
+      "journey_id": 202,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "effects-timeline",
+      "journey_id": 203,
+      "status": "failed",
+      "steps_total": 9,
+      "steps_passed": 8,
+      "steps_failed": 1,
+      "console_errors": [],
+      "issues": [
+        "Step 2 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"filter-preview\\\"]\") to be visible\n"
+      ]
+    },
+    {
+      "name": "export-render",
+      "journey_id": 204,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    }
+  ]
+}
