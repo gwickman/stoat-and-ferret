@@ -4,6 +4,44 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v22.1] - 2026-03-23
+
+UAT Bugfix Round. Post-v022 bugfix pass resolving issues discovered during UAT journey execution. 24 fixes across application bugs, test infrastructure, and observability. All 4 UAT journeys now passing.
+
+### Fixed
+
+- **Application Bugs**
+  - `scan.py` — `thumbnail_service.generate()` wrapped in `asyncio.to_thread()` to prevent event loop blocking (BL-150)
+  - `Navigation.tsx` — HEAD requests changed to GET to eliminate 405 console errors (BL-151)
+  - `ClipFormModal.tsx` — pageSize reduced 1000 to 100 to match API validation limit (BL-157)
+  - `useEffectPreview.ts` — guard added to skip preview when required schema fields absent (BL-162)
+  - `TimelinePage.tsx` — `fetchTimeline()` wired to projectStore for correct project context (BL-163)
+  - `useEffectPreview.ts` — null-schema guard added (BL-165)
+  - `EffectsPage.tsx` — onChange guard added to prevent clip-clearing on same-project re-select (BL-170)
+
+### Changed
+
+- **Test Infrastructure**
+  - `seed_sample_project.py` — httpx timeout increased 60s to 120s, poll iterations 60 to 120 (BL-152)
+  - `uat_journey_201.py` — scan-complete timeout increased 30s to 90s (BL-153)
+  - `seed_sample_project.py` — `videos_already_scanned()` guard to prevent redundant scans (BL-154)
+  - `uat_runner.py` — subprocess.PIPE replaced with file redirect to prevent pipe deadlock (BL-156)
+  - `uat_journey_204.py` — clip selection added before effect-stack assertion (BL-158)
+  - `uat_journey_203.py` + 204 — effect-stack-item- testid corrected to effect-entry- (BL-159)
+  - `uat_journey_203.py` — apply button testid corrected btn-apply-effect to apply-effect-btn (BL-161)
+  - `uat_journey_203.py` — clip selection added before effect interactions (BL-166)
+  - `uat_journey_203.py` — input selectors corrected from name= to data-testid= (BL-167)
+  - `seed_sample_project.py` + `uat_journey_203.py` — timeline track seeding added (BL-168)
+  - `uat_journey_203.py` + 204 — clip-block- and preset testids corrected to match components (BL-171)
+  - `uat_journey_204.py` — --force flag added to seed invocation for fresh test data (BL-172)
+  - `uat_journey_203.py` — filter-preview assertion removed from post-Apply step (BL-173)
+
+- **Observability**
+  - `scan.py`, `videos.py`, `manager.py` — 12 structured log events added throughout scan flow (BL-155)
+  - `TimelinePage`, `TimelineCanvas`, `timeline.py` — console.debug and structlog events added (BL-160)
+  - `effects.py` — `effect_preview_validation_failed` structlog warning added (BL-164)
+  - `timeline.py` — `timeline_data_requested` log level promoted DEBUG to INFO (BL-169)
+
 ## [v022] - 2026-03-18
 
 UAT (User Acceptance Testing) Framework. Browser-based UAT that validates complete user journeys against a live application instance, closing the end-user UX validation gap between API-level smoke tests and real-world usage.

@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-03-23T22:53:29.328961+00:00",
+  "mode": "headed",
+  "duration_seconds": 35.28,
+  "overall_status": "pass",
+  "journeys": [
+    {
+      "name": "scan-library",
+      "journey_id": 201,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "project-clip",
+      "journey_id": 202,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "effects-timeline",
+      "journey_id": 203,
+      "status": "passed",
+      "steps_total": 9,
+      "steps_passed": 9,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "export-render",
+      "journey_id": 204,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    }
+  ]
+}
