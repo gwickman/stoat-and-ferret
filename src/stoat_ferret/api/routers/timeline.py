@@ -293,7 +293,7 @@ async def get_timeline(
     tracks = await timeline_repo.get_tracks_by_project(project_id)
     clips_by_track = await _get_clips_by_track(clip_repo, project_id)
     total_clips = sum(len(clips) for clips in clips_by_track.values())
-    logger.debug(
+    logger.info(
         "timeline_data_requested",
         project_id=project_id,
         track_count=len(tracks),

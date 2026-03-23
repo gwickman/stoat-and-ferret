@@ -96,6 +96,13 @@ def run_effects_sub_journey(
         # Select the first project
         project_select.select_option(index=0)
         page.wait_for_timeout(500)
+
+        # Select the first clip so effects can be applied
+        first_clip = page.locator('[data-testid^="clip-option-"]').first
+        first_clip.wait_for(timeout=5000)
+        first_clip.click()
+        page.wait_for_timeout(500)
+
         screenshot(page, journey_dir, step, "effects_project_selected")
         state["steps_passed"] += 1
         print("  Step 1: Navigate to Effects page and select project - PASSED")
@@ -116,13 +123,11 @@ def run_effects_sub_journey(
         page.wait_for_selector('[data-testid="effect-parameter-form"]', timeout=5000)
 
         # Fill effect parameters
-        text_input = page.locator('[data-testid="effect-parameter-form"] input[name="text"]')
+        text_input = page.locator('[data-testid="input-text"]')
         if text_input.count() > 0:
             text_input.first.fill("UAT Test Overlay")
 
-        fontsize_input = page.locator(
-            '[data-testid="effect-parameter-form"] input[name="fontsize"]'
-        )
+        fontsize_input = page.locator('[data-testid="input-fontsize"]')
         if fontsize_input.count() > 0:
             fontsize_input.first.fill("24")
 
@@ -169,7 +174,7 @@ def run_effects_sub_journey(
         page.wait_for_selector('[data-testid="effect-parameter-form"]', timeout=5000)
 
         # Modify a parameter
-        text_input = page.locator('[data-testid="effect-parameter-form"] input[name="text"]')
+        text_input = page.locator('[data-testid="input-text"]')
         if text_input.count() > 0:
             text_input.first.fill("UAT Edited Overlay")
 
@@ -198,7 +203,7 @@ def run_effects_sub_journey(
         page.click('[data-testid="effect-card-text_overlay"]')
         page.wait_for_selector('[data-testid="effect-parameter-form"]', timeout=5000)
 
-        text_input = page.locator('[data-testid="effect-parameter-form"] input[name="text"]')
+        text_input = page.locator('[data-testid="input-text"]')
         if text_input.count() > 0:
             text_input.first.fill("Second Overlay")
 
@@ -256,10 +261,67 @@ def run_effects_sub_journey(
         print(f"  Step 5: Remove effect - FAILED: {exc}")
 
 
+def _setup_timeline_tracks(page: Any, server_url: str) -> None:
+    """Create timeline tracks and assign clips via API before GUI verification.
+
+    Queries the first project's clips and creates a default video track with
+    clip-to-track assignments using timeline_position/in_point/out_point at 30fps.
+
+    Args:
+        page: Playwright Page (used for page.request API calls).
+        server_url: Base URL of the running server.
+    """
+    api = f"{server_url}/api/v1"
+    fps = 30
+
+    # Get first project (same one the dropdown selects)
+    resp = page.request.get(f"{api}/projects?limit=100")
+    projects = resp.json()["projects"]
+    project_id = projects[0]["id"]
+
+    # Check if tracks already exist
+    tl_resp = page.request.get(f"{api}/projects/{project_id}/timeline")
+    if len(tl_resp.json().get("tracks", [])) > 0:
+        return
+
+    # Create a default video track
+    put_resp = page.request.put(
+        f"{api}/projects/{project_id}/timeline",
+        data=[
+            {
+                "track_type": "video",
+                "label": "Video Track 1",
+                "z_index": 0,
+                "muted": False,
+                "locked": False,
+            }
+        ],
+    )
+    track_id = put_resp.json()["tracks"][0]["id"]
+
+    # Get clips and assign each to the track
+    clips_resp = page.request.get(f"{api}/projects/{project_id}/clips")
+    clips = clips_resp.json().get("clips", [])
+    for clip in clips:
+        tl_start = clip["timeline_position"] / fps
+        clip_dur = (clip["out_point"] - clip["in_point"]) / fps
+        tl_end = tl_start + clip_dur
+        page.request.post(
+            f"{api}/projects/{project_id}/timeline/clips",
+            data={
+                "clip_id": clip["id"],
+                "track_id": track_id,
+                "timeline_start": tl_start,
+                "timeline_end": tl_end,
+            },
+        )
+
+
 def run_timeline_sub_journey(
     page: Any,
     journey_dir: Path,
     state: dict[str, Any],
+    server_url: str,
 ) -> None:
     """Timeline sub-journey: canvas, zoom, scroll verification.
 
@@ -267,7 +329,11 @@ def run_timeline_sub_journey(
         page: Playwright Page object.
         journey_dir: Output directory for screenshots.
         state: Mutable dict tracking steps_total, steps_passed, etc.
+        server_url: Base URL of the running server (for API setup calls).
     """
+    # Set up timeline tracks via API before GUI verification
+    _setup_timeline_tracks(page, server_url)
+
     # ----------------------------------------------------------
     # Step 6: Navigate to Timeline page and verify canvas
     # ----------------------------------------------------------
@@ -472,7 +538,7 @@ def run() -> int:
 
             # Sub-journey 2: Timeline
             print("\n  [Timeline Sub-Journey]")
-            run_timeline_sub_journey(page, journey_dir, state)
+            run_timeline_sub_journey(page, journey_dir, state, server_url)
 
             # Sub-journey 3: Layout
             print("\n  [Layout Sub-Journey]")

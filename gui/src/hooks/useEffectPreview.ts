@@ -17,7 +17,8 @@ function hasRequiredFields(
   schema: ParameterSchema | null,
   params: Record<string, unknown>,
 ): boolean {
-  if (!schema?.required || schema.required.length === 0) return true
+  if (!schema) return false
+  if (!schema.required || schema.required.length === 0) return true
   return schema.required.every((field) => {
     const val = params[field]
     return val !== undefined && val !== null && val !== ''

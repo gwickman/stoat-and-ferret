@@ -184,6 +184,37 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
         resp.raise_for_status()
         clip_ids.append(resp.json()["id"])
 
+    # 2b. Create a default video track and assign clips to it
+    fps = 30
+    resp = client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[
+            {
+                "track_type": "video",
+                "label": "Video Track 1",
+                "z_index": 0,
+                "muted": False,
+                "locked": False,
+            }
+        ],
+    )
+    resp.raise_for_status()
+    track_id = resp.json()["tracks"][0]["id"]
+
+    for i, (_, in_pt, out_pt, tl_pos) in enumerate(CLIP_DEFS):
+        tl_start = tl_pos / fps
+        tl_end = tl_start + (out_pt - in_pt) / fps
+        resp = client.post(
+            f"/api/v1/projects/{project_id}/timeline/clips",
+            json={
+                "clip_id": clip_ids[i],
+                "track_id": track_id,
+                "timeline_start": tl_start,
+                "timeline_end": tl_end,
+            },
+        )
+        resp.raise_for_status()
+
     # 3. Apply effects
     effects_applied = 0
     for clip_idx, effect_type, params in EFFECT_DEFS:

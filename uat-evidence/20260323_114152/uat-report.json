@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-03-23T11:45:36.590304+00:00",
+  "mode": "headed",
+  "duration_seconds": 190.96,
+  "overall_status": "fail",
+  "journeys": [
+    {
+      "name": "scan-library",
+      "journey_id": 201,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "project-clip",
+      "journey_id": 202,
+      "status": "passed",
+      "steps_total": 5,
+      "steps_passed": 5,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "effects-timeline",
+      "journey_id": 203,
+      "status": "failed",
+      "steps_total": 9,
+      "steps_passed": 1,
+      "steps_failed": 8,
+      "console_errors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "issues": [
+        "Step 2 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"filter-preview\\\"]\") to be visible\n",
+        "Step 3 failed: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid^=\\\"edit-effect-\\\"]\").first\n",
+        "Step 4 failed: Expected 2 effects in stack after second add, found 0",
+        "Step 5 failed: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid^=\\\"remove-effect-\\\"]\").first\n",
+        "Step 6 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"timeline-canvas\\\"]\") to be visible\n",
+        "Step 7 failed: Page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"zoom-in\\\"]\")\n",
+        "Step 8 failed: Locator.wait_for: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"canvas-scroll-area\\\"]\") to be visible\n",
+        "Step 9 failed: Page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"preset-side-by-side\\\"]\")\n"
+      ]
+    },
+    {
+      "name": "export-render",
+      "journey_id": 204,
+      "status": "failed",
+      "steps_total": 5,
+      "steps_passed": 3,
+      "steps_failed": 2,
+      "console_errors": [],
+      "issues": [
+        "Step 4 failed: Page.wait_for_selector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"timeline-canvas\\\"]\") to be visible\n",
+        "Step 5 failed: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"[data-testid=\\\"timeline-canvas\\\"]\") to be visible\n"
+      ]
+    }
+  ]
+}
