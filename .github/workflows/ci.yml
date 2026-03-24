@@ -347,23 +347,14 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Install backend dependencies
-        run: uv sync
-
-      - name: Build Python module
-        run: uv run maturin develop
+      - name: Install dependencies
+        run: |
+          uv sync
+          uv pip install pip
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: gui
-
-      - name: Build frontend
-        run: npm run build
-        working-directory: gui
 
       - name: Install UAT dependencies
         run: uv pip install -e ".[uat]"
@@ -389,22 +380,8 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: uv run playwright install-deps chromium
 
-      - name: Initialize database
-        run: |
-          mkdir -p data
-          uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
-
       - name: Run UAT suite
-        run: |
-          uv run python -m uvicorn stoat_ferret.api.app:create_app \
-            --factory --host 127.0.0.1 --port 8765 &
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8765/health/ready > /dev/null 2>&1 && break
-            if [ $i -eq 60 ]; then echo "Server failed to start" && exit 1; fi
-            sleep 1
-          done
-          uv run python scripts/seed_sample_project.py http://localhost:8765 || true
-          uv run python scripts/uat_runner.py --headless --skip-build
+        run: uv run python scripts/uat_runner.py --headless
 
       - name: Upload UAT evidence
         if: always()
