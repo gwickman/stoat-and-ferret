@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import LayerStack from '../LayerStack'
 import { useComposeStore } from '../../stores/composeStore'
-import type { LayoutPreset } from '../../types/timeline'
+import type { LayoutPreset } from '../../generated/types'
 
 const TEST_PRESETS: LayoutPreset[] = [
   {

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import VideoGrid from '../VideoGrid'
-import type { Video } from '../../hooks/useVideos'
+import type { Video } from '../../generated/types'
 
 function makeVideo(overrides: Partial<Video> = {}): Video {
   return {

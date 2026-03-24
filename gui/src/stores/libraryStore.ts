@@ -1,7 +1,5 @@
 import { create } from 'zustand'
-
-export type SortField = 'date' | 'name' | 'duration'
-export type SortOrder = 'asc' | 'desc'
+import type { SortField, SortOrder } from '../generated/types'
 
 interface LibraryState {
   searchQuery: string

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ProjectDetails from '../ProjectDetails'
-import type { Project } from '../../hooks/useProjects'
+import type { Project } from '../../generated/types'
 import { useClipStore } from '../../stores/clipStore'
 
 const mockProject: Project = {

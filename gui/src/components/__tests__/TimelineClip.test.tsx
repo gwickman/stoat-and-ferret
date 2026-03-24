@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import TimelineClip from '../TimelineClip'
-import type { TimelineClip as ClipType } from '../../types/timeline'
+import type { TimelineClip as ClipType } from '../../generated/types'
 
 const makeClip = (overrides: Partial<ClipType> = {}): ClipType => ({
   id: 'clip-1',

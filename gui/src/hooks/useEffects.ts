@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-
-export interface Effect {
-  effect_type: string
-  name: string
-  description: string
-  parameter_schema: Record<string, unknown>
-  ai_hints: Record<string, string>
-  filter_preview: string
-}
+import type { Effect } from '../generated/types'
 
 interface EffectListResponse {
   effects: Effect[]

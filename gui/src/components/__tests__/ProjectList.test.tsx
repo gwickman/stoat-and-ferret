@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ProjectList from '../ProjectList'
-import type { Project } from '../../hooks/useProjects'
+import type { Project } from '../../generated/types'
 
 const mockProjects: Project[] = [
   {

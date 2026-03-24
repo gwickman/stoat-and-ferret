@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TimelineResponse, Track } from '../types/timeline'
+import type { TimelineResponse, Track } from '../generated/types'
 
 interface TimelineStoreState {
   /** Tracks for the current project timeline. */

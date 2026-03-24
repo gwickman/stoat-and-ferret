@@ -1,29 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-
-export interface Project {
-  id: string
-  name: string
-  output_width: number
-  output_height: number
-  output_fps: number
-  created_at: string
-  updated_at: string
-}
+import type { Clip, Project } from '../generated/types'
 
 interface ProjectListResponse {
   projects: Project[]
   total: number
-}
-
-export interface Clip {
-  id: string
-  project_id: string
-  source_video_id: string
-  in_point: number
-  out_point: number
-  timeline_position: number
-  created_at: string
-  updated_at: string
 }
 
 interface ClipListResponse {

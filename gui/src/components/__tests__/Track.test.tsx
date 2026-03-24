@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import Track from '../Track'
-import type { Track as TrackType } from '../../types/timeline'
+import type { Track as TrackType } from '../../generated/types'
 
 const noop = vi.fn()
 

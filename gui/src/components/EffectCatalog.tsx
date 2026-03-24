@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { type Effect, deriveCategory, useEffects } from '../hooks/useEffects'
+import type { Effect } from '../generated/types'
+import { deriveCategory, useEffects } from '../hooks/useEffects'
 import { useEffectCatalogStore } from '../stores/effectCatalogStore'
 
 const CATEGORY_LABELS: Record<string, string> = {

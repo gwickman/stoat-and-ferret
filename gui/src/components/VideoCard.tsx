@@ -1,4 +1,4 @@
-import type { Video } from '../hooks/useVideos'
+import type { Video } from '../generated/types'
 
 interface VideoCardProps {
   video: Video

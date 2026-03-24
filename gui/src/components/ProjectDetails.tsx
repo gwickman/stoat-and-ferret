@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { type Clip, type Project, fetchClips } from '../hooks/useProjects'
+import type { Clip, Project } from '../generated/types'
+import { fetchClips } from '../hooks/useProjects'
 import { useClipStore } from '../stores/clipStore'
 import ClipFormModal from './ClipFormModal'
 

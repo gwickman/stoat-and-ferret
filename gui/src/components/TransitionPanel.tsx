@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
-import { type Effect, deriveCategory, useEffects } from '../hooks/useEffects'
-import type { Clip } from '../hooks/useProjects'
+import type { Clip, Effect } from '../generated/types'
+import { deriveCategory, useEffects } from '../hooks/useEffects'
 import type { ParameterSchema } from '../stores/effectFormStore'
 import { useEffectFormStore } from '../stores/effectFormStore'
 import { useTransitionStore } from '../stores/transitionStore'

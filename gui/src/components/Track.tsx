@@ -1,4 +1,4 @@
-import type { Track as TrackType } from '../types/timeline'
+import type { Track as TrackType } from '../generated/types'
 import TimelineClip from './TimelineClip'
 
 interface TrackProps {
