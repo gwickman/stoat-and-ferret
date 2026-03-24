@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -64,3 +67,30 @@ def test_injected_repositories_in_state(client: TestClient) -> None:
     assert client.app.state.project_repository is not None
     assert hasattr(client.app.state, "clip_repository")
     assert client.app.state.clip_repository is not None
+
+
+def test_openapi_spec_export_produces_valid_dict() -> None:
+    """create_app().openapi() returns a valid OpenAPI spec dict."""
+    app = create_app()
+    spec = app.openapi()
+    assert isinstance(spec, dict)
+    assert "openapi" in spec
+    assert "paths" in spec
+    assert "components" in spec
+    assert "schemas" in spec["components"]
+    # Verify it has endpoints and schemas
+    assert len(spec["paths"]) > 0
+    assert len(spec["components"]["schemas"]) > 0
+
+
+def test_openapi_spec_export_script(tmp_path: Path) -> None:
+    """export_openapi() writes valid JSON matching app.openapi()."""
+    from scripts.export_openapi import export_openapi
+
+    output_file = tmp_path / "openapi.json"
+    spec = export_openapi(output_path=output_file)
+
+    assert output_file.exists()
+    written = json.loads(output_file.read_text())
+    assert written == spec
+    assert written["info"]["title"] == "stoat-and-ferret"

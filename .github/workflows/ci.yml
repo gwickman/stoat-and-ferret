@@ -193,6 +193,11 @@ jobs:
         run: npm ci
         working-directory: gui
 
+      - name: Check generated types are up-to-date
+        run: |
+          cd gui && npm run generate:types
+          git diff --exit-code -- gui/src/generated/api-types.ts
+
       - name: Build
         run: npm run build
         working-directory: gui

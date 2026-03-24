@@ -1,0 +1,3715 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "stoat-and-ferret",
+    "description": "AI-driven video editor API",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness",
+        "description": "Liveness probe - indicates the server is running.\n\nThis endpoint always returns 200 if the server is able to respond.\nIt performs no dependency checks.\n\nReturns:\n    Simple status object indicating the server is alive.",
+        "operationId": "liveness_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Liveness Health Live Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness",
+        "description": "Readiness probe - indicates all dependencies are healthy.\n\nChecks database connectivity and FFmpeg availability.\n\nArgs:\n    request: The FastAPI request object, used to access app state.\n\nReturns:\n    JSON response with status and individual check results.\n    Returns 200 if all checks pass, 503 if any check fails.",
+        "operationId": "readiness_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "List Videos",
+        "description": "List videos with pagination.\n\nArgs:\n    limit: Maximum number of videos to return (1-100, default 20).\n    offset: Number of videos to skip (default 0).\n    repo: Video repository dependency.\n\nReturns:\n    Paginated list of videos.",
+        "operationId": "list_videos_api_v1_videos_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/search": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Search Videos",
+        "description": "Search videos by filename or path.\n\nArgs:\n    repo: Video repository dependency.\n    q: Search query string.\n    limit: Maximum number of results to return (1-100, default 20).\n\nReturns:\n    Search results with query echoed back.",
+        "operationId": "search_videos_api_v1_videos_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query",
+              "title": "Q"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/{video_id}/thumbnail": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Get Thumbnail",
+        "description": "Get thumbnail image for a video.\n\nReturns the generated thumbnail if available, or a placeholder image\nif thumbnail generation failed or hasn't been run.\n\nArgs:\n    video_id: The unique video identifier.\n    repo: Video repository dependency.\n\nReturns:\n    JPEG image response.\n\nRaises:\n    HTTPException: 404 if video not found.",
+        "operationId": "get_thumbnail_api_v1_videos__video_id__thumbnail_get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/{video_id}": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Get Video",
+        "description": "Get video by ID.\n\nArgs:\n    video_id: The unique video identifier.\n    repo: Video repository dependency.\n\nReturns:\n    Video details.\n\nRaises:\n    HTTPException: 404 if video not found.",
+        "operationId": "get_video_api_v1_videos__video_id__get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Delete Video",
+        "description": "Delete video from library.\n\nArgs:\n    video_id: The unique video identifier.\n    repo: Video repository dependency.\n    delete_file: If True, also delete the source file from disk.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if video not found.",
+        "operationId": "delete_video_api_v1_videos__video_id__delete",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          },
+          {
+            "name": "delete_file",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Also delete source file from disk",
+              "default": false,
+              "title": "Delete File"
+            },
+            "description": "Also delete source file from disk"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/scan": {
+      "post": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Scan Videos",
+        "description": "Submit a directory scan as an async job.\n\nCreates a scan job and returns the job ID immediately.\nUse GET /api/v1/jobs/{job_id} to poll for status and results.\n\nArgs:\n    scan_request: Scan request with directory path and recursion flag.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job submission response with the job ID.\n\nRaises:\n    HTTPException: 400 if path is not a valid directory.",
+        "operationId": "scan_videos_api_v1_videos_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Projects",
+        "description": "List all projects.\n\nArgs:\n    repo: Project repository dependency.\n    limit: Maximum number of projects to return (1-100, default 20).\n    offset: Number of projects to skip (default 0).\n\nReturns:\n    Paginated list of projects.",
+        "operationId": "list_projects_api_v1_projects_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Project",
+        "description": "Create a new project.\n\nArgs:\n    project_data: Project creation request.\n    request: The FastAPI request object.\n    repo: Project repository dependency.\n\nReturns:\n    Created project details.",
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Project",
+        "description": "Get project by ID.\n\nArgs:\n    project_id: The unique project identifier.\n    repo: Project repository dependency.\n\nReturns:\n    Project details.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Project",
+        "description": "Delete project.\n\nArgs:\n    project_id: The unique project identifier.\n    repo: Project repository dependency.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "delete_project_api_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/clips": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Clips",
+        "description": "List clips in project.\n\nArgs:\n    project_id: The unique project identifier.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    List of clips in the project.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "list_clips_api_v1_projects__project_id__clips_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClipListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Add Clip",
+        "description": "Add clip to project.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Clip creation request.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n    video_repo: Video repository dependency.\n\nReturns:\n    Created clip details.\n\nRaises:\n    HTTPException: 404 if project or video not found, 400 if validation fails.",
+        "operationId": "add_clip_api_v1_projects__project_id__clips_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClipCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClipResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/clips/{clip_id}": {
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Clip",
+        "description": "Update clip.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    request: Clip update request.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n    video_repo: Video repository dependency.\n\nReturns:\n    Updated clip details.\n\nRaises:\n    HTTPException: 404 if project or clip not found, 400 if validation fails.",
+        "operationId": "update_clip_api_v1_projects__project_id__clips__clip_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClipUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClipResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Clip",
+        "description": "Delete clip.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if clip not found.",
+        "operationId": "delete_clip_api_v1_projects__project_id__clips__clip_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Status",
+        "description": "Get the status of a submitted job.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job status including progress and result when complete.\n\nRaises:\n    HTTPException: 404 if job ID is not found.",
+        "operationId": "get_job_status_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Request cancellation of a job.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Updated job status.\n\nRaises:\n    HTTPException: 404 if job not found, 409 if already in terminal state.",
+        "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/effects": {
+      "get": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "List Effects",
+        "description": "List all available effects with metadata, schemas, and previews.\n\nReturns:\n    List of all registered effects with their parameter schemas,\n    AI hints, and filter preview strings.",
+        "operationId": "list_effects_api_v1_effects_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/effects/preview": {
+      "post": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "Preview Effect",
+        "description": "Preview the filter string an effect would generate without applying it.\n\nValidates the effect type and parameters, then returns the generated\nFFmpeg filter string.\n\nArgs:\n    request: Effect preview request with type and parameters.\n    registry: Effect registry dependency.\n\nReturns:\n    The effect type and generated filter string.\n\nRaises:\n    HTTPException: 400 if effect type unknown or parameters invalid.",
+        "operationId": "preview_effect_api_v1_effects_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EffectPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectPreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/clips/{clip_id}/effects": {
+      "post": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "Apply Effect To Clip",
+        "description": "Apply an effect to a clip.\n\nValidates the effect type via the registry, validates parameters against\nthe JSON schema, generates a filter string via the registered build function,\nand stores the effect configuration on the clip.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    request: Effect application request with type and parameters.\n    registry: Effect registry dependency.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The applied effect with generated filter string.\n\nRaises:\n    HTTPException: 404 if project or clip not found, 400 if effect type\n        unknown or parameters invalid.",
+        "operationId": "apply_effect_to_clip_api_v1_projects__project_id__clips__clip_id__effects_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EffectApplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectApplyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/clips/{clip_id}/effects/{index}": {
+      "patch": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "Update Clip Effect",
+        "description": "Update an effect at a specific index on a clip.\n\nValidates the index is within bounds, validates the new parameters\nagainst the effect's JSON schema, regenerates the filter string,\nand updates the effect in-place.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    index: Zero-based index of the effect in the clip's effects list.\n    request: Updated parameters for the effect.\n    registry: Effect registry dependency.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The updated effect with regenerated filter string.\n\nRaises:\n    HTTPException: 404 if project, clip, or effect index not found,\n        400 if parameters invalid.",
+        "operationId": "update_clip_effect_api_v1_projects__project_id__clips__clip_id__effects__index__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EffectUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectApplyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "Delete Clip Effect",
+        "description": "Remove an effect at a specific index from a clip.\n\nValidates the index is within bounds, removes the effect from the\nclip's effects list, and persists the change.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    index: Zero-based index of the effect to remove.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The deleted effect index and type.\n\nRaises:\n    HTTPException: 404 if project, clip, or effect index not found.",
+        "operationId": "delete_clip_effect_api_v1_projects__project_id__clips__clip_id__effects__index__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/effects/transition": {
+      "post": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "Apply Transition",
+        "description": "Apply a transition between two adjacent clips.\n\nValidates that both clips exist and are adjacent in the project timeline,\ngenerates the FFmpeg filter string via the effect registry, and stores\nthe transition in the project model.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Transition request with source/target clips, type, and parameters.\n    registry: Effect registry dependency.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The applied transition with generated filter string.\n\nRaises:\n    HTTPException: 404 if project or clips not found, 400 if clips not adjacent\n        or transition type unknown or parameters invalid.",
+        "operationId": "apply_transition_api_v1_projects__project_id__effects_transition_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransitionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compose/presets": {
+      "get": {
+        "tags": [
+          "compose"
+        ],
+        "summary": "List Presets",
+        "description": "List all available layout presets with metadata.\n\nReturns all predefined layout configurations (PIP, split-screen, grid)\nwith descriptions, AI hints, and input count requirements.\n\nReturns:\n    List of all layout presets with their metadata.",
+        "operationId": "list_presets_api_v1_compose_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutPresetListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/compose/layout": {
+      "post": {
+        "tags": [
+          "compose"
+        ],
+        "summary": "Apply Layout",
+        "description": "Apply a layout preset or custom positions and preview the filter chain.\n\nAccepts a preset name or custom positions array, validates inputs,\nand returns positioned elements with an FFmpeg filter preview string.\n\nArgs:\n    project_id: The project ID (reserved for future use).\n    request: Layout request with preset name or custom positions.\n\nReturns:\n    Layout positions and filter preview string.\n\nRaises:\n    HTTPException: 422 if positions are invalid or inputs insufficient.",
+        "operationId": "apply_layout_api_v1_projects__project_id__compose_layout_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LayoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/audio/mix": {
+      "put": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "Configure Audio Mix",
+        "description": "Configure audio mix for a project.\n\nValidates per-track volume, fade, master volume, and track count.\nBuilds filter chain via Rust AudioMixSpec with VolumeBuilder for\nmaster volume. Persists the mix configuration on the project.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Audio mix configuration request.\n    project_repo: Project repository dependency.\n\nReturns:\n    Audio mix response with filter preview and track count.\n\nRaises:\n    HTTPException: 404 if project not found, 422 if validation fails.",
+        "operationId": "configure_audio_mix_api_v1_projects__project_id__audio_mix_put",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AudioMixRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioMixResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audio/mix/preview": {
+      "post": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "Preview Audio Mix",
+        "description": "Preview audio mix filter chain without persisting.\n\nValidates per-track volume, fade, master volume, and track count,\nthen returns the filter preview string.\n\nArgs:\n    request: Audio mix configuration request.\n\nReturns:\n    Audio mix response with filter preview and track count.\n\nRaises:\n    HTTPException: 422 if validation fails.",
+        "operationId": "preview_audio_mix_api_v1_audio_mix_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AudioMixRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioMixResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filesystem/directories": {
+      "get": {
+        "tags": [
+          "filesystem"
+        ],
+        "summary": "List Directories",
+        "description": "List subdirectories within a given path with pagination.\n\nReturns a paginated list of immediate subdirectories. Hidden directories\n(starting with '.') are excluded. Uses run_in_executor for async-safe\nfilesystem access.\n\nWhen path is not provided, defaults to the first allowed_scan_root\nor the user's home directory if no roots are configured.\n\nArgs:\n    path: Directory path to list. Defaults to a sensible starting location.\n    limit: Maximum number of entries to return (1-100, default 20).\n    offset: Number of entries to skip (default 0).\n\nReturns:\n    Paginated directory listing with metadata.\n\nRaises:\n    HTTPException: 400 if path is not a directory, 403 if outside allowed roots,\n        404 if path does not exist.",
+        "operationId": "list_directories_api_v1_filesystem_directories_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Directory path to list",
+              "title": "Path"
+            },
+            "description": "Directory path to list"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/timeline": {
+      "put": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Put Timeline",
+        "description": "Create or replace timeline tracks for a project.\n\nReplaces all existing tracks with the provided list.\n\nArgs:\n    project_id: The unique project identifier.\n    tracks_data: List of track creation requests.\n    project_repo: Project repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Full timeline response with tracks, clips, and duration.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "put_timeline_api_v1_projects__project_id__timeline_put",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TrackCreate"
+                },
+                "title": "Tracks Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Get Timeline",
+        "description": "Get complete timeline for a project.\n\nReturns tracks ordered by z_index with clips ordered by timeline_start.\n\nArgs:\n    project_id: The unique project identifier.\n    project_repo: Project repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Full timeline response.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "get_timeline_api_v1_projects__project_id__timeline_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/timeline/clips": {
+      "post": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Add Timeline Clip",
+        "description": "Assign a clip to a timeline track with positioning.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Timeline clip creation request.\n    project_repo: Project repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Updated clip with timeline fields.\n\nRaises:\n    HTTPException: 404 if project, track, or clip not found.\n        422 if timeline positions are invalid.",
+        "operationId": "add_timeline_clip_api_v1_projects__project_id__timeline_clips_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimelineClipCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineClipResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/timeline/clips/{clip_id}": {
+      "patch": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Update Timeline Clip",
+        "description": "Update clip timeline position or track assignment.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    request: Timeline clip update request.\n    project_repo: Project repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Updated clip with timeline fields.\n\nRaises:\n    HTTPException: 404 if project, track, or clip not found.\n        422 if timeline positions are invalid.",
+        "operationId": "update_timeline_clip_api_v1_projects__project_id__timeline_clips__clip_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimelineClipUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineClipResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Remove Timeline Clip",
+        "description": "Remove a clip from the timeline.\n\nClears the clip's timeline association (track_id, timeline_start, timeline_end)\nwithout deleting the clip itself.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if project or clip not found.",
+        "operationId": "remove_timeline_clip_api_v1_projects__project_id__timeline_clips__clip_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/timeline/transitions": {
+      "post": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Add Transition",
+        "description": "Apply a transition between two adjacent clips.\n\nValidates clip adjacency, delegates offset computation to Rust core's\ncalculate_composition_positions(), and returns the computed filter_string\nand timeline_offset.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Transition creation request with clip IDs, type, and duration.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Transition response with filter_string and computed timeline_offset.\n\nRaises:\n    HTTPException: 404 if project or clips not found.\n        422 if clips are not adjacent.",
+        "operationId": "add_transition_api_v1_projects__project_id__timeline_transitions_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/stoat_ferret__api__schemas__timeline__TransitionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/timeline/transitions/{transition_id}": {
+      "delete": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "Delete Transition",
+        "description": "Remove a transition and recalculate timeline duration.\n\nArgs:\n    project_id: The unique project identifier.\n    transition_id: The unique transition identifier.\n    project_repo: Project repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Updated timeline state with recalculated duration.\n\nRaises:\n    HTTPException: 404 if project or transition not found.",
+        "operationId": "delete_transition_api_v1_projects__project_id__timeline_transitions__transition_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "transition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transition Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/render/batch": {
+      "post": {
+        "tags": [
+          "batch"
+        ],
+        "summary": "Submit Batch",
+        "description": "Submit a batch of render jobs for parallel execution.\n\nJobs are queued and executed with concurrency limited by\nSettings.batch_parallel_limit. Returns immediately with a batch_id.\n\nArgs:\n    batch_request: The batch render request with job configurations.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    BatchResponse with batch_id, queued job count, and status.\n\nRaises:\n    HTTPException: 422 if job count exceeds Settings.batch_max_jobs.",
+        "operationId": "submit_batch_api_v1_render_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/render/batch/{batch_id}": {
+      "get": {
+        "tags": [
+          "batch"
+        ],
+        "summary": "Get Batch Progress",
+        "description": "Get aggregated progress for a batch render.\n\nUses Rust calculate_batch_progress() for progress aggregation\nacross all jobs in the batch.\n\nArgs:\n    batch_id: The unique batch identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Aggregated batch progress with per-job status details.\n\nRaises:\n    HTTPException: 404 if batch ID is not found.",
+        "operationId": "get_batch_progress_api_v1_render_batch__batch_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchProgressResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/versions": {
+      "get": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "List Versions",
+        "description": "List versions for a project with pagination.\n\nArgs:\n    project_id: The unique project identifier.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n    limit: Maximum number of versions to return (1-100, default 20).\n    offset: Number of versions to skip (default 0).\n\nReturns:\n    Paginated list of versions.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "list_versions_api_v1_projects__project_id__versions_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "Create Version",
+        "description": "Create a new version snapshot of a project timeline.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Version creation request with timeline JSON data.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n\nReturns:\n    The created version with auto-incremented version number and checksum.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "create_version_api_v1_projects__project_id__versions_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/versions/{version}/restore": {
+      "post": {
+        "tags": [
+          "versions"
+        ],
+        "summary": "Restore Version",
+        "description": "Restore a previous project version, creating a new version.\n\nNon-destructive: restoring version N creates a new version containing\nthe restored data.\n\nArgs:\n    project_id: The unique project identifier.\n    version: The version number to restore from.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n\nReturns:\n    Restore confirmation with source and new version numbers.\n\nRaises:\n    HTTPException: 404 if project or version not found.",
+        "operationId": "restore_version_api_v1_projects__project_id__versions__version__restore_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdjustedClipPosition": {
+        "properties": {
+          "input_index": {
+            "type": "integer",
+            "title": "Input Index"
+          },
+          "timeline_start": {
+            "type": "number",
+            "title": "Timeline Start"
+          },
+          "timeline_end": {
+            "type": "number",
+            "title": "Timeline End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_index",
+          "timeline_start",
+          "timeline_end"
+        ],
+        "title": "AdjustedClipPosition",
+        "description": "Clip position after transition offset adjustment."
+      },
+      "AudioMixRequest": {
+        "properties": {
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackConfig"
+            },
+            "type": "array",
+            "title": "Tracks",
+            "description": "Per-track audio configurations (2-8 tracks)"
+          },
+          "master_volume": {
+            "type": "number",
+            "title": "Master Volume",
+            "description": "Master volume multiplier (0.0-2.0)",
+            "default": 1.0
+          },
+          "normalize": {
+            "type": "boolean",
+            "title": "Normalize",
+            "description": "Whether to normalize the mixed output",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "tracks"
+        ],
+        "title": "AudioMixRequest",
+        "description": "Request schema for audio mix configuration.\n\nVolume and track count validation is performed by the endpoint handler\nto return domain-specific error codes."
+      },
+      "AudioMixResponse": {
+        "properties": {
+          "filter_preview": {
+            "type": "string",
+            "title": "Filter Preview"
+          },
+          "tracks_configured": {
+            "type": "integer",
+            "title": "Tracks Configured"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filter_preview",
+          "tracks_configured"
+        ],
+        "title": "AudioMixResponse",
+        "description": "Response schema for audio mix configuration."
+      },
+      "BatchJobConfig": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Project ID to render"
+          },
+          "output_path": {
+            "type": "string",
+            "title": "Output Path",
+            "description": "Output file path for rendered video"
+          },
+          "quality": {
+            "type": "string",
+            "title": "Quality",
+            "description": "Render quality preset",
+            "default": "medium"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "output_path"
+        ],
+        "title": "BatchJobConfig",
+        "description": "Configuration for a single job in a batch render request.\n\nDefines the project, output path, and quality preset for one render job."
+      },
+      "BatchJobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress",
+            "default": 0.0
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "project_id",
+          "status"
+        ],
+        "title": "BatchJobStatusResponse",
+        "description": "Status of an individual job within a batch.\n\nTracks per-job state including progress and error information."
+      },
+      "BatchProgressResponse": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "overall_progress": {
+            "type": "number",
+            "title": "Overall Progress"
+          },
+          "completed_jobs": {
+            "type": "integer",
+            "title": "Completed Jobs"
+          },
+          "failed_jobs": {
+            "type": "integer",
+            "title": "Failed Jobs"
+          },
+          "total_jobs": {
+            "type": "integer",
+            "title": "Total Jobs"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/BatchJobStatusResponse"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "overall_progress",
+          "completed_jobs",
+          "failed_jobs",
+          "total_jobs",
+          "jobs"
+        ],
+        "title": "BatchProgressResponse",
+        "description": "Aggregated progress response for a batch render.\n\nUses Rust calculate_batch_progress() for progress aggregation.\nIncludes per-job status details."
+      },
+      "BatchRequest": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/BatchJobConfig"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Jobs",
+            "description": "List of render job configurations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs"
+        ],
+        "title": "BatchRequest",
+        "description": "Request to submit a batch of render jobs.\n\nContains a list of job configurations. The list must have at least one job.\nMaximum job count is enforced by the endpoint against Settings.batch_max_jobs."
+      },
+      "BatchResponse": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "jobs_queued": {
+            "type": "integer",
+            "title": "Jobs Queued"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "jobs_queued",
+          "status"
+        ],
+        "title": "BatchResponse",
+        "description": "Response returned when a batch render is submitted.\n\nContains the batch identifier, number of jobs queued, and status."
+      },
+      "ClipCreate": {
+        "properties": {
+          "source_video_id": {
+            "type": "string",
+            "title": "Source Video Id"
+          },
+          "in_point": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "In Point"
+          },
+          "out_point": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Out Point"
+          },
+          "timeline_position": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Timeline Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_video_id",
+          "in_point",
+          "out_point",
+          "timeline_position"
+        ],
+        "title": "ClipCreate",
+        "description": "Create clip request."
+      },
+      "ClipListResponse": {
+        "properties": {
+          "clips": {
+            "items": {
+              "$ref": "#/components/schemas/ClipResponse"
+            },
+            "type": "array",
+            "title": "Clips"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clips",
+          "total"
+        ],
+        "title": "ClipListResponse",
+        "description": "Clip list response."
+      },
+      "ClipResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_video_id": {
+            "type": "string",
+            "title": "Source Video Id"
+          },
+          "in_point": {
+            "type": "integer",
+            "title": "In Point"
+          },
+          "out_point": {
+            "type": "integer",
+            "title": "Out Point"
+          },
+          "timeline_position": {
+            "type": "integer",
+            "title": "Timeline Position"
+          },
+          "effects": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effects"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_video_id",
+          "in_point",
+          "out_point",
+          "timeline_position",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClipResponse",
+        "description": "Clip response."
+      },
+      "ClipUpdate": {
+        "properties": {
+          "in_point": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Point"
+          },
+          "out_point": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Out Point"
+          },
+          "timeline_position": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Position"
+          }
+        },
+        "type": "object",
+        "title": "ClipUpdate",
+        "description": "Update clip request."
+      },
+      "DirectoryEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "path"
+        ],
+        "title": "DirectoryEntry",
+        "description": "A single directory entry in a listing.\n\nRepresents a subdirectory with its display name and full path."
+      },
+      "DirectoryListResponse": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "directories": {
+            "items": {
+              "$ref": "#/components/schemas/DirectoryEntry"
+            },
+            "type": "array",
+            "title": "Directories"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "directories",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "DirectoryListResponse",
+        "description": "Paginated response for a directory listing request.\n\nContains the parent path, list of subdirectories within it,\nand pagination metadata."
+      },
+      "EffectApplyRequest": {
+        "properties": {
+          "effect_type": {
+            "type": "string",
+            "title": "Effect Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "effect_type",
+          "parameters"
+        ],
+        "title": "EffectApplyRequest",
+        "description": "Request schema for applying an effect to a clip."
+      },
+      "EffectApplyResponse": {
+        "properties": {
+          "effect_type": {
+            "type": "string",
+            "title": "Effect Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          },
+          "filter_string": {
+            "type": "string",
+            "title": "Filter String"
+          }
+        },
+        "type": "object",
+        "required": [
+          "effect_type",
+          "parameters",
+          "filter_string"
+        ],
+        "title": "EffectApplyResponse",
+        "description": "Response schema for a successfully applied effect."
+      },
+      "EffectDeleteResponse": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "deleted_effect_type": {
+            "type": "string",
+            "title": "Deleted Effect Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "deleted_effect_type"
+        ],
+        "title": "EffectDeleteResponse",
+        "description": "Response schema for a deleted effect."
+      },
+      "EffectListResponse": {
+        "properties": {
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/EffectResponse"
+            },
+            "type": "array",
+            "title": "Effects"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "effects",
+          "total"
+        ],
+        "title": "EffectListResponse",
+        "description": "Response schema for the effect list endpoint."
+      },
+      "EffectPreviewRequest": {
+        "properties": {
+          "effect_type": {
+            "type": "string",
+            "title": "Effect Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "effect_type",
+          "parameters"
+        ],
+        "title": "EffectPreviewRequest",
+        "description": "Request schema for previewing an effect's filter string."
+      },
+      "EffectPreviewResponse": {
+        "properties": {
+          "effect_type": {
+            "type": "string",
+            "title": "Effect Type"
+          },
+          "filter_string": {
+            "type": "string",
+            "title": "Filter String"
+          }
+        },
+        "type": "object",
+        "required": [
+          "effect_type",
+          "filter_string"
+        ],
+        "title": "EffectPreviewResponse",
+        "description": "Response schema for an effect filter string preview."
+      },
+      "EffectResponse": {
+        "properties": {
+          "effect_type": {
+            "type": "string",
+            "title": "Effect Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "parameter_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameter Schema"
+          },
+          "ai_hints": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Ai Hints"
+          },
+          "filter_preview": {
+            "type": "string",
+            "title": "Filter Preview"
+          }
+        },
+        "type": "object",
+        "required": [
+          "effect_type",
+          "name",
+          "description",
+          "parameter_schema",
+          "ai_hints",
+          "filter_preview"
+        ],
+        "title": "EffectResponse",
+        "description": "Response schema for a single effect.\n\nContains the effect metadata, parameter schema, AI hints,\nand a filter preview string."
+      },
+      "EffectUpdateRequest": {
+        "properties": {
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parameters"
+        ],
+        "title": "EffectUpdateRequest",
+        "description": "Request schema for updating an effect at a specific index."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "result": {
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "JobStatusResponse",
+        "description": "Response for job status queries.\n\nContains the current status, optional progress, result when complete,\nand error message on failure."
+      },
+      "JobSubmitResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "JobSubmitResponse",
+        "description": "Response returned when a job is submitted.\n\nContains the unique job ID for polling status."
+      },
+      "LayoutPresetListResponse": {
+        "properties": {
+          "presets": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutPresetResponse"
+            },
+            "type": "array",
+            "title": "Presets"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "presets",
+          "total"
+        ],
+        "title": "LayoutPresetListResponse",
+        "description": "Response schema for the layout preset list endpoint."
+      },
+      "LayoutPresetResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "ai_hint": {
+            "type": "string",
+            "title": "Ai Hint"
+          },
+          "min_inputs": {
+            "type": "integer",
+            "title": "Min Inputs"
+          },
+          "max_inputs": {
+            "type": "integer",
+            "title": "Max Inputs"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutResponsePosition"
+            },
+            "type": "array",
+            "title": "Positions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "ai_hint",
+          "min_inputs",
+          "max_inputs",
+          "positions"
+        ],
+        "title": "LayoutPresetResponse",
+        "description": "Response schema for a single layout preset.\n\nContains the preset metadata including name, description,\nAI hint, input count requirements, and default positions."
+      },
+      "LayoutRequest": {
+        "properties": {
+          "preset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset",
+            "description": "Layout preset name (e.g. 'PipTopLeft', 'Grid2x2')"
+          },
+          "positions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PositionModel"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positions",
+            "description": "Custom positions array with normalized coordinates"
+          },
+          "input_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Input Count",
+            "description": "Number of inputs for the layout",
+            "default": 2
+          },
+          "output_width": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Output Width",
+            "description": "Output width in pixels",
+            "default": 1920
+          },
+          "output_height": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Output Height",
+            "description": "Output height in pixels",
+            "default": 1080
+          }
+        },
+        "type": "object",
+        "title": "LayoutRequest",
+        "description": "Request schema for applying a layout.\n\nProvide either a preset name or a custom positions array, not both.\nIf preset is provided, positions are generated from the preset.\nIf positions are provided, they are used directly."
+      },
+      "LayoutResponse": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutResponsePosition"
+            },
+            "type": "array",
+            "title": "Positions"
+          },
+          "filter_preview": {
+            "type": "string",
+            "title": "Filter Preview"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positions",
+          "filter_preview"
+        ],
+        "title": "LayoutResponse",
+        "description": "Response schema for layout application.\n\nContains the resolved positions and a filter preview string."
+      },
+      "LayoutResponsePosition": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          },
+          "z_index": {
+            "type": "integer",
+            "title": "Z Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height",
+          "z_index"
+        ],
+        "title": "LayoutResponsePosition",
+        "description": "A positioned element in the layout response."
+      },
+      "PositionModel": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X",
+            "description": "Normalized x coordinate"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "description": "Normalized y coordinate"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width",
+            "description": "Normalized width"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height",
+            "description": "Normalized height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "PositionModel",
+        "description": "A normalized layout position (0.0-1.0 range).\n\nAll coordinate fields represent fractions of the output dimensions.\nValidation is performed by the endpoint handler to return domain-specific\nerror codes (INVALID_LAYOUT_POSITION)."
+      },
+      "ProjectCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "output_width": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Output Width",
+            "default": 1920
+          },
+          "output_height": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Output Height",
+            "default": 1080
+          },
+          "output_fps": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Output Fps",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreate",
+        "description": "Create project request."
+      },
+      "ProjectListResponse": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectResponse"
+            },
+            "type": "array",
+            "title": "Projects"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects",
+          "total"
+        ],
+        "title": "ProjectListResponse",
+        "description": "Project list response."
+      },
+      "ProjectResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "output_width": {
+            "type": "integer",
+            "title": "Output Width"
+          },
+          "output_height": {
+            "type": "integer",
+            "title": "Output Height"
+          },
+          "output_fps": {
+            "type": "integer",
+            "title": "Output Fps"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "output_width",
+          "output_height",
+          "output_fps",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProjectResponse",
+        "description": "Project response."
+      },
+      "RestoreResponse": {
+        "properties": {
+          "restored_version": {
+            "type": "integer",
+            "title": "Restored Version"
+          },
+          "new_version": {
+            "type": "integer",
+            "title": "New Version"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "restored_version",
+          "new_version",
+          "message"
+        ],
+        "title": "RestoreResponse",
+        "description": "Response from restoring a previous version.\n\nAttributes:\n    restored_version: The source version number that was restored.\n    new_version: The newly created version number.\n    message: Confirmation message."
+      },
+      "ScanRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "ScanRequest",
+        "description": "Directory scan request.\n\nSpecifies the directory to scan and whether to recurse into subdirectories."
+      },
+      "TimelineClipCreate": {
+        "properties": {
+          "clip_id": {
+            "type": "string",
+            "title": "Clip Id"
+          },
+          "track_id": {
+            "type": "string",
+            "title": "Track Id"
+          },
+          "timeline_start": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Timeline Start"
+          },
+          "timeline_end": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Timeline End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clip_id",
+          "track_id",
+          "timeline_start",
+          "timeline_end"
+        ],
+        "title": "TimelineClipCreate",
+        "description": "Assign clip to timeline track."
+      },
+      "TimelineClipResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_video_id": {
+            "type": "string",
+            "title": "Source Video Id"
+          },
+          "track_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Id"
+          },
+          "timeline_start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Start"
+          },
+          "timeline_end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline End"
+          },
+          "in_point": {
+            "type": "integer",
+            "title": "In Point"
+          },
+          "out_point": {
+            "type": "integer",
+            "title": "Out Point"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_video_id",
+          "track_id",
+          "timeline_start",
+          "timeline_end",
+          "in_point",
+          "out_point"
+        ],
+        "title": "TimelineClipResponse",
+        "description": "Timeline clip response."
+      },
+      "TimelineClipUpdate": {
+        "properties": {
+          "timeline_start": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Start"
+          },
+          "timeline_end": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline End"
+          },
+          "track_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Id"
+          }
+        },
+        "type": "object",
+        "title": "TimelineClipUpdate",
+        "description": "Update clip timeline position."
+      },
+      "TimelineResponse": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackResponse"
+            },
+            "type": "array",
+            "title": "Tracks"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "tracks",
+          "duration",
+          "version"
+        ],
+        "title": "TimelineResponse",
+        "description": "Full timeline response."
+      },
+      "TrackConfig": {
+        "properties": {
+          "volume": {
+            "type": "number",
+            "title": "Volume",
+            "description": "Volume multiplier (0.0-2.0)",
+            "default": 1.0
+          },
+          "fade_in": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fade In",
+            "description": "Fade-in duration in seconds",
+            "default": 0.0
+          },
+          "fade_out": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fade Out",
+            "description": "Fade-out duration in seconds",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "TrackConfig",
+        "description": "Per-track audio configuration.\n\nVolume validation is performed by the endpoint handler to return\ndomain-specific error codes (INVALID_AUDIO_VOLUME)."
+      },
+      "TrackCreate": {
+        "properties": {
+          "track_type": {
+            "type": "string",
+            "pattern": "^(video|audio|text)$",
+            "title": "Track Type"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "z_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z Index"
+          },
+          "muted": {
+            "type": "boolean",
+            "title": "Muted",
+            "default": false
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "track_type",
+          "label"
+        ],
+        "title": "TrackCreate",
+        "description": "Create track request."
+      },
+      "TrackResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "track_type": {
+            "type": "string",
+            "title": "Track Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "z_index": {
+            "type": "integer",
+            "title": "Z Index"
+          },
+          "muted": {
+            "type": "boolean",
+            "title": "Muted"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          },
+          "clips": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineClipResponse"
+            },
+            "type": "array",
+            "title": "Clips",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "track_type",
+          "label",
+          "z_index",
+          "muted",
+          "locked"
+        ],
+        "title": "TrackResponse",
+        "description": "Track response with clips."
+      },
+      "TransitionCreate": {
+        "properties": {
+          "clip_a_id": {
+            "type": "string",
+            "title": "Clip A Id"
+          },
+          "clip_b_id": {
+            "type": "string",
+            "title": "Clip B Id"
+          },
+          "transition_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Transition Type"
+          },
+          "duration": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Duration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clip_a_id",
+          "clip_b_id",
+          "transition_type",
+          "duration"
+        ],
+        "title": "TransitionCreate",
+        "description": "Create transition between adjacent clips."
+      },
+      "TransitionRequest": {
+        "properties": {
+          "source_clip_id": {
+            "type": "string",
+            "title": "Source Clip Id"
+          },
+          "target_clip_id": {
+            "type": "string",
+            "title": "Target Clip Id"
+          },
+          "transition_type": {
+            "type": "string",
+            "title": "Transition Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_clip_id",
+          "target_clip_id",
+          "transition_type",
+          "parameters"
+        ],
+        "title": "TransitionRequest",
+        "description": "Request schema for applying a transition between two clips."
+      },
+      "TransitionResponse": {
+        "properties": {
+          "source_clip_id": {
+            "type": "string",
+            "title": "Source Clip Id"
+          },
+          "target_clip_id": {
+            "type": "string",
+            "title": "Target Clip Id"
+          },
+          "transition_type": {
+            "type": "string",
+            "title": "Transition Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          },
+          "filter_string": {
+            "type": "string",
+            "title": "Filter String"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_clip_id",
+          "target_clip_id",
+          "transition_type",
+          "parameters",
+          "filter_string"
+        ],
+        "title": "TransitionResponse",
+        "description": "Response schema for a successfully applied transition."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VersionCreateRequest": {
+        "properties": {
+          "timeline_json": {
+            "type": "string",
+            "title": "Timeline Json"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timeline_json"
+        ],
+        "title": "VersionCreateRequest",
+        "description": "Request body for creating a new version snapshot.\n\nAttributes:\n    timeline_json: Serialized timeline data to snapshot."
+      },
+      "VersionListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionResponse"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "versions"
+        ],
+        "title": "VersionListResponse",
+        "description": "Paginated list of project versions.\n\nAttributes:\n    total: Total number of versions for the project.\n    limit: Maximum number of versions returned.\n    offset: Number of versions skipped.\n    versions: List of version entries."
+      },
+      "VersionResponse": {
+        "properties": {
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "checksum": {
+            "type": "string",
+            "title": "Checksum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version_number",
+          "created_at",
+          "checksum"
+        ],
+        "title": "VersionResponse",
+        "description": "Single version entry in a project's history.\n\nAttributes:\n    version_number: Auto-incremented version number.\n    created_at: ISO-8601 timestamp of when the version was created.\n    checksum: SHA-256 hex digest of the timeline data."
+      },
+      "VideoListResponse": {
+        "properties": {
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoResponse"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "videos",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "VideoListResponse",
+        "description": "Paginated video list response.\n\nContains a list of videos along with pagination metadata."
+      },
+      "VideoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "duration_frames": {
+            "type": "integer",
+            "title": "Duration Frames"
+          },
+          "frame_rate_numerator": {
+            "type": "integer",
+            "title": "Frame Rate Numerator"
+          },
+          "frame_rate_denominator": {
+            "type": "integer",
+            "title": "Frame Rate Denominator"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "video_codec": {
+            "type": "string",
+            "title": "Video Codec"
+          },
+          "audio_codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Codec"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Path"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "filename",
+          "duration_frames",
+          "frame_rate_numerator",
+          "frame_rate_denominator",
+          "width",
+          "height",
+          "video_codec",
+          "file_size",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "VideoResponse",
+        "description": "Video response schema.\n\nRepresents the API response format for a single video."
+      },
+      "VideoSearchResponse": {
+        "properties": {
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoResponse"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          }
+        },
+        "type": "object",
+        "required": [
+          "videos",
+          "total",
+          "query"
+        ],
+        "title": "VideoSearchResponse",
+        "description": "Search results response.\n\nContains search results along with the query that was executed."
+      },
+      "stoat_ferret__api__schemas__timeline__TransitionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "transition_type": {
+            "type": "string",
+            "title": "Transition Type"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "filter_string": {
+            "type": "string",
+            "title": "Filter String"
+          },
+          "timeline_offset": {
+            "type": "number",
+            "title": "Timeline Offset"
+          },
+          "clips": {
+            "items": {
+              "$ref": "#/components/schemas/AdjustedClipPosition"
+            },
+            "type": "array",
+            "title": "Clips"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "transition_type",
+          "duration",
+          "filter_string",
+          "timeline_offset",
+          "clips"
+        ],
+        "title": "TransitionResponse",
+        "description": "Transition response with computed offsets."
+      }
+    }
+  }
+}
