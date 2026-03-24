@@ -1,8 +1,32 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import ScanModal from '../ScanModal'
+import {
+  MockWebSocket,
+  mockInstances,
+  resetMockInstances,
+} from '../../__tests__/mockWebSocket'
+
+function makeProgressEvent(
+  jobId: string,
+  progress: number,
+  status: string = 'running',
+  error: string | null = null,
+): string {
+  return JSON.stringify({
+    type: 'job_progress',
+    payload: { job_id: jobId, progress, status, ...(error ? { error } : {}) },
+    timestamp: new Date().toISOString(),
+  })
+}
 
 beforeEach(() => {
+  resetMockInstances()
+  vi.stubGlobal('WebSocket', MockWebSocket)
+  vi.restoreAllMocks()
+})
+
+afterEach(() => {
   vi.restoreAllMocks()
 })
 
@@ -35,22 +59,15 @@ describe('ScanModal', () => {
     expect(submit.disabled).toBe(true)
   })
 
-  it('triggers scan API call on submit', async () => {
+  it('triggers scan API call on submit and completes via WebSocket', async () => {
     const onScanComplete = vi.fn()
-    const completedJob = {
-      job_id: 'job-1',
-      status: 'complete',
-      progress: 1.0,
-      result: { scanned: 5 },
-      error: null,
-    }
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
         })
       }
-      return new Response(JSON.stringify(completedJob), { status: 200 })
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -75,33 +92,27 @@ describe('ScanModal', () => {
       })
     })
 
-    // Wait for polling to find completion (poll fires at 1s intervals)
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('scan-complete')).toBeDefined()
-      },
-      { timeout: 3000 },
-    )
+    // Simulate WebSocket progress then completion
+    const ws = mockInstances[0]
+    ws.simulateOpen()
+    ws.simulateMessage(makeProgressEvent('job-1', 0.5))
+    ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'complete'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-complete')).toBeDefined()
+    })
 
     expect(onScanComplete).toHaveBeenCalled()
   })
 
   it('shows abort button during active scan', async () => {
-    // Mock: scan submission succeeds, but polling returns running status
-    const runningJob = {
-      job_id: 'job-1',
-      status: 'running',
-      progress: 0.5,
-      result: null,
-      error: null,
-    }
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
         })
       }
-      return new Response(JSON.stringify(runningJob), { status: 200 })
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -123,13 +134,6 @@ describe('ScanModal', () => {
   })
 
   it('abort button calls cancel endpoint', async () => {
-    const runningJob = {
-      job_id: 'job-1',
-      status: 'running',
-      progress: 0.5,
-      result: null,
-      error: null,
-    }
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
@@ -141,7 +145,7 @@ describe('ScanModal', () => {
           status: 200,
         })
       }
-      return new Response(JSON.stringify(runningJob), { status: 200 })
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -166,15 +170,7 @@ describe('ScanModal', () => {
     })
   })
 
-  it('shows cancelled state when scan is cancelled', async () => {
-    let pollCount = 0
-    const cancelledJob = {
-      job_id: 'job-1',
-      status: 'cancelled',
-      progress: 0.5,
-      result: { scanned: 2, new: 2, updated: 0, skipped: 0, errors: [] },
-      error: null,
-    }
+  it('shows cancelled state when scan is cancelled via WebSocket', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
@@ -182,17 +178,11 @@ describe('ScanModal', () => {
         })
       }
       if (String(url).includes('/cancel')) {
-        return new Response(JSON.stringify(cancelledJob), { status: 200 })
+        return new Response(JSON.stringify({ job_id: 'job-1', status: 'cancelled' }), {
+          status: 200,
+        })
       }
-      pollCount++
-      // First poll returns running, subsequent returns cancelled
-      if (pollCount <= 1) {
-        return new Response(
-          JSON.stringify({ job_id: 'job-1', status: 'running', progress: 0.3, result: null, error: null }),
-          { status: 200 },
-        )
-      }
-      return new Response(JSON.stringify(cancelledJob), { status: 200 })
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -203,12 +193,19 @@ describe('ScanModal', () => {
     fireEvent.change(input, { target: { value: '/videos' } })
     fireEvent.click(screen.getByTestId('scan-submit'))
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('scan-cancelled')).toBeDefined()
-      },
-      { timeout: 5000 },
-    )
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-abort')).toBeDefined()
+    })
+
+    // Simulate WebSocket cancelled event
+    const ws = mockInstances[0]
+    ws.simulateOpen()
+    ws.simulateMessage(makeProgressEvent('job-1', 0.3))
+    ws.simulateMessage(makeProgressEvent('job-1', 0.5, 'cancelled'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-cancelled')).toBeDefined()
+    })
 
     expect(screen.getByTestId('scan-cancelled').textContent).toBe(
       'Scan cancelled. Partial results have been saved.',
@@ -285,9 +282,8 @@ describe('ScanModal', () => {
     expect(input.value).toBe('/home/user')
   })
 
-  it('completes scan flow: polls running then complete, fires onScanComplete', async () => {
+  it('completes scan flow: receives progress then complete via WebSocket', async () => {
     const onScanComplete = vi.fn()
-    let pollCount = 0
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
@@ -295,29 +291,7 @@ describe('ScanModal', () => {
           status: 202,
         })
       }
-      pollCount++
-      if (pollCount <= 1) {
-        return new Response(
-          JSON.stringify({
-            job_id: 'job-2',
-            status: 'running',
-            progress: 0.5,
-            result: null,
-            error: null,
-          }),
-          { status: 200 },
-        )
-      }
-      return new Response(
-        JSON.stringify({
-          job_id: 'job-2',
-          status: 'complete',
-          progress: 1.0,
-          result: { scanned: 3 },
-          error: null,
-        }),
-        { status: 200 },
-      )
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -332,13 +306,20 @@ describe('ScanModal', () => {
     fireEvent.change(input, { target: { value: '/videos' } })
     fireEvent.click(screen.getByTestId('scan-submit'))
 
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-abort')).toBeDefined()
+    })
+
+    // Simulate WebSocket progress updates
+    const ws = mockInstances[0]
+    ws.simulateOpen()
+    ws.simulateMessage(makeProgressEvent('job-2', 0.5))
+    ws.simulateMessage(makeProgressEvent('job-2', 1.0, 'complete'))
+
     // Wait for completion state
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('scan-complete')).toBeDefined()
-      },
-      { timeout: 5000 },
-    )
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-complete')).toBeDefined()
+    })
 
     // onScanComplete callback should have fired
     expect(onScanComplete).toHaveBeenCalled()
@@ -350,37 +331,14 @@ describe('ScanModal', () => {
     expect(screen.getByTestId('scan-cancel').textContent).toBe('Close')
   })
 
-  it('shows error with backend message when scan times out', async () => {
-    let pollCount = 0
+  it('shows error with message when scan times out via WebSocket', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
         })
       }
-      pollCount++
-      if (pollCount <= 1) {
-        return new Response(
-          JSON.stringify({
-            job_id: 'job-1',
-            status: 'running',
-            progress: 0.5,
-            result: null,
-            error: null,
-          }),
-          { status: 200 },
-        )
-      }
-      return new Response(
-        JSON.stringify({
-          job_id: 'job-1',
-          status: 'timeout',
-          progress: 0.5,
-          result: null,
-          error: 'Job timed out after 300.0s',
-        }),
-        { status: 200 },
-      )
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -391,37 +349,32 @@ describe('ScanModal', () => {
     fireEvent.change(input, { target: { value: '/videos' } })
     fireEvent.click(screen.getByTestId('scan-submit'))
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('scan-error')).toBeDefined()
-      },
-      { timeout: 5000 },
-    )
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-abort')).toBeDefined()
+    })
+
+    // Simulate WebSocket timeout event
+    const ws = mockInstances[0]
+    ws.simulateOpen()
+    ws.simulateMessage(makeProgressEvent('job-1', 0.5, 'timeout', 'Job timed out after 300.0s'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-error')).toBeDefined()
+    })
 
     expect(screen.getByTestId('scan-error').textContent).toBe(
       'Job timed out after 300.0s',
     )
   })
 
-  it('stops polling after receiving timeout status', async () => {
-    let pollCount = 0
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+  it('does not make HTTP polling requests after scan starts', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
         })
       }
-      pollCount++
-      return new Response(
-        JSON.stringify({
-          job_id: 'job-1',
-          status: 'timeout',
-          progress: 0.5,
-          result: null,
-          error: 'Job timed out after 300.0s',
-        }),
-        { status: 200 },
-      )
+      return new Response('{}', { status: 200 })
     })
 
     render(
@@ -432,20 +385,24 @@ describe('ScanModal', () => {
     fireEvent.change(input, { target: { value: '/videos' } })
     fireEvent.click(screen.getByTestId('scan-submit'))
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('scan-error')).toBeDefined()
-      },
-      { timeout: 5000 },
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-abort')).toBeDefined()
+    })
+
+    // Complete via WebSocket
+    const ws = mockInstances[0]
+    ws.simulateOpen()
+    ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'complete'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-complete')).toBeDefined()
+    })
+
+    // Verify no polling requests were made to /api/v1/jobs/{id}
+    const jobStatusCalls = fetchSpy.mock.calls.filter(
+      (call) => String(call[0]).match(/\/api\/v1\/jobs\/[^/]+$/)
     )
-
-    // Record the poll count after error is shown
-    const pollCountAfterError = pollCount
-
-    // Wait a bit to ensure no more polls happen
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    expect(pollCount).toBe(pollCountAfterError)
+    expect(jobStatusCalls).toHaveLength(0)
   })
 
   it('shows error when scan request fails', async () => {
@@ -471,6 +428,38 @@ describe('ScanModal', () => {
       expect(screen.getByTestId('scan-error').textContent).toBe(
         'Invalid directory',
       )
+    })
+  })
+
+  it('shows progress percentage from WebSocket events', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/videos/scan')) {
+        return new Response(JSON.stringify({ job_id: 'job-1' }), {
+          status: 202,
+        })
+      }
+      return new Response('{}', { status: 200 })
+    })
+
+    render(
+      <ScanModal open={true} onClose={vi.fn()} onScanComplete={vi.fn()} />,
+    )
+
+    const input = screen.getByTestId('scan-directory-input')
+    fireEvent.change(input, { target: { value: '/videos' } })
+    fireEvent.click(screen.getByTestId('scan-submit'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-progress')).toBeDefined()
+    })
+
+    // Simulate progress update via WebSocket
+    const ws = mockInstances[0]
+    ws.simulateOpen()
+    ws.simulateMessage(makeProgressEvent('job-1', 0.75))
+
+    await waitFor(() => {
+      expect(screen.getByText('75%')).toBeDefined()
     })
   })
 })

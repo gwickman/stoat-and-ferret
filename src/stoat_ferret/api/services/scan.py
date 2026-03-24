@@ -87,12 +87,20 @@ def make_scan_handler(
         cancel_event: asyncio.Event | None = payload.get("_cancel_event")
         logger.info("scan_handler_started", job_id=str(job_id), path=str(scan_path))
 
-        # Build progress callback if queue and job_id are available
-        progress_callback: Callable[[float], None] | None = None
-        if queue and job_id:
+        # Build progress callback if queue/job_id or ws_manager are available
+        progress_callback: Callable[[float], Awaitable[None]] | None = None
+        if (queue and job_id) or ws_manager:
 
-            def progress_callback(value: float) -> None:
-                queue.set_progress(job_id, value)
+            async def progress_callback(value: float) -> None:
+                if queue and job_id:
+                    queue.set_progress(job_id, value)
+                if ws_manager and job_id:
+                    await ws_manager.broadcast(
+                        build_event(
+                            EventType.JOB_PROGRESS,
+                            {"job_id": str(job_id), "progress": value, "status": "running"},
+                        )
+                    )
 
         if ws_manager:
             logger.info("scan_broadcast_started", path=str(scan_path))
@@ -127,7 +135,7 @@ async def scan_directory(
     repository: AsyncVideoRepository,
     thumbnail_service: ThumbnailService | None = None,
     *,
-    progress_callback: Callable[[float], None] | None = None,
+    progress_callback: Callable[[float], Awaitable[None]] | None = None,
     cancel_event: asyncio.Event | None = None,
 ) -> ScanResponse:
     """Scan directory for video files.
@@ -141,7 +149,7 @@ async def scan_directory(
         recursive: Whether to scan subdirectories.
         repository: Video repository for storing results.
         thumbnail_service: Optional thumbnail service for generating thumbnails.
-        progress_callback: Optional callback invoked with progress 0.0-1.0 after each file.
+        progress_callback: Optional async callback invoked with progress 0.0-1.0 after each file.
         cancel_event: Optional event; when set, scan breaks and returns partial results.
 
     Returns:
@@ -232,7 +240,7 @@ async def scan_directory(
             errors.append(ScanError(path=str_path, error=str(e)))
 
         if progress_callback:
-            progress_callback(processed / total_files)
+            await progress_callback(processed / total_files)
 
     scanned = processed
     skipped = scanned - new - updated - len(errors)

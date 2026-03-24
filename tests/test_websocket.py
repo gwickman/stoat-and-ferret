@@ -119,10 +119,11 @@ class TestEventTypes:
         assert EventType.LAYOUT_APPLIED.value == "layout_applied"
         assert EventType.AUDIO_MIX_CHANGED.value == "audio_mix_changed"
         assert EventType.TRANSITION_APPLIED.value == "transition_applied"
+        assert EventType.JOB_PROGRESS.value == "job_progress"
 
     def test_event_type_count(self) -> None:
-        """EventType should have exactly 9 members."""
-        assert len(EventType) == 9
+        """EventType should have exactly 10 members."""
+        assert len(EventType) == 10
 
     def test_build_event_schema(self) -> None:
         """build_event should return dict with type, payload, correlation_id, timestamp."""
@@ -207,3 +208,17 @@ class TestEventTypes:
         )
         assert event["type"] == "transition_applied"
         assert event["payload"]["transition_id"] == "t1"
+
+    def test_build_event_job_progress(self) -> None:
+        """build_event with JOB_PROGRESS produces correct event with progress payload."""
+        event = build_event(
+            EventType.JOB_PROGRESS,
+            {"job_id": "job-1", "progress": 0.5, "status": "running"},
+            correlation_id="corr-5",
+        )
+        assert event["type"] == "job_progress"
+        assert event["payload"]["job_id"] == "job-1"
+        assert event["payload"]["progress"] == 0.5
+        assert event["payload"]["status"] == "running"
+        assert "timestamp" in event
+        assert event["correlation_id"] == "corr-5"
