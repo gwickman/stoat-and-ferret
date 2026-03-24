@@ -134,6 +134,8 @@ Response 202:
 
 Quality is optional - auto-selected based on source resolution.
 
+**Cleanup trigger:** Before starting proxy generation, check proxy storage quota (`SF_PROXY_MAX_STORAGE_BYTES`). If usage exceeds `SF_PROXY_CLEANUP_THRESHOLD` (default 0.8), evict LRU proxies until below threshold before proceeding.
+
 ### Get Proxy Status
 
 ```http
@@ -386,6 +388,21 @@ All events broadcast on existing `/ws` WebSocket endpoint.
   "timestamp": "2026-03-24T12:02:00Z"
 }
 ```
+
+### Job Progress Events
+
+```json
+{
+  "type": "job.progress",
+  "job_id": "job_001",
+  "progress": 0.65,
+  "status": "processing",
+  "message": "Processing file 3 of 5",
+  "timestamp": "2026-03-24T12:03:00Z"
+}
+```
+
+Note: `job.progress` is established by BL-141 (WebSocket push for job progress). All Phase 4 job types (proxy generation, preview generation, thumbnail strip, waveform) emit `job.progress` events through this mechanism.
 
 ### AI Theater Mode Events
 

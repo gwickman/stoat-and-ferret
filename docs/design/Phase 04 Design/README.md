@@ -1,6 +1,8 @@
 # Phase 4: Preview & Playback Design
 
-Phase 4 extends stoat-and-ferret with real-time preview generation, HLS-based playback, proxy workflow, and an AI Theater Mode for full-screen spectator viewing. The design builds on the established hybrid Python/Rust architecture: Python manages preview orchestration, HLS segment serving, and WebSocket event broadcasting; Rust adds preview filter simplification for real-time performance. Two deferred items from earlier phases (BL-086, BL-141) are resolved at the start of Phase 4. The design produces 30 backlog items (8 Small, 17 Medium, 5 Large) mapped across 4 suggested versions (v024-v027).
+Phase 4 extends stoat-and-ferret with real-time preview generation, HLS-based playback, proxy workflow, and an AI Theater Mode for full-screen spectator viewing. The design builds on the established hybrid Python/Rust architecture: Python manages preview orchestration, HLS segment serving, and WebSocket event broadcasting; Rust adds preview filter simplification for real-time performance. Two deferred items from earlier phases (BL-086, BL-141) are resolved at the start of Phase 4. The design produces 36 new backlog items (11 Small, 20 Medium, 5 Large) plus 2 deferred items, mapped across 4 versions (v024-v027).
+
+**Design status:** Updated and final. Open questions resolved via exploration (segment duration default changed to 2.0s, proxy storage management added, streaming during render deferred to Phase 5+, BL-141 confirmed as first v024 item, BL-086 and thumbnail strips confirmed as complementary).
 
 ## Key Design Decisions
 

@@ -10,8 +10,8 @@ Two open backlog items should be resolved before or alongside Phase 4 work:
 
 | ID | Item | Rationale for Phase 4 |
 |----|------|----------------------|
-| BL-086 | Effect preview thumbnail with static frame and applied effect | Preview thumbnails are a Phase 4 concern; thumbnail strip infrastructure enables this |
-| BL-141 | Replace polling-based job progress with WebSocket push events | Preview progress is WebSocket-first; resolve the general pattern before adding preview events |
+| BL-086 | Effect preview thumbnail with static frame and applied effect | Preview thumbnails are a Phase 4 concern; thumbnail strip infrastructure enables this. BL-086 tests should verify the frame extraction primitive is shared with the thumbnail strip pipeline. |
+| BL-141 | Replace polling-based job progress with WebSocket push events | Preview progress is WebSocket-first; resolve the general pattern before adding preview events. Tests must verify: (a) `JOB_PROGRESS` event broadcast when `set_progress()` called, (b) frontend receives push updates, (c) polling endpoint `GET /api/v1/jobs/{job_id}` still works. |
 
 ## Rust Unit Tests
 

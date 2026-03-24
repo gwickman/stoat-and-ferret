@@ -108,11 +108,20 @@ These existing open items should be completed before or alongside Phase 4 work:
 
 (Note: 2 deferred + 36 new = 38 total items)
 
+## Dependencies
+
+- **BL-086 depends on thumbnail strip infrastructure**: BL-086 (effect preview thumbnails) should reuse the frame extraction method from the thumbnail strip pipeline. Both features use `ffmpeg -ss {time} -i {video} -frames:v 1` as the extraction primitive. Phase 4 should ensure `ThumbnailService` exposes this primitive for BL-086 to reuse.
+- **BL-141 is a soft dependency for all Phase 4 WebSocket events**: Phase 4 preview events (`preview.generating`, `preview.ready`, `proxy.generating`, `proxy.ready`) build on the WebSocket push pattern established by BL-141. Implementing BL-141 first eliminates architectural debt.
+
+## Upgrade Triggers (Phase 5+)
+
+- **Streaming during render**: Reserved `render.frame_available` event type in the EventType enum (not implemented in Phase 4). Implement when user feedback indicates render preview latency is a pain point. Fastest path: WebSocket+JPEG at reduced resolution (540p), reusing proxy quality infrastructure.
+
 ## Suggested Version Mapping
 
 | Version | Theme | Items | Rationale |
 |---------|-------|-------|-----------|
-| v024 | Deferred items + Proxy infrastructure + Rust core | BL-086, BL-141, items 1-4, 11-12 | LRN-019: build infrastructure first; resolve tech debt; Rust core ready for preview |
-| v025 | Preview sessions + Visual aids | Items 5-10, 13-16 | Core preview engine + thumbnails/waveforms; enables all playback features |
+| v024 | Deferred items + Proxy infrastructure + Rust core | BL-141 (first), BL-086, items 1-4, 11-12 | LRN-019: build infrastructure first. BL-141 is first item — establishes WebSocket push pattern all Phase 4 events build upon. BL-086 in v024 validates FFmpeg frame extraction before v025 scales to sprite sheets. |
+| v025 | Preview sessions + Visual aids | Items 5-10, 13-16 | Core preview engine + thumbnails/waveforms; enables all playback features. Thumbnail strips reuse frame extraction primitive validated by BL-086 in v024. |
 | v026 | Observability + GUI Preview Player | Items 17-25 | Metrics, health, graceful degradation + frontend player with controls |
 | v027 | GUI Theater Mode + Integration + Quality | Items 26-36 | Theater mode, timeline sync, tests, UAT journeys, design doc updates |

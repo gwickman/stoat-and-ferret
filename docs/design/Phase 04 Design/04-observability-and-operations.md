@@ -91,6 +91,15 @@ logger.info("proxy_stale_detected",
     source_checksum=current_checksum,
     message="Source file modified after proxy generation",
 )
+
+logger.info("proxy_cache_eviction",
+    video_id=video_id,
+    proxy_id=proxy_id,
+    eviction_reason="lru_quota",    # or "stale", "manual"
+    freed_bytes=freed,
+    storage_usage_after=usage_percent,
+    storage_quota_bytes=quota_bytes,
+)
 ```
 
 ### Cache Events
@@ -197,6 +206,12 @@ proxy_files_total = Gauge(
 proxy_storage_bytes = Gauge(
     "video_editor_proxy_storage_bytes",
     "Total proxy storage used in bytes",
+)
+
+proxy_evictions_total = Counter(
+    "video_editor_proxy_evictions_total",
+    "Total proxy cache evictions",
+    ["reason"],  # lru_quota, stale, manual
 )
 ```
 
@@ -344,10 +359,12 @@ All preview/proxy settings are externalized via pydantic-settings (environment v
 | Preview cache max | `SF_PREVIEW_CACHE_MAX_BYTES` | 1073741824 (1GB) | Maximum preview cache size |
 | Preview max sessions | `SF_PREVIEW_CACHE_MAX_SESSIONS` | 5 | Max concurrent preview sessions |
 | Preview TTL | `SF_PREVIEW_SESSION_TTL_SECONDS` | 3600 | Session timeout |
-| HLS segment duration | `SF_PREVIEW_SEGMENT_DURATION` | 4.0 | Seconds per HLS segment |
+| HLS segment duration | `SF_PREVIEW_SEGMENT_DURATION` | 2.0 | Seconds per HLS segment (ge=1.0, le=6.0) |
 | Proxy auto-generate | `SF_PROXY_AUTO_GENERATE` | true | Generate proxies on scan |
 | Proxy output dir | `SF_PROXY_OUTPUT_DIR` | data/proxies | Proxy file storage path |
 | Proxy max concurrent | `SF_PROXY_MAX_CONCURRENT` | 2 | Max concurrent proxy jobs |
+| Proxy max storage | `SF_PROXY_MAX_STORAGE_BYTES` | 10737418240 (10GB) | Maximum proxy storage (ge=1_073_741_824, le=107_374_182_400) |
+| Proxy cleanup threshold | `SF_PROXY_CLEANUP_THRESHOLD` | 0.8 | Fraction of quota triggering LRU eviction |
 | Thumbnail interval | `SF_THUMBNAIL_STRIP_INTERVAL` | 5.0 | Seconds between strip frames |
 | Waveform samples/sec | `SF_WAVEFORM_SAMPLES_PER_SECOND` | 10 | Audio waveform resolution |
 

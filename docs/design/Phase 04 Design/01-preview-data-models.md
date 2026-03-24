@@ -30,6 +30,7 @@ class ProxyFile(BaseModel):
     status: ProxyStatus
     generated_at: str | None  # ISO 8601
     source_checksum: str      # detect stale proxies
+    last_accessed_at: str | None  # ISO 8601, updated on proxy read (for LRU eviction)
 ```
 
 ### Proxy Quality Selection Logic
@@ -71,7 +72,7 @@ class PreviewSession(BaseModel):
     current_position: float       # last known playback position
     created_at: str               # ISO 8601
     expires_at: str               # session expiry (configurable TTL)
-    segment_duration: float       # HLS segment length (default 4.0s)
+    segment_duration: float       # HLS segment length (default 2.0s, ge=1.0, le=6.0)
     segments_generated: int       # progress tracking
     segments_total: int           # estimated total segments
 ```
@@ -253,6 +254,7 @@ CREATE TABLE IF NOT EXISTS proxy_files (
     status TEXT NOT NULL DEFAULT 'pending',
     source_checksum TEXT NOT NULL,
     generated_at TEXT,
+    last_accessed_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(source_video_id, quality)
 );
@@ -265,7 +267,7 @@ CREATE TABLE IF NOT EXISTS preview_sessions (
     quality TEXT NOT NULL,
     manifest_path TEXT,
     duration REAL NOT NULL DEFAULT 0.0,
-    segment_duration REAL NOT NULL DEFAULT 4.0,
+    segment_duration REAL NOT NULL DEFAULT 2.0,
     segments_generated INTEGER NOT NULL DEFAULT 0,
     segments_total INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -318,13 +320,15 @@ class Settings(BaseSettings):
     preview_cache_max_bytes: int = 1_073_741_824    # 1 GB
     preview_cache_max_sessions: int = 5
     preview_session_ttl_seconds: int = 3600          # 1 hour
-    preview_segment_duration: float = 4.0            # HLS segment length
+    preview_segment_duration: float = 2.0            # HLS segment length (ge=1.0, le=6.0)
     preview_quality_default: str = "720p"
 
     # Proxy settings
     proxy_output_dir: str = "data/proxies"
     proxy_auto_generate: bool = True                 # generate on scan
     proxy_max_concurrent: int = 2                    # concurrent proxy jobs
+    proxy_max_storage_bytes: int = 10_737_418_240    # 10 GB (ge=1_073_741_824, le=107_374_182_400)
+    proxy_cleanup_threshold: float = 0.8             # evict when >80% full
 
     # Thumbnail/waveform settings
     thumbnail_strip_interval: float = 5.0            # seconds between frames
