@@ -107,6 +107,12 @@ jobs:
       - name: Python types
         run: uv run mypy src/
 
+      - name: Check OpenAPI spec is up-to-date
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          uv run python scripts/export_openapi.py
+          git diff --exit-code gui/openapi.json
+
       - name: Python tests
         run: uv run pytest tests/ -v --cov=src --cov-fail-under=80
 
@@ -191,6 +197,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        working-directory: gui
+
+      - name: Check generated types are up-to-date
+        run: |
+          npm run generate:types
+          git diff --exit-code gui/src/generated/api-types.ts
         working-directory: gui
 
       - name: Build
