@@ -115,6 +115,15 @@ def make_scan_handler(
             cancel_event=cancel_event,
         )
 
+        # Broadcast job completion via JOB_PROGRESS so useJobProgress receives it
+        if ws_manager and job_id:
+            await ws_manager.broadcast(
+                build_event(
+                    EventType.JOB_PROGRESS,
+                    {"job_id": str(job_id), "progress": 1.0, "status": "complete"},
+                )
+            )
+
         if ws_manager:
             logger.info("scan_broadcast_completed", path=str(scan_path))
             await ws_manager.broadcast(

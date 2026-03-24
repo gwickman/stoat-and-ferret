@@ -257,10 +257,12 @@ class TestScanBroadcasts:
             await handler("scan", {"path": "/tmp/videos", "_job_id": "job-42"})
 
         calls = mock_manager.broadcast.call_args_list  # type: ignore[union-attr]
-        # SCAN_STARTED + SCAN_COMPLETED = 2, no JOB_PROGRESS because scan_directory is mocked
-        assert len(calls) == 2
+        # SCAN_STARTED + JOB_PROGRESS(complete) + SCAN_COMPLETED = 3
+        assert len(calls) == 3
         assert calls[0][0][0]["type"] == EventType.SCAN_STARTED.value
-        assert calls[1][0][0]["type"] == EventType.SCAN_COMPLETED.value
+        assert calls[1][0][0]["type"] == EventType.JOB_PROGRESS.value
+        assert calls[1][0][0]["payload"]["status"] == "complete"
+        assert calls[2][0][0]["type"] == EventType.SCAN_COMPLETED.value
 
     @pytest.mark.api
     async def test_job_progress_broadcast_payload_structure(self) -> None:
@@ -294,13 +296,17 @@ class TestScanBroadcasts:
             for c in mock_manager.broadcast.call_args_list  # type: ignore[union-attr]
             if c[0][0]["type"] == EventType.JOB_PROGRESS.value
         ]
-        assert len(progress_events) == 2
+        # 2 running progress events + 1 complete event = 3
+        assert len(progress_events) == 3
         for evt in progress_events:
             assert evt["payload"]["job_id"] == "job-99"
-            assert evt["payload"]["status"] == "running"
             assert "timestamp" in evt
         assert progress_events[0]["payload"]["progress"] == 0.5
+        assert progress_events[0]["payload"]["status"] == "running"
         assert progress_events[1]["payload"]["progress"] == 1.0
+        assert progress_events[1]["payload"]["status"] == "running"
+        assert progress_events[2]["payload"]["progress"] == 1.0
+        assert progress_events[2]["payload"]["status"] == "complete"
 
     @pytest.mark.api
     async def test_broadcast_events_use_build_event_structure(self) -> None:
