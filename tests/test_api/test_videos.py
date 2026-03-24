@@ -550,7 +550,7 @@ async def test_scan_directory_calls_progress_callback(tmp_path: Path) -> None:
     repo = AsyncInMemoryVideoRepository()
     progress_values: list[float] = []
 
-    def on_progress(value: float) -> None:
+    async def on_progress(value: float) -> None:
         progress_values.append(value)
 
     with patch(
