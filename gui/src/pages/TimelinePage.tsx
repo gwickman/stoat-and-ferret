@@ -26,7 +26,7 @@ export default function TimelinePage() {
 
   // Auto-select first project if none selected
   useEffect(() => {
-    if (projects.length > 0 && !selectedProjectId) {
+    if (projects && projects.length > 0 && !selectedProjectId) {
       setSelectedProjectId(projects[0].id)
     }
   }, [projects, selectedProjectId, setSelectedProjectId])

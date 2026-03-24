@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ClipFormModal from '../ClipFormModal'
 import { useClipStore } from '../../stores/clipStore'
-import type { Clip } from '../../hooks/useProjects'
+import type { Clip } from '../../generated/types'
 
 const mockVideos = [
   {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import LayoutPreview from '../LayoutPreview'
 import { useComposeStore } from '../../stores/composeStore'
-import type { LayoutPreset } from '../../types/timeline'
+import type { LayoutPreset } from '../../generated/types'
 
 /** Test preset data matching Rust LayoutPreset definitions. */
 const TEST_PRESETS: LayoutPreset[] = [

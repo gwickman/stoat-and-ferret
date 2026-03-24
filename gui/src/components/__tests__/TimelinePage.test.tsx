@@ -18,6 +18,32 @@ const mockPresets = {
   total: 1,
 }
 
+const mockEmptyProjects = { projects: [], total: 0 }
+
+/** Return the right mock response per API endpoint, with a fresh Response each call. */
+function mockFetchForEndpoints(
+  overrides: Record<string, unknown> = {},
+) {
+  const responses: Record<string, unknown> = {
+    '/api/v1/compose/presets': mockPresets,
+    ...overrides,
+  }
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+    for (const [pattern, body] of Object.entries(responses)) {
+      if (url.includes(pattern)) {
+        return Promise.resolve(
+          new Response(JSON.stringify(body), { status: 200 }),
+        )
+      }
+    }
+    // Default: empty projects response for any unmatched URL (e.g. /api/v1/projects)
+    return Promise.resolve(
+      new Response(JSON.stringify(mockEmptyProjects), { status: 200 }),
+    )
+  })
+}
+
 beforeEach(() => {
   vi.restoreAllMocks()
   useTimelineStore.getState().reset()
@@ -36,9 +62,7 @@ function renderTimelinePage(initialPath = '/timeline') {
 
 describe('TimelinePage', () => {
   it('renders the page with heading', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(mockPresets), { status: 200 }),
-    )
+    mockFetchForEndpoints()
 
     renderTimelinePage()
 
@@ -55,9 +79,9 @@ describe('TimelinePage', () => {
   })
 
   it('shows empty state when no data', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ presets: [], total: 0 }), { status: 200 }),
-    )
+    mockFetchForEndpoints({
+      '/api/v1/compose/presets': { presets: [], total: 0 },
+    })
 
     renderTimelinePage()
 
@@ -78,9 +102,7 @@ describe('TimelinePage', () => {
   })
 
   it('renders presets when loaded', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(mockPresets), { status: 200 }),
-    )
+    mockFetchForEndpoints()
 
     renderTimelinePage()
 
@@ -91,9 +113,7 @@ describe('TimelinePage', () => {
   })
 
   it('renders tracks when timeline data is pre-loaded', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(mockPresets), { status: 200 }),
-    )
+    mockFetchForEndpoints()
 
     useTimelineStore.setState({
       tracks: [

@@ -1,4 +1,4 @@
-import type { Clip } from '../hooks/useProjects'
+import type { Clip } from '../generated/types'
 
 interface ClipSelectorProps {
   clips: Clip[]

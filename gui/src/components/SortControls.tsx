@@ -1,4 +1,4 @@
-import type { SortField, SortOrder } from '../stores/libraryStore'
+import type { SortField, SortOrder } from '../generated/types'
 
 interface SortControlsProps {
   sortField: SortField

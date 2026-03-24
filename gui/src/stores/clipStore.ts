@@ -1,6 +1,6 @@
 import { create } from 'zustand'
+import type { Clip } from '../generated/types'
 import {
-  type Clip,
   createClip as apiCreateClip,
   deleteClip as apiDeleteClip,
   fetchClips as apiFetchClips,

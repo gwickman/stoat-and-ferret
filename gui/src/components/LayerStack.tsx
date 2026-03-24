@@ -1,5 +1,5 @@
 import { useComposeStore } from '../stores/composeStore'
-import type { LayoutPosition } from '../types/timeline'
+import type { LayoutPosition } from '../generated/types'
 
 /** Coordinate fields for custom position input. */
 const COORD_FIELDS: (keyof LayoutPosition)[] = ['x', 'y', 'width', 'height']

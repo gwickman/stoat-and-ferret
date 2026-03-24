@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import TimelineCanvas from '../TimelineCanvas'
-import type { Track } from '../../types/timeline'
+import type { Track } from '../../generated/types'
 
 const makeTracks = (count: number): Track[] =>
   Array.from({ length: count }, (_, i) => ({

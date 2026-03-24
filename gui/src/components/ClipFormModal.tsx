@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { type Clip } from '../hooks/useProjects'
+import type { Clip } from '../generated/types'
 import { useVideos } from '../hooks/useVideos'
 import { useClipStore } from '../stores/clipStore'
 

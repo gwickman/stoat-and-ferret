@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import ClipSelector from '../ClipSelector'
-import type { Clip } from '../../hooks/useProjects'
+import type { Clip } from '../../generated/types'
 
 const mockClips: Clip[] = [
   {

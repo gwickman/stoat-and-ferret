@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import EffectCatalog from '../EffectCatalog'
-import type { Effect } from '../../hooks/useEffects'
+import type { Effect } from '../../generated/types'
 import { useEffectCatalogStore } from '../../stores/effectCatalogStore'
 
 const mockEffects: Effect[] = [

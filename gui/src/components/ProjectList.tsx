@@ -1,4 +1,4 @@
-import type { Project } from '../hooks/useProjects'
+import type { Project } from '../generated/types'
 import ProjectCard from './ProjectCard'
 
 interface ProjectListProps {

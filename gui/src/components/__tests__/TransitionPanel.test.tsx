@@ -1,8 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import TransitionPanel from '../TransitionPanel'
-import type { Clip } from '../../hooks/useProjects'
-import type { Effect } from '../../hooks/useEffects'
+import type { Clip, Effect } from '../../generated/types'
 import { useTransitionStore } from '../../stores/transitionStore'
 import { useEffectFormStore } from '../../stores/effectFormStore'
 

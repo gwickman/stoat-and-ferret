@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import type { Track as TrackType } from '../types/timeline'
+import type { Track as TrackType } from '../generated/types'
 import TimeRuler from './TimeRuler'
 import Track from './Track'
 import Playhead from './Playhead'

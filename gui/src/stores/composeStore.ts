@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { LayoutPosition, LayoutPreset, LayoutPresetListResponse } from '../types/timeline'
+import type { LayoutPosition, LayoutPreset, LayoutPresetListResponse } from '../generated/types'
 
 interface ComposeStoreState {
   /** Available layout presets. */

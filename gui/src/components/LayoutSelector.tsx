@@ -1,4 +1,4 @@
-import type { LayoutPreset } from '../types/timeline'
+import type { LayoutPreset } from '../generated/types'
 import { useComposeStore } from '../stores/composeStore'
 
 /** Displays all layout presets as selectable items. */

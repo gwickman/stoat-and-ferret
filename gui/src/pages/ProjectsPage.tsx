@@ -3,7 +3,8 @@ import CreateProjectModal from '../components/CreateProjectModal'
 import DeleteConfirmation from '../components/DeleteConfirmation'
 import ProjectDetails from '../components/ProjectDetails'
 import ProjectList from '../components/ProjectList'
-import { type Project, fetchClips, useProjects } from '../hooks/useProjects'
+import type { Project } from '../generated/types'
+import { fetchClips, useProjects } from '../hooks/useProjects'
 import { useProjectStore } from '../stores/projectStore'
 
 export default function ProjectsPage() {

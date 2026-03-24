@@ -1,22 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { SortField, SortOrder } from '../stores/libraryStore'
-
-export interface Video {
-  id: string
-  path: string
-  filename: string
-  duration_frames: number
-  frame_rate_numerator: number
-  frame_rate_denominator: number
-  width: number
-  height: number
-  video_codec: string
-  audio_codec: string | null
-  file_size: number
-  thumbnail_path: string | null
-  created_at: string
-  updated_at: string
-}
+import type { SortField, SortOrder, Video } from '../generated/types'
 
 interface VideoListResponse {
   videos: Video[]

@@ -1,4 +1,4 @@
-import type { TimelineClip as ClipType } from '../types/timeline'
+import type { TimelineClip as ClipType } from '../generated/types'
 import { timeToPixel } from '../utils/timeline'
 
 interface TimelineClipProps {
