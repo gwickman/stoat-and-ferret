@@ -71,6 +71,14 @@ class EffectDeleteResponse(BaseModel):
     deleted_effect_type: str
 
 
+class EffectThumbnailRequest(BaseModel):
+    """Request schema for generating an effect preview thumbnail."""
+
+    effect_name: str
+    video_path: str
+    parameters: dict[str, Any]
+
+
 class TransitionRequest(BaseModel):
     """Request schema for applying a transition between two clips."""
 

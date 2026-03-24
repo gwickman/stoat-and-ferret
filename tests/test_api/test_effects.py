@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -1620,3 +1621,216 @@ async def test_golden_full_crud_workflow(
     assert clip_final.effects is not None
     assert len(clip_final.effects) == 1
     assert clip_final.effects[0]["parameters"]["text"] == "Updated Title"
+
+
+# ---- Effect preview thumbnail tests ----
+
+
+@pytest.mark.api
+def test_thumbnail_unknown_effect_returns_400(client: TestClient) -> None:
+    """POST /effects/preview/thumbnail with unknown effect returns 400."""
+    response = client.post(
+        "/api/v1/effects/preview/thumbnail",
+        json={
+            "effect_name": "nonexistent_effect",
+            "video_path": "/tmp/fake_video.mp4",
+            "parameters": {},
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "EFFECT_NOT_FOUND"
+
+
+@pytest.mark.api
+def test_thumbnail_missing_video_returns_400(client: TestClient) -> None:
+    """POST /effects/preview/thumbnail with missing video file returns 400."""
+    response = client.post(
+        "/api/v1/effects/preview/thumbnail",
+        json={
+            "effect_name": "text_overlay",
+            "video_path": "/tmp/does_not_exist_12345.mp4",
+            "parameters": {"text": "Hello"},
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "VIDEO_NOT_FOUND"
+
+
+@pytest.mark.api
+def test_thumbnail_invalid_params_returns_400(
+    client: TestClient,
+    sample_video_path: Path,
+) -> None:
+    """POST /effects/preview/thumbnail with invalid params returns 400."""
+    response = client.post(
+        "/api/v1/effects/preview/thumbnail",
+        json={
+            "effect_name": "speed_control",
+            "video_path": str(sample_video_path),
+            "parameters": {"factor": "not_a_number"},
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "INVALID_EFFECT_PARAMS"
+
+
+@pytest.mark.api
+def test_thumbnail_ffmpeg_failure_returns_500(
+    sample_video_path: Path,
+) -> None:
+    """POST /effects/preview/thumbnail returns 500 when FFmpeg fails."""
+    from stoat_ferret.ffmpeg.executor import ExecutionResult
+
+    class FailingExecutor:
+        """FFmpeg executor that always returns failure."""
+
+        def run(
+            self,
+            args: list[str],
+            *,
+            stdin: bytes | None = None,
+            timeout: float | None = None,
+        ) -> ExecutionResult:
+            return ExecutionResult(
+                returncode=1,
+                stdout=b"",
+                stderr=b"ffmpeg error",
+                command=["ffmpeg", *args],
+                duration_seconds=0.1,
+            )
+
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        ffmpeg_executor=FailingExecutor(),
+    )
+    with TestClient(app) as c:
+        response = c.post(
+            "/api/v1/effects/preview/thumbnail",
+            json={
+                "effect_name": "text_overlay",
+                "video_path": str(sample_video_path),
+                "parameters": {"text": "Hello"},
+            },
+        )
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert detail["code"] == "THUMBNAIL_GENERATION_FAILED"
+
+
+@pytest.mark.api
+def test_thumbnail_success_returns_jpeg(
+    sample_video_path: Path,
+) -> None:
+    """POST /effects/preview/thumbnail returns JPEG on success."""
+    from stoat_ferret.ffmpeg.executor import ExecutionResult
+
+    class FakePreviewExecutor:
+        """FFmpeg executor that creates a fake JPEG file."""
+
+        def run(
+            self,
+            args: list[str],
+            *,
+            stdin: bytes | None = None,
+            timeout: float | None = None,
+        ) -> ExecutionResult:
+            # Find the output path (last argument) and write a fake JPEG
+            output_path = args[-1]
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"\xff\xd8\xff\xe0fake_jpeg_data")
+            return ExecutionResult(
+                returncode=0,
+                stdout=b"",
+                stderr=b"",
+                command=["ffmpeg", *args],
+                duration_seconds=0.5,
+            )
+
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        ffmpeg_executor=FakePreviewExecutor(),
+    )
+    with TestClient(app) as c:
+        response = c.post(
+            "/api/v1/effects/preview/thumbnail",
+            json={
+                "effect_name": "text_overlay",
+                "video_path": str(sample_video_path),
+                "parameters": {"text": "Hello"},
+            },
+        )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert response.content.startswith(b"\xff\xd8\xff\xe0")
+
+
+@pytest.mark.api
+def test_thumbnail_ffmpeg_command_has_correct_vf_filter(
+    sample_video_path: Path,
+) -> None:
+    """Verify FFmpeg command includes -vf with effect filter and scale."""
+    from stoat_ferret.ffmpeg.executor import ExecutionResult
+
+    captured_args: list[list[str]] = []
+
+    class CapturingExecutor:
+        """FFmpeg executor that captures the args for inspection."""
+
+        def run(
+            self,
+            args: list[str],
+            *,
+            stdin: bytes | None = None,
+            timeout: float | None = None,
+        ) -> ExecutionResult:
+            captured_args.append(args)
+            output_path = args[-1]
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"\xff\xd8\xff\xe0jpeg")
+            return ExecutionResult(
+                returncode=0,
+                stdout=b"",
+                stderr=b"",
+                command=["ffmpeg", *args],
+                duration_seconds=0.1,
+            )
+
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        ffmpeg_executor=CapturingExecutor(),
+    )
+    with TestClient(app) as c:
+        c.post(
+            "/api/v1/effects/preview/thumbnail",
+            json={
+                "effect_name": "text_overlay",
+                "video_path": str(sample_video_path),
+                "parameters": {"text": "Preview"},
+            },
+        )
+
+    assert len(captured_args) == 1
+    args = captured_args[0]
+    # Verify -vf flag is present with effect filter + scale
+    vf_idx = args.index("-vf")
+    vf_value = args[vf_idx + 1]
+    assert "drawtext" in vf_value
+    assert "scale=320:-1" in vf_value
+    # Verify timestamp at 0
+    ss_idx = args.index("-ss")
+    assert args[ss_idx + 1] == "0"
+    # Verify single frame extraction
+    assert "-frames:v" in args
+    assert "1" in args[args.index("-frames:v") + 1]
+    # Verify JPEG quality 3
+    qv_idx = args.index("-q:v")
+    assert args[qv_idx + 1] == "3"

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated, Any
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import FileResponse
 from prometheus_client import Counter
 
 from stoat_ferret.api.schemas.effect import (
@@ -17,10 +19,12 @@ from stoat_ferret.api.schemas.effect import (
     EffectPreviewRequest,
     EffectPreviewResponse,
     EffectResponse,
+    EffectThumbnailRequest,
     EffectUpdateRequest,
     TransitionRequest,
     TransitionResponse,
 )
+from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
@@ -28,6 +32,7 @@ from stoat_ferret.db.project_repository import (
 )
 from stoat_ferret.effects.definitions import create_default_registry
 from stoat_ferret.effects.registry import EffectRegistry
+from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
 
 logger = structlog.get_logger(__name__)
 
@@ -85,9 +90,25 @@ async def _get_clip_repository(request: Request) -> AsyncClipRepository:
     return AsyncSQLiteClipRepository(request.app.state.db)
 
 
+async def _get_thumbnail_service(request: Request) -> ThumbnailService:
+    """Get or create a ThumbnailService for effect preview thumbnails."""
+    service: ThumbnailService | None = getattr(request.app.state, "effect_thumbnail_service", None)
+    if service is not None:
+        return service
+
+    executor: FFmpegExecutor = (
+        getattr(request.app.state, "ffmpeg_executor", None) or RealFFmpegExecutor()
+    )
+    from stoat_ferret.api.settings import get_settings
+
+    settings = get_settings()
+    return ThumbnailService(executor=executor, thumbnail_dir=settings.thumbnail_dir)
+
+
 RegistryDep = Annotated[EffectRegistry, Depends(get_effect_registry)]
 ProjectRepoDep = Annotated[AsyncProjectRepository, Depends(_get_project_repository)]
 ClipRepoDep = Annotated[AsyncClipRepository, Depends(_get_clip_repository)]
+ThumbnailDep = Annotated[ThumbnailService, Depends(_get_thumbnail_service)]
 
 
 @router.get("/effects", response_model=EffectListResponse)
@@ -175,6 +196,92 @@ async def preview_effect(
         effect_type=request.effect_type,
         filter_string=filter_string,
     )
+
+
+@router.post("/effects/preview/thumbnail")
+async def preview_effect_thumbnail(
+    request: EffectThumbnailRequest,
+    registry: RegistryDep,
+    thumbnail_service: ThumbnailDep,
+) -> FileResponse:
+    """Generate a thumbnail showing an effect applied to a video frame.
+
+    Extracts the first frame from the specified video, applies the effect
+    filter, scales to 320px width, and returns a JPEG image.
+
+    Args:
+        request: Thumbnail request with effect name, video path, and parameters.
+        registry: Effect registry dependency.
+        thumbnail_service: Thumbnail service dependency.
+
+    Returns:
+        JPEG image response.
+
+    Raises:
+        HTTPException: 400 if effect unknown, parameters invalid, or video missing.
+            500 if FFmpeg thumbnail generation fails.
+    """
+    # Validate effect type
+    definition = registry.get(request.effect_name)
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "EFFECT_NOT_FOUND",
+                "message": f"Unknown effect type: {request.effect_name}",
+            },
+        )
+
+    # Validate video path exists
+    video_path = Path(request.video_path)
+    if not video_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "VIDEO_NOT_FOUND",
+                "message": f"Video file not found: {request.video_path}",
+            },
+        )
+
+    # Validate parameters
+    validation_errors = registry.validate(request.effect_name, request.parameters)
+    if validation_errors:
+        messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "; ".join(messages),
+            },
+        )
+
+    # Build filter string
+    try:
+        filter_string = definition.build_fn(request.parameters)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": str(e),
+            },
+        ) from None
+
+    # Generate thumbnail
+    output_path = await thumbnail_service.generate_effect_preview(
+        video_path=request.video_path,
+        effect_filter=filter_string,
+    )
+    if output_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "THUMBNAIL_GENERATION_FAILED",
+                "message": "Failed to generate effect preview thumbnail",
+            },
+        )
+
+    return FileResponse(output_path, media_type="image/jpeg")
 
 
 @router.post(
