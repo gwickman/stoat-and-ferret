@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.models import Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
@@ -202,3 +203,102 @@ def test_restore_version_project_not_found(client: TestClient) -> None:
     assert response.status_code == 404
     data = response.json()
     assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_create_version_with_retention_prunes(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    version_repository: AsyncInMemoryVersionRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Setting retention count prunes old versions after save."""
+    project_id = await _seed_project(project_repository)
+    monkeypatch.setenv("STOAT_VERSION_RETENTION_COUNT", "3")
+    get_settings.cache_clear()
+
+    # Save 5 versions via API
+    for i in range(5):
+        resp = client.post(
+            f"/api/v1/projects/{project_id}/versions",
+            json={"timeline_json": f'{{"v": {i + 1}}}'},
+        )
+        assert resp.status_code == 201
+
+    versions = await version_repository.list_versions(project_id)
+    assert len(versions) == 3
+    version_numbers = [v.version_number for v in versions]
+    assert version_numbers == [5, 4, 3]
+
+    # Cleanup
+    get_settings.cache_clear()
+
+
+@pytest.mark.api
+async def test_create_version_no_retention_keeps_all(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    version_repository: AsyncInMemoryVersionRepository,
+) -> None:
+    """Default (no retention) keeps all versions."""
+    get_settings.cache_clear()
+    project_id = await _seed_project(project_repository)
+
+    for i in range(5):
+        resp = client.post(
+            f"/api/v1/projects/{project_id}/versions",
+            json={"timeline_json": f'{{"v": {i + 1}}}'},
+        )
+        assert resp.status_code == 201
+
+    versions = await version_repository.list_versions(project_id)
+    assert len(versions) == 5
+
+
+@pytest.mark.api
+async def test_retention_per_project_isolation(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    version_repository: AsyncInMemoryVersionRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Retention pruning only affects the project being saved."""
+    # Create two projects
+    now = datetime.now(timezone.utc)
+    for pid, name in [("proj-a", "Project A"), ("proj-b", "Project B")]:
+        await project_repository.add(
+            Project(
+                id=pid,
+                name=name,
+                output_width=1920,
+                output_height=1080,
+                output_fps=30,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    monkeypatch.setenv("STOAT_VERSION_RETENTION_COUNT", "2")
+    get_settings.cache_clear()
+
+    # Save 4 versions for project A
+    for i in range(4):
+        client.post(
+            "/api/v1/projects/proj-a/versions",
+            json={"timeline_json": f'{{"a": {i + 1}}}'},
+        )
+
+    # Save 3 versions for project B
+    for i in range(3):
+        client.post(
+            "/api/v1/projects/proj-b/versions",
+            json={"timeline_json": f'{{"b": {i + 1}}}'},
+        )
+
+    a_versions = await version_repository.list_versions("proj-a")
+    b_versions = await version_repository.list_versions("proj-b")
+    assert len(a_versions) == 2
+    assert len(b_versions) == 2
+
+    # Cleanup
+    get_settings.cache_clear()

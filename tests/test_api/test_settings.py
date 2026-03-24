@@ -111,6 +111,31 @@ class TestSettings:
         assert isinstance(settings.database_path_resolved, Path)
         assert settings.database_path_resolved == Path("/some/path.db")
 
+    def test_version_retention_count_default_none(self) -> None:
+        """Version retention count defaults to None (retain all)."""
+        settings = Settings()
+        assert settings.version_retention_count is None
+
+    def test_version_retention_count_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """STOAT_VERSION_RETENTION_COUNT env var sets retention count."""
+        monkeypatch.setenv("STOAT_VERSION_RETENTION_COUNT", "5")
+        settings = Settings()
+        assert settings.version_retention_count == 5
+
+    def test_version_retention_count_rejects_zero(self) -> None:
+        """Version retention count of 0 is rejected (minimum is 1)."""
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(version_retention_count=0)
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("version_retention_count",) for e in errors)
+
+    def test_version_retention_count_rejects_negative(self) -> None:
+        """Negative version retention count is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(version_retention_count=-1)
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("version_retention_count",) for e in errors)
+
 
 class TestGetSettings:
     """Tests for the get_settings function."""

@@ -100,6 +100,13 @@ class Settings(BaseSettings):
         description="Maximum number of jobs allowed in a single batch request",
     )
 
+    # Version retention
+    version_retention_count: int | None = Field(
+        default=None,
+        ge=1,
+        description="Keep-last-N version retention per project. None retains all versions.",
+    )
+
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,

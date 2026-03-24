@@ -215,6 +215,74 @@ class TestVersionChecksumValidation:
 
 
 @pytest.mark.contract
+class TestVersionDeleteOldVersions:
+    """Tests for delete_old_versions() method."""
+
+    async def test_delete_keeps_last_n(
+        self, version_repository: AsyncVersionRepositoryType
+    ) -> None:
+        """delete_old_versions retains exactly keep_count most recent versions."""
+        for i in range(5):
+            await version_repository.save("project-1", f'{{"v": {i + 1}}}')
+
+        deleted = await version_repository.delete_old_versions("project-1", 3)
+
+        assert deleted == 2
+        remaining = await version_repository.list_versions("project-1")
+        assert len(remaining) == 3
+        version_numbers = [v.version_number for v in remaining]
+        assert version_numbers == [5, 4, 3]
+
+    async def test_delete_noop_when_fewer_than_keep(
+        self, version_repository: AsyncVersionRepositoryType
+    ) -> None:
+        """delete_old_versions is a no-op when fewer versions exist than keep_count."""
+        await version_repository.save("project-1", '{"v": 1}')
+        await version_repository.save("project-1", '{"v": 2}')
+
+        deleted = await version_repository.delete_old_versions("project-1", 5)
+
+        assert deleted == 0
+        remaining = await version_repository.list_versions("project-1")
+        assert len(remaining) == 2
+
+    async def test_delete_keep_one(self, version_repository: AsyncVersionRepositoryType) -> None:
+        """keep_count=1 retains only the most recent version."""
+        for i in range(4):
+            await version_repository.save("project-1", f'{{"v": {i + 1}}}')
+
+        deleted = await version_repository.delete_old_versions("project-1", 1)
+
+        assert deleted == 3
+        remaining = await version_repository.list_versions("project-1")
+        assert len(remaining) == 1
+        assert remaining[0].version_number == 4
+
+    async def test_delete_empty_project(
+        self, version_repository: AsyncVersionRepositoryType
+    ) -> None:
+        """delete_old_versions on project with no versions deletes nothing."""
+        deleted = await version_repository.delete_old_versions("project-1", 3)
+        assert deleted == 0
+
+    async def test_delete_does_not_affect_other_project(
+        self, version_repository: AsyncVersionRepositoryType
+    ) -> None:
+        """Pruning project-1 does not delete versions from project-2."""
+        for i in range(5):
+            await version_repository.save("project-1", f'{{"p1": {i + 1}}}')
+        for i in range(3):
+            await version_repository.save("project-2", f'{{"p2": {i + 1}}}')
+
+        await version_repository.delete_old_versions("project-1", 2)
+
+        p1 = await version_repository.list_versions("project-1")
+        p2 = await version_repository.list_versions("project-2")
+        assert len(p1) == 2
+        assert len(p2) == 3
+
+
+@pytest.mark.contract
 class TestVersionMultiProjectIsolation:
     """Tests for multi-project version isolation."""
 
