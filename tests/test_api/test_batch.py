@@ -7,7 +7,11 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from stoat_ferret.api.routers.batch import _BatchJob, _run_batch_job, _to_rust_status
+from stoat_ferret.api.routers.batch import _run_batch_job, _to_rust_status
+from stoat_ferret.db.batch_repository import (
+    BatchJobRecord,
+    InMemoryBatchRepository,
+)
 from stoat_ferret_core import calculate_batch_progress
 
 # ---- Submission tests ----
@@ -140,7 +144,7 @@ def test_get_batch_progress_job_details(client: TestClient) -> None:
     job = data["jobs"][0]
     assert "job_id" in job
     assert job["project_id"] == "proj-1"
-    assert job["status"] in ("queued", "running", "complete", "failed")
+    assert job["status"] in ("queued", "running", "completed", "failed")
 
 
 # ---- DTO round-trip tests ----
@@ -182,7 +186,7 @@ def test_batch_progress_response_round_trip() -> None:
         failed_jobs=0,
         total_jobs=2,
         jobs=[
-            BatchJobStatusResponse(job_id="j1", project_id="p1", status="complete", progress=1.0),
+            BatchJobStatusResponse(job_id="j1", project_id="p1", status="completed", progress=1.0),
             BatchJobStatusResponse(job_id="j2", project_id="p2", status="queued"),
         ],
     )
@@ -194,29 +198,40 @@ def test_batch_progress_response_round_trip() -> None:
 # ---- Parity tests: Python status mapping matches Rust ----
 
 
+def _make_record(
+    *,
+    job_id: str = "1",
+    status: str = "queued",
+    progress: float = 0.0,
+) -> BatchJobRecord:
+    """Create a BatchJobRecord for testing status mapping."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    return BatchJobRecord(
+        id=1,
+        batch_id="b",
+        job_id=job_id,
+        project_id="p",
+        output_path="/o",
+        quality="m",
+        status=status,
+        progress=progress,
+        error=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+
 @pytest.mark.api
 def test_status_mapping_matches_rust_calculate_batch_progress() -> None:
     """Python _to_rust_status maps correctly for Rust calculate_batch_progress."""
-    queued = _BatchJob(job_id="1", project_id="p", output_path="/o", quality="m", status="queued")
-    running = _BatchJob(
-        job_id="2",
-        project_id="p",
-        output_path="/o",
-        quality="m",
-        status="running",
-        progress=0.5,
-    )
-    complete = _BatchJob(
-        job_id="3",
-        project_id="p",
-        output_path="/o",
-        quality="m",
-        status="complete",
-        progress=1.0,
-    )
-    failed = _BatchJob(job_id="4", project_id="p", output_path="/o", quality="m", status="failed")
+    queued = _make_record(job_id="1", status="queued")
+    running = _make_record(job_id="2", status="running", progress=0.5)
+    completed = _make_record(job_id="3", status="completed", progress=1.0)
+    failed = _make_record(job_id="4", status="failed")
 
-    statuses = [_to_rust_status(j) for j in [queued, running, complete, failed]]
+    statuses = [_to_rust_status(j) for j in [queued, running, completed, failed]]
     progress = calculate_batch_progress(statuses)
 
     assert progress.total_jobs == 4
@@ -229,9 +244,7 @@ def test_status_mapping_matches_rust_calculate_batch_progress() -> None:
 @pytest.mark.api
 def test_all_queued_gives_zero_progress() -> None:
     """All queued jobs map to Pending and give 0.0 overall progress."""
-    jobs = [
-        _BatchJob(job_id=str(i), project_id="p", output_path="/o", quality="m") for i in range(3)
-    ]
+    jobs = [_make_record(job_id=str(i)) for i in range(3)]
     statuses = [_to_rust_status(j) for j in jobs]
     progress = calculate_batch_progress(statuses)
 
@@ -260,22 +273,41 @@ async def test_parallel_limit_enforced() -> None:
         async with lock:
             current_concurrent -= 1
 
-    jobs = [
-        _BatchJob(
+    repo = InMemoryBatchRepository()
+    records = []
+    for i in range(8):
+        record = await repo.create_batch_job(
+            batch_id="batch-1",
             job_id=str(i),
             project_id=f"proj-{i}",
             output_path=f"/out/{i}",
             quality="medium",
         )
-        for i in range(8)
-    ]
+        records.append(record)
+
     semaphore = asyncio.Semaphore(4)
 
-    tasks = [asyncio.create_task(_run_batch_job(job, semaphore, tracking_handler)) for job in jobs]
+    tasks = [
+        asyncio.create_task(
+            _run_batch_job(
+                r.job_id,
+                r.project_id,
+                r.output_path,
+                r.quality,
+                semaphore,
+                tracking_handler,
+                repo,
+            )
+        )
+        for r in records
+    ]
     await asyncio.gather(*tasks)
 
     assert max_concurrent <= 4
-    assert all(job.status == "complete" for job in jobs)
+    for r in records:
+        job = await repo.get_by_job_id(r.job_id)
+        assert job is not None
+        assert job.status == "completed"
 
 
 @pytest.mark.api
@@ -285,11 +317,28 @@ async def test_batch_job_failure_tracked() -> None:
     async def failing_handler(project_id: str, output_path: str, quality: str) -> None:
         raise RuntimeError("render failed")
 
-    job = _BatchJob(job_id="1", project_id="p1", output_path="/out/1", quality="medium")
+    repo = InMemoryBatchRepository()
+    record = await repo.create_batch_job(
+        batch_id="b",
+        job_id="1",
+        project_id="p1",
+        output_path="/out/1",
+        quality="medium",
+    )
     semaphore = asyncio.Semaphore(4)
 
-    await _run_batch_job(job, semaphore, failing_handler)
+    await _run_batch_job(
+        record.job_id,
+        record.project_id,
+        record.output_path,
+        record.quality,
+        semaphore,
+        failing_handler,
+        repo,
+    )
 
+    job = await repo.get_by_job_id("1")
+    assert job is not None
     assert job.status == "failed"
     assert job.error == "render failed"
 
@@ -297,27 +346,61 @@ async def test_batch_job_failure_tracked() -> None:
 @pytest.mark.api
 async def test_batch_job_no_handler_completes() -> None:
     """Batch job with no handler completes successfully."""
-    job = _BatchJob(job_id="1", project_id="p1", output_path="/out/1", quality="medium")
+    repo = InMemoryBatchRepository()
+    record = await repo.create_batch_job(
+        batch_id="b",
+        job_id="1",
+        project_id="p1",
+        output_path="/out/1",
+        quality="medium",
+    )
     semaphore = asyncio.Semaphore(4)
 
-    await _run_batch_job(job, semaphore, None)
+    await _run_batch_job(
+        record.job_id,
+        record.project_id,
+        record.output_path,
+        record.quality,
+        semaphore,
+        None,
+        repo,
+    )
 
-    assert job.status == "complete"
+    job = await repo.get_by_job_id("1")
+    assert job is not None
+    assert job.status == "completed"
     assert job.progress == 1.0
 
 
 @pytest.mark.api
 async def test_batch_job_status_transitions() -> None:
-    """Job status transitions from queued -> running -> complete."""
+    """Job status transitions from queued -> running -> completed."""
 
     async def observing_handler(project_id: str, output_path: str, quality: str) -> None:
         await asyncio.sleep(0)
 
-    job = _BatchJob(job_id="1", project_id="p1", output_path="/out/1", quality="medium")
-    assert job.status == "queued"
+    repo = InMemoryBatchRepository()
+    record = await repo.create_batch_job(
+        batch_id="b",
+        job_id="1",
+        project_id="p1",
+        output_path="/out/1",
+        quality="medium",
+    )
+    assert record.status == "queued"
 
     semaphore = asyncio.Semaphore(4)
-    await _run_batch_job(job, semaphore, observing_handler)
+    await _run_batch_job(
+        record.job_id,
+        record.project_id,
+        record.output_path,
+        record.quality,
+        semaphore,
+        observing_handler,
+        repo,
+    )
 
-    assert job.status == "complete"
+    job = await repo.get_by_job_id("1")
+    assert job is not None
+    assert job.status == "completed"
     assert job.progress == 1.0

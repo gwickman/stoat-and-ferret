@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from stoat_ferret.api.app import create_app
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
+from stoat_ferret.db.batch_repository import InMemoryBatchRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
@@ -71,6 +72,16 @@ def version_repository() -> AsyncInMemoryVersionRepository:
 
 
 @pytest.fixture
+def batch_repository() -> InMemoryBatchRepository:
+    """Create in-memory batch repository for testing.
+
+    Returns:
+        Empty in-memory batch repository.
+    """
+    return InMemoryBatchRepository()
+
+
+@pytest.fixture
 def job_queue(video_repository: AsyncInMemoryVideoRepository) -> InMemoryJobQueue:
     """Create in-memory job queue with scan handler registered.
 
@@ -92,6 +103,7 @@ def app(
     clip_repository: AsyncInMemoryClipRepository,
     timeline_repository: AsyncInMemoryTimelineRepository,
     version_repository: AsyncInMemoryVersionRepository,
+    batch_repository: InMemoryBatchRepository,
     job_queue: InMemoryJobQueue,
 ) -> FastAPI:
     """Create test application with injected in-memory repositories.
@@ -104,6 +116,7 @@ def app(
         clip_repository: In-memory clip repository for testing.
         timeline_repository: In-memory timeline repository for testing.
         version_repository: In-memory version repository for testing.
+        batch_repository: In-memory batch repository for testing.
         job_queue: In-memory job queue for testing.
 
     Returns:
@@ -115,6 +128,7 @@ def app(
         clip_repository=clip_repository,
         timeline_repository=timeline_repository,
         version_repository=version_repository,
+        batch_repository=batch_repository,
         job_queue=job_queue,
     )
 

@@ -41,6 +41,7 @@ from stoat_ferret.db.async_repository import (
     AsyncVideoRepository,
 )
 from stoat_ferret.db.audit import AuditLogger
+from stoat_ferret.db.batch_repository import AsyncBatchRepository, AsyncSQLiteBatchRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.schema import create_tables_async
@@ -100,6 +101,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     audit_logger = AuditLogger(conn=sync_conn)
     app.state.audit_logger = audit_logger
 
+    # Create batch repository backed by the same database
+    app.state.batch_repository = AsyncSQLiteBatchRepository(app.state.db)
+
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db, audit_logger=audit_logger)
@@ -135,6 +139,7 @@ def create_app(
     clip_repository: AsyncClipRepository | None = None,
     timeline_repository: AsyncTimelineRepository | None = None,
     version_repository: AsyncVersionRepository | None = None,
+    batch_repository: AsyncBatchRepository | None = None,
     job_queue: AsyncioJobQueue | None = None,
     ws_manager: ConnectionManager | None = None,
     effect_registry: EffectRegistry | None = None,
@@ -154,6 +159,7 @@ def create_app(
         clip_repository: Optional clip repository for dependency injection.
         timeline_repository: Optional timeline repository for dependency injection.
         version_repository: Optional version repository for dependency injection.
+        batch_repository: Optional batch repository for dependency injection.
         job_queue: Optional job queue for dependency injection.
         ws_manager: Optional WebSocket connection manager for dependency injection.
         effect_registry: Optional effect registry for dependency injection.
@@ -185,6 +191,7 @@ def create_app(
         app.state.clip_repository = clip_repository
         app.state.timeline_repository = timeline_repository
         app.state.version_repository = version_repository
+        app.state.batch_repository = batch_repository
         app.state.job_queue = job_queue
 
     if audit_logger is not None:

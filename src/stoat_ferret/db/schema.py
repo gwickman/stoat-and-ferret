@@ -14,6 +14,7 @@ TABLE_PROJECTS = "projects"
 TABLE_CLIPS = "clips"
 TABLE_TRACKS = "tracks"
 TABLE_PROJECT_VERSIONS = "project_versions"
+TABLE_BATCH_JOBS = "batch_jobs"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -153,6 +154,26 @@ CREATE INDEX IF NOT EXISTS idx_project_versions_project
     ON project_versions(project_id, version_number);
 """
 
+BATCH_JOBS_TABLE = """
+CREATE TABLE IF NOT EXISTS batch_jobs (
+    id INTEGER PRIMARY KEY,
+    batch_id TEXT NOT NULL,
+    job_id TEXT NOT NULL UNIQUE,
+    project_id TEXT NOT NULL,
+    output_path TEXT NOT NULL,
+    quality TEXT NOT NULL DEFAULT 'medium',
+    status TEXT NOT NULL DEFAULT 'queued',
+    progress REAL NOT NULL DEFAULT 0.0,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+"""
+
+BATCH_JOBS_BATCH_ID_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_batch_jobs_batch_id ON batch_jobs(batch_id);
+"""
+
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
 CLIPS_TIMELINE_COLUMNS = [
@@ -225,6 +246,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(TRACKS_PROJECT_INDEX)
     cursor.execute(PROJECT_VERSIONS_TABLE)
     cursor.execute(PROJECT_VERSIONS_PROJECT_INDEX)
+    cursor.execute(BATCH_JOBS_TABLE)
+    cursor.execute(BATCH_JOBS_BATCH_ID_INDEX)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     conn.commit()
@@ -287,6 +310,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(TRACKS_PROJECT_INDEX)
     await db.execute(PROJECT_VERSIONS_TABLE)
     await db.execute(PROJECT_VERSIONS_PROJECT_INDEX)
+    await db.execute(BATCH_JOBS_TABLE)
+    await db.execute(BATCH_JOBS_BATCH_ID_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await db.commit()
