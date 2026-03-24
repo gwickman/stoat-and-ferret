@@ -3,7 +3,7 @@
 Provides POST /render/batch for submitting batch render jobs and
 GET /render/batch/{batch_id} for tracking aggregated progress.
 Concurrency is managed via asyncio.Semaphore since AsyncioJobQueue
-is sequential-only.
+is sequential-only. Batch state is persisted via AsyncBatchRepository.
 """
 
 from __future__ import annotations
@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request, status
@@ -23,6 +22,7 @@ from stoat_ferret.api.schemas.batch import (
     BatchResponse,
 )
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.db.batch_repository import AsyncBatchRepository, BatchJobRecord
 from stoat_ferret_core import BatchJobStatus, calculate_batch_progress
 
 logger = structlog.get_logger(__name__)
@@ -33,55 +33,30 @@ router = APIRouter(prefix="/api/v1/render", tags=["batch"])
 BatchRenderHandler = Callable[[str, str, str], Awaitable[None]]
 
 
-@dataclass
-class _BatchJob:
-    """Internal tracking for a single job in a batch."""
-
-    job_id: str
-    project_id: str
-    output_path: str
-    quality: str
-    status: str = "queued"
-    progress: float = 0.0
-    error: str | None = None
-
-
-@dataclass
-class _BatchState:
-    """Internal tracking for a batch of render jobs."""
-
-    batch_id: str
-    jobs: list[_BatchJob] = field(default_factory=list)
-
-
-def _get_batch_store(request: Request) -> dict[str, _BatchState]:
-    """Get or lazily create the batch store on app state.
+def _get_batch_repository(request: Request) -> AsyncBatchRepository:
+    """Get the batch repository from app state.
 
     Args:
         request: The FastAPI request object.
 
     Returns:
-        Dict mapping batch_id to batch state.
+        The batch repository instance.
     """
-    store: dict[str, _BatchState] | None = getattr(request.app.state, "_batch_store", None)
-    if store is None:
-        store = {}
-        request.app.state._batch_store = store
-    return store
+    return request.app.state.batch_repository  # type: ignore[no-any-return]
 
 
-def _to_rust_status(job: _BatchJob) -> BatchJobStatus:
-    """Convert internal job status to Rust BatchJobStatus.
+def _to_rust_status(job: BatchJobRecord) -> BatchJobStatus:
+    """Convert a batch job record status to Rust BatchJobStatus.
 
     Args:
-        job: Internal batch job with status field.
+        job: Batch job record with status field.
 
     Returns:
         Corresponding Rust BatchJobStatus instance.
     """
     if job.status == "running":
         return BatchJobStatus.in_progress(job.progress)
-    if job.status == "complete":
+    if job.status == "completed":
         return BatchJobStatus.completed()
     if job.status == "failed":
         return BatchJobStatus.failed()
@@ -89,30 +64,37 @@ def _to_rust_status(job: _BatchJob) -> BatchJobStatus:
 
 
 async def _run_batch_job(
-    job: _BatchJob,
+    job_id: str,
+    project_id: str,
+    output_path: str,
+    quality: str,
     semaphore: asyncio.Semaphore,
     handler: BatchRenderHandler | None,
+    repository: AsyncBatchRepository,
 ) -> None:
     """Run a single batch job with semaphore-limited concurrency.
 
     Args:
-        job: The batch job to execute.
+        job_id: The unique job identifier.
+        project_id: The project to render.
+        output_path: Output file path.
+        quality: Render quality preset.
         semaphore: Semaphore limiting parallel execution.
         handler: Optional render handler to call for each job.
+        repository: Batch repository for persisting state changes.
     """
     async with semaphore:
-        job.status = "running"
-        logger.info("batch_job_started", job_id=job.job_id, project_id=job.project_id)
+        await repository.update_status(job_id, "running")
+        logger.info("batch_job_started", job_id=job_id, project_id=project_id)
         try:
             if handler is not None:
-                await handler(job.project_id, job.output_path, job.quality)
-            job.status = "complete"
-            job.progress = 1.0
-            logger.info("batch_job_completed", job_id=job.job_id)
+                await handler(project_id, output_path, quality)
+            await repository.update_status(job_id, "completed")
+            await repository.update_progress(job_id, 1.0)
+            logger.info("batch_job_completed", job_id=job_id)
         except Exception as exc:
-            job.status = "failed"
-            job.error = str(exc)
-            logger.error("batch_job_failed", job_id=job.job_id, error=str(exc))
+            await repository.update_status(job_id, "failed", error=str(exc))
+            logger.error("batch_job_failed", job_id=job_id, error=str(exc))
 
 
 @router.post("/batch", status_code=status.HTTP_202_ACCEPTED, response_model=BatchResponse)
@@ -147,30 +129,39 @@ async def submit_batch(
         )
 
     batch_id = str(uuid.uuid4())
-    batch = _BatchState(batch_id=batch_id)
+    repository = _get_batch_repository(request)
 
+    job_records = []
     for job_config in batch_request.jobs:
-        job = _BatchJob(
+        record = await repository.create_batch_job(
+            batch_id=batch_id,
             job_id=str(uuid.uuid4()),
             project_id=job_config.project_id,
             output_path=job_config.output_path,
             quality=job_config.quality,
         )
-        batch.jobs.append(job)
-
-    store = _get_batch_store(request)
-    store[batch_id] = batch
+        job_records.append(record)
 
     handler: BatchRenderHandler | None = getattr(request.app.state, "batch_render_handler", None)
     semaphore = asyncio.Semaphore(settings.batch_parallel_limit)
-    for job in batch.jobs:
-        asyncio.create_task(_run_batch_job(job, semaphore, handler))
+    for record in job_records:
+        asyncio.create_task(
+            _run_batch_job(
+                record.job_id,
+                record.project_id,
+                record.output_path,
+                record.quality,
+                semaphore,
+                handler,
+                repository,
+            )
+        )
 
-    logger.info("batch_submitted", batch_id=batch_id, job_count=len(batch.jobs))
+    logger.info("batch_submitted", batch_id=batch_id, job_count=len(job_records))
 
     return BatchResponse(
         batch_id=batch_id,
-        jobs_queued=len(batch.jobs),
+        jobs_queued=len(job_records),
         status="accepted",
     )
 
@@ -195,15 +186,16 @@ async def get_batch_progress(
     Raises:
         HTTPException: 404 if batch ID is not found.
     """
-    store = _get_batch_store(request)
-    batch = store.get(batch_id)
-    if batch is None:
+    repository = _get_batch_repository(request)
+    jobs = await repository.get_by_batch_id(batch_id)
+
+    if not jobs:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "NOT_FOUND", "message": f"Batch {batch_id} not found"},
         )
 
-    rust_statuses = [_to_rust_status(job) for job in batch.jobs]
+    rust_statuses = [_to_rust_status(job) for job in jobs]
     progress = calculate_batch_progress(rust_statuses)
 
     job_statuses = [
@@ -214,7 +206,7 @@ async def get_batch_progress(
             progress=job.progress,
             error=job.error,
         )
-        for job in batch.jobs
+        for job in jobs
     ]
 
     return BatchProgressResponse(
