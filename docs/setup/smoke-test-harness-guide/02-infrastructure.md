@@ -413,3 +413,54 @@ The smoke test fixtures override two settings via environment variables:
 | `STOAT_THUMBNAIL_DIR` | Directory for generated thumbnails | `data/thumbnails` |
 
 Both are set to paths within `tmp_path` for isolation and cleaned up after each test. The `Settings` class (pydantic-settings with `STOAT_` prefix, case-insensitive) reads these automatically.
+
+---
+
+## UAT Infrastructure
+
+The UAT harness is a separate testing tier that drives a real browser against a live server. Unlike the smoke tests (which run in-process via ASGI transport), UAT tests require a running server process and a Chromium browser.
+
+For full details on running and interpreting UAT tests, see [`docs/manual/uat-testing.md`](../../manual/uat-testing.md).
+
+### Runner Architecture (`uat_runner.py`)
+
+`scripts/uat_runner.py` orchestrates the full UAT lifecycle:
+
+1. **Build** — Runs `maturin develop`, `pip install -e .`, and `cd gui && npm ci && npm run build` (skipped with `--skip-build`)
+2. **Server start** — Launches `uvicorn` as a subprocess on port 8765, redirecting stdout/stderr to log files in the evidence directory
+3. **Seed** — Runs `scripts/seed_sample_project.py` to create the Running Montage sample project for J204
+4. **Journey execution** — Runs journey scripts (J201–J204) in order, respecting the dependency chain (201 → 202 → 203; 204 is independent)
+5. **Evidence collection** — Each journey captures numbered screenshots; the runner aggregates results into `uat-report.json` and `uat-report.md`
+6. **Teardown** — Stops the server subprocess and cleans up
+
+### Evidence Directory Structure
+
+Each run creates a timestamped directory under `uat-evidence/`:
+
+```
+uat-evidence/
+└── YYYYMMDD_HHMMSS/
+    ├── uat-report.json        # Machine-readable report
+    ├── uat-report.md          # Human-readable report
+    ├── server-stdout.log      # Server stdout during run
+    ├── server-stderr.log      # Server stderr during run
+    ├── scan-library/          # J201 screenshots
+    ├── project-clip/          # J202 screenshots
+    ├── effects-timeline/      # J203 screenshots
+    └── export-render/         # J204 screenshots
+```
+
+### Server Subprocess Management
+
+The runner starts the server as a subprocess with stdout and stderr redirected to files (not pipes) to avoid buffer deadlocks. The server process is terminated during teardown. If the runner is interrupted (e.g., Ctrl+C), the teardown handler still kills the server process.
+
+### Playwright Dependency
+
+Playwright is declared as an optional dependency group (`[uat]`). Install via:
+
+```bash
+uv pip install -e ".[uat]"
+uv run playwright install chromium
+```
+
+The UAT scripts use `playwright.sync_api` (synchronous Playwright API) for straightforward sequential journey execution.

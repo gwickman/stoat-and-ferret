@@ -118,3 +118,75 @@ Rationale:
 - The existing `pytest tests/` invocation uses `--cov=src --cov-fail-under=80` for coverage enforcement. Smoke tests would pollute coverage numbers (they cover the full stack, inflating coverage for modules that should demonstrate unit-level coverage).
 - Smoke tests require `maturin develop` and real video files. The unit test job may not have the Rust toolchain available on all matrix entries.
 - Separate jobs allow independent failure modes. A smoke test failure is a different signal than a unit test failure.
+
+---
+
+## UAT in CI
+
+### Running UAT Headlessly
+
+UAT journeys run in headless mode in CI. The runner handles the full lifecycle (build, start server, seed, run journeys, teardown):
+
+```yaml
+  uat-tests:
+    name: UAT Journeys
+    runs-on: ubuntu-latest
+    needs: [smoke-tests]  # Run after API-level smoke tests pass
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up FFmpeg
+        uses: AnimMouse/setup-ffmpeg@v1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync && uv pip install -e ".[uat]"
+
+      - name: Install Playwright browser
+        run: uv run playwright install chromium
+
+      - name: Run UAT journeys (headless)
+        run: uv run python scripts/uat_runner.py --headless
+        timeout-minutes: 10
+
+      - name: Upload UAT evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uat-evidence
+          path: uat-evidence/
+          retention-days: 7
+```
+
+### Evidence Artifact Collection
+
+The UAT runner produces a timestamped evidence directory under `uat-evidence/` containing:
+- `uat-report.json` and `uat-report.md` — structured and human-readable reports
+- Per-journey screenshot directories with numbered step images
+- `server-stdout.log` and `server-stderr.log` — server output during the run
+
+The CI job uploads the entire `uat-evidence/` directory as an artifact on every run (pass or fail), ensuring evidence is always available for review.
+
+### Key Differences from Smoke Test CI
+
+- **Requires a running server** — UAT tests start a real uvicorn process, not in-process ASGI transport
+- **Requires Node.js** — for `npm ci && npm run build` (GUI static files)
+- **Requires Playwright + Chromium** — browser binary download (~100MB)
+- **Longer timeout** — 10 minutes (browser interactions are slower than API calls)
+- **Evidence artifacts** — screenshots and reports are always uploaded, not just on failure
+- **Depends on smoke-tests** — no point running browser tests if the API is broken

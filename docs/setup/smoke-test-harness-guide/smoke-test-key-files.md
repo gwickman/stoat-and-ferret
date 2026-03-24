@@ -1,10 +1,14 @@
-# Smoke Test Key Files
+# Test Harness Key Files
 
 > **Read this file first, then read only the files relevant to your task. Do not read all files listed here unless necessary.**
 
-## What is the Smoke Test Suite?
+## What is the Test Harness?
 
-The smoke test suite is an API-level integration test suite that runs in-process using `httpx.ASGITransport` (no real HTTP server). It exercises the full application stack including the real Rust core (`stoat_ferret_core`). Tests verify API endpoint contracts, request/response schemas, and end-to-end behaviour from HTTP request through to Rust-level processing.
+The test harness has two tiers:
+
+1. **Smoke tests** — An API-level integration test suite that runs in-process using `httpx.ASGITransport` (no real HTTP server). It exercises the full application stack including the real Rust core (`stoat_ferret_core`). Tests verify API endpoint contracts, request/response schemas, and end-to-end behaviour from HTTP request through to Rust-level processing.
+
+2. **UAT journeys** — Playwright-based Python scripts that drive a real browser against a live server, validating complete user workflows. Each journey captures screenshot evidence and produces structured pass/fail reports. See [`docs/manual/uat-testing.md`](../../manual/uat-testing.md) for full details.
 
 ## Key Files
 
@@ -40,9 +44,33 @@ The smoke test suite is an API-level integration test suite that runs in-process
 | `create_adjacent_clips_timeline()` | Helper to set up two adjacent clips on a timeline track for transition tests |
 | `create_version_repo()` | Factory to create `AsyncSQLiteVersionRepository` from the live ASGI transport DB |
 
+## UAT Journey Key Files
+
+### Runner and Journey Scripts
+
+| File | What it tells you |
+|------|-------------------|
+| `scripts/uat_runner.py` | Orchestrates the full UAT lifecycle: build, server start, seed, journey execution, evidence collection, teardown |
+| `scripts/uat_journey_201.py` | J201 — Scan Library: directory scan, video grid, FTS5 search |
+| `scripts/uat_journey_202.py` | J202 — Project Clip: project creation, clip management, clips table |
+| `scripts/uat_journey_203.py` | J203 — Effects-Timeline: effects apply/edit/remove, timeline canvas, layout presets |
+| `scripts/uat_journey_204.py` | J204 — Export-Render: seeds Running Montage, validates clips/effects/timeline |
+| `scripts/seed_sample_project.py` | Seeds the Running Montage sample project via API calls for J204 |
+
+### Evidence Output
+
+| Path | What it contains |
+|------|-----------------|
+| `uat-evidence/` | Base directory for UAT output (gitignored) |
+| `uat-evidence/{YYYYMMDD_HHMMSS}/` | Timestamped per-run directory |
+| `uat-evidence/{run}/uat-report.json` | Machine-readable structured report |
+| `uat-evidence/{run}/uat-report.md` | Human-readable markdown report |
+| `uat-evidence/{run}/{journey}/` | Per-journey screenshot directory |
+
 ### Reference Documents
 
 | File | What it tells you |
 |------|-------------------|
-| `docs/setup/smoke-test-harness-guide/03-test-cases.md` | Canonical use case definitions |
-| `docs/setup/smoke-test-harness-guide/02-infrastructure.md` | Harness architecture decisions |
+| `docs/setup/smoke-test-harness-guide/03-test-cases.md` | Canonical use case definitions and UAT journey summaries |
+| `docs/setup/smoke-test-harness-guide/02-infrastructure.md` | Harness architecture decisions (smoke tests and UAT) |
+| `docs/manual/uat-testing.md` | Authoritative UAT manual — how to run, interpret results, troubleshoot |

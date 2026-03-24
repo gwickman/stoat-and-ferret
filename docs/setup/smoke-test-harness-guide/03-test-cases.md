@@ -621,3 +621,55 @@ All previously identified gaps have been addressed:
 | Effect type: AUDIO_FADE | Covered in test_effects.py (`test_create_effect_type[audio_fade]`) |
 | Effect type: VIDEO_FADE | Covered in test_effects.py (`test_create_effect_type[video_fade]`) |
 | Effect type: ACROSSFADE | Covered in test_effects.py (`test_create_effect_type[acrossfade]`) |
+
+---
+
+## UAT Journey Summaries
+
+The UAT harness provides browser-level end-to-end validation through 4 journey scripts. Each journey drives a real Chromium browser against a live server and captures screenshot evidence at each step.
+
+For full journey details (step-by-step breakdowns, prerequisites, troubleshooting), see [`docs/manual/uat-testing.md`](../../manual/uat-testing.md).
+
+### Journey 201: Scan Library (`uat_journey_201.py`)
+
+**What it tests:** Navigates to the Library page, triggers a directory scan via the scan modal, verifies that the video grid populates with metadata (thumbnails, filenames, resolution), and exercises FTS5 full-text search to confirm search results filter correctly.
+
+**Key assertions:** Video count matches expected count after scan, search results contain only matching videos, video metadata (resolution, duration) renders correctly in the grid.
+
+**Dependencies:** None — this is a root journey.
+
+### Journey 202: Project Clip (`uat_journey_202.py`)
+
+**What it tests:** Creates a new project, adds 3 clips with in/out points and timeline positions, then verifies all clips render correctly in the clips table with proper metadata.
+
+**Key assertions:** Project appears in project list after creation, clip count matches, clip metadata (source video, in/out points, timeline position) renders correctly.
+
+**Dependencies:** Journey 201 (requires scanned videos in the library).
+
+### Journey 203: Effects-Timeline (`uat_journey_203.py`)
+
+**What it tests:** Applies, edits, and removes effects on clips, verifies the filter preview, checks the timeline canvas with zoom and scroll controls, and tests layout preset selection with preview verification.
+
+**Key assertions:** Effect appears in effect stack after apply, filter preview contains expected FFmpeg filter substrings, timeline canvas renders with correct track structure, layout preset changes are reflected in the preview.
+
+**Dependencies:** Journey 202 (requires project with clips).
+
+### Journey 204: Export-Render (`uat_journey_204.py`)
+
+**What it tests:** Seeds the Running Montage sample project (via `seed_sample_project.py`) and validates that all clips (4), effects (5), and transitions (1) render correctly across the project detail, effects, and timeline pages.
+
+**Key assertions:** Sample project appears with correct clip count, all effects are visible in the effects page, timeline shows expected tracks and transitions.
+
+**Dependencies:** None — independent of journeys 201–203 (uses its own seeded data).
+
+### Journey Dependency Graph
+
+```
+201 (scan-library)
+ └──▶ 202 (project-clip)
+       └──▶ 203 (effects-timeline)
+
+204 (export-render)  ← independent
+```
+
+If journey 201 fails, journeys 202 and 203 are automatically skipped. Journey 204 always runs.

@@ -116,3 +116,36 @@ Smoke tests and the seed script encode specific assumptions about video file met
 
 **Concrete example:**
 Suppose a developer replaces `running1.mp4` with a higher-quality version that is 1920x1080 at 60fps instead of 960x540 at 30fps. The smoke test `EXPECTED_VIDEOS` dict still says `"width": 960, "height": 540, "frames": 888`. The scan test passes (scanning succeeds), but the metadata assertion `assert video["width"] == 960` fails. Without this check, the developer must trace the failure back to the changed video file. With this check, the design review flags: "Video file `running1.mp4` changed — verify that `EXPECTED_VIDEOS` in `tests/smoke/conftest.py` and clip definitions in `scripts/seed_sample_project.py` are updated to match the new metadata."
+
+---
+
+## UAT Maintenance
+
+### Keeping Journey Scripts in Sync with `data-testid` Attributes
+
+UAT journey scripts locate GUI elements using `data-testid` selectors (e.g., `page.get_by_test_id("scan-button")`). When a React component's `data-testid` attribute is changed or removed, the corresponding journey script will fail with an element-not-found error.
+
+**When a `data-testid` changes:**
+1. Identify which journey script(s) reference the changed testid (grep for the old value in `scripts/uat_journey_*.py`)
+2. Update the selector in the journey script to match the new testid
+3. Re-run the affected journey to confirm: `uv run python scripts/uat_runner.py --headed --journey <ID>`
+
+### Updating the Seed Script
+
+`scripts/seed_sample_project.py` creates the Running Montage sample project used by J204. When the data model changes (new required fields on clips, effects, or timeline tracks), the seed script must be updated to supply valid data.
+
+**Triggers for seed script updates:**
+- New required fields on `ClipCreate`, `EffectCreate`, or timeline track schemas
+- Changes to effect parameter schemas (renamed params, new required params)
+- Changes to the Timeline Track entity structure
+- Changes to API endpoint paths used by the seed script
+
+### Keeping `docs/manual/uat-testing.md` Up to Date
+
+The UAT manual at `docs/manual/uat-testing.md` is the developer-facing reference for running and interpreting UAT tests. It must be updated whenever:
+
+- The `uat_runner.py` command-line interface changes (new flags, changed defaults)
+- Journey scripts are added, removed, or have their scope significantly changed
+- The evidence output structure changes (new report files, changed directory layout)
+- The dependency chain between journeys changes
+- Prerequisites change (new dependencies, changed build steps)

@@ -1,4 +1,4 @@
-# Smoke Test Background
+# Test Harness Background
 
 ## The Testing Gap
 
@@ -8,13 +8,25 @@ stoat-and-ferret has comprehensive per-layer tests:
 - **Python backend:** Unit tests with mocked repositories (recording fakes, fixture factories). Integration tests verify API router wiring with in-memory test doubles.
 - **React frontend:** Vitest component tests verify rendering, state management (Zustand stores), and hook behavior.
 
-**What is not tested:** No existing test exercises the full request lifecycle:
+**What is not tested by unit/integration tests:** No existing test exercises the full request lifecycle:
 
 ```
 HTTP Client → FastAPI Router → Service Layer → Rust Core (PyO3) → SQLite Database
 ```
 
-A broken `maturin develop` build, a schema mismatch between Pydantic models and database columns, or a misconfigured PyO3 binding would pass every existing test but fail at runtime. The smoke test suite addresses this gap.
+A broken `maturin develop` build, a schema mismatch between Pydantic models and database columns, or a misconfigured PyO3 binding would pass every existing test but fail at runtime.
+
+## Two-Tier Testing Approach
+
+The project addresses this gap with two complementary tiers:
+
+1. **Smoke tests (API-level, fast inner loop):** In-process `httpx` tests that exercise the full backend stack without a browser. They run in under 10 seconds, require no browser binaries, and catch API contract regressions, schema mismatches, and Rust core integration failures. These are the first line of defence — run on every CI push and during local development.
+
+2. **UAT journeys (browser-level, outer validation):** Playwright-based Python scripts that drive a real Chromium browser against a live server instance. They validate complete user workflows — navigating between pages, triggering scans, creating projects, applying effects, and verifying timeline rendering. They catch GUI rendering bugs, navigation regressions, and data-testid breakage that API-level tests cannot detect. Run before releases and after major GUI changes.
+
+The two tiers are complementary, not redundant. Smoke tests validate that the API behaves correctly; UAT journeys validate that the GUI presents the API's data correctly to users. A passing smoke test suite with a failing UAT journey indicates a frontend-only bug. A failing smoke test means the UAT journeys will likely also fail (the runner skips dependent journeys when prerequisites fail).
+
+For full UAT documentation, see [`docs/manual/uat-testing.md`](../../manual/uat-testing.md).
 
 ## Current GUI State
 
@@ -40,13 +52,13 @@ Pages not yet implemented: Timeline (Phase 3), Preview Player (Phase 4), AI Thea
 | Phase 5 | Export & Production (render coordinator, HW acceleration) | Not started |
 | Phase 6 | Deployability & AI Integration | Not started |
 
-## Smoke Test Implementation Status
+## Test Harness Implementation Status
 
-| Smoke Test Phase | Scope | Status |
-|------------------|-------|--------|
-| Phase 1 — Core API | 12 use cases across scan, library, project, clip, effects, transitions, health | Implemented (v014) |
-| Phase 2 — Expanded API | Timeline CRUD, composition, audio, batch, versions, filesystem, video detail/thumbnail/delete, negative paths | Implemented (v018–v019) |
-| Phase 3 — Playwright E2E | 9 browser-level use cases exercising the React GUI | Future (design complete) |
+| Tier | Scope | Status |
+|------|-------|--------|
+| Smoke — Core API | 12 use cases across scan, library, project, clip, effects, transitions, health | Implemented (v014) |
+| Smoke — Expanded API | Timeline CRUD, composition, audio, batch, versions, filesystem, video detail/thumbnail/delete, negative paths | Implemented (v018–v019) |
+| UAT Journeys | 4 Playwright journey scripts (J201–J204) exercising the React GUI end-to-end | Implemented (v022) |
 
 ## Why API-Level Smoke Tests Are the Right Phase 1 Choice
 
@@ -56,21 +68,13 @@ Pages not yet implemented: Timeline (Phase 3), Preview Player (Phase 4), AI Thea
 4. **Deterministic.** No browser rendering, no CSS layout, no JavaScript timing issues. Tests are fully deterministic.
 5. **Consistent with project philosophy.** The Rust core is never mocked — it is always used as-is in tests, per the project's black-box testing philosophy.
 
-## Why Playwright Is the Right Phase 2 Choice
+## Why Playwright Was Chosen for UAT
 
-1. **Already in the project plan.** `@playwright/test` is listed in the technical stack design documents.
-2. **`data-testid` ready.** All 27 React components already include `data-testid` attributes, making test authoring straightforward.
-3. **Native WebSocket support.** Playwright can natively test WebSocket connections, enabling activity log verification.
-4. **Multi-browser coverage.** Chromium, Firefox, and WebKit testing with a single test suite.
-5. **Video recording.** Playwright records test runs as videos, providing visual debugging for CI failures.
-
-## Why Cypress Was Rejected (Option 3)
-
-- **Not in the project plan.** Cypress is not listed in any design document.
-- **Chromium-only in free tier.** Multi-browser testing requires a paid plan.
-- **No native WebSocket support.** Requires third-party plugins or workarounds.
-- **Larger CI footprint.** Heavier binary downloads than Playwright.
-- **Higher estimated effort.** 19-28 hours vs. Playwright's 15-23 hours.
+1. **Already in the project plan.** Playwright was listed in the technical stack design documents from the outset.
+2. **`data-testid` ready.** All React components include `data-testid` attributes, making test authoring straightforward.
+3. **Python bindings.** The UAT harness uses Playwright for Python (`playwright` package), integrating naturally with the project's Python-first toolchain. No Node.js runtime needed for UAT.
+4. **Screenshot evidence.** Playwright captures per-step screenshots, providing visual debugging evidence for failures.
+5. **Headed and headless modes.** Developers can watch journeys execute in a visible browser or run headlessly in CI.
 
 ## Video Metadata Reference
 

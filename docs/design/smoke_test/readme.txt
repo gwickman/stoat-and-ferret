@@ -1,0 +1,1 @@
+see docs\setup\smoke-test-harness-guide
