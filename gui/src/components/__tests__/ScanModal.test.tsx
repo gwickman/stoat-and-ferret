@@ -367,11 +367,16 @@ describe('ScanModal', () => {
     )
   })
 
-  it('does not make HTTP polling requests after scan starts', async () => {
+  it('makes exactly one fallback poll after scan starts (no periodic polling)', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
           status: 202,
+        })
+      }
+      if (String(url).match(/\/api\/v1\/jobs\/[^/]+$/)) {
+        return new Response(JSON.stringify({ status: 'running', progress: 0.5 }), {
+          status: 200,
         })
       }
       return new Response('{}', { status: 200 })
@@ -398,11 +403,47 @@ describe('ScanModal', () => {
       expect(screen.getByTestId('scan-complete')).toBeDefined()
     })
 
-    // Verify no polling requests were made to /api/v1/jobs/{id}
+    // Verify exactly one fallback poll was made (no periodic polling)
     const jobStatusCalls = fetchSpy.mock.calls.filter(
       (call) => String(call[0]).match(/\/api\/v1\/jobs\/[^/]+$/)
     )
-    expect(jobStatusCalls).toHaveLength(0)
+    expect(jobStatusCalls).toHaveLength(1)
+  })
+
+  it('completes via fallback poll when WebSocket misses complete event', async () => {
+    const onScanComplete = vi.fn()
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (String(url).includes('/api/v1/videos/scan')) {
+        return new Response(JSON.stringify({ job_id: 'job-1' }), {
+          status: 202,
+        })
+      }
+      if (String(url).match(/\/api\/v1\/jobs\/[^/]+$/)) {
+        return new Response(JSON.stringify({ status: 'complete', progress: 1.0 }), {
+          status: 200,
+        })
+      }
+      return new Response('{}', { status: 200 })
+    })
+
+    render(
+      <ScanModal
+        open={true}
+        onClose={vi.fn()}
+        onScanComplete={onScanComplete}
+      />,
+    )
+
+    const input = screen.getByTestId('scan-directory-input')
+    fireEvent.change(input, { target: { value: '/videos' } })
+    fireEvent.click(screen.getByTestId('scan-submit'))
+
+    // Fallback poll returns "complete" — no WebSocket event needed
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-complete')).toBeDefined()
+    })
+
+    expect(onScanComplete).toHaveBeenCalled()
   })
 
   it('shows error when scan request fails', async () => {

@@ -101,6 +101,20 @@ export default function ScanModal({
 
       const { job_id }: { job_id: string } = await res.json()
       setJobId(job_id)
+
+      // Fallback: poll job status in case WebSocket "complete" event was
+      // delivered before React processed the jobId state update (race
+      // condition when the scan finishes very quickly).
+      const statusRes = await fetch(`/api/v1/jobs/${job_id}`)
+      if (statusRes.ok) {
+        const statusData = await statusRes.json()
+        if (statusData.status === 'complete' && !completedRef.current) {
+          completedRef.current = true
+          setScanStatus('complete')
+          setProgress(1.0)
+          onScanComplete()
+        }
+      }
     } catch (err) {
       setScanStatus('error')
       setErrorMessage(err instanceof Error ? err.message : 'Scan failed')
