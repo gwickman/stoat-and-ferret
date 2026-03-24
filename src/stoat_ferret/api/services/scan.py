@@ -115,21 +115,24 @@ def make_scan_handler(
             cancel_event=cancel_event,
         )
 
-        # Broadcast job completion via JOB_PROGRESS so useJobProgress receives it
-        if ws_manager and job_id:
-            await ws_manager.broadcast(
-                build_event(
-                    EventType.JOB_PROGRESS,
-                    {"job_id": str(job_id), "progress": 1.0, "status": "complete"},
-                )
-            )
-
+        # Broadcast SCAN_COMPLETED first, then JOB_PROGRESS(complete) last.
+        # When rapid WebSocket messages are batched by React, only the final
+        # setLastMessage survives.  useJobProgress filters for "job_progress",
+        # so it must be the last message in the burst.
         if ws_manager:
             logger.info("scan_broadcast_completed", path=str(scan_path))
             await ws_manager.broadcast(
                 build_event(
                     EventType.SCAN_COMPLETED,
                     {"path": scan_path, "video_count": result.new + result.updated},
+                )
+            )
+
+        if ws_manager and job_id:
+            await ws_manager.broadcast(
+                build_event(
+                    EventType.JOB_PROGRESS,
+                    {"job_id": str(job_id), "progress": 1.0, "status": "complete"},
                 )
             )
 

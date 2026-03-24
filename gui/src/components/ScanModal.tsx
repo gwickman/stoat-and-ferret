@@ -51,6 +51,35 @@ export default function ScanModal({
     }
   }, [wsProgress, jobId, onScanComplete])
 
+  // Fallback: poll job status every 2s while scanning.
+  // Covers cases where rapid WebSocket messages get lost to React batching.
+  useEffect(() => {
+    if (!jobId || scanStatus !== 'scanning') return
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/jobs/${jobId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.status === 'complete' && !completedRef.current) {
+          completedRef.current = true
+          setScanStatus('complete')
+          setProgress(1.0)
+          onScanComplete()
+        } else if (data.status === 'failed') {
+          setScanStatus('error')
+          setErrorMessage(data.error ?? 'Scan failed')
+        } else if (data.status === 'cancelled') {
+          setScanStatus('cancelled')
+        }
+      } catch {
+        // Ignore poll errors; WebSocket is the primary path
+      }
+    }, 2000)
+
+    return () => clearInterval(timer)
+  }, [jobId, scanStatus, onScanComplete])
+
   const resetState = useCallback(() => {
     setScanStatus('idle')
     setDirectory('')
@@ -101,20 +130,6 @@ export default function ScanModal({
 
       const { job_id }: { job_id: string } = await res.json()
       setJobId(job_id)
-
-      // Fallback: poll job status in case WebSocket "complete" event was
-      // delivered before React processed the jobId state update (race
-      // condition when the scan finishes very quickly).
-      const statusRes = await fetch(`/api/v1/jobs/${job_id}`)
-      if (statusRes.ok) {
-        const statusData = await statusRes.json()
-        if (statusData.status === 'complete' && !completedRef.current) {
-          completedRef.current = true
-          setScanStatus('complete')
-          setProgress(1.0)
-          onScanComplete()
-        }
-      }
     } catch (err) {
       setScanStatus('error')
       setErrorMessage(err instanceof Error ? err.message : 'Scan failed')

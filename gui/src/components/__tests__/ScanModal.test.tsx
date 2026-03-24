@@ -367,7 +367,7 @@ describe('ScanModal', () => {
     )
   })
 
-  it('makes exactly one fallback poll after scan starts (no periodic polling)', async () => {
+  it('does not poll when WebSocket delivers completion promptly', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('/api/v1/videos/scan')) {
         return new Response(JSON.stringify({ job_id: 'job-1' }), {
@@ -394,7 +394,7 @@ describe('ScanModal', () => {
       expect(screen.getByTestId('scan-abort')).toBeDefined()
     })
 
-    // Complete via WebSocket
+    // Complete via WebSocket before polling interval fires
     const ws = mockInstances[0]
     ws.simulateOpen()
     ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'complete'))
@@ -403,11 +403,11 @@ describe('ScanModal', () => {
       expect(screen.getByTestId('scan-complete')).toBeDefined()
     })
 
-    // Verify exactly one fallback poll was made (no periodic polling)
+    // No fallback poll needed — WebSocket delivered completion
     const jobStatusCalls = fetchSpy.mock.calls.filter(
       (call) => String(call[0]).match(/\/api\/v1\/jobs\/[^/]+$/)
     )
-    expect(jobStatusCalls).toHaveLength(1)
+    expect(jobStatusCalls).toHaveLength(0)
   })
 
   it('completes via fallback poll when WebSocket misses complete event', async () => {
@@ -438,10 +438,10 @@ describe('ScanModal', () => {
     fireEvent.change(input, { target: { value: '/videos' } })
     fireEvent.click(screen.getByTestId('scan-submit'))
 
-    // Fallback poll returns "complete" — no WebSocket event needed
+    // Polling interval fires at 2s and discovers "complete" — no WebSocket needed
     await waitFor(() => {
       expect(screen.getByTestId('scan-complete')).toBeDefined()
-    })
+    }, { timeout: 5000 })
 
     expect(onScanComplete).toHaveBeenCalled()
   })
