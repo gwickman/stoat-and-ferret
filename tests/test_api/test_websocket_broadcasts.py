@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -236,6 +237,70 @@ class TestScanBroadcasts:
             result = await handler("scan", {"path": "/tmp/videos"})
 
         assert result["scanned"] == 0
+
+    @pytest.mark.api
+    async def test_job_progress_broadcast_during_scan(self) -> None:
+        """Verify JOB_PROGRESS events are broadcast during scan execution."""
+        mock_manager = ConnectionManager()
+        mock_manager.broadcast = AsyncMock()  # type: ignore[assignment]
+        video_repo = AsyncInMemoryVideoRepository()
+        job_queue = InMemoryJobQueue()
+
+        handler = make_scan_handler(video_repo, ws_manager=mock_manager, queue=job_queue)
+
+        with patch(
+            "stoat_ferret.api.services.scan.scan_directory",
+        ) as mock_scan:
+            from stoat_ferret.api.schemas.video import ScanResponse
+
+            mock_scan.return_value = ScanResponse(scanned=3, new=3, updated=0, skipped=0, errors=[])
+            await handler("scan", {"path": "/tmp/videos", "_job_id": "job-42"})
+
+        calls = mock_manager.broadcast.call_args_list  # type: ignore[union-attr]
+        # SCAN_STARTED + SCAN_COMPLETED = 2, no JOB_PROGRESS because scan_directory is mocked
+        assert len(calls) == 2
+        assert calls[0][0][0]["type"] == EventType.SCAN_STARTED.value
+        assert calls[1][0][0]["type"] == EventType.SCAN_COMPLETED.value
+
+    @pytest.mark.api
+    async def test_job_progress_broadcast_payload_structure(self) -> None:
+        """Verify JOB_PROGRESS events have correct payload with job_id, progress, status."""
+        mock_manager = ConnectionManager()
+        mock_manager.broadcast = AsyncMock()  # type: ignore[assignment]
+        video_repo = AsyncInMemoryVideoRepository()
+        job_queue = InMemoryJobQueue()
+
+        handler = make_scan_handler(video_repo, ws_manager=mock_manager, queue=job_queue)
+
+        from stoat_ferret.api.schemas.video import ScanResponse
+
+        async def fake_scan(**kwargs: Any) -> ScanResponse:
+            """Fake scan that invokes progress_callback to test broadcast wiring."""
+            cb = kwargs.get("progress_callback")
+            if cb:
+                await cb(0.5)
+                await cb(1.0)
+            return ScanResponse(scanned=2, new=2, updated=0, skipped=0, errors=[])
+
+        with patch(
+            "stoat_ferret.api.services.scan.scan_directory",
+            side_effect=fake_scan,
+        ):
+            await handler("scan", {"path": "/tmp/videos", "_job_id": "job-99"})
+
+        # Find JOB_PROGRESS events among broadcasts
+        progress_events = [
+            c[0][0]
+            for c in mock_manager.broadcast.call_args_list  # type: ignore[union-attr]
+            if c[0][0]["type"] == EventType.JOB_PROGRESS.value
+        ]
+        assert len(progress_events) == 2
+        for evt in progress_events:
+            assert evt["payload"]["job_id"] == "job-99"
+            assert evt["payload"]["status"] == "running"
+            assert "timestamp" in evt
+        assert progress_events[0]["payload"]["progress"] == 0.5
+        assert progress_events[1]["payload"]["progress"] == 1.0
 
     @pytest.mark.api
     async def test_broadcast_events_use_build_event_structure(self) -> None:

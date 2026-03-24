@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useJobProgress } from '../hooks/useJobProgress'
 import DirectoryBrowser from './DirectoryBrowser'
 
 interface ScanModalProps {
@@ -8,14 +9,6 @@ interface ScanModalProps {
 }
 
 type ScanStatus = 'idle' | 'scanning' | 'cancelling' | 'cancelled' | 'complete' | 'error'
-
-interface JobStatus {
-  job_id: string
-  status: 'pending' | 'running' | 'complete' | 'failed' | 'timeout' | 'cancelled'
-  progress: number | null
-  result: Record<string, unknown> | null
-  error: string | null
-}
 
 export default function ScanModal({
   open,
@@ -28,39 +21,60 @@ export default function ScanModal({
   const [errorMessage, setErrorMessage] = useState('')
   const [progress, setProgress] = useState<number | null>(null)
   const [showBrowser, setShowBrowser] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const jobIdRef = useRef<string | null>(null)
+  const [jobId, setJobId] = useState<string | null>(null)
+  const completedRef = useRef(false)
 
-  const cleanup = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
+  const wsProgress = useJobProgress(jobId)
+
+  // React to WebSocket progress updates
+  useEffect(() => {
+    if (!wsProgress.status || !jobId) return
+
+    setProgress(wsProgress.progress)
+
+    if (wsProgress.status === 'running') {
+      // Already in scanning state from handleSubmit
+    } else if (wsProgress.status === 'complete') {
+      if (!completedRef.current) {
+        completedRef.current = true
+        setScanStatus('complete')
+        onScanComplete()
+      }
+    } else if (wsProgress.status === 'cancelled') {
+      setScanStatus('cancelled')
+    } else if (wsProgress.status === 'failed') {
+      setScanStatus('error')
+      setErrorMessage(wsProgress.error ?? 'Scan failed')
+    } else if (wsProgress.status === 'timeout') {
+      setScanStatus('error')
+      setErrorMessage(wsProgress.error ?? 'Scan timed out')
     }
+  }, [wsProgress, jobId, onScanComplete])
+
+  const resetState = useCallback(() => {
+    setScanStatus('idle')
+    setDirectory('')
+    setErrorMessage('')
+    setProgress(null)
+    setShowBrowser(false)
+    setJobId(null)
+    completedRef.current = false
   }, [])
 
   useEffect(() => {
     if (!open) {
-      cleanup()
-      setScanStatus('idle')
-      setDirectory('')
-      setErrorMessage('')
-      setProgress(null)
-      setShowBrowser(false)
-      jobIdRef.current = null
+      resetState()
     }
-  }, [open, cleanup])
-
-  useEffect(() => () => cleanup(), [cleanup])
+  }, [open, resetState])
 
   async function handleCancel() {
-    const jobId = jobIdRef.current
     if (!jobId || scanStatus !== 'scanning') return
 
     setScanStatus('cancelling')
     try {
       await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' })
     } catch {
-      // Cancel request failed, polling will still detect final state
+      // Cancel request failed, WebSocket updates will still detect final state
     }
   }
 
@@ -71,6 +85,7 @@ export default function ScanModal({
     setScanStatus('scanning')
     setErrorMessage('')
     setProgress(null)
+    completedRef.current = false
 
     try {
       const res = await fetch('/api/v1/videos/scan', {
@@ -85,36 +100,7 @@ export default function ScanModal({
       }
 
       const { job_id }: { job_id: string } = await res.json()
-      jobIdRef.current = job_id
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const statusRes = await fetch(`/api/v1/jobs/${job_id}`)
-          if (!statusRes.ok) return
-          const status: JobStatus = await statusRes.json()
-
-          setProgress(status.progress)
-
-          if (status.status === 'complete') {
-            cleanup()
-            setScanStatus('complete')
-            onScanComplete()
-          } else if (status.status === 'cancelled') {
-            cleanup()
-            setScanStatus('cancelled')
-          } else if (status.status === 'failed') {
-            cleanup()
-            setScanStatus('error')
-            setErrorMessage(status.error ?? 'Scan failed')
-          } else if (status.status === 'timeout') {
-            cleanup()
-            setScanStatus('error')
-            setErrorMessage(status.error ?? 'Scan timed out')
-          }
-        } catch {
-          // polling error, keep trying
-        }
-      }, 1000)
+      setJobId(job_id)
     } catch (err) {
       setScanStatus('error')
       setErrorMessage(err instanceof Error ? err.message : 'Scan failed')

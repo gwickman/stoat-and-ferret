@@ -1,51 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useWebSocket } from '../useWebSocket'
-
-let mockInstances: MockWebSocket[]
-
-class MockWebSocket {
-  static readonly OPEN = 1
-  static readonly CLOSED = 3
-
-  url: string
-  onopen: (() => void) | null = null
-  onclose: (() => void) | null = null
-  onerror: (() => void) | null = null
-  onmessage: ((e: MessageEvent) => void) | null = null
-  readyState = MockWebSocket.OPEN
-  sentData: string[] = []
-
-  constructor(url: string) {
-    this.url = url
-    mockInstances.push(this)
-  }
-
-  close() {
-    this.readyState = MockWebSocket.CLOSED
-  }
-
-  send(data: string) {
-    this.sentData.push(data)
-  }
-
-  simulateOpen() {
-    this.readyState = MockWebSocket.OPEN
-    this.onopen?.()
-  }
-
-  simulateClose() {
-    this.readyState = MockWebSocket.CLOSED
-    this.onclose?.()
-  }
-
-  simulateMessage(data: string) {
-    this.onmessage?.(new MessageEvent('message', { data }))
-  }
-}
+import {
+  MockWebSocket,
+  mockInstances,
+  resetMockInstances,
+} from '../../__tests__/mockWebSocket'
 
 beforeEach(() => {
-  mockInstances = []
+  resetMockInstances()
   vi.stubGlobal('WebSocket', MockWebSocket)
   vi.useFakeTimers()
 })

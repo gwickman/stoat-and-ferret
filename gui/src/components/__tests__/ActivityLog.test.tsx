@@ -2,14 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import ActivityLog from '../ActivityLog'
 import { useActivityStore } from '../../stores/activityStore'
+import { makeMessage } from '../../__tests__/mockWebSocket'
 
 beforeEach(() => {
   useActivityStore.setState({ entries: [] })
 })
-
-function makeMessage(data: object): MessageEvent {
-  return new MessageEvent('message', { data: JSON.stringify(data) })
-}
 
 describe('ActivityLog', () => {
   it('shows empty state when no events', () => {
