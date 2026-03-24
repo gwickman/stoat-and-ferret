@@ -107,6 +107,20 @@ class AsyncVersionRepository(Protocol):
         """
         ...
 
+    async def delete_old_versions(self, project_id: str, keep_count: int) -> int:
+        """Delete old versions beyond the keep-last-N threshold for a project.
+
+        Retains the most recent `keep_count` versions and deletes the rest.
+
+        Args:
+            project_id: The project to prune versions for.
+            keep_count: Number of most recent versions to keep.
+
+        Returns:
+            Number of versions deleted.
+        """
+        ...
+
 
 class AsyncSQLiteVersionRepository:
     """Async SQLite implementation of the VersionRepository protocol."""
@@ -185,6 +199,24 @@ class AsyncSQLiteVersionRepository:
             )
 
         return await self.save(project_id, source.timeline_json)
+
+    async def delete_old_versions(self, project_id: str, keep_count: int) -> int:
+        """Delete old versions beyond the keep-last-N threshold."""
+        cursor = await self._conn.execute(
+            """
+            DELETE FROM project_versions
+            WHERE project_id = ?
+              AND version_number NOT IN (
+                SELECT version_number FROM project_versions
+                WHERE project_id = ?
+                ORDER BY version_number DESC
+                LIMIT ?
+              )
+            """,
+            (project_id, project_id, keep_count),
+        )
+        await self._conn.commit()
+        return cursor.rowcount
 
     async def _next_version_number(self, project_id: str) -> int:
         """Get the next version number for a project.
@@ -284,3 +316,14 @@ class AsyncInMemoryVersionRepository:
             )
 
         return await self.save(project_id, source.timeline_json)
+
+    async def delete_old_versions(self, project_id: str, keep_count: int) -> int:
+        """Delete old versions beyond the keep-last-N threshold."""
+        project_versions = self._versions.get(project_id, [])
+        if len(project_versions) <= keep_count:
+            return 0
+        sorted_versions = sorted(project_versions, key=lambda v: v.version_number, reverse=True)
+        keep = sorted_versions[:keep_count]
+        deleted = len(project_versions) - len(keep)
+        self._versions[project_id] = keep
+        return deleted

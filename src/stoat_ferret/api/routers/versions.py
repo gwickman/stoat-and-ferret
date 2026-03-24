@@ -12,6 +12,7 @@ from stoat_ferret.api.schemas.version import (
     VersionListResponse,
     VersionResponse,
 )
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
@@ -141,6 +142,11 @@ async def create_version(
         )
 
     record = await version_repo.save(project_id, request.timeline_json)
+
+    retention_count = get_settings().version_retention_count
+    if retention_count is not None:
+        await version_repo.delete_old_versions(project_id, retention_count)
+
     return VersionResponse(
         version_number=record.version_number,
         created_at=record.created_at.isoformat(),
