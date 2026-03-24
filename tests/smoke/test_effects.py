@@ -225,6 +225,58 @@ async def test_uc11_speed_control_and_stacking(
 
 
 # ---------------------------------------------------------------------------
+# Effect preview thumbnail tests (BL-086)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_effect_preview_thumbnail(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /effects/preview/thumbnail returns JPEG for a valid effect+video."""
+    client = smoke_client
+
+    # Scan videos so we have a real video file
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=1")
+    assert resp.status_code == 200
+    video = resp.json()["videos"][0]
+    video_path = video["path"]
+
+    # Request a thumbnail with a text_overlay effect
+    resp = await client.post(
+        "/api/v1/effects/preview/thumbnail",
+        json={
+            "effect_name": "text_overlay",
+            "video_path": video_path,
+            "parameters": {"text": "Smoke Test Thumbnail"},
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/jpeg"
+    # JPEG files start with the SOI marker
+    assert resp.content[:2] == b"\xff\xd8"
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_effect_preview_thumbnail_invalid_effect(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """POST /effects/preview/thumbnail returns 400 for unknown effect."""
+    resp = await smoke_client.post(
+        "/api/v1/effects/preview/thumbnail",
+        json={
+            "effect_name": "nonexistent_effect",
+            "video_path": "/tmp/fake.mp4",
+            "parameters": {},
+        },
+    )
+    assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
 # Effect type gap-fill tests (BL-146)
 # ---------------------------------------------------------------------------
 

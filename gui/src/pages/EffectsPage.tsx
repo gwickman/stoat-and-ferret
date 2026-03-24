@@ -12,6 +12,7 @@ import { useProjects } from '../hooks/useProjects'
 import { useEffectCatalogStore } from '../stores/effectCatalogStore'
 import type { ParameterSchema } from '../stores/effectFormStore'
 import { useEffectFormStore } from '../stores/effectFormStore'
+import { useEffectPreviewStore } from '../stores/effectPreviewStore'
 import type { AppliedEffect } from '../stores/effectStackStore'
 import { useEffectStackStore } from '../stores/effectStackStore'
 
@@ -32,6 +33,9 @@ export default function EffectsPage() {
   const stackSelectClip = useEffectStackStore((s) => s.selectClip)
   const fetchStackEffects = useEffectStackStore((s) => s.fetchEffects)
   const removeStackEffect = useEffectStackStore((s) => s.removeEffect)
+
+  const thumbnailUrl = useEffectPreviewStore((s) => s.thumbnailUrl)
+  const setVideoPath = useEffectPreviewStore((s) => s.setVideoPath)
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [clips, setClips] = useState<Clip[]>([])
@@ -72,6 +76,32 @@ export default function EffectsPage() {
       fetchStackEffects(selectedProjectId, selectedClipId)
     }
   }, [selectedProjectId, selectedClipId, fetchStackEffects])
+
+  // Fetch video path when clip selection changes
+  useEffect(() => {
+    if (!selectedClipId) {
+      setVideoPath(null)
+      return
+    }
+    const clip = clips.find((c) => c.id === selectedClipId)
+    if (!clip) {
+      setVideoPath(null)
+      return
+    }
+    let active = true
+    async function fetchVideoPath() {
+      try {
+        const res = await fetch(`/api/v1/videos/${clip!.source_video_id}`)
+        if (!res.ok) return
+        const json = await res.json()
+        if (active) setVideoPath(json.path ?? null)
+      } catch {
+        // Silently handle - thumbnail just won't appear
+      }
+    }
+    fetchVideoPath()
+    return () => { active = false }
+  }, [selectedClipId, clips, setVideoPath])
 
   // Set form schema when effect selected
   useEffect(() => {
@@ -279,11 +309,21 @@ export default function EffectsPage() {
             </div>
           )}
 
-          {/* Visual preview placeholder */}
+          {/* Visual preview: thumbnail or fallback placeholder */}
           {selectedClipId && (
-            <p className="mt-2 text-xs text-gray-500" data-testid="visual-preview-placeholder">
-              Visual preview coming in a future version
-            </p>
+            thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt="Effect preview"
+                data-testid="effect-preview-thumbnail"
+                className="mt-2 rounded border border-gray-700"
+                style={{ maxWidth: 320 }}
+              />
+            ) : (
+              <p className="mt-2 text-xs text-gray-500" data-testid="visual-preview-placeholder">
+                Visual preview coming in a future version
+              </p>
+            )
           )}
 
           {/* Effect stack for selected clip */}
