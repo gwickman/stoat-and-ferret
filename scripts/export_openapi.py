@@ -17,7 +17,9 @@ def export_openapi(output_path: Path | None = None) -> dict:
     Returns:
         The OpenAPI spec as a dict.
     """
-    app = create_app()
+    # Use a non-existent gui_static_path to exclude environment-dependent
+    # /gui routes, ensuring the spec is identical across all environments.
+    app = create_app(gui_static_path="/nonexistent")
     spec = app.openapi()
 
     if output_path is None:
