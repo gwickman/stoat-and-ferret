@@ -128,6 +128,17 @@ class Settings(BaseSettings):
         description="Automatically queue proxy generation for newly scanned videos",
     )
 
+    # Preview
+    preview_output_dir: str = Field(
+        default="data/previews",
+        description="Directory for storing generated preview files",
+    )
+    preview_session_ttl_seconds: int = Field(
+        default=3600,
+        ge=1,
+        description="Preview session time-to-live in seconds (default 1 hour)",
+    )
+
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,

@@ -16,6 +16,7 @@ TABLE_TRACKS = "tracks"
 TABLE_PROJECT_VERSIONS = "project_versions"
 TABLE_BATCH_JOBS = "batch_jobs"
 TABLE_PROXY_FILES = "proxy_files"
+TABLE_PREVIEW_SESSIONS = "preview_sessions"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -194,6 +195,29 @@ PROXY_FILES_VIDEO_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_proxy_files_video ON proxy_files(source_video_id);
 """
 
+PREVIEW_SESSIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS preview_sessions (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'initializing',
+    manifest_path TEXT,
+    segment_count INTEGER NOT NULL DEFAULT 0,
+    quality_level TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    error_message TEXT
+);
+"""
+
+PREVIEW_SESSIONS_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_preview_sessions_project ON preview_sessions(project_id);
+"""
+
+PREVIEW_SESSIONS_EXPIRES_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_preview_sessions_expires ON preview_sessions(expires_at);
+"""
+
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
 CLIPS_TIMELINE_COLUMNS = [
@@ -270,6 +294,9 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(BATCH_JOBS_BATCH_ID_INDEX)
     cursor.execute(PROXY_FILES_TABLE)
     cursor.execute(PROXY_FILES_VIDEO_INDEX)
+    cursor.execute(PREVIEW_SESSIONS_TABLE)
+    cursor.execute(PREVIEW_SESSIONS_PROJECT_INDEX)
+    cursor.execute(PREVIEW_SESSIONS_EXPIRES_INDEX)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     conn.commit()
@@ -336,6 +363,9 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(BATCH_JOBS_BATCH_ID_INDEX)
     await db.execute(PROXY_FILES_TABLE)
     await db.execute(PROXY_FILES_VIDEO_INDEX)
+    await db.execute(PREVIEW_SESSIONS_TABLE)
+    await db.execute(PREVIEW_SESSIONS_PROJECT_INDEX)
+    await db.execute(PREVIEW_SESSIONS_EXPIRES_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await db.commit()
