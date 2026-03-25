@@ -335,6 +335,123 @@ class TestFilter:
             graph.validate()
 
 
+class TestPreview:
+    """Tests for preview filter simplification bindings."""
+
+    def test_preview_quality_enum(self) -> None:
+        """Test PreviewQuality enum variants are accessible."""
+        from stoat_ferret_core import PreviewQuality
+
+        assert PreviewQuality.Draft is not None
+        assert PreviewQuality.Medium is not None
+        assert PreviewQuality.High is not None
+        assert PreviewQuality.Draft != PreviewQuality.Medium
+
+    def test_is_expensive_filter_true(self) -> None:
+        """Test is_expensive_filter returns True for known expensive filters."""
+        from stoat_ferret_core import is_expensive_filter
+
+        expensive = [
+            "hue",
+            "eq",
+            "colorbalance",
+            "unsharp",
+            "gblur",
+            "boxblur",
+            "smartblur",
+            "atadenoise",
+            "nlmeans",
+            "perspective",
+            "lenscorrection",
+        ]
+        for name in expensive:
+            assert is_expensive_filter(name), f"{name} should be expensive"
+
+    def test_is_expensive_filter_false(self) -> None:
+        """Test is_expensive_filter returns False for cheap filters."""
+        from stoat_ferret_core import is_expensive_filter
+
+        cheap = ["scale", "format", "setpts", "asetpts", "concat"]
+        for name in cheap:
+            assert not is_expensive_filter(name), f"{name} should not be expensive"
+
+    def test_filter_name_getter(self) -> None:
+        """Test Filter.name() returns the filter name."""
+        from stoat_ferret_core import Filter
+
+        f = Filter("scale")
+        assert f.name() == "scale"
+
+    def test_filter_chain_getters(self) -> None:
+        """Test FilterChain.filters() and filter_count()."""
+        from stoat_ferret_core import Filter, FilterChain
+
+        chain = FilterChain().filter(Filter("scale")).filter(Filter("hue"))
+        assert chain.filter_count() == 2
+        filters = chain.filters()
+        assert len(filters) == 2
+        assert filters[0].name() == "scale"
+        assert filters[1].name() == "hue"
+
+    def test_filter_graph_getters(self) -> None:
+        """Test FilterGraph.chains() and chain_count()."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph
+
+        graph = (
+            FilterGraph()
+            .chain(FilterChain().filter(Filter("scale")))
+            .chain(FilterChain().filter(Filter("format")))
+        )
+        assert graph.chain_count() == 2
+        chains = graph.chains()
+        assert len(chains) == 2
+
+    def test_simplify_filter_chain_draft(self) -> None:
+        """Test simplify_filter_chain removes expensive filters at Draft."""
+        from stoat_ferret_core import (
+            Filter,
+            FilterChain,
+            PreviewQuality,
+            simplify_filter_chain,
+        )
+
+        chain = FilterChain().filter(Filter("scale")).filter(Filter("hue")).filter(Filter("format"))
+        result = simplify_filter_chain(chain, PreviewQuality.Draft)
+        assert result.filter_count() == 2
+        names = [f.name() for f in result.filters()]
+        assert "scale" in names
+        assert "format" in names
+        assert "hue" not in names
+
+    def test_simplify_filter_chain_high(self) -> None:
+        """Test simplify_filter_chain preserves all at High."""
+        from stoat_ferret_core import (
+            Filter,
+            FilterChain,
+            PreviewQuality,
+            simplify_filter_chain,
+        )
+
+        chain = FilterChain().filter(Filter("scale")).filter(Filter("hue"))
+        result = simplify_filter_chain(chain, PreviewQuality.High)
+        assert result.filter_count() == 2
+
+    def test_simplify_filter_graph(self) -> None:
+        """Test simplify_filter_graph simplifies each chain."""
+        from stoat_ferret_core import (
+            Filter,
+            FilterChain,
+            FilterGraph,
+            PreviewQuality,
+            simplify_filter_graph,
+        )
+
+        graph = FilterGraph().chain(FilterChain().filter(Filter("scale")).filter(Filter("gblur")))
+        result = simplify_filter_graph(graph, PreviewQuality.Draft)
+        assert result.chain_count() == 1
+        assert result.chains()[0].filter_count() == 1
+
+
 class TestSanitization:
     """Tests for sanitization functions."""
 

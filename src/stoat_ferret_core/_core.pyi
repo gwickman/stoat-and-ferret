@@ -1309,6 +1309,10 @@ class Filter:
         """Creates a new filter with the given name."""
         ...
 
+    def name(self) -> str:
+        """Returns the filter name."""
+        ...
+
     def param(self, key: str, value: str) -> Filter:
         """Adds a parameter to the filter."""
         ...
@@ -1360,6 +1364,14 @@ class FilterChain:
         """Adds an output label to the chain."""
         ...
 
+    def filters(self) -> list[Filter]:
+        """Returns a list of filters in this chain."""
+        ...
+
+    def filter_count(self) -> int:
+        """Returns the number of filters in this chain."""
+        ...
+
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 
@@ -1372,6 +1384,14 @@ class FilterGraph:
 
     def chain(self, chain: FilterChain) -> FilterGraph:
         """Adds a filter chain to the graph."""
+        ...
+
+    def chains(self) -> list[FilterChain]:
+        """Returns a list of chains in this graph."""
+        ...
+
+    def chain_count(self) -> int:
+        """Returns the number of chains in this graph."""
         ...
 
     def validate(self) -> None:
@@ -1925,4 +1945,27 @@ def calculate_batch_progress(jobs: list[BatchJobStatus]) -> BatchProgress:
     Returns:
         BatchProgress with total_jobs, completed_jobs, failed_jobs, and overall_progress.
     """
+    ...
+
+# ========== Preview Types ==========
+
+class PreviewQuality:
+    """Preview quality level for filter simplification."""
+
+    Draft: PreviewQuality
+    Medium: PreviewQuality
+    High: PreviewQuality
+
+# ========== Preview Functions ==========
+
+def is_expensive_filter(name: str) -> bool:
+    """Returns true if the filter name is classified as expensive."""
+    ...
+
+def simplify_filter_chain(chain: FilterChain, quality: PreviewQuality) -> FilterChain:
+    """Simplifies a filter chain by removing expensive filters based on quality."""
+    ...
+
+def simplify_filter_graph(graph: FilterGraph, quality: PreviewQuality) -> FilterGraph:
+    """Simplifies a filter graph by simplifying each chain based on quality."""
     ...

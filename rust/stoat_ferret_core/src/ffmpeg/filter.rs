@@ -163,6 +163,12 @@ impl Filter {
         }
     }
 
+    /// Returns the filter name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     /// Adds a parameter to the filter.
     ///
     /// Parameters are rendered as `key=value` pairs separated by colons.
@@ -217,6 +223,12 @@ impl Filter {
     fn py_param(mut slf: PyRefMut<'_, Self>, key: String, value: String) -> PyRefMut<'_, Self> {
         slf.params.push((key, value));
         slf
+    }
+
+    /// Returns the filter name.
+    #[pyo3(name = "name")]
+    fn py_name(&self) -> String {
+        self.name.clone()
     }
 
     /// Returns a string representation of the filter.
@@ -519,6 +531,18 @@ impl FilterChain {
         self.outputs.push(format!("[{}]", label.into()));
         self
     }
+
+    /// Returns a reference to the filters in this chain.
+    #[must_use]
+    pub fn filters(&self) -> &Vec<Filter> {
+        &self.filters
+    }
+
+    /// Returns the number of filters in this chain.
+    #[must_use]
+    pub fn filter_count(&self) -> usize {
+        self.filters.len()
+    }
 }
 
 impl fmt::Display for FilterChain {
@@ -569,6 +593,18 @@ impl FilterChain {
     fn py_output(mut slf: PyRefMut<'_, Self>, label: String) -> PyRefMut<'_, Self> {
         slf.outputs.push(format!("[{}]", label));
         slf
+    }
+
+    /// Returns a list of filters in this chain.
+    #[pyo3(name = "filters")]
+    fn py_filters(&self) -> Vec<Filter> {
+        self.filters.clone()
+    }
+
+    /// Returns the number of filters in this chain.
+    #[pyo3(name = "filter_count")]
+    fn py_filter_count(&self) -> usize {
+        self.filters.len()
     }
 
     /// Returns a string representation of the filter chain.
@@ -662,6 +698,18 @@ impl FilterGraph {
     pub fn chain(mut self, chain: FilterChain) -> Self {
         self.chains.push(chain);
         self
+    }
+
+    /// Returns a reference to the chains in this graph.
+    #[must_use]
+    pub fn chains(&self) -> &Vec<FilterChain> {
+        &self.chains
+    }
+
+    /// Returns the number of chains in this graph.
+    #[must_use]
+    pub fn chain_count(&self) -> usize {
+        self.chains.len()
     }
 
     /// Validates the filter graph structure.
@@ -963,6 +1011,18 @@ impl FilterGraph {
     fn py_chain(mut slf: PyRefMut<'_, Self>, chain: FilterChain) -> PyRefMut<'_, Self> {
         slf.chains.push(chain);
         slf
+    }
+
+    /// Returns a list of chains in this graph.
+    #[pyo3(name = "chains")]
+    fn py_chains(&self) -> Vec<FilterChain> {
+        self.chains.clone()
+    }
+
+    /// Returns the number of chains in this graph.
+    #[pyo3(name = "chain_count")]
+    fn py_chain_count(&self) -> usize {
+        self.chains.len()
     }
 
     /// Validates the filter graph structure.
