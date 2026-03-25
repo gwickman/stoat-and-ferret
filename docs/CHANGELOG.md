@@ -4,6 +4,26 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v024] - 2026-03-25
+
+Phase 4 Foundation: Deferred Quality + Proxy Infrastructure + Rust Preview Core. Close the OpenAPI enum freshness gap from v023, build proxy data and service infrastructure for Phase 4 preview playback, and implement Rust-based filter simplification and cost estimation for real-time preview.
+
+### Added
+
+- **OpenAPI Enum CI Freshness Check** — boot-and-compare CI step ensures committed `gui/openapi.json` stays in sync with live FastAPI spec; key-sorted JSON normalization for deterministic diffs (BL-139, #190)
+- **Proxy Data Model** — `ProxyFile` dataclass, `ProxyStatus`/`ProxyQuality` enums, `proxy_files` SQLite table with UNIQUE constraint, `AsyncProxyRepository` protocol with SQLite + InMemory implementations and 51 parity tests (BL-174, #191)
+- **Proxy Generation Service** — async FFmpeg proxy transcoding with progress parsing, quality auto-selection, storage quota with LRU eviction, stale detection, per-job-type timeout (1800s) in job queue (BL-175, #192)
+- **Proxy Management API** — REST endpoints for proxy generate (POST), status (GET), delete (DELETE), and batch operations (POST); Pydantic response models with DI wiring (BL-176, #193)
+- **Proxy Scan Integration** — optional auto-queue of proxy generation on scan discovery, stale proxy detection during scan, `STOAT_PROXY_AUTO_GENERATE` setting (BL-177, #194)
+- **Proxy Smoke Tests** — 4 smoke tests covering all proxy endpoints with direct DB seeding; harness documentation updated (Impact #9, #11, #195)
+- **Preview Filter Simplification (Rust)** — `preview/` module with `PreviewQuality` enum, `simplify_filter_graph`/`simplify_filter_chain`/`is_expensive_filter` functions, getter methods on FilterGraph/FilterChain/Filter, 19 Rust tests + 9 Python binding tests via PyO3 (BL-184, #196)
+- **Filter Cost Estimation and Scale Injection (Rust)** — `estimate_filter_cost` with sigmoid normalization, `select_preview_quality` with threshold mapping, `inject_preview_scale` for scale filter insertion, property-based test coverage via proptest (BL-185, #197)
+
+### Changed
+
+- **`TransitionResponse` renamed to `EffectTransitionResponse`** — resolves non-deterministic OpenAPI schema naming from duplicate class names across modules
+- **Committed `gui/openapi.json` regenerated** — spec was stale; updated to match current FastAPI output
+
 ## [v023] - 2026-03-25
 
 Persistence, Frontend Modernisation, and CI UAT. Persistent batch state and version retention improve resilience; WebSocket push replaces HTTP polling; OpenAPI codegen pipeline eliminates hand-authored TypeScript types; effect preview thumbnails added; UAT harness wired into CI to block merges on browser-level regressions.
