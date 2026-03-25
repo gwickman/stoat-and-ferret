@@ -20,6 +20,10 @@ export type TimelineClip = components['schemas']['TimelineClipResponse']
 export type TimelineResponse = components['schemas']['TimelineResponse']
 export type LayoutPresetListResponse = components['schemas']['LayoutPresetListResponse']
 
+// Proxy types
+export type ProxyStatus = components['schemas']['ProxyStatus']
+export type ProxyQuality = components['schemas']['ProxyQuality']
+
 // Frontend-only sorting types (not API-derived, consolidated here for single import source)
 export type SortField = 'date' | 'name' | 'duration'
 export type SortOrder = 'asc' | 'desc'

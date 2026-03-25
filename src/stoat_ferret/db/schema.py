@@ -15,6 +15,7 @@ TABLE_CLIPS = "clips"
 TABLE_TRACKS = "tracks"
 TABLE_PROJECT_VERSIONS = "project_versions"
 TABLE_BATCH_JOBS = "batch_jobs"
+TABLE_PROXY_FILES = "proxy_files"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -174,6 +175,25 @@ BATCH_JOBS_BATCH_ID_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_batch_jobs_batch_id ON batch_jobs(batch_id);
 """
 
+PROXY_FILES_TABLE = """
+CREATE TABLE IF NOT EXISTS proxy_files (
+    id TEXT PRIMARY KEY,
+    source_video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    quality TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size_bytes INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending',
+    source_checksum TEXT NOT NULL,
+    generated_at TEXT,
+    last_accessed_at TEXT NOT NULL,
+    UNIQUE(source_video_id, quality)
+);
+"""
+
+PROXY_FILES_VIDEO_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_proxy_files_video ON proxy_files(source_video_id);
+"""
+
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
 CLIPS_TIMELINE_COLUMNS = [
@@ -248,6 +268,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(PROJECT_VERSIONS_PROJECT_INDEX)
     cursor.execute(BATCH_JOBS_TABLE)
     cursor.execute(BATCH_JOBS_BATCH_ID_INDEX)
+    cursor.execute(PROXY_FILES_TABLE)
+    cursor.execute(PROXY_FILES_VIDEO_INDEX)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     conn.commit()
@@ -312,6 +334,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(PROJECT_VERSIONS_PROJECT_INDEX)
     await db.execute(BATCH_JOBS_TABLE)
     await db.execute(BATCH_JOBS_BATCH_ID_INDEX)
+    await db.execute(PROXY_FILES_TABLE)
+    await db.execute(PROXY_FILES_VIDEO_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await db.commit()

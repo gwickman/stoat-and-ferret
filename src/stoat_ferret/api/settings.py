@@ -107,6 +107,23 @@ class Settings(BaseSettings):
         description="Keep-last-N version retention per project. None retains all versions.",
     )
 
+    # Proxy storage
+    proxy_output_dir: str = Field(
+        default="data/proxies",
+        description="Directory for storing generated proxy files",
+    )
+    proxy_max_storage_bytes: int = Field(
+        default=10_737_418_240,
+        ge=0,
+        description="Maximum total storage for proxy files in bytes (default 10 GB)",
+    )
+    proxy_cleanup_threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Storage usage ratio that triggers proxy cleanup (0.0-1.0)",
+    )
+
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,

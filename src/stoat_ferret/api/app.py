@@ -43,7 +43,9 @@ from stoat_ferret.db.async_repository import (
 from stoat_ferret.db.audit import AuditLogger
 from stoat_ferret.db.batch_repository import AsyncBatchRepository, AsyncSQLiteBatchRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
+from stoat_ferret.db.models import ProxyQuality, ProxyStatus
 from stoat_ferret.db.project_repository import AsyncProjectRepository
+from stoat_ferret.db.proxy_repository import AsyncProxyRepository, SQLiteProxyRepository
 from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.db.timeline_repository import AsyncTimelineRepository
 from stoat_ferret.db.version_repository import AsyncVersionRepository
@@ -104,6 +106,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create batch repository backed by the same database
     app.state.batch_repository = AsyncSQLiteBatchRepository(app.state.db)
 
+    # Create proxy repository backed by the same database
+    app.state.proxy_repository = SQLiteProxyRepository(app.state.db)
+
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db, audit_logger=audit_logger)
@@ -140,6 +145,7 @@ def create_app(
     timeline_repository: AsyncTimelineRepository | None = None,
     version_repository: AsyncVersionRepository | None = None,
     batch_repository: AsyncBatchRepository | None = None,
+    proxy_repository: AsyncProxyRepository | None = None,
     job_queue: AsyncioJobQueue | None = None,
     ws_manager: ConnectionManager | None = None,
     effect_registry: EffectRegistry | None = None,
@@ -160,6 +166,7 @@ def create_app(
         timeline_repository: Optional timeline repository for dependency injection.
         version_repository: Optional version repository for dependency injection.
         batch_repository: Optional batch repository for dependency injection.
+        proxy_repository: Optional proxy repository for dependency injection.
         job_queue: Optional job queue for dependency injection.
         ws_manager: Optional WebSocket connection manager for dependency injection.
         effect_registry: Optional effect registry for dependency injection.
@@ -192,6 +199,7 @@ def create_app(
         app.state.timeline_repository = timeline_repository
         app.state.version_repository = version_repository
         app.state.batch_repository = batch_repository
+        app.state.proxy_repository = proxy_repository
         app.state.job_queue = job_queue
 
     if audit_logger is not None:
@@ -249,5 +257,34 @@ def create_app(
                 if file_path.is_file():
                     return FileResponse(file_path)
                 return FileResponse(index_html)
+
+    # Inject standalone enum schemas into OpenAPI spec so they flow through
+    # to TypeScript codegen before proxy API endpoints exist (BL-176).
+    _original_openapi = app.openapi
+
+    def _custom_openapi() -> dict:  # type: ignore[type-arg]
+        schema = _original_openapi()
+        schemas = schema.setdefault("components", {}).setdefault("schemas", {})
+        schemas.setdefault(
+            "ProxyStatus",
+            {
+                "enum": [e.value for e in ProxyStatus],
+                "title": "ProxyStatus",
+                "type": "string",
+                "description": ProxyStatus.__doc__ or "",
+            },
+        )
+        schemas.setdefault(
+            "ProxyQuality",
+            {
+                "enum": [e.value for e in ProxyQuality],
+                "title": "ProxyQuality",
+                "type": "string",
+                "description": ProxyQuality.__doc__ or "",
+            },
+        )
+        return schema
+
+    app.openapi = _custom_openapi  # type: ignore[method-assign]
 
     return app
