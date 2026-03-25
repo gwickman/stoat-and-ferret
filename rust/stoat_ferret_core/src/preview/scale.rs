@@ -84,8 +84,11 @@ mod tests {
 
     #[test]
     fn test_total_filter_count_increases_by_one() {
-        let graph = FilterGraph::new()
-            .chain(FilterChain::new().filter(Filter::new("scale")).filter(Filter::new("format")));
+        let graph = FilterGraph::new().chain(
+            FilterChain::new()
+                .filter(Filter::new("scale"))
+                .filter(Filter::new("format")),
+        );
 
         let original_total: usize = graph.chains().iter().map(|c| c.filter_count()).sum();
         let result = inject_preview_scale(&graph, 640, 480);

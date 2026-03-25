@@ -138,8 +138,11 @@ mod tests {
 
     #[test]
     fn test_more_filters_higher_cost() {
-        let small = FilterGraph::new()
-            .chain(FilterChain::new().filter(Filter::new("scale")).filter(Filter::new("format")));
+        let small = FilterGraph::new().chain(
+            FilterChain::new()
+                .filter(Filter::new("scale"))
+                .filter(Filter::new("format")),
+        );
         let large = FilterGraph::new().chain(
             FilterChain::new()
                 .filter(Filter::new("scale"))
