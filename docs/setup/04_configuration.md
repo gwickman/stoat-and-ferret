@@ -51,6 +51,14 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 |----------|------|---------|-------------|
 | `STOAT_WS_HEARTBEAT_INTERVAL` | `int` | `30` | WebSocket heartbeat interval in seconds (minimum: 1). The server sends periodic pings to keep connections alive. |
 
+### Proxy Storage
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_PROXY_OUTPUT_DIR` | `str` | `data/proxies` | Directory for storing generated proxy files. Created automatically if it does not exist. |
+| `STOAT_PROXY_MAX_STORAGE_BYTES` | `int` | `10737418240` | Maximum total storage for proxy files in bytes (default 10 GB, 0 = unlimited). |
+| `STOAT_PROXY_CLEANUP_THRESHOLD` | `float` | `0.8` | Storage usage ratio (0.0-1.0) that triggers automatic proxy cleanup. When total proxy storage exceeds this fraction of `STOAT_PROXY_MAX_STORAGE_BYTES`, least-recently-accessed proxies are deleted. |
+
 ### Security
 
 | Variable | Type | Default | Description |

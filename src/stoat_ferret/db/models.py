@@ -5,10 +5,68 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from stoat_ferret_core import ClipValidationError as RustClipValidationError
+
+
+class ProxyStatus(str, Enum):
+    """Status of a proxy file through its lifecycle.
+
+    Transitions: pending -> generating -> ready, pending -> generating -> failed,
+    ready -> stale.
+    """
+
+    PENDING = "pending"
+    GENERATING = "generating"
+    READY = "ready"
+    FAILED = "failed"
+    STALE = "stale"
+
+
+class ProxyQuality(str, Enum):
+    """Quality level for a proxy file."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+@dataclass
+class ProxyFile:
+    """Proxy file metadata for lower-resolution editing previews.
+
+    Represents a proxy file generated from a source video at a specific
+    quality level. Each (source_video_id, quality) pair is unique.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        source_video_id: FK to the source video.
+        quality: Quality level of the proxy.
+        file_path: Absolute path to the proxy file.
+        file_size_bytes: Size of the proxy file in bytes.
+        status: Current lifecycle status.
+        source_checksum: SHA-256 checksum of the source video.
+        generated_at: When generation completed (None until ready).
+        last_accessed_at: When the proxy was last accessed.
+    """
+
+    id: str
+    source_video_id: str
+    quality: ProxyQuality
+    file_path: str
+    file_size_bytes: int
+    status: ProxyStatus
+    source_checksum: str
+    generated_at: datetime | None
+    last_accessed_at: datetime
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a proxy file."""
+        return str(uuid.uuid4())
 
 
 class ClipValidationError(Exception):
