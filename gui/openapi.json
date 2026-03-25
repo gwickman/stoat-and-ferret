@@ -1838,6 +1838,173 @@
         }
       }
     },
+    "/api/v1/videos/{video_id}/proxy": {
+      "post": {
+        "tags": [
+          "proxy"
+        ],
+        "summary": "Generate Proxy",
+        "description": "Queue proxy generation for a video.\n\nArgs:\n    video_id: The source video ID.\n    request: The FastAPI request object for accessing app state.\n    proxy_repo: Proxy repository dependency.\n    video_repo: Video repository dependency.\n\nReturns:\n    Job submission response with job_id.\n\nRaises:\n    HTTPException: 404 if video not found, 409 if proxy already exists.",
+        "operationId": "generate_proxy_api_v1_videos__video_id__proxy_post",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "proxy"
+        ],
+        "summary": "Get Proxy Status",
+        "description": "Get proxy status for a video.\n\nArgs:\n    video_id: The source video ID.\n    proxy_repo: Proxy repository dependency.\n\nReturns:\n    Proxy status response.\n\nRaises:\n    HTTPException: 404 if no proxy found for video.",
+        "operationId": "get_proxy_status_api_v1_videos__video_id__proxy_get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProxyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "proxy"
+        ],
+        "summary": "Delete Proxy",
+        "description": "Delete proxy file and DB record for a video.\n\nArgs:\n    video_id: The source video ID.\n    proxy_repo: Proxy repository dependency.\n\nReturns:\n    Response with freed_bytes count.\n\nRaises:\n    HTTPException: 404 if no proxy found for video.",
+        "operationId": "delete_proxy_api_v1_videos__video_id__proxy_delete",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProxyDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/proxy/batch": {
+      "post": {
+        "tags": [
+          "proxy"
+        ],
+        "summary": "Batch Generate Proxies",
+        "description": "Queue proxy generation for multiple videos, skipping those with ready proxies.\n\nArgs:\n    batch_request: Request with list of video IDs.\n    request: The FastAPI request object for accessing app state.\n    proxy_repo: Proxy repository dependency.\n    video_repo: Video repository dependency.\n\nReturns:\n    Response listing queued and skipped video IDs.",
+        "operationId": "batch_generate_proxies_api_v1_proxy_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProxyBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProxyBatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{project_id}/versions": {
       "get": {
         "tags": [
@@ -3077,6 +3244,110 @@
         ],
         "title": "ProjectResponse",
         "description": "Project response."
+      },
+      "ProxyBatchRequest": {
+        "properties": {
+          "video_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Video Ids",
+            "description": "List of video IDs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video_ids"
+        ],
+        "title": "ProxyBatchRequest",
+        "description": "Request to generate proxies for multiple videos."
+      },
+      "ProxyBatchResponse": {
+        "properties": {
+          "queued": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Queued"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queued",
+          "skipped"
+        ],
+        "title": "ProxyBatchResponse",
+        "description": "Response from batch proxy generation."
+      },
+      "ProxyDeleteResponse": {
+        "properties": {
+          "freed_bytes": {
+            "type": "integer",
+            "title": "Freed Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "freed_bytes"
+        ],
+        "title": "ProxyDeleteResponse",
+        "description": "Response after deleting a proxy."
+      },
+      "ProxyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_video_id": {
+            "type": "string",
+            "title": "Source Video Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "quality": {
+            "type": "string",
+            "title": "Quality"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_video_id",
+          "status",
+          "quality",
+          "file_size_bytes"
+        ],
+        "title": "ProxyResponse",
+        "description": "Single proxy status response."
       },
       "RestoreResponse": {
         "properties": {
