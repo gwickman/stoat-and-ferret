@@ -11,12 +11,15 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from stoat_ferret.api.schemas.video import ScanError, ScanResponse
+from stoat_ferret.api.services.proxy_service import PROXY_JOB_TYPE
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.db.async_repository import AsyncVideoRepository
-from stoat_ferret.db.models import Video
+from stoat_ferret.db.models import ProxyStatus, Video
 from stoat_ferret.ffmpeg.probe import ffprobe_video
 
 if TYPE_CHECKING:
+    from stoat_ferret.api.services.proxy_service import ProxyService
     from stoat_ferret.api.services.thumbnail import ThumbnailService
     from stoat_ferret.api.websocket.manager import ConnectionManager
     from stoat_ferret.jobs.queue import AsyncJobQueue
@@ -59,6 +62,7 @@ def make_scan_handler(
     thumbnail_service: ThumbnailService | None = None,
     ws_manager: ConnectionManager | None = None,
     queue: AsyncJobQueue | None = None,
+    proxy_service: ProxyService | None = None,
 ) -> Callable[[str, dict[str, Any]], Awaitable[Any]]:
     """Create a scan job handler bound to a repository.
 
@@ -67,6 +71,7 @@ def make_scan_handler(
         thumbnail_service: Optional thumbnail service for generating thumbnails.
         ws_manager: Optional WebSocket manager for broadcasting scan events.
         queue: Optional job queue for progress reporting.
+        proxy_service: Optional proxy service for auto-generating proxies.
 
     Returns:
         Async handler function compatible with the job queue.
@@ -115,6 +120,16 @@ def make_scan_handler(
             cancel_event=cancel_event,
         )
 
+        # Auto-queue proxy generation for new videos if enabled
+        if proxy_service is not None and queue is not None:
+            await _auto_queue_proxies(
+                result=result,
+                repository=repository,
+                proxy_service=proxy_service,
+                queue=queue,
+                scan_path=scan_path,
+            )
+
         # Broadcast SCAN_COMPLETED first, then JOB_PROGRESS(complete) last.
         # When rapid WebSocket messages are batched by React, only the final
         # setLastMessage survives.  useJobProgress filters for "job_progress",
@@ -139,6 +154,114 @@ def make_scan_handler(
         return result.model_dump()
 
     return handler
+
+
+async def _auto_queue_proxies(
+    *,
+    result: ScanResponse,
+    repository: AsyncVideoRepository,
+    proxy_service: ProxyService,
+    queue: AsyncJobQueue,
+    scan_path: str,
+) -> None:
+    """Auto-queue proxy generation for new videos and detect stale proxies.
+
+    Checks the STOAT_PROXY_AUTO_GENERATE setting. When enabled, queues proxy
+    generation jobs for newly discovered videos. Also checks existing proxies
+    for staleness by comparing source checksums.
+
+    Args:
+        result: The scan result containing counts.
+        repository: Video repository for looking up video metadata.
+        proxy_service: Proxy service for stale detection.
+        queue: Job queue for submitting proxy generation jobs.
+        scan_path: The scanned directory path (for logging context).
+    """
+    settings = get_settings()
+
+    if not settings.proxy_auto_generate:
+        logger.info(
+            "proxy_auto_queue_skipped",
+            scan_path=scan_path,
+            reason="auto_generate_disabled",
+        )
+        return
+
+    logger.info(
+        "proxy_auto_queue_started",
+        scan_path=scan_path,
+        new_videos=result.new,
+        updated_videos=result.updated,
+    )
+
+    # Re-discover video files in the scan path to look up their DB records
+    root = Path(scan_path)
+    video_files = [
+        f for f in root.glob("**/*") if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS
+    ]
+
+    queued_count = 0
+    stale_count = 0
+
+    for file_path in video_files:
+        str_path = str(file_path.absolute())
+        video = await repository.get_by_path(str_path)
+        if video is None:
+            continue
+
+        # Check for stale proxies on existing videos
+        existing_proxies = await proxy_service._repo.list_by_video(video.id)
+        for existing_proxy in existing_proxies:
+            if existing_proxy.status == ProxyStatus.READY:
+                try:
+                    was_stale = await proxy_service.check_stale(existing_proxy.id, video.path)
+                    if was_stale:
+                        stale_count += 1
+                        logger.info(
+                            "proxy_auto_queue_stale_detected",
+                            video_id=video.id,
+                            proxy_id=existing_proxy.id,
+                        )
+                except Exception:
+                    logger.warning(
+                        "proxy_auto_queue_stale_check_failed",
+                        video_id=video.id,
+                        proxy_id=existing_proxy.id,
+                        exc_info=True,
+                    )
+
+        # Queue proxy generation for videos without any proxy
+        if not existing_proxies:
+            try:
+                await queue.submit(
+                    PROXY_JOB_TYPE,
+                    {
+                        "video_id": video.id,
+                        "source_path": video.path,
+                        "source_width": video.width,
+                        "source_height": video.height,
+                        "duration_us": int(video.duration_seconds * 1_000_000),
+                    },
+                )
+                queued_count += 1
+                logger.info(
+                    "proxy_auto_queue_started",
+                    video_id=video.id,
+                    filename=video.filename,
+                )
+            except Exception:
+                logger.warning(
+                    "proxy_auto_queue_failed",
+                    video_id=video.id,
+                    exc_info=True,
+                )
+
+    logger.info(
+        "proxy_auto_queue_complete",
+        scan_path=scan_path,
+        queued=queued_count,
+        stale_detected=stale_count,
+    )
 
 
 async def scan_directory(

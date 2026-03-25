@@ -123,6 +123,10 @@ class Settings(BaseSettings):
         le=1.0,
         description="Storage usage ratio that triggers proxy cleanup (0.0-1.0)",
     )
+    proxy_auto_generate: bool = Field(
+        default=False,
+        description="Automatically queue proxy generation for newly scanned videos",
+    )
 
     # Security
     allowed_scan_roots: list[str] = Field(

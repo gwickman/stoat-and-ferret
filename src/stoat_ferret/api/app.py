@@ -125,12 +125,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         executor=app.state.ffmpeg_executor,
         thumbnail_dir=settings.thumbnail_dir,
     )
-    job_queue.register_handler(
-        SCAN_JOB_TYPE,
-        make_scan_handler(repo, thumbnail_service, app.state.ws_manager, queue=job_queue),
-    )
 
-    # Create proxy service and register proxy job handler with 1800s timeout
+    # Create proxy service before scan handler so it can be injected
     proxy_service = ProxyService(
         proxy_repository=app.state.proxy_repository,
         async_executor=RealAsyncFFmpegExecutor(),
@@ -141,6 +137,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         cleanup_threshold=settings.proxy_cleanup_threshold,
     )
     app.state.proxy_service = proxy_service
+
+    job_queue.register_handler(
+        SCAN_JOB_TYPE,
+        make_scan_handler(
+            repo,
+            thumbnail_service,
+            app.state.ws_manager,
+            queue=job_queue,
+            proxy_service=proxy_service,
+        ),
+    )
     job_queue.register_handler(
         PROXY_JOB_TYPE,
         make_proxy_handler(proxy_service),
