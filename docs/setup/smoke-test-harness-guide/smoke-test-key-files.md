@@ -36,6 +36,7 @@ The test harness has two tiers:
 | `tests/smoke/test_versions.py` | Version management: list, restore, not-found, nonexistent project (v019) |
 | `tests/smoke/test_filesystem.py` | Filesystem: directory listing, not-found, hidden file exclusion (v019) |
 | `tests/smoke/test_negative_paths.py` | Negative paths: invalid inputs across timeline, audio, batch, compose (v019) |
+| `tests/smoke/test_proxy.py` | Proxy management: generate, status, delete, batch (v024) |
 
 ### Conftest Additions (v018–v019)
 

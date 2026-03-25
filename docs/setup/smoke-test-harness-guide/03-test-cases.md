@@ -561,6 +561,15 @@ Phase 2 smoke tests extend API coverage beyond the original 12 use cases, adding
 | `test_batch_nonexistent_batch` | GET nonexistent batch |
 | `test_compose_insufficient_inputs` | POST compose with insufficient inputs |
 
+### Proxy Management (`test_proxy.py`, v024)
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_proxy_generate` | POST /api/v1/videos/{id}/proxy returns 202 with job_id |
+| `test_proxy_status` | GET /api/v1/videos/{id}/proxy returns status, quality, file_size_bytes |
+| `test_proxy_delete` | DELETE /api/v1/videos/{id}/proxy removes proxy, returns freed_bytes |
+| `test_proxy_batch` | POST /api/v1/proxy/batch returns queued and skipped lists |
+
 ---
 
 ## Endpoint Coverage Map
@@ -609,6 +618,10 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 | `GET /api/v1/projects/{id}/versions` | test_versions.py |
 | `POST /api/v1/projects/{id}/versions/{id}/restore` | test_versions.py |
 | `GET /api/v1/filesystem/directories` | test_filesystem.py |
+| `POST /api/v1/videos/{id}/proxy` | test_proxy.py |
+| `GET /api/v1/videos/{id}/proxy` | test_proxy.py |
+| `DELETE /api/v1/videos/{id}/proxy` | test_proxy.py |
+| `POST /api/v1/proxy/batch` | test_proxy.py |
 
 ### Residual Coverage Gaps
 
