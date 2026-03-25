@@ -4,196 +4,7 @@
  */
 
 export interface paths {
-    "/health/live": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Liveness
-         * @description Liveness probe - indicates the server is running.
-         *
-         *     This endpoint always returns 200 if the server is able to respond.
-         *     It performs no dependency checks.
-         *
-         *     Returns:
-         *         Simple status object indicating the server is alive.
-         */
-        get: operations["liveness_health_live_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/health/ready": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Readiness
-         * @description Readiness probe - indicates all dependencies are healthy.
-         *
-         *     Checks database connectivity and FFmpeg availability.
-         *
-         *     Args:
-         *         request: The FastAPI request object, used to access app state.
-         *
-         *     Returns:
-         *         JSON response with status and individual check results.
-         *         Returns 200 if all checks pass, 503 if any check fails.
-         */
-        get: operations["readiness_health_ready_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/videos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Videos
-         * @description List videos with pagination.
-         *
-         *     Args:
-         *         limit: Maximum number of videos to return (1-100, default 20).
-         *         offset: Number of videos to skip (default 0).
-         *         repo: Video repository dependency.
-         *
-         *     Returns:
-         *         Paginated list of videos.
-         */
-        get: operations["list_videos_api_v1_videos_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/videos/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Search Videos
-         * @description Search videos by filename or path.
-         *
-         *     Args:
-         *         repo: Video repository dependency.
-         *         q: Search query string.
-         *         limit: Maximum number of results to return (1-100, default 20).
-         *
-         *     Returns:
-         *         Search results with query echoed back.
-         */
-        get: operations["search_videos_api_v1_videos_search_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/videos/{video_id}/thumbnail": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Thumbnail
-         * @description Get thumbnail image for a video.
-         *
-         *     Returns the generated thumbnail if available, or a placeholder image
-         *     if thumbnail generation failed or hasn't been run.
-         *
-         *     Args:
-         *         video_id: The unique video identifier.
-         *         repo: Video repository dependency.
-         *
-         *     Returns:
-         *         JPEG image response.
-         *
-         *     Raises:
-         *         HTTPException: 404 if video not found.
-         */
-        get: operations["get_thumbnail_api_v1_videos__video_id__thumbnail_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/videos/{video_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Video
-         * @description Get video by ID.
-         *
-         *     Args:
-         *         video_id: The unique video identifier.
-         *         repo: Video repository dependency.
-         *
-         *     Returns:
-         *         Video details.
-         *
-         *     Raises:
-         *         HTTPException: 404 if video not found.
-         */
-        get: operations["get_video_api_v1_videos__video_id__get"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete Video
-         * @description Delete video from library.
-         *
-         *     Args:
-         *         video_id: The unique video identifier.
-         *         repo: Video repository dependency.
-         *         delete_file: If True, also delete the source file from disk.
-         *
-         *     Returns:
-         *         Empty response with 204 status.
-         *
-         *     Raises:
-         *         HTTPException: 404 if video not found.
-         */
-        delete: operations["delete_video_api_v1_videos__video_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/videos/scan": {
+    "/api/v1/audio/mix/preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -203,23 +14,239 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Scan Videos
-         * @description Submit a directory scan as an async job.
+         * Preview Audio Mix
+         * @description Preview audio mix filter chain without persisting.
          *
-         *     Creates a scan job and returns the job ID immediately.
-         *     Use GET /api/v1/jobs/{job_id} to poll for status and results.
+         *     Validates per-track volume, fade, master volume, and track count,
+         *     then returns the filter preview string.
          *
          *     Args:
-         *         scan_request: Scan request with directory path and recursion flag.
+         *         request: Audio mix configuration request.
+         *
+         *     Returns:
+         *         Audio mix response with filter preview and track count.
+         *
+         *     Raises:
+         *         HTTPException: 422 if validation fails.
+         */
+        post: operations["preview_audio_mix_api_v1_audio_mix_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compose/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Presets
+         * @description List all available layout presets with metadata.
+         *
+         *     Returns all predefined layout configurations (PIP, split-screen, grid)
+         *     with descriptions, AI hints, and input count requirements.
+         *
+         *     Returns:
+         *         List of all layout presets with their metadata.
+         */
+        get: operations["list_presets_api_v1_compose_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/effects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Effects
+         * @description List all available effects with metadata, schemas, and previews.
+         *
+         *     Returns:
+         *         List of all registered effects with their parameter schemas,
+         *         AI hints, and filter preview strings.
+         */
+        get: operations["list_effects_api_v1_effects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/effects/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Effect
+         * @description Preview the filter string an effect would generate without applying it.
+         *
+         *     Validates the effect type and parameters, then returns the generated
+         *     FFmpeg filter string.
+         *
+         *     Args:
+         *         request: Effect preview request with type and parameters.
+         *         registry: Effect registry dependency.
+         *
+         *     Returns:
+         *         The effect type and generated filter string.
+         *
+         *     Raises:
+         *         HTTPException: 400 if effect type unknown or parameters invalid.
+         */
+        post: operations["preview_effect_api_v1_effects_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/effects/preview/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Effect Thumbnail
+         * @description Generate a thumbnail showing an effect applied to a video frame.
+         *
+         *     Extracts the first frame from the specified video, applies the effect
+         *     filter, scales to 320px width, and returns a JPEG image.
+         *
+         *     Args:
+         *         request: Thumbnail request with effect name, video path, and parameters.
+         *         registry: Effect registry dependency.
+         *         thumbnail_service: Thumbnail service dependency.
+         *
+         *     Returns:
+         *         JPEG image response.
+         *
+         *     Raises:
+         *         HTTPException: 400 if effect unknown, parameters invalid, or video missing.
+         *             500 if FFmpeg thumbnail generation fails.
+         */
+        post: operations["preview_effect_thumbnail_api_v1_effects_preview_thumbnail_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/filesystem/directories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Directories
+         * @description List subdirectories within a given path with pagination.
+         *
+         *     Returns a paginated list of immediate subdirectories. Hidden directories
+         *     (starting with '.') are excluded. Uses run_in_executor for async-safe
+         *     filesystem access.
+         *
+         *     When path is not provided, defaults to the first allowed_scan_root
+         *     or the user's home directory if no roots are configured.
+         *
+         *     Args:
+         *         path: Directory path to list. Defaults to a sensible starting location.
+         *         limit: Maximum number of entries to return (1-100, default 20).
+         *         offset: Number of entries to skip (default 0).
+         *
+         *     Returns:
+         *         Paginated directory listing with metadata.
+         *
+         *     Raises:
+         *         HTTPException: 400 if path is not a directory, 403 if outside allowed roots,
+         *             404 if path does not exist.
+         */
+        get: operations["list_directories_api_v1_filesystem_directories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Status
+         * @description Get the status of a submitted job.
+         *
+         *     Args:
+         *         job_id: The unique job identifier.
          *         request: The FastAPI request object for accessing app state.
          *
          *     Returns:
-         *         Job submission response with the job ID.
+         *         Job status including progress and result when complete.
          *
          *     Raises:
-         *         HTTPException: 400 if path is not a valid directory.
+         *         HTTPException: 404 if job ID is not found.
          */
-        post: operations["scan_videos_api_v1_videos_scan_post"];
+        get: operations["get_job_status_api_v1_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Job
+         * @description Request cancellation of a job.
+         *
+         *     Args:
+         *         job_id: The unique job identifier.
+         *         request: The FastAPI request object for accessing app state.
+         *
+         *     Returns:
+         *         Updated job status.
+         *
+         *     Raises:
+         *         HTTPException: 404 if job not found, 409 if already in terminal state.
+         */
+        post: operations["cancel_job_api_v1_jobs__job_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -305,6 +332,41 @@ export interface paths {
          *         HTTPException: 404 if project not found.
          */
         delete: operations["delete_project_api_v1_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/audio/mix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Configure Audio Mix
+         * @description Configure audio mix for a project.
+         *
+         *     Validates per-track volume, fade, master volume, and track count.
+         *     Builds filter chain via Rust AudioMixSpec with VolumeBuilder for
+         *     master volume. Persists the mix configuration on the project.
+         *
+         *     Args:
+         *         project_id: The unique project identifier.
+         *         request: Audio mix configuration request.
+         *         project_repo: Project repository dependency.
+         *
+         *     Returns:
+         *         Audio mix response with filter preview and track count.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project not found, 422 if validation fails.
+         */
+        put: operations["configure_audio_mix_api_v1_projects__project_id__audio_mix_put"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -407,123 +469,6 @@ export interface paths {
         patch: operations["update_clip_api_v1_projects__project_id__clips__clip_id__patch"];
         trace?: never;
     };
-    "/api/v1/jobs/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Job Status
-         * @description Get the status of a submitted job.
-         *
-         *     Args:
-         *         job_id: The unique job identifier.
-         *         request: The FastAPI request object for accessing app state.
-         *
-         *     Returns:
-         *         Job status including progress and result when complete.
-         *
-         *     Raises:
-         *         HTTPException: 404 if job ID is not found.
-         */
-        get: operations["get_job_status_api_v1_jobs__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{job_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cancel Job
-         * @description Request cancellation of a job.
-         *
-         *     Args:
-         *         job_id: The unique job identifier.
-         *         request: The FastAPI request object for accessing app state.
-         *
-         *     Returns:
-         *         Updated job status.
-         *
-         *     Raises:
-         *         HTTPException: 404 if job not found, 409 if already in terminal state.
-         */
-        post: operations["cancel_job_api_v1_jobs__job_id__cancel_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/effects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Effects
-         * @description List all available effects with metadata, schemas, and previews.
-         *
-         *     Returns:
-         *         List of all registered effects with their parameter schemas,
-         *         AI hints, and filter preview strings.
-         */
-        get: operations["list_effects_api_v1_effects_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/effects/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Preview Effect
-         * @description Preview the filter string an effect would generate without applying it.
-         *
-         *     Validates the effect type and parameters, then returns the generated
-         *     FFmpeg filter string.
-         *
-         *     Args:
-         *         request: Effect preview request with type and parameters.
-         *         registry: Effect registry dependency.
-         *
-         *     Returns:
-         *         The effect type and generated filter string.
-         *
-         *     Raises:
-         *         HTTPException: 400 if effect type unknown or parameters invalid.
-         */
-        post: operations["preview_effect_api_v1_effects_preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/projects/{project_id}/clips/{clip_id}/effects": {
         parameters: {
             query?: never;
@@ -623,70 +568,6 @@ export interface paths {
         patch: operations["update_clip_effect_api_v1_projects__project_id__clips__clip_id__effects__index__patch"];
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/effects/transition": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Apply Transition
-         * @description Apply a transition between two adjacent clips.
-         *
-         *     Validates that both clips exist and are adjacent in the project timeline,
-         *     generates the FFmpeg filter string via the effect registry, and stores
-         *     the transition in the project model.
-         *
-         *     Args:
-         *         project_id: The unique project identifier.
-         *         request: Transition request with source/target clips, type, and parameters.
-         *         registry: Effect registry dependency.
-         *         project_repo: Project repository dependency.
-         *         clip_repo: Clip repository dependency.
-         *
-         *     Returns:
-         *         The applied transition with generated filter string.
-         *
-         *     Raises:
-         *         HTTPException: 404 if project or clips not found, 400 if clips not adjacent
-         *             or transition type unknown or parameters invalid.
-         */
-        post: operations["apply_transition_api_v1_projects__project_id__effects_transition_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/compose/presets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Presets
-         * @description List all available layout presets with metadata.
-         *
-         *     Returns all predefined layout configurations (PIP, split-screen, grid)
-         *     with descriptions, AI hints, and input count requirements.
-         *
-         *     Returns:
-         *         List of all layout presets with their metadata.
-         */
-        get: operations["list_presets_api_v1_compose_presets_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/projects/{project_id}/compose/layout": {
         parameters: {
             query?: never;
@@ -720,7 +601,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/audio/mix": {
+    "/api/v1/projects/{project_id}/effects/transition": {
         parameters: {
             query?: never;
             header?: never;
@@ -728,98 +609,30 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
         /**
-         * Configure Audio Mix
-         * @description Configure audio mix for a project.
+         * Apply Transition
+         * @description Apply a transition between two adjacent clips.
          *
-         *     Validates per-track volume, fade, master volume, and track count.
-         *     Builds filter chain via Rust AudioMixSpec with VolumeBuilder for
-         *     master volume. Persists the mix configuration on the project.
+         *     Validates that both clips exist and are adjacent in the project timeline,
+         *     generates the FFmpeg filter string via the effect registry, and stores
+         *     the transition in the project model.
          *
          *     Args:
          *         project_id: The unique project identifier.
-         *         request: Audio mix configuration request.
+         *         request: Transition request with source/target clips, type, and parameters.
+         *         registry: Effect registry dependency.
          *         project_repo: Project repository dependency.
+         *         clip_repo: Clip repository dependency.
          *
          *     Returns:
-         *         Audio mix response with filter preview and track count.
+         *         The applied transition with generated filter string.
          *
          *     Raises:
-         *         HTTPException: 404 if project not found, 422 if validation fails.
+         *         HTTPException: 404 if project or clips not found, 400 if clips not adjacent
+         *             or transition type unknown or parameters invalid.
          */
-        put: operations["configure_audio_mix_api_v1_projects__project_id__audio_mix_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/audio/mix/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Preview Audio Mix
-         * @description Preview audio mix filter chain without persisting.
-         *
-         *     Validates per-track volume, fade, master volume, and track count,
-         *     then returns the filter preview string.
-         *
-         *     Args:
-         *         request: Audio mix configuration request.
-         *
-         *     Returns:
-         *         Audio mix response with filter preview and track count.
-         *
-         *     Raises:
-         *         HTTPException: 422 if validation fails.
-         */
-        post: operations["preview_audio_mix_api_v1_audio_mix_preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/filesystem/directories": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Directories
-         * @description List subdirectories within a given path with pagination.
-         *
-         *     Returns a paginated list of immediate subdirectories. Hidden directories
-         *     (starting with '.') are excluded. Uses run_in_executor for async-safe
-         *     filesystem access.
-         *
-         *     When path is not provided, defaults to the first allowed_scan_root
-         *     or the user's home directory if no roots are configured.
-         *
-         *     Args:
-         *         path: Directory path to list. Defaults to a sensible starting location.
-         *         limit: Maximum number of entries to return (1-100, default 20).
-         *         offset: Number of entries to skip (default 0).
-         *
-         *     Returns:
-         *         Paginated directory listing with metadata.
-         *
-         *     Raises:
-         *         HTTPException: 400 if path is not a directory, 403 if outside allowed roots,
-         *             404 if path does not exist.
-         */
-        get: operations["list_directories_api_v1_filesystem_directories_get"];
-        put?: never;
-        post?: never;
+        post: operations["apply_transition_api_v1_projects__project_id__effects_transition_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1037,72 +850,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/render/batch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submit Batch
-         * @description Submit a batch of render jobs for parallel execution.
-         *
-         *     Jobs are queued and executed with concurrency limited by
-         *     Settings.batch_parallel_limit. Returns immediately with a batch_id.
-         *
-         *     Args:
-         *         batch_request: The batch render request with job configurations.
-         *         request: The FastAPI request object for accessing app state.
-         *
-         *     Returns:
-         *         BatchResponse with batch_id, queued job count, and status.
-         *
-         *     Raises:
-         *         HTTPException: 422 if job count exceeds Settings.batch_max_jobs.
-         */
-        post: operations["submit_batch_api_v1_render_batch_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/render/batch/{batch_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Batch Progress
-         * @description Get aggregated progress for a batch render.
-         *
-         *     Uses Rust calculate_batch_progress() for progress aggregation
-         *     across all jobs in the batch.
-         *
-         *     Args:
-         *         batch_id: The unique batch identifier.
-         *         request: The FastAPI request object for accessing app state.
-         *
-         *     Returns:
-         *         Aggregated batch progress with per-job status details.
-         *
-         *     Raises:
-         *         HTTPException: 404 if batch ID is not found.
-         */
-        get: operations["get_batch_progress_api_v1_render_batch__batch_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/projects/{project_id}/versions": {
         parameters: {
             query?: never;
@@ -1187,6 +934,294 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/render/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Batch
+         * @description Submit a batch of render jobs for parallel execution.
+         *
+         *     Jobs are queued and executed with concurrency limited by
+         *     Settings.batch_parallel_limit. Returns immediately with a batch_id.
+         *
+         *     Args:
+         *         batch_request: The batch render request with job configurations.
+         *         request: The FastAPI request object for accessing app state.
+         *
+         *     Returns:
+         *         BatchResponse with batch_id, queued job count, and status.
+         *
+         *     Raises:
+         *         HTTPException: 422 if job count exceeds Settings.batch_max_jobs.
+         */
+        post: operations["submit_batch_api_v1_render_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/batch/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Batch Progress
+         * @description Get aggregated progress for a batch render.
+         *
+         *     Uses Rust calculate_batch_progress() for progress aggregation
+         *     across all jobs in the batch.
+         *
+         *     Args:
+         *         batch_id: The unique batch identifier.
+         *         request: The FastAPI request object for accessing app state.
+         *
+         *     Returns:
+         *         Aggregated batch progress with per-job status details.
+         *
+         *     Raises:
+         *         HTTPException: 404 if batch ID is not found.
+         */
+        get: operations["get_batch_progress_api_v1_render_batch__batch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Videos
+         * @description List videos with pagination.
+         *
+         *     Args:
+         *         limit: Maximum number of videos to return (1-100, default 20).
+         *         offset: Number of videos to skip (default 0).
+         *         repo: Video repository dependency.
+         *
+         *     Returns:
+         *         Paginated list of videos.
+         */
+        get: operations["list_videos_api_v1_videos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scan Videos
+         * @description Submit a directory scan as an async job.
+         *
+         *     Creates a scan job and returns the job ID immediately.
+         *     Use GET /api/v1/jobs/{job_id} to poll for status and results.
+         *
+         *     Args:
+         *         scan_request: Scan request with directory path and recursion flag.
+         *         request: The FastAPI request object for accessing app state.
+         *
+         *     Returns:
+         *         Job submission response with the job ID.
+         *
+         *     Raises:
+         *         HTTPException: 400 if path is not a valid directory.
+         */
+        post: operations["scan_videos_api_v1_videos_scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Videos
+         * @description Search videos by filename or path.
+         *
+         *     Args:
+         *         repo: Video repository dependency.
+         *         q: Search query string.
+         *         limit: Maximum number of results to return (1-100, default 20).
+         *
+         *     Returns:
+         *         Search results with query echoed back.
+         */
+        get: operations["search_videos_api_v1_videos_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/{video_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Video
+         * @description Get video by ID.
+         *
+         *     Args:
+         *         video_id: The unique video identifier.
+         *         repo: Video repository dependency.
+         *
+         *     Returns:
+         *         Video details.
+         *
+         *     Raises:
+         *         HTTPException: 404 if video not found.
+         */
+        get: operations["get_video_api_v1_videos__video_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Video
+         * @description Delete video from library.
+         *
+         *     Args:
+         *         video_id: The unique video identifier.
+         *         repo: Video repository dependency.
+         *         delete_file: If True, also delete the source file from disk.
+         *
+         *     Returns:
+         *         Empty response with 204 status.
+         *
+         *     Raises:
+         *         HTTPException: 404 if video not found.
+         */
+        delete: operations["delete_video_api_v1_videos__video_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/{video_id}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Thumbnail
+         * @description Get thumbnail image for a video.
+         *
+         *     Returns the generated thumbnail if available, or a placeholder image
+         *     if thumbnail generation failed or hasn't been run.
+         *
+         *     Args:
+         *         video_id: The unique video identifier.
+         *         repo: Video repository dependency.
+         *
+         *     Returns:
+         *         JPEG image response.
+         *
+         *     Raises:
+         *         HTTPException: 404 if video not found.
+         */
+        get: operations["get_thumbnail_api_v1_videos__video_id__thumbnail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liveness
+         * @description Liveness probe - indicates the server is running.
+         *
+         *     This endpoint always returns 200 if the server is able to respond.
+         *     It performs no dependency checks.
+         *
+         *     Returns:
+         *         Simple status object indicating the server is alive.
+         */
+        get: operations["liveness_health_live_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Readiness
+         * @description Readiness probe - indicates all dependencies are healthy.
+         *
+         *     Checks database connectivity and FFmpeg availability.
+         *
+         *     Args:
+         *         request: The FastAPI request object, used to access app state.
+         *
+         *     Returns:
+         *         JSON response with status and individual check results.
+         *         Returns 200 if all checks pass, 503 if any check fails.
+         */
+        get: operations["readiness_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1198,10 +1233,10 @@ export interface components {
         AdjustedClipPosition: {
             /** Input Index */
             input_index: number;
-            /** Timeline Start */
-            timeline_start: number;
             /** Timeline End */
             timeline_end: number;
+            /** Timeline Start */
+            timeline_start: number;
         };
         /**
          * AudioMixRequest
@@ -1211,11 +1246,6 @@ export interface components {
          *     to return domain-specific error codes.
          */
         AudioMixRequest: {
-            /**
-             * Tracks
-             * @description Per-track audio configurations (2-8 tracks)
-             */
-            tracks: components["schemas"]["TrackConfig"][];
             /**
              * Master Volume
              * @description Master volume multiplier (0.0-2.0)
@@ -1228,6 +1258,11 @@ export interface components {
              * @default true
              */
             normalize: boolean;
+            /**
+             * Tracks
+             * @description Per-track audio configurations (2-8 tracks)
+             */
+            tracks: components["schemas"]["TrackConfig"][];
         };
         /**
          * AudioMixResponse
@@ -1247,15 +1282,15 @@ export interface components {
          */
         BatchJobConfig: {
             /**
-             * Project Id
-             * @description Project ID to render
-             */
-            project_id: string;
-            /**
              * Output Path
              * @description Output file path for rendered video
              */
             output_path: string;
+            /**
+             * Project Id
+             * @description Project ID to render
+             */
+            project_id: string;
             /**
              * Quality
              * @description Render quality preset
@@ -1270,19 +1305,19 @@ export interface components {
          *     Tracks per-job state including progress and error information.
          */
         BatchJobStatusResponse: {
+            /** Error */
+            error?: string | null;
             /** Job Id */
             job_id: string;
-            /** Project Id */
-            project_id: string;
-            /** Status */
-            status: string;
             /**
              * Progress
              * @default 0
              */
             progress: number;
-            /** Error */
-            error?: string | null;
+            /** Project Id */
+            project_id: string;
+            /** Status */
+            status: string;
         };
         /**
          * BatchProgressResponse
@@ -1294,16 +1329,16 @@ export interface components {
         BatchProgressResponse: {
             /** Batch Id */
             batch_id: string;
-            /** Overall Progress */
-            overall_progress: number;
             /** Completed Jobs */
             completed_jobs: number;
             /** Failed Jobs */
             failed_jobs: number;
-            /** Total Jobs */
-            total_jobs: number;
             /** Jobs */
             jobs: components["schemas"]["BatchJobStatusResponse"][];
+            /** Overall Progress */
+            overall_progress: number;
+            /** Total Jobs */
+            total_jobs: number;
         };
         /**
          * BatchRequest
@@ -1338,12 +1373,12 @@ export interface components {
          * @description Create clip request.
          */
         ClipCreate: {
-            /** Source Video Id */
-            source_video_id: string;
             /** In Point */
             in_point: number;
             /** Out Point */
             out_point: number;
+            /** Source Video Id */
+            source_video_id: string;
             /** Timeline Position */
             timeline_position: number;
         };
@@ -1362,27 +1397,27 @@ export interface components {
          * @description Clip response.
          */
         ClipResponse: {
-            /** Id */
-            id: string;
-            /** Project Id */
-            project_id: string;
-            /** Source Video Id */
-            source_video_id: string;
-            /** In Point */
-            in_point: number;
-            /** Out Point */
-            out_point: number;
-            /** Timeline Position */
-            timeline_position: number;
-            /** Effects */
-            effects?: {
-                [key: string]: unknown;
-            }[] | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Effects */
+            effects?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Id */
+            id: string;
+            /** In Point */
+            in_point: number;
+            /** Out Point */
+            out_point: number;
+            /** Project Id */
+            project_id: string;
+            /** Source Video Id */
+            source_video_id: string;
+            /** Timeline Position */
+            timeline_position: number;
             /**
              * Updated At
              * Format: date-time
@@ -1421,16 +1456,16 @@ export interface components {
          *     and pagination metadata.
          */
         DirectoryListResponse: {
-            /** Path */
-            path: string;
             /** Directories */
             directories: components["schemas"]["DirectoryEntry"][];
-            /** Total */
-            total: number;
             /** Limit */
             limit: number;
             /** Offset */
             offset: number;
+            /** Path */
+            path: string;
+            /** Total */
+            total: number;
         };
         /**
          * EffectApplyRequest
@@ -1451,22 +1486,22 @@ export interface components {
         EffectApplyResponse: {
             /** Effect Type */
             effect_type: string;
+            /** Filter String */
+            filter_string: string;
             /** Parameters */
             parameters: {
                 [key: string]: unknown;
             };
-            /** Filter String */
-            filter_string: string;
         };
         /**
          * EffectDeleteResponse
          * @description Response schema for a deleted effect.
          */
         EffectDeleteResponse: {
-            /** Index */
-            index: number;
             /** Deleted Effect Type */
             deleted_effect_type: string;
+            /** Index */
+            index: number;
         };
         /**
          * EffectListResponse
@@ -1508,22 +1543,54 @@ export interface components {
          *     and a filter preview string.
          */
         EffectResponse: {
-            /** Effect Type */
-            effect_type: string;
-            /** Name */
-            name: string;
-            /** Description */
-            description: string;
-            /** Parameter Schema */
-            parameter_schema: {
-                [key: string]: unknown;
-            };
             /** Ai Hints */
             ai_hints: {
                 [key: string]: string;
             };
+            /** Description */
+            description: string;
+            /** Effect Type */
+            effect_type: string;
             /** Filter Preview */
             filter_preview: string;
+            /** Name */
+            name: string;
+            /** Parameter Schema */
+            parameter_schema: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * EffectThumbnailRequest
+         * @description Request schema for generating an effect preview thumbnail.
+         */
+        EffectThumbnailRequest: {
+            /** Effect Name */
+            effect_name: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Video Path */
+            video_path: string;
+        };
+        /**
+         * EffectTransitionResponse
+         * @description Response schema for a successfully applied transition.
+         */
+        EffectTransitionResponse: {
+            /** Filter String */
+            filter_string: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Source Clip Id */
+            source_clip_id: string;
+            /** Target Clip Id */
+            target_clip_id: string;
+            /** Transition Type */
+            transition_type: string;
         };
         /**
          * EffectUpdateRequest
@@ -1548,16 +1615,16 @@ export interface components {
          *     and error message on failure.
          */
         JobStatusResponse: {
+            /** Error */
+            error?: string | null;
             /** Job Id */
             job_id: string;
-            /** Status */
-            status: string;
             /** Progress */
             progress?: number | null;
             /** Result */
             result?: unknown;
-            /** Error */
-            error?: string | null;
+            /** Status */
+            status: string;
         };
         /**
          * JobSubmitResponse
@@ -1587,16 +1654,16 @@ export interface components {
          *     AI hint, input count requirements, and default positions.
          */
         LayoutPresetResponse: {
-            /** Name */
-            name: string;
-            /** Description */
-            description: string;
             /** Ai Hint */
             ai_hint: string;
-            /** Min Inputs */
-            min_inputs: number;
+            /** Description */
+            description: string;
             /** Max Inputs */
             max_inputs: number;
+            /** Min Inputs */
+            min_inputs: number;
+            /** Name */
+            name: string;
             /** Positions */
             positions: components["schemas"]["LayoutResponsePosition"][];
         };
@@ -1610,21 +1677,17 @@ export interface components {
          */
         LayoutRequest: {
             /**
-             * Preset
-             * @description Layout preset name (e.g. 'PipTopLeft', 'Grid2x2')
-             */
-            preset?: string | null;
-            /**
-             * Positions
-             * @description Custom positions array with normalized coordinates
-             */
-            positions?: components["schemas"]["PositionModel"][] | null;
-            /**
              * Input Count
              * @description Number of inputs for the layout
              * @default 2
              */
             input_count: number;
+            /**
+             * Output Height
+             * @description Output height in pixels
+             * @default 1080
+             */
+            output_height: number;
             /**
              * Output Width
              * @description Output width in pixels
@@ -1632,11 +1695,15 @@ export interface components {
              */
             output_width: number;
             /**
-             * Output Height
-             * @description Output height in pixels
-             * @default 1080
+             * Positions
+             * @description Custom positions array with normalized coordinates
              */
-            output_height: number;
+            positions?: components["schemas"]["PositionModel"][] | null;
+            /**
+             * Preset
+             * @description Layout preset name (e.g. 'PipTopLeft', 'Grid2x2')
+             */
+            preset?: string | null;
         };
         /**
          * LayoutResponse
@@ -1645,24 +1712,24 @@ export interface components {
          *     Contains the resolved positions and a filter preview string.
          */
         LayoutResponse: {
-            /** Positions */
-            positions: components["schemas"]["LayoutResponsePosition"][];
             /** Filter Preview */
             filter_preview: string;
+            /** Positions */
+            positions: components["schemas"]["LayoutResponsePosition"][];
         };
         /**
          * LayoutResponsePosition
          * @description A positioned element in the layout response.
          */
         LayoutResponsePosition: {
+            /** Height */
+            height: number;
+            /** Width */
+            width: number;
             /** X */
             x: number;
             /** Y */
             y: number;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
             /** Z Index */
             z_index: number;
         };
@@ -1676,6 +1743,16 @@ export interface components {
          */
         PositionModel: {
             /**
+             * Height
+             * @description Normalized height
+             */
+            height: number;
+            /**
+             * Width
+             * @description Normalized width
+             */
+            width: number;
+            /**
              * X
              * @description Normalized x coordinate
              */
@@ -1685,16 +1762,6 @@ export interface components {
              * @description Normalized y coordinate
              */
             y: number;
-            /**
-             * Width
-             * @description Normalized width
-             */
-            width: number;
-            /**
-             * Height
-             * @description Normalized height
-             */
-            height: number;
         };
         /**
          * ProjectCreate
@@ -1704,20 +1771,20 @@ export interface components {
             /** Name */
             name: string;
             /**
-             * Output Width
-             * @default 1920
+             * Output Fps
+             * @default 30
              */
-            output_width: number;
+            output_fps: number;
             /**
              * Output Height
              * @default 1080
              */
             output_height: number;
             /**
-             * Output Fps
-             * @default 30
+             * Output Width
+             * @default 1920
              */
-            output_fps: number;
+            output_width: number;
         };
         /**
          * ProjectListResponse
@@ -1734,21 +1801,21 @@ export interface components {
          * @description Project response.
          */
         ProjectResponse: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Output Width */
-            output_width: number;
-            /** Output Height */
-            output_height: number;
-            /** Output Fps */
-            output_fps: number;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Output Fps */
+            output_fps: number;
+            /** Output Height */
+            output_height: number;
+            /** Output Width */
+            output_width: number;
             /**
              * Updated At
              * Format: date-time
@@ -1765,12 +1832,12 @@ export interface components {
          *         message: Confirmation message.
          */
         RestoreResponse: {
-            /** Restored Version */
-            restored_version: number;
-            /** New Version */
-            new_version: number;
             /** Message */
             message: string;
+            /** New Version */
+            new_version: number;
+            /** Restored Version */
+            restored_version: number;
         };
         /**
          * ScanRequest
@@ -1794,12 +1861,12 @@ export interface components {
         TimelineClipCreate: {
             /** Clip Id */
             clip_id: string;
-            /** Track Id */
-            track_id: string;
-            /** Timeline Start */
-            timeline_start: number;
             /** Timeline End */
             timeline_end: number;
+            /** Timeline Start */
+            timeline_start: number;
+            /** Track Id */
+            track_id: string;
         };
         /**
          * TimelineClipResponse
@@ -1808,30 +1875,30 @@ export interface components {
         TimelineClipResponse: {
             /** Id */
             id: string;
-            /** Project Id */
-            project_id: string;
-            /** Source Video Id */
-            source_video_id: string;
-            /** Track Id */
-            track_id: string | null;
-            /** Timeline Start */
-            timeline_start: number | null;
-            /** Timeline End */
-            timeline_end: number | null;
             /** In Point */
             in_point: number;
             /** Out Point */
             out_point: number;
+            /** Project Id */
+            project_id: string;
+            /** Source Video Id */
+            source_video_id: string;
+            /** Timeline End */
+            timeline_end: number | null;
+            /** Timeline Start */
+            timeline_start: number | null;
+            /** Track Id */
+            track_id: string | null;
         };
         /**
          * TimelineClipUpdate
          * @description Update clip timeline position.
          */
         TimelineClipUpdate: {
-            /** Timeline Start */
-            timeline_start?: number | null;
             /** Timeline End */
             timeline_end?: number | null;
+            /** Timeline Start */
+            timeline_start?: number | null;
             /** Track Id */
             track_id?: string | null;
         };
@@ -1840,12 +1907,12 @@ export interface components {
          * @description Full timeline response.
          */
         TimelineResponse: {
+            /** Duration */
+            duration: number;
             /** Project Id */
             project_id: string;
             /** Tracks */
             tracks: components["schemas"]["TrackResponse"][];
-            /** Duration */
-            duration: number;
             /** Version */
             version: number;
         };
@@ -1858,12 +1925,6 @@ export interface components {
          */
         TrackConfig: {
             /**
-             * Volume
-             * @description Volume multiplier (0.0-2.0)
-             * @default 1
-             */
-            volume: number;
-            /**
              * Fade In
              * @description Fade-in duration in seconds
              * @default 0
@@ -1875,53 +1936,59 @@ export interface components {
              * @default 0
              */
             fade_out: number;
+            /**
+             * Volume
+             * @description Volume multiplier (0.0-2.0)
+             * @default 1
+             */
+            volume: number;
         };
         /**
          * TrackCreate
          * @description Create track request.
          */
         TrackCreate: {
-            /** Track Type */
-            track_type: string;
             /** Label */
             label: string;
-            /** Z Index */
-            z_index?: number | null;
-            /**
-             * Muted
-             * @default false
-             */
-            muted: boolean;
             /**
              * Locked
              * @default false
              */
             locked: boolean;
+            /**
+             * Muted
+             * @default false
+             */
+            muted: boolean;
+            /** Track Type */
+            track_type: string;
+            /** Z Index */
+            z_index?: number | null;
         };
         /**
          * TrackResponse
          * @description Track response with clips.
          */
         TrackResponse: {
-            /** Id */
-            id: string;
-            /** Project Id */
-            project_id: string;
-            /** Track Type */
-            track_type: string;
-            /** Label */
-            label: string;
-            /** Z Index */
-            z_index: number;
-            /** Muted */
-            muted: boolean;
-            /** Locked */
-            locked: boolean;
             /**
              * Clips
              * @default []
              */
             clips: components["schemas"]["TimelineClipResponse"][];
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Locked */
+            locked: boolean;
+            /** Muted */
+            muted: boolean;
+            /** Project Id */
+            project_id: string;
+            /** Track Type */
+            track_type: string;
+            /** Z Index */
+            z_index: number;
         };
         /**
          * TransitionCreate
@@ -1932,44 +1999,44 @@ export interface components {
             clip_a_id: string;
             /** Clip B Id */
             clip_b_id: string;
-            /** Transition Type */
-            transition_type: string;
             /** Duration */
             duration: number;
+            /** Transition Type */
+            transition_type: string;
         };
         /**
          * TransitionRequest
          * @description Request schema for applying a transition between two clips.
          */
         TransitionRequest: {
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
             /** Source Clip Id */
             source_clip_id: string;
             /** Target Clip Id */
             target_clip_id: string;
             /** Transition Type */
             transition_type: string;
-            /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
         };
         /**
          * TransitionResponse
-         * @description Response schema for a successfully applied transition.
+         * @description Transition response with computed offsets.
          */
         TransitionResponse: {
-            /** Source Clip Id */
-            source_clip_id: string;
-            /** Target Clip Id */
-            target_clip_id: string;
-            /** Transition Type */
-            transition_type: string;
-            /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            /** Clips */
+            clips: components["schemas"]["AdjustedClipPosition"][];
+            /** Duration */
+            duration: number;
             /** Filter String */
             filter_string: string;
+            /** Id */
+            id: string;
+            /** Timeline Offset */
+            timeline_offset: number;
+            /** Transition Type */
+            transition_type: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -2002,12 +2069,12 @@ export interface components {
          *         versions: List of version entries.
          */
         VersionListResponse: {
-            /** Total */
-            total: number;
             /** Limit */
             limit: number;
             /** Offset */
             offset: number;
+            /** Total */
+            total: number;
             /** Versions */
             versions: components["schemas"]["VersionResponse"][];
         };
@@ -2021,12 +2088,12 @@ export interface components {
          *         checksum: SHA-256 hex digest of the timeline data.
          */
         VersionResponse: {
-            /** Version Number */
-            version_number: number;
-            /** Created At */
-            created_at: string;
             /** Checksum */
             checksum: string;
+            /** Created At */
+            created_at: string;
+            /** Version Number */
+            version_number: number;
         };
         /**
          * VideoListResponse
@@ -2035,14 +2102,14 @@ export interface components {
          *     Contains a list of videos along with pagination metadata.
          */
         VideoListResponse: {
-            /** Videos */
-            videos: components["schemas"]["VideoResponse"][];
-            /** Total */
-            total: number;
             /** Limit */
             limit: number;
             /** Offset */
             offset: number;
+            /** Total */
+            total: number;
+            /** Videos */
+            videos: components["schemas"]["VideoResponse"][];
         };
         /**
          * VideoResponse
@@ -2051,40 +2118,40 @@ export interface components {
          *     Represents the API response format for a single video.
          */
         VideoResponse: {
-            /** Id */
-            id: string;
-            /** Path */
-            path: string;
-            /** Filename */
-            filename: string;
-            /** Duration Frames */
-            duration_frames: number;
-            /** Frame Rate Numerator */
-            frame_rate_numerator: number;
-            /** Frame Rate Denominator */
-            frame_rate_denominator: number;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /** Video Codec */
-            video_codec: string;
             /** Audio Codec */
             audio_codec?: string | null;
-            /** File Size */
-            file_size: number;
-            /** Thumbnail Path */
-            thumbnail_path?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Duration Frames */
+            duration_frames: number;
+            /** File Size */
+            file_size: number;
+            /** Filename */
+            filename: string;
+            /** Frame Rate Denominator */
+            frame_rate_denominator: number;
+            /** Frame Rate Numerator */
+            frame_rate_numerator: number;
+            /** Height */
+            height: number;
+            /** Id */
+            id: string;
+            /** Path */
+            path: string;
+            /** Thumbnail Path */
+            thumbnail_path?: string | null;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /** Video Codec */
+            video_codec: string;
+            /** Width */
+            width: number;
         };
         /**
          * VideoSearchResponse
@@ -2093,30 +2160,12 @@ export interface components {
          *     Contains search results along with the query that was executed.
          */
         VideoSearchResponse: {
-            /** Videos */
-            videos: components["schemas"]["VideoResponse"][];
-            /** Total */
-            total: number;
             /** Query */
             query: string;
-        };
-        /**
-         * TransitionResponse
-         * @description Transition response with computed offsets.
-         */
-        stoat_ferret__api__schemas__timeline__TransitionResponse: {
-            /** Id */
-            id: string;
-            /** Transition Type */
-            transition_type: string;
-            /** Duration */
-            duration: number;
-            /** Filter String */
-            filter_string: string;
-            /** Timeline Offset */
-            timeline_offset: number;
-            /** Clips */
-            clips: components["schemas"]["AdjustedClipPosition"][];
+            /** Total */
+            total: number;
+            /** Videos */
+            videos: components["schemas"]["VideoResponse"][];
         };
     };
     responses: never;
@@ -2127,7 +2176,40 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    liveness_health_live_get: {
+    preview_audio_mix_api_v1_audio_mix_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AudioMixRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioMixResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_presets_api_v1_compose_presets_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2142,14 +2224,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["LayoutPresetListResponse"];
                 };
             };
         };
     };
-    readiness_health_ready_get: {
+    list_effects_api_v1_effects_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2157,6 +2237,63 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EffectListResponse"];
+                };
+            };
+        };
+    };
+    preview_effect_api_v1_effects_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EffectPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EffectPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_effect_thumbnail_api_v1_effects_preview_thumbnail_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EffectThumbnailRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2167,11 +2304,22 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
-    list_videos_api_v1_videos_get: {
+    list_directories_api_v1_filesystem_directories_get: {
         parameters: {
             query?: {
+                /** @description Directory path to list */
+                path?: string | null;
                 limit?: number;
                 offset?: number;
             };
@@ -2187,7 +2335,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VideoListResponse"];
+                    "application/json": components["schemas"]["DirectoryListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2201,45 +2349,12 @@ export interface operations {
             };
         };
     };
-    search_videos_api_v1_videos_search_get: {
-        parameters: {
-            query: {
-                /** @description Search query */
-                q: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VideoSearchResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_thumbnail_api_v1_videos__video_id__thumbnail_get: {
+    get_job_status_api_v1_jobs__job_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                video_id: string;
+                job_id: string;
             };
             cookie?: never;
         };
@@ -2251,7 +2366,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["JobStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2265,12 +2380,12 @@ export interface operations {
             };
         };
     };
-    get_video_api_v1_videos__video_id__get: {
+    cancel_job_api_v1_jobs__job_id__cancel_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                video_id: string;
+                job_id: string;
             };
             cookie?: never;
         };
@@ -2282,72 +2397,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VideoResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_video_api_v1_videos__video_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Also delete source file from disk */
-                delete_file?: boolean;
-            };
-            header?: never;
-            path: {
-                video_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    scan_videos_api_v1_videos_scan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ScanRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobSubmitResponse"];
+                    "application/json": components["schemas"]["JobStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2474,6 +2524,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    configure_audio_mix_api_v1_projects__project_id__audio_mix_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AudioMixRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioMixResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -2618,121 +2703,6 @@ export interface operations {
             };
         };
     };
-    get_job_status_api_v1_jobs__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    cancel_job_api_v1_jobs__job_id__cancel_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_effects_api_v1_effects_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EffectListResponse"];
-                };
-            };
-        };
-    };
-    preview_effect_api_v1_effects_preview_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EffectPreviewRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EffectPreviewResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     apply_effect_to_clip_api_v1_projects__project_id__clips__clip_id__effects_post: {
         parameters: {
             query?: never;
@@ -2839,61 +2809,6 @@ export interface operations {
             };
         };
     };
-    apply_transition_api_v1_projects__project_id__effects_transition_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_presets_api_v1_compose_presets_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LayoutPresetListResponse"];
-                };
-            };
-        };
-    };
     apply_layout_api_v1_projects__project_id__compose_layout_post: {
         parameters: {
             query?: never;
@@ -2929,7 +2844,7 @@ export interface operations {
             };
         };
     };
-    configure_audio_mix_api_v1_projects__project_id__audio_mix_put: {
+    apply_transition_api_v1_projects__project_id__effects_transition_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2940,84 +2855,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AudioMixRequest"];
+                "application/json": components["schemas"]["TransitionRequest"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AudioMixResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    preview_audio_mix_api_v1_audio_mix_preview_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AudioMixRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AudioMixResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_directories_api_v1_filesystem_directories_get: {
-        parameters: {
-            query?: {
-                /** @description Directory path to list */
-                path?: string | null;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DirectoryListResponse"];
+                    "application/json": components["schemas"]["EffectTransitionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3219,7 +3067,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["stoat_ferret__api__schemas__timeline__TransitionResponse"];
+                    "application/json": components["schemas"]["TransitionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3252,70 +3100,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimelineResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    submit_batch_api_v1_render_batch_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BatchRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BatchResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_batch_progress_api_v1_render_batch__batch_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                batch_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BatchProgressResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3426,6 +3210,304 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_batch_api_v1_render_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_batch_progress_api_v1_render_batch__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchProgressResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_videos_api_v1_videos_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_videos_api_v1_videos_scan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSubmitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_videos_api_v1_videos_search_get: {
+        parameters: {
+            query: {
+                /** @description Search query */
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_api_v1_videos__video_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_video_api_v1_videos__video_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Also delete source file from disk */
+                delete_file?: boolean;
+            };
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thumbnail_api_v1_videos__video_id__thumbnail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    liveness_health_live_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    readiness_health_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

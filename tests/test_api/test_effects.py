@@ -835,7 +835,7 @@ def test_transition_request_schema_roundtrip() -> None:
 @pytest.mark.contract
 def test_transition_response_schema_roundtrip() -> None:
     """TransitionResponse serializes and deserializes correctly."""
-    from stoat_ferret.api.schemas.effect import TransitionResponse
+    from stoat_ferret.api.schemas.effect import EffectTransitionResponse
 
     data = {
         "source_clip_id": "clip-a",
@@ -844,11 +844,11 @@ def test_transition_response_schema_roundtrip() -> None:
         "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         "filter_string": "xfade=transition=fade:duration=1:offset=0",
     }
-    resp = TransitionResponse(**data)
+    resp = EffectTransitionResponse(**data)
     assert resp.filter_string == "xfade=transition=fade:duration=1:offset=0"
 
     dumped = resp.model_dump()
-    restored = TransitionResponse(**dumped)
+    restored = EffectTransitionResponse(**dumped)
     assert restored == resp
 
 
