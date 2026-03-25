@@ -12,6 +12,95 @@ if TYPE_CHECKING:
     from stoat_ferret_core import ClipValidationError as RustClipValidationError
 
 
+class PreviewStatus(str, Enum):
+    """Status of a preview session through its lifecycle.
+
+    Transitions: initializing -> generating -> ready, ready -> seeking -> ready,
+    any -> error, any -> expired.
+    """
+
+    INITIALIZING = "initializing"
+    GENERATING = "generating"
+    READY = "ready"
+    SEEKING = "seeking"
+    ERROR = "error"
+    EXPIRED = "expired"
+
+
+# Valid preview status transitions: from -> set of allowed targets
+_PREVIEW_TRANSITIONS: dict[str, set[str]] = {
+    "initializing": {"generating", "error", "expired"},
+    "generating": {"ready", "error", "expired"},
+    "ready": {"seeking", "error", "expired"},
+    "seeking": {"ready", "error", "expired"},
+    "error": {"expired"},
+    "expired": set(),
+}
+
+
+def validate_preview_transition(current: str, new: str) -> None:
+    """Validate that a preview status transition is allowed.
+
+    Args:
+        current: Current status value.
+        new: Proposed new status value.
+
+    Raises:
+        ValueError: If the transition is not allowed.
+    """
+    allowed = _PREVIEW_TRANSITIONS.get(current, set())
+    if new not in allowed:
+        raise ValueError(
+            f"Invalid preview status transition: {current!r} -> {new!r}. "
+            f"Allowed: {sorted(allowed) if allowed else 'none (terminal state)'}"
+        )
+
+
+class PreviewQuality(str, Enum):
+    """Quality level for a preview session."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+@dataclass
+class PreviewSession:
+    """Preview session metadata for HLS preview generation.
+
+    Represents a preview session with lifecycle state management,
+    HLS manifest tracking, and TTL-based expiry.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        project_id: FK to the project.
+        status: Current lifecycle status.
+        manifest_path: Path to HLS manifest file (None until ready).
+        segment_count: Number of HLS segments generated.
+        quality_level: Quality level of the preview.
+        created_at: When the session was created.
+        updated_at: When the session was last modified.
+        expires_at: When the session expires.
+        error_message: Error description (None on success).
+    """
+
+    id: str
+    project_id: str
+    status: PreviewStatus
+    quality_level: PreviewQuality
+    created_at: datetime
+    updated_at: datetime
+    expires_at: datetime
+    manifest_path: str | None = None
+    segment_count: int = 0
+    error_message: str | None = None
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a preview session."""
+        return str(uuid.uuid4())
+
+
 class ProxyStatus(str, Enum):
     """Status of a proxy file through its lifecycle.
 

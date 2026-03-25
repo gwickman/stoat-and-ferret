@@ -59,6 +59,13 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | `STOAT_PROXY_MAX_STORAGE_BYTES` | `int` | `10737418240` | Maximum total storage for proxy files in bytes (default 10 GB, 0 = unlimited). |
 | `STOAT_PROXY_CLEANUP_THRESHOLD` | `float` | `0.8` | Storage usage ratio (0.0-1.0) that triggers automatic proxy cleanup. When total proxy storage exceeds this fraction of `STOAT_PROXY_MAX_STORAGE_BYTES`, least-recently-accessed proxies are deleted. |
 
+### Preview
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_PREVIEW_OUTPUT_DIR` | `str` | `data/previews` | Directory for storing generated preview files. Created automatically if it does not exist. |
+| `STOAT_PREVIEW_SESSION_TTL_SECONDS` | `int` | `3600` | Preview session time-to-live in seconds (minimum: 1). Sessions that exceed this TTL are eligible for expiry cleanup. |
+
 ### Security
 
 | Variable | Type | Default | Description |
