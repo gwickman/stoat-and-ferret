@@ -15,6 +15,7 @@ from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.batch_repository import InMemoryBatchRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.db.proxy_repository import InMemoryProxyRepository
 from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 from stoat_ferret.jobs.queue import InMemoryJobQueue
@@ -82,6 +83,16 @@ def batch_repository() -> InMemoryBatchRepository:
 
 
 @pytest.fixture
+def proxy_repository() -> InMemoryProxyRepository:
+    """Create in-memory proxy repository for testing.
+
+    Returns:
+        Empty in-memory proxy repository.
+    """
+    return InMemoryProxyRepository()
+
+
+@pytest.fixture
 def job_queue(video_repository: AsyncInMemoryVideoRepository) -> InMemoryJobQueue:
     """Create in-memory job queue with scan handler registered.
 
@@ -104,6 +115,7 @@ def app(
     timeline_repository: AsyncInMemoryTimelineRepository,
     version_repository: AsyncInMemoryVersionRepository,
     batch_repository: InMemoryBatchRepository,
+    proxy_repository: InMemoryProxyRepository,
     job_queue: InMemoryJobQueue,
 ) -> FastAPI:
     """Create test application with injected in-memory repositories.
@@ -117,6 +129,7 @@ def app(
         timeline_repository: In-memory timeline repository for testing.
         version_repository: In-memory version repository for testing.
         batch_repository: In-memory batch repository for testing.
+        proxy_repository: In-memory proxy repository for testing.
         job_queue: In-memory job queue for testing.
 
     Returns:
@@ -129,6 +142,7 @@ def app(
         timeline_repository=timeline_repository,
         version_repository=version_repository,
         batch_repository=batch_repository,
+        proxy_repository=proxy_repository,
         job_queue=job_queue,
     )
 
