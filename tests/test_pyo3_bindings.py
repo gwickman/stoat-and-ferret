@@ -451,6 +451,64 @@ class TestPreview:
         assert result.chain_count() == 1
         assert result.chains()[0].filter_count() == 1
 
+    def test_estimate_filter_cost_empty(self) -> None:
+        """Test estimate_filter_cost returns 0.0 for empty graph."""
+        from stoat_ferret_core import FilterGraph, estimate_filter_cost
+
+        graph = FilterGraph()
+        assert estimate_filter_cost(graph) == 0.0
+
+    def test_estimate_filter_cost_returns_float(self) -> None:
+        """Test estimate_filter_cost returns a float in [0.0, 1.0]."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph, estimate_filter_cost
+
+        graph = FilterGraph().chain(
+            FilterChain().filter(Filter("scale")).filter(Filter("hue")).filter(Filter("format"))
+        )
+        cost = estimate_filter_cost(graph)
+        assert isinstance(cost, float)
+        assert 0.0 <= cost <= 1.0
+
+    def test_estimate_filter_cost_expensive_higher(self) -> None:
+        """Test that expensive filters produce higher cost than cheap ones."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph, estimate_filter_cost
+
+        cheap = FilterGraph().chain(
+            FilterChain().filter(Filter("scale")).filter(Filter("format")).filter(Filter("setpts"))
+        )
+        expensive = FilterGraph().chain(
+            FilterChain().filter(Filter("nlmeans")).filter(Filter("gblur")).filter(Filter("hue"))
+        )
+        assert estimate_filter_cost(expensive) > estimate_filter_cost(cheap)
+
+    def test_select_preview_quality_thresholds(self) -> None:
+        """Test select_preview_quality threshold logic."""
+        from stoat_ferret_core import PreviewQuality, select_preview_quality
+
+        assert select_preview_quality(0.1) == PreviewQuality.High
+        assert select_preview_quality(0.5) == PreviewQuality.Medium
+        assert select_preview_quality(0.9) == PreviewQuality.Draft
+
+    def test_inject_preview_scale_adds_filter(self) -> None:
+        """Test inject_preview_scale adds exactly one filter."""
+        from stoat_ferret_core import Filter, FilterChain, FilterGraph, inject_preview_scale
+
+        graph = FilterGraph().chain(FilterChain().filter(Filter("format")))
+        result = inject_preview_scale(graph, 640, 480)
+        assert result.chain_count() == 2
+        # Total filter count should be original + 1
+        original_total = sum(c.filter_count() for c in graph.chains())
+        result_total = sum(c.filter_count() for c in result.chains())
+        assert result_total == original_total + 1
+
+    def test_inject_preview_scale_returns_filter_graph(self) -> None:
+        """Test inject_preview_scale returns a FilterGraph."""
+        from stoat_ferret_core import FilterGraph, inject_preview_scale
+
+        graph = FilterGraph()
+        result = inject_preview_scale(graph, 1280, 720)
+        assert isinstance(result, FilterGraph)
+
 
 class TestSanitization:
     """Tests for sanitization functions."""
