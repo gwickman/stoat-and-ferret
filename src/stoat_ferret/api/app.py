@@ -28,6 +28,7 @@ from stoat_ferret.api.routers import (
     health,
     jobs,
     projects,
+    proxy,
     timeline,
     versions,
     videos,
@@ -249,6 +250,7 @@ def create_app(
     app.include_router(filesystem.router)
     app.include_router(timeline.router)
     app.include_router(batch.router)
+    app.include_router(proxy.router)
     app.include_router(versions.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
