@@ -257,12 +257,13 @@ class TestScanBroadcasts:
             await handler("scan", {"path": "/tmp/videos", "_job_id": "job-42"})
 
         calls = mock_manager.broadcast.call_args_list  # type: ignore[union-attr]
-        # SCAN_STARTED + JOB_PROGRESS(complete) + SCAN_COMPLETED = 3
+        # SCAN_STARTED + SCAN_COMPLETED + JOB_PROGRESS(complete) = 3
+        # JOB_PROGRESS is sent last so it survives React state batching
         assert len(calls) == 3
         assert calls[0][0][0]["type"] == EventType.SCAN_STARTED.value
-        assert calls[1][0][0]["type"] == EventType.JOB_PROGRESS.value
-        assert calls[1][0][0]["payload"]["status"] == "complete"
-        assert calls[2][0][0]["type"] == EventType.SCAN_COMPLETED.value
+        assert calls[1][0][0]["type"] == EventType.SCAN_COMPLETED.value
+        assert calls[2][0][0]["type"] == EventType.JOB_PROGRESS.value
+        assert calls[2][0][0]["payload"]["status"] == "complete"
 
     @pytest.mark.api
     async def test_job_progress_broadcast_payload_structure(self) -> None:
