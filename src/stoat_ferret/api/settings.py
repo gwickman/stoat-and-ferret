@@ -138,6 +138,12 @@ class Settings(BaseSettings):
         ge=1,
         description="Preview session time-to-live in seconds (default 1 hour)",
     )
+    preview_segment_duration: float = Field(
+        default=2.0,
+        ge=1.0,
+        le=6.0,
+        description="HLS segment duration in seconds for preview generation",
+    )
 
     # Security
     allowed_scan_roots: list[str] = Field(
