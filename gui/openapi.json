@@ -3785,7 +3785,7 @@
         ],
         "title": "ProxyStatus",
         "type": "string",
-        "description": "Status of a proxy file through its lifecycle.\n\nTransitions: pending -> generating -> ready, pending -> generating -> failed,\nready -> stale.\n"
+        "description": "Status of a proxy file through its lifecycle.\n\nTransitions: pending -> generating -> ready, pending -> generating -> failed,\nready -> stale."
       },
       "ProxyQuality": {
         "enum": [

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import logging
 import sqlite3
 from collections.abc import AsyncGenerator
@@ -271,7 +272,7 @@ def create_app(
                 "enum": [e.value for e in ProxyStatus],
                 "title": "ProxyStatus",
                 "type": "string",
-                "description": ProxyStatus.__doc__ or "",
+                "description": inspect.cleandoc(ProxyStatus.__doc__ or ""),
             },
         )
         schemas.setdefault(
@@ -280,7 +281,7 @@ def create_app(
                 "enum": [e.value for e in ProxyQuality],
                 "title": "ProxyQuality",
                 "type": "string",
-                "description": ProxyQuality.__doc__ or "",
+                "description": inspect.cleandoc(ProxyQuality.__doc__ or ""),
             },
         )
         return schema
