@@ -209,6 +209,9 @@ __marimo__/
 # Application logs
 logs/
 
+# Generated preview data
+data/previews/
+
 # Generated stubs (for verification, not committed)
 .generated-stubs/
 
