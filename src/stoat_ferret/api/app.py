@@ -62,6 +62,7 @@ from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
 from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
 from stoat_ferret.logging import configure_logging
+from stoat_ferret.preview.manager import PreviewManager
 
 logger = structlog.get_logger(__name__)
 
@@ -138,6 +139,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     app.state.proxy_service = proxy_service
 
+    # Create preview manager
+    from stoat_ferret.db.preview_repository import SQLitePreviewRepository
+    from stoat_ferret.preview.hls_generator import HLSGenerator
+
+    preview_repo = SQLitePreviewRepository(app.state.db)
+    hls_generator = HLSGenerator(
+        async_executor=RealAsyncFFmpegExecutor(),
+        output_base_dir=settings.preview_output_dir,
+    )
+    app.state.preview_manager = PreviewManager(
+        repository=preview_repo,
+        generator=hls_generator,
+        ws_manager=app.state.ws_manager,
+    )
+
     job_queue.register_handler(
         SCAN_JOB_TYPE,
         make_scan_handler(
@@ -184,6 +200,7 @@ def create_app(
     effect_registry: EffectRegistry | None = None,
     ffmpeg_executor: FFmpegExecutor | None = None,
     audit_logger: AuditLogger | None = None,
+    preview_manager: PreviewManager | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -205,6 +222,7 @@ def create_app(
         effect_registry: Optional effect registry for dependency injection.
         ffmpeg_executor: Optional FFmpeg executor for dependency injection.
         audit_logger: Optional audit logger for dependency injection.
+        preview_manager: Optional preview manager for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -246,6 +264,9 @@ def create_app(
 
     if ffmpeg_executor is not None:
         app.state.ffmpeg_executor = ffmpeg_executor
+
+    if preview_manager is not None:
+        app.state.preview_manager = preview_manager
 
     app.include_router(health.router)
     app.include_router(videos.router)
