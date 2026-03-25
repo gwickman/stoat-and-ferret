@@ -30,6 +30,9 @@ def start_server() -> subprocess.Popen[bytes]:
         "STOAT_API_HOST": HOST,
         "STOAT_API_PORT": str(PORT),
         "STOAT_LOG_LEVEL": "WARNING",
+        # Use a non-existent GUI path so conditional GUI routes are never
+        # registered, keeping the spec deterministic across environments.
+        "STOAT_GUI_STATIC_PATH": "__nonexistent__",
     }
     import os
 

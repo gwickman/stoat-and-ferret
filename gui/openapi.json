@@ -638,6 +638,41 @@
         "title": "EffectThumbnailRequest",
         "type": "object"
       },
+      "EffectTransitionResponse": {
+        "description": "Response schema for a successfully applied transition.",
+        "properties": {
+          "filter_string": {
+            "title": "Filter String",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "source_clip_id": {
+            "title": "Source Clip Id",
+            "type": "string"
+          },
+          "target_clip_id": {
+            "title": "Target Clip Id",
+            "type": "string"
+          },
+          "transition_type": {
+            "title": "Transition Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_clip_id",
+          "target_clip_id",
+          "transition_type",
+          "parameters",
+          "filter_string"
+        ],
+        "title": "EffectTransitionResponse",
+        "type": "object"
+      },
       "EffectUpdateRequest": {
         "description": "Request schema for updating an effect at a specific index.",
         "properties": {
@@ -1730,41 +1765,6 @@
         ],
         "title": "VideoSearchResponse",
         "type": "object"
-      },
-      "stoat_ferret__api__schemas__effect__TransitionResponse": {
-        "description": "Response schema for a successfully applied transition.",
-        "properties": {
-          "filter_string": {
-            "title": "Filter String",
-            "type": "string"
-          },
-          "parameters": {
-            "additionalProperties": true,
-            "title": "Parameters",
-            "type": "object"
-          },
-          "source_clip_id": {
-            "title": "Source Clip Id",
-            "type": "string"
-          },
-          "target_clip_id": {
-            "title": "Target Clip Id",
-            "type": "string"
-          },
-          "transition_type": {
-            "title": "Transition Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "source_clip_id",
-          "target_clip_id",
-          "transition_type",
-          "parameters",
-          "filter_string"
-        ],
-        "title": "TransitionResponse",
-        "type": "object"
       }
     }
   },
@@ -2805,7 +2805,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/stoat_ferret__api__schemas__effect__TransitionResponse"
+                  "$ref": "#/components/schemas/EffectTransitionResponse"
                 }
               }
             },
@@ -3728,61 +3728,6 @@
         "tags": [
           "videos"
         ]
-      }
-    },
-    "/gui": {
-      "get": {
-        "description": "Serve index.html for the bare /gui path.",
-        "operationId": "gui_root_gui_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Gui Root"
-      }
-    },
-    "/gui/{path}": {
-      "get": {
-        "description": "Serve static files or fall back to index.html for SPA routing.",
-        "operationId": "gui_catch_all_gui__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Gui Catch All"
       }
     },
     "/health/live": {

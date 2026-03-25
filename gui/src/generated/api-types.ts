@@ -1167,46 +1167,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/gui": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gui Root
-         * @description Serve index.html for the bare /gui path.
-         */
-        get: operations["gui_root_gui_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/gui/{path}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gui Catch All
-         * @description Serve static files or fall back to index.html for SPA routing.
-         */
-        get: operations["gui_catch_all_gui__path__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -1613,6 +1573,24 @@ export interface components {
             };
             /** Video Path */
             video_path: string;
+        };
+        /**
+         * EffectTransitionResponse
+         * @description Response schema for a successfully applied transition.
+         */
+        EffectTransitionResponse: {
+            /** Filter String */
+            filter_string: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Source Clip Id */
+            source_clip_id: string;
+            /** Target Clip Id */
+            target_clip_id: string;
+            /** Transition Type */
+            transition_type: string;
         };
         /**
          * EffectUpdateRequest
@@ -2188,24 +2166,6 @@ export interface components {
             total: number;
             /** Videos */
             videos: components["schemas"]["VideoResponse"][];
-        };
-        /**
-         * TransitionResponse
-         * @description Response schema for a successfully applied transition.
-         */
-        stoat_ferret__api__schemas__effect__TransitionResponse: {
-            /** Filter String */
-            filter_string: string;
-            /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
-            /** Source Clip Id */
-            source_clip_id: string;
-            /** Target Clip Id */
-            target_clip_id: string;
-            /** Transition Type */
-            transition_type: string;
         };
     };
     responses: never;
@@ -2905,7 +2865,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["stoat_ferret__api__schemas__effect__TransitionResponse"];
+                    "application/json": components["schemas"]["EffectTransitionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3485,57 +3445,6 @@ export interface operations {
             header?: never;
             path: {
                 video_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    gui_root_gui_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    gui_catch_all_gui__path__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                path: string;
             };
             cookie?: never;
         };

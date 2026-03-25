@@ -20,9 +20,9 @@ from stoat_ferret.api.schemas.effect import (
     EffectPreviewResponse,
     EffectResponse,
     EffectThumbnailRequest,
+    EffectTransitionResponse,
     EffectUpdateRequest,
     TransitionRequest,
-    TransitionResponse,
 )
 from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
@@ -589,7 +589,7 @@ async def delete_clip_effect(
 
 @router.post(
     "/projects/{project_id}/effects/transition",
-    response_model=TransitionResponse,
+    response_model=EffectTransitionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def apply_transition(
@@ -598,7 +598,7 @@ async def apply_transition(
     registry: RegistryDep,
     project_repo: ProjectRepoDep,
     clip_repo: ClipRepoDep,
-) -> TransitionResponse:
+) -> EffectTransitionResponse:
     """Apply a transition between two adjacent clips.
 
     Validates that both clips exist and are adjacent in the project timeline,
@@ -737,7 +737,7 @@ async def apply_transition(
         transition_type=request.transition_type,
     )
 
-    return TransitionResponse(
+    return EffectTransitionResponse(
         source_clip_id=request.source_clip_id,
         target_clip_id=request.target_clip_id,
         transition_type=request.transition_type,

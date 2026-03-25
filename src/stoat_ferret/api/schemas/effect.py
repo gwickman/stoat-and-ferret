@@ -88,7 +88,7 @@ class TransitionRequest(BaseModel):
     parameters: dict[str, Any]
 
 
-class TransitionResponse(BaseModel):
+class EffectTransitionResponse(BaseModel):
     """Response schema for a successfully applied transition."""
 
     source_clip_id: str
