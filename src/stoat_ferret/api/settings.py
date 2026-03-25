@@ -144,6 +144,12 @@ class Settings(BaseSettings):
         le=6.0,
         description="HLS segment duration in seconds for preview generation",
     )
+    preview_cache_max_sessions: int = Field(
+        default=5,
+        ge=1,
+        le=100,
+        description="Maximum number of concurrent preview sessions",
+    )
 
     # Security
     allowed_scan_roots: list[str] = Field(

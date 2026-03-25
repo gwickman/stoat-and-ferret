@@ -120,10 +120,14 @@ class TestEventTypes:
         assert EventType.AUDIO_MIX_CHANGED.value == "audio_mix_changed"
         assert EventType.TRANSITION_APPLIED.value == "transition_applied"
         assert EventType.JOB_PROGRESS.value == "job_progress"
+        assert EventType.PREVIEW_GENERATING.value == "preview.generating"
+        assert EventType.PREVIEW_READY.value == "preview.ready"
+        assert EventType.PREVIEW_SEEKING.value == "preview.seeking"
+        assert EventType.PREVIEW_ERROR.value == "preview.error"
 
     def test_event_type_count(self) -> None:
-        """EventType should have exactly 10 members."""
-        assert len(EventType) == 10
+        """EventType should have exactly 14 members."""
+        assert len(EventType) == 14
 
     def test_build_event_schema(self) -> None:
         """build_event should return dict with type, payload, correlation_id, timestamp."""

@@ -22,6 +22,10 @@ class EventType(str, Enum):
     AUDIO_MIX_CHANGED = "audio_mix_changed"
     TRANSITION_APPLIED = "transition_applied"
     JOB_PROGRESS = "job_progress"
+    PREVIEW_GENERATING = "preview.generating"
+    PREVIEW_READY = "preview.ready"
+    PREVIEW_SEEKING = "preview.seeking"
+    PREVIEW_ERROR = "preview.error"
 
 
 def build_event(
