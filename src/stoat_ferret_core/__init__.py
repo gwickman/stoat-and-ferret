@@ -72,6 +72,7 @@ try:
         LayoutPreset,
         LayoutSpec,
         Position,
+        PreviewQuality,
         SanitizationError,
         SpeedControl,
         TimeRange,
@@ -90,7 +91,10 @@ try:
         concat_filter,
         escape_filter_text,
         health_check,
+        is_expensive_filter,
         scale_filter,
+        simplify_filter_chain,
+        simplify_filter_graph,
         validate_audio_codec,
         validate_clip,
         validate_clips,
@@ -139,6 +143,10 @@ except ImportError:
     Filter = _not_built  # type: ignore[misc,assignment]
     FilterChain = _not_built  # type: ignore[misc,assignment]
     FilterGraph = _not_built  # type: ignore[misc,assignment]
+    PreviewQuality = _not_built  # type: ignore[misc,assignment]
+    is_expensive_filter = _not_built
+    simplify_filter_chain = _not_built
+    simplify_filter_graph = _not_built
     LayoutPosition = _not_built  # type: ignore[misc,assignment]
     LayoutPreset = _not_built  # type: ignore[misc,assignment]
     LayoutSpec = _not_built  # type: ignore[misc,assignment]
@@ -215,6 +223,11 @@ __all__ = [
     # Composition functions
     "build_overlay_filter",
     "build_scale_for_layout",
+    # Preview types and functions
+    "PreviewQuality",
+    "is_expensive_filter",
+    "simplify_filter_chain",
+    "simplify_filter_graph",
     # Filter helpers
     "scale_filter",
     "concat_filter",

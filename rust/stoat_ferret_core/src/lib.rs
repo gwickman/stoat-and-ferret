@@ -12,6 +12,7 @@
 //! - [`layout`] - Layout positioning for composition features
 //! - [`compose`] - Overlay and scale filter builders for multi-stream composition
 //! - [`batch`] - Batch render progress aggregation
+//! - [`preview`] - Preview filter graph simplification
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -21,6 +22,7 @@ pub mod clip;
 pub mod compose;
 pub mod ffmpeg;
 pub mod layout;
+pub mod preview;
 pub mod sanitize;
 pub mod timeline;
 
@@ -121,6 +123,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register batch progress types and functions
     batch::register(m)?;
+
+    // Register preview types and functions
+    preview::register(m)?;
 
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
