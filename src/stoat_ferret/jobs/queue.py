@@ -145,9 +145,11 @@ class InMemoryJobQueue:
         self._outcomes: dict[str, JobOutcome] = {}
         self._default_outcome: JobOutcome = JobOutcome.SUCCESS
         self._results: dict[str, Any] = {}
-        self._handlers: dict[str, JobHandler] = {}
+        self._handlers: dict[str, tuple[JobHandler, float | None]] = {}
 
-    def register_handler(self, job_type: str, handler: JobHandler) -> None:
+    def register_handler(
+        self, job_type: str, handler: JobHandler, *, timeout: float | None = None
+    ) -> None:
         """Register a handler for a job type.
 
         When a handler is registered, submit() executes it synchronously
@@ -156,8 +158,10 @@ class InMemoryJobQueue:
         Args:
             job_type: The job type identifier.
             handler: Async callable that processes the job payload.
+            timeout: Optional per-job-type timeout in seconds. Unused in
+                InMemoryJobQueue (synchronous execution) but stored for parity.
         """
-        self._handlers[job_type] = handler
+        self._handlers[job_type] = (handler, timeout)
 
     def configure_outcome(
         self,
@@ -219,8 +223,9 @@ class InMemoryJobQueue:
         job_id = str(uuid.uuid4())
         entry = _JobEntry(job_id=job_id, job_type=job_type, payload=payload)
 
-        handler = self._handlers.get(job_type)
-        if handler is not None:
+        handler_entry = self._handlers.get(job_type)
+        if handler_entry is not None:
+            handler = handler_entry[0]
             try:
                 result_value = await handler(job_type, payload)
                 entry.result = JobResult(
@@ -334,17 +339,21 @@ class AsyncioJobQueue:
         """
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._jobs: dict[str, _AsyncJobEntry] = {}
-        self._handlers: dict[str, JobHandler] = {}
+        self._handlers: dict[str, tuple[JobHandler, float | None]] = {}
         self._timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
 
-    def register_handler(self, job_type: str, handler: JobHandler) -> None:
+    def register_handler(
+        self, job_type: str, handler: JobHandler, *, timeout: float | None = None
+    ) -> None:
         """Register a handler for a job type.
 
         Args:
             job_type: The job type identifier.
             handler: Async callable that processes the job payload.
+            timeout: Optional per-job-type timeout in seconds.
+                Overrides the queue-level default when set.
         """
-        self._handlers[job_type] = handler
+        self._handlers[job_type] = (handler, timeout)
 
     def set_progress(self, job_id: str, value: float) -> None:
         """Update progress for a running job.
@@ -446,8 +455,8 @@ class AsyncioJobQueue:
                     self._queue.task_done()
                     continue
 
-                handler = self._handlers.get(entry.job_type)
-                if handler is None:
+                handler_entry = self._handlers.get(entry.job_type)
+                if handler_entry is None:
                     entry.status = JobStatus.FAILED
                     entry.error = f"No handler registered for job type: {entry.job_type}"
                     logger.error(
@@ -457,6 +466,9 @@ class AsyncioJobQueue:
                     )
                     self._queue.task_done()
                     continue
+
+                handler, job_timeout = handler_entry
+                effective_timeout = job_timeout if job_timeout is not None else self._timeout
 
                 entry.status = JobStatus.RUNNING
                 logger.info("job_started", job_id=job_id, job_type=entry.job_type)
@@ -471,7 +483,7 @@ class AsyncioJobQueue:
                 try:
                     result = await asyncio.wait_for(
                         handler(entry.job_type, payload),
-                        timeout=self._timeout,
+                        timeout=effective_timeout,
                     )
                     if entry.cancel_event.is_set():
                         entry.status = JobStatus.CANCELLED
@@ -483,12 +495,12 @@ class AsyncioJobQueue:
                         logger.info("job_completed", job_id=job_id, job_type=entry.job_type)
                 except asyncio.TimeoutError:
                     entry.status = JobStatus.TIMEOUT
-                    entry.error = f"Job timed out after {self._timeout}s"
+                    entry.error = f"Job timed out after {effective_timeout}s"
                     logger.warning(
                         "job_timeout",
                         job_id=job_id,
                         job_type=entry.job_type,
-                        timeout=self._timeout,
+                        timeout=effective_timeout,
                     )
                 except Exception as exc:
                     entry.status = JobStatus.FAILED

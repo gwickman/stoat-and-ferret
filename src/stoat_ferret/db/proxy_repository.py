@@ -142,6 +142,24 @@ class AsyncProxyRepository(Protocol):
         """
         ...
 
+    async def total_size_bytes(self) -> int:
+        """Get the total size of all proxy files in bytes.
+
+        Returns:
+            Sum of file_size_bytes across all proxy records.
+        """
+        ...
+
+    async def get_oldest_accessed(self) -> ProxyFile | None:
+        """Get the proxy file with the oldest last_accessed_at timestamp.
+
+        Only considers proxies with status 'ready'.
+
+        Returns:
+            The oldest-accessed ready proxy, or None if no ready proxies exist.
+        """
+        ...
+
 
 class SQLiteProxyRepository:
     """Async SQLite implementation of the proxy repository."""
@@ -265,6 +283,25 @@ class SQLiteProxyRepository:
         result: int = row[0]
         return result
 
+    async def total_size_bytes(self) -> int:
+        """Get the total size of all proxy files in bytes."""
+        cursor = await self._conn.execute(
+            "SELECT COALESCE(SUM(file_size_bytes), 0) FROM proxy_files"
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        result: int = row[0]
+        return result
+
+    async def get_oldest_accessed(self) -> ProxyFile | None:
+        """Get the oldest-accessed ready proxy file."""
+        cursor = await self._conn.execute(
+            "SELECT * FROM proxy_files WHERE status = ? ORDER BY last_accessed_at ASC LIMIT 1",
+            (ProxyStatus.READY.value,),
+        )
+        row = await cursor.fetchone()
+        return self._row_to_proxy(row) if row else None
+
     def _row_to_proxy(self, row: aiosqlite.Row) -> ProxyFile:
         """Convert a database row to a ProxyFile.
 
@@ -367,3 +404,15 @@ class InMemoryProxyRepository:
     async def count(self) -> int:
         """Count all proxy file records."""
         return len(self._proxies)
+
+    async def total_size_bytes(self) -> int:
+        """Get the total size of all proxy files in bytes."""
+        return sum(p.file_size_bytes for p in self._proxies.values())
+
+    async def get_oldest_accessed(self) -> ProxyFile | None:
+        """Get the oldest-accessed ready proxy file."""
+        ready = [p for p in self._proxies.values() if p.status == ProxyStatus.READY]
+        if not ready:
+            return None
+        oldest = min(ready, key=lambda p: p.last_accessed_at)
+        return copy.deepcopy(oldest)

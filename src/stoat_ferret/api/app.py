@@ -33,6 +33,11 @@ from stoat_ferret.api.routers import (
     videos,
 )
 from stoat_ferret.api.routers.ws import websocket_endpoint
+from stoat_ferret.api.services.proxy_service import (
+    PROXY_JOB_TYPE,
+    ProxyService,
+    make_proxy_handler,
+)
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.api.settings import get_settings
@@ -51,6 +56,7 @@ from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.db.timeline_repository import AsyncTimelineRepository
 from stoat_ferret.db.version_repository import AsyncVersionRepository
 from stoat_ferret.effects.registry import EffectRegistry
+from stoat_ferret.ffmpeg.async_executor import RealAsyncFFmpegExecutor
 from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
 from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
@@ -122,6 +128,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         SCAN_JOB_TYPE,
         make_scan_handler(repo, thumbnail_service, app.state.ws_manager, queue=job_queue),
     )
+
+    # Create proxy service and register proxy job handler with 1800s timeout
+    proxy_service = ProxyService(
+        proxy_repository=app.state.proxy_repository,
+        async_executor=RealAsyncFFmpegExecutor(),
+        ws_manager=app.state.ws_manager,
+        job_queue=job_queue,
+        proxy_dir=settings.proxy_output_dir,
+        max_storage_bytes=settings.proxy_max_storage_bytes,
+        cleanup_threshold=settings.proxy_cleanup_threshold,
+    )
+    app.state.proxy_service = proxy_service
+    job_queue.register_handler(
+        PROXY_JOB_TYPE,
+        make_proxy_handler(proxy_service),
+        timeout=1800.0,
+    )
+
     app.state.job_queue = job_queue
     worker_task = asyncio.create_task(job_queue.process_jobs())
     logger.info("job_worker_started")
