@@ -51,6 +51,35 @@ export default function ScanModal({
     }
   }, [wsProgress, jobId, onScanComplete])
 
+  // Fallback: poll job status every 2s while scanning.
+  // Covers cases where rapid WebSocket messages get lost to React batching.
+  useEffect(() => {
+    if (!jobId || scanStatus !== 'scanning') return
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/jobs/${jobId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.status === 'complete' && !completedRef.current) {
+          completedRef.current = true
+          setScanStatus('complete')
+          setProgress(1.0)
+          onScanComplete()
+        } else if (data.status === 'failed') {
+          setScanStatus('error')
+          setErrorMessage(data.error ?? 'Scan failed')
+        } else if (data.status === 'cancelled') {
+          setScanStatus('cancelled')
+        }
+      } catch {
+        // Ignore poll errors; WebSocket is the primary path
+      }
+    }, 2000)
+
+    return () => clearInterval(timer)
+  }, [jobId, scanStatus, onScanComplete])
+
   const resetState = useCallback(() => {
     setScanStatus('idle')
     setDirectory('')

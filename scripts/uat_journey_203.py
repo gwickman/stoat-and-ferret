@@ -409,6 +409,11 @@ def run_timeline_sub_journey(
         if not scroll_area.is_visible():
             raise AssertionError("Canvas scroll area is not visible")
 
+        # Zoom in to ensure content overflows the viewport (required for scroll)
+        for _ in range(3):
+            page.click('[data-testid="zoom-in"]')
+        page.wait_for_timeout(500)
+
         # Scroll horizontally
         scroll_area.evaluate("el => el.scrollLeft = 100")
         page.wait_for_timeout(300)
