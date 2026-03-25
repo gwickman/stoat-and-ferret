@@ -1969,3 +1969,15 @@ def simplify_filter_chain(chain: FilterChain, quality: PreviewQuality) -> Filter
 def simplify_filter_graph(graph: FilterGraph, quality: PreviewQuality) -> FilterGraph:
     """Simplifies a filter graph by simplifying each chain based on quality."""
     ...
+
+def estimate_filter_cost(graph: FilterGraph) -> float:
+    """Estimates the computational cost of a filter graph as a score in [0.0, 1.0]."""
+    ...
+
+def select_preview_quality(cost: float) -> PreviewQuality:
+    """Selects preview quality based on estimated cost score."""
+    ...
+
+def inject_preview_scale(graph: FilterGraph, width: int, height: int) -> FilterGraph:
+    """Appends a scale filter with the given dimensions to the filter graph."""
+    ...

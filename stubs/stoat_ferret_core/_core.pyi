@@ -1998,3 +1998,47 @@ def simplify_filter_graph(graph: FilterGraph, quality: PreviewQuality) -> Filter
         A simplified filter graph.
     """
     ...
+
+def estimate_filter_cost(graph: FilterGraph) -> float:
+    """Estimates the computational cost of a filter graph as a score in [0.0, 1.0].
+
+    Uses weighted filter counts normalized via sigmoid. Expensive filters
+    contribute more to the score. Empty graphs return 0.0.
+
+    Args:
+        graph: The filter graph to estimate cost for.
+
+    Returns:
+        A cost score between 0.0 and 1.0 inclusive.
+    """
+    ...
+
+def select_preview_quality(cost: float) -> PreviewQuality:
+    """Selects preview quality based on estimated cost score.
+
+    - Cost > 0.7: Draft (fastest preview)
+    - Cost 0.3-0.7: Medium (balanced)
+    - Cost < 0.3: High (full quality)
+
+    Args:
+        cost: A cost score in [0.0, 1.0].
+
+    Returns:
+        The recommended PreviewQuality level.
+    """
+    ...
+
+def inject_preview_scale(graph: FilterGraph, width: int, height: int) -> FilterGraph:
+    """Appends a scale filter with the given dimensions to the filter graph.
+
+    The scale filter is added as a new chain at the end of the graph.
+
+    Args:
+        graph: The filter graph to inject scale into.
+        width: Target width in pixels.
+        height: Target height in pixels.
+
+    Returns:
+        A new FilterGraph with the scale filter appended.
+    """
+    ...

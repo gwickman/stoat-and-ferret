@@ -90,9 +90,12 @@ try:
         calculate_timeline_duration,
         concat_filter,
         escape_filter_text,
+        estimate_filter_cost,
         health_check,
+        inject_preview_scale,
         is_expensive_filter,
         scale_filter,
+        select_preview_quality,
         simplify_filter_chain,
         simplify_filter_graph,
         validate_audio_codec,
@@ -145,6 +148,9 @@ except ImportError:
     FilterGraph = _not_built  # type: ignore[misc,assignment]
     PreviewQuality = _not_built  # type: ignore[misc,assignment]
     is_expensive_filter = _not_built
+    estimate_filter_cost = _not_built
+    select_preview_quality = _not_built
+    inject_preview_scale = _not_built
     simplify_filter_chain = _not_built
     simplify_filter_graph = _not_built
     LayoutPosition = _not_built  # type: ignore[misc,assignment]
@@ -226,6 +232,9 @@ __all__ = [
     # Preview types and functions
     "PreviewQuality",
     "is_expensive_filter",
+    "estimate_filter_cost",
+    "select_preview_quality",
+    "inject_preview_scale",
     "simplify_filter_chain",
     "simplify_filter_graph",
     # Filter helpers
