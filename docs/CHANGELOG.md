@@ -4,6 +4,30 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v023] - 2026-03-25
+
+Persistence, Frontend Modernisation, and CI UAT. Persistent batch state and version retention improve resilience; WebSocket push replaces HTTP polling; OpenAPI codegen pipeline eliminates hand-authored TypeScript types; effect preview thumbnails added; UAT harness wired into CI to block merges on browser-level regressions.
+
+### Added
+
+- **Batch SQLite Persistence** — batch render state persisted to SQLite via Protocol + SQLite + InMemory repository pattern; jobs survive server restarts (BL-143, #183)
+- **Version Retention Policy** — configurable `STOAT_VERSION_RETENTION_COUNT` env var for keep-last-N pruning per project (BL-144, #184)
+- **WebSocket Job Progress** — `JOB_PROGRESS` event type with async broadcast from scan handler and `useJobProgress` frontend hook; replaces HTTP polling in ScanModal (BL-141, #185)
+- **OpenAPI-to-TypeScript Codegen Pipeline** — Python spec export (`scripts/export_openapi.py`), `openapi-typescript` codegen, CI drift detection for both JSON and TypeScript layers (BL-139, #186)
+- **Effect Preview Thumbnails** — `POST /api/v1/effects/preview/thumbnail` endpoint with async FFmpeg processing, EffectsPage thumbnail display with 500ms debounce (BL-086, #188)
+- **UAT CI Pipeline** — GitHub Actions `uat` job with Playwright install, server boot, 4 UAT journeys headless, artifact upload, `dorny/paths-filter` scoping, 5-min timeout, Playwright browser caching (BL-149, #189)
+
+### Changed
+
+- **Frontend Type Migration** — 9 hand-authored TypeScript types replaced with generated OpenAPI imports across 34 files; convenience re-export layer (`generated/types.ts`); deleted unused `types/timeline.ts` (BL-139, #187)
+- **`ci-status` gate** updated to include UAT job
+
+### Fixed
+
+- **WebSocket message-loss race condition** — broadcast reordering in `scan.py` ensures critical messages arrive last; ScanModal polling fallback added as safety net (discovered during CI UAT integration)
+- **Headless scroll assertion** — journey 203 zoom fix for flaky headless Playwright assertion
+- **TimelinePage test failures** — 3 pre-existing test failures fixed (undefined `projects` guard, shared Response mock)
+
 ## [v22.1] - 2026-03-23
 
 UAT Bugfix Round. Post-v022 bugfix pass resolving issues discovered during UAT journey execution. 24 fixes across application bugs, test infrastructure, and observability. All 4 UAT journeys now passing.
