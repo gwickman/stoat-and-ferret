@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from stoat_ferret.api.middleware.correlation import get_correlation_id
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.db.models import (
@@ -299,6 +300,14 @@ class PreviewManager:
         )
         await self._repository.add(session)
 
+        logger.info(
+            "preview_session_created",
+            session_id=session.id,
+            project_id=project_id,
+            quality=quality_level.value,
+            correlation_id=get_correlation_id(),
+        )
+
         # Record metrics
         preview_sessions_total.labels(quality=quality_level.value).inc()
         preview_sessions_active.inc()
@@ -306,6 +315,13 @@ class PreviewManager:
         # Transition to generating and broadcast
         await self._transition(session, PreviewStatus.GENERATING)
         await self._broadcast_event(EventType.PREVIEW_GENERATING, session.id)
+
+        logger.info(
+            "preview_generation_started",
+            session_id=session.id,
+            input_path=input_path,
+            correlation_id=get_correlation_id(),
+        )
 
         # Set up cancellation
         cancel_event = asyncio.Event()
@@ -365,10 +381,29 @@ class PreviewManager:
                 quality=session.quality_level.value,
             ).observe(elapsed)
 
+            segment_count = (
+                sum(1 for f in output_dir.iterdir() if f.suffix == ".ts")
+                if output_dir.is_dir()
+                else 0
+            )
+            logger.info(
+                "preview_segment_generated",
+                session_id=session_id,
+                segment_count=segment_count,
+                duration_seconds=round(elapsed, 2),
+                correlation_id=get_correlation_id(),
+            )
+
             manifest_path = str(output_dir / "manifest.m3u8")
             session.manifest_path = manifest_path
             await self._transition(session, PreviewStatus.READY)
             await self._broadcast_event(EventType.PREVIEW_READY, session.id)
+
+            logger.info(
+                "preview_session_ready",
+                session_id=session_id,
+                correlation_id=get_correlation_id(),
+            )
 
         except Exception as exc:
             # Don't set error on cancelled sessions
@@ -390,6 +425,7 @@ class PreviewManager:
                 "preview_generation_failed",
                 session_id=session_id,
                 error=error_msg,
+                correlation_id=get_correlation_id(),
             )
         finally:
             self._generation_tasks.pop(session_id, None)
@@ -423,6 +459,12 @@ class PreviewManager:
             SessionExpiredError: If the session has expired.
             InvalidTransitionError: If the session is not in a seekable state.
         """
+        logger.info(
+            "preview_seek_requested",
+            session_id=session_id,
+            correlation_id=get_correlation_id(),
+        )
+
         lock = self._get_lock(session_id)
         async with lock:
             session = await self._repository.get(session_id)
@@ -545,6 +587,7 @@ class PreviewManager:
                 "preview_seek_generation_failed",
                 session_id=session_id,
                 error=error_msg,
+                correlation_id=get_correlation_id(),
             )
         finally:
             self._generation_tasks.pop(session_id, None)
@@ -601,5 +644,9 @@ class PreviewManager:
         for session in expired:
             await self._cleanup_session(session)
             await self._repository.delete(session.id)
-            logger.info("preview_session_expired_cleanup", session_id=session.id)
+            logger.info(
+                "preview_session_expired",
+                session_id=session.id,
+                correlation_id=get_correlation_id(),
+            )
         return len(expired)

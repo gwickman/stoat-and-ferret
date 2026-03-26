@@ -366,7 +366,7 @@ class ProxyService:
             proxy_files_total.labels(status="ready").dec()
             proxy_files_total.labels(status="stale").inc()
             logger.info(
-                "proxy_marked_stale",
+                "proxy_stale_detected",
                 proxy_id=proxy_id,
                 video_id=proxy.source_video_id,
             )
@@ -390,7 +390,7 @@ class ProxyService:
             proxy_evictions_total.labels(reason="lru_quota").inc()
 
             logger.info(
-                "proxy_evicted",
+                "proxy_cache_eviction",
                 proxy_id=oldest.id,
                 video_id=oldest.source_video_id,
                 file_size_bytes=oldest.file_size_bytes,

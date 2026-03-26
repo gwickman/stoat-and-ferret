@@ -216,7 +216,7 @@ class ThumbnailService:
             "thumbnail_generated",
             video_id=video_id,
             output_path=str(output_path),
-            duration_seconds=result.duration_seconds,
+            duration_ms=round(result.duration_seconds * 1000, 1),
         )
         return str(output_path)
 
@@ -449,7 +449,7 @@ class ThumbnailService:
             video_id=video_id,
             frame_count=frame_count,
             strip_size_bytes=strip_size_bytes,
-            generation_time=round(generation_time, 2),
+            duration_ms=round(generation_time * 1000, 1),
         )
 
         # Send completion progress event

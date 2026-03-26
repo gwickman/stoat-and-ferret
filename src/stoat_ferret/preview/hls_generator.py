@@ -212,6 +212,7 @@ class HLSGenerator:
             session_id=session_id,
             input_path=input_path,
             segment_duration=segment_duration,
+            ffmpeg_command=" ".join(args),
         )
 
         # Wrap progress_callback to convert ProgressInfo -> percentage
