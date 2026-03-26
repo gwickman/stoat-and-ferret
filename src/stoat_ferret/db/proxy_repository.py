@@ -150,6 +150,17 @@ class AsyncProxyRepository(Protocol):
         """
         ...
 
+    async def count_by_status(self, status: ProxyStatus) -> int:
+        """Count proxy file records with a given status.
+
+        Args:
+            status: The proxy status to filter by.
+
+        Returns:
+            Number of proxy files matching the status.
+        """
+        ...
+
     async def get_oldest_accessed(self) -> ProxyFile | None:
         """Get the proxy file with the oldest last_accessed_at timestamp.
 
@@ -293,6 +304,17 @@ class SQLiteProxyRepository:
         result: int = row[0]
         return result
 
+    async def count_by_status(self, status: ProxyStatus) -> int:
+        """Count proxy file records with a given status."""
+        cursor = await self._conn.execute(
+            "SELECT COUNT(*) FROM proxy_files WHERE status = ?",
+            (status.value,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        result: int = row[0]
+        return result
+
     async def get_oldest_accessed(self) -> ProxyFile | None:
         """Get the oldest-accessed ready proxy file."""
         cursor = await self._conn.execute(
@@ -408,6 +430,10 @@ class InMemoryProxyRepository:
     async def total_size_bytes(self) -> int:
         """Get the total size of all proxy files in bytes."""
         return sum(p.file_size_bytes for p in self._proxies.values())
+
+    async def count_by_status(self, status: ProxyStatus) -> int:
+        """Count proxy file records with a given status."""
+        return sum(1 for p in self._proxies.values() if p.status == status)
 
     async def get_oldest_accessed(self) -> ProxyFile | None:
         """Get the oldest-accessed ready proxy file."""
