@@ -2335,6 +2335,148 @@
         }
       }
     },
+    "/api/v1/videos/{video_id}/thumbnails/strip": {
+      "post": {
+        "tags": [
+          "thumbnails"
+        ],
+        "summary": "Generate Strip",
+        "description": "Queue thumbnail strip generation for a video.\n\nArgs:\n    video_id: The source video ID.\n    request: The FastAPI request object.\n    background_tasks: FastAPI background task manager.\n    video_repo: Video repository dependency.\n    thumbnail_service: Thumbnail service dependency.\n    body: Optional generation parameters.\n\nReturns:\n    Response with strip_id and pending status.\n\nRaises:\n    HTTPException: 404 if video not found.",
+        "operationId": "generate_strip_api_v1_videos__video_id__thumbnails_strip_post",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ThumbnailStripGenerateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThumbnailStripGenerateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "thumbnails"
+        ],
+        "summary": "Get Strip Metadata",
+        "description": "Get metadata for a video's thumbnail strip.\n\nArgs:\n    video_id: The source video ID.\n    thumbnail_service: Thumbnail service dependency.\n\nReturns:\n    Strip metadata including frame count, dimensions, columns, and rows.\n\nRaises:\n    HTTPException: 404 if no strip exists for this video.",
+        "operationId": "get_strip_metadata_api_v1_videos__video_id__thumbnails_strip_get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThumbnailStripMetadataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/{video_id}/thumbnails/strip.jpg": {
+      "get": {
+        "tags": [
+          "thumbnails"
+        ],
+        "summary": "Get Strip Image",
+        "description": "Serve the thumbnail strip sprite sheet as a JPEG image.\n\nArgs:\n    video_id: The source video ID.\n    thumbnail_service: Thumbnail service dependency.\n\nReturns:\n    JPEG image response.\n\nRaises:\n    HTTPException: 404 if no strip exists or file not ready.",
+        "operationId": "get_strip_image_api_v1_videos__video_id__thumbnails_strip_jpg_get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{project_id}/versions": {
       "get": {
         "tags": [
@@ -2488,6 +2630,61 @@
                 "schema": {
                   "$ref": "#/components/schemas/RestoreResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gui": {
+      "get": {
+        "summary": "Gui Root",
+        "description": "Serve index.html for the bare /gui path.",
+        "operationId": "gui_root_gui_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gui/{path}": {
+      "get": {
+        "summary": "Gui Catch All",
+        "description": "Serve static files or fall back to index.html for SPA routing.",
+        "operationId": "gui_catch_all_gui__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -3899,6 +4096,124 @@
         ],
         "title": "ScanRequest",
         "description": "Directory scan request.\n\nSpecifies the directory to scan and whether to recurse into subdirectories."
+      },
+      "ThumbnailStripGenerateRequest": {
+        "properties": {
+          "interval_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Seconds",
+            "description": "Seconds between frames (default: service default)"
+          },
+          "frame_width": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Width",
+            "description": "Width of each frame in pixels"
+          },
+          "frame_height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Height",
+            "description": "Height of each frame in pixels"
+          }
+        },
+        "type": "object",
+        "title": "ThumbnailStripGenerateRequest",
+        "description": "Request body for thumbnail strip generation.\n\nAll fields are optional; the service uses defaults when omitted."
+      },
+      "ThumbnailStripGenerateResponse": {
+        "properties": {
+          "strip_id": {
+            "type": "string",
+            "title": "Strip Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strip_id",
+          "status"
+        ],
+        "title": "ThumbnailStripGenerateResponse",
+        "description": "Response returned when strip generation is queued."
+      },
+      "ThumbnailStripMetadataResponse": {
+        "properties": {
+          "strip_id": {
+            "type": "string",
+            "title": "Strip Id"
+          },
+          "video_id": {
+            "type": "string",
+            "title": "Video Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "frame_count": {
+            "type": "integer",
+            "title": "Frame Count"
+          },
+          "frame_width": {
+            "type": "integer",
+            "title": "Frame Width"
+          },
+          "frame_height": {
+            "type": "integer",
+            "title": "Frame Height"
+          },
+          "interval_seconds": {
+            "type": "number",
+            "title": "Interval Seconds"
+          },
+          "columns": {
+            "type": "integer",
+            "title": "Columns"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strip_id",
+          "video_id",
+          "status",
+          "frame_count",
+          "frame_width",
+          "frame_height",
+          "interval_seconds",
+          "columns",
+          "rows"
+        ],
+        "title": "ThumbnailStripMetadataResponse",
+        "description": "Metadata for a generated thumbnail strip sprite sheet.\n\nIncludes columns and rows so the client can calculate\nframe coordinates within the sprite sheet."
       },
       "TimelineClipCreate": {
         "properties": {
