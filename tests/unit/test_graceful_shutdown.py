@@ -267,38 +267,26 @@ class TestGracefulShutdown:
 
     async def test_cancel_all_logs_lifecycle_events(self, tmp_path: Path) -> None:
         """FR-006: preview_shutdown_started and preview_shutdown_complete events logged."""
-        import structlog
-
-        captured: list[dict[str, object]] = []
-
-        def capture_log(
-            _logger: object, _name: str, event_dict: dict[str, object]
-        ) -> dict[str, object]:
-            captured.append(event_dict.copy())
-            return event_dict
-
-        structlog.configure(
-            processors=[capture_log, structlog.dev.ConsoleRenderer()],
-            wrapper_class=structlog.BoundLogger,
-            logger_factory=structlog.PrintLoggerFactory(),
+        manager, _repo, _gen, _ws = _make_manager(
+            output_base_dir=str(tmp_path / "previews"),
         )
 
-        try:
-            manager, _repo, _gen, _ws = _make_manager(
-                output_base_dir=str(tmp_path / "previews"),
-            )
+        with patch("stoat_ferret.preview.manager.logger") as mock_logger:
             await manager.cancel_all()
-        finally:
-            # Reset structlog config
-            structlog.reset_defaults()
 
-        events = [c.get("event") for c in captured]
+        # Extract all info() call event names
+        call_args_list = mock_logger.info.call_args_list
+        events = [
+            call.args[0] if call.args else call.kwargs.get("event") for call in call_args_list
+        ]
         assert "preview_shutdown_started" in events
         assert "preview_shutdown_complete" in events
 
-        # Verify timing is included in completion event
-        complete_event = next(c for c in captured if c.get("event") == "preview_shutdown_complete")
-        assert "duration_seconds" in complete_event
+        # Verify timing is in the completion call
+        complete_call = next(
+            c for c in call_args_list if c.args and c.args[0] == "preview_shutdown_complete"
+        )
+        assert "duration_seconds" in complete_call.kwargs
 
     async def test_cancel_all_completes_within_timeout(self) -> None:
         """NFR-001: Shutdown completes within 10 seconds.
