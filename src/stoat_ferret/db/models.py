@@ -101,6 +101,57 @@ class PreviewSession:
         return str(uuid.uuid4())
 
 
+class ThumbnailStripStatus(str, Enum):
+    """Status of a thumbnail strip through its lifecycle.
+
+    Transitions: pending -> generating -> ready, any -> error.
+    """
+
+    PENDING = "pending"
+    GENERATING = "generating"
+    READY = "ready"
+    ERROR = "error"
+
+
+@dataclass
+class ThumbnailStrip:
+    """Thumbnail strip sprite sheet metadata.
+
+    Represents an NxM grid sprite sheet generated from a video using
+    FFmpeg fps+scale+tile filters for timeline seek tooltips.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        video_id: FK to the source video.
+        status: Current lifecycle status.
+        file_path: Path to the sprite sheet JPEG (None until ready).
+        frame_count: Number of frames in the sprite sheet.
+        frame_width: Width of each frame in pixels.
+        frame_height: Height of each frame in pixels.
+        interval_seconds: Seconds between extracted frames.
+        columns: Number of columns in the grid.
+        rows: Number of rows in the grid.
+        created_at: When the strip was created.
+    """
+
+    id: str
+    video_id: str
+    status: ThumbnailStripStatus
+    created_at: datetime
+    file_path: str | None = None
+    frame_count: int = 0
+    frame_width: int = 160
+    frame_height: int = 90
+    interval_seconds: float = 5.0
+    columns: int = 10
+    rows: int = 0
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a thumbnail strip."""
+        return str(uuid.uuid4())
+
+
 class ProxyStatus(str, Enum):
     """Status of a proxy file through its lifecycle.
 

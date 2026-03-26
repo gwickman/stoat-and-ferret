@@ -107,6 +107,13 @@ class Settings(BaseSettings):
         description="Keep-last-N version retention per project. None retains all versions.",
     )
 
+    # Thumbnail strips
+    thumbnail_strip_interval: float = Field(
+        default=5.0,
+        ge=0.5,
+        description="Seconds between frames in thumbnail strip sprite sheets",
+    )
+
     # Proxy storage
     proxy_output_dir: str = Field(
         default="data/proxies",
