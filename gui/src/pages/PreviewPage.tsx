@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { usePreviewStore } from '../stores/previewStore'
 import { useProjectStore } from '../stores/projectStore'
+
+const PreviewPlayer = lazy(() => import('../components/PreviewPlayer'))
 
 export default function PreviewPage() {
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId)
@@ -83,9 +85,18 @@ export default function PreviewPage() {
       )}
 
       {status === 'ready' && sessionId && (
-        <div data-testid="player-placeholder" className="flex h-64 items-center justify-center rounded border border-gray-700 bg-gray-900">
-          <p className="text-gray-500">Video player will be rendered here</p>
-        </div>
+        <Suspense
+          fallback={
+            <div data-testid="player-suspense-fallback" className="flex h-64 items-center justify-center rounded border border-gray-700 bg-gray-900">
+              <p className="text-gray-400">Loading player...</p>
+            </div>
+          }
+        >
+          <PreviewPlayer
+            manifestUrl={`/api/v1/preview/${sessionId}/manifest.m3u8`}
+            onError={(msg) => usePreviewStore.getState().setError(msg)}
+          />
+        </Suspense>
       )}
 
       {status === 'error' && error && (
