@@ -23,7 +23,7 @@ The test harness has two tiers:
 | `tests/smoke/test_clip_workflow.py` | UC-04 and UC-10: clip add and modify |
 | `tests/smoke/test_effects.py` | UC-05, UC-06, UC-11: effects catalog, update/delete, speed and stacking |
 | `tests/smoke/test_transitions.py` | UC-07: fade transition |
-| `tests/smoke/test_health.py` | UC-08: health live and ready probes |
+| `tests/smoke/test_health.py` | UC-08: health live and ready probes; preview and proxy subsystem checks (v026) |
 
 ### Phase 2 — Expanded API Smoke Tests (v018–v019)
 
@@ -37,6 +37,7 @@ The test harness has two tiers:
 | `tests/smoke/test_filesystem.py` | Filesystem: directory listing, not-found, hidden file exclusion (v019) |
 | `tests/smoke/test_negative_paths.py` | Negative paths: invalid inputs across timeline, audio, batch, compose (v019) |
 | `tests/smoke/test_proxy.py` | Proxy management: generate, status, delete, batch (v024) |
+| `tests/smoke/test_preview.py` | Preview session: create session via POST with timeline, verify 202 and session_id (v026) |
 
 ### Conftest Additions (v018–v019)
 
