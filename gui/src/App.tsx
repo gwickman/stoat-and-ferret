@@ -3,6 +3,7 @@ import Shell from './components/Shell'
 import DashboardPage from './pages/DashboardPage'
 import EffectsPage from './pages/EffectsPage'
 import LibraryPage from './pages/LibraryPage'
+import PreviewPage from './pages/PreviewPage'
 import ProjectsPage from './pages/ProjectsPage'
 import TimelinePage from './pages/TimelinePage'
 
@@ -15,6 +16,7 @@ function App() {
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="effects" element={<EffectsPage />} />
         <Route path="timeline" element={<TimelinePage />} />
+        <Route path="preview" element={<PreviewPage />} />
       </Route>
     </Routes>
   )

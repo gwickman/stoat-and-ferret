@@ -13,6 +13,7 @@ const TABS: TabDef[] = [
   { label: 'Projects', path: '/projects', checkUrl: '/api/v1/projects' },
   { label: 'Effects', path: '/effects', checkUrl: '/api/v1/effects' },
   { label: 'Timeline', path: '/timeline', checkUrl: '/api/v1/compose/presets' },
+  { label: 'Preview', path: '/preview', checkUrl: '/api/v1/preview/cache' },
 ]
 
 export default function Navigation() {
