@@ -313,7 +313,9 @@ class TestPreviewManagerMetrics:
         )
 
         cancel_event = asyncio.Event()
-        before_sum = _sample("video_editor_preview_generation_seconds_sum", {"quality": "low"})
+        before_count = _sample(
+            "video_editor_preview_generation_seconds_count", {"quality": "low"}
+        )
 
         await manager._run_generation(
             session_id="gen-session",
@@ -323,8 +325,10 @@ class TestPreviewManagerMetrics:
             cancel_event=cancel_event,
         )
 
-        after_sum = _sample("video_editor_preview_generation_seconds_sum", {"quality": "low"})
-        assert after_sum > before_sum
+        after_count = _sample(
+            "video_editor_preview_generation_seconds_count", {"quality": "low"}
+        )
+        assert after_count == before_count + 1
 
     @pytest.mark.usefixtures("_mock_settings")
     async def test_seek_generation_observes_latency(self) -> None:
@@ -351,7 +355,7 @@ class TestPreviewManagerMetrics:
         )
 
         cancel_event = asyncio.Event()
-        before_sum = _sample("video_editor_preview_seek_latency_seconds_sum")
+        before_count = _sample("video_editor_preview_seek_latency_seconds_count")
 
         await manager._run_seek_generation(
             session_id="seek-session",
@@ -361,8 +365,8 @@ class TestPreviewManagerMetrics:
             cancel_event=cancel_event,
         )
 
-        after_sum = _sample("video_editor_preview_seek_latency_seconds_sum")
-        assert after_sum > before_sum
+        after_count = _sample("video_editor_preview_seek_latency_seconds_count")
+        assert after_count == before_count + 1
 
 
 class TestCacheMetricsInstrumentation:
