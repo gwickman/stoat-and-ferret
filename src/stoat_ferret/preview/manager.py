@@ -634,6 +634,62 @@ class PreviewManager:
         await self._check_expired(session)
         return session
 
+    async def cancel_all(self) -> int:
+        """Cancel all active preview sessions for graceful shutdown.
+
+        Terminates FFmpeg processes (stdin 'q' on Windows, SIGTERM on Unix),
+        waits up to 5 seconds per process, force-kills on timeout, and
+        removes temporary segment files.
+
+        Returns:
+            Number of sessions cancelled.
+        """
+        start = time.monotonic()
+        task_ids = list(self._generation_tasks.keys())
+        count = len(task_ids)
+
+        logger.info("preview_shutdown_started", active_sessions=count)
+
+        # Signal all cancel events
+        for session_id in task_ids:
+            cancel_event = self._cancel_events.get(session_id)
+            if cancel_event is not None:
+                cancel_event.set()
+
+        # Wait for all generation tasks to finish (with timeout)
+        tasks = [
+            self._generation_tasks[sid]
+            for sid in task_ids
+            if sid in self._generation_tasks and not self._generation_tasks[sid].done()
+        ]
+        if tasks:
+            for task in tasks:
+                task.cancel()
+            done, pending = await asyncio.wait(tasks, timeout=5.0)
+            for task in pending:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await task
+
+        # Clean up session directories
+        if self._output_base_dir.exists():
+            for child in self._output_base_dir.iterdir():
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+
+        # Clear tracking state
+        self._generation_tasks.clear()
+        self._cancel_events.clear()
+        self._session_locks.clear()
+
+        elapsed = time.monotonic() - start
+        logger.info(
+            "preview_shutdown_complete",
+            cancelled_sessions=count,
+            duration_seconds=round(elapsed, 2),
+        )
+        return count
+
     async def cleanup_expired(self) -> int:
         """Clean up all expired sessions.
 

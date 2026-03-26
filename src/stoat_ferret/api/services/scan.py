@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -184,6 +185,14 @@ async def _auto_queue_proxies(
             "proxy_auto_queue_skipped",
             scan_path=scan_path,
             reason="auto_generate_disabled",
+        )
+        return
+
+    if shutil.which("ffmpeg") is None:
+        logger.warning(
+            "proxy_auto_queue_skipped",
+            scan_path=scan_path,
+            reason="ffmpeg_unavailable",
         )
         return
 
