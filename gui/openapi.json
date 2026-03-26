@@ -1838,6 +1838,294 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/preview/start": {
+      "post": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Start Preview",
+        "description": "Start a new preview session for a project.\n\nValidates that the project exists and has a non-empty timeline,\nthen starts asynchronous HLS generation.\n\nArgs:\n    project_id: The project to preview.\n    request: The FastAPI request object.\n    body: Optional request body with quality settings.\n\nReturns:\n    202 Accepted with session_id.\n\nRaises:\n    HTTPException: 404 if project not found, 422 if timeline is empty,\n        429 if session limit reached.",
+        "operationId": "start_preview_api_v1_projects__project_id__preview_start_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PreviewStartRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preview/{session_id}": {
+      "get": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Get Preview Status",
+        "description": "Get the current status of a preview session.\n\nWhen status is \"ready\", manifest_url is included in the response.\n\nArgs:\n    session_id: The preview session ID.\n    request: The FastAPI request object.\n\nReturns:\n    Session status with optional manifest_url.\n\nRaises:\n    HTTPException: 404 if session not found.",
+        "operationId": "get_preview_status_api_v1_preview__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Stop Preview",
+        "description": "Stop a preview session and clean up resources.\n\nCancels any active generation, removes segment files,\nand deletes the session record.\n\nArgs:\n    session_id: The preview session ID.\n    request: The FastAPI request object.\n\nReturns:\n    200 with confirmation.\n\nRaises:\n    HTTPException: 404 if session not found.",
+        "operationId": "stop_preview_api_v1_preview__session_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewStopResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preview/{session_id}/seek": {
+      "post": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Seek Preview",
+        "description": "Seek to a new position in a preview session.\n\nTriggers regeneration of HLS segments from the new position.\n\nArgs:\n    session_id: The preview session ID.\n    body: Seek request with position.\n    request: The FastAPI request object.\n\nReturns:\n    200 with status \"seeking\".\n\nRaises:\n    HTTPException: 404 if session not found.",
+        "operationId": "seek_preview_api_v1_preview__session_id__seek_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewSeekRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewSeekResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preview/{session_id}/manifest.m3u8": {
+      "get": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Get Manifest",
+        "description": "Serve the HLS manifest file for a preview session.\n\nArgs:\n    session_id: The preview session ID.\n    request: The FastAPI request object.\n\nReturns:\n    HLS manifest with Content-Type application/vnd.apple.mpegurl.\n\nRaises:\n    HTTPException: 404 if session or manifest not found.",
+        "operationId": "get_manifest_api_v1_preview__session_id__manifest_m3u8_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preview/{session_id}/segment_{index}.ts": {
+      "get": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Get Segment",
+        "description": "Serve an HLS segment file for a preview session.\n\nArgs:\n    session_id: The preview session ID.\n    index: The segment index number.\n    request: The FastAPI request object.\n\nReturns:\n    MPEG-TS segment with Content-Type video/MP2T.\n\nRaises:\n    HTTPException: 404 if session or segment not found.",
+        "operationId": "get_segment_api_v1_preview__session_id__segment__index__ts_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/videos/{video_id}/proxy": {
       "post": {
         "tags": [
@@ -3142,6 +3430,128 @@
         ],
         "title": "PositionModel",
         "description": "A normalized layout position (0.0-1.0 range).\n\nAll coordinate fields represent fractions of the output dimensions.\nValidation is performed by the endpoint handler to return domain-specific\nerror codes (INVALID_LAYOUT_POSITION)."
+      },
+      "PreviewSeekRequest": {
+        "properties": {
+          "position": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Position",
+            "description": "Seek position in seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position"
+        ],
+        "title": "PreviewSeekRequest",
+        "description": "Request to seek within a preview session."
+      },
+      "PreviewSeekResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status"
+        ],
+        "title": "PreviewSeekResponse",
+        "description": "Response after seeking in a preview session."
+      },
+      "PreviewStartRequest": {
+        "properties": {
+          "quality": {
+            "type": "string",
+            "title": "Quality",
+            "description": "Preview quality level (low, medium, high)",
+            "default": "medium"
+          }
+        },
+        "type": "object",
+        "title": "PreviewStartRequest",
+        "description": "Request to start a preview session."
+      },
+      "PreviewStartResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "PreviewStartResponse",
+        "description": "Response after starting a preview session."
+      },
+      "PreviewStatusResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "manifest_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Url"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status"
+        ],
+        "title": "PreviewStatusResponse",
+        "description": "Response with preview session status."
+      },
+      "PreviewStopResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "stopped": {
+            "type": "boolean",
+            "title": "Stopped",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "PreviewStopResponse",
+        "description": "Response after stopping a preview session."
       },
       "ProjectCreate": {
         "properties": {
