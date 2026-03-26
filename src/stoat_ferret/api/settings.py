@@ -114,6 +114,12 @@ class Settings(BaseSettings):
         description="Seconds between frames in thumbnail strip sprite sheets",
     )
 
+    # Waveforms
+    waveform_dir: str = Field(
+        default="data/waveforms",
+        description="Directory for storing generated waveform files",
+    )
+
     # Proxy storage
     proxy_output_dir: str = Field(
         default="data/proxies",

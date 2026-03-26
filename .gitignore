@@ -209,6 +209,9 @@ __marimo__/
 # Application logs
 logs/
 
+# Generated waveform data
+data/waveforms/
+
 # Generated preview data
 data/previews/
 

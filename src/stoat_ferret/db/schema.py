@@ -17,6 +17,7 @@ TABLE_PROJECT_VERSIONS = "project_versions"
 TABLE_BATCH_JOBS = "batch_jobs"
 TABLE_PROXY_FILES = "proxy_files"
 TABLE_THUMBNAIL_STRIPS = "thumbnail_strips"
+TABLE_WAVEFORMS = "waveforms"
 TABLE_PREVIEW_SESSIONS = "preview_sessions"
 
 VIDEOS_TABLE = """
@@ -216,6 +217,23 @@ THUMBNAIL_STRIPS_VIDEO_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_thumbnail_strips_video ON thumbnail_strips(video_id);
 """
 
+WAVEFORMS_TABLE = """
+CREATE TABLE IF NOT EXISTS waveforms (
+    id TEXT PRIMARY KEY,
+    video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    format TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    file_path TEXT,
+    duration REAL NOT NULL DEFAULT 0.0,
+    channels INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+"""
+
+WAVEFORMS_VIDEO_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_waveforms_video ON waveforms(video_id);
+"""
+
 PREVIEW_SESSIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS preview_sessions (
     id TEXT PRIMARY KEY,
@@ -317,6 +335,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(PROXY_FILES_VIDEO_INDEX)
     cursor.execute(THUMBNAIL_STRIPS_TABLE)
     cursor.execute(THUMBNAIL_STRIPS_VIDEO_INDEX)
+    cursor.execute(WAVEFORMS_TABLE)
+    cursor.execute(WAVEFORMS_VIDEO_INDEX)
     cursor.execute(PREVIEW_SESSIONS_TABLE)
     cursor.execute(PREVIEW_SESSIONS_PROJECT_INDEX)
     cursor.execute(PREVIEW_SESSIONS_EXPIRES_INDEX)
@@ -388,6 +408,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(PROXY_FILES_VIDEO_INDEX)
     await db.execute(THUMBNAIL_STRIPS_TABLE)
     await db.execute(THUMBNAIL_STRIPS_VIDEO_INDEX)
+    await db.execute(WAVEFORMS_TABLE)
+    await db.execute(WAVEFORMS_VIDEO_INDEX)
     await db.execute(PREVIEW_SESSIONS_TABLE)
     await db.execute(PREVIEW_SESSIONS_PROJECT_INDEX)
     await db.execute(PREVIEW_SESSIONS_EXPIRES_INDEX)
