@@ -57,11 +57,12 @@ describe('PreviewPage', () => {
     expect(screen.getByText('50%')).toBeDefined()
   })
 
-  it('shows player placeholder when ready', () => {
+  it('shows player area when ready', () => {
     useProjectStore.setState({ selectedProjectId: 'proj-1' })
     usePreviewStore.setState({ sessionId: 'sess-1', status: 'ready' })
     renderPage()
-    expect(screen.getByTestId('player-placeholder')).toBeDefined()
+    // PreviewPlayer is lazy-loaded; in test env the Suspense fallback renders
+    expect(screen.getByTestId('player-suspense-fallback')).toBeDefined()
   })
 
   it('shows error message with retry button', () => {
