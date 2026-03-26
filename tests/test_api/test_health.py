@@ -109,6 +109,8 @@ def test_readiness_structure(client: TestClient) -> None:
     assert "checks" in data
     assert "database" in data["checks"]
     assert "ffmpeg" in data["checks"]
+    assert "preview" in data["checks"]
+    assert "proxy" in data["checks"]
 
     # Database check has expected fields
     db_check = data["checks"]["database"]
@@ -125,3 +127,18 @@ def test_readiness_structure(client: TestClient) -> None:
         assert "version" in ffmpeg_check
     else:
         assert "error" in ffmpeg_check
+
+    # Preview check has expected fields
+    preview_check = data["checks"]["preview"]
+    assert "status" in preview_check
+    if preview_check["status"] != "degraded" or "error" not in preview_check:
+        assert "active_sessions" in preview_check
+        assert "cache_usage_percent" in preview_check
+        assert "cache_healthy" in preview_check
+
+    # Proxy check has expected fields
+    proxy_check = data["checks"]["proxy"]
+    assert "status" in proxy_check
+    if proxy_check["status"] != "degraded" or "error" not in proxy_check:
+        assert "proxy_dir_writable" in proxy_check
+        assert "pending_proxies" in proxy_check

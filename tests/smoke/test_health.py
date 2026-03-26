@@ -22,7 +22,8 @@ async def test_uc08_health_ready(smoke_client: httpx.AsyncClient) -> None:
     resp = await smoke_client.get("/health/ready")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["status"] == "ok"
+    # Overall may be "degraded" if proxy dir hasn't been created yet
+    assert body["status"] in ("ok", "degraded")
 
     checks = body["checks"]
     assert "database" in checks
@@ -32,3 +33,9 @@ async def test_uc08_health_ready(smoke_client: httpx.AsyncClient) -> None:
 
     assert "ffmpeg" in checks
     assert checks["ffmpeg"]["status"] == "ok"
+
+    assert "preview" in checks
+    assert "status" in checks["preview"]
+
+    assert "proxy" in checks
+    assert "status" in checks["proxy"]

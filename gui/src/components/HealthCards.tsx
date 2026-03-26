@@ -7,16 +7,19 @@ interface HealthCardProps {
 
 const STATUS_COLORS: Record<string, string> = {
   ok: 'bg-green-900/50 border-green-700',
+  degraded: 'bg-yellow-900/50 border-yellow-700',
   error: 'bg-red-900/50 border-red-700',
 }
 
 const DOT_COLORS: Record<string, string> = {
   ok: 'bg-green-500',
+  degraded: 'bg-yellow-500',
   error: 'bg-red-500',
 }
 
 const STATUS_LABELS: Record<string, string> = {
   ok: 'Operational',
+  degraded: 'Degraded',
   error: 'Error',
 }
 
@@ -47,6 +50,8 @@ function HealthCard({ name, status }: HealthCardProps) {
 const COMPONENTS: Record<string, string> = {
   database: 'Python API',
   ffmpeg: 'FFmpeg',
+  preview: 'Preview',
+  proxy: 'Proxy',
 }
 
 interface HealthCardsProps {
