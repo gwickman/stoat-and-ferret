@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import shutil
+import time
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -127,6 +129,40 @@ class PreviewManager:
         if session_id not in self._session_locks:
             self._session_locks[session_id] = asyncio.Lock()
         return self._session_locks[session_id]
+
+    # Minimum interval between progress broadcasts (seconds)
+    _PROGRESS_THROTTLE_SECONDS = 0.5
+
+    def _make_progress_callback(self, session_id: str) -> Callable[[float], Awaitable[None]]:
+        """Create a throttled progress callback that broadcasts via WebSocket.
+
+        Returns an async callback that broadcasts JOB_PROGRESS events at most
+        once per _PROGRESS_THROTTLE_SECONDS interval. Progress value 1.0 is
+        always broadcast regardless of throttling.
+
+        Args:
+            session_id: The session ID to include in event payloads.
+
+        Returns:
+            Async callback accepting a progress float (0.0-1.0).
+        """
+        last_broadcast_time = 0.0
+
+        async def _on_progress(progress: float) -> None:
+            nonlocal last_broadcast_time
+            now = time.monotonic()
+            # Always broadcast final progress; throttle intermediate updates
+            if progress < 1.0 and (now - last_broadcast_time) < self._PROGRESS_THROTTLE_SECONDS:
+                return
+            last_broadcast_time = now
+            await self._broadcast_event(
+                EventType.JOB_PROGRESS,
+                session_id,
+                progress=progress,
+                status="generating",
+            )
+
+        return _on_progress
 
     async def _broadcast_event(
         self, event_type: EventType, session_id: str, **extra: object
@@ -295,11 +331,13 @@ class PreviewManager:
             cancel_event: Event for cooperative cancellation.
         """
         try:
+            progress_callback = self._make_progress_callback(session_id)
             output_dir = await self._generator.generate(
                 session_id=session_id,
                 input_path=input_path,
                 filter_graph=filter_graph,
                 duration_us=duration_us,
+                progress_callback=progress_callback,
                 cancel_event=cancel_event,
             )
 
@@ -444,11 +482,13 @@ class PreviewManager:
             cancel_event: Event for cooperative cancellation.
         """
         try:
+            progress_callback = self._make_progress_callback(session_id)
             output_dir = await self._generator.generate(
                 session_id=session_id,
                 input_path=input_path,
                 filter_graph=filter_graph,
                 duration_us=duration_us,
+                progress_callback=progress_callback,
                 cancel_event=cancel_event,
             )
 
