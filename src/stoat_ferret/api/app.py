@@ -34,6 +34,7 @@ from stoat_ferret.api.routers import (
     timeline,
     versions,
     videos,
+    waveform,
 )
 from stoat_ferret.api.routers.ws import websocket_endpoint
 from stoat_ferret.api.services.proxy_service import (
@@ -43,6 +44,7 @@ from stoat_ferret.api.services.proxy_service import (
 )
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.services.thumbnail import ThumbnailService
+from stoat_ferret.api.services.waveform import WaveformService
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import (
@@ -208,6 +210,7 @@ def create_app(
     preview_manager: PreviewManager | None = None,
     preview_cache: PreviewCache | None = None,
     thumbnail_service: ThumbnailService | None = None,
+    waveform_service: WaveformService | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -232,6 +235,7 @@ def create_app(
         preview_manager: Optional preview manager for dependency injection.
         preview_cache: Optional preview cache for dependency injection.
         thumbnail_service: Optional thumbnail service for dependency injection.
+        waveform_service: Optional waveform service for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -283,6 +287,9 @@ def create_app(
     if thumbnail_service is not None:
         app.state.thumbnail_service = thumbnail_service
 
+    if waveform_service is not None:
+        app.state.waveform_service = waveform_service
+
     app.include_router(health.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
@@ -297,6 +304,7 @@ def create_app(
     app.include_router(proxy.router)
     app.include_router(thumbnails.router)
     app.include_router(versions.router)
+    app.include_router(waveform.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)
