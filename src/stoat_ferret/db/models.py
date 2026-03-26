@@ -152,6 +152,58 @@ class ThumbnailStrip:
         return str(uuid.uuid4())
 
 
+class WaveformStatus(str, Enum):
+    """Status of a waveform through its lifecycle.
+
+    Transitions: pending -> generating -> ready, any -> error.
+    """
+
+    PENDING = "pending"
+    GENERATING = "generating"
+    READY = "ready"
+    ERROR = "error"
+
+
+class WaveformFormat(str, Enum):
+    """Output format for waveform generation."""
+
+    PNG = "png"
+    JSON = "json"
+
+
+@dataclass
+class Waveform:
+    """Waveform metadata for audio visualization.
+
+    Represents a waveform generated from a video's audio stream using
+    FFmpeg showwavespic (PNG) or astats (JSON) filters.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        video_id: FK to the source video.
+        format: Output format (png or json).
+        status: Current lifecycle status.
+        file_path: Path to the output file (None until ready).
+        duration: Audio duration in seconds.
+        channels: Number of audio channels.
+        created_at: When the waveform was created.
+    """
+
+    id: str
+    video_id: str
+    format: WaveformFormat
+    status: WaveformStatus
+    created_at: datetime
+    file_path: str | None = None
+    duration: float = 0.0
+    channels: int = 0
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a waveform."""
+        return str(uuid.uuid4())
+
+
 class ProxyStatus(str, Enum):
     """Status of a proxy file through its lifecycle.
 
