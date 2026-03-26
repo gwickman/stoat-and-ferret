@@ -150,6 +150,11 @@ class Settings(BaseSettings):
         le=100,
         description="Maximum number of concurrent preview sessions",
     )
+    preview_cache_max_bytes: int = Field(
+        default=1_073_741_824,
+        ge=0,
+        description="Maximum total storage for preview cache in bytes (default 1 GB)",
+    )
 
     # Security
     allowed_scan_roots: list[str] = Field(
