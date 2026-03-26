@@ -30,6 +30,7 @@ from stoat_ferret.api.routers import (
     preview,
     projects,
     proxy,
+    thumbnails,
     timeline,
     versions,
     videos,
@@ -128,6 +129,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         executor=app.state.ffmpeg_executor,
         thumbnail_dir=settings.thumbnail_dir,
     )
+    app.state.thumbnail_service = thumbnail_service
 
     # Create proxy service before scan handler so it can be injected
     proxy_service = ProxyService(
@@ -205,6 +207,7 @@ def create_app(
     audit_logger: AuditLogger | None = None,
     preview_manager: PreviewManager | None = None,
     preview_cache: PreviewCache | None = None,
+    thumbnail_service: ThumbnailService | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -228,6 +231,7 @@ def create_app(
         audit_logger: Optional audit logger for dependency injection.
         preview_manager: Optional preview manager for dependency injection.
         preview_cache: Optional preview cache for dependency injection.
+        thumbnail_service: Optional thumbnail service for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -276,6 +280,9 @@ def create_app(
     if preview_cache is not None:
         app.state.preview_cache = preview_cache
 
+    if thumbnail_service is not None:
+        app.state.thumbnail_service = thumbnail_service
+
     app.include_router(health.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
@@ -288,6 +295,7 @@ def create_app(
     app.include_router(batch.router)
     app.include_router(preview.router)
     app.include_router(proxy.router)
+    app.include_router(thumbnails.router)
     app.include_router(versions.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 

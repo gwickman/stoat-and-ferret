@@ -165,6 +165,7 @@ class ThumbnailService:
         self._async_executor = async_executor
         self._ws_manager = ws_manager
         self._strip_interval = strip_interval
+        self._strips: dict[str, ThumbnailStrip] = {}  # video_id -> strip
 
     def generate(self, video_path: str, video_id: str) -> str | None:
         """Generate a thumbnail for a video file.
@@ -307,6 +308,17 @@ class ThumbnailService:
             return str(path)
         return None
 
+    def get_strip(self, video_id: str) -> ThumbnailStrip | None:
+        """Get the thumbnail strip metadata for a video.
+
+        Args:
+            video_id: Unique video identifier.
+
+        Returns:
+            ThumbnailStrip if one has been generated, or None.
+        """
+        return self._strips.get(video_id)
+
     async def generate_strip(
         self,
         *,
@@ -366,7 +378,8 @@ class ThumbnailService:
             rows=0,
         )
 
-        # Transition to generating
+        # Store strip for later retrieval and transition to generating
+        self._strips[video_id] = strip
         strip.status = ThumbnailStripStatus.GENERATING
 
         # Prepare output
