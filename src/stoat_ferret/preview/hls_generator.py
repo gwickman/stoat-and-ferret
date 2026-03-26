@@ -17,6 +17,7 @@ import structlog
 
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.ffmpeg.async_executor import ProgressInfo
+from stoat_ferret.preview.metrics import preview_segment_seconds
 from stoat_ferret_core import FilterGraph
 
 if TYPE_CHECKING:
@@ -246,6 +247,13 @@ class HLSGenerator:
                 error=error_msg,
             )
             raise RuntimeError(f"HLS generation failed (exit {result.returncode}): {error_msg}")
+
+        # Record per-segment average timing
+        segment_count = sum(1 for f in output_dir.iterdir() if f.suffix == ".ts")
+        if segment_count > 0:
+            per_segment = result.duration_seconds / segment_count
+            for _ in range(segment_count):
+                preview_segment_seconds.observe(per_segment)
 
         logger.info(
             "hls_generation_completed",

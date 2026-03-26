@@ -17,6 +17,12 @@ import structlog
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.db.models import ProxyFile, ProxyQuality, ProxyStatus
 from stoat_ferret.ffmpeg.async_executor import ProgressInfo
+from stoat_ferret.preview.metrics import (
+    proxy_evictions_total,
+    proxy_files_total,
+    proxy_generation_seconds,
+    proxy_storage_bytes,
+)
 
 if TYPE_CHECKING:
     import asyncio
@@ -231,6 +237,8 @@ class ProxyService:
 
         # Transition to generating
         await self._repo.update_status(proxy.id, ProxyStatus.GENERATING)
+        proxy_files_total.labels(status="pending").inc()
+        gen_start = time.monotonic()
 
         # Build FFmpeg args
         if quality == _PASSTHROUGH_QUALITY:
@@ -260,6 +268,8 @@ class ProxyService:
                 # Cleanup partial file on cancellation
                 _remove_file_if_exists(output_path)
                 await self._repo.update_status(proxy.id, ProxyStatus.FAILED)
+                proxy_files_total.labels(status="pending").dec()
+                proxy_files_total.labels(status="failed").inc()
                 logger.info(
                     "proxy_generation_cancelled",
                     job_id=job_id,
@@ -271,6 +281,8 @@ class ProxyService:
                 # Cleanup partial file on failure
                 _remove_file_if_exists(output_path)
                 await self._repo.update_status(proxy.id, ProxyStatus.FAILED)
+                proxy_files_total.labels(status="pending").dec()
+                proxy_files_total.labels(status="failed").inc()
                 error_msg = result.stderr.decode("utf-8", errors="replace")[:500]
                 logger.error(
                     "proxy_generation_failed",
@@ -284,6 +296,15 @@ class ProxyService:
             # Get file size and mark as ready
             file_size = os.path.getsize(output_path) if os.path.exists(output_path) else 0
             await self._repo.update_status(proxy.id, ProxyStatus.READY, file_size_bytes=file_size)
+
+            # Record proxy metrics
+            proxy_generation_seconds.labels(quality=quality.value).observe(
+                time.monotonic() - gen_start
+            )
+            proxy_files_total.labels(status="pending").dec()
+            proxy_files_total.labels(status="ready").inc()
+            total_bytes = await self._repo.total_size_bytes()
+            proxy_storage_bytes.set(total_bytes)
 
             logger.info(
                 "proxy_generation_complete",
@@ -311,6 +332,8 @@ class ProxyService:
         except Exception:
             _remove_file_if_exists(output_path)
             await self._repo.update_status(proxy.id, ProxyStatus.FAILED)
+            proxy_files_total.labels(status="pending").dec()
+            proxy_files_total.labels(status="failed").inc()
             logger.error(
                 "proxy_generation_failed",
                 job_id=job_id,
@@ -340,6 +363,8 @@ class ProxyService:
         current_checksum = await _run_in_thread(compute_file_checksum, source_path)
         if current_checksum != proxy.source_checksum:
             await self._repo.update_status(proxy.id, ProxyStatus.STALE)
+            proxy_files_total.labels(status="ready").dec()
+            proxy_files_total.labels(status="stale").inc()
             logger.info(
                 "proxy_marked_stale",
                 proxy_id=proxy_id,
@@ -361,6 +386,8 @@ class ProxyService:
             # Delete the file
             _remove_file_if_exists(oldest.file_path)
             await self._repo.delete(oldest.id)
+
+            proxy_evictions_total.labels(reason="lru_quota").inc()
 
             logger.info(
                 "proxy_evicted",
