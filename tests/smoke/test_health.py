@@ -36,6 +36,15 @@ async def test_uc08_health_ready(smoke_client: httpx.AsyncClient) -> None:
 
     assert "preview" in checks
     assert "status" in checks["preview"]
+    assert "active_sessions" in checks["preview"]
+    assert "cache_usage_percent" in checks["preview"]
+    assert isinstance(checks["preview"]["cache_usage_percent"], (int, float))
+    assert "cache_healthy" in checks["preview"]
+    assert isinstance(checks["preview"]["cache_healthy"], bool)
 
     assert "proxy" in checks
     assert "status" in checks["proxy"]
+    assert "proxy_dir_writable" in checks["proxy"]
+    assert isinstance(checks["proxy"]["proxy_dir_writable"], bool)
+    assert "pending_proxies" in checks["proxy"]
+    assert isinstance(checks["proxy"]["pending_proxies"], int)
