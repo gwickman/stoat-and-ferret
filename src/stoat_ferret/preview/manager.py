@@ -27,6 +27,13 @@ from stoat_ferret.db.models import (
     PreviewStatus,
     validate_preview_transition,
 )
+from stoat_ferret.preview.metrics import (
+    preview_errors_total,
+    preview_generation_seconds,
+    preview_seek_latency_seconds,
+    preview_sessions_active,
+    preview_sessions_total,
+)
 
 if TYPE_CHECKING:
     from stoat_ferret.api.websocket.manager import ConnectionManager
@@ -217,6 +224,8 @@ class PreviewManager:
         Args:
             session: The session to clean up.
         """
+        preview_sessions_active.dec()
+
         # Cancel active generation
         cancel_event = self._cancel_events.get(session.id)
         if cancel_event is not None:
@@ -290,6 +299,10 @@ class PreviewManager:
         )
         await self._repository.add(session)
 
+        # Record metrics
+        preview_sessions_total.labels(quality=quality_level.value).inc()
+        preview_sessions_active.inc()
+
         # Transition to generating and broadcast
         await self._transition(session, PreviewStatus.GENERATING)
         await self._broadcast_event(EventType.PREVIEW_GENERATING, session.id)
@@ -330,6 +343,7 @@ class PreviewManager:
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
         """
+        gen_start = time.monotonic()
         try:
             progress_callback = self._make_progress_callback(session_id)
             output_dir = await self._generator.generate(
@@ -346,6 +360,11 @@ class PreviewManager:
             if session is None:
                 return
 
+            elapsed = time.monotonic() - gen_start
+            preview_generation_seconds.labels(
+                quality=session.quality_level.value,
+            ).observe(elapsed)
+
             manifest_path = str(output_dir / "manifest.m3u8")
             session.manifest_path = manifest_path
             await self._transition(session, PreviewStatus.READY)
@@ -355,6 +374,8 @@ class PreviewManager:
             # Don't set error on cancelled sessions
             if cancel_event.is_set():
                 return
+
+            preview_errors_total.labels(error_type="ffmpeg_error").inc()
 
             session = await self._repository.get(session_id)
             if session is None:
@@ -481,6 +502,7 @@ class PreviewManager:
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
         """
+        seek_start = time.monotonic()
         try:
             progress_callback = self._make_progress_callback(session_id)
             output_dir = await self._generator.generate(
@@ -496,6 +518,8 @@ class PreviewManager:
             if session is None:
                 return
 
+            preview_seek_latency_seconds.observe(time.monotonic() - seek_start)
+
             manifest_path = str(output_dir / "manifest.m3u8")
             session.manifest_path = manifest_path
             # seeking -> ready
@@ -505,6 +529,8 @@ class PreviewManager:
         except Exception as exc:
             if cancel_event.is_set():
                 return
+
+            preview_errors_total.labels(error_type="ffmpeg_error").inc()
 
             session = await self._repository.get(session_id)
             if session is None:

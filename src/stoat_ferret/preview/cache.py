@@ -17,6 +17,12 @@ from pathlib import Path
 import structlog
 
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.preview.metrics import (
+    preview_cache_bytes,
+    preview_cache_evictions_total,
+    preview_cache_hit_ratio,
+    preview_cache_max_bytes,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -75,6 +81,11 @@ class PreviewCache:
         self._lock = asyncio.Lock()
         self._entries: dict[str, CacheEntry] = {}
         self._cleanup_task: asyncio.Task[None] | None = None
+        self._hits = 0
+        self._misses = 0
+
+        # Set max bytes gauge once at init
+        preview_cache_max_bytes.set(self._max_bytes)
 
     @property
     def used_bytes(self) -> int:
@@ -115,6 +126,8 @@ class PreviewCache:
                 expires_at=expires_at,
             )
 
+        preview_cache_bytes.set(self.used_bytes)
+
         logger.debug(
             "preview_cache_registered",
             session_id=session_id,
@@ -133,7 +146,12 @@ class PreviewCache:
         async with self._lock:
             entry = self._entries.get(session_id)
             if entry is None:
+                self._misses += 1
+                self._update_hit_ratio()
                 return
+
+            self._hits += 1
+            self._update_hit_ratio()
 
             now = datetime.now(timezone.utc)
             if now >= entry.expires_at:
@@ -144,6 +162,7 @@ class PreviewCache:
             # Refresh size from disk
             session_dir = self._base_dir / session_id
             entry.size_bytes = _calculate_dir_size(session_dir)
+            preview_cache_bytes.set(self.used_bytes)
 
     async def remove(self, session_id: str) -> None:
         """Remove a session from the cache (metadata only, no disk cleanup).
@@ -153,6 +172,7 @@ class PreviewCache:
         """
         async with self._lock:
             self._entries.pop(session_id, None)
+            preview_cache_bytes.set(self.used_bytes)
 
     async def status(self) -> CacheStatus:
         """Get current cache status.
@@ -191,6 +211,8 @@ class PreviewCache:
 
             self._entries.clear()
 
+        preview_cache_bytes.set(0)
+
         logger.info(
             "preview_cache_cleared",
             cleared_sessions=cleared,
@@ -221,6 +243,8 @@ class PreviewCache:
                         last_accessed=now,
                         expires_at=now + timedelta(seconds=self._session_ttl_seconds),
                     )
+
+        preview_cache_bytes.set(self.used_bytes)
 
         logger.info(
             "preview_cache_rebuilt",
@@ -282,6 +306,9 @@ class PreviewCache:
 
         self._entries.pop(entry.session_id, None)
 
+        preview_cache_evictions_total.labels(reason=reason).inc()
+        preview_cache_bytes.set(self.used_bytes)
+
         cache_used_after = self.used_bytes
         logger.info(
             "preview_cache_eviction",
@@ -290,6 +317,12 @@ class PreviewCache:
             freed_bytes=freed,
             cache_usage_after=cache_used_after,
         )
+
+    def _update_hit_ratio(self) -> None:
+        """Recalculate and set the cache hit ratio gauge."""
+        total = self._hits + self._misses
+        ratio = self._hits / total if total > 0 else 0.0
+        preview_cache_hit_ratio.set(ratio)
 
 
 def _calculate_dir_size(path: Path) -> int:
