@@ -313,9 +313,7 @@ class TestPreviewManagerMetrics:
         )
 
         cancel_event = asyncio.Event()
-        before_count = _sample(
-            "video_editor_preview_generation_seconds_count", {"quality": "low"}
-        )
+        before_count = _sample("video_editor_preview_generation_seconds_count", {"quality": "low"})
 
         await manager._run_generation(
             session_id="gen-session",
@@ -325,9 +323,7 @@ class TestPreviewManagerMetrics:
             cancel_event=cancel_event,
         )
 
-        after_count = _sample(
-            "video_editor_preview_generation_seconds_count", {"quality": "low"}
-        )
+        after_count = _sample("video_editor_preview_generation_seconds_count", {"quality": "low"})
         assert after_count == before_count + 1
 
     @pytest.mark.usefixtures("_mock_settings")
