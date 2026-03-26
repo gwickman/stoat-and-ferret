@@ -44,3 +44,20 @@ class PreviewStopResponse(BaseModel):
 
     session_id: str
     stopped: bool = True
+
+
+class PreviewCacheStatusResponse(BaseModel):
+    """Response with preview cache status metrics."""
+
+    active_sessions: int
+    used_bytes: int
+    max_bytes: int
+    usage_percent: float
+    sessions: list[str]
+
+
+class PreviewCacheClearResponse(BaseModel):
+    """Response after clearing the preview cache."""
+
+    cleared_sessions: int
+    freed_bytes: int
