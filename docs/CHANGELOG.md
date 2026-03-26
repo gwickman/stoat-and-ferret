@@ -4,6 +4,23 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v025] - 2026-03-26
+
+Phase 4 Preview Engine: Sessions + Visual Aids. Core preview playback infrastructure with HLS session management, thumbnail strip generation, and waveform visualization. Backend-only — no GUI components.
+
+### Added
+
+- **Preview Session Data Model** — `PreviewSession` dataclass, `PreviewStatus` enum, `preview_sessions` SQLite table, `AsyncPreviewSessionRepository` protocol with SQLite + InMemory implementations and 31 parity tests (BL-178, #198)
+- **HLS Segment Generator** — FFmpeg HLS VOD segment generation with Rust filter simplification, progress callbacks, and cooperative cancellation (BL-179, #199)
+- **Preview Session Manager** — `PreviewManager` with start/seek/stop lifecycle, concurrency limits, per-session locks, 4 new WebSocket `EventType` variants, background expiry cleanup (BL-180, #200)
+- **Preview API Endpoints** — 7 REST endpoints for session management and HLS content serving with Pydantic schemas and DI wiring (BL-181, #201)
+- **Preview Cache** — LRU eviction and TTL expiry for preview segment storage with configurable size limits (1 GB default) and background cleanup task (BL-182, #202)
+- **Preview Cache API** — GET/DELETE endpoints for cache status inspection and clearing with `clear_all()` bulk operation (BL-183, #203)
+- **Thumbnail Strip Service** — sprite sheet generation using FFmpeg fps+scale+tile filters with NxM grid tiling, JPEG dimension limit handling, configurable interval via `STOAT_THUMBNAIL_STRIP_INTERVAL`, `extract_frame_args()` shared primitive (BL-186, #204)
+- **Thumbnail Strip API** — POST 202/GET metadata/GET strip.jpg endpoints with Pydantic schemas and DI wiring (BL-187, #205)
+- **Waveform Generation Service** — dual output: PNG via showwavespic filter and JSON via astats/ffprobe, mono/stereo support, Windows path escaping, configurable via `STOAT_WAVEFORM_DIR` (BL-188, #206)
+- **Waveform API** — POST 202/GET metadata/GET waveform.png/GET waveform.json endpoints with dual format support (BL-189, #207)
+
 ## [v024] - 2026-03-25
 
 Phase 4 Foundation: Deferred Quality + Proxy Infrastructure + Rust Preview Core. Close the OpenAPI enum freshness gap from v023, build proxy data and service infrastructure for Phase 4 preview playback, and implement Rust-based filter simplification and cost estimation for real-time preview.
