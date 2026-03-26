@@ -287,6 +287,14 @@ class PreviewCache:
         Args:
             needed_bytes: Number of bytes needed for the new session.
         """
+        if self._entries and (self.used_bytes + needed_bytes > self._max_bytes):
+            logger.warning(
+                "preview_cache_full",
+                used_bytes=self.used_bytes,
+                max_bytes=self._max_bytes,
+                needed_bytes=needed_bytes,
+                active_sessions=len(self._entries),
+            )
         while self._entries and (self.used_bytes + needed_bytes > self._max_bytes):
             # Find the oldest-accessed entry
             oldest = min(self._entries.values(), key=lambda e: e.last_accessed)

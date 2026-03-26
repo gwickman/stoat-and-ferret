@@ -311,7 +311,7 @@ class WaveformService:
             format="png",
             duration=duration_seconds,
             channels=channels,
-            generation_time=round(generation_time, 2),
+            duration_ms=round(generation_time * 1000, 1),
         )
 
         # Send completion progress event
@@ -436,7 +436,7 @@ class WaveformService:
             format="json",
             duration=duration_seconds,
             channels=channels,
-            generation_time=round(generation_time, 2),
+            duration_ms=round(generation_time * 1000, 1),
         )
 
         # Send completion progress event
