@@ -183,6 +183,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
+    # Shutdown: cancel preview sessions first
+    preview_manager: PreviewManager | None = getattr(app.state, "preview_manager", None)
+    if preview_manager is not None:
+        await preview_manager.cancel_all()
+
+    preview_cache: PreviewCache | None = getattr(app.state, "preview_cache", None)
+    if preview_cache is not None:
+        await preview_cache.stop_cleanup_task()
+
     # Shutdown: cancel worker and close database
     worker_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):

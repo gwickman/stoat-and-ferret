@@ -8,6 +8,7 @@ and JSON:API-style error responses.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import structlog
@@ -121,6 +122,22 @@ def _get_preview_cache(request: Request) -> PreviewCache:
     return cache
 
 
+def _check_ffmpeg_available() -> None:
+    """Raise 503 if FFmpeg is not available on the system.
+
+    Raises:
+        HTTPException: 503 with FFMPEG_UNAVAILABLE code if ffmpeg not in PATH.
+    """
+    if shutil.which("ffmpeg") is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "FFMPEG_UNAVAILABLE",
+                "message": "FFmpeg is not available. Preview functionality requires FFmpeg.",
+            },
+        )
+
+
 # ---------- Endpoints ----------
 
 
@@ -205,6 +222,7 @@ async def start_preview(
         HTTPException: 404 if project not found, 422 if timeline is empty,
             429 if session limit reached.
     """
+    _check_ffmpeg_available()
     manager = _get_preview_manager(request)
     project_repo = await _get_project_repository(request)
     clip_repo = await _get_clip_repository(request)
@@ -336,6 +354,7 @@ async def seek_preview(
     Raises:
         HTTPException: 404 if session not found.
     """
+    _check_ffmpeg_available()
     manager = _get_preview_manager(request)
 
     try:
