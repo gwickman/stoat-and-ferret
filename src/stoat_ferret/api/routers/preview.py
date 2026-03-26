@@ -14,6 +14,8 @@ import structlog
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from stoat_ferret.api.schemas.preview import (
+    PreviewCacheClearResponse,
+    PreviewCacheStatusResponse,
     PreviewSeekRequest,
     PreviewSeekResponse,
     PreviewStartRequest,
@@ -27,6 +29,7 @@ from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
 )
+from stoat_ferret.preview.cache import PreviewCache
 from stoat_ferret.preview.manager import (
     PreviewManager,
     SessionExpiredError,
@@ -97,7 +100,82 @@ async def _get_clip_repository(request: Request) -> AsyncClipRepository:
     return AsyncSQLiteClipRepository(request.app.state.db)
 
 
+def _get_preview_cache(request: Request) -> PreviewCache:
+    """Get preview cache from app state.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        PreviewCache instance.
+
+    Raises:
+        HTTPException: 503 if preview cache is not available.
+    """
+    cache: PreviewCache | None = getattr(request.app.state, "preview_cache", None)
+    if cache is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "SERVICE_UNAVAILABLE", "message": "Preview cache not available"},
+        )
+    return cache
+
+
 # ---------- Endpoints ----------
+
+
+@router.get(
+    "/preview/cache",
+    response_model=PreviewCacheStatusResponse,
+)
+async def get_cache_status(
+    request: Request,
+) -> PreviewCacheStatusResponse:
+    """Get current preview cache status metrics.
+
+    Returns cache usage statistics including session count,
+    byte usage, and list of active session IDs.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        Cache status with usage metrics.
+    """
+    cache = _get_preview_cache(request)
+    cache_status = await cache.status()
+
+    return PreviewCacheStatusResponse(
+        active_sessions=len(cache_status.active_sessions),
+        used_bytes=cache_status.used_bytes,
+        max_bytes=cache_status.max_bytes,
+        usage_percent=cache_status.usage_percent,
+        sessions=cache_status.active_sessions,
+    )
+
+
+@router.delete(
+    "/preview/cache",
+    response_model=PreviewCacheClearResponse,
+)
+async def clear_cache(
+    request: Request,
+) -> PreviewCacheClearResponse:
+    """Clear all cached preview sessions and free disk space.
+
+    Removes all cached session data from disk and resets the cache.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        Number of cleared sessions and bytes freed.
+    """
+    cache = _get_preview_cache(request)
+    cleared, freed = await cache.clear_all()
+
+    logger.info("preview_cache_api_cleared", cleared_sessions=cleared, freed_bytes=freed)
+    return PreviewCacheClearResponse(cleared_sessions=cleared, freed_bytes=freed)
 
 
 @router.post(

@@ -63,6 +63,7 @@ from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
 from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
 from stoat_ferret.jobs.queue import AsyncioJobQueue
 from stoat_ferret.logging import configure_logging
+from stoat_ferret.preview.cache import PreviewCache
 from stoat_ferret.preview.manager import PreviewManager
 
 logger = structlog.get_logger(__name__)
@@ -154,6 +155,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         generator=hls_generator,
         ws_manager=app.state.ws_manager,
     )
+    app.state.preview_cache = PreviewCache()
 
     job_queue.register_handler(
         SCAN_JOB_TYPE,
@@ -202,6 +204,7 @@ def create_app(
     ffmpeg_executor: FFmpegExecutor | None = None,
     audit_logger: AuditLogger | None = None,
     preview_manager: PreviewManager | None = None,
+    preview_cache: PreviewCache | None = None,
     gui_static_path: str | Path | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -224,6 +227,7 @@ def create_app(
         ffmpeg_executor: Optional FFmpeg executor for dependency injection.
         audit_logger: Optional audit logger for dependency injection.
         preview_manager: Optional preview manager for dependency injection.
+        preview_cache: Optional preview cache for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
 
     Returns:
@@ -268,6 +272,9 @@ def create_app(
 
     if preview_manager is not None:
         app.state.preview_manager = preview_manager
+
+    if preview_cache is not None:
+        app.state.preview_cache = preview_cache
 
     app.include_router(health.router)
     app.include_router(videos.router)

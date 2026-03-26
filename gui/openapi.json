@@ -1838,6 +1838,48 @@
         }
       }
     },
+    "/api/v1/preview/cache": {
+      "get": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Get Cache Status",
+        "description": "Get current preview cache status metrics.\n\nReturns cache usage statistics including session count,\nbyte usage, and list of active session IDs.\n\nArgs:\n    request: The FastAPI request object.\n\nReturns:\n    Cache status with usage metrics.",
+        "operationId": "get_cache_status_api_v1_preview_cache_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewCacheStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "preview"
+        ],
+        "summary": "Clear Cache",
+        "description": "Clear all cached preview sessions and free disk space.\n\nRemoves all cached session data from disk and resets the cache.\n\nArgs:\n    request: The FastAPI request object.\n\nReturns:\n    Number of cleared sessions and bytes freed.",
+        "operationId": "clear_cache_api_v1_preview_cache_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewCacheClearResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{project_id}/preview/start": {
       "post": {
         "tags": [
@@ -3430,6 +3472,62 @@
         ],
         "title": "PositionModel",
         "description": "A normalized layout position (0.0-1.0 range).\n\nAll coordinate fields represent fractions of the output dimensions.\nValidation is performed by the endpoint handler to return domain-specific\nerror codes (INVALID_LAYOUT_POSITION)."
+      },
+      "PreviewCacheClearResponse": {
+        "properties": {
+          "cleared_sessions": {
+            "type": "integer",
+            "title": "Cleared Sessions"
+          },
+          "freed_bytes": {
+            "type": "integer",
+            "title": "Freed Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cleared_sessions",
+          "freed_bytes"
+        ],
+        "title": "PreviewCacheClearResponse",
+        "description": "Response after clearing the preview cache."
+      },
+      "PreviewCacheStatusResponse": {
+        "properties": {
+          "active_sessions": {
+            "type": "integer",
+            "title": "Active Sessions"
+          },
+          "used_bytes": {
+            "type": "integer",
+            "title": "Used Bytes"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "title": "Max Bytes"
+          },
+          "usage_percent": {
+            "type": "number",
+            "title": "Usage Percent"
+          },
+          "sessions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_sessions",
+          "used_bytes",
+          "max_bytes",
+          "usage_percent",
+          "sessions"
+        ],
+        "title": "PreviewCacheStatusResponse",
+        "description": "Response with preview cache status metrics."
       },
       "PreviewSeekRequest": {
         "properties": {

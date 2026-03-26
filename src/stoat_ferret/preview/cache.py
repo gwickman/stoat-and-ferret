@@ -174,6 +174,30 @@ class PreviewCache:
             active_sessions=sessions,
         )
 
+    async def clear_all(self) -> tuple[int, int]:
+        """Remove all cached sessions, freeing disk space.
+
+        Returns:
+            Tuple of (cleared_sessions count, freed_bytes).
+        """
+        async with self._lock:
+            cleared = len(self._entries)
+            freed = sum(e.size_bytes for e in self._entries.values())
+
+            for entry in list(self._entries.values()):
+                session_dir = self._base_dir / entry.session_id
+                if session_dir.exists():
+                    shutil.rmtree(session_dir, ignore_errors=True)
+
+            self._entries.clear()
+
+        logger.info(
+            "preview_cache_cleared",
+            cleared_sessions=cleared,
+            freed_bytes=freed,
+        )
+        return cleared, freed
+
     async def rebuild_from_disk(self) -> None:
         """Rebuild cache metadata by scanning the base directory.
 
