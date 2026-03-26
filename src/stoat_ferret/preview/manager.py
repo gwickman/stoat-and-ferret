@@ -381,7 +381,11 @@ class PreviewManager:
                 quality=session.quality_level.value,
             ).observe(elapsed)
 
-            segment_count = sum(1 for f in output_dir.iterdir() if f.suffix == ".ts")
+            segment_count = (
+                sum(1 for f in output_dir.iterdir() if f.suffix == ".ts")
+                if output_dir.is_dir()
+                else 0
+            )
             logger.info(
                 "preview_segment_generated",
                 session_id=session_id,
