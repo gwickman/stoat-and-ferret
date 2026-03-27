@@ -4,6 +4,26 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v026] - 2026-03-27
+
+Phase 4 Observability + GUI Preview Player. Instruments preview and proxy subsystems with Prometheus metrics, structured logging, health checks, and graceful degradation. Wires deferred BL-179 WebSocket progress callbacks. Builds the complete GUI preview player with HLS.js, controls, seek tooltip, quality selector, and Preview page.
+
+### Added
+
+- **WebSocket Progress Wiring** — throttled progress callbacks in PreviewManager broadcasting `JOB_PROGRESS` events via WebSocket for real-time generation updates (BL-179, #208)
+- **Preview & Proxy Prometheus Metrics** — 14 metric definitions (counters, gauges, histograms) across preview, proxy, and cache subsystems (BL-190, #209)
+- **Preview Structured Logging** — structured log events across session lifecycle, proxy, cache, thumbnail, and waveform generation with `{subsystem}_{action}` naming convention (BL-191, #210)
+- **Preview & Proxy Health Checks** — preview and proxy checks on `/health/ready` with degraded semantics for optional subsystems; HealthCards GUI updates (BL-192, #211)
+- **Graceful Degradation & Shutdown** — 503 `FFMPEG_UNAVAILABLE` on preview endpoints when FFmpeg missing; `cancel_all()` with process termination and temp cleanup on shutdown (BL-193, #212)
+- **Smoke Test Updates** — health check assertions for preview/proxy fields; new preview session creation smoke test (BL-192, #213)
+- **Smoke Test Harness Guide** — documentation of new smoke test entries in smoke-test-key-files.md (BL-192, #214)
+- **Preview Page & Store** — PreviewPage shell, Zustand previewStore, navigation tab, route, and regenerated OpenAPI types for v025 preview API (BL-198, #215)
+- **HLS.js Preview Player** — PreviewPlayer with HLS.js integration, Safari native fallback, fatal error recovery, buffer tracking, and `React.lazy` dynamic import (BL-194, #216)
+- **Player Controls** — play/pause, progress bar click-to-seek, skip ±5s, volume slider with mute, time display (mm:ss/hh:mm:ss), and full keyboard accessibility (BL-195, #217)
+- **Seek Tooltip** — sprite-sheet frame calculation, smooth mouse-following via absolute positioning, and time-only fallback when thumbnails unavailable (BL-196, #218)
+- **Quality Selector & Status Display** — quality dropdown (low/medium/high) with cancel-and-restart flow, and PreviewStatus with seek latency, buffer bar, and generation progress at ~4 Hz (BL-197, #219)
+- **Preview Playback UAT Journey** — J205 with 5 steps, registered in `uat_runner.py` dependency graph, and updated uat-testing.md (BL-198, #220)
+
 ## [v025] - 2026-03-26
 
 Phase 4 Preview Engine: Sessions + Visual Aids. Core preview playback infrastructure with HLS session management, thumbnail strip generation, and waveform visualization. Backend-only — no GUI components.
