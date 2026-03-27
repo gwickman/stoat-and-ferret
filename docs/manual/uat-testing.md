@@ -202,6 +202,7 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 202 | `uat_journey_202.py` | **Project Clip** — Creates a project, adds 3 clips with in/out points and timeline positions, then verifies all clips render correctly in the clips table. Depends on journey 201. |
 | 203 | `uat_journey_203.py` | **Effects-Timeline** — Applies, edits, and removes effects on clips, verifies the timeline canvas with zoom and scroll, and selects layout presets with preview verification. Depends on journey 202. |
 | 204 | `uat_journey_204.py` | **Export-Render** — Seeds the Running Montage sample project and validates that all clips (4), effects (5), and transitions (1) render correctly across the project detail, effects, and timeline pages. Independent of journeys 201–203. |
+| 205 | `uat_journey_205.py` | **Preview Playback** — Navigates to the Preview page via the navigation tab, verifies the player component renders (or a no-content placeholder), checks that controls are visible and interactive, and confirms the quality selector is present. Independent of journeys 201–204. |
 
 ### Dependency graph
 
@@ -210,7 +211,8 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
  └─▶ 202 (project-clip)
       └─▶ 203 (effects-timeline)
 
-204 (export-render)  ← independent
+204 (export-render)      ← independent
+205 (preview-playback)   ← independent
 ```
 
-If journey 201 fails, journeys 202 and 203 are skipped automatically. Journey 204 always runs regardless of other journey results.
+If journey 201 fails, journeys 202 and 203 are skipped automatically. Journeys 204 and 205 always run regardless of other journey results.
