@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { usePreviewStore } from '../stores/previewStore'
 import { useProjectStore } from '../stores/projectStore'
+import PlayerControls from '../components/PlayerControls'
 
 const PreviewPlayer = lazy(() => import('../components/PreviewPlayer'))
 
 export default function PreviewPage() {
+  const videoRef = useRef<HTMLVideoElement>(null)
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId)
   const sessionId = usePreviewStore((s) => s.sessionId)
   const status = usePreviewStore((s) => s.status)
@@ -95,7 +97,9 @@ export default function PreviewPage() {
           <PreviewPlayer
             manifestUrl={`/api/v1/preview/${sessionId}/manifest.m3u8`}
             onError={(msg) => usePreviewStore.getState().setError(msg)}
+            videoRef={videoRef}
           />
+          <PlayerControls videoRef={videoRef} />
         </Suspense>
       )}
 

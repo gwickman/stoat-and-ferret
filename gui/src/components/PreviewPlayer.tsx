@@ -14,6 +14,8 @@ export interface PreviewPlayerProps {
   onBufferUpdate?: (ranges: BufferRange[]) => void
   /** Called on playback error. */
   onError?: (message: string) => void
+  /** External ref for the video element, used by player controls. */
+  videoRef?: React.RefObject<HTMLVideoElement | null>
 }
 
 /** HLS.js VOD configuration per NFR-002. */
@@ -34,8 +36,10 @@ export default function PreviewPlayer({
   manifestUrl,
   onBufferUpdate,
   onError,
+  videoRef: externalRef,
 }: PreviewPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const internalRef = useRef<HTMLVideoElement>(null)
+  const videoRef = externalRef ?? internalRef
   const hlsRef = useRef<Hls | null>(null)
   const [usingSafari, setUsingSafari] = useState(false)
 
