@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useRef } from 'react'
 import { usePreviewStore } from '../stores/previewStore'
 import { useProjectStore } from '../stores/projectStore'
 import PlayerControls from '../components/PlayerControls'
+import QualitySelector from '../components/QualitySelector'
+import PreviewStatus from '../components/PreviewStatus'
 
 const PreviewPlayer = lazy(() => import('../components/PreviewPlayer'))
 
@@ -44,7 +46,10 @@ export default function PreviewPage() {
 
   return (
     <div className="p-6" data-testid="preview-page">
-      <h2 className="mb-4 text-2xl font-semibold">Preview</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Preview</h2>
+        {selectedProjectId && <QualitySelector />}
+      </div>
 
       {!selectedProjectId && (
         <p className="text-gray-400" data-testid="no-project-message">
@@ -100,6 +105,7 @@ export default function PreviewPage() {
             videoRef={videoRef}
           />
           <PlayerControls videoRef={videoRef} />
+          <PreviewStatus videoRef={videoRef} />
         </Suspense>
       )}
 
