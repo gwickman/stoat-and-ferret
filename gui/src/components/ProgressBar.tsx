@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import SeekTooltip, { type ThumbnailMetadata } from './SeekTooltip'
 
 export interface ProgressBarProps {
   /** Current playback position in seconds. */
@@ -7,6 +8,8 @@ export interface ProgressBarProps {
   duration: number
   /** Called when user clicks to seek. */
   onSeek: (time: number) => void
+  /** Thumbnail strip metadata for seek preview, or null/undefined for time-only tooltip. */
+  thumbnailMetadata?: ThumbnailMetadata | null
 }
 
 /** Format seconds as mm:ss or hh:mm:ss for durations >= 1 hour. */
@@ -24,13 +27,19 @@ export function formatTime(seconds: number): string {
  *
  * Displays a filled bar proportional to currentTime/duration and
  * handles click-to-seek by calculating position from click offset.
+ * Shows a seek tooltip with thumbnail preview on hover.
  */
 export default function ProgressBar({
   currentTime,
   duration,
   onSeek,
+  thumbnailMetadata = null,
 }: ProgressBarProps) {
   const fraction = duration > 0 ? currentTime / duration : 0
+  const [hovering, setHovering] = useState(false)
+  const [mouseX, setMouseX] = useState(0)
+  const [hoverTime, setHoverTime] = useState(0)
+  const trackRef = useRef<HTMLDivElement>(null)
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -43,12 +52,28 @@ export default function ProgressBar({
     [duration, onSeek],
   )
 
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (duration <= 0) return
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const ratio = Math.max(0, Math.min(1, x / rect.width))
+      setMouseX(x)
+      setHoverTime(ratio * duration)
+    },
+    [duration],
+  )
+
+  const handleMouseEnter = useCallback(() => setHovering(true), [])
+  const handleMouseLeave = useCallback(() => setHovering(false), [])
+
   return (
     <div className="flex items-center gap-2" data-testid="progress-bar-container">
       <span className="text-xs text-gray-400 tabular-nums" data-testid="time-current">
         {formatTime(currentTime)}
       </span>
       <div
+        ref={trackRef}
         role="progressbar"
         aria-valuenow={Math.round(currentTime)}
         aria-valuemin={0}
@@ -57,12 +82,24 @@ export default function ProgressBar({
         className="relative h-2 flex-1 cursor-pointer rounded bg-gray-700"
         data-testid="progress-bar-track"
         onClick={handleClick}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div
           className="absolute inset-y-0 left-0 rounded bg-blue-500 transition-[width] duration-100"
           style={{ width: `${Math.min(100, fraction * 100)}%` }}
           data-testid="progress-bar-fill"
         />
+        {hovering && duration > 0 && (
+          <SeekTooltip
+            hoverTime={hoverTime}
+            duration={duration}
+            thumbnailMetadata={thumbnailMetadata}
+            mouseX={mouseX}
+            barWidth={trackRef.current?.clientWidth ?? 0}
+          />
+        )}
       </div>
       <span className="text-xs text-gray-400 tabular-nums" data-testid="time-duration">
         {formatTime(duration)}
