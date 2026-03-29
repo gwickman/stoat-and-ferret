@@ -838,6 +838,7 @@ def test_transition_response_schema_roundtrip() -> None:
     from stoat_ferret.api.schemas.effect import EffectTransitionResponse
 
     data = {
+        "id": "test-uuid-123",
         "source_clip_id": "clip-a",
         "target_clip_id": "clip-b",
         "transition_type": "xfade",
@@ -845,6 +846,7 @@ def test_transition_response_schema_roundtrip() -> None:
         "filter_string": "xfade=transition=fade:duration=1:offset=0",
     }
     resp = EffectTransitionResponse(**data)
+    assert resp.id == "test-uuid-123"
     assert resp.filter_string == "xfade=transition=fade:duration=1:offset=0"
 
     dumped = resp.model_dump()
@@ -928,6 +930,8 @@ async def test_transition_adjacent_clips_succeeds(
     )
     assert response.status_code == 201
     data = response.json()
+    assert "id" in data
+    assert len(data["id"]) > 0
     assert data["source_clip_id"] == clip_ids[0]
     assert data["target_clip_id"] == clip_ids[1]
     assert data["transition_type"] == "xfade"
@@ -1288,6 +1292,8 @@ async def test_transition_black_box_full_flow(
     # 4. Verify response
     assert response.status_code == 201
     data = response.json()
+    assert "id" in data
+    assert len(data["id"]) > 0
     assert data["source_clip_id"] == "bb-clip-1"
     assert data["target_clip_id"] == "bb-clip-2"
     assert data["transition_type"] == "xfade"
