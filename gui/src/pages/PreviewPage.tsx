@@ -3,6 +3,7 @@ import { usePreviewStore } from '../stores/previewStore'
 import { useProjectStore } from '../stores/projectStore'
 import { useTheaterStore } from '../stores/theaterStore'
 import { useFullscreen } from '../hooks/useFullscreen'
+import { useTimelineSync } from '../hooks/useTimelineSync'
 import PlayerControls from '../components/PlayerControls'
 import QualitySelector from '../components/QualitySelector'
 import PreviewStatus from '../components/PreviewStatus'
@@ -21,6 +22,7 @@ export default function PreviewPage() {
   const connect = usePreviewStore((s) => s.connect)
   const isFullscreen = useTheaterStore((s) => s.isFullscreen)
   const { enter: enterFullscreen } = useFullscreen(theaterContainerRef)
+  useTimelineSync(videoRef)
 
   // Connect to existing session if a project is selected and no session active
   useEffect(() => {
