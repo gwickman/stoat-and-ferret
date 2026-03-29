@@ -75,6 +75,8 @@ async def test_uc07_fade_transition(
     )
     assert resp.status_code == 201
     transition = resp.json()
+    assert "id" in transition
+    assert len(transition["id"]) > 0
     assert "xfade" in transition["filter_string"]
 
 
@@ -116,3 +118,70 @@ async def test_transition_delete(
     assert resp.status_code == 200
     timeline = resp.json()
     assert timeline["project_id"] == project_id
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_effects_router_transition_create_then_delete(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Create transition via effects router, delete via timeline endpoint."""
+    client = smoke_client
+
+    # Scan videos and get two video IDs
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=2")
+    videos = resp.json()["videos"]
+    assert len(videos) >= 2
+    vid1_id = videos[0]["id"]
+    vid2_id = videos[1]["id"]
+
+    # Create project with two adjacent clips
+    project, clip_responses = await create_project_with_clips(
+        client,
+        project_name="Effects-Delete Lifecycle Project",
+        video_ids=[vid1_id, vid2_id],
+        clips=[
+            {
+                "source_video_id": vid1_id,
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 0,
+            },
+            {
+                "source_video_id": vid2_id,
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 100,
+            },
+        ],
+    )
+    project_id = project["id"]
+    clip1_id = clip_responses[0]["id"]
+    clip2_id = clip_responses[1]["id"]
+
+    # Create transition via effects router
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip1_id,
+            "target_clip_id": clip2_id,
+            "transition_type": "xfade",
+            "parameters": {
+                "transition": "fade",
+                "duration": 1.0,
+                "offset": 0.0,
+            },
+        },
+    )
+    assert resp.status_code == 201
+    transition = resp.json()
+    transition_id = transition["id"]
+    assert len(transition_id) > 0
+
+    # Delete via timeline endpoint using the effects-router ID
+    resp = await client.delete(
+        f"/api/v1/projects/{project_id}/timeline/transitions/{transition_id}",
+    )
+    assert resp.status_code == 200

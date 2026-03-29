@@ -149,7 +149,7 @@ describe('TransitionPanel', () => {
   it('submits transition via POST endpoint', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({}),
+      json: () => Promise.resolve({ id: 'test-transition-id' }),
     })
     globalThis.fetch = mockFetch
 

@@ -91,6 +91,7 @@ class TransitionRequest(BaseModel):
 class EffectTransitionResponse(BaseModel):
     """Response schema for a successfully applied transition."""
 
+    id: str
     source_clip_id: str
     target_clip_id: str
     transition_type: str

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any
@@ -714,7 +715,9 @@ async def apply_transition(
         ) from None
 
     # Store transition in project model
+    transition_id = str(uuid.uuid4())
     transition_entry: dict[str, Any] = {
+        "id": transition_id,
         "source_clip_id": request.source_clip_id,
         "target_clip_id": request.target_clip_id,
         "transition_type": request.transition_type,
@@ -738,6 +741,7 @@ async def apply_transition(
     )
 
     return EffectTransitionResponse(
+        id=transition_id,
         source_clip_id=request.source_clip_id,
         target_clip_id=request.target_clip_id,
         transition_type=request.transition_type,
