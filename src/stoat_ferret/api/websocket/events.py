@@ -28,6 +28,7 @@ class EventType(str, Enum):
     PREVIEW_ERROR = "preview.error"
     AI_ACTION = "ai_action"
     RENDER_PROGRESS = "render_progress"
+    PROXY_READY = "proxy.ready"
 
 
 def build_event(
