@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useTheaterStore } from '../../stores/theaterStore'
+import { useTheaterShortcuts } from '../../hooks/useTheaterShortcuts'
 import TopHUD from './TopHUD'
 import BottomHUD from './BottomHUD'
 
@@ -25,6 +26,26 @@ export default function TheaterMode({ children, videoRef }: TheaterModeProps) {
   const showHUD = useTheaterStore((s) => s.showHUD)
   const hideHUD = useTheaterStore((s) => s.hideHUD)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const exitFullscreen = useCallback(async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+    }
+  }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+    }
+    // If not currently fullscreen, the parent handles entering via useFullscreen
+  }, [])
+
+  useTheaterShortcuts({
+    videoRef: videoRef ?? { current: null },
+    onExit: exitFullscreen,
+    onToggleFullscreen: toggleFullscreen,
+    enabled: isFullscreen,
+  })
 
   const clearHideTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -70,6 +91,9 @@ export default function TheaterMode({ children, videoRef }: TheaterModeProps) {
     <div
       data-testid="theater-container"
       className="relative h-full w-full bg-black"
+      tabIndex={0}
+      role="toolbar"
+      aria-label="Theater mode controls"
       onMouseMove={handleMouseMove}
     >
       {children}
