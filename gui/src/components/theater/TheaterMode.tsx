@@ -1,11 +1,15 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useTheaterStore } from '../../stores/theaterStore'
+import TopHUD from './TopHUD'
+import BottomHUD from './BottomHUD'
 
 const HUD_HIDE_DELAY_MS = 3000
 
 interface TheaterModeProps {
   /** Content to render inside the fullscreen container (e.g. PreviewPlayer). */
   children: React.ReactNode
+  /** Ref to the video element for playback controls in theater HUD. */
+  videoRef?: React.RefObject<HTMLVideoElement | null>
 }
 
 /**
@@ -15,7 +19,7 @@ interface TheaterModeProps {
  * wraps children in a theater container with mouse-tracking HUD overlay
  * that auto-hides after 3 seconds of inactivity.
  */
-export default function TheaterMode({ children }: TheaterModeProps) {
+export default function TheaterMode({ children, videoRef }: TheaterModeProps) {
   const isFullscreen = useTheaterStore((s) => s.isFullscreen)
   const isHUDVisible = useTheaterStore((s) => s.isHUDVisible)
   const showHUD = useTheaterStore((s) => s.showHUD)
@@ -76,7 +80,8 @@ export default function TheaterMode({ children }: TheaterModeProps) {
           isHUDVisible ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        {/* HUD content slots (TopHUD, BottomHUD) added by BL-200 */}
+        <TopHUD />
+        {videoRef && <BottomHUD videoRef={videoRef} />}
       </div>
     </div>
   )

@@ -126,8 +126,8 @@ class TestEventTypes:
         assert EventType.PREVIEW_ERROR.value == "preview.error"
 
     def test_event_type_count(self) -> None:
-        """EventType should have exactly 14 members."""
-        assert len(EventType) == 14
+        """EventType should have exactly 16 members."""
+        assert len(EventType) == 16
 
     def test_build_event_schema(self) -> None:
         """build_event should return dict with type, payload, correlation_id, timestamp."""

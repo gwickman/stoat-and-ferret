@@ -118,7 +118,7 @@ export default function PreviewPage() {
               </div>
             }
           >
-            <TheaterMode>
+            <TheaterMode videoRef={videoRef}>
               <PreviewPlayer
                 manifestUrl={`/api/v1/preview/${sessionId}/manifest.m3u8`}
                 onError={(msg) => usePreviewStore.getState().setError(msg)}
