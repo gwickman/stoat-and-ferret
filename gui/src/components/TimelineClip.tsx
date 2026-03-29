@@ -1,5 +1,6 @@
 import type { TimelineClip as ClipType } from '../generated/types'
 import { timeToPixel } from '../utils/timeline'
+import AudioWaveform from './AudioWaveform'
 
 interface TimelineClipProps {
   clip: ClipType
@@ -7,10 +8,11 @@ interface TimelineClipProps {
   scrollOffset: number
   isSelected: boolean
   onSelect: (clipId: string) => void
+  trackType?: string
 }
 
 /** Renders a single clip on a timeline track with position-accurate placement. */
-export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onSelect }: TimelineClipProps) {
+export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onSelect, trackType }: TimelineClipProps) {
   const start = clip.timeline_start ?? 0
   const end = clip.timeline_end ?? start + (clip.out_point - clip.in_point)
   const duration = end - start
@@ -39,9 +41,10 @@ export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onS
       }}
       aria-selected={isSelected}
     >
+      {trackType === 'audio' && <AudioWaveform videoId={clip.source_video_id} />}
       <span
         data-testid={`clip-duration-${clip.id}`}
-        className="truncate px-1 text-gray-200"
+        className="relative truncate px-1 text-gray-200"
       >
         {duration.toFixed(1)}s
       </span>

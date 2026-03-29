@@ -45,6 +45,7 @@ export default function Track({ track, zoom, scrollOffset, selectedClipId, onSel
             scrollOffset={scrollOffset}
             isSelected={clip.id === selectedClipId}
             onSelect={onSelectClip}
+            trackType={track.track_type}
           />
         ))}
       </div>
