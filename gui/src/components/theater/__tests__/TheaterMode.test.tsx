@@ -3,6 +3,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import TheaterMode from '../TheaterMode'
 import { useTheaterStore } from '../../../stores/theaterStore'
 
+vi.mock('../../../hooks/useWebSocket', () => ({
+  useWebSocket: () => ({
+    state: 'disconnected' as const,
+    send: vi.fn(),
+    lastMessage: null,
+  }),
+}))
+
+vi.mock('../../../hooks/useProjects', () => ({
+  useProjects: () => ({
+    projects: [],
+    total: 0,
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}))
+
 beforeEach(() => {
   vi.restoreAllMocks()
   vi.useFakeTimers()
