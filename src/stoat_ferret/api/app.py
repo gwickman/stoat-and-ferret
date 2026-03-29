@@ -127,11 +127,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db, audit_logger=audit_logger)
     app.state.ffmpeg_executor = ObservableFFmpegExecutor(RealFFmpegExecutor())
+    async_executor = RealAsyncFFmpegExecutor()
     thumbnail_service = ThumbnailService(
         executor=app.state.ffmpeg_executor,
         thumbnail_dir=settings.thumbnail_dir,
+        async_executor=async_executor,
+        ws_manager=app.state.ws_manager,
     )
     app.state.thumbnail_service = thumbnail_service
+
+    # Create waveform service
+    app.state.waveform_service = WaveformService(
+        async_executor=async_executor,
+        waveform_dir=settings.waveform_dir,
+        ws_manager=app.state.ws_manager,
+    )
 
     # Create proxy service before scan handler so it can be injected
     proxy_service = ProxyService(

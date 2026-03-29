@@ -48,7 +48,7 @@ Pages not yet implemented: Timeline (Phase 3), Preview Player (Phase 4), AI Thea
 | Phase 1 | Foundation + Rust Core | Implemented |
 | Phase 2 | Effects Engine | Implemented |
 | Phase 3 | Composition Engine (PIP, split-screen, visual timeline) | Implemented (v015–v017) |
-| Phase 4 | Preview & Playback (proxy gen, preview server, Theater Mode) | Not started |
+| Phase 4 | Preview & Playback (proxy gen, preview server, Theater Mode) | Smoke tests implemented (v027) |
 | Phase 5 | Export & Production (render coordinator, HW acceleration) | Not started |
 | Phase 6 | Deployability & AI Integration | Not started |
 
