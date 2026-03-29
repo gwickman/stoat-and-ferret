@@ -1,20 +1,26 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
 import { usePreviewStore } from '../stores/previewStore'
 import { useProjectStore } from '../stores/projectStore'
+import { useTheaterStore } from '../stores/theaterStore'
+import { useFullscreen } from '../hooks/useFullscreen'
 import PlayerControls from '../components/PlayerControls'
 import QualitySelector from '../components/QualitySelector'
 import PreviewStatus from '../components/PreviewStatus'
+import TheaterMode from '../components/theater/TheaterMode'
 
 const PreviewPlayer = lazy(() => import('../components/PreviewPlayer'))
 
 export default function PreviewPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const theaterContainerRef = useRef<HTMLDivElement>(null)
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId)
   const sessionId = usePreviewStore((s) => s.sessionId)
   const status = usePreviewStore((s) => s.status)
   const error = usePreviewStore((s) => s.error)
   const progress = usePreviewStore((s) => s.progress)
   const connect = usePreviewStore((s) => s.connect)
+  const isFullscreen = useTheaterStore((s) => s.isFullscreen)
+  const { enter: enterFullscreen } = useFullscreen(theaterContainerRef)
 
   // Connect to existing session if a project is selected and no session active
   useEffect(() => {
@@ -48,7 +54,19 @@ export default function PreviewPage() {
     <div className="p-6" data-testid="preview-page">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Preview</h2>
-        {selectedProjectId && <QualitySelector />}
+        <div className="flex items-center gap-2">
+          {selectedProjectId && <QualitySelector />}
+          {sessionId && status === 'ready' && (
+            <button
+              type="button"
+              data-testid="theater-mode-button"
+              onClick={() => enterFullscreen()}
+              className="rounded bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-600"
+            >
+              Theater Mode
+            </button>
+          )}
+        </div>
       </div>
 
       {!selectedProjectId && (
@@ -92,21 +110,29 @@ export default function PreviewPage() {
       )}
 
       {status === 'ready' && sessionId && (
-        <Suspense
-          fallback={
-            <div data-testid="player-suspense-fallback" className="flex h-64 items-center justify-center rounded border border-gray-700 bg-gray-900">
-              <p className="text-gray-400">Loading player...</p>
-            </div>
-          }
-        >
-          <PreviewPlayer
-            manifestUrl={`/api/v1/preview/${sessionId}/manifest.m3u8`}
-            onError={(msg) => usePreviewStore.getState().setError(msg)}
-            videoRef={videoRef}
-          />
-          <PlayerControls videoRef={videoRef} />
-          <PreviewStatus videoRef={videoRef} />
-        </Suspense>
+        <div ref={theaterContainerRef}>
+          <Suspense
+            fallback={
+              <div data-testid="player-suspense-fallback" className="flex h-64 items-center justify-center rounded border border-gray-700 bg-gray-900">
+                <p className="text-gray-400">Loading player...</p>
+              </div>
+            }
+          >
+            <TheaterMode>
+              <PreviewPlayer
+                manifestUrl={`/api/v1/preview/${sessionId}/manifest.m3u8`}
+                onError={(msg) => usePreviewStore.getState().setError(msg)}
+                videoRef={videoRef}
+              />
+            </TheaterMode>
+            {!isFullscreen && (
+              <>
+                <PlayerControls videoRef={videoRef} />
+                <PreviewStatus videoRef={videoRef} />
+              </>
+            )}
+          </Suspense>
+        </div>
       )}
 
       {status === 'error' && error && (
