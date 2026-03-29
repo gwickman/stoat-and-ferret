@@ -1,6 +1,14 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import VideoGrid from '../VideoGrid'
+
+vi.mock('../../hooks/useWebSocket', () => ({
+  useWebSocket: () => ({
+    state: 'connected' as const,
+    send: vi.fn(),
+    lastMessage: null,
+  }),
+}))
 import type { Video } from '../../generated/types'
 
 function makeVideo(overrides: Partial<Video> = {}): Video {

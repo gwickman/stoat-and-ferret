@@ -1,4 +1,5 @@
 import type { Video } from '../generated/types'
+import ProxyStatusBadge from './library/ProxyStatusBadge'
 
 interface VideoCardProps {
   video: Video
@@ -39,6 +40,9 @@ export default function VideoCard({ video }: VideoCardProps) {
           data-testid={`video-duration-${video.id}`}
         >
           {formatDuration(video)}
+        </span>
+        <span className="absolute top-1 right-1">
+          <ProxyStatusBadge videoId={video.id} />
         </span>
       </div>
       <div className="p-2">

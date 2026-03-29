@@ -314,6 +314,18 @@ class ProxyService:
                 file_size_bytes=file_size,
             )
 
+            # Broadcast PROXY_READY event for real-time UI updates
+            if self._ws_manager:
+                await self._ws_manager.broadcast(
+                    build_event(
+                        EventType.PROXY_READY,
+                        {
+                            "video_id": video_id,
+                            "quality": quality.value,
+                        },
+                    )
+                )
+
             # Send final completion progress event
             await self._send_progress(
                 job_id=job_id,
