@@ -58,14 +58,14 @@ interface ActivityEntry {
   - `customPositions: LayoutPosition[]` - Manual position overrides
 - **Actions:**
   - `fetchPresets()` - GET `/api/v1/compose/presets`
-  - `selectPreset(name)` - Select preset by name, load from PRESET_POSITIONS
+  - `selectPreset(name)` - Select preset by name, load positions from API
   - `setCustomPositions(positions)` - Direct custom position override
   - `updateCustomPosition(index, field, value)` - Update single field with clamping
   - `getActivePositions()` - Return selected preset positions or custom positions
   - `reset()` - Clear state
 - **Used by:** LayoutSelector, LayoutPreview, LayerStack in TimelinePage
 
-**Key Detail:** `updateCustomPosition` clamps width/height/x/y to [0,1], rounds z_index
+**Key Detail:** `updateCustomPosition` clamps width/height/x/y to [0,1], rounds z_index. Presets are now fetched from API rather than hardcoded client-side.
 
 ### effectCatalogStore
 
@@ -212,12 +212,60 @@ interface AppliedEffect {
   - `reset()` - Clear both
 - **Used by:** TransitionPanel (pair-mode clip selection)
 
+### previewStore
+
+**Location:** `gui/src/stores/previewStore.ts` (line 59)
+
+- **State:**
+  - `sessionId: string | null` - Active preview session ID
+  - `status: PreviewStatus | null` - 'initializing' | 'generating' | 'ready' | 'seeking' | 'error' | 'expired'
+  - `quality: PreviewQuality` - 'low' | 'medium' | 'high' (default: medium)
+  - `position: number` - Current playback position in seconds
+  - `duration: number` - Total video duration in seconds
+  - `volume: number` - Volume level [0.0, 1.0]
+  - `muted: boolean` - Audio mute state
+  - `progress: number` - Generation progress [0.0, 1.0]
+  - `error: string | null` - Error message
+
+- **Actions:**
+  - `connect(projectId)` - POST `/api/v1/projects/{id}/preview/start` with quality
+  - `disconnect()` - DELETE `/api/v1/preview/{sessionId}`, reset state
+  - `setQuality(projectId, quality)` - Delete old session, create new at quality
+  - `setVolume(volume)` - Clamp to [0.0, 1.0]
+  - `setMuted(muted)` - Toggle mute state
+  - `setPosition(position)` - Clamp to [0, duration]
+  - `setProgress(progress)` - Clamp to [0.0, 1.0]
+  - `setStatus(status)` - Update preview status
+  - `setError(error)` - Set error message (null to clear)
+  - `reset()` - Clear all state to initial
+
+- **Used by:** PreviewPage, PreviewPlayer, PlayerControls, QualitySelector, PreviewStatus, TheaterMode
+
+### theaterStore
+
+**Location:** `gui/src/stores/theaterStore.ts` (line 24)
+
+- **State:**
+  - `isFullscreen: boolean` - Whether theater mode is in fullscreen
+  - `isHUDVisible: boolean` - Whether HUD overlay is visible
+  - `lastMouseMoveTime: number` - Timestamp of last mouse movement (ms since epoch)
+
+- **Actions:**
+  - `enterTheater()` - Enter fullscreen, show HUD, set lastMouseMoveTime
+  - `exitTheater()` - Exit fullscreen, reset to initial state
+  - `showHUD()` - Show HUD overlay, set lastMouseMoveTime
+  - `hideHUD()` - Hide HUD overlay
+  - `reset()` - Reset to initial state
+
+- **Used by:** TheaterMode, useFullscreen, useTheaterShortcuts
+
+**Key Detail:** `isFullscreen` derived from browser `fullscreenchange` events (via useFullscreen hook), not button state. Ensures accuracy with ESC key, F11, etc.
+
 ## Dependencies
 
 ### Internal Dependencies
 
-- Type imports: `Clip` (useProjects), `LayoutPosition`, `LayoutPreset`, `TimelineResponse`, `Track` (timeline.ts)
-- `PRESET_POSITIONS` from `data/presetPositions`
+- Type imports: `Clip` (useProjects), `LayoutPosition`, `LayoutPreset`, `TimelineResponse`, `Track` (types)
 - Zustand: `create` hook
 
 ### External Dependencies
@@ -297,7 +345,7 @@ classDiagram
             presets: LayoutPreset[]
             selectedPreset: string | null
             customPositions: LayoutPosition[]
-            selectPreset(), updateCustomPosition(), getActivePositions()
+            selectPreset(), updateCustomPosition()
         }
         class EffectCatalogStore {
             searchQuery, selectedCategory, selectedEffect
@@ -331,11 +379,24 @@ classDiagram
             sourceClipId, targetClipId
             selectSource(), selectTarget(), isReady()
         }
+        class PreviewStore {
+            sessionId, status, quality
+            position, duration, volume, muted
+            progress, error
+            connect(), disconnect(), setQuality()
+        }
+        class TheaterStore {
+            isFullscreen, isHUDVisible
+            lastMouseMoveTime
+            enterTheater(), exitTheater(), showHUD(), hideHUD()
+        }
     }
 
     EffectFormStore --> EffectCatalogStore : "schema from selected effect"
     EffectPreviewStore --> EffectFormStore : "triggered by parameter changes"
     EffectStackStore --> ClipStore : "uses clip data"
-    ComposeStore --> "PRESET_POSITIONS data" : "loads layout positions"
+    PreviewStore --> ProjectStore : "selectedProjectId"
+    PreviewStore --> TimelineStore : "syncs playhead position"
+    TheaterStore -.->|derives from fullscreenchange event|"Fullscreen API"
 ```
 

@@ -90,6 +90,90 @@ Defines all data model classes and exceptions for the database layer. These are 
   - `@property duration_seconds() -> float`: Computed duration in seconds (duration_frames / frame_rate)
   - `@staticmethod new_id() -> str`: Generate unique UUID for video
 
+- `PreviewStatus`: Enum for preview session lifecycle
+  - Values: `INITIALIZING`, `GENERATING`, `READY`, `SEEKING`, `ERROR`, `EXPIRED`
+  - Transitions: initializing → generating → ready, ready ↔ seeking, any → error, any → expired
+  - Terminal states: error (→ expired), expired (no further transitions)
+
+- `PreviewQuality`: Enum for preview quality levels
+  - Values: `LOW`, `MEDIUM`, `HIGH`
+
+- `PreviewSession`: Preview session metadata for HLS preview generation
+  - Properties:
+    - `id: str` — Unique identifier (UUID)
+    - `project_id: str` — FK to the project
+    - `status: PreviewStatus` — Current lifecycle status
+    - `quality_level: PreviewQuality` — Quality level of the preview
+    - `created_at: datetime` — When the session was created
+    - `updated_at: datetime` — When the session was last modified
+    - `expires_at: datetime` — When the session expires (TTL)
+    - `manifest_path: str | None` — Path to HLS manifest file (None until ready)
+    - `segment_count: int` — Number of HLS segments generated (default 0)
+    - `error_message: str | None` — Error description (None on success)
+  - `@staticmethod new_id() -> str`: Generate unique UUID for preview session
+
+- `ThumbnailStripStatus`: Enum for thumbnail strip lifecycle
+  - Values: `PENDING`, `GENERATING`, `READY`, `ERROR`
+  - Transitions: pending → generating → ready, any → error
+
+- `ThumbnailStrip`: Thumbnail strip sprite sheet metadata
+  - Represents an NxM grid sprite sheet generated from a video for timeline seek tooltips
+  - Properties:
+    - `id: str` — Unique identifier (UUID)
+    - `video_id: str` — FK to the source video
+    - `status: ThumbnailStripStatus` — Current lifecycle status
+    - `created_at: datetime` — When the strip was created
+    - `file_path: str | None` — Path to the sprite sheet JPEG (None until ready)
+    - `frame_count: int` — Number of frames in the sprite sheet (default 0)
+    - `frame_width: int` — Width of each frame in pixels (default 160)
+    - `frame_height: int` — Height of each frame in pixels (default 90)
+    - `interval_seconds: float` — Seconds between extracted frames (default 5.0)
+    - `columns: int` — Number of columns in the grid (default 10)
+    - `rows: int` — Number of rows in the grid (default 0)
+  - `@staticmethod new_id() -> str`: Generate unique UUID for thumbnail strip
+
+- `WaveformStatus`: Enum for waveform lifecycle
+  - Values: `PENDING`, `GENERATING`, `READY`, `ERROR`
+  - Transitions: pending → generating → ready, any → error
+
+- `WaveformFormat`: Enum for waveform output format
+  - Values: `PNG`, `JSON`
+
+- `Waveform`: Waveform metadata for audio visualization
+  - Represents a waveform generated from a video's audio stream
+  - Properties:
+    - `id: str` — Unique identifier (UUID)
+    - `video_id: str` — FK to the source video
+    - `format: WaveformFormat` — Output format (png or json)
+    - `status: WaveformStatus` — Current lifecycle status
+    - `created_at: datetime` — When the waveform was created
+    - `file_path: str | None` — Path to the output file (None until ready)
+    - `duration: float` — Audio duration in seconds (default 0.0)
+    - `channels: int` — Number of audio channels (default 0)
+  - `@staticmethod new_id() -> str`: Generate unique UUID for waveform
+
+- `ProxyStatus`: Enum for proxy file lifecycle
+  - Values: `PENDING`, `GENERATING`, `READY`, `FAILED`, `STALE`
+  - Transitions: pending → generating → (ready | failed), ready → stale
+
+- `ProxyQuality`: Enum for proxy quality levels
+  - Values: `LOW`, `MEDIUM`, `HIGH`
+
+- `ProxyFile`: Proxy file metadata for lower-resolution editing previews
+  - Represents a proxy file generated from a source video at a specific quality level
+  - Each (source_video_id, quality) pair is unique
+  - Properties:
+    - `id: str` — Unique identifier (UUID)
+    - `source_video_id: str` — FK to the source video
+    - `quality: ProxyQuality` — Quality level of the proxy
+    - `file_path: str` — Absolute path to the proxy file
+    - `file_size_bytes: int` — Size of the proxy file in bytes
+    - `status: ProxyStatus` — Current lifecycle status
+    - `source_checksum: str` — SHA-256 checksum of the source video
+    - `generated_at: datetime | None` — When generation completed (None until ready)
+    - `last_accessed_at: datetime` — When the proxy was last accessed
+  - `@staticmethod new_id() -> str`: Generate unique UUID for proxy file
+
 ## Dependencies
 
 - **stoat_ferret_core**: Rust core library bindings
@@ -120,8 +204,13 @@ Defines all data model classes and exceptions for the database layer. These are 
   - `clip_repository.py` (AsyncSQLiteClipRepository) — Clip CRUD operations
   - `timeline_repository.py` (AsyncSQLiteTimelineRepository) — Track CRUD and Clip queries
   - `version_repository.py` — indirectly (uses JSON for timeline data)
+  - `batch_repository.py` (AsyncSQLiteBatchRepository) — BatchJobRecord for batch render jobs
+  - `preview_repository.py` (SQLitePreviewRepository) — PreviewSession, PreviewStatus, PreviewQuality
+  - `proxy_repository.py` (SQLiteProxyRepository) — ProxyFile, ProxyStatus, ProxyQuality
   - `audit.py` (AuditLogger) — logs changes to these models
   - API layer (routes and handlers) — transmits models to/from clients
 
 - **Uses:**
   - stoat_ferret_core library for clip validation
+  - enum.Enum — for status and quality enumerations
+  - uuid — for generating unique IDs via new_id() methods

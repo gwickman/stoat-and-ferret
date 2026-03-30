@@ -2,11 +2,12 @@
 
 ## Purpose
 
-The FFmpeg Integration component abstracts all interaction with the FFmpeg and ffprobe processes. It provides a protocol-based executor that hides process spawning details from callers, wraps the executor with structured logging and Prometheus metrics for production observability, defines Prometheus metrics specific to FFmpeg execution, and provides an async function for extracting video metadata from ffprobe.
+The FFmpeg Integration component abstracts all interaction with the FFmpeg and ffprobe processes. It provides protocol-based executors (synchronous and asynchronous) that hide process spawning details from callers, wraps executors with structured logging and Prometheus metrics for production observability, defines Prometheus metrics specific to FFmpeg execution as module-level singletons (LRN-137), and provides an async function for extracting video metadata from ffprobe.
 
 ## Responsibilities
 
-- Execute FFmpeg commands as subprocesses and return structured results (stdout, stderr, exit code, duration)
+- Execute FFmpeg commands as subprocesses (synchronous and asynchronous) and return structured results (stdout, stderr, exit code, duration)
+- Provide async FFmpeg execution with real-time progress tracking and cooperative cancellation for long-running transcoding
 - Record and replay FFmpeg interactions for deterministic testing via record/replay executors
 - Wrap any executor implementation with structured logging and Prometheus metrics (decorator pattern)
 - Define the Prometheus metrics namespace for FFmpeg observability: execution count, duration histogram, and active process gauge
@@ -31,6 +32,18 @@ The FFmpeg Integration component abstracts all interaction with the FFmpeg and f
 - `RealFFmpegExecutor` — Wraps `subprocess.run()`; production implementation
 - `RecordingFFmpegExecutor` — Delegates to wrapped executor and records all interactions to a JSON file
 - `FakeFFmpegExecutor` — Replays recorded interactions in order; supports strict mode for argument matching
+
+**AsyncFFmpegExecutor (protocol)**
+- `async run(args: list[str], *, progress_callback: ProgressCallback | None, cancel_event: asyncio.Event | None) -> ExecutionResult` — Execute FFmpeg asynchronously with optional progress tracking and cooperative cancellation
+
+**ProgressInfo (dataclass)**
+- `out_time_us: int` — Current output time in microseconds
+- `speed: float` — Encoding speed multiplier
+- `fps: float` — Current encoding FPS
+
+**Implementations (async)**
+- `RealAsyncFFmpegExecutor` — Uses `asyncio.create_subprocess_exec()`; concurrent stderr reading task; progress callback invoked per progress block; SIGTERM on cancellation
+- `FakeAsyncFFmpegExecutor` — Test double with call recording
 
 **ObservableFFmpegExecutor**
 - `__init__(wrapped: FFmpegExecutor) -> None`
@@ -65,8 +78,9 @@ None — the component depends only on Python standard library modules (`subproc
 | Module | Source | Purpose |
 |--------|--------|---------|
 | Executor | `src/stoat_ferret/ffmpeg/executor.py` | `FFmpegExecutor` protocol; `RealFFmpegExecutor`, `RecordingFFmpegExecutor`, `FakeFFmpegExecutor`; `ExecutionResult` dataclass |
+| Async Executor | `src/stoat_ferret/ffmpeg/async_executor.py` | `AsyncFFmpegExecutor` protocol; `RealAsyncFFmpegExecutor` with progress tracking and cooperative cancellation; `FakeAsyncFFmpegExecutor` for testing; `ProgressInfo` dataclass |
 | Observable | `src/stoat_ferret/ffmpeg/observable.py` | `ObservableFFmpegExecutor` — decorator that adds structlog events and Prometheus metrics to any executor |
-| Metrics | `src/stoat_ferret/ffmpeg/metrics.py` | Prometheus metric definitions: `ffmpeg_executions_total`, `ffmpeg_execution_duration_seconds`, `ffmpeg_active_processes` |
+| Metrics | `src/stoat_ferret/ffmpeg/metrics.py` | Prometheus metric definitions as module-level singletons (LRN-137): `ffmpeg_executions_total`, `ffmpeg_execution_duration_seconds`, `ffmpeg_active_processes` |
 | Probe | `src/stoat_ferret/ffmpeg/probe.py` | `ffprobe_video()` async function; `VideoMetadata` dataclass; `FFprobeError` exception; `_parse_ffprobe_output()` internal parser |
 
 ## Key Behaviors
@@ -81,6 +95,10 @@ None — the component depends only on Python standard library modules (`subproc
 
 **Async Subprocess with Timeout:** `ffprobe_video()` uses `asyncio.create_subprocess_exec()` and wraps `proc.communicate()` in `asyncio.wait_for(..., timeout=30)`. On timeout, it kills the process before re-raising as `FFprobeError` to avoid zombie processes.
 
+**Async FFmpeg Execution:** `RealAsyncFFmpegExecutor` uses concurrent tasks for stderr reading, cancellation monitoring, and the main process. Progress callbacks are invoked after each progress block (~1s intervals). Cooperative cancellation via `asyncio.Event` sends SIGTERM to the process. Duration is measured with `time.monotonic()` for immunity to system clock changes.
+
+**Metric Singleton Module Pattern (LRN-137):** All Prometheus metrics for FFmpeg are defined as module-level singletons in `metrics.py`. Service files import specific metric objects rather than creating them inline, providing a single inventory of all instrumentation points and avoiding import-time side effects in service code.
+
 ## Inter-Component Relationships
 
 ```
@@ -89,6 +107,12 @@ API Gateway (ThumbnailService)
 
 API Gateway (ScanService)
     |-- uses --> FFmpeg Integration (ffprobe_video)
+
+API Gateway (ProxyService, PreviewManager)
+    |-- uses --> FFmpeg Integration (AsyncFFmpegExecutor for transcoding/HLS generation)
+
+API Gateway (WaveformService)
+    |-- uses --> FFmpeg Integration (ffprobe for waveform extraction)
 
 API Gateway (HealthRouter)
     |-- checks availability of ffmpeg binary directly via subprocess
@@ -102,3 +126,4 @@ Observability
 | Version | Changes |
 |---------|---------|
 | v010 | Initial FFmpeg integration with executor, observable wrapper, probe, and metrics |
+| v027 | Added async executor with progress tracking and cooperative cancellation; documented metric singleton module pattern (LRN-137) |

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Rust Core component is a native extension module (`stoat_ferret_core`) built with PyO3 and maturin. It provides all compute-intensive operations that benefit from Rust's performance and type safety: frame-accurate timeline mathematics, clip validation, FFmpeg command and filter graph construction, multi-stream composition with layout presets, audio mixing and transition builders, batch progress aggregation, and input sanitization. All types and functions are exposed to Python via PyO3 bindings with hand-maintained `.pyi` type stubs.
+The Rust Core component is a native extension module (`stoat_ferret_core`) built with PyO3 and maturin. It provides all compute-intensive operations that benefit from Rust's performance and type safety: frame-accurate timeline mathematics, clip validation, FFmpeg command and filter graph construction, multi-stream composition with layout presets, audio mixing and transition builders, batch progress aggregation, preview filter simplification and quality selection, and input sanitization. All types and functions are exposed to Python via PyO3 bindings with hand-maintained `.pyi` type stubs.
 
 ## Responsibilities
 
@@ -13,6 +13,7 @@ The Rust Core component is a native extension module (`stoat_ferret_core`) built
 - Provide layout presets (PIP variants, side-by-side, top-bottom, grid) with normalized coordinate computation and pixel conversion
 - Build composition graphs for multi-stream video layouts by combining clip validation, layout resolution, and filter graph assembly
 - Compute aggregated batch render progress from individual job statuses
+- Simplify filter graphs for preview playback by removing expensive filters at lower quality levels, estimate filter computational cost, and select appropriate preview quality
 - Sanitize and validate user-supplied text, paths, codecs, presets, and numeric parameters before use in FFmpeg commands
 - Expose all types and functions to Python via a single `_core` PyO3 module with custom exception types
 
@@ -75,6 +76,15 @@ The Rust Core component is a native extension module (`stoat_ferret_core`) built
 - `BatchProgress` — `total_jobs`, `completed_jobs`, `failed_jobs`, `overall_progress`
 - `calculate_batch_progress(jobs: list[BatchJobStatus]) -> BatchProgress`
 
+**Preview Quality**
+- `PreviewQuality` — Enum: `Draft`, `Medium`, `High`
+- `is_expensive_filter(name: str) -> bool` — Classify filter by computational cost
+- `simplify_filter_chain(chain: FilterChain, quality: PreviewQuality) -> FilterChain` — Remove expensive filters at Draft/Medium
+- `simplify_filter_graph(graph: FilterGraph, quality: PreviewQuality) -> FilterGraph` — Remove expensive filters from full graph
+- `estimate_filter_cost(graph: FilterGraph) -> float` — Sigmoid-normalized cost in [0.0, 1.0]
+- `select_preview_quality(cost: float) -> PreviewQuality` — Auto-select quality (High: <0.3, Medium: 0.3–0.7, Draft: >0.7)
+- `inject_preview_scale(graph: FilterGraph, width: int, height: int) -> FilterGraph` — Append scale filter for resolution control
+
 **Sanitization**
 - `escape_filter_text(text) -> str` — Escapes FFmpeg special chars: `\`, `'`, `:`, `[`, `]`, `;`
 - `validate_path(path) -> None` — Rejects empty or null-byte paths
@@ -109,6 +119,7 @@ None — the Rust crate has no runtime dependencies on other application compone
 | Layout | `rust/stoat_ferret_core/src/layout/` | `LayoutPosition` with pixel conversion; `LayoutPreset` enum with position factories; `LayoutError` |
 | Compose | `rust/stoat_ferret_core/src/compose/` | `build_composition_graph()`; overlay and scale filter helpers; composition timeline builders |
 | Batch | `rust/stoat_ferret_core/src/batch.rs` | `BatchJobStatus`; `BatchProgress`; `calculate_batch_progress()` mean-based aggregation |
+| Preview | `rust/stoat_ferret_core/src/preview/` | `PreviewQuality` enum; filter classification and simplification; cost estimation (sigmoid); quality auto-selection; scale filter injection |
 | Sanitize | `rust/stoat_ferret_core/src/sanitize/` | `escape_filter_text()`; `validate_path()`; numeric bounds validators; codec and preset whitelists |
 
 ## Key Behaviors
@@ -151,3 +162,4 @@ Data Access (models.py)
 | v014 | Added `batch.md` (batch progress aggregation) |
 | v015 | Added `AudioMixSpec`, `TrackAudioConfig`, `VolumeBuilder` bindings for audio mix support |
 | v016 | Added transition calculation helpers: `calculate_composition_positions()`, `calculate_timeline_duration()`, `CompositionClip`, `TransitionSpec` |
+| v027 | Added preview module: `PreviewQuality` enum, filter classification and simplification, cost estimation, quality auto-selection, scale filter injection |

@@ -10,14 +10,14 @@ Detailed documentation of individual source modules organized by component:
 
 | Directory | Component | Files | Description |
 |-----------|-----------|-------|-------------|
-| `API-Gateway/` | API Gateway | 22 | FastAPI app, routers, middleware, schemas, services, WebSocket |
-| `Data-Access/` | Data Access | 9 | SQLite repositories, models, schema, audit logging |
+| `API-Gateway/` | API Gateway | 28 | FastAPI app, routers (16), middleware, schemas, services, WebSocket |
+| `Data-Access/` | Data Access | 12 | SQLite repositories (8), models, schema, audit logging |
 | `Effects-Engine/` | Effects Engine | 2 | Effect definitions and registry |
-| `FFmpeg-Integration/` | FFmpeg Integration | 4 | FFmpeg executor, probe, metrics, observable wrapper |
-| `Job-Queue/` | Job Queue | 1 | Async job queue for scan/render operations |
+| `FFmpeg-Integration/` | FFmpeg Integration | 5 | FFmpeg executors (sync + async), probe, metrics, observable wrapper |
+| `Job-Queue/` | Job Queue | 1 | Async job queue for scan/render/proxy operations |
 | `Observability/` | Observability | 1 | Structured logging with file rotation |
-| `Rust-Core/` | Rust Core | 8 | PyO3 bindings, timeline math, filters, layout, composition |
-| `Web-GUI/` | Web GUI | 11 | React/TypeScript SPA with Zustand stores |
+| `Rust-Core/` | Rust Core | 9 | PyO3 bindings, timeline math, filters, layout, composition, preview quality |
+| `Web-GUI/` | Web GUI | 13 | React/TypeScript SPA with Zustand stores, preview, theater mode |
 
 ### Component Level (`Component/`)
 
@@ -49,3 +49,4 @@ See also [docs/design/02-architecture.md](../design/02-architecture.md) for deta
 | Version | Date | Description |
 |---------|------|-------------|
 | v018 | 2026-03-13 | Full regeneration for v009-v017 drift (BL-069) |
+| v027 | 2026-03-30 | Full regeneration for v011-v027 drift (BL-147): preview, proxy, thumbnails, waveform, theater mode, degraded health semantics (LRN-136), metric singleton pattern (LRN-137) |

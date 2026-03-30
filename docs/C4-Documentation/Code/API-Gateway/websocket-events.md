@@ -21,6 +21,14 @@ Event type definitions and message schema for WebSocket broadcasting. Provides s
   - `LAYOUT_APPLIED`: Layout preset applied to project
   - `AUDIO_MIX_CHANGED`: Audio mix configuration changed
   - `TRANSITION_APPLIED`: Transition applied between clips
+  - `JOB_PROGRESS`: Background job progress update (proxy, waveform, etc.)
+  - `PREVIEW_GENERATING`: Preview session starting HLS generation
+  - `PREVIEW_READY`: Preview HLS manifest ready
+  - `PREVIEW_SEEKING`: Preview seek position changed
+  - `PREVIEW_ERROR`: Preview generation error occurred
+  - `AI_ACTION`: AI-assisted action executed
+  - `RENDER_PROGRESS`: Batch render job progress update
+  - `PROXY_READY`: Proxy video file ready for use
 
 ### Functions
 

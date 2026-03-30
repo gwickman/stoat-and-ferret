@@ -96,6 +96,46 @@ Five top-level page components serving as route destinations. Each page manages 
 - Loading/error states for both timeline and presets independently
 - Presets section only rendered if `presets.length > 0`
 
+### PreviewPage
+
+**Location:** `gui/src/pages/PreviewPage.tsx` (line 14)
+
+- HLS video preview with quality selection, theater mode, and real-time sync
+- State:
+  - `usePreviewStore()`: sessionId, status, quality, position, duration, volume, muted, progress, error
+  - `useProjectStore()`: selectedProjectId
+  - `useTheaterStore()`: isFullscreen
+- Hooks: `useFullscreen()`, `useTimelineSync()`, lazy-loaded `PreviewPlayer`
+- Components: PreviewPlayer, PlayerControls, PreviewStatus, QualitySelector, TheaterMode
+
+**Features:**
+- Connect to preview session via `POST /api/v1/projects/{id}/preview/start`
+- Quality selector (low/medium/high) with session restart
+- Theater mode toggle (fullscreen with auto-hiding HUD)
+- Real-time position/duration sync with timeline
+- Progress bar during generation with percentage display
+- Error handling with retry button
+- Session expiration handling with restart option
+
+**State Transitions:**
+- "No project selected" → Select project
+- "No session" → Click "Start Preview"
+- "Initializing" → Waiting for session creation
+- "Generating" → Progress bar with percentage
+- "Ready" → Player visible, quality selector, theater button
+- "Error" → Error message with retry
+- "Expired" → Session expired message with restart
+
+**Theater Mode:**
+- Enters fullscreen on "Theater Mode" button click
+- Quality selector visible in normal mode only
+- Auto-hiding HUD in theater (player controls + project name + AI indicator)
+- Exit theater with Esc key or fullscreen exit
+
+**Timeline Sync:**
+- `useTimelineSync()` syncs video playhead ↔ timeline playhead
+- Debounced bidirectional sync (100ms debounce, 0.5s threshold)
+
 ## Dependencies
 
 ### Internal Dependencies
@@ -196,6 +236,13 @@ classDiagram
             useComposeStore()
             render TimelineCanvas, LayoutSelector, LayoutPreview, LayerStack
         }
+        class PreviewPage {
+            usePreviewStore()
+            useProjectStore()
+            useTheaterStore()
+            useFullscreen(), useTimelineSync()
+            render PreviewPlayer, PlayerControls, PreviewStatus, QualitySelector, TheaterMode
+        }
     }
     class App {
         Routes to all Pages
@@ -205,5 +252,6 @@ classDiagram
     App --> ProjectsPage
     App --> EffectsPage
     App --> TimelinePage
+    App --> PreviewPage
 ```
 

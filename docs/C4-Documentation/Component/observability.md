@@ -54,13 +54,20 @@ All components
     |-- emit structured logs via --> structlog.get_logger(__name__)
     |   (all logs route through the configured pipeline)
 
+FFmpeg Integration, Preview subsystem
+    |-- follow metric singleton module pattern (LRN-137)
+    |   (all Prometheus metrics defined as module-level singletons in metrics.py)
+
 Observability
     |-- writes logs to --> logs/stoat-ferret.log (rotating file)
     |-- writes logs to --> stdout (stream handler)
 ```
+
+**Metric Singleton Module Pattern (LRN-137):** Subsystems define all Prometheus metrics in a dedicated `metrics.py` module as module-level singletons. Service files import specific metric objects rather than creating them inline. This provides a single inventory of all instrumentation points per subsystem, avoids import-time side effects, and enables consistent naming conventions. Applied in FFmpeg Integration (`ffmpeg/metrics.py`) and Preview subsystem (`preview/metrics.py`).
 
 ## Version History
 
 | Version | Changes |
 |---------|---------|
 | v007 | Initial logging configuration with structlog, rotating file handler, and JSON/console formats |
+| v027 | Documented metric singleton module pattern (LRN-137) as cross-cutting observability guidance |

@@ -18,6 +18,11 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
 - `TABLE_CLIPS: str = "clips"`
 - `TABLE_TRACKS: str = "tracks"`
 - `TABLE_PROJECT_VERSIONS: str = "project_versions"`
+- `TABLE_BATCH_JOBS: str = "batch_jobs"`
+- `TABLE_PROXY_FILES: str = "proxy_files"`
+- `TABLE_THUMBNAIL_STRIPS: str = "thumbnail_strips"`
+- `TABLE_WAVEFORMS: str = "waveforms"`
+- `TABLE_PREVIEW_SESSIONS: str = "preview_sessions"`
 
 ### SQL Definitions (DDL Strings)
 
@@ -37,6 +42,17 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
 - `TRACKS_PROJECT_INDEX: str` — Index for querying tracks by project_id
 - `PROJECT_VERSIONS_TABLE: str` — Version history table with UNIQUE(project_id, version_number)
 - `PROJECT_VERSIONS_PROJECT_INDEX: str` — Composite index for version queries
+- `BATCH_JOBS_TABLE: str` — Batch job records table with batch_id, job_id (unique), project_id, status, progress
+- `BATCH_JOBS_BATCH_ID_INDEX: str` — Index for querying jobs by batch_id
+- `PROXY_FILES_TABLE: str` — Proxy file records table with UNIQUE(source_video_id, quality)
+- `PROXY_FILES_VIDEO_INDEX: str` — Index for querying proxies by source_video_id
+- `THUMBNAIL_STRIPS_TABLE: str` — Thumbnail strip sprite sheet records with frame grid dimensions
+- `THUMBNAIL_STRIPS_VIDEO_INDEX: str` — Index for querying strips by video_id
+- `WAVEFORMS_TABLE: str` — Waveform metadata records with format (png/json) and duration
+- `WAVEFORMS_VIDEO_INDEX: str` — Index for querying waveforms by video_id
+- `PREVIEW_SESSIONS_TABLE: str` — Preview session records with status, HLS manifest tracking, TTL expiry
+- `PREVIEW_SESSIONS_PROJECT_INDEX: str` — Index for querying sessions by project_id
+- `PREVIEW_SESSIONS_EXPIRES_INDEX: str` — Index for querying expired sessions by expires_at
 
 ### Column Definitions
 
@@ -136,16 +152,63 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
 - Composite index on (entity_id, timestamp) for efficient history queries
 - changes_json stores field-level changes as JSON
 
+**batch_jobs table:**
+- Stores batch render job records with auto-incrementing row ID
+- batch_id groups multiple jobs into a single batch operation
+- job_id is unique across all jobs for individual job tracking
+- status: queued, running, completed, failed (state machine enforced)
+- progress: 0.0-1.0 float for render completion percentage
+- error: NULL for success, contains message when status is failed
+- created_at/updated_at track job lifecycle timestamps
+
+**proxy_files table:**
+- Stores proxy file metadata with unique constraint on (source_video_id, quality)
+- status: pending, generating, ready, failed, stale (state machine enforced)
+- source_checksum: SHA-256 of source video for validity checking
+- generated_at: NULL until status transitions to ready
+- last_accessed_at: Updated on every status change for LRU cache eviction
+- file_size_bytes: Proxy file size on disk for cache management
+
+**thumbnail_strips table:**
+- Stores sprite sheet frame grid dimensions for timeline seek tooltips
+- status: pending, generating, ready, error (state machine enforced)
+- frame_width/frame_height: Pixel dimensions of each frame in the grid
+- columns/rows: Grid layout of the sprite sheet
+- interval_seconds: Seconds between extracted frames (temporal resolution)
+- file_path: NULL until status is ready
+
+**waveforms table:**
+- Stores waveform generation metadata for audio visualization
+- status: pending, generating, ready, error (state machine enforced)
+- format: png or json output format
+- duration: Audio duration in seconds
+- channels: Number of audio channels
+- file_path: NULL until status is ready
+
+**preview_sessions table:**
+- Stores HLS preview session records with TTL-based expiry
+- status: initializing, generating, ready, seeking, error, expired (state machine enforced)
+- quality_level: low, medium, high
+- manifest_path: NULL until status transitions to ready
+- segment_count: 0 until generation completes, then tracks HLS segment count
+- expires_at: TTL timestamp for session cleanup
+- error_message: NULL for success, contains error details when status is error
+- Composite index on (project_id, expires_at) for efficient expiry queries
+
 ## Relationships
 
 - **Used by:**
-  - `repository.py` — SQLiteVideoRepository reads/writes from/to these schemas
+  - `repository.py` — SQLiteVideoRepository reads/writes from/to videos, videos_fts
   - `async_repository.py` — AsyncSQLiteVideoRepository uses async schema
-  - `project_repository.py` — AsyncSQLiteProjectRepository CRUD
-  - `clip_repository.py` — AsyncSQLiteClipRepository CRUD
+  - `project_repository.py` — AsyncSQLiteProjectRepository CRUD on projects
+  - `clip_repository.py` — AsyncSQLiteClipRepository CRUD on clips
   - `timeline_repository.py` — AsyncSQLiteTimelineRepository for tracks and clips
-  - `version_repository.py` — AsyncSQLiteVersionRepository for versioning
+  - `version_repository.py` — AsyncSQLiteVersionRepository for project_versions
+  - `batch_repository.py` — AsyncSQLiteBatchRepository CRUD on batch_jobs
+  - `preview_repository.py` — SQLitePreviewRepository CRUD on preview_sessions
+  - `proxy_repository.py` — SQLiteProxyRepository CRUD on proxy_files
   - `audit.py` — AuditLogger writes to audit_log table
 
 - **Uses:**
   - SQLite3 database engine (no external dependencies)
+  - aiosqlite — async wrapper for async operations

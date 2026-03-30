@@ -218,7 +218,7 @@ useWebSocket(url: string): WebSocketHook
   - `state: ConnectionState` - Current connection status
   - `lastMessage: MessageEvent | null` - Most recent message received
   - `send(data)` - Send string to server (no-op if not connected)
-- **Used by:** Shell (initializes), DashboardPage (listens for activity)
+- **Used by:** Shell (initializes), DashboardPage (listens for activity), TheaterMode (AI actions, render progress), ProxyStatusBadge (proxy updates)
 
 **Connection flow:**
 1. New connection via `new WebSocket(url)`
@@ -226,6 +226,109 @@ useWebSocket(url: string): WebSocketHook
 3. On message: update lastMessage (subscribers listen to this)
 4. On close: set state to 'reconnecting', schedule reconnect with backoff
 5. On error: just trigger close (reconnect logic in onclose)
+
+### useFullscreen
+
+**Location:** `gui/src/hooks/useFullscreen.ts` (line 8)
+
+```typescript
+useFullscreen(containerRef: React.RefObject<HTMLElement | null>): {
+  enter: () => Promise<void>
+  exit: () => Promise<void>
+}
+```
+
+- **Purpose:** Wrapper around Fullscreen API with state synchronization
+- **Features:**
+  - Derives fullscreen state from browser fullscreenchange events (not button state)
+  - Syncs state with theaterStore via enterTheater/exitTheater actions
+  - Handles API errors gracefully (e.g., permission denied)
+- **Implementation:**
+  - On mount: add fullscreenchange listener
+  - When fullscreen enters: call `enterTheater()`
+  - When fullscreen exits: call `exitTheater()`
+  - `enter()`: Call `requestFullscreen()` on container element
+  - `exit()`: Call `document.exitFullscreen()`
+- **Used by:** PreviewPage (via TheaterMode)
+
+**Event-Driven State:** State derived from browser fullscreenchange event, ensuring accuracy even with ESC key, F11, other fullscreen triggers (NFR-002).
+
+### useTheaterShortcuts
+
+**Location:** `gui/src/hooks/useTheaterShortcuts.ts` (line 26)
+
+```typescript
+useTheaterShortcuts(options: UseTheaterShortcutsOptions): void
+```
+
+**Options:**
+```typescript
+interface UseTheaterShortcutsOptions {
+  videoRef: React.RefObject<HTMLVideoElement | null>
+  onExit: () => void
+  onToggleFullscreen: () => void
+  enabled: boolean
+}
+```
+
+- **Purpose:** Keyboard shortcuts for theater mode playback control
+- **Bindings (when enabled && not in input field):**
+  - Space: Play/pause
+  - Escape: Exit theater
+  - F: Toggle fullscreen
+  - M: Mute/unmute
+  - ArrowLeft/Right: Seek ±5s
+  - Home/End: Jump to start/end
+- **Input Protection:** Ignores shortcuts when focused on INPUT, TEXTAREA, SELECT (FR-007)
+- **State Sync:** All actions update previewStore (position, muted) to keep UI consistent
+- **Used by:** TheaterMode component
+
+### useTimelineSync
+
+**Location:** `gui/src/hooks/useTimelineSync.ts` (line 18)
+
+```typescript
+useTimelineSync(videoRef: React.RefObject<HTMLVideoElement | null>): {
+  seekFromTimeline: (pos: number) => void
+}
+```
+
+- **Purpose:** Bidirectional sync between preview player and timeline playhead
+- **Behavior:**
+  - Player → Timeline: Updates playheadPosition when video position changes (debounced 100ms, threshold 0.5s)
+  - Timeline → Player: Seeks video element to given position via seekFromTimeline
+  - Uses `isSeeking` ref guard to prevent infinite update loops
+- **Debounce:** 100ms delay to avoid excessive updates
+- **Threshold:** Only sync if position differs by > 0.5 seconds
+- **Used by:** PreviewPage
+
+**Key Constants:**
+- `SYNC_DEBOUNCE_MS = 100` - Debounce interval
+- `SYNC_THRESHOLD_S = 0.5` - Minimum position difference to trigger sync
+
+### useJobProgress
+
+**Location:** `gui/src/hooks/useJobProgress.ts` (line 10)
+
+```typescript
+useJobProgress(jobId: string | null, intervalMs?: number): JobProgress
+// Returns: { progress, status, isComplete, error }
+```
+
+- **Purpose:** Poll job status endpoint for long-running operations (preview generation, rendering)
+- **Behavior:**
+  - Polls `/api/v1/jobs/{jobId}` at regular intervals (default 1000ms)
+  - Stops polling when jobId is null or job completes
+  - Tracks progress percentage, status, and completion state
+  - Handles errors gracefully
+- **Status Values:** 'pending' | 'running' | 'complete' | 'failed' | 'cancelled' | 'timeout'
+- **Used by:** ScanModal (directory scan), potentially for preview generation
+
+**Polling Pattern:**
+1. On mount: Start interval polling if jobId provided
+2. Each poll: GET `/api/v1/jobs/{jobId}`, update state
+3. On completion (complete/failed/cancelled/timeout): Stop polling
+4. On unmount: Clear interval, prevent memory leak
 
 ## Dependencies
 
@@ -297,6 +400,7 @@ flowchart LR
         H3[useEffects]
         H4[useHealth]
         H5[useMetrics]
+        H10[useJobProgress]
     end
     subgraph "Real-time"
         H6[useWebSocket]
@@ -306,15 +410,27 @@ flowchart LR
         H8[useDebounce]
         H9[useEffectPreview]
     end
+    subgraph "Theater & Preview"
+        H11[useFullscreen]
+        H12[useTheaterShortcuts]
+        H13[useTimelineSync]
+    end
 
     H8 --> H9
     H9 --> "effectPreviewStore"
     H6 --> H7
+    H6 --> H12
     H1 -->|Clip data| H2
     H3 -->|Effect definitions| H9
+    H11 --> "theaterStore"
+    H12 --> "previewStore"
+    H13 --> "previewStore"
+    H13 --> "timelineStore"
+    H10 -.->|polls job status|"Long-running ops"
 
-    class H1,H2,H3,H4,H5 fetch
+    class H1,H2,H3,H4,H5,H10 fetch
     class H6,H7 realtime
     class H8,H9 processing
+    class H11,H12,H13 theater
 ```
 

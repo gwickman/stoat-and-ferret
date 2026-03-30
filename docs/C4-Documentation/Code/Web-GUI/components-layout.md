@@ -97,18 +97,7 @@ const COORD_FIELDS: (keyof LayoutPosition)[] = ['x', 'y', 'width', 'height']
 
 ### Layout Preset Data (composeStore)
 
-Presets loaded from API; positions defined in client-side `PRESET_POSITIONS`:
-```typescript
-export const PRESET_POSITIONS: Record<string, LayoutPosition[]> = {
-  PipTopLeft: [
-    { x: 0.0, y: 0.0, width: 1.0, height: 1.0, z_index: 0 },  // Background
-    { x: 0.02, y: 0.02, width: 0.25, height: 0.25, z_index: 1 },  // PiP
-  ],
-  // ... other presets
-}
-```
-
-When preset selected, composeStore copies positions to `customPositions` allowing manual edit.
+Presets loaded from API via `GET /api/v1/compose/presets`. The API provides preset metadata (name, description, input constraints) which the UI uses to render the LayoutSelector. Position data is managed server-side and fetched on preset selection. When preset selected, composeStore stores positions in `customPositions` allowing manual edit.
 
 ### LayoutPosition Clamping
 
@@ -235,16 +224,17 @@ classDiagram
 - **LayoutSelector.tsx**: Preset selection buttons
 - **LayoutPreview.tsx**: 16:9 preview visualization
 - **LayerStack.tsx**: Layer list and coordinate editor
-- **data/presetPositions.ts**: Preset position definitions
 
-## Layout Presets Available
+## Layout Presets
 
-From `presetPositions.ts`:
-- **PipTopLeft**: Background (full) + PiP (top-left 25%)
-- **PipTopRight**: Background (full) + PiP (top-right 25%)
-- **PipBottomLeft**: Background (full) + PiP (bottom-left 25%)
-- **PipBottomRight**: Background (full) + PiP (bottom-right 25%)
-- **SideBySide**: Left (50%) + Right (50%)
-- **TopBottom**: Top (50%) + Bottom (50%)
-- **Grid2x2**: 2x2 grid (4 inputs)
+Presets are fetched from the API endpoint `GET /api/v1/compose/presets`. Examples include:
+- **PipTopLeft**: Picture-in-picture top-left corner
+- **PipTopRight**: Picture-in-picture top-right corner
+- **PipBottomLeft**: Picture-in-picture bottom-left corner
+- **PipBottomRight**: Picture-in-picture bottom-right corner
+- **SideBySide**: Left and right split (50/50)
+- **TopBottom**: Top and bottom split (50/50)
+- **Grid2x2**: 2x2 grid layout for 4 inputs
+
+Available presets depend on API configuration. The UI dynamically loads available presets on mount.
 

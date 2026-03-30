@@ -142,6 +142,60 @@ interface ClipSelectorProps {
   - Second click (different clip): selects TO
   - TO selection calls `onSelectPair(clipId, 'to')`
 
+### ProxyStatusBadge
+
+**Location:** `gui/src/components/library/ProxyStatusBadge.tsx` (line 34)
+
+**Props:**
+```typescript
+interface ProxyStatusBadgeProps {
+  videoId: string
+  proxyStatus?: ProxyStatusValue  // 'ready' | 'generating' | 'none'
+}
+```
+
+- **Purpose:** Displays color-coded proxy generation status indicator
+- **Status Colors:**
+  - `ready` → green-500 (✓ Proxy available)
+  - `generating` → yellow-500 (⟳ Proxy in progress)
+  - `none` → gray-500 (— No proxy)
+- **Display:** Small rounded dot (2.5x2.5) with title tooltip
+- **Real-time Updates:** Listens to `proxy.ready` WebSocket events
+- **Event Parsing:**
+  ```typescript
+  if (data.type === 'proxy.ready' && data.payload?.video_id === videoId) {
+    setStatus('ready')
+  }
+  ```
+- **Used by:** VideoCard component in VideoGrid
+
+**Styling:** Inline-block rounded-full, title attribute shows full label
+
+### AudioWaveform
+
+**Location:** `gui/src/components/AudioWaveform.tsx` (line 8)
+
+**Props:**
+```typescript
+interface AudioWaveformProps {
+  videoId: string
+}
+```
+
+- **Purpose:** Displays audio waveform as background for timeline audio tracks
+- **Fetching:** GET `/api/v1/videos/{videoId}/waveform.png`
+- **Features:**
+  - Lazy loads PNG waveform image via fetch
+  - Shows gradient fallback if image unavailable
+  - Uses `URL.createObjectURL(blob)` for blob URL
+  - Cancellation support to prevent updates after unmount
+- **Styling:**
+  - Success: Background image with 60% opacity
+  - Fallback: Gradient (darker-to-lighter-to-darker gray)
+  - Positioned absolutely within clip container
+
+**Error Handling:** If fetch fails or image unavailable, shows fallback gradient instead of error
+
 ### ClipFormModal
 
 **Location:** `gui/src/components/ClipFormModal.tsx` (line 14)
