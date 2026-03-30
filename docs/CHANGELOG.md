@@ -4,6 +4,28 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v027] - 2026-03-30
+
+Theater Mode, Integration Wiring, Phase 4 Test Coverage, and Documentation Updates. Adds fullscreen Theater Mode with HUD overlay and keyboard shortcuts. Wires transition IDs, timeline-player sync, audio waveforms, and proxy status indicators. Adds Phase 4 smoke tests, contract tests, and UAT journeys. Regenerates C4 architecture documentation and updates design documents.
+
+### Added
+
+- **Theater Mode Fullscreen Wrapper** — fullscreen container with auto-hiding HUD, CSS transition animations, and escape-to-exit (BL-199, #221)
+- **Theater HUD Overlay** — AI action indicator and render progress display overlaid on fullscreen preview (BL-200, #222)
+- **Theater Mode Keyboard Shortcuts** — hotkeys for theater toggle, HUD visibility, and playback controls in fullscreen (BL-201, #223)
+- **Bidirectional Timeline-Player Sync** — playhead position synchronized between timeline and preview player in both directions (BL-202, #225)
+- **Audio Waveform Visualization** — waveform overlay on timeline clips using generated waveform data (BL-206, #226)
+- **Proxy Status Indicators** — ProxyStatusBadge component on VideoCard showing proxy generation state via WebSocket updates (BL-207, #227)
+- **Phase 4 Preview Smoke Tests** — smoke tests covering preview session endpoints (BL-203, #228)
+- **Phase 4 UAT Journeys** — J401-J404 UAT journeys for theater mode, timeline sync, waveform, and proxy status (BL-205, #230)
+- **C4 Architecture Regeneration** — full C4 documentation regenerated covering v011-v027 (BL-147, #231)
+- **Design Document Updates** — Phase 4 content added to architecture and GUI design documents (BL-208, #232)
+- **Impact Assessment Patterns** — Phase 4 grep patterns added to IMPACT_ASSESSMENT (BL-209, #233)
+
+### Fixed
+
+- **Transition ID Assignment** — effects-router transitions now receive IDs for DELETE compatibility (BL-148, #224)
+
 ## [v026] - 2026-03-27
 
 Phase 4 Observability + GUI Preview Player. Instruments preview and proxy subsystems with Prometheus metrics, structured logging, health checks, and graceful degradation. Wires deferred BL-179 WebSocket progress callbacks. Builds the complete GUI preview player with HLS.js, controls, seek tooltip, quality selector, and Preview page.

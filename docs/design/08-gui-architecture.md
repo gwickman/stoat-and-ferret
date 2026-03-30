@@ -785,9 +785,6 @@ stoat-and-ferret/
 │   │   │   ├── effects.ts
 │   │   │   └── render.ts
 │   │   │
-│   │   ├── data/
-│   │   │   └── presetPositions.ts  # Phase 3: client-side preset position data
-│   │   │
 │   │   └── types/
 │   │       ├── api.ts
 │   │       └── events.ts
