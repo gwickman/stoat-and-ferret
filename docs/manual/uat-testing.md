@@ -203,16 +203,25 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 203 | `uat_journey_203.py` | **Effects-Timeline** — Applies, edits, and removes effects on clips, verifies the timeline canvas with zoom and scroll, and selects layout presets with preview verification. Depends on journey 202. |
 | 204 | `uat_journey_204.py` | **Export-Render** — Seeds the Running Montage sample project and validates that all clips (4), effects (5), and transitions (1) render correctly across the project detail, effects, and timeline pages. Independent of journeys 201–203. |
 | 205 | `uat_journey_205.py` | **Preview Playback** — Navigates to the Preview page via the navigation tab, verifies the player component renders (or a no-content placeholder), checks that controls are visible and interactive, and confirms the quality selector is present. Independent of journeys 201–204. |
+| 401 | `uat_journey_401.py` | **Preview Playback (Full)** — Starts a preview session, waits for generation, plays the video, seeks to 50% via the progress bar, pauses, and checks the quality indicator. Depends on journey 205. |
+| 402 | `uat_journey_402.py` | **Proxy Management** — Navigates to the Library, verifies proxy status badges on video cards, waits for proxy generation, then starts a preview with proxy. Depends on journey 201. |
+| 403 | `uat_journey_403.py` | **Theater Mode** — Enters Theater Mode, verifies HUD auto-hide after 3 seconds, re-shows HUD on mouse move, tests keyboard shortcuts (Space, Escape), and exits. Independent. |
+| 404 | `uat_journey_404.py` | **Timeline Sync** — Plays the preview, verifies the playhead moves with playback, clicks a timeline position, and verifies the video seeks to match. Independent. |
 
 ### Dependency graph
 
 ```
 201 (scan-library)
- └─▶ 202 (project-clip)
-      └─▶ 203 (effects-timeline)
+ ├─▶ 202 (project-clip)
+ │    └─▶ 203 (effects-timeline)
+ └─▶ 402 (proxy-management)
 
 204 (export-render)      ← independent
 205 (preview-playback)   ← independent
+ └─▶ 401 (preview-playback-full)
+
+403 (theater-mode)       ← independent
+404 (timeline-sync)      ← independent
 ```
 
-If journey 201 fails, journeys 202 and 203 are skipped automatically. Journeys 204 and 205 always run regardless of other journey results.
+If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, and 404 always run regardless of other journey results.

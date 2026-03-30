@@ -47,6 +47,10 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     203: [202],
     204: [],
     205: [],
+    401: [205],
+    402: [201],
+    403: [],
+    404: [],
 }
 
 # Human-readable journey names for screenshot directories and reports
@@ -56,6 +60,10 @@ JOURNEY_NAMES: dict[int, str] = {
     203: "effects-timeline",
     204: "export-render",
     205: "preview-playback",
+    401: "preview-playback-full",
+    402: "proxy-management",
+    403: "theater-mode",
+    404: "timeline-sync",
 }
 
 # Known benign console error patterns to exclude from reports
