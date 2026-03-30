@@ -55,6 +55,7 @@ The React app uses `react-router-dom` with `BrowserRouter` rooted at `/gui`:
 | `/gui/projects` | `ProjectsPage` | Project list and management | 1 |
 | `/gui/effects` | `EffectsPage` | Effect Workshop with full CRUD workflow | 2 |
 | `/gui/timeline` | `TimelinePage` | Timeline canvas with multi-track composition | 3 |
+| `/gui/preview` | `PreviewPage` | HLS preview player with quality selector and Theater Mode | 4 |
 
 Navigation tabs are dynamically shown/hidden based on backend endpoint availability checks.
 
@@ -369,9 +370,9 @@ Visual timeline for multi-track composition, accessible at `/gui/timeline`:
 - Layout preview canvas showing normalized positions as colored rectangles
 - Drag-and-drop reordering (future)
 
-### 7. Preview Player (Phase 4)
+### 7. Preview Player (Phase 4) — Implemented
 
-Embedded video preview with controls:
+Embedded video preview with controls, accessible at `/gui/preview`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -382,7 +383,7 @@ Embedded video preview with controls:
 │  │                                                                  │    │
 │  │                                                                  │    │
 │  │                         VIDEO PREVIEW                           │    │
-│  │                                                                  │    │
+│  │                       (HLS.js player)                            │    │
 │  │                                                                  │    │
 │  │                                                                  │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
@@ -392,10 +393,40 @@ Embedded video preview with controls:
 │  │  [⏮] [⏪] [▶/⏸] [⏩] [⏭]              🔊 ████████░░  [⚙️]      │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                          │
-│  Preview Status: Ready | Quality: 720p (proxy) | Latency: 45ms          │
+│  Preview Status: Ready | Quality: [Medium ▼] | Session: active          │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Implemented Components:**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `PreviewPage` | `pages/PreviewPage.tsx` | Orchestrator — project selection, quality control, session lifecycle, Theater Mode wrapper |
+| `PreviewPlayer` | `components/PreviewPlayer.tsx` | HLS.js player with Safari native fallback, VOD mode, error recovery |
+| `PlayerControls` | `components/PlayerControls.tsx` | Play/pause, skip ±5s, progress bar with seek, volume/mute, time display |
+| `QualitySelector` | `components/QualitySelector.tsx` | Low/Medium/High dropdown, triggers session recreate on change |
+| `TheaterMode` | `components/theater/TheaterMode.tsx` | Fullscreen wrapper with auto-hiding HUD (3s idle timeout) |
+| `TopHUD` | `components/theater/TopHUD.tsx` | Project title, AI action indicator, gradient background |
+| `BottomHUD` | `components/theater/BottomHUD.tsx` | Player controls, render progress bar with ETA |
+| `AIActionIndicator` | `components/theater/AIActionIndicator.tsx` | Displays latest AI action from WebSocket `ai_action` events |
+
+**Zustand Stores:**
+
+| Store | File | State |
+|-------|------|-------|
+| `usePreviewStore` | `stores/previewStore.ts` | `sessionId`, `status`, `quality`, `position`, `duration`, `volume`, `muted`, `progress`, `error` |
+| `useTheaterStore` | `stores/theaterStore.ts` | `isFullscreen`, `isHUDVisible`, `lastMouseMoveTime` |
+
+**Features:**
+- HLS.js streaming with VOD mode (max buffer 30s, worker enabled)
+- Safari native HLS fallback for browser compatibility
+- Quality selector (low, medium, high) with session lifecycle management
+- Session states: initializing → generating (with progress bar) → ready → seeking → error/expired
+- Theater Mode with fullscreen toggle, auto-hiding HUD, and keyboard shortcuts
+- AI action display in Theater Mode via WebSocket events
+- Render progress bar with ETA in Theater Mode bottom HUD
+- Lazy-loaded player component with React Suspense
 
 ### 8. Render Control Center (Phase 5)
 
@@ -611,20 +642,20 @@ interface PreviewUpdateEvent {
 - [x] Show layer ordering visualization with colored rectangles
 - [x] Implement preset selection UI (7 presets: PIP corners, SideBySide, TopBottom, Grid2x2)
 
-### Phase 4: Preview & Theater Mode
+### Phase 4: Preview & Theater Mode — Implemented
 
 **GUI Milestone 4.1: Embedded Preview**
-- [ ] Integrate HLS.js video player
-- [ ] Build player controls (play, pause, seek)
-- [ ] Synchronize with timeline position
-- [ ] Add preview quality indicator
+- [x] Integrate HLS.js video player (with Safari native fallback)
+- [x] Build player controls (play, pause, seek, volume, skip ±5s)
+- [x] Synchronize with timeline position via `usePreviewStore`
+- [x] Add preview quality selector (low, medium, high)
 
 **GUI Milestone 4.2: AI Theater Mode**
-- [ ] Implement full-screen mode
-- [ ] Build auto-hiding HUD overlay
-- [ ] Add WebSocket event display
-- [ ] Create progress bar with AI action indicators
-- [ ] Implement keyboard shortcuts
+- [x] Implement full-screen mode with `TheaterMode` wrapper
+- [x] Build auto-hiding HUD overlay (3s idle timeout, mouse re-shows)
+- [x] Add WebSocket event display (`AIActionIndicator` component)
+- [x] Create progress bar with AI action indicators and render ETA
+- [x] Implement keyboard shortcuts (Space, Escape, F, M, arrows)
 - [ ] Add ambient status sounds (optional)
 
 ### Phase 5: Render Control
@@ -744,7 +775,8 @@ stoat-and-ferret/
 │   │   │   ├── effectStackStore.ts
 │   │   │   ├── timelineStore.ts        # Phase 3: tracks, clips, playhead
 │   │   │   ├── composeStore.ts         # Phase 3: presets, positions
-│   │   │   └── theaterStore.ts
+│   │   │   ├── previewStore.ts         # Phase 4: session, quality, position, volume
+│   │   │   └── theaterStore.ts         # Phase 4: fullscreen, HUD visibility
 │   │   │
 │   │   ├── api/
 │   │   │   ├── client.ts

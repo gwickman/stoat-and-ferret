@@ -927,6 +927,79 @@ class TestErrorHandlingIntegration:
         assert "font_size" in error["message"]
 ```
 
+### Preview Test Strategy (Phase 4)
+
+The preview subsystem introduces additional test doubles and strategies for testing HLS generation, proxy workflow, and the session lifecycle without requiring FFmpeg or real video files.
+
+**NullPreviewEngine:**
+```python
+class NullPreviewEngine:
+    """No-op preview engine for CI environments without FFmpeg.
+
+    Used in test wiring when preview functionality is not under test.
+    Returns canned responses for all preview operations.
+    """
+
+    async def start_session(self, project_id: str, quality: str) -> str:
+        return "null_session_id"
+
+    async def get_status(self, session_id: str) -> dict:
+        return {"status": "ready", "manifest_url": "/preview/null/manifest.m3u8"}
+
+    async def seek(self, session_id: str, position: float) -> None:
+        pass
+
+    async def stop(self, session_id: str) -> None:
+        pass
+```
+
+**RecordingPreviewManager:**
+```python
+class RecordingPreviewManager:
+    """Records preview operations for verification in black box tests."""
+
+    def __init__(self):
+        self.sessions_started: list[dict] = []
+        self.seeks: list[dict] = []
+        self.sessions_stopped: list[str] = []
+
+    async def start_session(self, project_id: str, quality: str) -> str:
+        session_id = f"test_session_{len(self.sessions_started)}"
+        self.sessions_started.append({"project_id": project_id, "quality": quality})
+        return session_id
+```
+
+**Preview Smoke Tests:**
+
+Smoke tests validate all preview-related endpoints are registered and return expected status codes without requiring real video generation:
+
+```
+tests/smoke/test_preview_endpoints.py
+├── test_preview_start_returns_202
+├── test_preview_status_returns_session_info
+├── test_preview_seek_returns_202
+├── test_preview_stop_returns_200
+├── test_preview_cache_status_returns_200
+├── test_proxy_create_returns_202
+├── test_proxy_status_returns_info
+├── test_thumbnail_strip_returns_202
+├── test_waveform_create_returns_202
+└── test_waveform_json_returns_amplitude_data
+```
+
+**UAT Journeys (Phase 4):**
+
+Browser-based acceptance tests using Playwright validate the complete preview and theater mode user experience:
+
+| Journey | Description | Key Assertions |
+|---------|-------------|----------------|
+| J401 | Preview session lifecycle | Start → generate → ready → seek → stop |
+| J402 | Proxy workflow | Queue → generate → ready, verify indicator |
+| J403 | Theater Mode | Enter fullscreen → HUD auto-hide → keyboard shortcuts → exit |
+| J404 | Timeline-player sync | Playhead position synced between timeline and player |
+
+---
+
 ### Contract Testing for Test Doubles
 
 ```python
@@ -1037,6 +1110,30 @@ render_duration_seconds = Histogram(
     "Render job duration",
     ["quality"],
     buckets=[10, 30, 60, 120, 300, 600, 1200, 3600],
+)
+
+# Preview metrics (Phase 4)
+preview_sessions_total = Counter(
+    "video_editor_preview_sessions_total",
+    "Total preview sessions created",
+    ["quality", "status"],
+)
+
+preview_generation_seconds = Histogram(
+    "video_editor_preview_generation_seconds",
+    "Preview HLS generation duration",
+    ["quality"],
+    buckets=[1, 2, 5, 10, 30, 60],
+)
+
+preview_active_sessions = Gauge(
+    "video_editor_preview_active_sessions",
+    "Currently active preview sessions",
+)
+
+preview_cache_bytes = Gauge(
+    "video_editor_preview_cache_bytes",
+    "Preview cache disk usage in bytes",
 )
 ```
 

@@ -108,9 +108,16 @@ This document describes the architecture of an AI-driven video editing system de
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                        Preview Engine                                 │  │
+│  │                    Preview Subsystem (Phase 4)                         │  │
 │  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐         │  │
-│  │  │ libmpv Player  │  │ Proxy Manager  │  │ Frame Extract  │         │  │
+│  │  │ Preview Manager│  │ HLS Generator  │  │ Preview Cache  │         │  │
+│  │  │ (session life- │  │ (VOD segments, │  │ (LRU eviction, │         │  │
+│  │  │  cycle, seek)  │  │  FFmpeg-based) │  │  TTL cleanup)  │         │  │
+│  │  └────────────────┘  └────────────────┘  └────────────────┘         │  │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐         │  │
+│  │  │ Proxy Manager  │  │ Thumbnail Gen  │  │ Waveform Gen   │         │  │
+│  │  │ (transcode,    │  │ (strip/sprite  │  │ (PNG + JSON    │         │  │
+│  │  │  batch, status)│  │  sheets)       │  │  amplitude)    │         │  │
 │  │  └────────────────┘  └────────────────┘  └────────────────┘         │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────┬────────────────────────────────────────┘
@@ -182,7 +189,7 @@ This document describes the architecture of an AI-driven video editing system de
 ├─────────────────────────────────────────────────────────────────────────┤
 │  • HTTP request handling (FastAPI routes, middleware)                   │
 │  • API schema generation (OpenAPI, effect discovery)                    │
-│  • Subprocess management (FFmpeg execution, libmpv control)             │
+│  • Subprocess management (FFmpeg execution, HLS generation)             │
 │  • Database operations (SQLite, project storage)                        │
 │  • Job queue orchestration (asyncio.Queue)                              │
 │  • Observability (logging, metrics, health checks)                      │
@@ -328,13 +335,16 @@ The architecture integrates quality attributes at every layer. These are not opt
 | `/effects` | Effect application and discovery |
 | `/compose` | Multi-stream composition (PIP, split) |
 | `/render` | Export job management |
-| `/preview` | Real-time preview control |
+| `/preview` | Preview session lifecycle, HLS manifest/segment serving |
+| `/videos/{id}/proxy` | Proxy generation and status (Phase 4) |
+| `/videos/{id}/thumbnails` | Thumbnail strip generation and serving (Phase 4) |
+| `/videos/{id}/waveform` | Waveform generation in PNG/JSON formats (Phase 4) |
 | `/ws` | WebSocket endpoint for real-time event streaming |
 | `/gui` | Static file serving for the React frontend |
 
 **WebSocket Transport Layer:**
 
-The `/ws` endpoint provides real-time event streaming to connected clients using a `ConnectionManager` that tracks active connections and broadcasts events. Supported event types include `HEARTBEAT`, `SCAN_STARTED`, `SCAN_COMPLETED`, `PROJECT_CREATED`, and `HEALTH_STATUS`. A configurable heartbeat interval (default 30s) keeps connections alive.
+The `/ws` endpoint provides real-time event streaming to connected clients using a `ConnectionManager` that tracks active connections and broadcasts events. Supported event types include `HEARTBEAT`, `SCAN_STARTED`, `SCAN_COMPLETED`, `PROJECT_CREATED`, `HEALTH_STATUS`, `PREVIEW_GENERATING`, `PREVIEW_READY`, `PREVIEW_SEEKING`, `PREVIEW_ERROR`, `PROXY_READY`, `AI_ACTION`, and `RENDER_PROGRESS`. A configurable heartbeat interval (default 30s) keeps connections alive.
 
 **Frontend Static Serving:**
 
@@ -432,6 +442,49 @@ Responsibilities:
 ├── Emit metrics: render_jobs_total, render_duration_seconds
 └── Audit log: render events
 ```
+
+**Preview Subsystem (Phase 4)**
+
+The preview subsystem provides HLS-based video preview with session lifecycle management, proxy generation, and asset extraction (thumbnails, waveforms).
+
+```
+Preview Subsystem Architecture:
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Preview Manager                                │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐         │
+│  │ Session Life-  │  │ Concurrent     │  │ WebSocket      │         │
+│  │ cycle (create, │  │ Limit Control  │  │ Event Emitter  │         │
+│  │ seek, expire)  │  │ (configurable) │  │ (progress,     │         │
+│  └────────────────┘  └────────────────┘  │  ready, error) │         │
+│                                           └────────────────┘         │
+├──────────────────────────────────────────────────────────────────────┤
+│                        HLS Generator                                  │
+│  • FFmpeg-based VOD segment generation                                │
+│  • Quality-aware filter simplification (via Rust core)                │
+│  • Cooperative cancellation with event-driven shutdown                │
+│  • m3u8 manifest + .ts segment files                                  │
+├──────────────────────────────────────────────────────────────────────┤
+│                        Preview Cache                                  │
+│  • LRU eviction (oldest-accessed sessions removed first)              │
+│  • TTL-based cleanup (background periodic task)                       │
+│  • Configurable max size with enforcement                             │
+│  • Cache hit/miss ratio tracking                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                        Proxy Workflow                                  │
+│  • Background proxy transcoding (720p for 4K, 540p for 1080p)        │
+│  • Batch generation for multiple videos                               │
+│  • Status tracking (READY, FAILED, STALE states)                      │
+│  • WebSocket PROXY_READY event on completion                          │
+├──────────────────────────────────────────────────────────────────────┤
+│                   Asset Extraction                                    │
+│  • Thumbnail strips (sprite sheets with configurable grid layout)     │
+│  • Waveform generation (PNG visual + JSON amplitude data)             │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Session state machine: `INITIALIZING → GENERATING → READY → SEEKING → ERROR/EXPIRED`
+
+All long-running operations return `202 Accepted` with a session/job ID for async polling. The preview manager enforces concurrent session limits and graceful shutdown with cooperative cancellation.
 
 ### 3. Rust Core Library
 
@@ -841,12 +894,14 @@ For long-running operations (directory scanning, rendering) with the async produ
 
 **Preview Engine (Python)**
 
-Real-time playback using libmpv:
-- Python bindings via `python-mpv`
-- Filter pipeline for live effect preview
-- Seek/scrub with frame accuracy
-- Automatic proxy switching
-- **Performance metrics** (frame drops, latency)
+HLS-based preview with session lifecycle management:
+- `PreviewManager` coordinates session creation, seeking, and cleanup
+- `HLSGenerator` produces VOD segments via FFmpeg with quality-aware filter simplification
+- `PreviewCache` provides LRU eviction with TTL-based cleanup
+- Proxy workflow for background transcoding (720p/540p proxies)
+- Thumbnail strip and waveform generation for timeline display
+- **Performance metrics** (session counts, generation time, cache usage)
+- WebSocket events for progress, ready, seeking, and error states
 
 ### 5. Storage Layer
 
@@ -1234,7 +1289,7 @@ pub fn escape_ffmpeg_text(text: &str) -> String {
 ### Current Design (Solo Use)
 - SQLite handles concurrent reads well
 - Single FFmpeg process per render
-- In-process preview (libmpv)
+- HLS-based preview with session management
 - Rust core provides efficient single-threaded performance
 
 ### Future Scaling Options
@@ -1326,7 +1381,9 @@ ai-video-editor/
 │   │   └── audit.py             # Audit logging
 │   │
 │   ├── preview/
-│   │   ├── player.py            # libmpv integration
+│   │   ├── manager.py           # Preview session lifecycle
+│   │   ├── hls_generator.py     # HLS segment generation
+│   │   ├── cache.py             # Preview cache (LRU + TTL)
 │   │   └── proxy.py             # Proxy management
 │   │
 │   └── config.py                # Pydantic settings
@@ -1431,7 +1488,7 @@ Returns: System info including Rust core version
 | API Response Time | <100ms (p95) | `http_request_duration_seconds` histogram | Python |
 | Filter Generation | <1ms | `rust_filter_generation_seconds` histogram | Rust |
 | Timeline Calculation | <5ms for 100 clips | `rust_timeline_calculation_seconds` histogram | Rust |
-| Preview Latency | <100ms seek response | `preview_seek_latency_seconds` histogram | Python + libmpv |
+| Preview Latency | <100ms seek response | `preview_seek_latency_seconds` histogram | Python + HLS |
 | Render Throughput | >1x realtime with HW accel | `render_duration_seconds` / video duration | Rust coordinator |
 | Database Size | Support 100K+ videos | Load test with synthetic data | Python |
 
