@@ -70,6 +70,10 @@ Authorization: Bearer <token>
 | `/projects/{id}/audio/mix` | Audio mix configuration | 3 |
 | `/render/batch` | Batch render job submission and progress | 3 |
 | `/projects/{id}/versions` | Project version history and restore | 3 |
+| `/preview` | Preview session lifecycle, HLS manifest/segment serving | 4 |
+| `/videos/{id}/proxy` | Proxy generation, status, and deletion | 4 |
+| `/videos/{id}/thumbnails` | Thumbnail strip generation and serving | 4 |
+| `/videos/{id}/waveform` | Waveform generation (PNG and JSON formats) | 4 |
 
 ---
 
@@ -1746,6 +1750,324 @@ POST /projects/{project_id}/versions/{version}/restore
 
 ---
 
+### Preview (Phase 4 — HLS Preview Sessions)
+
+Preview endpoints manage HLS-based preview sessions with quality selection, seeking, and cache management. All generation operations are asynchronous (202 Accepted) with WebSocket progress events.
+
+#### Start Preview Session
+```http
+POST /api/v1/projects/{project_id}/preview/start
+```
+
+**Request Body:**
+```json
+{
+  "quality": "medium"
+}
+```
+
+**Quality Options:** `low`, `medium`, `high`
+
+**Response:** `202 Accepted`
+```json
+{
+  "session_id": "preview_abc123"
+}
+```
+
+**WebSocket Events:** `preview.generating` (with progress), then `preview.ready` when manifest is available.
+
+**Error Responses:**
+- `404`: Project not found
+- `503`: Preview service unavailable
+
+---
+
+#### Get Preview Status
+```http
+GET /api/v1/preview/{session_id}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "session_id": "preview_abc123",
+  "status": "ready",
+  "manifest_url": "/api/v1/preview/preview_abc123/manifest.m3u8",
+  "error_message": null
+}
+```
+
+**Status Values:** `initializing`, `generating`, `ready`, `seeking`, `error`, `expired`
+
+---
+
+#### Seek Preview
+```http
+POST /api/v1/preview/{session_id}/seek
+```
+
+**Request Body:**
+```json
+{
+  "position": 12.5
+}
+```
+
+**Response:** `202 Accepted`
+```json
+{
+  "session_id": "preview_abc123",
+  "status": "seeking"
+}
+```
+
+**Note:** Triggers segment regeneration from the seek position.
+
+---
+
+#### Stop Preview Session
+```http
+DELETE /api/v1/preview/{session_id}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "session_id": "preview_abc123",
+  "stopped": true
+}
+```
+
+---
+
+#### Get HLS Manifest
+```http
+GET /api/v1/preview/{session_id}/manifest.m3u8
+```
+
+**Response:** `200 OK` (Content-Type: `application/vnd.apple.mpegurl`)
+
+Returns the HLS manifest for the preview session. Used by HLS.js player.
+
+---
+
+#### Get HLS Segment
+```http
+GET /api/v1/preview/{session_id}/segment_{index}.ts
+```
+
+**Response:** `200 OK` (Content-Type: `video/mp2t`)
+
+Returns an individual HLS segment file.
+
+---
+
+#### Get Cache Status
+```http
+GET /api/v1/preview/cache
+```
+
+**Response:** `200 OK`
+```json
+{
+  "active_sessions": 2,
+  "used_bytes": 104857600,
+  "max_bytes": 1073741824,
+  "usage_percent": 9.8,
+  "sessions": [...]
+}
+```
+
+---
+
+#### Clear Cache
+```http
+DELETE /api/v1/preview/cache
+```
+
+**Response:** `200 OK`
+```json
+{
+  "cleared_sessions": 5,
+  "freed_bytes": 524288000
+}
+```
+
+---
+
+### Proxy (Phase 4 — Proxy Generation)
+
+Proxy endpoints manage background transcoding of videos to lower-resolution proxies for smooth preview playback.
+
+#### Queue Proxy Generation
+```http
+POST /api/v1/videos/{video_id}/proxy
+```
+
+**Response:** `202 Accepted`
+```json
+{
+  "video_id": 1,
+  "status": "queued"
+}
+```
+
+**Error Responses:**
+- `404`: Video not found
+- `409`: Proxy already exists
+
+**WebSocket Event:** `proxy.ready` on completion
+
+---
+
+#### Get Proxy Status
+```http
+GET /api/v1/videos/{video_id}/proxy
+```
+
+**Response:** `200 OK`
+```json
+{
+  "video_id": 1,
+  "status": "ready",
+  "proxy_path": "/cache/proxies/1_720p.mp4"
+}
+```
+
+**Status Values:** `queued`, `generating`, `ready`, `failed`, `stale`
+
+---
+
+#### Delete Proxy
+```http
+DELETE /api/v1/videos/{video_id}/proxy
+```
+
+**Response:** `204 No Content`
+
+---
+
+#### Batch Proxy Generation
+```http
+POST /api/v1/proxy/batch
+```
+
+**Request Body:**
+```json
+{
+  "video_ids": [1, 2, 3]
+}
+```
+
+**Response:** `202 Accepted`
+```json
+{
+  "queued": 3,
+  "skipped": 0
+}
+```
+
+---
+
+### Thumbnails (Phase 4 — Thumbnail Strips)
+
+Thumbnail endpoints generate sprite sheets for video scrubbing.
+
+#### Queue Thumbnail Strip Generation
+```http
+POST /api/v1/videos/{video_id}/thumbnails/strip
+```
+
+**Response:** `202 Accepted`
+
+---
+
+#### Get Thumbnail Strip Metadata
+```http
+GET /api/v1/videos/{video_id}/thumbnails/strip
+```
+
+**Response:** `200 OK`
+```json
+{
+  "video_id": 1,
+  "width": 160,
+  "height": 90,
+  "frame_count": 30,
+  "columns": 10,
+  "rows": 3,
+  "interval": 1.0
+}
+```
+
+---
+
+#### Serve Thumbnail Strip Image
+```http
+GET /api/v1/videos/{video_id}/thumbnails/strip.jpg
+```
+
+**Response:** `200 OK` (Content-Type: `image/jpeg`)
+
+Returns the sprite sheet as a JPEG image.
+
+---
+
+### Waveform (Phase 4 — Audio Waveform)
+
+Waveform endpoints generate visual representations of audio for timeline display.
+
+#### Queue Waveform Generation
+```http
+POST /api/v1/videos/{video_id}/waveform
+```
+
+**Response:** `202 Accepted`
+
+---
+
+#### Get Waveform Metadata
+```http
+GET /api/v1/videos/{video_id}/waveform
+```
+
+**Response:** `200 OK`
+```json
+{
+  "video_id": 1,
+  "format": "png",
+  "samples_per_second": 10
+}
+```
+
+---
+
+#### Serve Waveform as PNG
+```http
+GET /api/v1/videos/{video_id}/waveform.png
+```
+
+**Response:** `200 OK` (Content-Type: `image/png`)
+
+---
+
+#### Serve Waveform as JSON
+```http
+GET /api/v1/videos/{video_id}/waveform.json
+```
+
+**Response:** `200 OK`
+```json
+{
+  "samples_per_second": 10,
+  "duration": 30.0,
+  "amplitudes": [0.12, 0.45, 0.78, ...]
+}
+```
+
+---
+
 ### WebSocket (Real-Time Events)
 
 #### Connect to WebSocket
@@ -1778,6 +2100,14 @@ Establishes a WebSocket connection for receiving real-time server events. The se
 | `TRANSITION_APPLIED` | Transition added between clips | `{"project_id": "...", "transition_id": "..."}` |
 | `LAYOUT_APPLIED` | Layout preset applied | `{"project_id": "..."}` |
 | `AUDIO_MIX_CHANGED` | Audio mix configuration updated | `{"project_id": "..."}` |
+| `preview.generating` | Preview HLS generation started | `{"session_id": "...", "project_id": "..."}` |
+| `preview.ready` | Preview manifest ready for playback | `{"session_id": "...", "manifest_url": "..."}` |
+| `preview.seeking` | Seek regeneration in progress | `{"session_id": "...", "position": 12.5}` |
+| `preview.error` | Preview generation error | `{"session_id": "...", "error": "..."}` |
+| `job.progress` | Job progress update | `{"session_id": "...", "progress": 0.75}` |
+| `proxy.ready` | Proxy generation complete | `{"video_id": 1}` |
+| `ai_action` | AI action for Theater Mode display | `{"action": "...", "description": "..."}` |
+| `render.progress` | Render progress with ETA | `{"job_id": "...", "progress": 0.5, "eta_seconds": 30}` |
 
 ---
 
