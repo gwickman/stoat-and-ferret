@@ -27,6 +27,11 @@ The app supports two modes:
    - `app.state.ffmpeg_executor`: ObservableFFmpegExecutor wrapping RealFFmpegExecutor for observable FFmpeg command execution
    - `app.state.job_queue`: AsyncioJobQueue with worker task processing async jobs
    - `app.state.ws_manager`: ConnectionManager for WebSocket broadcasting
+   - `app.state.preview_manager`: PreviewManager for HLS preview session lifecycle
+   - `app.state.preview_cache`: PreviewCache for preview session caching and status
+   - `app.state.thumbnail_service`: ThumbnailService for sprite sheet generation
+   - `app.state.waveform_service`: WaveformService for PNG/JSON waveform generation
+   - `app.state.proxy_service`: ProxyService for proxy video generation and quota management
 
 2. **Test mode** (at least one DI param provided):
    - Sets `app.state._deps_injected = True` to skip lifespan setup
@@ -62,7 +67,7 @@ Middleware is added in order (outermost first):
 
 ### Router Inclusion
 
-All routers included on the FastAPI instance (lines 202-212):
+All routers included on the FastAPI instance:
 - `health`: Liveness and readiness probes
 - `videos`: Video listing, search, thumbnail, scan
 - `projects`: Project CRUD and clip management
@@ -74,6 +79,10 @@ All routers included on the FastAPI instance (lines 202-212):
 - `timeline`: Track and clip timeline management
 - `batch`: Batch render job submission and progress
 - `versions`: Version listing and restoration
+- `preview`: HLS preview session lifecycle and manifest/segment serving
+- `proxy`: Proxy video generation, status, deletion, and batch operations
+- `thumbnails`: Thumbnail sprite strip generation, metadata, and image serving
+- `waveform`: Waveform PNG/JSON generation, metadata, and file serving
 
 ### WebSocket
 
@@ -90,15 +99,18 @@ All routers included on the FastAPI instance (lines 202-212):
 
 - `stoat_ferret.api.middleware.correlation.CorrelationIdMiddleware`: Request tracing middleware
 - `stoat_ferret.api.middleware.metrics.MetricsMiddleware`: Prometheus metrics collection
-- `stoat_ferret.api.routers.*`: All 11 router modules (audio, batch, compose, effects, filesystem, health, jobs, projects, timeline, versions, videos, ws)
+- `stoat_ferret.api.routers.*`: All 15 router modules (audio, batch, compose, effects, filesystem, health, jobs, preview, projects, proxy, thumbnails, timeline, versions, videos, waveform, ws)
+- `stoat_ferret.api.services.proxy_service.ProxyService, make_proxy_handler`: Proxy generation service and job handler factory
 - `stoat_ferret.api.services.scan.SCAN_JOB_TYPE, make_scan_handler`: Scan job handler factory
 - `stoat_ferret.api.services.thumbnail.ThumbnailService`: Thumbnail generation service
+- `stoat_ferret.api.services.waveform.WaveformService`: Waveform generation service
 - `stoat_ferret.api.settings.get_settings`: Configuration retrieval
 - `stoat_ferret.api.websocket.manager.ConnectionManager`: WebSocket connection management
 - `stoat_ferret.db.async_repository.AsyncSQLiteVideoRepository, AsyncVideoRepository`: Video persistence
 - `stoat_ferret.db.audit.AuditLogger`: Audit logging for mutations
 - `stoat_ferret.db.clip_repository.AsyncClipRepository`: Clip persistence
 - `stoat_ferret.db.project_repository.AsyncProjectRepository`: Project persistence
+- `stoat_ferret.db.proxy_repository.AsyncProxyRepository, SQLiteProxyRepository`: Proxy persistence
 - `stoat_ferret.db.schema.create_tables_async`: Database schema initialization
 - `stoat_ferret.db.timeline_repository.AsyncTimelineRepository`: Timeline persistence
 - `stoat_ferret.db.version_repository.AsyncVersionRepository`: Version persistence
@@ -107,6 +119,8 @@ All routers included on the FastAPI instance (lines 202-212):
 - `stoat_ferret.ffmpeg.observable.ObservableFFmpegExecutor`: Observable FFmpeg executor wrapper
 - `stoat_ferret.jobs.queue.AsyncioJobQueue`: Async job queue for background processing
 - `stoat_ferret.logging.configure_logging`: Structured logging configuration
+- `stoat_ferret.preview.cache.PreviewCache`: Preview session caching
+- `stoat_ferret.preview.manager.PreviewManager`: Preview session lifecycle management
 
 ### External Dependencies
 

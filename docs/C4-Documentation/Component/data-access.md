@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Data Access component provides the full persistence layer for the stoat-and-ferret backend. It defines protocol-based repository interfaces for every domain entity (videos, projects, clips, timeline tracks, project versions, and audit entries), implements them against an async SQLite database, manages schema creation and backward-compatible migrations, and provides an immutable audit trail for all data mutations.
+The Data Access component provides the full persistence layer for the stoat-and-ferret backend. It defines protocol-based repository interfaces for every domain entity (videos, projects, clips, timeline tracks, project versions, batch jobs, preview sessions, proxy files, and audit entries), implements them against an async SQLite database, manages schema creation and backward-compatible migrations, and provides an immutable audit trail for all data mutations.
 
 ## Responsibilities
 
@@ -15,6 +15,10 @@ The Data Access component provides the full persistence layer for the stoat-and-
 - Record an append-only audit trail of INSERT, UPDATE, and DELETE operations
 - Manage project version history with non-destructive restoration and SHA-256 checksums
 - Serialize complex domain fields (effects, transitions, audio mix) as JSON columns
+- Track batch job lifecycle with status state machine (queued → running → completed/failed)
+- Manage preview session records with TTL-based expiry and HLS manifest metadata
+- Track proxy file records with LRU access timestamps and cache statistics
+- Store thumbnail strip and waveform generation metadata
 
 ## Interfaces
 
@@ -61,6 +65,29 @@ The Data Access component provides the full persistence layer for the stoat-and-
 - `get_version(project_id: str, version_number: int) -> VersionRecord | None`
 - `restore(project_id: str, version_number: int) -> VersionRecord` — non-destructive; creates new version
 
+**AsyncBatchRepository (protocol)**
+- `create_job(batch_id: str, job_type: str, payload: dict) -> BatchJobRecord`
+- `get_job(job_id: str) -> BatchJobRecord | None`
+- `list_by_batch(batch_id: str) -> list[BatchJobRecord]`
+- `update_status(job_id: str, status: str, progress: float | None, error: str | None) -> BatchJobRecord`
+
+**AsyncPreviewRepository (protocol)**
+- `create(session: PreviewSession) -> PreviewSession`
+- `get(session_id: str) -> PreviewSession | None`
+- `update(session: PreviewSession) -> PreviewSession`
+- `delete(session_id: str) -> bool`
+- `list_expired() -> list[PreviewSession]` — sessions past TTL
+- `count_active() -> int`
+
+**AsyncProxyRepository (protocol)**
+- `create(proxy: ProxyFile) -> ProxyFile`
+- `get(proxy_id: str) -> ProxyFile | None`
+- `get_by_video(video_id: str, quality: str | None) -> ProxyFile | None`
+- `update(proxy: ProxyFile) -> ProxyFile`
+- `delete(proxy_id: str) -> bool`
+- `list_by_access(limit: int) -> list[ProxyFile]` — LRU order for eviction
+- `cache_stats() -> dict` — count, total size, oldest access time
+
 **AuditLogger**
 - `log_change(operation: str, entity_type: str, entity_id: str, changes: dict | None, context: str | None) -> AuditEntry`
 - `get_history(entity_id: str, limit: int) -> list[AuditEntry]`
@@ -77,14 +104,17 @@ The Data Access component provides the full persistence layer for the stoat-and-
 
 | Module | Source | Purpose |
 |--------|--------|---------|
-| Models | `src/stoat_ferret/db/models.py` | Dataclasses for all entities: `Video`, `Project`, `Clip`, `Track`, `AuditEntry`; `ClipValidationError` wrapping Rust validation errors |
-| Schema | `src/stoat_ferret/db/schema.py` | DDL for all tables, indexes, FTS5 virtual table and triggers, backward-compatible column migrations |
+| Models | `src/stoat_ferret/db/models.py` | Dataclasses for all entities: `Video`, `Project`, `Clip`, `Track`, `AuditEntry`, `PreviewSession`, `ThumbnailStrip`, `Waveform`, `ProxyFile`; status enums: `PreviewStatus`, `PreviewQuality`, `ThumbnailStripStatus`, `WaveformStatus`, `WaveformFormat`, `ProxyStatus`, `ProxyQuality`; `ClipValidationError` wrapping Rust validation errors |
+| Schema | `src/stoat_ferret/db/schema.py` | DDL for all tables (videos, projects, clips, tracks, audit_log, project_versions, batch_jobs, proxy_files, thumbnail_strips, waveforms, preview_sessions), indexes, FTS5 virtual table and triggers, backward-compatible column migrations |
 | Async Video Repository | `src/stoat_ferret/db/async_repository.py` | `AsyncSQLiteVideoRepository` (production), `AsyncInMemoryVideoRepository` (testing) |
 | Sync Video Repository | `src/stoat_ferret/db/repository.py` | `SQLiteVideoRepository` (sync, with field-level audit diff), `InMemoryVideoRepository` (testing) |
 | Project Repository | `src/stoat_ferret/db/project_repository.py` | `AsyncSQLiteProjectRepository`, `AsyncInMemoryProjectRepository`; handles JSON serialization of transitions and audio_mix fields |
 | Clip Repository | `src/stoat_ferret/db/clip_repository.py` | `AsyncSQLiteClipRepository`, `AsyncInMemoryClipRepository`; handles JSON effects field and timeline positioning columns |
 | Timeline Repository | `src/stoat_ferret/db/timeline_repository.py` | `AsyncSQLiteTimelineRepository`, `AsyncInMemoryTimelineRepository`; track CRUD and clips-by-track queries |
 | Version Repository | `src/stoat_ferret/db/version_repository.py` | `AsyncSQLiteVersionRepository`, `AsyncInMemoryVersionRepository`; versioning with SHA-256 checksums and non-destructive restore |
+| Batch Repository | `src/stoat_ferret/db/batch_repository.py` | `AsyncSQLiteBatchRepository`, `InMemoryBatchRepository`; batch job tracking with status state machine |
+| Preview Repository | `src/stoat_ferret/db/preview_repository.py` | `SQLitePreviewRepository`, `InMemoryPreviewRepository`; preview session lifecycle with TTL expiry |
+| Proxy Repository | `src/stoat_ferret/db/proxy_repository.py` | `SQLiteProxyRepository`, `InMemoryProxyRepository`; proxy file tracking with LRU access and cache statistics |
 | Audit | `src/stoat_ferret/db/audit.py` | `AuditLogger` — append-only audit trail with field-level change diffs stored as JSON |
 
 ## Key Behaviors
@@ -124,3 +154,4 @@ Data Access
 | v012 | Added audio_mix_json column to projects table via migration; added `project_repository.md` |
 | v013 | Added timeline columns (track_id, timeline_start, timeline_end) to clips table via migration; added `timeline-repository.md` |
 | v016 | Added `version-repository.md` (project versioning with non-destructive restore and SHA-256 checksums); added `clip-repository.md` |
+| v027 | Added batch, preview, and proxy repositories; expanded models with PreviewSession, ThumbnailStrip, Waveform, ProxyFile and status enums; added batch_jobs, proxy_files, thumbnail_strips, waveforms, preview_sessions tables to schema |

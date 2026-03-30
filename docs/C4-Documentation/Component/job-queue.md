@@ -77,11 +77,14 @@ API Gateway
     |-- creates and starts worker --> Job Queue (AsyncioJobQueue.process_jobs)
     |-- submits scan jobs --> Job Queue
     |-- submits batch render jobs --> Job Queue
+    |-- submits proxy generation jobs --> Job Queue (timeout: 1800s)
     |-- polls status --> Job Queue
     |-- requests cancellation --> Job Queue
     |
     |-- registers handler: scan --> Job Queue
     |   (handler calls FFmpeg Integration, Data Access)
+    |-- registers handler: proxy --> Job Queue
+    |   (handler calls AsyncFFmpegExecutor, Proxy Repository)
     |
     |-- queries progress --> Job Queue (router-jobs.py)
 
@@ -94,3 +97,4 @@ Tests
 | Version | Changes |
 |---------|---------|
 | v009 | Initial job queue with protocol, AsyncioJobQueue, InMemoryJobQueue, and job status tracking |
+| v027 | Added proxy generation handler registration with 30-minute timeout |

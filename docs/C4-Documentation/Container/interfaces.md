@@ -10,17 +10,21 @@ The API Server exposes a versioned REST API under `/api/v1/` with the following 
 
 | Domain | Base Path | Key Operations |
 |--------|-----------|---------------|
-| Health | `/health/` | Liveness probe, readiness probe (DB + FFmpeg checks) |
+| Health | `/health/` | Liveness probe, readiness probe (DB + FFmpeg + degraded checks for preview/proxy) |
 | Videos | `/api/v1/videos` | List, search (FTS5), get, delete, thumbnail, scan |
 | Projects | `/api/v1/projects` | CRUD, clip management within projects |
 | Jobs | `/api/v1/jobs` | Background job status polling and cancellation |
-| Effects | `/api/v1/effects` | Effect catalog, preview, apply/update/delete, transitions |
-| Compose | `/api/v1/compose` | Layout presets, apply layout to project |
+| Effects | `/api/v1/effects` | Effect catalog, preview, thumbnail preview, apply/update/delete, transitions |
+| Compose | `/api/v1/compose` | Layout presets (with positions field for custom coordinates), apply layout to project |
 | Audio | `/api/v1/projects/{id}/audio` | Audio mix configuration and stateless preview |
 | Timeline | `/api/v1/projects/{id}/timeline` | Track CRUD, clip positioning, transition application |
 | Batch | `/api/v1/render/batch` | Batch render submission and progress tracking |
-| Versions | `/api/v1/projects/{id}/versions` | Version listing and non-destructive restore |
-| Filesystem | `/api/v1/filesystem` | Directory browsing (path-validated) |
+| Versions | `/api/v1/projects/{id}/versions` | Version listing (GET), version creation (POST), non-destructive restore |
+| Preview | `/api/v1/preview` | HLS preview session lifecycle: start, status, seek, stop, manifest, segments, cache |
+| Proxy | `/api/v1/videos/{id}/proxy`, `/api/v1/proxy/batch` | Single and batch proxy generation, status, deletion |
+| Thumbnails | `/api/v1/videos/{id}/thumbnails` | Thumbnail sprite strip generation, metadata, JPEG serving |
+| Waveform | `/api/v1/videos/{id}/waveform` | Waveform generation (PNG/JSON), metadata, file serving |
+| Filesystem | `/api/v1/filesystem` | Directory browsing with pagination (`limit`, `offset`, `path` query params) |
 | Metrics | `/metrics` | Prometheus text exposition format |
 | SPA | `/gui` | Static file serving with catch-all for client-side routing |
 
@@ -41,7 +45,7 @@ Persistent connection for real-time server-to-client event broadcasting.
 }
 ```
 
-**Events:**
+**Events (17 types):**
 
 | Event | Trigger | Data |
 |-------|---------|------|
@@ -54,8 +58,16 @@ Persistent connection for real-time server-to-client event broadcasting.
 | `LAYOUT_APPLIED` | `POST /api/v1/projects/{id}/compose/layout` | Project ID, preset name |
 | `AUDIO_MIX_CHANGED` | `PUT /api/v1/projects/{id}/audio/mix` | Project ID |
 | `TRANSITION_APPLIED` | Transition applied between clips | Project ID, transition type |
+| `JOB_PROGRESS` | Background job progress update | Job ID, progress (0.0–1.0) |
+| `PREVIEW_GENERATING` | Preview session generation started | Session ID, project ID |
+| `PREVIEW_READY` | Preview session ready for playback | Session ID, manifest URL |
+| `PREVIEW_SEEKING` | Preview session seek in progress | Session ID, position |
+| `PREVIEW_ERROR` | Preview session error | Session ID, error message |
+| `AI_ACTION` | AI-driven action notification | Action type, details |
+| `RENDER_PROGRESS` | Render pipeline progress update | Job ID, progress |
+| `PROXY_READY` | Proxy video generation complete | Video ID, proxy quality |
 
-All Phase 3 events (TIMELINE_UPDATED, LAYOUT_APPLIED, AUDIO_MIX_CHANGED, TRANSITION_APPLIED) are actively wired — they are emitted by their respective routers during real API operations, not just defined.
+All events are actively wired — they are emitted by their respective routers and services during real API operations, not just defined.
 
 ## API Server → SQLite Database
 
@@ -70,23 +82,28 @@ All Phase 3 events (TIMELINE_UPDATED, LAYOUT_APPLIED, AUDIO_MIX_CHANGED, TRANSIT
 
 | Interface | Technology | Details |
 |-----------|-----------|---------|
-| FFmpeg execution | `subprocess.run()` | Synchronous subprocess for encoding and thumbnail generation |
+| FFmpeg execution (sync) | `subprocess.run()` | Synchronous subprocess for encoding and thumbnail generation |
+| FFmpeg execution (async) | `asyncio.create_subprocess_exec()` | Async subprocess for proxy transcoding and HLS generation with real-time progress tracking and cooperative cancellation |
 | FFprobe metadata | `asyncio.create_subprocess_exec()` | Async subprocess with 30s timeout; JSON output parsing |
 | Observable wrapper | `ObservableFFmpegExecutor` | Structured logging (started/completed/failed events) and Prometheus metrics (count, duration, active gauge) |
-| Health check | Binary availability probe | Readiness endpoint checks FFmpeg binary exists and is executable |
+| Health check | Binary availability probe | Readiness endpoint checks FFmpeg binary exists and is executable; non-critical (degraded only, LRN-136) |
 
 ## Web GUI → API Server
 
 | Interface | Technology | Details |
 |-----------|-----------|---------|
 | REST calls | `fetch()` | All data operations via HTTP/JSON to `/api/v1/*` endpoints |
-| WebSocket | `WebSocket` API | Persistent connection to `/ws` with exponential-backoff reconnect (1s–30s) |
-| Health polling | `GET /health/ready` | 30-second interval polling from Dashboard page |
+| WebSocket | `WebSocket` API | Persistent connection to `/ws` with exponential-backoff reconnect (1s–30s); receives 17 event types |
+| Health polling | `GET /health/ready` | 30-second interval polling from Dashboard page; displays degraded status |
 | Metrics polling | `GET /metrics` | 30-second interval polling; Prometheus text format parsed client-side |
 | Job polling | `GET /api/v1/jobs/{id}` | 1-second interval polling from ScanModal until terminal state |
+| Preview streaming | HLS manifest + segments | `GET /api/v1/preview/{session}/manifest.m3u8` + segments via HLS.js or native `<video>` |
+| Proxy status | `GET /api/v1/videos/{id}/proxy` | Proxy status checked for video cards; updates via PROXY_READY WebSocket event |
+| Waveform images | `GET /api/v1/videos/{id}/waveform.png` | PNG waveform loaded as CSS background-image in AudioWaveform component |
 
 ## Version History
 
 | Version | Changes |
 |---------|---------|
 | v018 | Initial Container interfaces documentation |
+| v027 | Added preview, proxy, thumbnails, waveform API domains; expanded WebSocket events to 17; added async FFmpeg execution; added filesystem pagination; documented degraded health semantics; added Web GUI preview streaming and proxy status interfaces |

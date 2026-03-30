@@ -97,6 +97,31 @@ All schemas are Pydantic BaseModel subclasses with from_attributes=True for ORM 
 - `DirectoryEntry`: Directory (name, path)
 - `DirectoryListResponse`: Directory list (path, directories: list)
 
+### Preview Schemas (preview.py)
+
+- `PreviewStartRequest`: Start preview request (quality: str="medium")
+- `PreviewStartResponse`: Session started (session_id: str)
+- `PreviewStatusResponse`: Session status (session_id, status: str, manifest_url: str | None, error_message: str | None)
+- `PreviewSeekRequest`: Seek request (position: float >= 0.0)
+- `PreviewSeekResponse`: Seek result (session_id, status: str)
+- `PreviewStopResponse`: Stop result (session_id, stopped: bool=True)
+- `PreviewCacheStatusResponse`: Cache metrics (active_sessions, used_bytes, max_bytes, usage_percent: float, sessions: list)
+- `PreviewCacheClearResponse`: Cache clear result (cleared_sessions, freed_bytes)
+
+### Thumbnail Schemas (thumbnail.py)
+
+- `ThumbnailStripGenerateRequest`: Generation request (interval_seconds: float | None, frame_width: int | None, frame_height: int | None)
+- `ThumbnailStripGenerateResponse`: Generation queued (strip_id: str, status: str)
+- `ThumbnailStripMetadataResponse`: Strip metadata (strip_id, video_id, status: str, frame_count, frame_width, frame_height, interval_seconds: float, columns, rows)
+
+### Waveform Schemas (waveform.py)
+
+- `WaveformGenerateRequest`: Generation request (format: Literal["png", "json"]="png")
+- `WaveformGenerateResponse`: Generation queued (waveform_id: str, status: str)
+- `WaveformMetadataResponse`: Waveform metadata (waveform_id, video_id, status: str, format: str, duration: float, channels, samples_per_second)
+- `WaveformSample`: Single amplitude sample (Peak_level: str | None, RMS_level: str | None, ch1_Peak_level, ch1_RMS_level, ch2_Peak_level, ch2_RMS_level all str | None)
+- `WaveformSamplesResponse`: JSON waveform data (video_id, channels, samples_per_second, samples: list[WaveformSample])
+
 ## Key Implementation Details
 
 - **ORM compatibility**: from_attributes=True allows Pydantic to deserialize from domain model instances (Project, Video, Clip, etc.)

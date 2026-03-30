@@ -26,7 +26,10 @@ High-level system context for stoat-and-ferret, showing the system boundary, per
 │  - Transitions (fade, crossfade, audio crossfade)   │
 │  - Batch rendering with parallel execution          │
 │  - Project versioning with non-destructive restore  │
-│  - Real-time WebSocket event updates                │
+│  - HLS preview with quality selection & theater mode│
+│  - Proxy video generation with quality tiers        │
+│  - Thumbnail strips and audio waveforms             │
+│  - Real-time WebSocket event updates (17 types)     │
 │  - AI-discoverable API with OpenAPI + effect hints  │
 │  - Full-text video search                           │
 │                                                     │
@@ -45,7 +48,7 @@ High-level system context for stoat-and-ferret, showing the system boundary, per
 
 ### Video Editor User
 
-Interacts with the system through the Web GUI (React SPA served at `/gui`). Manages video libraries, creates projects, positions clips on timelines, applies effects and transitions, configures audio mixes, selects layout presets for multi-input composition, and initiates batch renders. Receives real-time feedback via WebSocket events displayed in the activity log and status bar.
+Interacts with the system through the Web GUI (React SPA served at `/gui`). Manages video libraries, creates projects, positions clips on timelines, applies effects and transitions, configures audio mixes, selects layout presets for multi-input composition, previews edits via HLS streaming with theater mode, monitors proxy generation status, and initiates batch renders. Receives real-time feedback via WebSocket events displayed in the activity log and status bar.
 
 ### AI Agent (Claude)
 
@@ -70,20 +73,28 @@ The core editing pipeline, spanning timeline management through to rendered outp
 | Batch Rendering | Concurrent render job submission with semaphore-limited parallelism (default 4) and aggregated progress | v017 |
 | Project Versioning | Non-destructive version snapshots with SHA-256 integrity checksums and restore-as-new-version semantics | v016 |
 | Effects Pipeline | 9 built-in effects (text overlay, speed, volume, fades, audio mix, ducking, crossfades) with JSON Schema validation | v011 |
+| HLS Preview | Session-based preview with quality selection (low/medium/high), seek, and auto-quality based on filter cost | v019-v022 |
+| Proxy Generation | 3-tier proxy quality with storage quota, LRU eviction, and batch generation | v024-v025 |
+| Thumbnail Strips | Sprite sheet generation for timeline scrubbing with configurable interval and dimensions | v023 |
+| Audio Waveforms | PNG and JSON waveform generation for audio visualization | v023 |
+| Degraded Health | Non-critical subsystems report degraded status without triggering 503 errors | v026 |
 
 ### Web GUI
 
 | Capability | Description | Added |
 |------------|-------------|-------|
 | Timeline Canvas | Interactive visualization with tracks, clips, time ruler, playhead, and zoom controls | v013-v014 |
-| Layout Preview | 16:9 canvas preview of layout presets with manual coordinate editing | v014-v015 |
+| Layout Preview | 16:9 canvas preview of API-fetched layout presets with manual coordinate editing | v014-v015 |
 | Schema-Driven Forms | Effect parameter forms auto-generated from JSON Schema (sliders, inputs, dropdowns, color pickers) | v011-v012 |
-| Real-Time Updates | WebSocket-driven activity log and status bar reflecting all 9 event types | v011-v017 |
-| Video Library | Browsing, FTS5 search, directory scanning with background job polling | v009-v010 |
+| Real-Time Updates | WebSocket-driven activity log and status bar reflecting all 17 event types | v011-v027 |
+| Video Library | Browsing, FTS5 search, proxy status badges, directory scanning with background job polling | v009-v025 |
+| Preview Player | HLS video preview with quality selection, seek, progress tracking, and theater mode | v019-v025 |
+| Theater Mode | Fullscreen preview with auto-hiding HUD (3s), keyboard shortcuts, AI action display | v025 |
+| Audio Waveforms | Waveform PNG visualization in timeline audio tracks | v023 |
 
 ### WebSocket Events
 
-All events are actively wired — emitted by routers during real API operations:
+All 17 events are actively wired — emitted by routers and services during real API operations:
 
 | Event | Description |
 |-------|-------------|
@@ -96,6 +107,14 @@ All events are actively wired — emitted by routers during real API operations:
 | `LAYOUT_APPLIED` | Layout preset applied to a project |
 | `AUDIO_MIX_CHANGED` | Audio mix configuration updated |
 | `TRANSITION_APPLIED` | Transition applied between adjacent clips |
+| `JOB_PROGRESS` | Background job progress update |
+| `PREVIEW_GENERATING` | Preview session generation started |
+| `PREVIEW_READY` | Preview session ready for playback |
+| `PREVIEW_SEEKING` | Preview session seek in progress |
+| `PREVIEW_ERROR` | Preview session error |
+| `AI_ACTION` | AI-driven action notification |
+| `RENDER_PROGRESS` | Render pipeline progress update |
+| `PROXY_READY` | Proxy video generation complete |
 
 ## External Dependencies
 
@@ -126,3 +145,4 @@ SQLite is embedded — no external database server required. Schema is initializ
 | Version | Changes |
 |---------|---------|
 | v018 | Initial Context-level documentation synthesized from Container and Component docs |
+| v027 | Added Phase 4 capabilities (preview, proxy, thumbnails, waveforms, theater mode); expanded WebSocket events to 17; updated personas for preview/proxy workflows |

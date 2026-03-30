@@ -1,6 +1,6 @@
 # C4 Code Level: Types & Utilities
 
-**Source:** `gui/src/types/timeline.ts`, `gui/src/utils/timeline.ts`, `gui/src/data/presetPositions.ts`
+**Source:** `gui/src/types/generated/types.ts`, `gui/src/types/generated/api-types.ts`, `gui/src/utils/timeline.ts`
 
 **Component:** Web GUI
 
@@ -191,35 +191,26 @@ export function formatRulerTime(seconds: number): string
   - 90 → "1:30"
   - 0.5 → "0:00.5"
 
-### Preset Positions Data
+### Layout Presets (API-Fetched)
 
-**Location:** `gui/src/data/presetPositions.ts`
+**Source:** API endpoint `GET /api/v1/compose/presets`
 
-**Export:** `PRESET_POSITIONS: Record<string, LayoutPosition[]>`
+**Fetching:** `composeStore.fetchPresets()` retrieves available presets from backend
 
-Available presets:
+**Preset Metadata:** LayoutPreset interface provides name, description, AI hint, and input constraints
 
-| Preset | Description | Positions |
-|--------|-------------|-----------|
-| **PipTopLeft** | Picture-in-picture top-left | [Full (0,0,1,1,z:0), PiP (0.02,0.02,0.25,0.25,z:1)] |
-| **PipTopRight** | Picture-in-picture top-right | [Full (0,0,1,1,z:0), PiP (0.73,0.02,0.25,0.25,z:1)] |
-| **PipBottomLeft** | Picture-in-picture bottom-left | [Full (0,0,1,1,z:0), PiP (0.02,0.73,0.25,0.25,z:1)] |
-| **PipBottomRight** | Picture-in-picture bottom-right | [Full (0,0,1,1,z:0), PiP (0.73,0.73,0.25,0.25,z:1)] |
-| **SideBySide** | Left/right split | [Left (0,0,0.5,1,z:0), Right (0.5,0,0.5,1,z:0)] |
-| **TopBottom** | Top/bottom split | [Top (0,0,1,0.5,z:0), Bottom (0,0.5,1,0.5,z:0)] |
-| **Grid2x2** | 2x2 grid (4 inputs) | [TL (0,0,0.5,0.5,z:0), TR (0.5,0,0.5,0.5,z:0), BL (0,0.5,0.5,0.5,z:0), BR (0.5,0.5,0.5,0.5,z:0)] |
-
-**Usage:** composeStore loads positions for selected preset
+**Positions:** Layout positions are computed/managed by the backend API and provided per preset selection
 
 ## Dependencies
 
 ### Internal Dependencies
 
-None (pure types and utilities)
+- None (pure types and utilities)
 
 ### External Dependencies
 
-None (TypeScript only, no runtime deps)
+- None (TypeScript only, no runtime deps)
+- Note: Layout presets are fetched from API at runtime, not hardcoded
 
 ## Key Implementation Details
 
@@ -309,10 +300,10 @@ classDiagram
         }
     }
 
-    namespace Data {
-        class PresetPositions {
-            "PRESET_POSITIONS: Record"
-            "PipTopLeft, PipTopRight, ..."
+    namespace API {
+        class ComposePresetsAPI {
+            "GET /api/v1/compose/presets"
+            "Returns LayoutPresetListResponse"
         }
     }
 
@@ -321,14 +312,14 @@ classDiagram
     LayoutPresetListResponse --> LayoutPreset
 
     CoordinateMath -.->|uses| "zoom, scrollOffset"
-    PresetPositions -.->|defines| LayoutPosition
+    ComposePresetsAPI -.->|fetches| LayoutPresetListResponse
 ```
 
 ## Code Locations
 
 - **types/timeline.ts**: Type definitions
 - **utils/timeline.ts**: Coordinate math and formatting
-- **data/presetPositions.ts**: Preset layout data
+- **types/generated/api-types.ts**: Auto-generated API types from OpenAPI schema
 
 ## Usage Examples
 

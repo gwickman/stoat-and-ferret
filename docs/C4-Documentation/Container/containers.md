@@ -70,7 +70,18 @@ The API Server is a single Uvicorn process running a FastAPI application. It con
 - Batch rendering with semaphore-limited concurrency (v017)
 - Full-text video search via SQLite FTS5
 
-**WebSocket Events (all actively wired):**
+**Key Capabilities (Phase 4 — v018-v027):**
+
+- HLS preview session management with quality selection and seek (v019-v022)
+- Proxy video generation with 3-tier quality selection and storage quota (v024-v025)
+- Thumbnail sprite strip generation for timeline scrubbing (v023)
+- Audio waveform generation in PNG and JSON formats (v023)
+- Degraded health check semantics for non-critical subsystems (v026, LRN-136)
+- Prometheus metrics for preview, proxy, and cache subsystems (v026, LRN-137)
+- Preview filter simplification and cost estimation in Rust Core (v022)
+- Filesystem directory browsing with pagination (v019)
+
+**WebSocket Events (17 event types, all actively wired):**
 
 | Event | Source | Status |
 |-------|--------|--------|
@@ -83,6 +94,14 @@ The API Server is a single Uvicorn process running a FastAPI application. It con
 | `LAYOUT_APPLIED` | Compose router (v014+) | Active |
 | `AUDIO_MIX_CHANGED` | Audio router (v015+) | Active |
 | `TRANSITION_APPLIED` | Timeline router (v016+) | Active |
+| `JOB_PROGRESS` | Job queue worker (v019+) | Active |
+| `PREVIEW_GENERATING` | Preview manager (v019+) | Active |
+| `PREVIEW_READY` | Preview manager (v019+) | Active |
+| `PREVIEW_SEEKING` | Preview router (v019+) | Active |
+| `PREVIEW_ERROR` | Preview manager (v019+) | Active |
+| `AI_ACTION` | AI action handler (v025+) | Active |
+| `RENDER_PROGRESS` | Render pipeline (v025+) | Active |
+| `PROXY_READY` | Proxy service (v025+) | Active |
 
 ### Web GUI
 
@@ -98,17 +117,26 @@ The Web GUI is a React SPA built with Vite and deployed as static assets inside 
 
 | Page | Description |
 |------|-------------|
-| Dashboard | System health, Prometheus metrics display, activity log |
-| Library | Video browsing, search, directory scanning with job polling |
+| Dashboard | System health with degraded status display, Prometheus metrics, activity log |
+| Library | Video browsing, search, proxy status badges, directory scanning with job polling |
 | Projects | Project CRUD, clip management |
-| Effects | Effect catalog, schema-driven parameter forms, filter preview |
+| Effects | Effect catalog, schema-driven parameter forms, filter and thumbnail preview |
 | Timeline | Interactive canvas with tracks, clips, playhead, zoom; layout preset panel with 16:9 preview |
+| Preview | HLS video preview with quality selection, seek, theater mode with auto-hiding HUD |
 
 **Key Capabilities (Phase 3):**
 
 - Timeline visualization with canvas-rendered tracks, clips, time ruler, and playhead (v013-v014)
 - Layout preset selection with 16:9 visual preview and coordinate editing (v014-v015)
 - Real-time WebSocket event display for TIMELINE_UPDATED, LAYOUT_APPLIED, AUDIO_MIX_CHANGED, TRANSITION_APPLIED (v016-v017)
+
+**Key Capabilities (Phase 4):**
+
+- HLS video preview with quality switching and theater mode (v019-v022)
+- Proxy status indicators on video cards with WebSocket-driven updates (v025)
+- Audio waveform visualization as PNG backgrounds (v023)
+- Timeline-preview synchronization with bidirectional playhead sync (v022)
+- Theater mode with fullscreen, auto-hiding HUD, keyboard shortcuts (v025)
 
 ### SQLite Database
 
@@ -129,7 +157,12 @@ Accessed via `aiosqlite` for non-blocking I/O. Schema is initialized idempotentl
 | `projects` | Project metadata with JSON fields for transitions and audio_mix |
 | `clips` | Clip definitions with effects JSON and timeline positioning columns |
 | `tracks` | Timeline tracks with z_index ordering |
-| `versions` | Project version snapshots with SHA-256 checksums |
+| `project_versions` | Project version snapshots with SHA-256 checksums |
+| `batch_jobs` | Batch render job tracking with status state machine |
+| `preview_sessions` | HLS preview session metadata with TTL expiry |
+| `proxy_files` | Proxy video records with quality, status, LRU access tracking |
+| `thumbnail_strips` | Thumbnail sprite strip metadata (frame count, grid dimensions) |
+| `waveforms` | Audio waveform metadata (format, duration, channels) |
 | `audit_log` | Append-only audit trail of data mutations |
 
 ### FFmpeg / FFprobe
@@ -147,10 +180,10 @@ The API Server invokes FFmpeg and FFprobe as external subprocesses. All interact
 | From | To | Protocol | Purpose |
 |------|----|----------|---------|
 | User / AI Agent | API Server | HTTP/JSON on port 8765 | REST API calls for all domain operations |
-| User / AI Agent | API Server | WebSocket on `/ws` | Real-time event broadcast (9 event types) |
+| User / AI Agent | API Server | WebSocket on `/ws` | Real-time event broadcast (17 event types) |
 | Web GUI (browser) | API Server | HTTP/JSON + WS | SPA ↔ backend communication |
-| API Server | SQLite Database | aiosqlite (async file I/O) | Read/write all domain entities |
-| API Server | FFmpeg / FFprobe | subprocess (stdin/stdout) | Video processing and metadata extraction |
+| API Server | SQLite Database | aiosqlite (async file I/O) | Read/write all domain entities (12 tables) |
+| API Server | FFmpeg / FFprobe | subprocess + async subprocess | Video processing, metadata extraction, proxy transcoding, HLS generation, waveform extraction |
 | API Server | Web GUI (static) | Filesystem read | Serve SPA assets from `gui/dist/` at `/gui` |
 
 ## Version History
@@ -158,3 +191,4 @@ The API Server invokes FFmpeg and FFprobe as external subprocesses. All interact
 | Version | Changes |
 |---------|---------|
 | v018 | Initial Container-level documentation synthesized from Component-level docs |
+| v027 | Added Phase 4 capabilities (preview, proxy, thumbnails, waveform); expanded WebSocket events to 17; added 5 database tables; updated Web GUI for 6 pages with theater mode; documented degraded health semantics (LRN-136) |

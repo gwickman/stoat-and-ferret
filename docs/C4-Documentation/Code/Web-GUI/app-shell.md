@@ -37,11 +37,12 @@ Provides the application entry point, router configuration, shell layout (header
   - Applies dark theme styling (bg-gray-950, text-gray-100)
   - Returns: flexbox column with full viewport height
 
-- `Navigation()` component in `Navigation.tsx` (line 18)
-  - Discovers available tabs by probing endpoints with HEAD requests
-  - Tabs checked: `/health/live`, `/api/v1/videos`, `/api/v1/projects`, `/api/v1/effects`, `/api/v1/compose/presets`
+- `Navigation()` component in `Navigation.tsx` (line 19)
+  - Discovers available tabs by probing endpoints with GET requests
+  - Tabs checked: `/health/live`, `/api/v1/videos`, `/api/v1/projects`, `/api/v1/effects`, `/api/v1/compose/presets`, `/api/v1/preview/cache`
+  - Accepts 200 OK or 405 Method Not Allowed (endpoint exists)
   - Renders `NavLink` for each available tab with active state styling
-  - Lazy-loads; re-checks availability on mount only
+  - Lazy-loads; checks availability on mount only
   - Returns: horizontal nav flex with rounded-top styling
 
 ### Helper Functions
