@@ -13,6 +13,7 @@
 //! - [`compose`] - Overlay and scale filter builders for multi-stream composition
 //! - [`batch`] - Batch render progress aggregation
 //! - [`preview`] - Preview filter graph simplification
+//! - [`render`] - Render plan builder and settings validation
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -23,6 +24,7 @@ pub mod compose;
 pub mod ffmpeg;
 pub mod layout;
 pub mod preview;
+pub mod render;
 pub mod sanitize;
 pub mod timeline;
 
@@ -126,6 +128,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register preview types and functions
     preview::register(m)?;
+
+    // Register render plan types and functions
+    render::register(m)?;
 
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;
