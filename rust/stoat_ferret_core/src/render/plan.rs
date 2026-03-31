@@ -23,7 +23,12 @@ const OUTPUT_FORMATS: &[&str] = &["mp4", "mkv", "webm", "mov", "avi"];
 
 /// Allowed video codecs (must match sanitize module's VIDEO_CODECS).
 const VIDEO_CODECS: &[&str] = &[
-    "libx264", "libx265", "libvpx", "libvpx-vp9", "libaom-av1", "prores_ks",
+    "libx264",
+    "libx265",
+    "libvpx",
+    "libvpx-vp9",
+    "libaom-av1",
+    "prores_ks",
 ];
 
 /// Allowed quality presets.
@@ -168,7 +173,13 @@ impl RenderSegment {
         frame_count: u64,
         cost_estimate: f64,
     ) -> Self {
-        Self::new(index, timeline_start, timeline_end, frame_count, cost_estimate)
+        Self::new(
+            index,
+            timeline_start,
+            timeline_end,
+            frame_count,
+            cost_estimate,
+        )
     }
 
     /// Returns the duration of this segment in seconds.
@@ -180,7 +191,11 @@ impl RenderSegment {
     fn __repr__(&self) -> String {
         format!(
             "RenderSegment(index={}, {:.3}-{:.3}, frames={}, cost={:.1})",
-            self.index, self.timeline_start, self.timeline_end, self.frame_count, self.cost_estimate
+            self.index,
+            self.timeline_start,
+            self.timeline_end,
+            self.frame_count,
+            self.cost_estimate
         )
     }
 }
@@ -507,7 +522,14 @@ mod tests {
     }
 
     fn default_settings() -> RenderSettings {
-        RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), 30.0)
+        RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            30.0,
+        )
     }
 
     // -- Empty input --
@@ -562,8 +584,15 @@ mod tests {
         // Positioned: A=0-5, B=4-9 -> boundaries [0, 4, 5, 9]
         let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 0.0, 5.0)];
         let transitions = vec![make_transition(1.0)];
-        let plan =
-            build_render_plan(&clips, &transitions, None, None, 1920, 1080, &default_settings());
+        let plan = build_render_plan(
+            &clips,
+            &transitions,
+            None,
+            None,
+            1920,
+            1080,
+            &default_settings(),
+        );
         assert_eq!(plan.segments.len(), 3);
         // Segment 0: 0-4 (clip A only)
         assert!((plan.segments[0].timeline_start - 0.0).abs() < 1e-9);
@@ -594,8 +623,15 @@ mod tests {
             make_clip(2, 0.0, 6.0),
         ];
         let transitions = vec![make_transition(1.0), make_transition(2.0)];
-        let plan =
-            build_render_plan(&clips, &transitions, None, None, 1920, 1080, &default_settings());
+        let plan = build_render_plan(
+            &clips,
+            &transitions,
+            None,
+            None,
+            1920,
+            1080,
+            &default_settings(),
+        );
         let segment_sum: f64 = plan.segments.iter().map(|s| s.duration()).sum();
         assert!(
             (segment_sum - plan.total_duration).abs() < 1e-9,
@@ -613,8 +649,15 @@ mod tests {
             make_clip(2, 0.0, 6.0),
         ];
         let transitions = vec![make_transition(1.0), make_transition(2.0)];
-        let plan =
-            build_render_plan(&clips, &transitions, None, None, 1920, 1080, &default_settings());
+        let plan = build_render_plan(
+            &clips,
+            &transitions,
+            None,
+            None,
+            1920,
+            1080,
+            &default_settings(),
+        );
         for i in 1..plan.segments.len() {
             assert!(
                 (plan.segments[i].timeline_start - plan.segments[i - 1].timeline_end).abs() < 1e-9,
@@ -630,8 +673,14 @@ mod tests {
     #[test]
     fn frame_counts_match_fps_times_duration() {
         let clips = vec![make_clip(0, 0.0, 10.0)];
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), 24.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            24.0,
+        );
         let plan = build_render_plan(&clips, &[], None, None, 1920, 1080, &settings);
         assert_eq!(plan.segments[0].frame_count, 240); // 10s * 24fps
     }
@@ -642,8 +691,15 @@ mod tests {
     fn segment_indices_sequential() {
         let clips = vec![make_clip(0, 0.0, 3.0), make_clip(1, 0.0, 4.0)];
         let transitions = vec![make_transition(1.0)];
-        let plan =
-            build_render_plan(&clips, &transitions, None, None, 1920, 1080, &default_settings());
+        let plan = build_render_plan(
+            &clips,
+            &transitions,
+            None,
+            None,
+            1920,
+            1080,
+            &default_settings(),
+        );
         for (i, seg) in plan.segments.iter().enumerate() {
             assert_eq!(seg.index, i);
         }
@@ -659,17 +715,32 @@ mod tests {
     #[test]
     fn all_supported_formats_pass() {
         for fmt in OUTPUT_FORMATS {
-            let settings =
-                RenderSettings::new(fmt.to_string(), 1920, 1080, "libx264".into(), "medium".into(), 30.0);
-            assert!(validate_render_settings(&settings).is_ok(), "format {fmt} should pass");
+            let settings = RenderSettings::new(
+                fmt.to_string(),
+                1920,
+                1080,
+                "libx264".into(),
+                "medium".into(),
+                30.0,
+            );
+            assert!(
+                validate_render_settings(&settings).is_ok(),
+                "format {fmt} should pass"
+            );
         }
     }
 
     #[test]
     fn all_supported_codecs_pass() {
         for codec in VIDEO_CODECS {
-            let settings =
-                RenderSettings::new("mp4".into(), 1920, 1080, codec.to_string(), "medium".into(), 30.0);
+            let settings = RenderSettings::new(
+                "mp4".into(),
+                1920,
+                1080,
+                codec.to_string(),
+                "medium".into(),
+                30.0,
+            );
             assert!(
                 validate_render_settings(&settings).is_ok(),
                 "codec {codec} should pass"
@@ -679,64 +750,112 @@ mod tests {
 
     #[test]
     fn empty_format_rejected() {
-        let settings =
-            RenderSettings::new("".into(), 1920, 1080, "libx264".into(), "medium".into(), 30.0);
+        let settings = RenderSettings::new(
+            "".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            30.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("output_format"), "error: {err}");
     }
 
     #[test]
     fn unsupported_format_rejected() {
-        let settings =
-            RenderSettings::new("flv".into(), 1920, 1080, "libx264".into(), "medium".into(), 30.0);
+        let settings = RenderSettings::new(
+            "flv".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            30.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("unsupported"), "error: {err}");
     }
 
     #[test]
     fn zero_width_rejected() {
-        let settings =
-            RenderSettings::new("mp4".into(), 0, 1080, "libx264".into(), "medium".into(), 30.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            0,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            30.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("resolution"), "error: {err}");
     }
 
     #[test]
     fn zero_height_rejected() {
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 0, "libx264".into(), "medium".into(), 30.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            0,
+            "libx264".into(),
+            "medium".into(),
+            30.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("resolution"), "error: {err}");
     }
 
     #[test]
     fn unsupported_codec_rejected() {
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 1080, "rawvideo".into(), "medium".into(), 30.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "rawvideo".into(),
+            "medium".into(),
+            30.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("codec"), "error: {err}");
     }
 
     #[test]
     fn unsupported_preset_rejected() {
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "turbo".into(), 30.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "turbo".into(),
+            30.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("quality_preset"), "error: {err}");
     }
 
     #[test]
     fn zero_fps_rejected() {
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), 0.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            0.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("fps"), "error: {err}");
     }
 
     #[test]
     fn negative_fps_rejected() {
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), -1.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            -1.0,
+        );
         let err = validate_render_settings(&settings).unwrap_err();
         assert!(err.contains("fps"), "error: {err}");
     }
@@ -921,8 +1040,14 @@ mod pyo3_tests {
                 CompositionClip::new(0, 0.0, 5.0, 0, 0),
                 CompositionClip::new(1, 0.0, 5.0, 0, 0),
             ];
-            let settings =
-                RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), 30.0);
+            let settings = RenderSettings::new(
+                "mp4".into(),
+                1920,
+                1080,
+                "libx264".into(),
+                "medium".into(),
+                30.0,
+            );
             let plan = build_render_plan(&clips, &[], None, None, 1920, 1080, &settings);
             assert_eq!(plan.segments.len(), 2);
             assert_eq!(plan.total_frames, 300);
@@ -933,8 +1058,14 @@ mod pyo3_tests {
     fn test_validate_render_settings_pyo3() {
         pyo3::prepare_freethreaded_python();
         pyo3::Python::with_gil(|_py| {
-            let valid =
-                RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), 30.0);
+            let valid = RenderSettings::new(
+                "mp4".into(),
+                1920,
+                1080,
+                "libx264".into(),
+                "medium".into(),
+                30.0,
+            );
             assert!(validate_render_settings(&valid).is_ok());
 
             let invalid =
@@ -956,8 +1087,14 @@ mod contract_tests {
     /// representation, verifying structural integrity without adding serde.
     #[test]
     fn render_plan_structural_round_trip() {
-        let settings =
-            RenderSettings::new("mp4".into(), 1920, 1080, "libx264".into(), "medium".into(), 30.0);
+        let settings = RenderSettings::new(
+            "mp4".into(),
+            1920,
+            1080,
+            "libx264".into(),
+            "medium".into(),
+            30.0,
+        );
         let segments = vec![
             RenderSegment::new(0, 0.0, 4.0, 120, 120.0),
             RenderSegment::new(1, 4.0, 5.0, 30, 60.0),
@@ -988,7 +1125,9 @@ mod contract_tests {
         // "Deserialize" back
         let restored_segments: Vec<RenderSegment> = seg_data
             .into_iter()
-            .map(|(idx, start, end, frames, cost)| RenderSegment::new(idx, start, end, frames, cost))
+            .map(|(idx, start, end, frames, cost)| {
+                RenderSegment::new(idx, start, end, frames, cost)
+            })
             .collect();
         let restored = RenderPlan {
             segments: restored_segments,
