@@ -2381,3 +2381,146 @@ def build_encoding_args(encoder: EncoderInfo, quality: QualityPreset) -> list[st
         List of FFmpeg CLI argument strings.
     """
     ...
+
+# ========== Progress Tracking Types ==========
+
+class FfmpegProgressUpdate:
+    """A single progress update parsed from FFmpeg ``-progress pipe:1`` output.
+
+    Each block of key=value lines terminated by ``progress=continue`` or
+    ``progress=end`` produces one update. Fields that FFmpeg omits (e.g.,
+    ``frame``/``fps`` for audio-only streams) are ``None``.
+    """
+
+    @property
+    def frame(self) -> int | None:
+        """Frame number reached (None for audio-only streams)."""
+        ...
+
+    @property
+    def fps(self) -> float | None:
+        """Current encoding speed in fps (None for audio-only streams)."""
+        ...
+
+    @property
+    def out_time_us(self) -> int:
+        """Output time in microseconds (primary progress metric)."""
+        ...
+
+    @property
+    def bitrate(self) -> str:
+        """Current bitrate string (e.g., '1234.5kbits/s' or 'N/A')."""
+        ...
+
+    @property
+    def speed(self) -> str:
+        """Encoding speed multiplier string (e.g., '1.5x' or 'N/A')."""
+        ...
+
+    @property
+    def progress_end(self) -> bool:
+        """True when this is the final progress block."""
+        ...
+
+class ProgressInfo:
+    """Calculated progress information for a render job.
+
+    Combines the raw completion ratio with optional ETA and frame counts.
+    """
+
+    def __init__(
+        self,
+        progress: float,
+        eta_seconds: float | None = None,
+        frames_done: int | None = None,
+        total_frames: int | None = None,
+    ) -> None:
+        """Creates a new ProgressInfo.
+
+        Args:
+            progress: Completion ratio clamped to [0.0, 1.0].
+            eta_seconds: Estimated seconds remaining, or None.
+            frames_done: Frames encoded so far, or None.
+            total_frames: Total frames expected, or None.
+        """
+        ...
+
+    @property
+    def progress(self) -> float:
+        """Completion ratio clamped to [0.0, 1.0]."""
+        ...
+
+    @property
+    def eta_seconds(self) -> float | None:
+        """Estimated seconds remaining, or None if progress is zero."""
+        ...
+
+    @property
+    def frames_done(self) -> int | None:
+        """Frames encoded so far (None if unknown)."""
+        ...
+
+    @property
+    def total_frames(self) -> int | None:
+        """Total frames expected (None if unknown)."""
+        ...
+
+# ========== Progress Tracking Functions ==========
+
+def parse_ffmpeg_progress(output: str) -> list[FfmpegProgressUpdate]:
+    """Parses FFmpeg ``-progress pipe:1`` output into progress updates.
+
+    Each block of key=value lines terminated by ``progress=continue`` or
+    ``progress=end`` produces one update. Handles the documented deviation
+    where ``out_time_ms`` actually reports microseconds.
+
+    Args:
+        output: Complete or partial FFmpeg progress output.
+
+    Returns:
+        List of parsed progress updates.
+    """
+    ...
+
+def calculate_progress(current_time_us: int, total_duration_us: int) -> float:
+    """Calculates render progress as a ratio in [0.0, 1.0].
+
+    Returns 0.0 when total_duration_us is zero or negative.
+
+    Args:
+        current_time_us: Current output time in microseconds.
+        total_duration_us: Total expected duration in microseconds.
+
+    Returns:
+        Progress ratio clamped to [0.0, 1.0].
+    """
+    ...
+
+def estimate_eta(elapsed_seconds: float, progress: float) -> float | None:
+    """Estimates remaining time in seconds.
+
+    Formula: eta = (elapsed / progress) * (1 - progress).
+    Returns None when progress is zero or >= 1.0.
+
+    Args:
+        elapsed_seconds: Time elapsed so far in seconds.
+        progress: Current progress ratio (0.0 to 1.0).
+
+    Returns:
+        Estimated seconds remaining, or None.
+    """
+    ...
+
+def aggregate_segment_progress(segments: list[tuple[float, float]]) -> float:
+    """Aggregates per-segment progress into an overall progress ratio.
+
+    Each tuple is (segment_progress, segment_duration). Segments are
+    weighted by their proportion of the total duration.
+
+    Args:
+        segments: List of (progress, duration) tuples.
+
+    Returns:
+        Weighted aggregate progress clamped to [0.0, 1.0].
+    """
+    ...

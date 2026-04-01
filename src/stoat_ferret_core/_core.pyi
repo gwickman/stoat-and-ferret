@@ -1950,7 +1950,10 @@ def calculate_batch_progress(jobs: list[BatchJobStatus]) -> BatchProgress:
 # ========== Preview Types ==========
 
 class PreviewQuality:
-    """Preview quality level for filter simplification."""
+    """Preview quality level for filter simplification.
+
+    Controls how aggressively filters are simplified for preview playback.
+    """
 
     Draft: PreviewQuality
     Medium: PreviewQuality
@@ -1959,25 +1962,565 @@ class PreviewQuality:
 # ========== Preview Functions ==========
 
 def is_expensive_filter(name: str) -> bool:
-    """Returns true if the filter name is classified as expensive."""
+    """Returns true if the filter name is classified as expensive.
+
+    Expensive filters are those with high computational cost that can be
+    safely removed during preview without affecting structural correctness.
+
+    Args:
+        name: The FFmpeg filter name to check.
+
+    Returns:
+        True if the filter is expensive, False otherwise.
+    """
     ...
 
 def simplify_filter_chain(chain: FilterChain, quality: PreviewQuality) -> FilterChain:
-    """Simplifies a filter chain by removing expensive filters based on quality."""
+    """Simplifies a filter chain by removing expensive filters based on quality.
+
+    Args:
+        chain: The filter chain to simplify.
+        quality: The preview quality level.
+
+    Returns:
+        A simplified filter chain.
+    """
     ...
 
 def simplify_filter_graph(graph: FilterGraph, quality: PreviewQuality) -> FilterGraph:
-    """Simplifies a filter graph by simplifying each chain based on quality."""
+    """Simplifies a filter graph by simplifying each chain based on quality.
+
+    Args:
+        graph: The filter graph to simplify.
+        quality: The preview quality level.
+
+    Returns:
+        A simplified filter graph.
+    """
     ...
 
 def estimate_filter_cost(graph: FilterGraph) -> float:
-    """Estimates the computational cost of a filter graph as a score in [0.0, 1.0]."""
+    """Estimates the computational cost of a filter graph as a score in [0.0, 1.0].
+
+    Uses weighted filter counts normalized via sigmoid. Expensive filters
+    contribute more to the score. Empty graphs return 0.0.
+
+    Args:
+        graph: The filter graph to estimate cost for.
+
+    Returns:
+        A cost score between 0.0 and 1.0 inclusive.
+    """
     ...
 
 def select_preview_quality(cost: float) -> PreviewQuality:
-    """Selects preview quality based on estimated cost score."""
+    """Selects preview quality based on estimated cost score.
+
+    - Cost > 0.7: Draft (fastest preview)
+    - Cost 0.3-0.7: Medium (balanced)
+    - Cost < 0.3: High (full quality)
+
+    Args:
+        cost: A cost score in [0.0, 1.0].
+
+    Returns:
+        The recommended PreviewQuality level.
+    """
     ...
 
 def inject_preview_scale(graph: FilterGraph, width: int, height: int) -> FilterGraph:
-    """Appends a scale filter with the given dimensions to the filter graph."""
+    """Appends a scale filter with the given dimensions to the filter graph.
+
+    The scale filter is added as a new chain at the end of the graph.
+
+    Args:
+        graph: The filter graph to inject scale into.
+        width: Target width in pixels.
+        height: Target height in pixels.
+
+    Returns:
+        A new FilterGraph with the scale filter appended.
+    """
+    ...
+
+# ========== Render Plan Types ==========
+
+class RenderSettings:
+    """Settings controlling how a render is executed.
+
+    Contains the output format, resolution, codec, quality preset, and frame rate.
+    """
+
+    @property
+    def output_format(self) -> str:
+        """Output container format (e.g., "mp4", "mkv")."""
+        ...
+
+    @property
+    def width(self) -> int:
+        """Output width in pixels."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """Output height in pixels."""
+        ...
+
+    @property
+    def codec(self) -> str:
+        """Video codec (e.g., "libx264", "libx265")."""
+        ...
+
+    @property
+    def quality_preset(self) -> str:
+        """Quality preset (e.g., "fast", "medium", "slow")."""
+        ...
+
+    @property
+    def fps(self) -> float:
+        """Frames per second for the output."""
+        ...
+
+    def __init__(
+        self,
+        output_format: str,
+        width: int,
+        height: int,
+        codec: str,
+        quality_preset: str,
+        fps: float,
+    ) -> None:
+        """Creates a new RenderSettings.
+
+        Args:
+            output_format: Container format (e.g., "mp4").
+            width: Output width in pixels.
+            height: Output height in pixels.
+            codec: Video codec (e.g., "libx264").
+            quality_preset: Encoding preset (e.g., "medium").
+            fps: Output frame rate.
+        """
+        ...
+
+class RenderSegment:
+    """A single non-overlapping segment of the render timeline.
+
+    Segments partition the full timeline so their durations sum to the
+    total render duration with no gaps or overlaps.
+    """
+
+    @property
+    def index(self) -> int:
+        """Zero-based segment index."""
+        ...
+
+    @property
+    def timeline_start(self) -> float:
+        """Start time on the composition timeline in seconds."""
+        ...
+
+    @property
+    def timeline_end(self) -> float:
+        """End time on the composition timeline in seconds."""
+        ...
+
+    @property
+    def frame_count(self) -> int:
+        """Number of frames in this segment."""
+        ...
+
+    @property
+    def cost_estimate(self) -> float:
+        """Estimated cost (proportional to frame count x active clip count)."""
+        ...
+
+    def __init__(
+        self,
+        index: int,
+        timeline_start: float,
+        timeline_end: float,
+        frame_count: int,
+        cost_estimate: float,
+    ) -> None:
+        """Creates a new RenderSegment.
+
+        Args:
+            index: Zero-based segment index.
+            timeline_start: Start time in seconds.
+            timeline_end: End time in seconds.
+            frame_count: Number of frames in this segment.
+            cost_estimate: Estimated rendering cost.
+        """
+        ...
+
+    def duration(self) -> float:
+        """Returns the duration of this segment in seconds."""
+        ...
+
+class RenderPlan:
+    """A complete render plan decomposed from composition data.
+
+    Contains ordered, non-overlapping segments covering the full timeline
+    duration, along with aggregate totals and the render settings.
+    """
+
+    @property
+    def total_frames(self) -> int:
+        """Total frame count across all segments."""
+        ...
+
+    @property
+    def total_duration(self) -> float:
+        """Total timeline duration in seconds."""
+        ...
+
+    def __init__(
+        self,
+        segments: list[RenderSegment],
+        total_frames: int,
+        total_duration: float,
+        settings: RenderSettings,
+    ) -> None:
+        """Creates a new RenderPlan.
+
+        Args:
+            segments: Ordered list of RenderSegment.
+            total_frames: Total frame count.
+            total_duration: Total duration in seconds.
+            settings: Render settings.
+        """
+        ...
+
+    def segments(self) -> list[RenderSegment]:
+        """Returns the list of segments."""
+        ...
+
+    def settings(self) -> RenderSettings:
+        """Returns the render settings."""
+        ...
+
+    def segment_count(self) -> int:
+        """Returns the number of segments."""
+        ...
+
+    def total_cost(self) -> float:
+        """Returns the total estimated cost."""
+        ...
+
+# ========== Render Plan Functions ==========
+
+def build_render_plan(
+    clips: list[CompositionClip],
+    transitions: list[TransitionSpec],
+    layout: LayoutSpec | None,
+    audio_mix: AudioMixSpec | None,
+    output_width: int,
+    output_height: int,
+    settings: RenderSettings,
+) -> RenderPlan:
+    """Builds a render plan from composition data.
+
+    Decomposes the timeline into ordered segments with frame counts and cost
+    estimates. Uses composition timeline logic for transition clamping.
+
+    Args:
+        clips: List of CompositionClip with timeline positions.
+        transitions: List of TransitionSpec for adjacent clip pairs.
+        layout: Optional LayoutSpec for spatial composition.
+        audio_mix: Optional AudioMixSpec for audio mixing.
+        output_width: Output width in pixels.
+        output_height: Output height in pixels.
+        settings: RenderSettings controlling format, resolution, codec, fps.
+
+    Returns:
+        A RenderPlan with segments, total_frames, total_duration, and settings.
+    """
+    ...
+
+def validate_render_settings(settings: RenderSettings) -> None:
+    """Validates render settings before execution.
+
+    Checks output format, resolution, codec, quality preset, and fps.
+
+    Args:
+        settings: RenderSettings to validate.
+
+    Raises:
+        ValueError: If any setting is invalid, with a descriptive message.
+    """
+    ...
+
+# ========== Encoder Detection Types ==========
+
+class EncoderType:
+    """Type of hardware acceleration used by an encoder.
+
+    Use class attributes to access specific encoder types.
+    """
+
+    Software: EncoderType
+    Nvenc: EncoderType
+    Qsv: EncoderType
+    Vaapi: EncoderType
+    Amf: EncoderType
+    Mf: EncoderType
+
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+
+class QualityPreset:
+    """Quality preset for encoding output.
+
+    Maps to encoder-specific parameters (CRF, CQ, QP, etc.) rather than
+    FFmpeg's built-in preset names.
+    """
+
+    Draft: QualityPreset
+    Standard: QualityPreset
+    High: QualityPreset
+
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+
+class EncoderInfo:
+    """Information about a detected video encoder.
+
+    Contains the encoder name, codec, hardware classification, and description
+    as parsed from FFmpeg ``-encoders`` output.
+    """
+
+    @property
+    def name(self) -> str:
+        """Encoder name as reported by FFmpeg (e.g., "h264_nvenc", "libx264")."""
+        ...
+
+    @property
+    def codec(self) -> str:
+        """Codec identifier (e.g., "h264", "hevc", "av1")."""
+        ...
+
+    @property
+    def is_hardware(self) -> bool:
+        """Whether this is a hardware-accelerated encoder."""
+        ...
+
+    @property
+    def encoder_type(self) -> EncoderType:
+        """Type of hardware acceleration."""
+        ...
+
+    @property
+    def description(self) -> str:
+        """Encoder description from FFmpeg output."""
+        ...
+
+    def __new__(
+        cls,
+        name: str,
+        codec: str,
+        is_hardware: bool,
+        encoder_type: EncoderType,
+        description: str,
+    ) -> EncoderInfo:
+        """Creates a new EncoderInfo.
+
+        Args:
+            name: Encoder name (e.g., "h264_nvenc").
+            codec: Codec identifier (e.g., "h264").
+            is_hardware: Whether this is hardware-accelerated.
+            encoder_type: Type of hardware acceleration.
+            description: Encoder description.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+# ========== Encoder Detection Functions ==========
+
+def detect_hardware_encoders(ffmpeg_output: str) -> list[EncoderInfo]:
+    """Detects available video encoders by parsing FFmpeg ``-encoders`` output.
+
+    Parses each line, filters to video encoders only, and classifies each
+    as hardware or software based on the ``{codec}_{platform}`` naming pattern.
+
+    Args:
+        ffmpeg_output: Complete output from ``ffmpeg -encoders``.
+
+    Returns:
+        List of detected video encoders with classification.
+    """
+    ...
+
+def select_encoder(available: list[EncoderInfo], codec: str) -> EncoderInfo:
+    """Selects the best encoder for a codec from available encoders.
+
+    Follows the fallback chain: nvenc -> qsv -> vaapi -> amf -> mf -> software.
+    Always returns a valid encoder; synthesises a default software encoder
+    if no matching encoder is found in the available list.
+
+    Args:
+        available: List of detected encoders.
+        codec: Target codec (e.g., "h264", "hevc").
+
+    Returns:
+        The best available encoder for the requested codec.
+    """
+    ...
+
+def build_encoding_args(encoder: EncoderInfo, quality: QualityPreset) -> list[str]:
+    """Builds FFmpeg encoding arguments for an encoder and quality preset.
+
+    Returns a list of FFmpeg command-line arguments appropriate for the
+    encoder type and quality level (codec flag, quality params, preset).
+
+    Args:
+        encoder: The encoder to build arguments for.
+        quality: The target quality preset.
+
+    Returns:
+        List of FFmpeg CLI argument strings.
+    """
+    ...
+
+# ========== Progress Tracking Types ==========
+
+class FfmpegProgressUpdate:
+    """A single progress update parsed from FFmpeg ``-progress pipe:1`` output.
+
+    Each block of key=value lines terminated by ``progress=continue`` or
+    ``progress=end`` produces one update. Fields that FFmpeg omits (e.g.,
+    ``frame``/``fps`` for audio-only streams) are ``None``.
+    """
+
+    @property
+    def frame(self) -> int | None:
+        """Frame number reached (None for audio-only streams)."""
+        ...
+
+    @property
+    def fps(self) -> float | None:
+        """Current encoding speed in fps (None for audio-only streams)."""
+        ...
+
+    @property
+    def out_time_us(self) -> int:
+        """Output time in microseconds (primary progress metric)."""
+        ...
+
+    @property
+    def bitrate(self) -> str:
+        """Current bitrate string (e.g., '1234.5kbits/s' or 'N/A')."""
+        ...
+
+    @property
+    def speed(self) -> str:
+        """Encoding speed multiplier string (e.g., '1.5x' or 'N/A')."""
+        ...
+
+    @property
+    def progress_end(self) -> bool:
+        """True when this is the final progress block."""
+        ...
+
+class ProgressInfo:
+    """Calculated progress information for a render job.
+
+    Combines the raw completion ratio with optional ETA and frame counts.
+    """
+
+    def __init__(
+        self,
+        progress: float,
+        eta_seconds: float | None = None,
+        frames_done: int | None = None,
+        total_frames: int | None = None,
+    ) -> None:
+        """Creates a new ProgressInfo.
+
+        Args:
+            progress: Completion ratio clamped to [0.0, 1.0].
+            eta_seconds: Estimated seconds remaining, or None.
+            frames_done: Frames encoded so far, or None.
+            total_frames: Total frames expected, or None.
+        """
+        ...
+
+    @property
+    def progress(self) -> float:
+        """Completion ratio clamped to [0.0, 1.0]."""
+        ...
+
+    @property
+    def eta_seconds(self) -> float | None:
+        """Estimated seconds remaining, or None if progress is zero."""
+        ...
+
+    @property
+    def frames_done(self) -> int | None:
+        """Frames encoded so far (None if unknown)."""
+        ...
+
+    @property
+    def total_frames(self) -> int | None:
+        """Total frames expected (None if unknown)."""
+        ...
+
+# ========== Progress Tracking Functions ==========
+
+def parse_ffmpeg_progress(output: str) -> list[FfmpegProgressUpdate]:
+    """Parses FFmpeg ``-progress pipe:1`` output into progress updates.
+
+    Each block of key=value lines terminated by ``progress=continue`` or
+    ``progress=end`` produces one update. Handles the documented deviation
+    where ``out_time_ms`` actually reports microseconds.
+
+    Args:
+        output: Complete or partial FFmpeg progress output.
+
+    Returns:
+        List of parsed progress updates.
+    """
+    ...
+
+def calculate_progress(current_time_us: int, total_duration_us: int) -> float:
+    """Calculates render progress as a ratio in [0.0, 1.0].
+
+    Returns 0.0 when total_duration_us is zero or negative.
+
+    Args:
+        current_time_us: Current output time in microseconds.
+        total_duration_us: Total expected duration in microseconds.
+
+    Returns:
+        Progress ratio clamped to [0.0, 1.0].
+    """
+    ...
+
+def estimate_eta(elapsed_seconds: float, progress: float) -> float | None:
+    """Estimates remaining time in seconds.
+
+    Formula: eta = (elapsed / progress) * (1 - progress).
+    Returns None when progress is zero or >= 1.0.
+
+    Args:
+        elapsed_seconds: Time elapsed so far in seconds.
+        progress: Current progress ratio (0.0 to 1.0).
+
+    Returns:
+        Estimated seconds remaining, or None.
+    """
+    ...
+
+def aggregate_segment_progress(segments: list[tuple[float, float]]) -> float:
+    """Aggregates per-segment progress into an overall progress ratio.
+
+    Each tuple is (segment_progress, segment_duration). Segments are
+    weighted by their proportion of the total duration.
+
+    Args:
+        segments: List of (progress, duration) tuples.
+
+    Returns:
+        Weighted aggregate progress clamped to [0.0, 1.0].
+    """
     ...
