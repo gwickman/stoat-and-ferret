@@ -2249,3 +2249,135 @@ def validate_render_settings(settings: RenderSettings) -> None:
         ValueError: If any setting is invalid, with a descriptive message.
     """
     ...
+
+# ========== Encoder Detection Types ==========
+
+class EncoderType:
+    """Type of hardware acceleration used by an encoder.
+
+    Use class attributes to access specific encoder types.
+    """
+
+    Software: EncoderType
+    Nvenc: EncoderType
+    Qsv: EncoderType
+    Vaapi: EncoderType
+    Amf: EncoderType
+    Mf: EncoderType
+
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+
+class QualityPreset:
+    """Quality preset for encoding output.
+
+    Maps to encoder-specific parameters (CRF, CQ, QP, etc.) rather than
+    FFmpeg's built-in preset names.
+    """
+
+    Draft: QualityPreset
+    Standard: QualityPreset
+    High: QualityPreset
+
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+
+class EncoderInfo:
+    """Information about a detected video encoder.
+
+    Contains the encoder name, codec, hardware classification, and description
+    as parsed from FFmpeg ``-encoders`` output.
+    """
+
+    @property
+    def name(self) -> str:
+        """Encoder name as reported by FFmpeg (e.g., "h264_nvenc", "libx264")."""
+        ...
+
+    @property
+    def codec(self) -> str:
+        """Codec identifier (e.g., "h264", "hevc", "av1")."""
+        ...
+
+    @property
+    def is_hardware(self) -> bool:
+        """Whether this is a hardware-accelerated encoder."""
+        ...
+
+    @property
+    def encoder_type(self) -> EncoderType:
+        """Type of hardware acceleration."""
+        ...
+
+    @property
+    def description(self) -> str:
+        """Encoder description from FFmpeg output."""
+        ...
+
+    def __new__(
+        cls,
+        name: str,
+        codec: str,
+        is_hardware: bool,
+        encoder_type: EncoderType,
+        description: str,
+    ) -> EncoderInfo:
+        """Creates a new EncoderInfo.
+
+        Args:
+            name: Encoder name (e.g., "h264_nvenc").
+            codec: Codec identifier (e.g., "h264").
+            is_hardware: Whether this is hardware-accelerated.
+            encoder_type: Type of hardware acceleration.
+            description: Encoder description.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+# ========== Encoder Detection Functions ==========
+
+def detect_hardware_encoders(ffmpeg_output: str) -> list[EncoderInfo]:
+    """Detects available video encoders by parsing FFmpeg ``-encoders`` output.
+
+    Parses each line, filters to video encoders only, and classifies each
+    as hardware or software based on the ``{codec}_{platform}`` naming pattern.
+
+    Args:
+        ffmpeg_output: Complete output from ``ffmpeg -encoders``.
+
+    Returns:
+        List of detected video encoders with classification.
+    """
+    ...
+
+def select_encoder(available: list[EncoderInfo], codec: str) -> EncoderInfo:
+    """Selects the best encoder for a codec from available encoders.
+
+    Follows the fallback chain: nvenc -> qsv -> vaapi -> amf -> mf -> software.
+    Always returns a valid encoder; synthesises a default software encoder
+    if no matching encoder is found in the available list.
+
+    Args:
+        available: List of detected encoders.
+        codec: Target codec (e.g., "h264", "hevc").
+
+    Returns:
+        The best available encoder for the requested codec.
+    """
+    ...
+
+def build_encoding_args(encoder: EncoderInfo, quality: QualityPreset) -> list[str]:
+    """Builds FFmpeg encoding arguments for an encoder and quality preset.
+
+    Returns a list of FFmpeg command-line arguments appropriate for the
+    encoder type and quality level (codec flag, quality params, preset).
+
+    Args:
+        encoder: The encoder to build arguments for.
+        quality: The target quality preset.
+
+    Returns:
+        List of FFmpeg CLI argument strings.
+    """
+    ...
