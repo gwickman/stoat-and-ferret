@@ -11,6 +11,7 @@ from collections.abc import AsyncGenerator
 
 import aiosqlite
 import pytest
+import structlog
 
 from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.render.checkpoints import RenderCheckpointManager
@@ -331,48 +332,43 @@ class TestStructuredLogging:
         self,
         db: aiosqlite.Connection,
         manager: RenderCheckpointManager,
-        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """write_checkpoint emits a log event."""
         await _insert_job(db, "job-1")
-        await manager.write_checkpoint("job-1", 0)
-        captured = capsys.readouterr()
-        assert "render_checkpoint.write" in captured.out
+        with structlog.testing.capture_logs() as logs:
+            await manager.write_checkpoint("job-1", 0)
+        assert any(log.get("event") == "render_checkpoint.write" for log in logs)
 
     async def test_recovery_logs_event(
         self,
         db: aiosqlite.Connection,
         manager: RenderCheckpointManager,
-        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """recover() emits a recovery log event."""
         await _insert_job(db, "job-1", status="running")
-        await manager.recover()
-        captured = capsys.readouterr()
-        assert "render_checkpoint.recovery" in captured.out
+        with structlog.testing.capture_logs() as logs:
+            await manager.recover()
+        assert any(log.get("event") == "render_checkpoint.recovery" for log in logs)
 
     async def test_resume_logs_event(
         self,
         db: aiosqlite.Connection,
         manager: RenderCheckpointManager,
-        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """recover() emits resume log events for each interrupted job."""
         await _insert_job(db, "job-1", status="running")
-        await manager.recover()
-        captured = capsys.readouterr()
-        assert "render_checkpoint.resume" in captured.out
+        with structlog.testing.capture_logs() as logs:
+            await manager.recover()
+        assert any(log.get("event") == "render_checkpoint.resume" for log in logs)
 
     async def test_cleanup_logs_event(
         self,
         db: aiosqlite.Connection,
         manager: RenderCheckpointManager,
-        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """cleanup_stale emits a cleanup log event."""
         await _insert_job(db, "job-1")
         await manager.write_checkpoint("job-1", 0)
-        _ = capsys.readouterr()  # clear previous output
-        await manager.cleanup_stale(["job-1"])
-        captured = capsys.readouterr()
-        assert "render_checkpoint.cleanup" in captured.out
+        with structlog.testing.capture_logs() as logs:
+            await manager.cleanup_stale(["job-1"])
+        assert any(log.get("event") == "render_checkpoint.cleanup" for log in logs)
