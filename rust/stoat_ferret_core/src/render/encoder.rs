@@ -153,7 +153,9 @@ pub fn detect_hardware_encoders(ffmpeg_output: &str) -> Vec<EncoderInfo> {
     let mut encoders = Vec::new();
     // FFmpeg output has a header section ending with "------".
     // If we find it, skip everything up to and including that line.
-    let has_header = ffmpeg_output.lines().any(|l| l.trim_start().starts_with("------"));
+    let has_header = ffmpeg_output
+        .lines()
+        .any(|l| l.trim_start().starts_with("------"));
     let mut past_header = !has_header;
     for line in ffmpeg_output.lines() {
         if !past_header {
@@ -408,14 +410,15 @@ Encoders:
         // 6 software + 15 hardware = 21 video encoders
         assert_eq!(encoders.len(), 21);
         // All should be video (no audio/subtitle)
-        assert!(encoders.iter().all(|e| !e.name.starts_with("aac")
-            && !e.name.starts_with("lib")
-            || e.codec == "h264"
-            || e.codec == "hevc"
-            || e.codec == "vp8"
-            || e.codec == "vp9"
-            || e.codec == "av1"
-            || e.codec == "prores"));
+        assert!(encoders
+            .iter()
+            .all(|e| !e.name.starts_with("aac") && !e.name.starts_with("lib")
+                || e.codec == "h264"
+                || e.codec == "hevc"
+                || e.codec == "vp8"
+                || e.codec == "vp9"
+                || e.codec == "av1"
+                || e.codec == "prores"));
     }
 
     #[test]
@@ -556,7 +559,10 @@ Encoders:
         let all = detect_hardware_encoders(FFMPEG_ENCODERS_FIXTURE);
 
         // With all: nvenc wins
-        assert_eq!(select_encoder(&all, "h264").encoder_type, EncoderType::Nvenc);
+        assert_eq!(
+            select_encoder(&all, "h264").encoder_type,
+            EncoderType::Nvenc
+        );
 
         // Without nvenc: qsv wins
         let no_nvenc: Vec<_> = all
@@ -653,7 +659,10 @@ Encoders:
             description: "".into(),
         };
         let args = build_encoding_args(&encoder, &QualityPreset::Draft);
-        assert_eq!(args, vec!["-c:v", "libx264", "-preset", "veryfast", "-crf", "28"]);
+        assert_eq!(
+            args,
+            vec!["-c:v", "libx264", "-preset", "veryfast", "-crf", "28"]
+        );
     }
 
     #[test]
@@ -666,7 +675,10 @@ Encoders:
             description: "".into(),
         };
         let args = build_encoding_args(&encoder, &QualityPreset::Standard);
-        assert_eq!(args, vec!["-c:v", "libx264", "-preset", "medium", "-crf", "23"]);
+        assert_eq!(
+            args,
+            vec!["-c:v", "libx264", "-preset", "medium", "-crf", "23"]
+        );
     }
 
     #[test]
@@ -679,7 +691,10 @@ Encoders:
             description: "".into(),
         };
         let args = build_encoding_args(&encoder, &QualityPreset::High);
-        assert_eq!(args, vec!["-c:v", "libx264", "-preset", "slow", "-crf", "18"]);
+        assert_eq!(
+            args,
+            vec!["-c:v", "libx264", "-preset", "slow", "-crf", "18"]
+        );
     }
 
     #[test]
@@ -694,7 +709,16 @@ Encoders:
         let args = build_encoding_args(&encoder, &QualityPreset::Standard);
         assert_eq!(
             args,
-            vec!["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "24"]
+            vec![
+                "-c:v",
+                "h264_nvenc",
+                "-preset",
+                "p4",
+                "-rc",
+                "vbr",
+                "-cq",
+                "24"
+            ]
         );
     }
 
@@ -710,7 +734,14 @@ Encoders:
         let args = build_encoding_args(&encoder, &QualityPreset::High);
         assert_eq!(
             args,
-            vec!["-c:v", "h264_qsv", "-preset", "veryslow", "-global_quality", "18"]
+            vec![
+                "-c:v",
+                "h264_qsv",
+                "-preset",
+                "veryslow",
+                "-global_quality",
+                "18"
+            ]
         );
     }
 
@@ -765,7 +796,11 @@ Encoders:
             encoder_type: EncoderType::Software,
             description: "".into(),
         };
-        for quality in [QualityPreset::Draft, QualityPreset::Standard, QualityPreset::High] {
+        for quality in [
+            QualityPreset::Draft,
+            QualityPreset::Standard,
+            QualityPreset::High,
+        ] {
             let args = build_encoding_args(&encoder, &quality);
             assert!(!args.is_empty());
             assert_eq!(args[0], "-c:v");
@@ -824,12 +859,12 @@ Encoders:
         // Verify the 8-char fixed-width prefix is parsed correctly
         // Position: " VFSXBD " (space, type, frame_mt, slice_mt, experimental, draw, direct, space)
         let lines = vec![
-            " VF.... libx264              test (codec h264)",   // frame_mt set
-            " V.S... libx265              test (codec hevc)",   // slice_mt set
-            " V..X.. test_exp             test (codec h264)",   // experimental set
-            " V...B. test_band            test (codec h264)",   // draw_horiz set
-            " V....D test_direct          test (codec h264)",   // direct_render set
-            " VFSXBD test_all             test (codec h264)",   // all flags set
+            " VF.... libx264              test (codec h264)", // frame_mt set
+            " V.S... libx265              test (codec hevc)", // slice_mt set
+            " V..X.. test_exp             test (codec h264)", // experimental set
+            " V...B. test_band            test (codec h264)", // draw_horiz set
+            " V....D test_direct          test (codec h264)", // direct_render set
+            " VFSXBD test_all             test (codec h264)", // all flags set
         ];
         let input = lines.join("\n");
         let encoders = detect_hardware_encoders(&input);
@@ -843,9 +878,7 @@ Encoders:
         let encoders = detect_hardware_encoders(input);
         assert_eq!(encoders.len(), 2);
         assert!(encoders.iter().all(|e| e.is_hardware));
-        assert!(encoders
-            .iter()
-            .all(|e| e.encoder_type == EncoderType::Mf));
+        assert!(encoders.iter().all(|e| e.encoder_type == EncoderType::Mf));
     }
 
     // -- PyO3 binding tests --
@@ -857,7 +890,11 @@ Encoders:
             let result = py_detect_hardware_encoders(FFMPEG_ENCODERS_FIXTURE);
             assert_eq!(result.len(), 21);
             // Verify they can be converted to Python objects
-            let py_list = pyo3::types::PyList::new(py, result.iter().map(|e| e.clone().into_pyobject(py).unwrap())).unwrap();
+            let py_list = pyo3::types::PyList::new(
+                py,
+                result.iter().map(|e| e.clone().into_pyobject(py).unwrap()),
+            )
+            .unwrap();
             assert_eq!(py_list.len(), 21);
         });
     }
