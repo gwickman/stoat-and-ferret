@@ -64,6 +64,7 @@ try:
         Duration,
         FadeBuilder,
         FFmpegCommand,
+        FfmpegProgressUpdate,
         Filter,
         FilterChain,
         FilterGraph,
@@ -73,6 +74,7 @@ try:
         LayoutSpec,
         Position,
         PreviewQuality,
+        ProgressInfo,
         SanitizationError,
         SpeedControl,
         TimeRange,
@@ -82,18 +84,22 @@ try:
         ValidationError,
         VolumeBuilder,
         XfadeBuilder,
+        aggregate_segment_progress,
         build_composition_graph,
         build_overlay_filter,
         build_scale_for_layout,
         calculate_batch_progress,
         calculate_composition_positions,
+        calculate_progress,
         calculate_timeline_duration,
         concat_filter,
         escape_filter_text,
+        estimate_eta,
         estimate_filter_cost,
         health_check,
         inject_preview_scale,
         is_expensive_filter,
+        parse_ffmpeg_progress,
         scale_filter,
         select_preview_quality,
         simplify_filter_chain,
@@ -121,7 +127,9 @@ except ImportError:
     # Callable stub replacing typed classes (intentional fallback)
     BatchJobStatus = _not_built  # type: ignore[misc,assignment]
     BatchProgress = _not_built  # type: ignore[misc,assignment]
+    aggregate_segment_progress = _not_built
     calculate_batch_progress = _not_built
+    calculate_progress = _not_built
     Clip = _not_built  # type: ignore[misc,assignment]
     ClipValidationError = _not_built  # type: ignore[misc,assignment]
     validate_clip = _not_built
@@ -165,6 +173,10 @@ except ImportError:
     CompositionClip = _not_built  # type: ignore[misc,assignment]
     scale_filter = _not_built
     concat_filter = _not_built
+    estimate_eta = _not_built
+    FfmpegProgressUpdate = _not_built  # type: ignore[misc,assignment]
+    parse_ffmpeg_progress = _not_built
+    ProgressInfo = _not_built  # type: ignore[misc,assignment]
     escape_filter_text = _not_built
     validate_path = _not_built
     validate_volume = _not_built
@@ -184,6 +196,13 @@ __all__ = [
     "BatchJobStatus",
     "BatchProgress",
     "calculate_batch_progress",
+    # Render progress types
+    "FfmpegProgressUpdate",
+    "ProgressInfo",
+    "parse_ffmpeg_progress",
+    "calculate_progress",
+    "estimate_eta",
+    "aggregate_segment_progress",
     # Clip types
     "Clip",
     "ClipValidationError",
