@@ -328,6 +328,17 @@ class TestFullLifecycle:
 class TestStructuredLogging:
     """Tests for structured logging events."""
 
+    @pytest.fixture(autouse=True)
+    def _reset_structlog(self) -> None:
+        """Reset structlog to defaults before each test.
+
+        When tests that create TestClient run before this class, the
+        lifespan's configure_logging() configures structlog with a stdlib
+        integration that prevents capture_logs() from intercepting events.
+        Resetting ensures capture_logs() works regardless of test ordering.
+        """
+        structlog.reset_defaults()
+
     async def test_write_logs_event(
         self,
         db: aiosqlite.Connection,
