@@ -6,6 +6,12 @@ These stubs are generated from the Rust code using pyo3-stub-gen.
 
 # Re-export all types from _core
 from stoat_ferret_core._core import (
+    aggregate_segment_progress as aggregate_segment_progress,
+)
+from stoat_ferret_core._core import (
+    calculate_progress as calculate_progress,
+)
+from stoat_ferret_core._core import (
     # Clip types
     Clip as Clip,
 )
@@ -56,8 +62,20 @@ from stoat_ferret_core._core import (
     escape_filter_text as escape_filter_text,
 )
 from stoat_ferret_core._core import (
+    estimate_eta as estimate_eta,
+)
+from stoat_ferret_core._core import (
+    FfmpegProgressUpdate as FfmpegProgressUpdate,
+)
+from stoat_ferret_core._core import (
     # Utility
     health_check as health_check,
+)
+from stoat_ferret_core._core import (
+    parse_ffmpeg_progress as parse_ffmpeg_progress,
+)
+from stoat_ferret_core._core import (
+    ProgressInfo as ProgressInfo,
 )
 from stoat_ferret_core._core import (
     # Filter helpers
@@ -88,6 +106,13 @@ from stoat_ferret_core._core import (
 __all__ = [
     # Utility
     "health_check",
+    # Render progress types
+    "FfmpegProgressUpdate",
+    "ProgressInfo",
+    "parse_ffmpeg_progress",
+    "calculate_progress",
+    "estimate_eta",
+    "aggregate_segment_progress",
     # Clip types
     "Clip",
     "ClipValidationError",

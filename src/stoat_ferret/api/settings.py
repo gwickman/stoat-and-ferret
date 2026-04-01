@@ -114,6 +114,20 @@ class Settings(BaseSettings):
         description="Maximum queue depth before rejection",
     )
 
+    # Render executor
+    render_timeout_seconds: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        description="Render job timeout in seconds",
+    )
+    render_cancel_grace_seconds: int = Field(
+        default=10,
+        ge=1,
+        le=60,
+        description="Grace period for FFmpeg to finalize after cancel",
+    )
+
     # Version retention
     version_retention_count: int | None = Field(
         default=None,
