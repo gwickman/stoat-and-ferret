@@ -328,6 +328,23 @@ class TestFullLifecycle:
 class TestStructuredLogging:
     """Tests for structured logging events."""
 
+    @pytest.fixture(autouse=True)
+    def _reset_structlog(self) -> None:
+        """Reset structlog to defaults before each test.
+
+        When tests that create TestClient run before this class, the
+        lifespan's configure_logging() configures structlog with a stdlib
+        integration and cache_logger_on_first_use=True. This causes
+        module-level loggers to cache resolved BoundLogger instances that
+        bypass capture_logs(). Resetting the config and refreshing the
+        module's logger ensures capture_logs() works regardless of ordering.
+        """
+        structlog.reset_defaults()
+        # Force the checkpoints module to get a fresh logger proxy
+        from stoat_ferret.render import checkpoints
+
+        checkpoints.logger = structlog.get_logger(checkpoints.__name__)
+
     async def test_write_logs_event(
         self,
         db: aiosqlite.Connection,

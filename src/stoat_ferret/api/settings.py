@@ -156,6 +156,12 @@ class Settings(BaseSettings):
         description="Directory for storing generated waveform files",
     )
 
+    # Render storage
+    render_output_dir: str = Field(
+        default="data/renders",
+        description="Directory for storing rendered output files",
+    )
+
     # Proxy storage
     proxy_output_dir: str = Field(
         default="data/proxies",

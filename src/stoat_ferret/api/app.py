@@ -30,6 +30,7 @@ from stoat_ferret.api.routers import (
     preview,
     projects,
     proxy,
+    render,
     thumbnails,
     timeline,
     versions,
@@ -68,8 +69,13 @@ from stoat_ferret.jobs.queue import AsyncioJobQueue
 from stoat_ferret.logging import configure_logging
 from stoat_ferret.preview.cache import PreviewCache
 from stoat_ferret.preview.manager import PreviewManager
+from stoat_ferret.render.checkpoints import RenderCheckpointManager
+from stoat_ferret.render.executor import RenderExecutor
 from stoat_ferret.render.queue import RenderQueue
-from stoat_ferret.render.render_repository import AsyncRenderRepository
+from stoat_ferret.render.render_repository import (
+    AsyncRenderRepository,
+    AsyncSQLiteRenderRepository,
+)
 from stoat_ferret.render.service import RenderService
 
 logger = structlog.get_logger(__name__)
@@ -158,6 +164,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     app.state.proxy_service = proxy_service
 
+    # Create render services
+    render_repo = AsyncSQLiteRenderRepository(app.state.db)
+    app.state.render_repository = render_repo
+    render_queue = RenderQueue(
+        render_repo,
+        max_concurrent=settings.render_max_concurrent,
+        max_depth=settings.render_max_queue_depth,
+    )
+    app.state.render_queue = render_queue
+    render_executor = RenderExecutor(
+        timeout_seconds=settings.render_timeout_seconds,
+        cancel_grace_seconds=settings.render_cancel_grace_seconds,
+    )
+    app.state.render_executor = render_executor
+    checkpoint_manager = RenderCheckpointManager(app.state.db)
+    app.state.checkpoint_manager = checkpoint_manager
+    render_service = RenderService(
+        repository=render_repo,
+        queue=render_queue,
+        executor=render_executor,
+        checkpoint_manager=checkpoint_manager,
+        connection_manager=app.state.ws_manager,
+        settings=settings,
+    )
+    app.state.render_service = render_service
+    await render_service.recover()
+
     # Create preview manager
     from stoat_ferret.db.preview_repository import SQLitePreviewRepository
     from stoat_ferret.preview.hls_generator import HLSGenerator
@@ -195,6 +228,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("job_worker_started")
 
     yield
+
+    # Shutdown: cancel active renders
+    rs: RenderService | None = getattr(app.state, "render_service", None)
+    if rs is not None:
+        # Cancel any running render jobs gracefully
+        re: RenderExecutor | None = getattr(app.state, "render_executor", None)
+        if re is not None:
+            for job_id in list(re._active_processes.keys()):
+                with contextlib.suppress(Exception):
+                    await re.cancel(job_id)
+        logger.info("render_services_shutdown")
 
     # Shutdown: cancel preview sessions first
     preview_manager: PreviewManager | None = getattr(app.state, "preview_manager", None)
@@ -343,6 +387,7 @@ def create_app(
     app.include_router(batch.router)
     app.include_router(preview.router)
     app.include_router(proxy.router)
+    app.include_router(render.router)
     app.include_router(thumbnails.router)
     app.include_router(versions.router)
     app.include_router(waveform.router)

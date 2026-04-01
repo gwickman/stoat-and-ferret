@@ -107,6 +107,25 @@ class AsyncRenderRepository(Protocol):
         """
         ...
 
+    async def list_jobs(
+        self,
+        *,
+        status: RenderStatus | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[RenderJob], int]:
+        """List render jobs with pagination and optional status filtering.
+
+        Args:
+            status: Optional status filter.
+            limit: Maximum number of jobs to return.
+            offset: Number of jobs to skip.
+
+        Returns:
+            Tuple of (jobs, total_count).
+        """
+        ...
+
     async def delete(self, job_id: str) -> bool:
         """Delete a render job by ID.
 
@@ -186,6 +205,40 @@ class AsyncSQLiteRenderRepository:
         )
         rows = await cursor.fetchall()
         return [self._row_to_job(row) for row in rows]
+
+    async def list_jobs(
+        self,
+        *,
+        status: RenderStatus | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[RenderJob], int]:
+        """List render jobs with pagination and optional status filtering."""
+        if status is not None:
+            count_cursor = await self._conn.execute(
+                "SELECT COUNT(*) FROM render_jobs WHERE status = ?",
+                (status.value,),
+            )
+            row = await count_cursor.fetchone()
+            total = row[0] if row else 0
+
+            cursor = await self._conn.execute(
+                "SELECT * FROM render_jobs WHERE status = ?"
+                " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (status.value, limit, offset),
+            )
+        else:
+            count_cursor = await self._conn.execute("SELECT COUNT(*) FROM render_jobs")
+            row = await count_cursor.fetchone()
+            total = row[0] if row else 0
+
+            cursor = await self._conn.execute(
+                "SELECT * FROM render_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (limit, offset),
+            )
+
+        rows = await cursor.fetchall()
+        return [self._row_to_job(row) for row in rows], total
 
     async def update_status(
         self,
@@ -329,6 +382,21 @@ class InMemoryRenderRepository:
         """List all render jobs with a given status."""
         jobs = [copy.deepcopy(j) for j in self._jobs.values() if j.status == status]
         return sorted(jobs, key=lambda j: j.created_at)
+
+    async def list_jobs(
+        self,
+        *,
+        status: RenderStatus | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[RenderJob], int]:
+        """List render jobs with pagination and optional status filtering."""
+        all_jobs = sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
+        if status is not None:
+            all_jobs = [j for j in all_jobs if j.status == status]
+        total = len(all_jobs)
+        page = [copy.deepcopy(j) for j in all_jobs[offset : offset + limit]]
+        return page, total
 
     async def update_status(
         self,
