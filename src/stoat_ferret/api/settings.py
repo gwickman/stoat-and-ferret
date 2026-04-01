@@ -114,6 +114,14 @@ class Settings(BaseSettings):
         description="Maximum queue depth before rejection",
     )
 
+    # Render service
+    render_retry_count: int = Field(
+        default=2,
+        ge=0,
+        le=5,
+        description="Maximum retry attempts for transient render failures",
+    )
+
     # Render executor
     render_timeout_seconds: int = Field(
         default=3600,

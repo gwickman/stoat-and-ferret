@@ -28,6 +28,10 @@ class EventType(str, Enum):
     PREVIEW_ERROR = "preview.error"
     AI_ACTION = "ai_action"
     RENDER_PROGRESS = "render_progress"
+    RENDER_STARTED = "render_started"
+    RENDER_COMPLETED = "render_completed"
+    RENDER_FAILED = "render_failed"
+    RENDER_CANCELLED = "render_cancelled"
     PROXY_READY = "proxy.ready"
 
 

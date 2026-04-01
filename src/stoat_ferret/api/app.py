@@ -68,6 +68,9 @@ from stoat_ferret.jobs.queue import AsyncioJobQueue
 from stoat_ferret.logging import configure_logging
 from stoat_ferret.preview.cache import PreviewCache
 from stoat_ferret.preview.manager import PreviewManager
+from stoat_ferret.render.queue import RenderQueue
+from stoat_ferret.render.render_repository import AsyncRenderRepository
+from stoat_ferret.render.service import RenderService
 
 logger = structlog.get_logger(__name__)
 
@@ -221,6 +224,9 @@ def create_app(
     version_repository: AsyncVersionRepository | None = None,
     batch_repository: AsyncBatchRepository | None = None,
     proxy_repository: AsyncProxyRepository | None = None,
+    render_repository: AsyncRenderRepository | None = None,
+    render_queue: RenderQueue | None = None,
+    render_service: RenderService | None = None,
     job_queue: AsyncioJobQueue | None = None,
     ws_manager: ConnectionManager | None = None,
     effect_registry: EffectRegistry | None = None,
@@ -246,6 +252,9 @@ def create_app(
         version_repository: Optional version repository for dependency injection.
         batch_repository: Optional batch repository for dependency injection.
         proxy_repository: Optional proxy repository for dependency injection.
+        render_repository: Optional render repository for dependency injection.
+        render_queue: Optional render queue for dependency injection.
+        render_service: Optional render service for dependency injection.
         job_queue: Optional job queue for dependency injection.
         ws_manager: Optional WebSocket connection manager for dependency injection.
         effect_registry: Optional effect registry for dependency injection.
@@ -272,7 +281,13 @@ def create_app(
     # Store injected dependencies on app.state
     has_injected = any(
         dep is not None
-        for dep in (video_repository, project_repository, clip_repository, job_queue)
+        for dep in (
+            video_repository,
+            project_repository,
+            clip_repository,
+            render_repository,
+            job_queue,
+        )
     )
     if has_injected:
         app.state._deps_injected = True
@@ -283,7 +298,14 @@ def create_app(
         app.state.version_repository = version_repository
         app.state.batch_repository = batch_repository
         app.state.proxy_repository = proxy_repository
+        app.state.render_repository = render_repository
         app.state.job_queue = job_queue
+
+    if render_queue is not None:
+        app.state.render_queue = render_queue
+
+    if render_service is not None:
+        app.state.render_service = render_service
 
     if audit_logger is not None:
         app.state.audit_logger = audit_logger

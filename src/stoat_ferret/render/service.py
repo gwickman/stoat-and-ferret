@@ -1,0 +1,405 @@
+"""Render service orchestrating job lifecycle.
+
+Coordinates pre-flight checks, queue management, executor dispatch,
+progress broadcasting via WebSocket, retry logic, and cleanup.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+
+import structlog
+
+from stoat_ferret.api.settings import Settings
+from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.render.checkpoints import RenderCheckpointManager
+from stoat_ferret.render.executor import RenderExecutor
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
+from stoat_ferret.render.queue import QueueFullError, RenderQueue
+from stoat_ferret.render.render_repository import AsyncRenderRepository
+
+try:
+    from stoat_ferret_core._core import (
+        RenderSettings,
+        estimate_output_size,
+        validate_render_settings,
+    )
+
+    _HAS_RUST_BINDINGS = True
+except ImportError:
+    _HAS_RUST_BINDINGS = False
+
+logger = structlog.get_logger(__name__)
+
+
+class PreflightError(Exception):
+    """Raised when pre-flight checks fail before queuing a render job.
+
+    Attributes:
+        reason: Human-readable description of the failure.
+    """
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(reason)
+
+
+class RenderService:
+    """Orchestrates the full render job lifecycle.
+
+    Handles pre-flight validation, queue coordination, executor dispatch,
+    progress broadcasting via WebSocket, retry on transient failure, and
+    cleanup on completion or failure.
+
+    Args:
+        repository: Async render job repository for persistence.
+        queue: Render queue for job scheduling.
+        executor: Render executor for FFmpeg process management.
+        checkpoint_manager: Checkpoint manager for crash recovery.
+        connection_manager: WebSocket connection manager for broadcasting.
+        settings: Application settings.
+    """
+
+    def __init__(
+        self,
+        *,
+        repository: AsyncRenderRepository,
+        queue: RenderQueue,
+        executor: RenderExecutor,
+        checkpoint_manager: RenderCheckpointManager,
+        connection_manager: ConnectionManager,
+        settings: Settings,
+    ) -> None:
+        self._repo = repository
+        self._queue = queue
+        self._executor = executor
+        self._checkpoint_manager = checkpoint_manager
+        self._ws = connection_manager
+        self._max_retries = settings.render_retry_count
+
+    async def submit_job(
+        self,
+        *,
+        project_id: str,
+        output_path: str,
+        output_format: OutputFormat,
+        quality_preset: QualityPreset,
+        render_plan_json: str,
+    ) -> RenderJob:
+        """Submit a new render job after pre-flight checks.
+
+        Validates render settings via Rust bindings, checks disk space,
+        and verifies queue capacity before creating and enqueuing the job.
+
+        Args:
+            project_id: The project to render.
+            output_path: Output file path for rendered video.
+            output_format: Container format.
+            quality_preset: Quality preset.
+            render_plan_json: Serialized RenderPlan JSON string.
+
+        Returns:
+            The created and enqueued render job.
+
+        Raises:
+            PreflightError: If any pre-flight check fails.
+        """
+        log = logger.bind(project_id=project_id, output_path=output_path)
+
+        # Pre-flight: validate settings via Rust
+        self._validate_settings(render_plan_json)
+
+        # Pre-flight: check disk space
+        self._check_disk_space(output_path, render_plan_json, quality_preset)
+
+        # Pre-flight: check queue capacity (fail-fast before creating the job)
+        queue_depth = await self._queue.get_queue_depth()
+        if queue_depth >= self._queue._max_depth:
+            raise PreflightError(
+                f"Render queue at capacity: {queue_depth}/{self._queue._max_depth}"
+            )
+
+        # Create and enqueue
+        job = RenderJob.create(
+            project_id=project_id,
+            output_path=output_path,
+            output_format=output_format,
+            quality_preset=quality_preset,
+            render_plan=render_plan_json,
+        )
+
+        try:
+            job = await self._queue.enqueue(job)
+        except QueueFullError as exc:
+            raise PreflightError(str(exc)) from exc
+
+        log.info("render_service.job_submitted", job_id=job.id)
+
+        await self._broadcast_event(EventType.RENDER_STARTED, job)
+        return job
+
+    async def run_job(self, job: RenderJob, command: list[str]) -> None:
+        """Execute a render job with progress tracking and retry logic.
+
+        Dequeues the job, runs it via the executor with progress broadcasting,
+        and handles completion, failure (with retry), or cancellation.
+
+        Args:
+            job: The render job to execute.
+            command: Full FFmpeg command arguments.
+        """
+        job_id = job.id
+        log = logger.bind(job_id=job_id)
+
+        # Parse total duration for progress calculation
+        total_duration_us = self._extract_duration_us(job.render_plan)
+
+        async def progress_callback(jid: str, progress: float) -> None:
+            await self._repo.update_progress(jid, progress)
+            await self._ws.broadcast(
+                build_event(
+                    EventType.RENDER_PROGRESS,
+                    {"job_id": jid, "progress": progress},
+                )
+            )
+
+        # Wire progress callback into executor
+        self._executor._progress_callback = progress_callback
+
+        log.info("render_service.running_job")
+        success = await self._executor.execute(job, command, total_duration_us=total_duration_us)
+
+        if success:
+            await self._complete_job(job)
+        else:
+            # Check if job was cancelled
+            current = await self._repo.get(job_id)
+            if current and current.status == RenderStatus.CANCELLED:
+                log.info("render_service.job_cancelled", job_id=job_id)
+                return
+
+            await self._handle_failure(job, "FFmpeg process failed")
+
+    async def cancel_job(self, job_id: str) -> bool:
+        """Cancel a render job.
+
+        Cancels the executor process if running, updates status to cancelled,
+        and broadcasts the RENDER_CANCELLED event.
+
+        Args:
+            job_id: The render job ID to cancel.
+
+        Returns:
+            True if the job was found and cancelled, False otherwise.
+        """
+        log = logger.bind(job_id=job_id)
+        job = await self._repo.get(job_id)
+        if job is None:
+            log.warning("render_service.cancel_not_found")
+            return False
+
+        if job.status not in (RenderStatus.QUEUED, RenderStatus.RUNNING):
+            log.info(
+                "render_service.cancel_not_cancellable",
+                status=job.status.value,
+            )
+            return False
+
+        # Cancel executor process if running
+        if job.status == RenderStatus.RUNNING:
+            await self._executor.cancel(job_id)
+
+        await self._repo.update_status(job_id, RenderStatus.CANCELLED)
+        log.info("render_service.job_cancelled")
+        await self._broadcast_event(EventType.RENDER_CANCELLED, job)
+        return True
+
+    async def recover(self) -> list[tuple[str, int]]:
+        """Recover from server restart.
+
+        Delegates to queue recovery (marks running jobs as failed)
+        and checkpoint recovery (finds resume points).
+
+        Returns:
+            List of (job_id, next_segment_index) pairs from checkpoint recovery.
+        """
+        await self._queue.recover()
+        resume_points = await self._checkpoint_manager.recover()
+        logger.info(
+            "render_service.recovery_complete",
+            resume_points=len(resume_points),
+        )
+        return resume_points
+
+    async def _complete_job(self, job: RenderJob) -> None:
+        """Mark a job as completed, broadcast event, and clean up.
+
+        Args:
+            job: The render job that completed successfully.
+        """
+        await self._repo.update_status(job.id, RenderStatus.COMPLETED)
+        logger.info("render_service.job_completed", job_id=job.id)
+        await self._broadcast_event(EventType.RENDER_COMPLETED, job)
+        await self._cleanup(job.id)
+
+    async def _handle_failure(self, job: RenderJob, error_message: str) -> None:
+        """Handle a job failure with retry logic.
+
+        If the job has not exceeded the max retry count, requeue it.
+        Otherwise, mark it as permanently failed.
+
+        Args:
+            job: The failed render job.
+            error_message: Description of the failure.
+        """
+        log = logger.bind(job_id=job.id)
+
+        # Reload current state from repo
+        current = await self._repo.get(job.id)
+        if current is None:
+            log.error("render_service.failure_job_not_found")
+            return
+
+        if current.retry_count < self._max_retries:
+            # Transition: running -> failed -> queued (retry)
+            await self._repo.update_status(job.id, RenderStatus.FAILED, error_message=error_message)
+            await self._repo.update_status(job.id, RenderStatus.QUEUED)
+            log.info(
+                "render_service.job_retrying",
+                retry_count=current.retry_count + 1,
+                max_retries=self._max_retries,
+            )
+        else:
+            await self._repo.update_status(job.id, RenderStatus.FAILED, error_message=error_message)
+            log.warning(
+                "render_service.job_failed_permanently",
+                retry_count=current.retry_count,
+                error=error_message,
+            )
+            await self._broadcast_event(EventType.RENDER_FAILED, job)
+            await self._cleanup(job.id)
+
+    async def _cleanup(self, job_id: str) -> None:
+        """Clean up temp files and stale checkpoints for a job.
+
+        Args:
+            job_id: The render job ID to clean up.
+        """
+        self._executor._cleanup_temp_files(job_id)
+        await self._checkpoint_manager.cleanup_stale([job_id])
+        logger.debug("render_service.cleanup_complete", job_id=job_id)
+
+    async def _broadcast_event(self, event_type: EventType, job: RenderJob) -> None:
+        """Broadcast a render lifecycle event via WebSocket.
+
+        Args:
+            event_type: The event type to broadcast.
+            job: The render job associated with the event.
+        """
+        await self._ws.broadcast(
+            build_event(
+                event_type,
+                {
+                    "job_id": job.id,
+                    "project_id": job.project_id,
+                    "status": job.status.value,
+                },
+            )
+        )
+
+    def _validate_settings(self, render_plan_json: str) -> None:
+        """Validate render settings via Rust bindings.
+
+        Args:
+            render_plan_json: Serialized RenderPlan JSON containing settings.
+
+        Raises:
+            PreflightError: If settings are invalid.
+        """
+        if not _HAS_RUST_BINDINGS:
+            return
+
+        try:
+            plan_data = json.loads(render_plan_json)
+            settings_data = plan_data.get("settings")
+            if settings_data is None:
+                return
+            settings_obj = RenderSettings(
+                output_format=settings_data.get("output_format", "mp4"),
+                width=settings_data.get("width", 1920),
+                height=settings_data.get("height", 1080),
+                codec=settings_data.get("codec", "libx264"),
+                quality_preset=settings_data.get("quality_preset", "standard"),
+                fps=settings_data.get("fps", 30.0),
+            )
+            validate_render_settings(settings_obj)
+        except (json.JSONDecodeError, KeyError) as exc:
+            raise PreflightError("Invalid render plan JSON") from exc
+        except (ValueError, TypeError) as exc:
+            raise PreflightError(f"Invalid render settings: {exc}") from exc
+
+    def _check_disk_space(
+        self,
+        output_path: str,
+        render_plan_json: str,
+        quality_preset: QualityPreset,
+    ) -> None:
+        """Check that sufficient disk space is available.
+
+        Uses the Rust estimate_output_size() binding to estimate the output
+        file size, then checks against available disk space.
+
+        Args:
+            output_path: Output file path for rendered video.
+            render_plan_json: Serialized RenderPlan JSON.
+            quality_preset: Quality preset for size estimation.
+
+        Raises:
+            PreflightError: If insufficient disk space.
+        """
+        if not _HAS_RUST_BINDINGS:
+            return
+
+        try:
+            plan_data = json.loads(render_plan_json)
+            duration = plan_data.get("total_duration", 0.0)
+            settings_data = plan_data.get("settings", {})
+            codec = settings_data.get("codec", "libx264")
+
+            estimated_bytes = estimate_output_size(duration, codec, quality_preset.value)
+
+            output_dir = Path(output_path).parent
+            if output_dir.exists():
+                usage = shutil.disk_usage(str(output_dir))
+                if usage.free < estimated_bytes:
+                    raise PreflightError(
+                        f"Insufficient disk space: need {estimated_bytes} bytes, "
+                        f"have {usage.free} bytes free"
+                    )
+        except PreflightError:
+            raise
+        except (json.JSONDecodeError, KeyError, OSError) as exc:
+            logger.warning(
+                "render_service.disk_check_skipped",
+                reason=str(exc),
+            )
+
+    @staticmethod
+    def _extract_duration_us(render_plan_json: str) -> int:
+        """Extract total duration in microseconds from render plan JSON.
+
+        Args:
+            render_plan_json: Serialized RenderPlan JSON.
+
+        Returns:
+            Total duration in microseconds, or 0 if not available.
+        """
+        try:
+            plan_data = json.loads(render_plan_json)
+            duration_seconds = plan_data.get("total_duration", 0.0)
+            return int(duration_seconds * 1_000_000)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return 0

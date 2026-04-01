@@ -66,6 +66,16 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | `STOAT_PREVIEW_OUTPUT_DIR` | `str` | `data/previews` | Directory for storing generated preview files. Created automatically if it does not exist. |
 | `STOAT_PREVIEW_SESSION_TTL_SECONDS` | `int` | `3600` | Preview session time-to-live in seconds (minimum: 1). Sessions that exceed this TTL are eligible for expiry cleanup. |
 
+### Render
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_RENDER_MAX_CONCURRENT` | `int` | `4` | Maximum number of concurrent render jobs (valid range: 1-16). |
+| `STOAT_RENDER_MAX_QUEUE_DEPTH` | `int` | `50` | Maximum queue depth before new jobs are rejected (valid range: 1-200). |
+| `STOAT_RENDER_TIMEOUT_SECONDS` | `int` | `3600` | Render job timeout in seconds (valid range: 60-86400). |
+| `STOAT_RENDER_CANCEL_GRACE_SECONDS` | `int` | `10` | Grace period in seconds for FFmpeg to finalize after cancel (valid range: 1-60). |
+| `STOAT_RENDER_RETRY_COUNT` | `int` | `2` | Maximum retry attempts for transient render failures (valid range: 0-5). |
+
 ### Security
 
 | Variable | Type | Default | Description |
