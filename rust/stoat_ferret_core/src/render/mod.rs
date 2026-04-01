@@ -26,6 +26,7 @@ use pyo3::prelude::*;
 
 pub mod encoder;
 pub mod plan;
+pub mod progress;
 
 /// Registers render types and functions with the Python module.
 pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
@@ -43,5 +44,13 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encoder::py_detect_hardware_encoders, m)?)?;
     m.add_function(wrap_pyfunction!(encoder::py_select_encoder, m)?)?;
     m.add_function(wrap_pyfunction!(encoder::py_build_encoding_args, m)?)?;
+
+    // Progress tracking types
+    m.add_class::<progress::FfmpegProgressUpdate>()?;
+    m.add_class::<progress::ProgressInfo>()?;
+    m.add_function(wrap_pyfunction!(progress::py_parse_ffmpeg_progress, m)?)?;
+    m.add_function(wrap_pyfunction!(progress::py_calculate_progress, m)?)?;
+    m.add_function(wrap_pyfunction!(progress::py_estimate_eta, m)?)?;
+    m.add_function(wrap_pyfunction!(progress::py_aggregate_segment_progress, m)?)?;
     Ok(())
 }
