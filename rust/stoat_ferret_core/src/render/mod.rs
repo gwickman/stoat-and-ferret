@@ -24,6 +24,7 @@
 
 use pyo3::prelude::*;
 
+pub mod command;
 pub mod encoder;
 pub mod plan;
 pub mod progress;
@@ -44,6 +45,14 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encoder::py_detect_hardware_encoders, m)?)?;
     m.add_function(wrap_pyfunction!(encoder::py_select_encoder, m)?)?;
     m.add_function(wrap_pyfunction!(encoder::py_build_encoding_args, m)?)?;
+
+    // Command builder types
+    m.add_class::<command::RenderCommand>()?;
+    m.add_class::<command::ConcatCommand>()?;
+    m.add_function(wrap_pyfunction!(command::py_build_render_command, m)?)?;
+    m.add_function(wrap_pyfunction!(command::py_build_concat_command, m)?)?;
+    m.add_function(wrap_pyfunction!(command::py_check_output_conflict, m)?)?;
+    m.add_function(wrap_pyfunction!(command::py_estimate_output_size, m)?)?;
 
     // Progress tracking types
     m.add_class::<progress::FfmpegProgressUpdate>()?;
