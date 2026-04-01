@@ -161,10 +161,12 @@ class RenderExecutor:
         except (BrokenPipeError, ConnectionResetError, OSError):
             log.debug("render_executor.cancel_stdin_closed")
 
-        # Wait for graceful shutdown
+        # Wait for graceful shutdown. Shield process.wait() so that
+        # timeout cancellation does not propagate to the shared process
+        # future — which would cancel _run_process on Python 3.10.
         try:
             await asyncio.wait_for(
-                process.wait(),
+                asyncio.shield(process.wait()),
                 timeout=self._cancel_grace_seconds,
             )
             log.info("render_executor.cancelled_gracefully", returncode=process.returncode)
