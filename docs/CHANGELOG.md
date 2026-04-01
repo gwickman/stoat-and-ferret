@@ -19,6 +19,7 @@ Phase 5 Foundation: Rust Render Core + Render Job Infrastructure. Builds compute
 - **Render Executor** — FFmpeg subprocess management with Rust PyO3 progress parsing, stdin-based graceful cancellation, timeout enforcement, and temp file cleanup (BL-216, #240)
 - **Render Checkpoints** — per-segment checkpoint persistence to SQLite, recovery scanning on startup, resume-from-checkpoint, stale cleanup with CASCADE FK (BL-217, #241)
 - **Render Service** — lifecycle orchestration with pre-flight checks via Rust, WebSocket event broadcasting, retry logic, and DI wiring in `create_app()` (BL-218, #242)
+- **Phase 4 FFmpeg Contract Tests** — HLS segment generation, Rust-simplified filter chain, thumbnail strip JPEG, and waveform PNG validation with real FFmpeg output (BL-204, #229)
 
 ## [v027] - 2026-03-30
 
