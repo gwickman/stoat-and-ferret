@@ -51,6 +51,9 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(progress::py_parse_ffmpeg_progress, m)?)?;
     m.add_function(wrap_pyfunction!(progress::py_calculate_progress, m)?)?;
     m.add_function(wrap_pyfunction!(progress::py_estimate_eta, m)?)?;
-    m.add_function(wrap_pyfunction!(progress::py_aggregate_segment_progress, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        progress::py_aggregate_segment_progress,
+        m
+    )?)?;
     Ok(())
 }
