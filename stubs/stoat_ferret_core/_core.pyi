@@ -2670,3 +2670,56 @@ def aggregate_segment_progress(segments: list[tuple[float, float]]) -> float:
         Weighted aggregate progress clamped to [0.0, 1.0].
     """
     ...
+
+# ========== Render Job Enums ==========
+
+class RenderStatus:
+    """Status of a render job through its lifecycle.
+
+    5 variants — must match Rust source.
+    """
+
+    Queued: int
+    Running: int
+    Completed: int
+    Failed: int
+    Cancelled: int
+
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __repr__(self) -> str: ...
+
+class OutputFormat:
+    """Supported output container formats for rendered video.
+
+    4 variants — must match Rust source.
+    """
+
+    Mp4: int
+    Webm: int
+    Mov: int
+    Mkv: int
+
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __repr__(self) -> str: ...
+
+class QualityPreset:
+    """Quality presets controlling encoder settings.
+
+    3 variants — must match Rust source.
+    """
+
+    Draft: int
+    Standard: int
+    High: int
+
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __repr__(self) -> str: ...
