@@ -198,7 +198,14 @@ class RenderExecutor:
 
         if process.stdout is not None:
             while True:
-                chunk = await process.stdout.readline()
+                try:
+                    # Timeout readline so we detect a killed process on
+                    # Python 3.10 where pipe close doesn't unblock reads.
+                    chunk = await asyncio.wait_for(process.stdout.readline(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if process.returncode is not None:
+                        break
+                    continue
                 if not chunk:
                     break
                 stdout_chunks.append(chunk)
