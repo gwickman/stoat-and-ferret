@@ -150,6 +150,32 @@ def test_create_app_with_audit_logger_stores_on_state() -> None:
 
 
 @pytest.mark.api
+def test_create_app_with_render_repository_sets_injected_flag() -> None:
+    """create_app(render_repository=...) triggers _deps_injected flag."""
+    from stoat_ferret.render.render_repository import InMemoryRenderRepository
+
+    render_repo = InMemoryRenderRepository()
+    app = create_app(render_repository=render_repo)
+    assert app.state._deps_injected is True
+    assert app.state.render_repository is render_repo
+
+
+@pytest.mark.api
+def test_create_app_with_render_service_stores_on_state() -> None:
+    """create_app(render_service=...) stores render service on app.state."""
+    from unittest.mock import MagicMock
+
+    mock_service = MagicMock()
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        render_service=mock_service,
+    )
+    assert app.state.render_service is mock_service
+
+
+@pytest.mark.api
 def test_zero_dependency_overrides_in_conftest(client: TestClient) -> None:
     """Verify no dependency_overrides are set on the test app."""
     assert len(client.app.dependency_overrides) == 0  # type: ignore[union-attr]

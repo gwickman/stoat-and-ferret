@@ -19,6 +19,7 @@ from stoat_ferret.db.proxy_repository import InMemoryProxyRepository
 from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 from stoat_ferret.jobs.queue import InMemoryJobQueue
+from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from tests.factories import ProjectFactory, make_test_video
 
 
@@ -93,6 +94,16 @@ def proxy_repository() -> InMemoryProxyRepository:
 
 
 @pytest.fixture
+def render_repository() -> InMemoryRenderRepository:
+    """Create in-memory render repository for testing.
+
+    Returns:
+        Empty in-memory render repository.
+    """
+    return InMemoryRenderRepository()
+
+
+@pytest.fixture
 def job_queue(video_repository: AsyncInMemoryVideoRepository) -> InMemoryJobQueue:
     """Create in-memory job queue with scan handler registered.
 
@@ -116,6 +127,7 @@ def app(
     version_repository: AsyncInMemoryVersionRepository,
     batch_repository: InMemoryBatchRepository,
     proxy_repository: InMemoryProxyRepository,
+    render_repository: InMemoryRenderRepository,
     job_queue: InMemoryJobQueue,
 ) -> FastAPI:
     """Create test application with injected in-memory repositories.
@@ -130,6 +142,7 @@ def app(
         version_repository: In-memory version repository for testing.
         batch_repository: In-memory batch repository for testing.
         proxy_repository: In-memory proxy repository for testing.
+        render_repository: In-memory render repository for testing.
         job_queue: In-memory job queue for testing.
 
     Returns:
@@ -143,6 +156,7 @@ def app(
         version_repository=version_repository,
         batch_repository=batch_repository,
         proxy_repository=proxy_repository,
+        render_repository=render_repository,
         job_queue=job_queue,
     )
 
