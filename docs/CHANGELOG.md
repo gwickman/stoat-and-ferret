@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v028] - 2026-04-01
+
+Phase 5 Foundation: Rust Render Core + Render Job Infrastructure. Builds compute-intensive Rust render functions (plan, encoder, progress, command) with PyO3 bindings and proptest coverage, plus Python job infrastructure (model, queue, executor, checkpoints, service) for end-to-end render job lifecycle management.
+
+### Added
+
+- **Render Plan Builder** — Rust `build_render_plan()` with segment decomposition at clip boundaries, frame counting, cost estimation, and `validate_render_settings()` pre-flight checks (BL-210, #234)
+- **Hardware Encoder Detection** — Rust `detect_hardware_encoders()` parsing FFmpeg output, `select_encoder()` with nvenc/qsv/vaapi/amf/mf/software fallback chain, `build_encoding_args()` for draft/standard/high presets (BL-211, #235)
+- **Progress Tracking** — Rust `parse_ffmpeg_progress()` for FFmpeg `-progress pipe:1` output, `calculate_progress()` bounded 0.0-1.0, `estimate_eta()`, and `aggregate_segment_progress()` with duration weighting (BL-212, #236)
+- **Render Command Builder** — Rust `build_render_command()`, `build_concat_command()` for ffconcat demuxer, `check_output_conflict()`, and `estimate_output_size()` with bitrate lookup table (BL-213, #237)
+- **Render Job Model** — `RenderJob` dataclass, `RenderStatus` state machine, `OutputFormat`/`QualityPreset` enums, SQLite + InMemory repository implementations with 86 parity tests (BL-214, #238)
+- **Render Queue** — persistent queue with `max_concurrent`/`max_depth` limits, FIFO ordering, startup recovery, and `QueueFullError` (BL-215, #239)
+- **Render Executor** — FFmpeg subprocess management with Rust PyO3 progress parsing, stdin-based graceful cancellation, timeout enforcement, and temp file cleanup (BL-216, #240)
+- **Render Checkpoints** — per-segment checkpoint persistence to SQLite, recovery scanning on startup, resume-from-checkpoint, stale cleanup with CASCADE FK (BL-217, #241)
+- **Render Service** — lifecycle orchestration with pre-flight checks via Rust, WebSocket event broadcasting, retry logic, and DI wiring in `create_app()` (BL-218, #242)
+
 ## [v027] - 2026-03-30
 
 Theater Mode, Integration Wiring, Phase 4 Test Coverage, and Documentation Updates. Adds fullscreen Theater Mode with HUD overlay and keyboard shortcuts. Wires transition IDs, timeline-player sync, audio waveforms, and proxy status indicators. Adds Phase 4 smoke tests, contract tests, and UAT journeys. Regenerates C4 architecture documentation and updates design documents.
