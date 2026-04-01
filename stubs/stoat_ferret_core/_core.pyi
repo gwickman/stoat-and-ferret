@@ -2382,6 +2382,152 @@ def build_encoding_args(encoder: EncoderInfo, quality: QualityPreset) -> list[st
     """
     ...
 
+# ========== Render Command Builder Types ==========
+
+class RenderCommand:
+    """A complete FFmpeg render command for a single segment.
+
+    Contains the argument list, output path, and segment index for tracking.
+    """
+
+    def __init__(
+        self,
+        args: list[str],
+        output_path: str,
+        segment_index: int,
+    ) -> None:
+        """Creates a new RenderCommand.
+
+        Args:
+            args: FFmpeg argument list.
+            output_path: Output file path.
+            segment_index: Zero-based segment index.
+        """
+        ...
+
+    def args(self) -> list[str]:
+        """Returns the FFmpeg argument list."""
+        ...
+
+    @property
+    def output_path(self) -> str:
+        """Output file path for this segment."""
+        ...
+
+    @property
+    def segment_index(self) -> int:
+        """Zero-based segment index this command renders."""
+        ...
+
+class ConcatCommand:
+    """Result of a concat demuxer command build.
+
+    Contains the FFmpeg argument list and the concat file content.
+    """
+
+    def __init__(
+        self,
+        args: list[str],
+        concat_file_content: str,
+    ) -> None:
+        """Creates a new ConcatCommand.
+
+        Args:
+            args: FFmpeg argument list.
+            concat_file_content: Concat demuxer file content.
+        """
+        ...
+
+    def args(self) -> list[str]:
+        """Returns the FFmpeg argument list."""
+        ...
+
+    @property
+    def concat_file_content(self) -> str:
+        """Content of the concat demuxer file."""
+        ...
+
+# ========== Render Command Builder Functions ==========
+
+def build_render_command(
+    segment: RenderSegment,
+    encoder: EncoderInfo,
+    quality: QualityPreset,
+    settings: RenderSettings,
+    input_path: str,
+    output_path: str,
+) -> RenderCommand:
+    """Builds a complete FFmpeg render command for a single segment.
+
+    The command includes input file, seek position, duration,
+    encoder-specific arguments, output format, and progress reporting flags.
+
+    Args:
+        segment: The render segment to build a command for.
+        encoder: The selected encoder.
+        quality: The quality preset.
+        settings: Render settings (format, resolution, fps).
+        input_path: Path to the input media file.
+        output_path: Path to write the rendered segment output.
+
+    Returns:
+        A RenderCommand with the complete argument list.
+    """
+    ...
+
+def build_concat_command(
+    segment_outputs: list[str],
+    final_output: str,
+    concat_file_path: str,
+) -> ConcatCommand:
+    """Builds an FFmpeg concat demuxer command for joining multiple segments.
+
+    Generates ``ffconcat version 1.0`` file content listing all segment
+    files with forward slashes and ``safe=0`` for absolute path support.
+
+    Args:
+        segment_outputs: List of segment output file paths.
+        final_output: Path for the final concatenated output.
+        concat_file_path: Path where the concat list file will be written.
+
+    Returns:
+        A ConcatCommand with the argument list and file content.
+    """
+    ...
+
+def check_output_conflict(output_path: str) -> bool:
+    """Checks whether a file already exists at the given output path.
+
+    Args:
+        output_path: Path to check for an existing file.
+
+    Returns:
+        True if a file exists at the path, False otherwise.
+    """
+    ...
+
+def estimate_output_size(
+    duration_seconds: float,
+    codec: str,
+    quality_preset: str,
+) -> int:
+    """Estimates the output file size in bytes.
+
+    Uses a hardcoded bitrate lookup table keyed by (codec, quality_preset)
+    with a 20% safety margin for overestimation.
+
+    Formula: ``duration_seconds * bitrate_bps / 8 * 1.2``
+
+    Args:
+        duration_seconds: Total render duration in seconds.
+        codec: Video codec string (e.g., "libx264").
+        quality_preset: Quality preset string ("draft", "standard", "high").
+
+    Returns:
+        Estimated file size in bytes.
+    """
+    ...
+
 # ========== Progress Tracking Types ==========
 
 class FfmpegProgressUpdate:
