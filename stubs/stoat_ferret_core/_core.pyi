@@ -2042,3 +2042,210 @@ def inject_preview_scale(graph: FilterGraph, width: int, height: int) -> FilterG
         A new FilterGraph with the scale filter appended.
     """
     ...
+
+# ========== Render Plan Types ==========
+
+class RenderSettings:
+    """Settings controlling how a render is executed.
+
+    Contains the output format, resolution, codec, quality preset, and frame rate.
+    """
+
+    @property
+    def output_format(self) -> str:
+        """Output container format (e.g., "mp4", "mkv")."""
+        ...
+
+    @property
+    def width(self) -> int:
+        """Output width in pixels."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """Output height in pixels."""
+        ...
+
+    @property
+    def codec(self) -> str:
+        """Video codec (e.g., "libx264", "libx265")."""
+        ...
+
+    @property
+    def quality_preset(self) -> str:
+        """Quality preset (e.g., "fast", "medium", "slow")."""
+        ...
+
+    @property
+    def fps(self) -> float:
+        """Frames per second for the output."""
+        ...
+
+    def __init__(
+        self,
+        output_format: str,
+        width: int,
+        height: int,
+        codec: str,
+        quality_preset: str,
+        fps: float,
+    ) -> None:
+        """Creates a new RenderSettings.
+
+        Args:
+            output_format: Container format (e.g., "mp4").
+            width: Output width in pixels.
+            height: Output height in pixels.
+            codec: Video codec (e.g., "libx264").
+            quality_preset: Encoding preset (e.g., "medium").
+            fps: Output frame rate.
+        """
+        ...
+
+class RenderSegment:
+    """A single non-overlapping segment of the render timeline.
+
+    Segments partition the full timeline so their durations sum to the
+    total render duration with no gaps or overlaps.
+    """
+
+    @property
+    def index(self) -> int:
+        """Zero-based segment index."""
+        ...
+
+    @property
+    def timeline_start(self) -> float:
+        """Start time on the composition timeline in seconds."""
+        ...
+
+    @property
+    def timeline_end(self) -> float:
+        """End time on the composition timeline in seconds."""
+        ...
+
+    @property
+    def frame_count(self) -> int:
+        """Number of frames in this segment."""
+        ...
+
+    @property
+    def cost_estimate(self) -> float:
+        """Estimated cost (proportional to frame count x active clip count)."""
+        ...
+
+    def __init__(
+        self,
+        index: int,
+        timeline_start: float,
+        timeline_end: float,
+        frame_count: int,
+        cost_estimate: float,
+    ) -> None:
+        """Creates a new RenderSegment.
+
+        Args:
+            index: Zero-based segment index.
+            timeline_start: Start time in seconds.
+            timeline_end: End time in seconds.
+            frame_count: Number of frames in this segment.
+            cost_estimate: Estimated rendering cost.
+        """
+        ...
+
+    def duration(self) -> float:
+        """Returns the duration of this segment in seconds."""
+        ...
+
+class RenderPlan:
+    """A complete render plan decomposed from composition data.
+
+    Contains ordered, non-overlapping segments covering the full timeline
+    duration, along with aggregate totals and the render settings.
+    """
+
+    @property
+    def total_frames(self) -> int:
+        """Total frame count across all segments."""
+        ...
+
+    @property
+    def total_duration(self) -> float:
+        """Total timeline duration in seconds."""
+        ...
+
+    def __init__(
+        self,
+        segments: list[RenderSegment],
+        total_frames: int,
+        total_duration: float,
+        settings: RenderSettings,
+    ) -> None:
+        """Creates a new RenderPlan.
+
+        Args:
+            segments: Ordered list of RenderSegment.
+            total_frames: Total frame count.
+            total_duration: Total duration in seconds.
+            settings: Render settings.
+        """
+        ...
+
+    def segments(self) -> list[RenderSegment]:
+        """Returns the list of segments."""
+        ...
+
+    def settings(self) -> RenderSettings:
+        """Returns the render settings."""
+        ...
+
+    def segment_count(self) -> int:
+        """Returns the number of segments."""
+        ...
+
+    def total_cost(self) -> float:
+        """Returns the total estimated cost."""
+        ...
+
+# ========== Render Plan Functions ==========
+
+def build_render_plan(
+    clips: list[CompositionClip],
+    transitions: list[TransitionSpec],
+    layout: LayoutSpec | None,
+    audio_mix: AudioMixSpec | None,
+    output_width: int,
+    output_height: int,
+    settings: RenderSettings,
+) -> RenderPlan:
+    """Builds a render plan from composition data.
+
+    Decomposes the timeline into ordered segments with frame counts and cost
+    estimates. Uses composition timeline logic for transition clamping.
+
+    Args:
+        clips: List of CompositionClip with timeline positions.
+        transitions: List of TransitionSpec for adjacent clip pairs.
+        layout: Optional LayoutSpec for spatial composition.
+        audio_mix: Optional AudioMixSpec for audio mixing.
+        output_width: Output width in pixels.
+        output_height: Output height in pixels.
+        settings: RenderSettings controlling format, resolution, codec, fps.
+
+    Returns:
+        A RenderPlan with segments, total_frames, total_duration, and settings.
+    """
+    ...
+
+def validate_render_settings(settings: RenderSettings) -> None:
+    """Validates render settings before execution.
+
+    Checks output format, resolution, codec, quality preset, and fps.
+
+    Args:
+        settings: RenderSettings to validate.
+
+    Raises:
+        ValueError: If any setting is invalid, with a descriptive message.
+    """
+    ...
