@@ -176,10 +176,7 @@ pub fn build_render_command(
     args.extend(["-i".to_string(), input_path.to_string()]);
 
     // Seek to segment start
-    args.extend([
-        "-ss".to_string(),
-        format!("{:.6}", segment.timeline_start),
-    ]);
+    args.extend(["-ss".to_string(), format!("{:.6}", segment.timeline_start)]);
 
     // Duration
     let duration = segment.timeline_end - segment.timeline_start;
@@ -345,11 +342,7 @@ pub fn estimate_output_size(duration_seconds: f64, codec: &str, quality_preset: 
 /// PyO3 binding for `estimate_output_size`.
 #[pyfunction]
 #[pyo3(name = "estimate_output_size")]
-pub fn py_estimate_output_size(
-    duration_seconds: f64,
-    codec: &str,
-    quality_preset: &str,
-) -> u64 {
+pub fn py_estimate_output_size(duration_seconds: f64, codec: &str, quality_preset: &str) -> u64 {
     estimate_output_size(duration_seconds, codec, quality_preset)
 }
 
@@ -502,7 +495,9 @@ mod tests {
         ];
         let result = build_concat_command(&segments, "/output/final.mp4", "/tmp/concat.txt");
 
-        assert!(result.concat_file_content.starts_with("ffconcat version 1.0\n"));
+        assert!(result
+            .concat_file_content
+            .starts_with("ffconcat version 1.0\n"));
         assert!(result
             .concat_file_content
             .contains("file /output/seg_000.mp4\n"));
@@ -651,10 +646,7 @@ mod tests {
 
     #[test]
     fn concat_file_content_format_validation() {
-        let segments = vec![
-            "/a/seg0.mp4".to_string(),
-            "/b/seg1.mp4".to_string(),
-        ];
+        let segments = vec!["/a/seg0.mp4".to_string(), "/b/seg1.mp4".to_string()];
         let result = build_concat_command(&segments, "/out.mp4", "/tmp/list.txt");
         let content = &result.concat_file_content;
 
@@ -664,7 +656,10 @@ mod tests {
 
         // Each subsequent line is a file entry
         for line in &lines[1..] {
-            assert!(line.starts_with("file "), "Expected 'file ' prefix, got: {line}");
+            assert!(
+                line.starts_with("file "),
+                "Expected 'file ' prefix, got: {line}"
+            );
             // No backslashes
             assert!(!line.contains('\\'), "Backslash found in: {line}");
         }
@@ -701,11 +696,7 @@ mod tests {
             let idx: usize = py_cmd.getattr("segment_index").unwrap().extract().unwrap();
             assert_eq!(idx, 0);
 
-            let args: Vec<String> = py_cmd
-                .call_method0("args")
-                .unwrap()
-                .extract()
-                .unwrap();
+            let args: Vec<String> = py_cmd.call_method0("args").unwrap().extract().unwrap();
             assert!(!args.is_empty());
         });
     }
@@ -725,11 +716,7 @@ mod tests {
                 .unwrap();
             assert!(content.starts_with("ffconcat version 1.0"));
 
-            let args: Vec<String> = py_result
-                .call_method0("args")
-                .unwrap()
-                .extract()
-                .unwrap();
+            let args: Vec<String> = py_result.call_method0("args").unwrap().extract().unwrap();
             assert!(!args.is_empty());
         });
     }
@@ -764,7 +751,13 @@ mod proptests {
         (0..100usize, 0.0..1000.0f64, 0.001..500.0f64).prop_map(|(index, start, duration)| {
             let end = start + duration;
             let frame_count = (duration * 30.0) as u64;
-            RenderSegment::new(index, start, end, frame_count.max(1), frame_count.max(1) as f64)
+            RenderSegment::new(
+                index,
+                start,
+                end,
+                frame_count.max(1),
+                frame_count.max(1) as f64,
+            )
         })
     }
 
