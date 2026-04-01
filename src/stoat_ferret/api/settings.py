@@ -100,6 +100,20 @@ class Settings(BaseSettings):
         description="Maximum number of jobs allowed in a single batch request",
     )
 
+    # Render queue
+    render_max_concurrent: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Maximum concurrent render jobs",
+    )
+    render_max_queue_depth: int = Field(
+        default=50,
+        ge=1,
+        le=200,
+        description="Maximum queue depth before rejection",
+    )
+
     # Version retention
     version_retention_count: int | None = Field(
         default=None,
