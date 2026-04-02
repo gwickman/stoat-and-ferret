@@ -12,6 +12,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import structlog
 from structlog.testing import capture_logs
 
 from stoat_ferret.api.settings import Settings
@@ -24,6 +25,12 @@ from stoat_ferret.render.service import RenderService
 
 _PATCH_NO_RUST = patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", False)
 _PATCH_NO_RUST_EXECUTOR = patch("stoat_ferret.render.executor._HAS_RUST_BINDINGS", False)
+
+
+@pytest.fixture(autouse=True)
+def _reset_structlog() -> None:
+    """Reset structlog so capture_logs() works after configure_logging()."""
+    structlog.reset_defaults()
 
 
 def _make_plan_json(
