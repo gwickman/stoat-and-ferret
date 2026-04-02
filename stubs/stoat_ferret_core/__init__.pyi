@@ -102,6 +102,22 @@ from stoat_ferret_core._core import (
 from stoat_ferret_core._core import (
     validate_volume as validate_volume,
 )
+from stoat_ferret_core._core import (
+    # Encoder detection
+    EncoderInfo as EncoderInfo,
+)
+from stoat_ferret_core._core import (
+    EncoderType as EncoderType,
+)
+from stoat_ferret_core._core import (
+    build_encoding_args as build_encoding_args,
+)
+from stoat_ferret_core._core import (
+    detect_hardware_encoders as detect_hardware_encoders,
+)
+from stoat_ferret_core._core import (
+    select_encoder as select_encoder,
+)
 
 __all__ = [
     # Utility
@@ -142,4 +158,10 @@ __all__ = [
     "ValidationError",
     "CommandError",
     "SanitizationError",
+    # Encoder detection
+    "EncoderInfo",
+    "EncoderType",
+    "detect_hardware_encoders",
+    "select_encoder",
+    "build_encoding_args",
 ]

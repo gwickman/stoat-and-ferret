@@ -62,6 +62,8 @@ try:
         DrawtextBuilder,
         DuckingPattern,
         Duration,
+        EncoderInfo,
+        EncoderType,
         FadeBuilder,
         FFmpegCommand,
         FfmpegProgressUpdate,
@@ -86,6 +88,7 @@ try:
         XfadeBuilder,
         aggregate_segment_progress,
         build_composition_graph,
+        build_encoding_args,
         build_overlay_filter,
         build_scale_for_layout,
         calculate_batch_progress,
@@ -93,6 +96,7 @@ try:
         calculate_progress,
         calculate_timeline_duration,
         concat_filter,
+        detect_hardware_encoders,
         escape_filter_text,
         estimate_eta,
         estimate_filter_cost,
@@ -101,6 +105,7 @@ try:
         is_expensive_filter,
         parse_ffmpeg_progress,
         scale_filter,
+        select_encoder,
         select_preview_quality,
         simplify_filter_chain,
         simplify_filter_graph,
@@ -125,6 +130,11 @@ except ImportError:
 
     health_check = _not_built
     # Callable stub replacing typed classes (intentional fallback)
+    EncoderInfo = _not_built  # type: ignore[misc,assignment]
+    EncoderType = _not_built  # type: ignore[misc,assignment]
+    detect_hardware_encoders = _not_built
+    select_encoder = _not_built
+    build_encoding_args = _not_built
     BatchJobStatus = _not_built  # type: ignore[misc,assignment]
     BatchProgress = _not_built  # type: ignore[misc,assignment]
     aggregate_segment_progress = _not_built
@@ -266,6 +276,12 @@ __all__ = [
     "validate_video_codec",
     "validate_audio_codec",
     "validate_preset",
+    # Encoder detection
+    "EncoderInfo",
+    "EncoderType",
+    "detect_hardware_encoders",
+    "select_encoder",
+    "build_encoding_args",
     # Exceptions
     "ValidationError",
     "CommandError",

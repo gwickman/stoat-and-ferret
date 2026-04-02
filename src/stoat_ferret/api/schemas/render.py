@@ -49,3 +49,21 @@ class QueueStatusResponse(BaseModel):
     queue_depth: int
     max_concurrent: int
     max_depth: int
+
+
+class EncoderInfoResponse(BaseModel):
+    """Response representing a single detected encoder."""
+
+    name: str
+    codec: str
+    is_hardware: bool
+    encoder_type: str
+    description: str
+    detected_at: datetime
+
+
+class EncoderListResponse(BaseModel):
+    """List of detected encoders."""
+
+    encoders: list[EncoderInfoResponse]
+    cached: bool

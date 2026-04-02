@@ -21,6 +21,7 @@ TABLE_WAVEFORMS = "waveforms"
 TABLE_PREVIEW_SESSIONS = "preview_sessions"
 TABLE_RENDER_JOBS = "render_jobs"
 TABLE_RENDER_CHECKPOINTS = "render_checkpoints"
+TABLE_ENCODER_CACHE = "encoder_cache"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -299,6 +300,23 @@ RENDER_CHECKPOINTS_JOB_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_render_checkpoints_job ON render_checkpoints(job_id);
 """
 
+ENCODER_CACHE_TABLE = """
+CREATE TABLE IF NOT EXISTS encoder_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    codec TEXT NOT NULL,
+    is_hardware INTEGER NOT NULL DEFAULT 0,
+    encoder_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    detected_at TEXT NOT NULL,
+    UNIQUE(name)
+);
+"""
+
+ENCODER_CACHE_CODEC_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_encoder_cache_codec ON encoder_cache(codec);
+"""
+
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
 CLIPS_TIMELINE_COLUMNS = [
@@ -387,6 +405,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(RENDER_JOBS_PROJECT_INDEX)
     cursor.execute(RENDER_CHECKPOINTS_TABLE)
     cursor.execute(RENDER_CHECKPOINTS_JOB_INDEX)
+    cursor.execute(ENCODER_CACHE_TABLE)
+    cursor.execute(ENCODER_CACHE_CODEC_INDEX)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     conn.commit()
@@ -465,6 +485,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(RENDER_JOBS_PROJECT_INDEX)
     await db.execute(RENDER_CHECKPOINTS_TABLE)
     await db.execute(RENDER_CHECKPOINTS_JOB_INDEX)
+    await db.execute(ENCODER_CACHE_TABLE)
+    await db.execute(ENCODER_CACHE_CODEC_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await db.commit()

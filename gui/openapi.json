@@ -2454,6 +2454,50 @@
         }
       }
     },
+    "/api/v1/render/encoders": {
+      "get": {
+        "tags": [
+          "render"
+        ],
+        "summary": "Get Encoders",
+        "description": "Return cached encoders, triggering lazy detection if cache is empty.\n\nIf the cache is populated, returns cached data immediately.\nIf the cache is empty, runs FFmpeg encoder detection, caches the\nresults, and returns them.\n\nIf a refresh is currently in progress, returns stale cached data\nrather than blocking (NFR-003).\n\nArgs:\n    encoder_repo: Encoder cache repository dependency.\n\nReturns:\n    List of detected encoders with cached flag.",
+        "operationId": "get_encoders_api_v1_render_encoders_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EncoderListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/render/encoders/refresh": {
+      "post": {
+        "tags": [
+          "render"
+        ],
+        "summary": "Refresh Encoders",
+        "description": "Re-run FFmpeg encoder detection and update cached results.\n\nTruncates existing cache and re-inserts fresh detection results.\nUses asyncio.Lock to prevent concurrent refresh operations (NFR-002).\nUses asyncio.to_thread to avoid blocking the event loop (NFR-001).\n\nArgs:\n    encoder_repo: Encoder cache repository dependency.\n\nReturns:\n    Fresh list of detected encoders.\n\nRaises:\n    HTTPException: 409 if a refresh is already in progress,\n        503 if FFmpeg is unavailable.",
+        "operationId": "refresh_encoders_api_v1_render_encoders_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EncoderListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/render/{job_id}": {
       "get": {
         "tags": [
@@ -3857,6 +3901,68 @@
         ],
         "title": "EffectUpdateRequest",
         "description": "Request schema for updating an effect at a specific index."
+      },
+      "EncoderInfoResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "codec": {
+            "type": "string",
+            "title": "Codec"
+          },
+          "is_hardware": {
+            "type": "boolean",
+            "title": "Is Hardware"
+          },
+          "encoder_type": {
+            "type": "string",
+            "title": "Encoder Type"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "codec",
+          "is_hardware",
+          "encoder_type",
+          "description",
+          "detected_at"
+        ],
+        "title": "EncoderInfoResponse",
+        "description": "Response representing a single detected encoder."
+      },
+      "EncoderListResponse": {
+        "properties": {
+          "encoders": {
+            "items": {
+              "$ref": "#/components/schemas/EncoderInfoResponse"
+            },
+            "type": "array",
+            "title": "Encoders"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          }
+        },
+        "type": "object",
+        "required": [
+          "encoders",
+          "cached"
+        ],
+        "title": "EncoderListResponse",
+        "description": "List of detected encoders."
       },
       "HTTPValidationError": {
         "properties": {

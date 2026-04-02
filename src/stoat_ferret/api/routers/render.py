@@ -2,6 +2,7 @@
 
 Provides POST/GET/DELETE for render job lifecycle management
 with pagination, status filtering, cancel, and retry support.
+Exposes hardware encoder detection and caching via GET/POST endpoints.
 Follows established router conventions with DI via app.state
 and JSON:API-style error responses.
 """
@@ -9,6 +10,10 @@ and JSON:API-style error responses.
 from __future__ import annotations
 
 import asyncio
+import shutil
+import subprocess
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
@@ -17,10 +22,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from stoat_ferret.api.schemas.render import (
     CreateRenderRequest,
+    EncoderInfoResponse,
+    EncoderListResponse,
     RenderJobResponse,
     RenderListResponse,
 )
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.render.encoder_cache import (
+    AsyncEncoderCacheRepository,
+    AsyncSQLiteEncoderCacheRepository,
+    EncoderCacheEntry,
+)
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import (
     AsyncRenderRepository,
@@ -35,8 +47,28 @@ router = APIRouter(prefix="/api/v1", tags=["render"])
 # Lock for concurrent cancel/retry safety (NFR-003)
 _state_transition_lock = asyncio.Lock()
 
+# Lock for concurrent encoder refresh prevention (NFR-002)
+_encoder_refresh_lock = asyncio.Lock()
+
 
 # ---------- Dependency injection ----------
+
+
+async def get_encoder_cache_repository(request: Request) -> AsyncEncoderCacheRepository:
+    """Get encoder cache repository from app state.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        Async encoder cache repository instance.
+    """
+    repo: AsyncEncoderCacheRepository | None = getattr(
+        request.app.state, "encoder_cache_repository", None
+    )
+    if repo is not None:
+        return repo
+    return AsyncSQLiteEncoderCacheRepository(request.app.state.db)
 
 
 async def get_render_repository(request: Request) -> AsyncRenderRepository:
@@ -77,6 +109,7 @@ async def get_render_service(request: Request) -> RenderService:
 
 RenderRepoDep = Annotated[AsyncRenderRepository, Depends(get_render_repository)]
 RenderServiceDep = Annotated[RenderService, Depends(get_render_service)]
+EncoderCacheDep = Annotated[AsyncEncoderCacheRepository, Depends(get_encoder_cache_repository)]
 
 
 # ---------- Helpers ----------
@@ -105,6 +138,128 @@ def _job_to_response(job: RenderJob) -> RenderJobResponse:
         updated_at=job.updated_at,
         completed_at=job.completed_at,
     )
+
+
+# ---------- Encoder helpers ----------
+
+
+@dataclass
+class _RawEncoder:
+    """Intermediate representation from FFmpeg detection."""
+
+    name: str
+    codec: str
+    is_hardware: bool
+    encoder_type: str
+    description: str
+
+
+def _detect_encoders_sync() -> list[_RawEncoder]:
+    """Run FFmpeg -encoders and parse output using Rust core.
+
+    Returns:
+        List of raw encoder data from Rust detect_hardware_encoders.
+
+    Raises:
+        FileNotFoundError: If FFmpeg is not found in PATH.
+        RuntimeError: If FFmpeg subprocess fails.
+    """
+    ffmpeg_path = shutil.which("ffmpeg")
+    if not ffmpeg_path:
+        raise FileNotFoundError("ffmpeg not found in PATH")
+
+    result = subprocess.run(
+        ["ffmpeg", "-encoders"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    from stoat_ferret_core import detect_hardware_encoders
+
+    encoders = detect_hardware_encoders(result.stdout)
+    return [
+        _RawEncoder(
+            name=enc.name,
+            codec=enc.codec,
+            is_hardware=enc.is_hardware,
+            encoder_type=str(enc.encoder_type),
+            description=enc.description,
+        )
+        for enc in encoders
+    ]
+
+
+def _entry_to_response(entry: EncoderCacheEntry) -> EncoderInfoResponse:
+    """Convert an EncoderCacheEntry to an API response.
+
+    Args:
+        entry: Encoder cache entry.
+
+    Returns:
+        Pydantic response model.
+    """
+    return EncoderInfoResponse(
+        name=entry.name,
+        codec=entry.codec,
+        is_hardware=entry.is_hardware,
+        encoder_type=entry.encoder_type,
+        description=entry.description,
+        detected_at=entry.detected_at,
+    )
+
+
+async def _run_detection_and_cache(
+    repo: AsyncEncoderCacheRepository,
+) -> list[EncoderCacheEntry]:
+    """Run FFmpeg encoder detection and store results in the cache.
+
+    Runs detection in a thread to avoid blocking the event loop (NFR-001).
+
+    Args:
+        repo: Encoder cache repository.
+
+    Returns:
+        List of newly cached entries.
+
+    Raises:
+        HTTPException: 503 if FFmpeg is unavailable.
+    """
+    try:
+        raw_encoders = await asyncio.to_thread(_detect_encoders_sync)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "FFMPEG_UNAVAILABLE",
+                "message": "FFmpeg binary not found in PATH",
+            },
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "DETECTION_FAILED",
+                "message": f"Encoder detection failed: {exc}",
+            },
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+    entries = [
+        EncoderCacheEntry(
+            id=None,
+            name=enc.name,
+            codec=enc.codec,
+            is_hardware=enc.is_hardware,
+            encoder_type=enc.encoder_type,
+            description=enc.description,
+            detected_at=now,
+        )
+        for enc in raw_encoders
+    ]
+
+    await repo.clear()
+    return await repo.create_many(entries)
 
 
 # ---------- Endpoints ----------
@@ -182,6 +337,99 @@ async def create_render_job(
         action="start",
     )
     return _job_to_response(job)
+
+
+# ---------- Encoder endpoints ----------
+# These must be registered before /render/{job_id} to avoid path conflicts.
+
+
+@router.get("/render/encoders", response_model=EncoderListResponse)
+async def get_encoders(
+    encoder_repo: EncoderCacheDep,
+) -> EncoderListResponse:
+    """Return cached encoders, triggering lazy detection if cache is empty.
+
+    If the cache is populated, returns cached data immediately.
+    If the cache is empty, runs FFmpeg encoder detection, caches the
+    results, and returns them.
+
+    If a refresh is currently in progress, returns stale cached data
+    rather than blocking (NFR-003).
+
+    Args:
+        encoder_repo: Encoder cache repository dependency.
+
+    Returns:
+        List of detected encoders with cached flag.
+    """
+    cached = await encoder_repo.get_all()
+    if cached:
+        return EncoderListResponse(
+            encoders=[_entry_to_response(e) for e in cached],
+            cached=True,
+        )
+
+    # Lazy detection: cache is empty
+    if _encoder_refresh_lock.locked():
+        # Refresh in progress, return empty (no stale data available)
+        return EncoderListResponse(encoders=[], cached=False)
+
+    async with _encoder_refresh_lock:
+        # Double-check: another request may have populated the cache
+        cached = await encoder_repo.get_all()
+        if cached:
+            return EncoderListResponse(
+                encoders=[_entry_to_response(e) for e in cached],
+                cached=True,
+            )
+        entries = await _run_detection_and_cache(encoder_repo)
+
+    return EncoderListResponse(
+        encoders=[_entry_to_response(e) for e in entries],
+        cached=False,
+    )
+
+
+@router.post("/render/encoders/refresh", response_model=EncoderListResponse)
+async def refresh_encoders(
+    encoder_repo: EncoderCacheDep,
+) -> EncoderListResponse:
+    """Re-run FFmpeg encoder detection and update cached results.
+
+    Truncates existing cache and re-inserts fresh detection results.
+    Uses asyncio.Lock to prevent concurrent refresh operations (NFR-002).
+    Uses asyncio.to_thread to avoid blocking the event loop (NFR-001).
+
+    Args:
+        encoder_repo: Encoder cache repository dependency.
+
+    Returns:
+        Fresh list of detected encoders.
+
+    Raises:
+        HTTPException: 409 if a refresh is already in progress,
+            503 if FFmpeg is unavailable.
+    """
+    if _encoder_refresh_lock.locked():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "REFRESH_IN_PROGRESS",
+                "message": "Encoder refresh is already in progress",
+            },
+        )
+
+    async with _encoder_refresh_lock:
+        entries = await _run_detection_and_cache(encoder_repo)
+
+    logger.info("render_endpoint.encoders_refreshed", count=len(entries))
+    return EncoderListResponse(
+        encoders=[_entry_to_response(e) for e in entries],
+        cached=False,
+    )
+
+
+# ---------- Render job endpoints ----------
 
 
 @router.get("/render/{job_id}", response_model=RenderJobResponse)
