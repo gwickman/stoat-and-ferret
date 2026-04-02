@@ -19,6 +19,11 @@ from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.render.checkpoints import RenderCheckpointManager
 from stoat_ferret.render.executor import RenderExecutor
+from stoat_ferret.render.metrics import (
+    render_disk_usage_bytes,
+    render_duration_seconds,
+    render_jobs_total,
+)
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.queue import QueueFullError, RenderQueue
 from stoat_ferret.render.render_repository import AsyncRenderRepository
@@ -178,10 +183,13 @@ class RenderService:
         self._executor._progress_callback = progress_callback
 
         log.info("render_service.running_job")
+        render_start = time.monotonic()
         success = await self._executor.execute(job, command, total_duration_us=total_duration_us)
 
+        render_elapsed = time.monotonic() - render_start
+
         if success:
-            await self._complete_job(job)
+            await self._complete_job(job, render_elapsed)
         else:
             # Check if job was cancelled
             current = await self._repo.get(job_id)
@@ -221,6 +229,7 @@ class RenderService:
             await self._executor.cancel(job_id)
 
         await self._repo.update_status(job_id, RenderStatus.CANCELLED)
+        render_jobs_total.labels(status="cancelled").inc()
         log.info("render_service.job_cancelled")
         await self._broadcast_event(EventType.RENDER_CANCELLED, job)
         await self._broadcast_queue_status()
@@ -244,13 +253,18 @@ class RenderService:
         )
         return resume_points
 
-    async def _complete_job(self, job: RenderJob) -> None:
-        """Mark a job as completed, broadcast event, and clean up.
+    async def _complete_job(self, job: RenderJob, elapsed_seconds: float = 0.0) -> None:
+        """Mark a job as completed, broadcast event, update metrics, and clean up.
 
         Args:
             job: The render job that completed successfully.
+            elapsed_seconds: Wall-clock render time in seconds.
         """
         await self._repo.update_status(job.id, RenderStatus.COMPLETED)
+        render_jobs_total.labels(status="completed").inc()
+        if elapsed_seconds > 0:
+            render_duration_seconds.observe(elapsed_seconds)
+        self._update_disk_usage(job.output_path)
         logger.info("render_service.job_completed", job_id=job.id)
         await self._broadcast_event(EventType.RENDER_COMPLETED, job)
         await self._broadcast_queue_status()
@@ -286,6 +300,7 @@ class RenderService:
             )
         else:
             await self._repo.update_status(job.id, RenderStatus.FAILED, error_message=error_message)
+            render_jobs_total.labels(status="failed").inc()
             log.warning(
                 "render_service.job_failed_permanently",
                 retry_count=current.retry_count,
@@ -427,6 +442,20 @@ class RenderService:
         for k in keys_to_remove:
             del self._last_broadcast_time[k]
         self._last_broadcast_progress.pop(job_id, None)
+
+    def _update_disk_usage(self, output_path: str) -> None:
+        """Update the render disk usage metric from the output directory.
+
+        Args:
+            output_path: Output file path whose parent directory is measured.
+        """
+        try:
+            output_dir = Path(output_path).parent
+            if output_dir.exists():
+                usage = shutil.disk_usage(str(output_dir))
+                render_disk_usage_bytes.set(usage.used)
+        except OSError:
+            logger.debug("render_service.disk_usage_update_failed", exc_info=True)
 
     def _validate_settings(self, render_plan_json: str) -> None:
         """Validate render settings via Rust bindings.

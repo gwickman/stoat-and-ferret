@@ -8,12 +8,14 @@ Rust PyO3 bindings, cross-platform graceful cancellation using stdin ``q``
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import structlog
 
+from stoat_ferret.render.metrics import render_encoder_active, render_speed_ratio
 from stoat_ferret.render.models import RenderJob
 
 try:
@@ -58,6 +60,8 @@ class RenderExecutor:
         self._ffmpeg_path = ffmpeg_path
         self._active_processes: dict[str, asyncio.subprocess.Process] = {}
         self._temp_files: dict[str, list[Path]] = {}
+        self._job_start_times: dict[str, float] = {}
+        self._job_durations_us: dict[str, int] = {}
 
     def register_temp_file(self, job_id: str, path: Path) -> None:
         """Register a temp file for cleanup when the job terminates.
@@ -92,9 +96,13 @@ class RenderExecutor:
         """
         job_id = job.id
         log = logger.bind(job_id=job_id)
+        encoder_name = self._extract_encoder_name(job)
 
         log.info("render_executor.starting", command=command)
         start = time.monotonic()
+        self._job_start_times[job_id] = start
+        self._job_durations_us[job_id] = total_duration_us
+        render_encoder_active.labels(encoder_name=encoder_name).inc()
 
         process = await asyncio.create_subprocess_exec(
             *command,
@@ -119,6 +127,9 @@ class RenderExecutor:
             return False
         finally:
             self._active_processes.pop(job_id, None)
+            render_encoder_active.labels(encoder_name=encoder_name).dec()
+            self._job_start_times.pop(job_id, None)
+            self._job_durations_us.pop(job_id, None)
             self._cleanup_temp_files(job_id)
 
         elapsed = time.monotonic() - start
@@ -242,6 +253,7 @@ class RenderExecutor:
             updates = parse_ffmpeg_progress(line)
             for update in updates:
                 progress = calculate_progress(update.out_time_us, total_duration_us)
+                self._update_speed_ratio(job_id, progress)
                 if self._progress_callback is not None:
                     await self._progress_callback(job_id, progress)
         except Exception:
@@ -267,6 +279,45 @@ class RenderExecutor:
             await process.wait()
         except ProcessLookupError:
             pass
+
+    def _update_speed_ratio(self, job_id: str, progress: float) -> None:
+        """Update the render speed ratio gauge based on current progress.
+
+        Speed ratio = (total_duration_s * progress) / wall_clock_elapsed.
+        A ratio > 1.0 means rendering faster than real-time.
+
+        Args:
+            job_id: The render job ID.
+            progress: Current progress 0.0-1.0.
+        """
+        start_time = self._job_start_times.get(job_id)
+        total_us = self._job_durations_us.get(job_id, 0)
+        if start_time is None or total_us <= 0 or progress <= 0:
+            return
+
+        elapsed = time.monotonic() - start_time
+        if elapsed <= 0:
+            return
+
+        total_duration_s = total_us / 1_000_000
+        rendered_s = total_duration_s * progress
+        render_speed_ratio.set(rendered_s / elapsed)
+
+    @staticmethod
+    def _extract_encoder_name(job: RenderJob) -> str:
+        """Extract the encoder/codec name from a render job's plan.
+
+        Args:
+            job: The render job.
+
+        Returns:
+            The codec name, or 'unknown' if not determinable.
+        """
+        try:
+            plan_data = json.loads(job.render_plan)
+            return str(plan_data.get("settings", {}).get("codec", "unknown"))
+        except (json.JSONDecodeError, AttributeError):
+            return "unknown"
 
     def _cleanup_temp_files(self, job_id: str) -> None:
         """Remove registered temp files for a job.

@@ -11,6 +11,7 @@ import asyncio
 
 import structlog
 
+from stoat_ferret.render.metrics import render_queue_depth
 from stoat_ferret.render.models import RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import AsyncRenderRepository
 
@@ -80,6 +81,7 @@ class RenderQueue:
             raise QueueFullError(queue_depth=depth, max_depth=self._max_depth)
 
         persisted = await self._repo.create(job)
+        render_queue_depth.set(depth + 1)
         logger.info(
             "render_queue.enqueue",
             job_id=job.id,
@@ -110,6 +112,7 @@ class RenderQueue:
             # FIFO: list_by_status returns ordered by created_at
             job = queued_jobs[0]
             await self._repo.update_status(job.id, RenderStatus.RUNNING)
+            render_queue_depth.set(len(queued_jobs) - 1)
             logger.info(
                 "render_queue.dequeue",
                 job_id=job.id,
