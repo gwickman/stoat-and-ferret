@@ -570,6 +570,22 @@ Phase 2 smoke tests extend API coverage beyond the original 12 use cases, adding
 | `test_proxy_delete` | DELETE /api/v1/videos/{id}/proxy removes proxy, returns freed_bytes |
 | `test_proxy_batch` | POST /api/v1/proxy/batch returns queued and skipped lists |
 
+### Render API (`test_render_api.py`, v029)
+
+Each render test creates its own project for isolation — no shared fixtures between tests.
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_render_create` | POST /api/v1/render creates a render job (201, verifies project_id, status, output_format, quality_preset) |
+| `test_render_get` | GET /api/v1/render/{job_id} retrieves job details (200, verifies id, project_id, status, progress, timestamps) |
+| `test_render_list` | GET /api/v1/render returns paginated list (200, verifies items, total, limit, offset) |
+| `test_render_encoders` | GET /api/v1/render/encoders returns encoder list (200, verifies encoders array and cached flag; conditionally checks encoder structure when encoders are detected) |
+| `test_render_formats` | GET /api/v1/render/formats returns all 4 output formats (200, verifies mp4/webm/mov/mkv with extension, mime_type, codecs, and quality presets) |
+| `test_render_queue` | GET /api/v1/render/queue returns queue status (200, verifies active_count, pending_count, max_concurrent, max_queue_depth, disk stats, completed/failed today) |
+| `test_render_delete` | DELETE /api/v1/render/{job_id} removes a render job (200/204, then verifies GET returns 404) |
+
+**Health check render assertion** (`test_health.py`): The existing `test_uc08_monitor_system_health` test was extended to assert the `render` key in the `/health/ready` response, checking: status (ok/degraded/unavailable), active_jobs, queue_depth, disk_usage_percent, and encoder_available.
+
 ---
 
 ## Endpoint Coverage Map
@@ -622,6 +638,13 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 | `GET /api/v1/videos/{id}/proxy` | test_proxy.py |
 | `DELETE /api/v1/videos/{id}/proxy` | test_proxy.py |
 | `POST /api/v1/proxy/batch` | test_proxy.py |
+| `POST /api/v1/render` | test_render_api.py |
+| `GET /api/v1/render` | test_render_api.py |
+| `GET /api/v1/render/{id}` | test_render_api.py |
+| `DELETE /api/v1/render/{id}` | test_render_api.py |
+| `GET /api/v1/render/encoders` | test_render_api.py |
+| `GET /api/v1/render/formats` | test_render_api.py |
+| `GET /api/v1/render/queue` | test_render_api.py |
 
 ### Residual Coverage Gaps
 
