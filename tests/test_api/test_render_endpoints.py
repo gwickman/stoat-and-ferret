@@ -1161,3 +1161,172 @@ class TestFormatContract:
         format_names = {f["format"] for f in resp.json()["formats"]}
         enum_values = {f.value for f in OutputFormat}
         assert format_names == enum_values
+
+
+# ---------- Queue status fixtures ----------
+
+
+@pytest.fixture
+def queue_repo() -> InMemoryRenderRepository:
+    """Create isolated render repository for queue status tests."""
+    return InMemoryRenderRepository()
+
+
+@pytest.fixture
+def queue_app(
+    queue_repo: InMemoryRenderRepository,
+    mock_render_service: AsyncMock,
+) -> FastAPI:
+    """Create test app with render queue injected for queue status tests."""
+    from stoat_ferret.render.queue import RenderQueue
+
+    queue = RenderQueue(queue_repo, max_concurrent=4, max_depth=50)
+    return create_app(
+        render_repository=queue_repo,
+        render_service=mock_render_service,
+        render_queue=queue,
+    )
+
+
+@pytest.fixture
+def queue_client(queue_app: FastAPI) -> Generator[TestClient, None, None]:
+    """Create test client for queue status endpoints."""
+    with TestClient(queue_app) as c:
+        yield c
+
+
+# ---------- GET /render/queue ----------
+
+
+class TestGetQueueStatus:
+    """Tests for GET /render/queue endpoint."""
+
+    def test_queue_status_returns_counts(
+        self,
+        queue_client: TestClient,
+    ) -> None:
+        """GET /render/queue returns active_count, pending_count, and max values."""
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["active_count"] == 0
+        assert data["pending_count"] == 0
+        assert data["max_concurrent"] == 4
+        assert data["max_queue_depth"] == 50
+
+    def test_queue_status_disk_space(
+        self,
+        queue_client: TestClient,
+    ) -> None:
+        """GET /render/queue includes disk space values."""
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data["disk_available_bytes"], int)
+        assert data["disk_available_bytes"] > 0
+        assert isinstance(data["disk_total_bytes"], int)
+        assert data["disk_total_bytes"] > 0
+        assert data["disk_total_bytes"] >= data["disk_available_bytes"]
+
+    def test_queue_status_today_counts(
+        self,
+        queue_client: TestClient,
+        queue_repo: InMemoryRenderRepository,
+    ) -> None:
+        """GET /render/queue includes completed_today and failed_today counts."""
+        # Create and complete a job
+        job = RenderJob.create(
+            project_id="proj-q1",
+            output_path="/tmp/q1.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan="{}",
+        )
+        asyncio.get_event_loop().run_until_complete(queue_repo.create(job))
+        asyncio.get_event_loop().run_until_complete(
+            queue_repo.update_status(job.id, RenderStatus.RUNNING)
+        )
+        asyncio.get_event_loop().run_until_complete(
+            queue_repo.update_status(job.id, RenderStatus.COMPLETED)
+        )
+
+        # Create and fail another job
+        job2 = RenderJob.create(
+            project_id="proj-q2",
+            output_path="/tmp/q2.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan="{}",
+        )
+        asyncio.get_event_loop().run_until_complete(queue_repo.create(job2))
+        asyncio.get_event_loop().run_until_complete(
+            queue_repo.update_status(job2.id, RenderStatus.RUNNING)
+        )
+        asyncio.get_event_loop().run_until_complete(
+            queue_repo.update_status(job2.id, RenderStatus.FAILED, error_message="test error")
+        )
+
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["completed_today"] == 1
+        assert data["failed_today"] == 1
+
+    def test_queue_status_realtime_accuracy(
+        self,
+        queue_client: TestClient,
+        queue_repo: InMemoryRenderRepository,
+    ) -> None:
+        """GET /render/queue reflects real-time state after enqueue (FR-004)."""
+        # Initially empty
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.json()["pending_count"] == 0
+        assert resp.json()["active_count"] == 0
+
+        # Enqueue a job
+        job = RenderJob.create(
+            project_id="proj-rt",
+            output_path="/tmp/rt.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan="{}",
+        )
+        asyncio.get_event_loop().run_until_complete(queue_repo.create(job))
+
+        # Immediately check — count should be updated
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.json()["pending_count"] == 1
+
+        # Transition to running
+        asyncio.get_event_loop().run_until_complete(
+            queue_repo.update_status(job.id, RenderStatus.RUNNING)
+        )
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.json()["active_count"] == 1
+        assert resp.json()["pending_count"] == 0
+
+    def test_queue_status_response_schema(
+        self,
+        queue_client: TestClient,
+    ) -> None:
+        """GET /render/queue returns all expected fields."""
+        resp = queue_client.get("/api/v1/render/queue")
+        assert resp.status_code == 200
+        expected_fields = {
+            "active_count",
+            "pending_count",
+            "max_concurrent",
+            "max_queue_depth",
+            "disk_available_bytes",
+            "disk_total_bytes",
+            "completed_today",
+            "failed_today",
+        }
+        assert set(resp.json().keys()) == expected_fields
+
+    def test_queue_unavailable_returns_503(self) -> None:
+        """GET /render/queue returns 503 when render queue is not on app.state."""
+        app = create_app(render_repository=InMemoryRenderRepository())
+        with TestClient(app) as client:
+            resp = client.get("/api/v1/render/queue")
+            assert resp.status_code == 503
