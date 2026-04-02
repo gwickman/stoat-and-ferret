@@ -28,6 +28,7 @@ from stoat_ferret.api.schemas.render import (
     FormatInfo,
     FormatListResponse,
     QualityPresetInfo,
+    QueueStatusResponse,
     RenderJobResponse,
     RenderListResponse,
 )
@@ -38,6 +39,7 @@ from stoat_ferret.render.encoder_cache import (
     EncoderCacheEntry,
 )
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
+from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import (
     AsyncRenderRepository,
     AsyncSQLiteRenderRepository,
@@ -111,8 +113,30 @@ async def get_render_service(request: Request) -> RenderService:
     return service
 
 
+async def get_render_queue(request: Request) -> RenderQueue:
+    """Get render queue from app state.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        RenderQueue instance.
+
+    Raises:
+        HTTPException: 503 if render queue is not available.
+    """
+    queue: RenderQueue | None = getattr(request.app.state, "render_queue", None)
+    if queue is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "SERVICE_UNAVAILABLE", "message": "Render queue not available"},
+        )
+    return queue
+
+
 RenderRepoDep = Annotated[AsyncRenderRepository, Depends(get_render_repository)]
 RenderServiceDep = Annotated[RenderService, Depends(get_render_service)]
+RenderQueueDep = Annotated[RenderQueue, Depends(get_render_queue)]
 EncoderCacheDep = Annotated[AsyncEncoderCacheRepository, Depends(get_encoder_cache_repository)]
 
 
@@ -528,6 +552,62 @@ async def get_output_formats() -> FormatListResponse:
         All available output formats with codec and quality preset details.
     """
     return FormatListResponse(formats=_FORMAT_DATA)
+
+
+# ---------- Queue status ----------
+
+
+@router.get("/render/queue", response_model=QueueStatusResponse)
+async def get_queue_status(
+    queue: RenderQueueDep,
+    repo: RenderRepoDep,
+) -> QueueStatusResponse:
+    """Return current render queue status with capacity, disk space, and throughput.
+
+    Aggregates live queue counts from RenderQueue, disk space from the
+    render output directory, and today's completed/failed job counts
+    from the repository. Read-only — no state mutations (NFR-001).
+
+    Args:
+        queue: Render queue dependency.
+        repo: Render repository dependency.
+
+    Returns:
+        Queue status with active/pending counts, capacity, disk, and throughput.
+    """
+    settings = get_settings()
+
+    active_count = await queue.get_active_count()
+    pending_count = await queue.get_queue_depth()
+
+    # Disk space for render output directory
+    output_dir = Path(settings.render_output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output_dir)
+
+    # Today's completed/failed counts
+    midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    completed_jobs = await repo.list_by_status(RenderStatus.COMPLETED)
+    completed_today = sum(
+        1 for j in completed_jobs if j.completed_at is not None and j.completed_at >= midnight
+    )
+
+    failed_jobs = await repo.list_by_status(RenderStatus.FAILED)
+    failed_today = sum(
+        1 for j in failed_jobs if j.completed_at is not None and j.completed_at >= midnight
+    )
+
+    return QueueStatusResponse(
+        active_count=active_count,
+        pending_count=pending_count,
+        max_concurrent=settings.render_max_concurrent,
+        max_queue_depth=settings.render_max_queue_depth,
+        disk_available_bytes=usage.free,
+        disk_total_bytes=usage.total,
+        completed_today=completed_today,
+        failed_today=failed_today,
+    )
 
 
 # ---------- Render job endpoints ----------

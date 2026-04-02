@@ -2520,6 +2520,28 @@
         }
       }
     },
+    "/api/v1/render/queue": {
+      "get": {
+        "tags": [
+          "render"
+        ],
+        "summary": "Get Queue Status",
+        "description": "Return current render queue status with capacity, disk space, and throughput.\n\nAggregates live queue counts from RenderQueue, disk space from the\nrender output directory, and today's completed/failed job counts\nfrom the repository. Read-only \u2014 no state mutations (NFR-001).\n\nArgs:\n    queue: Render queue dependency.\n    repo: Render repository dependency.\n\nReturns:\n    Queue status with active/pending counts, capacity, disk, and throughput.",
+        "operationId": "get_queue_status_api_v1_render_queue_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/render/{job_id}": {
       "get": {
         "tags": [
@@ -4765,6 +4787,63 @@
         ],
         "title": "QualityPresetInfo",
         "description": "Bitrate settings for a single quality preset."
+      },
+      "QueueStatusResponse": {
+        "properties": {
+          "active_count": {
+            "type": "integer",
+            "title": "Active Count",
+            "description": "Number of currently running render jobs"
+          },
+          "pending_count": {
+            "type": "integer",
+            "title": "Pending Count",
+            "description": "Number of queued jobs waiting to run"
+          },
+          "max_concurrent": {
+            "type": "integer",
+            "title": "Max Concurrent",
+            "description": "Maximum simultaneous running jobs"
+          },
+          "max_queue_depth": {
+            "type": "integer",
+            "title": "Max Queue Depth",
+            "description": "Maximum queued jobs before rejection"
+          },
+          "disk_available_bytes": {
+            "type": "integer",
+            "title": "Disk Available Bytes",
+            "description": "Available disk space in the render output directory"
+          },
+          "disk_total_bytes": {
+            "type": "integer",
+            "title": "Disk Total Bytes",
+            "description": "Total disk space on the render output volume"
+          },
+          "completed_today": {
+            "type": "integer",
+            "title": "Completed Today",
+            "description": "Jobs completed since midnight UTC"
+          },
+          "failed_today": {
+            "type": "integer",
+            "title": "Failed Today",
+            "description": "Jobs failed since midnight UTC"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_count",
+          "pending_count",
+          "max_concurrent",
+          "max_queue_depth",
+          "disk_available_bytes",
+          "disk_total_bytes",
+          "completed_today",
+          "failed_today"
+        ],
+        "title": "QueueStatusResponse",
+        "description": "Render queue status with capacity, disk space, and throughput metrics."
       },
       "RenderJobResponse": {
         "properties": {

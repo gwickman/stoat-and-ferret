@@ -43,12 +43,18 @@ class RenderListResponse(BaseModel):
 
 
 class QueueStatusResponse(BaseModel):
-    """Render queue status information."""
+    """Render queue status with capacity, disk space, and throughput metrics."""
 
-    active_count: int
-    queue_depth: int
-    max_concurrent: int
-    max_depth: int
+    active_count: int = Field(..., description="Number of currently running render jobs")
+    pending_count: int = Field(..., description="Number of queued jobs waiting to run")
+    max_concurrent: int = Field(..., description="Maximum simultaneous running jobs")
+    max_queue_depth: int = Field(..., description="Maximum queued jobs before rejection")
+    disk_available_bytes: int = Field(
+        ..., description="Available disk space in the render output directory"
+    )
+    disk_total_bytes: int = Field(..., description="Total disk space on the render output volume")
+    completed_today: int = Field(..., description="Jobs completed since midnight UTC")
+    failed_today: int = Field(..., description="Jobs failed since midnight UTC")
 
 
 class EncoderInfoResponse(BaseModel):
