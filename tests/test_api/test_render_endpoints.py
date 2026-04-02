@@ -1,13 +1,15 @@
-"""Tests for render job CRUD endpoints.
+"""Tests for render job CRUD and encoder endpoints.
 
-Covers all 6 endpoints, DI fallback, lifespan wiring, re-export
-verification, pagination, status filtering, parity tests, and
-system tests for full lifecycle scenarios.
+Covers all 6 CRUD endpoints, encoder GET/POST endpoints, DI fallback,
+lifespan wiring, re-export verification, pagination, status filtering,
+parity tests, and system tests for full lifecycle scenarios.
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Generator
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -15,6 +17,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
+from stoat_ferret.render.encoder_cache import (
+    EncoderCacheEntry,
+    InMemoryEncoderCacheRepository,
+)
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
@@ -666,3 +672,370 @@ class TestRenderLifecycle:
         detail = resp.json()["detail"]
         assert "code" in detail
         assert "message" in detail
+
+
+# ---------- Encoder endpoint fixtures ----------
+
+
+def _make_sample_entries(count: int = 3) -> list[EncoderCacheEntry]:
+    """Create sample encoder cache entries for testing."""
+    now = datetime.now(timezone.utc)
+    entries = [
+        EncoderCacheEntry(
+            id=None,
+            name="libx264",
+            codec="h264",
+            is_hardware=False,
+            encoder_type="Software",
+            description="libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+            detected_at=now,
+        ),
+        EncoderCacheEntry(
+            id=None,
+            name="h264_nvenc",
+            codec="h264",
+            is_hardware=True,
+            encoder_type="Nvenc",
+            description="NVIDIA NVENC H.264 encoder",
+            detected_at=now,
+        ),
+        EncoderCacheEntry(
+            id=None,
+            name="libx265",
+            codec="hevc",
+            is_hardware=False,
+            encoder_type="Software",
+            description="libx265 H.265 / HEVC",
+            detected_at=now,
+        ),
+    ]
+    return entries[:count]
+
+
+def _make_raw_encoders() -> list:
+    """Create mock _RawEncoder objects for detection mock."""
+    from stoat_ferret.api.routers.render import _RawEncoder
+
+    return [
+        _RawEncoder(
+            name="libx264",
+            codec="h264",
+            is_hardware=False,
+            encoder_type="Software",
+            description="libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        ),
+        _RawEncoder(
+            name="h264_nvenc",
+            codec="h264",
+            is_hardware=True,
+            encoder_type="Nvenc",
+            description="NVIDIA NVENC H.264 encoder",
+        ),
+    ]
+
+
+@pytest.fixture
+def encoder_repo() -> InMemoryEncoderCacheRepository:
+    """Create isolated encoder cache repository for encoder tests."""
+    return InMemoryEncoderCacheRepository()
+
+
+@pytest.fixture
+def encoder_app(
+    render_repo: InMemoryRenderRepository,
+    mock_render_service: AsyncMock,
+    encoder_repo: InMemoryEncoderCacheRepository,
+) -> FastAPI:
+    """Create test app with encoder cache repository injected."""
+    app = create_app(
+        render_repository=render_repo,
+        render_service=mock_render_service,
+    )
+    app.state.encoder_cache_repository = encoder_repo
+    return app
+
+
+@pytest.fixture
+def encoder_client(encoder_app: FastAPI) -> Generator[TestClient, None, None]:
+    """Create test client for encoder endpoints."""
+    with TestClient(encoder_app) as c:
+        yield c
+
+
+# ---------- GET /render/encoders ----------
+
+
+class TestGetEncoders:
+    """Tests for GET /render/encoders endpoint."""
+
+    def test_get_encoders_returns_cached(
+        self,
+        encoder_client: TestClient,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """GET /render/encoders returns cached encoders when cache is populated."""
+        entries = _make_sample_entries()
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+
+        resp = encoder_client.get("/api/v1/render/encoders")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["cached"] is True
+        assert len(data["encoders"]) == 3
+
+    def test_get_encoders_lazy_detection(
+        self,
+        encoder_client: TestClient,
+    ) -> None:
+        """GET /render/encoders triggers lazy detection when cache is empty."""
+        raw = _make_raw_encoders()
+        with patch(
+            "stoat_ferret.api.routers.render._detect_encoders_sync",
+            return_value=raw,
+        ):
+            resp = encoder_client.get("/api/v1/render/encoders")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["cached"] is False
+        assert len(data["encoders"]) == 2
+        names = {e["name"] for e in data["encoders"]}
+        assert "libx264" in names
+        assert "h264_nvenc" in names
+
+    def test_get_encoders_ffmpeg_unavailable(
+        self,
+        encoder_client: TestClient,
+    ) -> None:
+        """GET /render/encoders returns 503 when FFmpeg is unavailable."""
+        with patch(
+            "stoat_ferret.api.routers.render._detect_encoders_sync",
+            side_effect=FileNotFoundError("ffmpeg not found"),
+        ):
+            resp = encoder_client.get("/api/v1/render/encoders")
+
+        assert resp.status_code == 503
+        assert resp.json()["detail"]["code"] == "FFMPEG_UNAVAILABLE"
+
+    def test_get_encoders_response_schema(
+        self,
+        encoder_client: TestClient,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """GET /render/encoders returns correct schema fields."""
+        entries = _make_sample_entries(1)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+
+        resp = encoder_client.get("/api/v1/render/encoders")
+        data = resp.json()
+        assert set(data.keys()) == {"encoders", "cached"}
+        enc = data["encoders"][0]
+        expected = {"name", "codec", "is_hardware", "encoder_type", "description", "detected_at"}
+        assert set(enc.keys()) == expected
+
+    def test_get_encoders_during_refresh_returns_stale(
+        self,
+        encoder_app: FastAPI,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """GET during active refresh returns stale cached data (NFR-003)."""
+        # Pre-populate cache
+        entries = _make_sample_entries(1)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+
+        with TestClient(encoder_app) as client:
+            # Cache is populated, GET should return cached data regardless of lock
+            resp = client.get("/api/v1/render/encoders")
+            assert resp.status_code == 200
+            assert resp.json()["cached"] is True
+            assert len(resp.json()["encoders"]) == 1
+
+
+# ---------- POST /render/encoders/refresh ----------
+
+
+class TestRefreshEncoders:
+    """Tests for POST /render/encoders/refresh endpoint."""
+
+    def test_refresh_returns_fresh_results(
+        self,
+        encoder_client: TestClient,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """POST /render/encoders/refresh re-runs detection and updates cache."""
+        # Pre-populate with old data
+        old_entries = _make_sample_entries(1)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(old_entries))
+
+        raw = _make_raw_encoders()
+        with patch(
+            "stoat_ferret.api.routers.render._detect_encoders_sync",
+            return_value=raw,
+        ):
+            resp = encoder_client.post("/api/v1/render/encoders/refresh")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["cached"] is False
+        assert len(data["encoders"]) == 2
+
+        # Verify cache was updated
+        cached = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        assert len(cached) == 2
+
+    def test_refresh_clears_old_cache(
+        self,
+        encoder_client: TestClient,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """POST /render/encoders/refresh truncates old cache before re-inserting."""
+        old_entries = _make_sample_entries(3)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(old_entries))
+
+        # Return only 1 encoder this time
+        raw = _make_raw_encoders()[:1]
+        with patch(
+            "stoat_ferret.api.routers.render._detect_encoders_sync",
+            return_value=raw,
+        ):
+            resp = encoder_client.post("/api/v1/render/encoders/refresh")
+
+        assert resp.status_code == 200
+        cached = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        assert len(cached) == 1
+
+    def test_refresh_ffmpeg_unavailable(
+        self,
+        encoder_client: TestClient,
+    ) -> None:
+        """POST /render/encoders/refresh returns 503 when FFmpeg is unavailable."""
+        with patch(
+            "stoat_ferret.api.routers.render._detect_encoders_sync",
+            side_effect=FileNotFoundError("ffmpeg not found"),
+        ):
+            resp = encoder_client.post("/api/v1/render/encoders/refresh")
+
+        assert resp.status_code == 503
+        assert resp.json()["detail"]["code"] == "FFMPEG_UNAVAILABLE"
+
+    def test_refresh_uses_asyncio_to_thread(
+        self,
+        encoder_client: TestClient,
+    ) -> None:
+        """POST /render/encoders/refresh uses asyncio.to_thread (NFR-001)."""
+        raw = _make_raw_encoders()
+        with patch(
+            "stoat_ferret.api.routers.render.asyncio.to_thread",
+            new_callable=AsyncMock,
+            return_value=raw,
+        ) as mock_to_thread:
+            resp = encoder_client.post("/api/v1/render/encoders/refresh")
+
+        assert resp.status_code == 200
+        mock_to_thread.assert_called_once()
+
+
+# ---------- Encoder cache parity tests ----------
+
+
+class TestEncoderCacheParity:
+    """Parity tests: AsyncSQLiteEncoderCacheRepository vs InMemoryEncoderCacheRepository."""
+
+    def test_create_many_and_get_all_parity(
+        self,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """Both implementations return same entries after create_many."""
+        entries = _make_sample_entries()
+        created = asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        assert len(created) == 3
+        assert all(e.id is not None for e in created)
+
+        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        assert len(fetched) == 3
+        names = {e.name for e in fetched}
+        assert names == {"libx264", "h264_nvenc", "libx265"}
+
+    def test_clear_removes_all(
+        self,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """Clear removes all entries from cache."""
+        entries = _make_sample_entries()
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+
+        asyncio.get_event_loop().run_until_complete(encoder_repo.clear())
+        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        assert len(fetched) == 0
+
+    def test_refresh_cycle_truncate_reinsert(
+        self,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """Refresh cycle: clear + create_many replaces all entries."""
+        old = _make_sample_entries(3)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(old))
+        assert len(asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())) == 3
+
+        # Simulate refresh: clear + re-insert with fewer entries
+        asyncio.get_event_loop().run_until_complete(encoder_repo.clear())
+        new = _make_sample_entries(1)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(new))
+
+        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        assert len(fetched) == 1
+        assert fetched[0].name == "libx264"
+
+
+# ---------- Encoder contract tests ----------
+
+
+class TestEncoderContract:
+    """Contract tests for encoder cache round-trip and response schema."""
+
+    def test_encoder_cache_roundtrip(
+        self,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """Encoder cache SQLite round-trip: insert -> read -> verify all fields."""
+        now = datetime.now(timezone.utc)
+        entry = EncoderCacheEntry(
+            id=None,
+            name="hevc_nvenc",
+            codec="hevc",
+            is_hardware=True,
+            encoder_type="Nvenc",
+            description="NVIDIA NVENC HEVC encoder",
+            detected_at=now,
+        )
+        created = asyncio.get_event_loop().run_until_complete(encoder_repo.create_many([entry]))
+        assert len(created) == 1
+        assert created[0].id is not None
+
+        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        assert len(fetched) == 1
+        e = fetched[0]
+        assert e.name == "hevc_nvenc"
+        assert e.codec == "hevc"
+        assert e.is_hardware is True
+        assert e.encoder_type == "Nvenc"
+        assert e.description == "NVIDIA NVENC HEVC encoder"
+        assert e.detected_at == now
+
+    def test_encoder_response_matches_cache_entry(
+        self,
+        encoder_client: TestClient,
+        encoder_repo: InMemoryEncoderCacheRepository,
+    ) -> None:
+        """Encoder response schema matches EncoderCacheEntry fields."""
+        entries = _make_sample_entries(1)
+        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+
+        resp = encoder_client.get("/api/v1/render/encoders")
+        enc = resp.json()["encoders"][0]
+
+        assert enc["name"] == entries[0].name
+        assert enc["codec"] == entries[0].codec
+        assert enc["is_hardware"] == entries[0].is_hardware
+        assert enc["encoder_type"] == entries[0].encoder_type
+        assert enc["description"] == entries[0].description
