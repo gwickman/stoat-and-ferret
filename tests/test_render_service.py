@@ -202,7 +202,7 @@ class TestJobLifecycle:
             assert persisted is not None
 
     async def test_submit_broadcasts_render_started(self) -> None:
-        """submit_job broadcasts RENDER_STARTED event."""
+        """submit_job broadcasts RENDER_STARTED event (among others)."""
         with _PATCH_NO_RUST:
             service, _, ws, _ = _build_service()
 
@@ -214,9 +214,9 @@ class TestJobLifecycle:
                 render_plan_json=_make_plan_json(),
             )
 
-            ws.broadcast.assert_called_once()
-            event = ws.broadcast.call_args[0][0]
-            assert event["type"] == EventType.RENDER_STARTED.value
+            broadcast_calls = ws.broadcast.call_args_list
+            event_types = [c[0][0]["type"] for c in broadcast_calls]
+            assert EventType.RENDER_STARTED.value in event_types
 
     async def test_run_job_success_completes(self) -> None:
         """Successful execution completes the job and broadcasts RENDER_COMPLETED."""
@@ -484,10 +484,14 @@ class TestWebSocketEvents:
                 render_plan_json=_make_plan_json(),
             )
 
-            ws.broadcast.assert_called_once()
-            event = ws.broadcast.call_args[0][0]
-            assert event["type"] == EventType.RENDER_STARTED.value
-            assert event["payload"]["job_id"] == job.id
+            broadcast_calls = ws.broadcast.call_args_list
+            started_events = [
+                c[0][0]
+                for c in broadcast_calls
+                if c[0][0]["type"] == EventType.RENDER_STARTED.value
+            ]
+            assert len(started_events) == 1
+            assert started_events[0]["payload"]["job_id"] == job.id
 
     async def test_render_completed_on_success(self) -> None:
         """RENDER_COMPLETED event is emitted on successful completion."""
