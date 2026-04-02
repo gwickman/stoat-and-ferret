@@ -849,6 +849,401 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/effects/transitio
 
 ---
 
+## Render
+
+### POST /api/v1/render
+
+Submit a render job for a project. The server queues the job and begins rendering asynchronously.
+
+**Request Body:**
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `project_id` | string | Yes | -- | Project UUID to render |
+| `output_format` | string | No | `"mp4"` | Output container format (`mp4`, `webm`, `mov`, `mkv`) |
+| `quality_preset` | string | No | `"standard"` | Quality preset (`draft`, `standard`, `high`) |
+| `render_plan` | string | No | `"{}"` | Serialized render plan JSON |
+
+**Response (201 Created):**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "project_id": "proj-xyz789",
+  "status": "queued",
+  "output_path": "/output/proj-xyz789_20250115T110000.mp4",
+  "output_format": "mp4",
+  "quality_preset": "standard",
+  "progress": 0.0,
+  "error_message": null,
+  "retry_count": 0,
+  "created_at": "2025-01-15T11:00:00Z",
+  "updated_at": "2025-01-15T11:00:00Z",
+  "completed_at": null
+}
+```
+
+**Errors:**
+
+- 400 `INVALID_FORMAT` -- Unknown output format
+- 400 `INVALID_PRESET` -- Unknown quality preset
+- 422 `PREFLIGHT_FAILED` -- Pre-flight validation failed (settings, disk space, or queue capacity)
+- 503 `RENDER_UNAVAILABLE` -- Render service unavailable (shutting down or FFmpeg not installed)
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/render \
+  -H "Content-Type: application/json" \
+  -d '{"project_id": "proj-xyz789", "output_format": "mp4", "quality_preset": "high"}'
+```
+
+---
+
+### GET /api/v1/render/{job_id}
+
+Get the status of a render job by its ID.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | string | Render job UUID |
+
+**Response (200):**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "project_id": "proj-xyz789",
+  "status": "running",
+  "output_path": "/output/proj-xyz789_20250115T110000.mp4",
+  "output_format": "mp4",
+  "quality_preset": "standard",
+  "progress": 0.45,
+  "error_message": null,
+  "retry_count": 0,
+  "created_at": "2025-01-15T11:00:00Z",
+  "updated_at": "2025-01-15T11:00:30Z",
+  "completed_at": null
+}
+```
+
+**Render Job Statuses:**
+
+| Status | Description |
+|--------|-------------|
+| `queued` | Job is queued, waiting to start |
+| `running` | Job is currently rendering |
+| `completed` | Render finished successfully |
+| `failed` | Render encountered an error |
+| `cancelled` | Job was cancelled by the user |
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Render job does not exist
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/render/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+---
+
+### GET /api/v1/render
+
+List all render jobs with pagination and optional status filter.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Range | Description |
+|-----------|------|---------|-------|-------------|
+| `limit` | integer | 20 | 1-100 | Max jobs per page |
+| `offset` | integer | 0 | 0+ | Number of jobs to skip |
+| `status` | string | -- | -- | Filter by status (`queued`, `running`, `completed`, `failed`, `cancelled`) |
+
+**Response:**
+
+```json
+{
+  "items": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "project_id": "proj-xyz789",
+      "status": "completed",
+      "output_path": "/output/proj-xyz789_20250115T110000.mp4",
+      "output_format": "mp4",
+      "quality_preset": "standard",
+      "progress": 1.0,
+      "error_message": null,
+      "retry_count": 0,
+      "created_at": "2025-01-15T11:00:00Z",
+      "updated_at": "2025-01-15T11:05:00Z",
+      "completed_at": "2025-01-15T11:05:00Z"
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+**Errors:**
+
+- 400 `INVALID_STATUS` -- Invalid status filter value
+
+**Example:**
+
+```bash
+curl "http://localhost:8765/api/v1/render?status=completed&limit=10"
+```
+
+---
+
+### POST /api/v1/render/{job_id}/cancel
+
+Cancel a queued or running render job. Terminates the active FFmpeg process if running.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | string | Render job UUID |
+
+**Response (200):**
+
+Returns the updated `RenderJobResponse` with status set to `cancelled`.
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Render job does not exist
+- 409 `NOT_CANCELLABLE` -- Job is not in a cancellable state (must be `queued` or `running`)
+- 409 `CANCEL_FAILED` -- Failed to terminate the FFmpeg process
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/render/a1b2c3d4-e5f6-7890-abcd-ef1234567890/cancel
+```
+
+---
+
+### POST /api/v1/render/{job_id}/retry
+
+Retry a failed render job. Requeues the job with progress reset to 0.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | string | Render job UUID |
+
+**Response (200):**
+
+Returns the updated `RenderJobResponse` with status reset to `queued`, progress reset to `0.0`, and `retry_count` incremented.
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Render job does not exist
+- 409 `NOT_RETRYABLE` -- Job is not in `failed` status
+- 409 `PERMANENT_FAILURE` -- Retry count exceeds maximum allowed retries
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/render/a1b2c3d4-e5f6-7890-abcd-ef1234567890/retry
+```
+
+---
+
+### DELETE /api/v1/render/{job_id}
+
+Delete a render job record. Output files are preserved on disk.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | string | Render job UUID |
+
+**Response (200):**
+
+Returns the deleted job's final `RenderJobResponse` state.
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Render job does not exist
+
+**Example:**
+
+```bash
+curl -X DELETE http://localhost:8765/api/v1/render/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+---
+
+### GET /api/v1/render/encoders
+
+List available FFmpeg encoders. Returns cached results if available; triggers lazy detection in background if cache is empty.
+
+**Response:**
+
+```json
+{
+  "encoders": [
+    {
+      "name": "h264_nvenc",
+      "codec": "h264",
+      "is_hardware": true,
+      "encoder_type": "Nvenc",
+      "description": "NVIDIA NVENC H.264 encoder",
+      "detected_at": "2025-01-15T10:00:00Z"
+    },
+    {
+      "name": "libx264",
+      "codec": "h264",
+      "is_hardware": false,
+      "encoder_type": "Software",
+      "description": "libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+      "detected_at": "2025-01-15T10:00:00Z"
+    }
+  ],
+  "cached": true
+}
+```
+
+**Errors:**
+
+- 503 `FFMPEG_UNAVAILABLE` -- FFmpeg binary not found in PATH
+- 503 `DETECTION_FAILED` -- Encoder detection subprocess error
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/render/encoders
+```
+
+---
+
+### POST /api/v1/render/encoders/refresh
+
+Force re-detection of available FFmpeg encoders. Clears the cache and runs a fresh detection.
+
+**Response:**
+
+Returns `EncoderListResponse` with freshly detected encoders and `cached` set to `false`.
+
+**Errors:**
+
+- 409 `REFRESH_IN_PROGRESS` -- Another encoder refresh is currently running
+- 503 `FFMPEG_UNAVAILABLE` -- FFmpeg binary not found in PATH
+- 503 `DETECTION_FAILED` -- Encoder detection subprocess error
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/render/encoders/refresh
+```
+
+---
+
+### GET /api/v1/render/formats
+
+List supported output formats with codec details and capability flags.
+
+**Response:**
+
+```json
+{
+  "formats": [
+    {
+      "format": "mp4",
+      "extension": ".mp4",
+      "mime_type": "video/mp4",
+      "codecs": [
+        {
+          "name": "h264",
+          "quality_presets": [
+            {"preset": "draft", "video_bitrate_kbps": 1500},
+            {"preset": "standard", "video_bitrate_kbps": 5000},
+            {"preset": "high", "video_bitrate_kbps": 15000}
+          ]
+        },
+        {
+          "name": "h265",
+          "quality_presets": [
+            {"preset": "draft", "video_bitrate_kbps": 1000},
+            {"preset": "standard", "video_bitrate_kbps": 3500},
+            {"preset": "high", "video_bitrate_kbps": 10000}
+          ]
+        }
+      ],
+      "supports_hw_accel": true,
+      "supports_two_pass": true,
+      "supports_alpha": false
+    }
+  ]
+}
+```
+
+**Format Summary:**
+
+| Format | Codecs | HW Accel | Two-Pass | Alpha |
+|--------|--------|----------|----------|-------|
+| `mp4` | h264, h265 | Yes | Yes | No |
+| `webm` | vp8, vp9 | No | Yes | Yes |
+| `mov` | h264, prores | Yes | Yes | Yes |
+| `mkv` | h264, h265, vp9 | Yes | Yes | Yes |
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/render/formats
+```
+
+---
+
+### GET /api/v1/render/queue
+
+Get the current render queue status including job counts and disk space.
+
+**Response:**
+
+```json
+{
+  "active_count": 1,
+  "pending_count": 3,
+  "max_concurrent": 2,
+  "max_queue_depth": 10,
+  "disk_available_bytes": 107374182400,
+  "disk_total_bytes": 536870912000,
+  "completed_today": 5,
+  "failed_today": 0
+}
+```
+
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `active_count` | integer | Currently running render jobs |
+| `pending_count` | integer | Queued jobs waiting to start |
+| `max_concurrent` | integer | Maximum simultaneous running jobs |
+| `max_queue_depth` | integer | Maximum queued jobs before rejection |
+| `disk_available_bytes` | integer | Available disk space in render output directory |
+| `disk_total_bytes` | integer | Total disk space on render output volume |
+| `completed_today` | integer | Jobs completed since midnight UTC |
+| `failed_today` | integer | Jobs failed since midnight UTC |
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/render/queue
+```
+
+---
+
 ## WebSocket
 
 ### WS /ws
@@ -985,3 +1380,56 @@ ReDoc -- clean, readable API documentation.
 | `progress` | float or null | Normalized progress (0.0-1.0) |
 | `result` | any or null | Job result when complete |
 | `error` | string or null | Error message when failed |
+
+### RenderJobResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique render job identifier (UUID) |
+| `project_id` | string | Project being rendered |
+| `status` | string | `queued`, `running`, `completed`, `failed`, or `cancelled` |
+| `output_path` | string | Full file path for rendered output |
+| `output_format` | string | Container format (`mp4`, `webm`, `mov`, `mkv`) |
+| `quality_preset` | string | Quality preset (`draft`, `standard`, `high`) |
+| `progress` | float | Render progress (0.0-1.0) |
+| `error_message` | string or null | Error description if failed |
+| `retry_count` | integer | Number of retry attempts |
+| `created_at` | datetime | Job creation time |
+| `updated_at` | datetime | Last update time |
+| `completed_at` | datetime or null | Completion time (null if not terminal) |
+
+### QueueStatusResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `active_count` | integer | Currently running render jobs |
+| `pending_count` | integer | Queued jobs waiting to start |
+| `max_concurrent` | integer | Maximum simultaneous running jobs |
+| `max_queue_depth` | integer | Maximum queued jobs before rejection |
+| `disk_available_bytes` | integer | Available disk space in render output directory |
+| `disk_total_bytes` | integer | Total disk space on render output volume |
+| `completed_today` | integer | Jobs completed since midnight UTC |
+| `failed_today` | integer | Jobs failed since midnight UTC |
+
+### EncoderInfoResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Encoder name as reported by FFmpeg |
+| `codec` | string | Codec identifier (e.g., `h264`, `hevc`) |
+| `is_hardware` | boolean | Whether hardware-accelerated |
+| `encoder_type` | string | Type classification (e.g., `Software`, `Nvenc`, `Qsv`) |
+| `description` | string | Encoder description from FFmpeg |
+| `detected_at` | datetime | When the encoder was detected |
+
+### FormatInfo
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `format` | string | Format identifier (`mp4`, `webm`, `mov`, `mkv`) |
+| `extension` | string | File extension with dot (e.g., `.mp4`) |
+| `mime_type` | string | MIME type (e.g., `video/mp4`) |
+| `codecs` | array | Supported codecs with quality presets |
+| `supports_hw_accel` | boolean | Hardware-accelerated encoding available |
+| `supports_two_pass` | boolean | Two-pass encoding supported |
+| `supports_alpha` | boolean | Alpha channel transparency supported |

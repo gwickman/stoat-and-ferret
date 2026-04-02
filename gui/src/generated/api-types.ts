@@ -1448,6 +1448,286 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Render Jobs
+         * @description List all render jobs with pagination and optional status filtering.
+         *
+         *     Args:
+         *         repo: Render repository dependency.
+         *         limit: Maximum number of results.
+         *         offset: Number of results to skip.
+         *         status_filter: Optional status value to filter by.
+         *
+         *     Returns:
+         *         Paginated list of render jobs.
+         *
+         *     Raises:
+         *         HTTPException: 400 if invalid status filter.
+         */
+        get: operations["list_render_jobs_api_v1_render_get"];
+        put?: never;
+        /**
+         * Create Render Job
+         * @description Start a new render job with pre-flight validation.
+         *
+         *     Args:
+         *         body: Render job creation request.
+         *         render_service: Render service dependency.
+         *
+         *     Returns:
+         *         Created render job with 201 status.
+         *
+         *     Raises:
+         *         HTTPException: 400 for invalid format/preset/plan, 422 for pre-flight failure.
+         */
+        post: operations["create_render_job_api_v1_render_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/encoders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Encoders
+         * @description Return cached encoders, triggering lazy detection if cache is empty.
+         *
+         *     If the cache is populated, returns cached data immediately.
+         *     If the cache is empty, runs FFmpeg encoder detection, caches the
+         *     results, and returns them.
+         *
+         *     If a refresh is currently in progress, returns stale cached data
+         *     rather than blocking (NFR-003).
+         *
+         *     Args:
+         *         encoder_repo: Encoder cache repository dependency.
+         *
+         *     Returns:
+         *         List of detected encoders with cached flag.
+         */
+        get: operations["get_encoders_api_v1_render_encoders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/encoders/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Encoders
+         * @description Re-run FFmpeg encoder detection and update cached results.
+         *
+         *     Truncates existing cache and re-inserts fresh detection results.
+         *     Uses asyncio.Lock to prevent concurrent refresh operations (NFR-002).
+         *     Uses asyncio.to_thread to avoid blocking the event loop (NFR-001).
+         *
+         *     Args:
+         *         encoder_repo: Encoder cache repository dependency.
+         *
+         *     Returns:
+         *         Fresh list of detected encoders.
+         *
+         *     Raises:
+         *         HTTPException: 409 if a refresh is already in progress,
+         *             503 if FFmpeg is unavailable.
+         */
+        post: operations["refresh_encoders_api_v1_render_encoders_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/formats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Output Formats
+         * @description Return all supported output formats with codecs, capability flags, and quality presets.
+         *
+         *     Static data endpoint — no database or external dependencies required.
+         *     Designed for AI discoverability with self-documenting field names.
+         *
+         *     Returns:
+         *         All available output formats with codec and quality preset details.
+         */
+        get: operations["get_output_formats_api_v1_render_formats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Queue Status
+         * @description Return current render queue status with capacity, disk space, and throughput.
+         *
+         *     Aggregates live queue counts from RenderQueue, disk space from the
+         *     render output directory, and today's completed/failed job counts
+         *     from the repository. Read-only — no state mutations (NFR-001).
+         *
+         *     Args:
+         *         queue: Render queue dependency.
+         *         repo: Render repository dependency.
+         *
+         *     Returns:
+         *         Queue status with active/pending counts, capacity, disk, and throughput.
+         */
+        get: operations["get_queue_status_api_v1_render_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Render Job
+         * @description Get current status, progress, and metadata for a render job.
+         *
+         *     Args:
+         *         job_id: The render job UUID.
+         *         repo: Render repository dependency.
+         *
+         *     Returns:
+         *         Render job details.
+         *
+         *     Raises:
+         *         HTTPException: 404 if job not found.
+         */
+        get: operations["get_render_job_api_v1_render__job_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Render Job
+         * @description Delete render job metadata. Output files are preserved on disk.
+         *
+         *     Args:
+         *         job_id: The render job UUID.
+         *         repo: Render repository dependency.
+         *
+         *     Returns:
+         *         The deleted render job.
+         *
+         *     Raises:
+         *         HTTPException: 404 if not found.
+         */
+        delete: operations["delete_render_job_api_v1_render__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Render Job
+         * @description Cancel a running or queued render job.
+         *
+         *     Terminates the active FFmpeg process via stdin 'q' and marks the job cancelled.
+         *
+         *     Args:
+         *         job_id: The render job UUID.
+         *         repo: Render repository dependency.
+         *         render_service: Render service dependency.
+         *
+         *     Returns:
+         *         Updated render job.
+         *
+         *     Raises:
+         *         HTTPException: 404 if not found, 409 if not cancellable.
+         */
+        post: operations["cancel_render_job_api_v1_render__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Render Job
+         * @description Retry a failed render job (transient failures only).
+         *
+         *     Requeues the job for re-execution. Rejects permanent failures
+         *     (jobs that have exceeded the max retry count).
+         *
+         *     Args:
+         *         job_id: The render job UUID.
+         *         repo: Render repository dependency.
+         *
+         *     Returns:
+         *         Updated render job in QUEUED status.
+         *
+         *     Raises:
+         *         HTTPException: 404 if not found, 409 if not retryable.
+         */
+        post: operations["retry_render_job_api_v1_render__job_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/{video_id}/thumbnails/strip": {
         parameters: {
             query?: never;
@@ -1718,6 +1998,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/gui": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gui Root
+         * @description Serve index.html for the bare /gui path.
+         */
+        get: operations["gui_root_gui_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gui/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gui Catch All
+         * @description Serve static files or fall back to index.html for SPA routing.
+         */
+        get: operations["gui_catch_all_gui__path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1933,6 +2253,51 @@ export interface components {
             timeline_position?: number | null;
         };
         /**
+         * CodecInfo
+         * @description Codec available within an output format, with quality presets.
+         */
+        CodecInfo: {
+            /**
+             * Name
+             * @description Codec identifier (e.g. h264, vp9)
+             */
+            name: string;
+            /**
+             * Quality Presets
+             * @description Bitrate mappings for each quality level
+             */
+            quality_presets: components["schemas"]["QualityPresetInfo"][];
+        };
+        /**
+         * CreateRenderRequest
+         * @description Request to start a new render job.
+         */
+        CreateRenderRequest: {
+            /**
+             * Project Id
+             * @description Project UUID to render
+             */
+            project_id: string;
+            /**
+             * Output Format
+             * @description Output container format
+             * @default mp4
+             */
+            output_format: string;
+            /**
+             * Quality Preset
+             * @description Quality preset
+             * @default standard
+             */
+            quality_preset: string;
+            /**
+             * Render Plan
+             * @description Serialized render plan JSON
+             * @default {}
+             */
+            render_plan: string;
+        };
+        /**
          * DirectoryEntry
          * @description A single directory entry in a listing.
          *
@@ -2099,6 +2464,89 @@ export interface components {
             parameters: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * EncoderInfoResponse
+         * @description Response representing a single detected encoder.
+         */
+        EncoderInfoResponse: {
+            /** Name */
+            name: string;
+            /** Codec */
+            codec: string;
+            /** Is Hardware */
+            is_hardware: boolean;
+            /** Encoder Type */
+            encoder_type: string;
+            /** Description */
+            description: string;
+            /**
+             * Detected At
+             * Format: date-time
+             */
+            detected_at: string;
+        };
+        /**
+         * EncoderListResponse
+         * @description List of detected encoders.
+         */
+        EncoderListResponse: {
+            /** Encoders */
+            encoders: components["schemas"]["EncoderInfoResponse"][];
+            /** Cached */
+            cached: boolean;
+        };
+        /**
+         * FormatInfo
+         * @description Output format metadata with capability flags and codec details.
+         */
+        FormatInfo: {
+            /**
+             * Format
+             * @description Format identifier (mp4, webm, mov, mkv)
+             */
+            format: string;
+            /**
+             * Extension
+             * @description File extension including dot (e.g. .mp4)
+             */
+            extension: string;
+            /**
+             * Mime Type
+             * @description MIME type for the container format
+             */
+            mime_type: string;
+            /**
+             * Codecs
+             * @description Codecs supported by this container format
+             */
+            codecs: components["schemas"]["CodecInfo"][];
+            /**
+             * Supports Hw Accel
+             * @description Whether hardware-accelerated encoding is available
+             */
+            supports_hw_accel: boolean;
+            /**
+             * Supports Two Pass
+             * @description Whether two-pass encoding is supported
+             */
+            supports_two_pass: boolean;
+            /**
+             * Supports Alpha
+             * @description Whether the format supports alpha channel transparency
+             */
+            supports_alpha: boolean;
+        };
+        /**
+         * FormatListResponse
+         * @description All available output formats with codec and quality preset details.
+         */
+        FormatListResponse: {
+            /**
+             * Formats
+             * @description Available output formats for rendering
+             */
+            formats: components["schemas"]["FormatInfo"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2460,6 +2908,118 @@ export interface components {
             file_size_bytes: number;
             /** Generated At */
             generated_at?: string | null;
+        };
+        /**
+         * QualityPresetInfo
+         * @description Bitrate settings for a single quality preset.
+         */
+        QualityPresetInfo: {
+            /**
+             * Preset
+             * @description Quality preset name (draft, standard, high)
+             */
+            preset: string;
+            /**
+             * Video Bitrate Kbps
+             * @description Target video bitrate in kilobits per second
+             */
+            video_bitrate_kbps: number;
+        };
+        /**
+         * QueueStatusResponse
+         * @description Render queue status with capacity, disk space, and throughput metrics.
+         */
+        QueueStatusResponse: {
+            /**
+             * Active Count
+             * @description Number of currently running render jobs
+             */
+            active_count: number;
+            /**
+             * Pending Count
+             * @description Number of queued jobs waiting to run
+             */
+            pending_count: number;
+            /**
+             * Max Concurrent
+             * @description Maximum simultaneous running jobs
+             */
+            max_concurrent: number;
+            /**
+             * Max Queue Depth
+             * @description Maximum queued jobs before rejection
+             */
+            max_queue_depth: number;
+            /**
+             * Disk Available Bytes
+             * @description Available disk space in the render output directory
+             */
+            disk_available_bytes: number;
+            /**
+             * Disk Total Bytes
+             * @description Total disk space on the render output volume
+             */
+            disk_total_bytes: number;
+            /**
+             * Completed Today
+             * @description Jobs completed since midnight UTC
+             */
+            completed_today: number;
+            /**
+             * Failed Today
+             * @description Jobs failed since midnight UTC
+             */
+            failed_today: number;
+        };
+        /**
+         * RenderJobResponse
+         * @description Response representing a single render job.
+         */
+        RenderJobResponse: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /** Status */
+            status: string;
+            /** Output Path */
+            output_path: string;
+            /** Output Format */
+            output_format: string;
+            /** Quality Preset */
+            quality_preset: string;
+            /** Progress */
+            progress: number;
+            /** Error Message */
+            error_message?: string | null;
+            /** Retry Count */
+            retry_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Completed At */
+            completed_at?: string | null;
+        };
+        /**
+         * RenderListResponse
+         * @description Paginated list of render jobs.
+         */
+        RenderListResponse: {
+            /** Items */
+            items: components["schemas"]["RenderJobResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
         };
         /**
          * RestoreResponse
@@ -4566,6 +5126,279 @@ export interface operations {
             };
         };
     };
+    list_render_jobs_api_v1_render_get: {
+        parameters: {
+            query?: {
+                /** @description Maximum results */
+                limit?: number;
+                /** @description Number of results to skip */
+                offset?: number;
+                /** @description Filter by status */
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_render_job_api_v1_render_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRenderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_encoders_api_v1_render_encoders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncoderListResponse"];
+                };
+            };
+        };
+    };
+    refresh_encoders_api_v1_render_encoders_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncoderListResponse"];
+                };
+            };
+        };
+    };
+    get_output_formats_api_v1_render_formats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormatListResponse"];
+                };
+            };
+        };
+    };
+    get_queue_status_api_v1_render_queue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueStatusResponse"];
+                };
+            };
+        };
+    };
+    get_render_job_api_v1_render__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_render_job_api_v1_render__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_render_job_api_v1_render__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_render_job_api_v1_render__job_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_strip_metadata_api_v1_videos__video_id__thumbnails_strip_get: {
         parameters: {
             query?: never;
@@ -4881,6 +5714,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WaveformSamplesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gui_root_gui_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    gui_catch_all_gui__path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
