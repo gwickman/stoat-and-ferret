@@ -1039,3 +1039,125 @@ class TestEncoderContract:
         assert enc["is_hardware"] == entries[0].is_hardware
         assert enc["encoder_type"] == entries[0].encoder_type
         assert enc["description"] == entries[0].description
+
+
+# ---------- GET /render/formats ----------
+
+
+class TestGetOutputFormats:
+    """Tests for GET /render/formats discovery endpoint."""
+
+    def test_returns_all_four_formats(self, render_client: TestClient) -> None:
+        """GET /render/formats returns MP4, WEBM, MOV, MKV."""
+        resp = render_client.get("/api/v1/render/formats")
+        assert resp.status_code == 200
+        data = resp.json()
+        format_names = {f["format"] for f in data["formats"]}
+        assert format_names == {"mp4", "webm", "mov", "mkv"}
+
+    def test_format_extensions_and_mime_types(self, render_client: TestClient) -> None:
+        """Each format has correct file extension and MIME type."""
+        resp = render_client.get("/api/v1/render/formats")
+        formats = {f["format"]: f for f in resp.json()["formats"]}
+
+        assert formats["mp4"]["extension"] == ".mp4"
+        assert formats["mp4"]["mime_type"] == "video/mp4"
+        assert formats["webm"]["extension"] == ".webm"
+        assert formats["webm"]["mime_type"] == "video/webm"
+        assert formats["mov"]["extension"] == ".mov"
+        assert formats["mov"]["mime_type"] == "video/quicktime"
+        assert formats["mkv"]["extension"] == ".mkv"
+        assert formats["mkv"]["mime_type"] == "video/x-matroska"
+
+    def test_codecs_present_per_format(self, render_client: TestClient) -> None:
+        """Each format includes at least one codec."""
+        resp = render_client.get("/api/v1/render/formats")
+        for fmt in resp.json()["formats"]:
+            assert len(fmt["codecs"]) >= 1, f"{fmt['format']} has no codecs"
+            for codec in fmt["codecs"]:
+                assert "name" in codec
+                assert isinstance(codec["name"], str)
+
+    def test_capability_flags_present(self, render_client: TestClient) -> None:
+        """Each format has boolean capability flags."""
+        resp = render_client.get("/api/v1/render/formats")
+        for fmt in resp.json()["formats"]:
+            assert isinstance(fmt["supports_hw_accel"], bool)
+            assert isinstance(fmt["supports_two_pass"], bool)
+            assert isinstance(fmt["supports_alpha"], bool)
+
+    def test_capability_flag_values(self, render_client: TestClient) -> None:
+        """Capability flags are accurate per format."""
+        resp = render_client.get("/api/v1/render/formats")
+        formats = {f["format"]: f for f in resp.json()["formats"]}
+
+        # MP4 does not support alpha
+        assert formats["mp4"]["supports_hw_accel"] is True
+        assert formats["mp4"]["supports_alpha"] is False
+
+        # WebM does not support hw accel
+        assert formats["webm"]["supports_hw_accel"] is False
+        assert formats["webm"]["supports_alpha"] is True
+
+    def test_quality_presets_per_codec(self, render_client: TestClient) -> None:
+        """Each codec includes DRAFT, STANDARD, HIGH quality presets with bitrates."""
+        resp = render_client.get("/api/v1/render/formats")
+        expected_presets = {"draft", "standard", "high"}
+
+        for fmt in resp.json()["formats"]:
+            for codec in fmt["codecs"]:
+                preset_names = {p["preset"] for p in codec["quality_presets"]}
+                assert preset_names == expected_presets, (
+                    f"{fmt['format']}/{codec['name']} missing presets: "
+                    f"{expected_presets - preset_names}"
+                )
+                for preset in codec["quality_presets"]:
+                    assert isinstance(preset["video_bitrate_kbps"], int)
+                    assert preset["video_bitrate_kbps"] > 0
+
+    def test_no_dependencies_required(self) -> None:
+        """Format endpoint works without render_service or database (NFR-001)."""
+        app = create_app()
+        with TestClient(app) as client:
+            resp = client.get("/api/v1/render/formats")
+        assert resp.status_code == 200
+        assert len(resp.json()["formats"]) == 4
+
+
+class TestFormatContract:
+    """Contract tests for format discovery response schema."""
+
+    def test_response_schema_all_formats_present(self, render_client: TestClient) -> None:
+        """Contract: all 4 OutputFormat variants present with required fields."""
+        resp = render_client.get("/api/v1/render/formats")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert "formats" in data
+        assert len(data["formats"]) == 4
+
+        required_format_fields = {
+            "format",
+            "extension",
+            "mime_type",
+            "codecs",
+            "supports_hw_accel",
+            "supports_two_pass",
+            "supports_alpha",
+        }
+        required_codec_fields = {"name", "quality_presets"}
+        required_preset_fields = {"preset", "video_bitrate_kbps"}
+
+        for fmt in data["formats"]:
+            assert set(fmt.keys()) == required_format_fields
+            for codec in fmt["codecs"]:
+                assert set(codec.keys()) == required_codec_fields
+                for preset in codec["quality_presets"]:
+                    assert set(preset.keys()) == required_preset_fields
+
+    def test_format_values_match_output_format_enum(self, render_client: TestClient) -> None:
+        """Contract: format identifiers match OutputFormat enum values."""
+        resp = render_client.get("/api/v1/render/formats")
+        format_names = {f["format"] for f in resp.json()["formats"]}
+        enum_values = {f.value for f in OutputFormat}
+        assert format_names == enum_values

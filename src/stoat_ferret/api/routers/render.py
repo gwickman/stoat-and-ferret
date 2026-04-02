@@ -21,9 +21,13 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from stoat_ferret.api.schemas.render import (
+    CodecInfo,
     CreateRenderRequest,
     EncoderInfoResponse,
     EncoderListResponse,
+    FormatInfo,
+    FormatListResponse,
+    QualityPresetInfo,
     RenderJobResponse,
     RenderListResponse,
 )
@@ -427,6 +431,103 @@ async def refresh_encoders(
         encoders=[_entry_to_response(e) for e in entries],
         cached=False,
     )
+
+
+# ---------- Format discovery ----------
+# Static data: no persistence, no lifespan dependency (NFR-001).
+
+_QUALITY_PRESETS: dict[str, list[QualityPresetInfo]] = {
+    "h264": [
+        QualityPresetInfo(preset="draft", video_bitrate_kbps=1_500),
+        QualityPresetInfo(preset="standard", video_bitrate_kbps=5_000),
+        QualityPresetInfo(preset="high", video_bitrate_kbps=15_000),
+    ],
+    "h265": [
+        QualityPresetInfo(preset="draft", video_bitrate_kbps=1_000),
+        QualityPresetInfo(preset="standard", video_bitrate_kbps=3_500),
+        QualityPresetInfo(preset="high", video_bitrate_kbps=10_000),
+    ],
+    "vp8": [
+        QualityPresetInfo(preset="draft", video_bitrate_kbps=1_500),
+        QualityPresetInfo(preset="standard", video_bitrate_kbps=5_000),
+        QualityPresetInfo(preset="high", video_bitrate_kbps=12_000),
+    ],
+    "vp9": [
+        QualityPresetInfo(preset="draft", video_bitrate_kbps=1_000),
+        QualityPresetInfo(preset="standard", video_bitrate_kbps=3_500),
+        QualityPresetInfo(preset="high", video_bitrate_kbps=10_000),
+    ],
+    "prores": [
+        QualityPresetInfo(preset="draft", video_bitrate_kbps=30_000),
+        QualityPresetInfo(preset="standard", video_bitrate_kbps=60_000),
+        QualityPresetInfo(preset="high", video_bitrate_kbps=120_000),
+    ],
+}
+
+_FORMAT_DATA: list[FormatInfo] = [
+    FormatInfo(
+        format="mp4",
+        extension=".mp4",
+        mime_type="video/mp4",
+        codecs=[
+            CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
+            CodecInfo(name="h265", quality_presets=_QUALITY_PRESETS["h265"]),
+        ],
+        supports_hw_accel=True,
+        supports_two_pass=True,
+        supports_alpha=False,
+    ),
+    FormatInfo(
+        format="webm",
+        extension=".webm",
+        mime_type="video/webm",
+        codecs=[
+            CodecInfo(name="vp8", quality_presets=_QUALITY_PRESETS["vp8"]),
+            CodecInfo(name="vp9", quality_presets=_QUALITY_PRESETS["vp9"]),
+        ],
+        supports_hw_accel=False,
+        supports_two_pass=True,
+        supports_alpha=True,
+    ),
+    FormatInfo(
+        format="mov",
+        extension=".mov",
+        mime_type="video/quicktime",
+        codecs=[
+            CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
+            CodecInfo(name="prores", quality_presets=_QUALITY_PRESETS["prores"]),
+        ],
+        supports_hw_accel=True,
+        supports_two_pass=True,
+        supports_alpha=True,
+    ),
+    FormatInfo(
+        format="mkv",
+        extension=".mkv",
+        mime_type="video/x-matroska",
+        codecs=[
+            CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
+            CodecInfo(name="h265", quality_presets=_QUALITY_PRESETS["h265"]),
+            CodecInfo(name="vp9", quality_presets=_QUALITY_PRESETS["vp9"]),
+        ],
+        supports_hw_accel=True,
+        supports_two_pass=True,
+        supports_alpha=True,
+    ),
+]
+
+
+@router.get("/render/formats", response_model=FormatListResponse)
+async def get_output_formats() -> FormatListResponse:
+    """Return all supported output formats with codecs, capability flags, and quality presets.
+
+    Static data endpoint — no database or external dependencies required.
+    Designed for AI discoverability with self-documenting field names.
+
+    Returns:
+        All available output formats with codec and quality preset details.
+    """
+    return FormatListResponse(formats=_FORMAT_DATA)
 
 
 # ---------- Render job endpoints ----------
