@@ -12,7 +12,6 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from prometheus_client import REGISTRY
 
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
@@ -226,10 +225,6 @@ class TestDurationHistogram:
         with _PATCH_NO_RUST:
             service, repo, ws, executor = _build_service()
 
-            sample_before = (
-                REGISTRY.get_sample_value("stoat_ferret_render_duration_seconds_count") or 0.0
-            )
-
             job = await service.submit_job(
                 project_id="proj-1",
                 output_path="/tmp/out.mp4",
@@ -239,12 +234,12 @@ class TestDurationHistogram:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
-            await service.run_job(job, ["ffmpeg"])
 
-            sample_after = (
-                REGISTRY.get_sample_value("stoat_ferret_render_duration_seconds_count") or 0.0
-            )
-            assert sample_after > sample_before
+            with patch("stoat_ferret.render.service.render_duration_seconds") as mock_histogram:
+                await service.run_job(job, ["ffmpeg"])
+                mock_histogram.observe.assert_called_once()
+                observed_value = mock_histogram.observe.call_args[0][0]
+                assert observed_value > 0
 
 
 # ---------------------------------------------------------------------------
