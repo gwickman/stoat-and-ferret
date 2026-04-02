@@ -29,8 +29,18 @@ _PATCH_NO_RUST_EXECUTOR = patch("stoat_ferret.render.executor._HAS_RUST_BINDINGS
 
 @pytest.fixture(autouse=True)
 def _reset_structlog() -> None:
-    """Reset structlog so capture_logs() works after configure_logging()."""
+    """Reset structlog so capture_logs() works after configure_logging().
+
+    Module-level loggers cache the bound logger when cache_logger_on_first_use
+    is True. Clearing _logger forces re-resolution on next use.
+    """
+    from stoat_ferret.render import executor as _executor_mod
+    from stoat_ferret.render import queue as _queue_mod
+    from stoat_ferret.render import service as _service_mod
+
     structlog.reset_defaults()
+    for mod in (_service_mod, _executor_mod, _queue_mod):
+        mod.logger._logger = None
 
 
 def _make_plan_json(
