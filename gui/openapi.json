@@ -3217,6 +3217,61 @@
           }
         }
       }
+    },
+    "/gui": {
+      "get": {
+        "summary": "Gui Root",
+        "description": "Serve index.html for the bare /gui path.",
+        "operationId": "gui_root_gui_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gui/{path}": {
+      "get": {
+        "summary": "Gui Catch All",
+        "description": "Serve static files or fall back to index.html for SPA routing.",
+        "operationId": "gui_catch_all_gui__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
