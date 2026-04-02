@@ -226,9 +226,9 @@ class TestDurationHistogram:
         with _PATCH_NO_RUST:
             service, repo, ws, executor = _build_service()
 
-            sample_before = REGISTRY.get_sample_value(
-                "stoat_ferret_render_duration_seconds_count"
-            ) or 0.0
+            sample_before = (
+                REGISTRY.get_sample_value("stoat_ferret_render_duration_seconds_count") or 0.0
+            )
 
             job = await service.submit_job(
                 project_id="proj-1",
@@ -241,9 +241,9 @@ class TestDurationHistogram:
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
-            sample_after = REGISTRY.get_sample_value(
-                "stoat_ferret_render_duration_seconds_count"
-            ) or 0.0
+            sample_after = (
+                REGISTRY.get_sample_value("stoat_ferret_render_duration_seconds_count") or 0.0
+            )
             assert sample_after > sample_before
 
 
