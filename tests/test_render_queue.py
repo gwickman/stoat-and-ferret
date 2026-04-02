@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+import structlog
 from structlog.testing import capture_logs
 
 from stoat_ferret.render.models import (
@@ -201,6 +202,11 @@ class TestRecovery:
 
 class TestStructuredLogging:
     """Tests for structured log events."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_structlog(self) -> None:
+        """Reset structlog so capture_logs() works after other tests configure it."""
+        structlog.reset_defaults()
 
     async def test_enqueue_logs_event(self, queue: RenderQueue) -> None:
         """Enqueue emits a render_queue.enqueue log event."""
