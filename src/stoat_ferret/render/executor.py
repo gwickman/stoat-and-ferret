@@ -246,10 +246,12 @@ class RenderExecutor:
 
         success = process.returncode == 0
 
-        # Capture and log stderr on failure for post-mortem analysis
+        # Capture and log stderr on failure for post-mortem analysis.
+        # Use a timeout to avoid blocking on Python 3.10 where pipe
+        # reads can hang after process cancellation/kill.
         if not success and process.stderr is not None:
             try:
-                stderr_data = await process.stderr.read()
+                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=2.0)
                 stderr_text = stderr_data.decode("utf-8", errors="replace").strip()
                 if stderr_text:
                     logger.error(
@@ -258,7 +260,7 @@ class RenderExecutor:
                         stderr=stderr_text,
                         returncode=process.returncode,
                     )
-            except Exception:
+            except (asyncio.TimeoutError, Exception):
                 logger.debug(
                     "render_executor.stderr_read_failed",
                     job_id=job_id,
