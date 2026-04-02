@@ -67,3 +67,41 @@ class EncoderListResponse(BaseModel):
 
     encoders: list[EncoderInfoResponse]
     cached: bool
+
+
+class QualityPresetInfo(BaseModel):
+    """Bitrate settings for a single quality preset."""
+
+    preset: str = Field(..., description="Quality preset name (draft, standard, high)")
+    video_bitrate_kbps: int = Field(..., description="Target video bitrate in kilobits per second")
+
+
+class CodecInfo(BaseModel):
+    """Codec available within an output format, with quality presets."""
+
+    name: str = Field(..., description="Codec identifier (e.g. h264, vp9)")
+    quality_presets: list[QualityPresetInfo] = Field(
+        ..., description="Bitrate mappings for each quality level"
+    )
+
+
+class FormatInfo(BaseModel):
+    """Output format metadata with capability flags and codec details."""
+
+    format: str = Field(..., description="Format identifier (mp4, webm, mov, mkv)")
+    extension: str = Field(..., description="File extension including dot (e.g. .mp4)")
+    mime_type: str = Field(..., description="MIME type for the container format")
+    codecs: list[CodecInfo] = Field(..., description="Codecs supported by this container format")
+    supports_hw_accel: bool = Field(
+        ..., description="Whether hardware-accelerated encoding is available"
+    )
+    supports_two_pass: bool = Field(..., description="Whether two-pass encoding is supported")
+    supports_alpha: bool = Field(
+        ..., description="Whether the format supports alpha channel transparency"
+    )
+
+
+class FormatListResponse(BaseModel):
+    """All available output formats with codec and quality preset details."""
+
+    formats: list[FormatInfo] = Field(..., description="Available output formats for rendering")

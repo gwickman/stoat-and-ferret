@@ -2498,6 +2498,28 @@
         }
       }
     },
+    "/api/v1/render/formats": {
+      "get": {
+        "tags": [
+          "render"
+        ],
+        "summary": "Get Output Formats",
+        "description": "Return all supported output formats with codecs, capability flags, and quality presets.\n\nStatic data endpoint \u2014 no database or external dependencies required.\nDesigned for AI discoverability with self-documenting field names.\n\nReturns:\n    All available output formats with codec and quality preset details.",
+        "operationId": "get_output_formats_api_v1_render_formats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormatListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/render/{job_id}": {
       "get": {
         "tags": [
@@ -3565,6 +3587,30 @@
         "title": "ClipUpdate",
         "description": "Update clip request."
       },
+      "CodecInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Codec identifier (e.g. h264, vp9)"
+          },
+          "quality_presets": {
+            "items": {
+              "$ref": "#/components/schemas/QualityPresetInfo"
+            },
+            "type": "array",
+            "title": "Quality Presets",
+            "description": "Bitrate mappings for each quality level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "quality_presets"
+        ],
+        "title": "CodecInfo",
+        "description": "Codec available within an output format, with quality presets."
+      },
       "CreateRenderRequest": {
         "properties": {
           "project_id": {
@@ -3963,6 +4009,78 @@
         ],
         "title": "EncoderListResponse",
         "description": "List of detected encoders."
+      },
+      "FormatInfo": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Format identifier (mp4, webm, mov, mkv)"
+          },
+          "extension": {
+            "type": "string",
+            "title": "Extension",
+            "description": "File extension including dot (e.g. .mp4)"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type for the container format"
+          },
+          "codecs": {
+            "items": {
+              "$ref": "#/components/schemas/CodecInfo"
+            },
+            "type": "array",
+            "title": "Codecs",
+            "description": "Codecs supported by this container format"
+          },
+          "supports_hw_accel": {
+            "type": "boolean",
+            "title": "Supports Hw Accel",
+            "description": "Whether hardware-accelerated encoding is available"
+          },
+          "supports_two_pass": {
+            "type": "boolean",
+            "title": "Supports Two Pass",
+            "description": "Whether two-pass encoding is supported"
+          },
+          "supports_alpha": {
+            "type": "boolean",
+            "title": "Supports Alpha",
+            "description": "Whether the format supports alpha channel transparency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "extension",
+          "mime_type",
+          "codecs",
+          "supports_hw_accel",
+          "supports_two_pass",
+          "supports_alpha"
+        ],
+        "title": "FormatInfo",
+        "description": "Output format metadata with capability flags and codec details."
+      },
+      "FormatListResponse": {
+        "properties": {
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/FormatInfo"
+            },
+            "type": "array",
+            "title": "Formats",
+            "description": "Available output formats for rendering"
+          }
+        },
+        "type": "object",
+        "required": [
+          "formats"
+        ],
+        "title": "FormatListResponse",
+        "description": "All available output formats with codec and quality preset details."
       },
       "HTTPValidationError": {
         "properties": {
@@ -4626,6 +4744,27 @@
         ],
         "title": "ProxyResponse",
         "description": "Single proxy status response."
+      },
+      "QualityPresetInfo": {
+        "properties": {
+          "preset": {
+            "type": "string",
+            "title": "Preset",
+            "description": "Quality preset name (draft, standard, high)"
+          },
+          "video_bitrate_kbps": {
+            "type": "integer",
+            "title": "Video Bitrate Kbps",
+            "description": "Target video bitrate in kilobits per second"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preset",
+          "video_bitrate_kbps"
+        ],
+        "title": "QualityPresetInfo",
+        "description": "Bitrate settings for a single quality preset."
       },
       "RenderJobResponse": {
         "properties": {
