@@ -215,7 +215,11 @@ class TestStructuredLogging:
         bound loggers before each test.
         """
         structlog.reset_defaults()
-        structlog.configure(cache_logger_on_first_use=False)
+        # Force the queue module to get a fresh logger proxy so that
+        # any cached BoundLogger from a prior configure() is replaced.
+        from stoat_ferret.render import queue as queue_mod
+
+        queue_mod.logger = structlog.get_logger(queue_mod.__name__)
         yield
         structlog.reset_defaults()
 
