@@ -6,7 +6,7 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 
 ## Responsibilities
 
-- Accept and route HTTP requests across all domain areas: videos, projects, clips, effects, composition, audio, timeline, batch rendering, version history, preview sessions, proxy generation, thumbnail strips, and waveforms
+- Accept and route HTTP requests across all domain areas: videos, projects, clips, effects, composition, audio, timeline, batch rendering, version history, preview sessions, proxy generation, thumbnail strips, waveforms, and render jobs
 - Enforce per-request correlation ID generation and Prometheus metrics collection via middleware
 - Manage application lifecycle: database initialization, job queue startup, audit logger creation, and graceful shutdown
 - Serve the React SPA as static files with a catch-all fallback route for client-side routing (FR-003)
@@ -17,7 +17,9 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 - Manage HLS preview session lifecycle: start, status, seek, stop, manifest and segment serving
 - Manage proxy video generation with quality selection, storage quota, and LRU eviction
 - Generate and serve thumbnail sprite strips and audio waveforms (PNG and JSON formats)
-- Implement degraded health check semantics for non-critical subsystems (LRN-136): preview and proxy checks return HTTP 200 with `"degraded"` status rather than HTTP 503
+- Implement degraded health check semantics for non-critical subsystems (LRN-136): preview, proxy, and render checks return HTTP 200 with `"degraded"` status rather than HTTP 503
+- Manage render job lifecycle: submit, query, cancel, retry, delete render jobs; encoder detection and caching; queue status monitoring
+- Orchestrate graceful render shutdown: reject new requests, cancel active renders, wait grace period, force-kill, clean temp files
 
 ## Interfaces
 
@@ -42,13 +44,14 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 | Proxy | `/api/v1/videos/{id}/proxy`, `/api/v1/proxy/batch` | GET, POST, DELETE |
 | Thumbnails | `/api/v1/videos/{id}/thumbnails/strip`, `/api/v1/videos/{id}/thumbnails/strip.jpg` | GET, POST |
 | Waveform | `/api/v1/videos/{id}/waveform`, `/api/v1/videos/{id}/waveform.png`, `/api/v1/videos/{id}/waveform.json` | GET, POST |
+| Render | `/api/v1/render`, `/api/v1/render/{job_id}`, `/api/v1/render/{job_id}/cancel`, `/api/v1/render/{job_id}/retry`, `/api/v1/render/encoders`, `/api/v1/render/encoders/refresh`, `/api/v1/render/formats`, `/api/v1/render/queue` | GET, POST, DELETE |
 | SPA | `/gui`, `/gui/{path}` | GET |
 | Metrics | `/metrics` | GET (Prometheus text) |
 
 **WebSocket**
 - `GET /ws` — Persistent connection for real-time event broadcasting
 
-**WebSocket Events Broadcast (17 event types)**
+**WebSocket Events Broadcast (25 event types)**
 - `HEALTH_STATUS` — Health or readiness status changes
 - `SCAN_STARTED` — Directory scan initiated
 - `SCAN_COMPLETED` — Directory scan finished with video count
@@ -64,7 +67,14 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 - `PREVIEW_SEEKING` — Preview session seek in progress (v019+)
 - `PREVIEW_ERROR` — Preview session error (v019+)
 - `AI_ACTION` — AI-driven action notification (v025+)
-- `RENDER_PROGRESS` — Render progress update (v025+)
+- `RENDER_QUEUED` — Render job added to queue (v029+)
+- `RENDER_STARTED` — Render job execution started (v029+)
+- `RENDER_PROGRESS` — Render job progress update, throttled: 0.5s + 5% delta (v029+)
+- `RENDER_FRAME_AVAILABLE` — Render frame preview, max 2/s (v029+)
+- `RENDER_COMPLETED` — Render job finished successfully (v029+)
+- `RENDER_FAILED` — Render job failed permanently (v029+)
+- `RENDER_CANCELLED` — Render job cancelled by user (v029+)
+- `RENDER_QUEUE_STATUS` — Queue capacity snapshot (v029+)
 - `PROXY_READY` — Proxy video generation complete (v025+)
 
 **HTTP Response Headers**
@@ -77,6 +87,7 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 - **FFmpeg Integration component** — `ObservableFFmpegExecutor` for thumbnail generation; `AsyncFFmpegExecutor` for proxy transcoding and preview HLS generation; `ffprobe_video()` for metadata extraction during directory scans
 - **Effects Engine component** — `EffectRegistry` for effect discovery, parameter validation, and filter string generation
 - **Job Queue component** — `AsyncioJobQueue` for submitting and tracking background scan, render, and proxy generation jobs
+- **Render Engine component** — `RenderService` for job lifecycle orchestration, `RenderQueue` for queue status, `AsyncRenderRepository` for job persistence, `AsyncEncoderCacheRepository` for encoder detection caching
 
 ## Code Modules
 
@@ -102,14 +113,15 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 | Router: Proxy | `src/stoat_ferret/api/routers/proxy.py` | Proxy video generation (single and batch), status, deletion |
 | Router: Thumbnails | `src/stoat_ferret/api/routers/thumbnails.py` | Thumbnail sprite strip generation, metadata, and JPEG serving |
 | Router: Waveform | `src/stoat_ferret/api/routers/waveform.py` | Audio waveform generation (PNG and JSON), metadata, and file serving |
+| Router: Render | `src/stoat_ferret/api/routers/render.py` | Render job lifecycle (submit, query, cancel, retry, delete), encoder management, queue status |
 | Router: WebSocket | `src/stoat_ferret/api/routers/ws.py` | WebSocket endpoint, heartbeat loop, graceful disconnection |
 | WebSocket Manager | `src/stoat_ferret/api/websocket/manager.py` | `ConnectionManager` — set-based connection tracking, thread-safe broadcast with dead-connection cleanup |
-| WebSocket Events | `src/stoat_ferret/api/websocket/events.py` | `EventType` enum (17 event types), `build_event()` helper with correlation ID and ISO timestamp |
+| WebSocket Events | `src/stoat_ferret/api/websocket/events.py` | `EventType` enum (25 event types), `build_event()` helper with correlation ID and ISO timestamp |
 | Scan Service | `src/stoat_ferret/api/services/scan.py` | Directory walking, ffprobe metadata extraction, thumbnail generation, progress/cancellation, WebSocket events |
 | Thumbnail Service | `src/stoat_ferret/api/services/thumbnail.py` | FFmpeg frame extraction at 5-second offset, JPEG output |
 | Proxy Service | `src/stoat_ferret/api/services/proxy_service.py` | Proxy video management with 3-tier quality selection, storage quota (10GB), LRU eviction, stale detection |
 | Waveform Service | `src/stoat_ferret/api/services/waveform.py` | Waveform generation: PNG via showwavespic, JSON via ffprobe astats; in-memory caching |
-| Schemas | `src/stoat_ferret/api/schemas/` | Pydantic request/response models for all domains (Video, Project, Clip, Job, Effect, Audio, Batch, Compose, Timeline, Version, Filesystem, Preview, Thumbnail, Waveform) |
+| Schemas | `src/stoat_ferret/api/schemas/` | Pydantic request/response models for all domains (Video, Project, Clip, Job, Effect, Audio, Batch, Compose, Timeline, Version, Filesystem, Preview, Thumbnail, Waveform, Render) |
 
 ## Key Behaviors
 
@@ -125,7 +137,11 @@ The API Gateway component is the primary HTTP entry point for the stoat-and-ferr
 
 **Path Security:** The filesystem and scan endpoints validate that requested paths fall within the `allowed_scan_roots` setting. An empty `allowed_scan_roots` list permits all paths. The filesystem directories endpoint supports pagination via `limit` (1–100, default 20) and `offset` query parameters.
 
-**Degraded Health Check Semantics (LRN-136):** The readiness endpoint classifies subsystem checks as critical or non-critical. Critical checks (database, FFmpeg) cause HTTP 503. Non-critical checks (preview cache >90% usage, proxy directory writability) return HTTP 200 with `"degraded"` status, keeping optional subsystem visibility in monitoring dashboards without triggering false alerts.
+**Degraded Health Check Semantics (LRN-136):** The readiness endpoint classifies subsystem checks as critical or non-critical. Critical checks (database, FFmpeg) cause HTTP 503. Non-critical checks (preview cache >90% usage, proxy directory writability, render queue/disk thresholds) return HTTP 200 with `"degraded"` status, keeping optional subsystem visibility in monitoring dashboards without triggering false alerts.
+
+**Render Job Lifecycle:** `POST /api/v1/render` submits a render job through pre-flight validation (settings, disk space, queue capacity), queuing, and execution. Jobs progress through the state machine (QUEUED -> RUNNING -> COMPLETED|FAILED|CANCELLED) with retry support. Asyncio locks serialize state transitions and encoder refresh to prevent race conditions.
+
+**Graceful Render Shutdown:** During application shutdown, the lifespan manager initiates a multi-phase render shutdown: set shutdown flag (reject new requests), send stdin 'q' to active FFmpeg processes, wait configurable grace period (default 10s), force-kill remaining processes, clean up temporary files.
 
 **Preview Session Lifecycle:** `POST /api/v1/projects/{id}/preview/start` returns 202 Accepted with a session ID. Clients poll status until `ready`, then fetch the HLS manifest and segments. Sessions can be seeked, stopped, and expire after a configurable TTL. Session limits enforce a maximum number of concurrent sessions (429 Too Many Requests).
 
@@ -146,6 +162,7 @@ API Gateway
     |-- calls --> FFmpeg Integration (thumbnail gen, video probe, async proxy/preview transcoding)
     |-- delegates jobs --> Job Queue (scan, batch render, proxy generation)
     |-- looks up effects --> Effects Engine (registry, filter strings)
+    |-- manages render --> Render Engine (submit, cancel, retry, queue status, encoder cache)
 ```
 
 ## Version History
@@ -159,3 +176,4 @@ API Gateway
 | v016 | Added `router-versions.md` (version listing, non-destructive restore); added `TRANSITION_APPLIED` WebSocket event from timeline router |
 | v017 | Added `router-batch.md` (batch render submission and progress tracking) |
 | v027 | Added preview, proxy, thumbnails, waveform routers and services; expanded WebSocket events to 17 types; documented degraded health check semantics (LRN-136); documented compose presets positions field (FR-004) |
+| v029 | Added render router (job lifecycle, encoder management, queue status); expanded WebSocket events to 25 types (8 render events); updated health check for render subsystem; added graceful render shutdown to lifespan; added Render Engine as required interface |

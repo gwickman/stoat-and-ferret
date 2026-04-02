@@ -27,7 +27,14 @@ Event type definitions and message schema for WebSocket broadcasting. Provides s
   - `PREVIEW_SEEKING`: Preview seek position changed
   - `PREVIEW_ERROR`: Preview generation error occurred
   - `AI_ACTION`: AI-assisted action executed
-  - `RENDER_PROGRESS`: Batch render job progress update
+  - `RENDER_QUEUED`: Render job added to queue
+  - `RENDER_STARTED`: Render job execution started
+  - `RENDER_PROGRESS`: Render job progress update (throttled: 0.5s interval + 5% delta)
+  - `RENDER_FRAME_AVAILABLE`: Render frame preview available (540p JPEG, max 2/s)
+  - `RENDER_COMPLETED`: Render job finished successfully
+  - `RENDER_FAILED`: Render job failed permanently (after retries exhausted)
+  - `RENDER_CANCELLED`: Render job cancelled by user
+  - `RENDER_QUEUE_STATUS`: Queue capacity/status snapshot
   - `PROXY_READY`: Proxy video file ready for use
 
 ### Functions
@@ -59,5 +66,6 @@ Event type definitions and message schema for WebSocket broadcasting. Provides s
 
 ## Relationships
 
-- **Used by**: WebSocket endpoint, all routers (projects, effects, compose, audio, timeline, videos) for event broadcasting
+- **Used by**: WebSocket endpoint, all routers (projects, effects, compose, audio, timeline, videos, render) for event broadcasting
 - **Used with**: ConnectionManager for sending events to clients
+- **Render events**: RenderService broadcasts RENDER_QUEUED, RENDER_STARTED, RENDER_PROGRESS, RENDER_FRAME_AVAILABLE, RENDER_COMPLETED, RENDER_FAILED, RENDER_CANCELLED via throttled callbacks

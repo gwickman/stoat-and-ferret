@@ -11,7 +11,7 @@ Provides the FastAPI application factory (`create_app()`) and lifespan managemen
 
 ### Functions
 
-- `lifespan(app: FastAPI) -> AsyncGenerator[None, None]`: Async context manager handling startup (database initialization, audit logger setup, job queue creation and worker start) and shutdown (job cancellation, database closure). Skips setup when dependencies are injected for test mode.
+- `lifespan(app: FastAPI) -> AsyncGenerator[None, None]`: Async context manager handling startup (database initialization, audit logger setup, job queue creation and worker start, render service initialization with queue/executor/checkpoint recovery) and graceful shutdown (render shutdown flag, cancel active renders via stdin 'q', wait grace period, force-kill remaining, clean temp files, cancel preview sessions, stop cleanup tasks, cancel job worker, close database). Skips setup when dependencies are injected for test mode.
 
 - `create_app(video_repository=None, project_repository=None, clip_repository=None, timeline_repository=None, version_repository=None, job_queue=None, ws_manager=None, effect_registry=None, ffmpeg_executor=None, audit_logger=None, gui_static_path=None) -> FastAPI`: Creates and configures the FastAPI application instance with all routers, middleware, metrics endpoint, and optional SPA catch-all routing. Accepts optional dependency injection parameters for testing.
 
@@ -32,6 +32,12 @@ The app supports two modes:
    - `app.state.thumbnail_service`: ThumbnailService for sprite sheet generation
    - `app.state.waveform_service`: WaveformService for PNG/JSON waveform generation
    - `app.state.proxy_service`: ProxyService for proxy video generation and quota management
+   - `app.state.render_service`: RenderService for render job orchestration
+   - `app.state.render_queue`: RenderQueue for render job queuing with concurrency limits
+   - `app.state.render_executor`: RenderExecutor for FFmpeg process management
+   - `app.state.checkpoint_manager`: CheckpointManager for render crash recovery
+   - `app.state.render_repository`: AsyncSQLiteRenderRepository for render job persistence
+   - `app.state.encoder_cache_repository`: AsyncSQLiteEncoderCacheRepository for hardware encoder caching
 
 2. **Test mode** (at least one DI param provided):
    - Sets `app.state._deps_injected = True` to skip lifespan setup
@@ -68,7 +74,7 @@ Middleware is added in order (outermost first):
 ### Router Inclusion
 
 All routers included on the FastAPI instance:
-- `health`: Liveness and readiness probes
+- `health`: Liveness and readiness probes (critical + non-critical checks)
 - `videos`: Video listing, search, thumbnail, scan
 - `projects`: Project CRUD and clip management
 - `jobs`: Job status polling and cancellation
@@ -83,6 +89,7 @@ All routers included on the FastAPI instance:
 - `proxy`: Proxy video generation, status, deletion, and batch operations
 - `thumbnails`: Thumbnail sprite strip generation, metadata, and image serving
 - `waveform`: Waveform PNG/JSON generation, metadata, and file serving
+- `render`: Render job lifecycle (submit, query, cancel, retry, delete), encoder management, queue status
 
 ### WebSocket
 
@@ -99,7 +106,7 @@ All routers included on the FastAPI instance:
 
 - `stoat_ferret.api.middleware.correlation.CorrelationIdMiddleware`: Request tracing middleware
 - `stoat_ferret.api.middleware.metrics.MetricsMiddleware`: Prometheus metrics collection
-- `stoat_ferret.api.routers.*`: All 15 router modules (audio, batch, compose, effects, filesystem, health, jobs, preview, projects, proxy, thumbnails, timeline, versions, videos, waveform, ws)
+- `stoat_ferret.api.routers.*`: All 16 router modules (audio, batch, compose, effects, filesystem, health, jobs, preview, projects, proxy, render, thumbnails, timeline, versions, videos, waveform, ws)
 - `stoat_ferret.api.services.proxy_service.ProxyService, make_proxy_handler`: Proxy generation service and job handler factory
 - `stoat_ferret.api.services.scan.SCAN_JOB_TYPE, make_scan_handler`: Scan job handler factory
 - `stoat_ferret.api.services.thumbnail.ThumbnailService`: Thumbnail generation service
@@ -121,6 +128,12 @@ All routers included on the FastAPI instance:
 - `stoat_ferret.logging.configure_logging`: Structured logging configuration
 - `stoat_ferret.preview.cache.PreviewCache`: Preview session caching
 - `stoat_ferret.preview.manager.PreviewManager`: Preview session lifecycle management
+- `stoat_ferret.render.service.RenderService`: Render job orchestration
+- `stoat_ferret.render.queue.RenderQueue`: Render job queuing with concurrency limits
+- `stoat_ferret.render.executor.RenderExecutor`: FFmpeg subprocess management for rendering
+- `stoat_ferret.render.checkpoints.CheckpointManager`: Render crash recovery via checkpoints
+- `stoat_ferret.render.render_repository.AsyncSQLiteRenderRepository`: Render job persistence
+- `stoat_ferret.render.encoder_cache.AsyncSQLiteEncoderCacheRepository`: Hardware encoder cache
 
 ### External Dependencies
 

@@ -10,7 +10,7 @@ The API Server exposes a versioned REST API under `/api/v1/` with the following 
 
 | Domain | Base Path | Key Operations |
 |--------|-----------|---------------|
-| Health | `/health/` | Liveness probe, readiness probe (DB + FFmpeg + degraded checks for preview/proxy) |
+| Health | `/health/` | Liveness probe, readiness probe (DB + FFmpeg + degraded checks for preview/proxy/render) |
 | Videos | `/api/v1/videos` | List, search (FTS5), get, delete, thumbnail, scan |
 | Projects | `/api/v1/projects` | CRUD, clip management within projects |
 | Jobs | `/api/v1/jobs` | Background job status polling and cancellation |
@@ -25,6 +25,7 @@ The API Server exposes a versioned REST API under `/api/v1/` with the following 
 | Thumbnails | `/api/v1/videos/{id}/thumbnails` | Thumbnail sprite strip generation, metadata, JPEG serving |
 | Waveform | `/api/v1/videos/{id}/waveform` | Waveform generation (PNG/JSON), metadata, file serving |
 | Filesystem | `/api/v1/filesystem` | Directory browsing with pagination (`limit`, `offset`, `path` query params) |
+| Render | `/api/v1/render` | Render job lifecycle (submit, query, cancel, retry, delete), encoder detection/refresh, format listing, queue status |
 | Metrics | `/metrics` | Prometheus text exposition format |
 | SPA | `/gui` | Static file serving with catch-all for client-side routing |
 
@@ -45,7 +46,7 @@ Persistent connection for real-time server-to-client event broadcasting.
 }
 ```
 
-**Events (17 types):**
+**Events (25 types):**
 
 | Event | Trigger | Data |
 |-------|---------|------|
@@ -64,7 +65,14 @@ Persistent connection for real-time server-to-client event broadcasting.
 | `PREVIEW_SEEKING` | Preview session seek in progress | Session ID, position |
 | `PREVIEW_ERROR` | Preview session error | Session ID, error message |
 | `AI_ACTION` | AI-driven action notification | Action type, details |
-| `RENDER_PROGRESS` | Render pipeline progress update | Job ID, progress |
+| `RENDER_QUEUED` | Render job submitted and queued | Job ID, project ID |
+| `RENDER_STARTED` | Render job execution started | Job ID |
+| `RENDER_PROGRESS` | Render progress (throttled: 0.5s + 5% delta) | Job ID, progress (0.0–1.0) |
+| `RENDER_FRAME_AVAILABLE` | Render frame preview available (max 2/s) | Job ID, frame data (540p JPEG) |
+| `RENDER_COMPLETED` | Render job finished successfully | Job ID, output path |
+| `RENDER_FAILED` | Render job failed permanently | Job ID, error message |
+| `RENDER_CANCELLED` | Render job cancelled by user | Job ID |
+| `RENDER_QUEUE_STATUS` | Queue capacity snapshot | Active jobs, pending jobs, max concurrent |
 | `PROXY_READY` | Proxy video generation complete | Video ID, proxy quality |
 
 All events are actively wired — they are emitted by their respective routers and services during real API operations, not just defined.
@@ -86,6 +94,7 @@ All events are actively wired — they are emitted by their respective routers a
 | FFmpeg execution (async) | `asyncio.create_subprocess_exec()` | Async subprocess for proxy transcoding and HLS generation with real-time progress tracking and cooperative cancellation |
 | FFprobe metadata | `asyncio.create_subprocess_exec()` | Async subprocess with 30s timeout; JSON output parsing |
 | Observable wrapper | `ObservableFFmpegExecutor` | Structured logging (started/completed/failed events) and Prometheus metrics (count, duration, active gauge) |
+| Render execution | `asyncio.create_subprocess_exec()` | Async subprocess for render job FFmpeg execution with stdin-based cancellation, real-time progress parsing via Rust bindings, speed ratio tracking |
 | Health check | Binary availability probe | Readiness endpoint checks FFmpeg binary exists and is executable; non-critical (degraded only, LRN-136) |
 
 ## Web GUI → API Server
@@ -93,7 +102,7 @@ All events are actively wired — they are emitted by their respective routers a
 | Interface | Technology | Details |
 |-----------|-----------|---------|
 | REST calls | `fetch()` | All data operations via HTTP/JSON to `/api/v1/*` endpoints |
-| WebSocket | `WebSocket` API | Persistent connection to `/ws` with exponential-backoff reconnect (1s–30s); receives 17 event types |
+| WebSocket | `WebSocket` API | Persistent connection to `/ws` with exponential-backoff reconnect (1s–30s); receives 25 event types |
 | Health polling | `GET /health/ready` | 30-second interval polling from Dashboard page; displays degraded status |
 | Metrics polling | `GET /metrics` | 30-second interval polling; Prometheus text format parsed client-side |
 | Job polling | `GET /api/v1/jobs/{id}` | 1-second interval polling from ScanModal until terminal state |
@@ -107,3 +116,4 @@ All events are actively wired — they are emitted by their respective routers a
 |---------|---------|
 | v018 | Initial Container interfaces documentation |
 | v027 | Added preview, proxy, thumbnails, waveform API domains; expanded WebSocket events to 17; added async FFmpeg execution; added filesystem pagination; documented degraded health semantics; added Web GUI preview streaming and proxy status interfaces |
+| v029 | Added render API domain (job lifecycle, encoders, formats, queue status); expanded WebSocket events to 25 (8 render events); added render FFmpeg execution interface; updated health check for render subsystem |

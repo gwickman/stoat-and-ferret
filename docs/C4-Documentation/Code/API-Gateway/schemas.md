@@ -122,6 +122,17 @@ All schemas are Pydantic BaseModel subclasses with from_attributes=True for ORM 
 - `WaveformSample`: Single amplitude sample (Peak_level: str | None, RMS_level: str | None, ch1_Peak_level, ch1_RMS_level, ch2_Peak_level, ch2_RMS_level all str | None)
 - `WaveformSamplesResponse`: JSON waveform data (video_id, channels, samples_per_second, samples: list[WaveformSample])
 
+### Render Schemas (render.py)
+
+- `CreateRenderRequest`: Submit render job (project_id: str, output_format: str, quality_preset: str, render_plan: str)
+- `RenderJobResponse`: Full job state (id, project_id, status, output_path, output_format, quality_preset, progress: float, error_message: str | None, retry_count: int, created_at, updated_at, completed_at)
+- `RenderListResponse`: Paginated render jobs (items: list[RenderJobResponse], total, limit, offset)
+- `EncoderResponse`: Single encoder (name, codec, is_hardware: bool, encoder_type, description, detected_at)
+- `EncoderListResponse`: Encoder list (encoders: list[EncoderResponse], cached: bool)
+- `FormatInfo`: Format metadata (format: str, codecs: list[str], quality_presets: list[str])
+- `FormatListResponse`: Format list (formats: list[FormatInfo])
+- `QueueStatusResponse`: Queue status (active_jobs, pending_jobs, max_concurrent, max_depth, disk_usage_bytes, daily_completed, daily_failed)
+
 ## Key Implementation Details
 
 - **ORM compatibility**: from_attributes=True allows Pydantic to deserialize from domain model instances (Project, Video, Clip, etc.)

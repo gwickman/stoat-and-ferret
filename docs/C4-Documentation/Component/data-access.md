@@ -19,6 +19,9 @@ The Data Access component provides the full persistence layer for the stoat-and-
 - Manage preview session records with TTL-based expiry and HLS manifest metadata
 - Track proxy file records with LRU access timestamps and cache statistics
 - Store thumbnail strip and waveform generation metadata
+- Store render job records with status state machine, progress tracking, and retry counts
+- Store write-once render segment checkpoints for crash recovery
+- Store hardware encoder detection cache for render subsystem
 
 ## Interfaces
 
@@ -105,7 +108,7 @@ The Data Access component provides the full persistence layer for the stoat-and-
 | Module | Source | Purpose |
 |--------|--------|---------|
 | Models | `src/stoat_ferret/db/models.py` | Dataclasses for all entities: `Video`, `Project`, `Clip`, `Track`, `AuditEntry`, `PreviewSession`, `ThumbnailStrip`, `Waveform`, `ProxyFile`; status enums: `PreviewStatus`, `PreviewQuality`, `ThumbnailStripStatus`, `WaveformStatus`, `WaveformFormat`, `ProxyStatus`, `ProxyQuality`; `ClipValidationError` wrapping Rust validation errors |
-| Schema | `src/stoat_ferret/db/schema.py` | DDL for all tables (videos, projects, clips, tracks, audit_log, project_versions, batch_jobs, proxy_files, thumbnail_strips, waveforms, preview_sessions), indexes, FTS5 virtual table and triggers, backward-compatible column migrations |
+| Schema | `src/stoat_ferret/db/schema.py` | DDL for all tables (videos, projects, clips, tracks, audit_log, project_versions, batch_jobs, proxy_files, thumbnail_strips, waveforms, preview_sessions, render_jobs, render_checkpoints, encoder_cache), indexes, FTS5 virtual table and triggers, backward-compatible column migrations |
 | Async Video Repository | `src/stoat_ferret/db/async_repository.py` | `AsyncSQLiteVideoRepository` (production), `AsyncInMemoryVideoRepository` (testing) |
 | Sync Video Repository | `src/stoat_ferret/db/repository.py` | `SQLiteVideoRepository` (sync, with field-level audit diff), `InMemoryVideoRepository` (testing) |
 | Project Repository | `src/stoat_ferret/db/project_repository.py` | `AsyncSQLiteProjectRepository`, `AsyncInMemoryProjectRepository`; handles JSON serialization of transitions and audio_mix fields |
@@ -155,3 +158,4 @@ Data Access
 | v013 | Added timeline columns (track_id, timeline_start, timeline_end) to clips table via migration; added `timeline-repository.md` |
 | v016 | Added `version-repository.md` (project versioning with non-destructive restore and SHA-256 checksums); added `clip-repository.md` |
 | v027 | Added batch, preview, and proxy repositories; expanded models with PreviewSession, ThumbnailStrip, Waveform, ProxyFile and status enums; added batch_jobs, proxy_files, thumbnail_strips, waveforms, preview_sessions tables to schema |
+| v029 | Added render_jobs, render_checkpoints, encoder_cache tables to schema; Render Engine component owns its own repositories (AsyncRenderRepository, CheckpointManager, AsyncEncoderCacheRepository) |

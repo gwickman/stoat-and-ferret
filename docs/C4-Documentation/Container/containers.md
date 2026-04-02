@@ -17,6 +17,7 @@ Overview of stoat-and-ferret deployment containers and their interactions.
 │  Components:                                                        │
 │    API Gateway  │  Data Access  │  Effects Engine                    │
 │    FFmpeg Integration  │  Job Queue  │  Observability                │
+│    Render Engine                                                     │
 │                                                                     │
 │  Embedded via PyO3:                                                 │
 │    Rust Core (stoat_ferret_core native extension)                   │
@@ -46,7 +47,7 @@ Overview of stoat-and-ferret deployment containers and their interactions.
 | Port | 8765 (configurable via `STOAT_API_PORT`) |
 | Role | Primary backend process hosting all server-side logic |
 
-The API Server is a single Uvicorn process running a FastAPI application. It contains six Python components (API Gateway, Data Access, Effects Engine, FFmpeg Integration, Job Queue, Observability) and embeds the Rust Core native extension via PyO3. All dependencies are wired via constructor injection on `app.state` during the lifespan startup phase.
+The API Server is a single Uvicorn process running a FastAPI application. It contains seven Python components (API Gateway, Data Access, Effects Engine, FFmpeg Integration, Job Queue, Observability, Render Engine) and embeds the Rust Core native extension via PyO3. All dependencies are wired via constructor injection on `app.state` during the lifespan startup phase.
 
 **Hosted Components:**
 
@@ -58,7 +59,8 @@ The API Server is a single Uvicorn process running a FastAPI application. It con
 | FFmpeg Integration | Subprocess execution, metadata extraction (ffprobe), Prometheus metrics |
 | Job Queue | Async background job dispatch for scan and batch render operations |
 | Observability | Structured logging (structlog), rotating file handler, log format selection |
-| Rust Core | Native extension (PyO3): timeline math, clip validation, filter builders, layout engine, composition, batch progress, sanitization |
+| Render Engine | Render job lifecycle (submit, queue, execute, cancel, retry), FFmpeg subprocess management, crash recovery checkpoints, hardware encoder caching, Prometheus metrics |
+| Rust Core | Native extension (PyO3): timeline math, clip validation, filter builders, layout engine, composition, batch progress, render validation/progress parsing, sanitization |
 
 **Key Capabilities (Phase 3 — v009-v017):**
 
@@ -81,7 +83,18 @@ The API Server is a single Uvicorn process running a FastAPI application. It con
 - Preview filter simplification and cost estimation in Rust Core (v022)
 - Filesystem directory browsing with pagination (v019)
 
-**WebSocket Events (17 event types, all actively wired):**
+**Key Capabilities (Phase 5 — v028-v029):**
+
+- Render job lifecycle management with persistent FIFO queue and concurrency control (v028-v029)
+- FFmpeg subprocess management with real-time progress parsing via Rust bindings (v029)
+- Hardware encoder detection and caching (NVENC, QSV, AMF, VideoToolbox) (v029)
+- Crash recovery via write-once segment checkpoints (v029)
+- Graceful render shutdown: stdin 'q' cancellation, grace period, force-kill (v029)
+- Pre-flight validation: settings via Rust, disk space, queue capacity (v029)
+- Render-specific Prometheus metrics (jobs, duration, speed ratio, queue, encoders, disk) (v029)
+- Render health check with degraded-but-healthy pattern (v029)
+
+**WebSocket Events (25 event types, all actively wired):**
 
 | Event | Source | Status |
 |-------|--------|--------|
@@ -100,7 +113,14 @@ The API Server is a single Uvicorn process running a FastAPI application. It con
 | `PREVIEW_SEEKING` | Preview router (v019+) | Active |
 | `PREVIEW_ERROR` | Preview manager (v019+) | Active |
 | `AI_ACTION` | AI action handler (v025+) | Active |
-| `RENDER_PROGRESS` | Render pipeline (v025+) | Active |
+| `RENDER_QUEUED` | Render service (v029+) | Active |
+| `RENDER_STARTED` | Render service (v029+) | Active |
+| `RENDER_PROGRESS` | Render service (v029+, throttled) | Active |
+| `RENDER_FRAME_AVAILABLE` | Render service (v029+, max 2/s) | Active |
+| `RENDER_COMPLETED` | Render service (v029+) | Active |
+| `RENDER_FAILED` | Render service (v029+) | Active |
+| `RENDER_CANCELLED` | Render service (v029+) | Active |
+| `RENDER_QUEUE_STATUS` | Render service (v029+) | Active |
 | `PROXY_READY` | Proxy service (v025+) | Active |
 
 ### Web GUI
@@ -163,6 +183,9 @@ Accessed via `aiosqlite` for non-blocking I/O. Schema is initialized idempotentl
 | `proxy_files` | Proxy video records with quality, status, LRU access tracking |
 | `thumbnail_strips` | Thumbnail sprite strip metadata (frame count, grid dimensions) |
 | `waveforms` | Audio waveform metadata (format, duration, channels) |
+| `render_jobs` | Render job records with status state machine, progress, retry count |
+| `render_checkpoints` | Write-once per-segment checkpoints for crash recovery |
+| `encoder_cache` | Hardware encoder detection cache (NVENC, QSV, AMF, VideoToolbox) |
 | `audit_log` | Append-only audit trail of data mutations |
 
 ### FFmpeg / FFprobe
@@ -180,10 +203,10 @@ The API Server invokes FFmpeg and FFprobe as external subprocesses. All interact
 | From | To | Protocol | Purpose |
 |------|----|----------|---------|
 | User / AI Agent | API Server | HTTP/JSON on port 8765 | REST API calls for all domain operations |
-| User / AI Agent | API Server | WebSocket on `/ws` | Real-time event broadcast (17 event types) |
+| User / AI Agent | API Server | WebSocket on `/ws` | Real-time event broadcast (25 event types) |
 | Web GUI (browser) | API Server | HTTP/JSON + WS | SPA ↔ backend communication |
-| API Server | SQLite Database | aiosqlite (async file I/O) | Read/write all domain entities (12 tables) |
-| API Server | FFmpeg / FFprobe | subprocess + async subprocess | Video processing, metadata extraction, proxy transcoding, HLS generation, waveform extraction |
+| API Server | SQLite Database | aiosqlite (async file I/O) | Read/write all domain entities (15 tables) |
+| API Server | FFmpeg / FFprobe | subprocess + async subprocess | Video processing, metadata extraction, proxy transcoding, HLS generation, waveform extraction, render job execution |
 | API Server | Web GUI (static) | Filesystem read | Serve SPA assets from `gui/dist/` at `/gui` |
 
 ## Version History
@@ -192,3 +215,4 @@ The API Server invokes FFmpeg and FFprobe as external subprocesses. All interact
 |---------|---------|
 | v018 | Initial Container-level documentation synthesized from Component-level docs |
 | v027 | Added Phase 4 capabilities (preview, proxy, thumbnails, waveform); expanded WebSocket events to 17; added 5 database tables; updated Web GUI for 6 pages with theater mode; documented degraded health semantics (LRN-136) |
+| v029 | Added Render Engine component; expanded WebSocket events to 25 (8 render events); added 3 database tables (render_jobs, render_checkpoints, encoder_cache); Phase 5 render capabilities (job lifecycle, queue, executor, checkpoints, encoder cache, graceful shutdown) |

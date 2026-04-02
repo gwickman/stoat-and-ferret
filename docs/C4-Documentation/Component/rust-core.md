@@ -85,6 +85,14 @@ The Rust Core component is a native extension module (`stoat_ferret_core`) built
 - `select_preview_quality(cost: float) -> PreviewQuality` — Auto-select quality (High: <0.3, Medium: 0.3–0.7, Draft: >0.7)
 - `inject_preview_scale(graph: FilterGraph, width: int, height: int) -> FilterGraph` — Append scale filter for resolution control
 
+**Render Support**
+- `RenderSettings` — Dataclass for render configuration (format, codec, fps, etc.)
+- `validate_render_settings(settings: RenderSettings) -> None` — Validate format, codec, and fps combinations
+- `estimate_output_size(duration: float, codec: str, preset: str) -> int` — Estimate render output file size in bytes
+- `parse_ffmpeg_progress(line: str) -> list[ProgressUpdate]` — Parse FFmpeg stdout line into progress updates
+- `calculate_progress(out_time_us: int, total_duration_us: int) -> float` — Convert time to 0.0-1.0 progress ratio
+- `detect_hardware_encoders(ffmpeg_output: str) -> list[dict]` — Parse FFmpeg encoder list for hardware encoders
+
 **Sanitization**
 - `escape_filter_text(text) -> str` — Escapes FFmpeg special chars: `\`, `'`, `:`, `[`, `]`, `;`
 - `validate_path(path) -> None` — Rejects empty or null-byte paths
@@ -120,6 +128,7 @@ None — the Rust crate has no runtime dependencies on other application compone
 | Compose | `rust/stoat_ferret_core/src/compose/` | `build_composition_graph()`; overlay and scale filter helpers; composition timeline builders |
 | Batch | `rust/stoat_ferret_core/src/batch.rs` | `BatchJobStatus`; `BatchProgress`; `calculate_batch_progress()` mean-based aggregation |
 | Preview | `rust/stoat_ferret_core/src/preview/` | `PreviewQuality` enum; filter classification and simplification; cost estimation (sigmoid); quality auto-selection; scale filter injection |
+| Render | `rust/stoat_ferret_core/src/render/` | `RenderSettings`; `validate_render_settings()`; `estimate_output_size()`; `parse_ffmpeg_progress()`; `calculate_progress()`; `detect_hardware_encoders()` |
 | Sanitize | `rust/stoat_ferret_core/src/sanitize/` | `escape_filter_text()`; `validate_path()`; numeric bounds validators; codec and preset whitelists |
 
 ## Key Behaviors
@@ -146,6 +155,13 @@ API Gateway
     |-- calls (batch progress) --> Rust Core
     |-- calls (transition calculation) --> Rust Core
 
+Render Engine
+    |-- calls (validate_render_settings) --> Rust Core
+    |-- calls (estimate_output_size) --> Rust Core
+    |-- calls (parse_ffmpeg_progress) --> Rust Core
+    |-- calls (calculate_progress) --> Rust Core
+    |-- calls (detect_hardware_encoders) --> Rust Core
+
 Effects Engine
     |-- calls (all filter builders) --> Rust Core
 
@@ -163,3 +179,4 @@ Data Access (models.py)
 | v015 | Added `AudioMixSpec`, `TrackAudioConfig`, `VolumeBuilder` bindings for audio mix support |
 | v016 | Added transition calculation helpers: `calculate_composition_positions()`, `calculate_timeline_duration()`, `CompositionClip`, `TransitionSpec` |
 | v027 | Added preview module: `PreviewQuality` enum, filter classification and simplification, cost estimation, quality auto-selection, scale filter injection |
+| v029 | Added render module: `RenderSettings`, `validate_render_settings()`, `estimate_output_size()`, `parse_ffmpeg_progress()`, `calculate_progress()`, `detect_hardware_encoders()` |

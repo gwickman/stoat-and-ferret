@@ -23,6 +23,9 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
 - `TABLE_THUMBNAIL_STRIPS: str = "thumbnail_strips"`
 - `TABLE_WAVEFORMS: str = "waveforms"`
 - `TABLE_PREVIEW_SESSIONS: str = "preview_sessions"`
+- `TABLE_RENDER_JOBS: str = "render_jobs"`
+- `TABLE_RENDER_CHECKPOINTS: str = "render_checkpoints"`
+- `TABLE_ENCODER_CACHE: str = "encoder_cache"`
 
 ### SQL Definitions (DDL Strings)
 
@@ -53,6 +56,12 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
 - `PREVIEW_SESSIONS_TABLE: str` — Preview session records with status, HLS manifest tracking, TTL expiry
 - `PREVIEW_SESSIONS_PROJECT_INDEX: str` — Index for querying sessions by project_id
 - `PREVIEW_SESSIONS_EXPIRES_INDEX: str` — Index for querying expired sessions by expires_at
+- `RENDER_JOBS_TABLE: str` — Render job records with status state machine, progress, retry_count
+- `RENDER_JOBS_STATUS_INDEX: str` — Index for querying jobs by status (FIFO dequeue)
+- `RENDER_JOBS_PROJECT_INDEX: str` — Index for querying jobs by project_id
+- `RENDER_CHECKPOINTS_TABLE: str` — Write-once per-segment checkpoints for crash recovery
+- `RENDER_CHECKPOINTS_JOB_INDEX: str` — Index for querying checkpoints by job_id
+- `ENCODER_CACHE_TABLE: str` — Hardware encoder detection cache with codec and type info
 
 ### Column Definitions
 
@@ -195,6 +204,33 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
 - error_message: NULL for success, contains error details when status is error
 - Composite index on (project_id, expires_at) for efficient expiry queries
 
+**render_jobs table:**
+- Stores render job records with full lifecycle state machine
+- status: QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED (state machine enforced via `validate_render_transition`)
+- output_format: mp4, webm, mov, mkv
+- quality_preset: draft, standard, high
+- progress: 0.0-1.0 float for render completion
+- error_message: NULL for success, contains failure details
+- retry_count: Number of retry attempts (resets on manual retry)
+- render_plan: JSON string containing the full render plan
+- created_at/updated_at/completed_at: Lifecycle timestamps
+- Indexes on status (for FIFO dequeue) and project_id (for project queries)
+
+**render_checkpoints table:**
+- Stores write-once per-segment completion records for crash recovery
+- job_id: References render_jobs.id
+- segment_index: Completed segment number
+- completed_at: Timestamp of segment completion
+- Index on job_id for recovery queries
+
+**encoder_cache table:**
+- Caches hardware encoder detection results to avoid repeated FFmpeg subprocess calls
+- name: Encoder name (e.g., "h264_nvenc")
+- codec: Codec family (e.g., "h264")
+- is_hardware: Boolean flag
+- encoder_type: Technology (e.g., "Nvenc", "QSV", "AMF", "VideoToolbox")
+- detected_at: Detection timestamp for cache age tracking
+
 ## Relationships
 
 - **Used by:**
@@ -208,6 +244,9 @@ Defines the SQLite database schema including table definitions, indexes, FTS5 fu
   - `preview_repository.py` — SQLitePreviewRepository CRUD on preview_sessions
   - `proxy_repository.py` — SQLiteProxyRepository CRUD on proxy_files
   - `audit.py` — AuditLogger writes to audit_log table
+  - `render/render_repository.py` — AsyncSQLiteRenderRepository CRUD on render_jobs
+  - `render/checkpoints.py` — CheckpointManager writes/reads render_checkpoints
+  - `render/encoder_cache.py` — AsyncSQLiteEncoderCacheRepository manages encoder_cache
 
 - **Uses:**
   - SQLite3 database engine (no external dependencies)
