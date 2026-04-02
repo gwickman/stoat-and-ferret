@@ -32,6 +32,9 @@ class EventType(str, Enum):
     RENDER_COMPLETED = "render_completed"
     RENDER_FAILED = "render_failed"
     RENDER_CANCELLED = "render_cancelled"
+    RENDER_QUEUED = "render_queued"
+    RENDER_FRAME_AVAILABLE = "render_frame_available"
+    RENDER_QUEUE_STATUS = "render_queue_status"
     PROXY_READY = "proxy.ready"
 
 

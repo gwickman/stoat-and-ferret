@@ -344,7 +344,7 @@ The architecture integrates quality attributes at every layer. These are not opt
 
 **WebSocket Transport Layer:**
 
-The `/ws` endpoint provides real-time event streaming to connected clients using a `ConnectionManager` that tracks active connections and broadcasts events. Supported event types include `HEARTBEAT`, `SCAN_STARTED`, `SCAN_COMPLETED`, `PROJECT_CREATED`, `HEALTH_STATUS`, `PREVIEW_GENERATING`, `PREVIEW_READY`, `PREVIEW_SEEKING`, `PREVIEW_ERROR`, `PROXY_READY`, `AI_ACTION`, and `RENDER_PROGRESS`. A configurable heartbeat interval (default 30s) keeps connections alive.
+The `/ws` endpoint provides real-time event streaming to connected clients using a `ConnectionManager` that tracks active connections and broadcasts events. Supported event types include `HEARTBEAT`, `SCAN_STARTED`, `SCAN_COMPLETED`, `PROJECT_CREATED`, `HEALTH_STATUS`, `PREVIEW_GENERATING`, `PREVIEW_READY`, `PREVIEW_SEEKING`, `PREVIEW_ERROR`, `PROXY_READY`, `AI_ACTION`, `RENDER_STARTED`, `RENDER_PROGRESS`, `RENDER_COMPLETED`, `RENDER_FAILED`, `RENDER_CANCELLED`, `RENDER_QUEUED`, `RENDER_FRAME_AVAILABLE`, and `RENDER_QUEUE_STATUS`. Render progress and frame-available events use dual-threshold throttling (0.5s interval + 5% progress delta). A configurable heartbeat interval (default 30s) keeps connections alive.
 
 **Frontend Static Serving:**
 

@@ -2,12 +2,14 @@
 
 Coordinates pre-flight checks, queue management, executor dispatch,
 progress broadcasting via WebSocket, retry logic, and cleanup.
+Includes dual-threshold throttling for progress and frame events.
 """
 
 from __future__ import annotations
 
 import json
 import shutil
+import time
 from pathlib import Path
 
 import structlog
@@ -63,6 +65,10 @@ class RenderService:
         settings: Application settings.
     """
 
+    # Throttle constants
+    THROTTLE_INTERVAL: float = 0.5  # seconds between broadcasts
+    THROTTLE_PROGRESS_DELTA: float = 0.05  # 5% progress delta
+
     def __init__(
         self,
         *,
@@ -79,6 +85,10 @@ class RenderService:
         self._checkpoint_manager = checkpoint_manager
         self._ws = connection_manager
         self._max_retries = settings.render_retry_count
+        # Per-job-per-event-type throttle state: (job_id, event_type) -> last_broadcast_time
+        self._last_broadcast_time: dict[tuple[str, str], float] = {}
+        # Per-job last broadcast progress for delta throttling
+        self._last_broadcast_progress: dict[str, float] = {}
 
     async def submit_job(
         self,
@@ -138,6 +148,8 @@ class RenderService:
 
         log.info("render_service.job_submitted", job_id=job.id)
 
+        await self._broadcast_event(EventType.RENDER_QUEUED, job)
+        await self._broadcast_queue_status()
         await self._broadcast_event(EventType.RENDER_STARTED, job)
         return job
 
@@ -159,12 +171,8 @@ class RenderService:
 
         async def progress_callback(jid: str, progress: float) -> None:
             await self._repo.update_progress(jid, progress)
-            await self._ws.broadcast(
-                build_event(
-                    EventType.RENDER_PROGRESS,
-                    {"job_id": jid, "progress": progress},
-                )
-            )
+            await self._broadcast_throttled_progress(jid, progress)
+            await self._broadcast_throttled_frame(jid, progress)
 
         # Wire progress callback into executor
         self._executor._progress_callback = progress_callback
@@ -215,6 +223,8 @@ class RenderService:
         await self._repo.update_status(job_id, RenderStatus.CANCELLED)
         log.info("render_service.job_cancelled")
         await self._broadcast_event(EventType.RENDER_CANCELLED, job)
+        await self._broadcast_queue_status()
+        self._clear_throttle_state(job_id)
         return True
 
     async def recover(self) -> list[tuple[str, int]]:
@@ -243,6 +253,8 @@ class RenderService:
         await self._repo.update_status(job.id, RenderStatus.COMPLETED)
         logger.info("render_service.job_completed", job_id=job.id)
         await self._broadcast_event(EventType.RENDER_COMPLETED, job)
+        await self._broadcast_queue_status()
+        self._clear_throttle_state(job.id)
         await self._cleanup(job.id)
 
     async def _handle_failure(self, job: RenderJob, error_message: str) -> None:
@@ -280,6 +292,8 @@ class RenderService:
                 error=error_message,
             )
             await self._broadcast_event(EventType.RENDER_FAILED, job)
+            await self._broadcast_queue_status()
+            self._clear_throttle_state(job.id)
             await self._cleanup(job.id)
 
     async def _cleanup(self, job_id: str) -> None:
@@ -309,6 +323,110 @@ class RenderService:
                 },
             )
         )
+
+    def _should_throttle(self, job_id: str, event_type: EventType) -> bool:
+        """Check if an event should be throttled based on time interval.
+
+        Args:
+            job_id: The render job ID.
+            event_type: The event type to check.
+
+        Returns:
+            True if the event should be suppressed (throttled).
+        """
+        key = (job_id, event_type.value)
+        now = time.monotonic()
+        last = self._last_broadcast_time.get(key, 0.0)
+        if now - last < self.THROTTLE_INTERVAL:
+            return True
+        self._last_broadcast_time[key] = now
+        return False
+
+    async def _broadcast_throttled_progress(self, job_id: str, progress: float) -> None:
+        """Broadcast render.progress with dual-threshold throttling.
+
+        Applies both time interval (0.5s) and progress delta (5%) thresholds.
+        Final progress (1.0) is always sent.
+
+        Args:
+            job_id: The render job ID.
+            progress: Current progress value 0.0-1.0.
+        """
+        is_final = progress >= 1.0
+        last_progress = self._last_broadcast_progress.get(job_id, 0.0)
+        progress_delta = progress - last_progress
+
+        if not is_final:
+            if self._should_throttle(job_id, EventType.RENDER_PROGRESS):
+                return
+            if progress_delta < self.THROTTLE_PROGRESS_DELTA:
+                # Reset the time stamp since we didn't actually broadcast
+                key = (job_id, EventType.RENDER_PROGRESS.value)
+                self._last_broadcast_time.pop(key, None)
+                return
+
+        self._last_broadcast_progress[job_id] = progress
+        # Update time stamp for final progress too
+        self._last_broadcast_time[(job_id, EventType.RENDER_PROGRESS.value)] = time.monotonic()
+        await self._ws.broadcast(
+            build_event(
+                EventType.RENDER_PROGRESS,
+                {"job_id": job_id, "progress": progress},
+            )
+        )
+
+    async def _broadcast_throttled_frame(self, job_id: str, progress: float) -> None:
+        """Broadcast render.frame_available with throttling.
+
+        Throttled to max 2/sec. Includes a 540p JPEG frame URL.
+
+        Args:
+            job_id: The render job ID.
+            progress: Current progress value 0.0-1.0.
+        """
+        if self._should_throttle(job_id, EventType.RENDER_FRAME_AVAILABLE):
+            return
+
+        frame_url = f"/api/v1/render/{job_id}/frame_preview.jpg"
+        await self._ws.broadcast(
+            build_event(
+                EventType.RENDER_FRAME_AVAILABLE,
+                {
+                    "job_id": job_id,
+                    "frame_url": frame_url,
+                    "resolution": "540p",
+                    "progress": progress,
+                },
+            )
+        )
+
+    async def _broadcast_queue_status(self) -> None:
+        """Broadcast render.queue_status event with current queue snapshot."""
+        active_count = await self._queue.get_active_count()
+        pending_count = await self._queue.get_queue_depth()
+
+        await self._ws.broadcast(
+            build_event(
+                EventType.RENDER_QUEUE_STATUS,
+                {
+                    "active_count": active_count,
+                    "pending_count": pending_count,
+                    "max_concurrent": self._queue._max_concurrent,
+                    "max_queue_depth": self._queue._max_depth,
+                },
+            )
+        )
+
+    def _clear_throttle_state(self, job_id: str) -> None:
+        """Remove throttle state for a completed/failed/cancelled job.
+
+        Args:
+            job_id: The render job ID to clean up.
+        """
+        keys_to_remove = [k for k in self._last_broadcast_time if k[0] == job_id]
+        for k in keys_to_remove:
+            del self._last_broadcast_time[k]
+        self._last_broadcast_progress.pop(job_id, None)
 
     def _validate_settings(self, render_plan_json: str) -> None:
         """Validate render settings via Rust bindings.

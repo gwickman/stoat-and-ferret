@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
 
 import pytest
+import structlog
 from structlog.testing import capture_logs
 
 from stoat_ferret.render.models import (
@@ -201,6 +203,25 @@ class TestRecovery:
 
 class TestStructuredLogging:
     """Tests for structured log events."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_structlog(self) -> Iterator[None]:
+        """Reset structlog so capture_logs() works after other tests configure it.
+
+        Other test modules (test_logging*.py, test_observable.py) call
+        configure_logging() or structlog.configure() which replaces the
+        processor chain.  capture_logs() only works when structlog uses
+        its default lazy-proxy loggers, so we reset AND clear any cached
+        bound loggers before each test.
+        """
+        structlog.reset_defaults()
+        # Force the queue module to get a fresh logger proxy so that
+        # any cached BoundLogger from a prior configure() is replaced.
+        from stoat_ferret.render import queue as queue_mod
+
+        queue_mod.logger = structlog.get_logger(queue_mod.__name__)
+        yield
+        structlog.reset_defaults()
 
     async def test_enqueue_logs_event(self, queue: RenderQueue) -> None:
         """Enqueue emits a render_queue.enqueue log event."""
