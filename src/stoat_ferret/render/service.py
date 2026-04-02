@@ -54,6 +54,21 @@ class PreflightError(Exception):
         super().__init__(reason)
 
 
+class RenderUnavailableError(Exception):
+    """Raised when the render subsystem cannot accept requests.
+
+    Used for shutdown-in-progress and FFmpeg-unavailable scenarios,
+    both of which should result in HTTP 503 responses.
+
+    Attributes:
+        reason: Human-readable description of why rendering is unavailable.
+    """
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(reason)
+
+
 class RenderService:
     """Orchestrates the full render job lifecycle.
 
@@ -90,10 +105,39 @@ class RenderService:
         self._checkpoint_manager = checkpoint_manager
         self._ws = connection_manager
         self._max_retries = settings.render_retry_count
+        self._shutting_down = False
+        self._ffmpeg_available = shutil.which("ffmpeg") is not None
         # Per-job-per-event-type throttle state: (job_id, event_type) -> last_broadcast_time
         self._last_broadcast_time: dict[tuple[str, str], float] = {}
         # Per-job last broadcast progress for delta throttling
         self._last_broadcast_progress: dict[str, float] = {}
+
+    def initiate_shutdown(self) -> None:
+        """Set the shutdown flag to reject new render requests.
+
+        Once called, all subsequent ``submit_job`` calls will raise
+        ``RenderUnavailableError`` with a "shutting down" message.
+        """
+        self._shutting_down = True
+        logger.info("render_service.shutdown_initiated")
+
+    @property
+    def is_shutting_down(self) -> bool:
+        """Whether the service is in shutdown mode.
+
+        Returns:
+            True if shutdown has been initiated.
+        """
+        return self._shutting_down
+
+    @property
+    def ffmpeg_available(self) -> bool:
+        """Whether FFmpeg is available on this system.
+
+        Returns:
+            True if FFmpeg was found in PATH at service creation time.
+        """
+        return self._ffmpeg_available
 
     async def submit_job(
         self,
@@ -121,7 +165,16 @@ class RenderService:
 
         Raises:
             PreflightError: If any pre-flight check fails.
+            RenderUnavailableError: If shutting down or FFmpeg unavailable.
         """
+        if self._shutting_down:
+            raise RenderUnavailableError("Render service is shutting down")
+
+        if not self._ffmpeg_available:
+            raise RenderUnavailableError(
+                "FFmpeg is not installed — render operations are unavailable"
+            )
+
         log = logger.bind(project_id=project_id, output_path=output_path)
 
         # Pre-flight: validate settings via Rust

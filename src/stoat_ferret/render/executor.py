@@ -206,6 +206,63 @@ class RenderExecutor:
         self._cleanup_temp_files(job_id)
         return True
 
+    async def cancel_all(self) -> list[str]:
+        """Cancel all active render processes gracefully via stdin 'q'.
+
+        Sends the quit command to every active FFmpeg process without
+        waiting for them to exit. Use :meth:`kill_remaining` after a
+        grace period to escalate unresponsive processes.
+
+        Returns:
+            List of job IDs that received the cancel signal.
+        """
+        cancelled: list[str] = []
+        for job_id, process in list(self._active_processes.items()):
+            try:
+                if process.stdin is not None:
+                    process.stdin.write(b"q")
+                    await process.stdin.drain()
+                    process.stdin.close()
+                cancelled.append(job_id)
+                logger.info("render_executor.shutdown_cancel_sent", job_id=job_id)
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                logger.debug("render_executor.shutdown_cancel_stdin_closed", job_id=job_id)
+                cancelled.append(job_id)
+        return cancelled
+
+    async def kill_remaining(self) -> list[str]:
+        """Kill all active processes that did not exit after cancel.
+
+        Should be called after :meth:`cancel_all` and a grace period.
+
+        Returns:
+            List of job IDs that were forcefully killed.
+        """
+        killed: list[str] = []
+        for job_id, process in list(self._active_processes.items()):
+            if process.returncode is not None:
+                continue
+            logger.warning("render_executor.shutdown_kill", job_id=job_id, pid=process.pid)
+            try:
+                process.kill()
+                await process.wait()
+            except ProcessLookupError:
+                pass
+            killed.append(job_id)
+        return killed
+
+    def cleanup_all_temp_files(self) -> list[str]:
+        """Clean up temp files for all tracked jobs (active and queued).
+
+        Returns:
+            List of job IDs whose temp files were cleaned.
+        """
+        cleaned: list[str] = []
+        for job_id in list(self._temp_files.keys()):
+            self._cleanup_temp_files(job_id)
+            cleaned.append(job_id)
+        return cleaned
+
     async def _run_process(
         self,
         job_id: str,
