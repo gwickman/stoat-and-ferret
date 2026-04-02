@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
 
 import pytest
 import structlog
@@ -204,8 +205,18 @@ class TestStructuredLogging:
     """Tests for structured log events."""
 
     @pytest.fixture(autouse=True)
-    def _reset_structlog(self) -> None:
-        """Reset structlog so capture_logs() works after other tests configure it."""
+    def _reset_structlog(self) -> Iterator[None]:
+        """Reset structlog so capture_logs() works after other tests configure it.
+
+        Other test modules (test_logging*.py, test_observable.py) call
+        configure_logging() or structlog.configure() which replaces the
+        processor chain.  capture_logs() only works when structlog uses
+        its default lazy-proxy loggers, so we reset AND clear any cached
+        bound loggers before each test.
+        """
+        structlog.reset_defaults()
+        structlog.configure(cache_logger_on_first_use=False)
+        yield
         structlog.reset_defaults()
 
     async def test_enqueue_logs_event(self, queue: RenderQueue) -> None:
