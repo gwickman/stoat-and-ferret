@@ -146,12 +146,14 @@ class RenderService:
             render_plan=render_plan_json,
         )
 
+        log.info("render_job.created", job_id=job.id)
+
         try:
             job = await self._queue.enqueue(job)
         except QueueFullError as exc:
             raise PreflightError(str(exc)) from exc
 
-        log.info("render_service.job_submitted", job_id=job.id)
+        log.info("render_job.queued", job_id=job.id)
 
         await self._broadcast_event(EventType.RENDER_QUEUED, job)
         await self._broadcast_queue_status()
@@ -174,7 +176,20 @@ class RenderService:
         # Parse total duration for progress calculation
         total_duration_us = self._extract_duration_us(job.render_plan)
 
+        # Track milestones already logged to avoid duplicates
+        logged_milestones: set[int] = set()
+
         async def progress_callback(jid: str, progress: float) -> None:
+            # Log progress milestones at 25%, 50%, 75%, 100%
+            pct = int(progress * 100)
+            for milestone in (25, 50, 75, 100):
+                if pct >= milestone and milestone not in logged_milestones:
+                    logged_milestones.add(milestone)
+                    log.info(
+                        "render_job.progress_milestone",
+                        milestone_pct=milestone,
+                        progress=round(progress, 4),
+                    )
             await self._repo.update_progress(jid, progress)
             await self._broadcast_throttled_progress(jid, progress)
             await self._broadcast_throttled_frame(jid, progress)
@@ -182,7 +197,7 @@ class RenderService:
         # Wire progress callback into executor
         self._executor._progress_callback = progress_callback
 
-        log.info("render_service.running_job")
+        log.info("render_job.started")
         render_start = time.monotonic()
         success = await self._executor.execute(job, command, total_duration_us=total_duration_us)
 
@@ -194,7 +209,7 @@ class RenderService:
             # Check if job was cancelled
             current = await self._repo.get(job_id)
             if current and current.status == RenderStatus.CANCELLED:
-                log.info("render_service.job_cancelled", job_id=job_id)
+                log.info("render_job.cancelled")
                 return
 
             await self._handle_failure(job, "FFmpeg process failed")
@@ -230,7 +245,7 @@ class RenderService:
 
         await self._repo.update_status(job_id, RenderStatus.CANCELLED)
         render_jobs_total.labels(status="cancelled").inc()
-        log.info("render_service.job_cancelled")
+        log.info("render_job.cancelled")
         await self._broadcast_event(EventType.RENDER_CANCELLED, job)
         await self._broadcast_queue_status()
         self._clear_throttle_state(job_id)
@@ -265,7 +280,11 @@ class RenderService:
         if elapsed_seconds > 0:
             render_duration_seconds.observe(elapsed_seconds)
         self._update_disk_usage(job.output_path)
-        logger.info("render_service.job_completed", job_id=job.id)
+        logger.info(
+            "render_job.completed",
+            job_id=job.id,
+            elapsed_seconds=round(elapsed_seconds, 2),
+        )
         await self._broadcast_event(EventType.RENDER_COMPLETED, job)
         await self._broadcast_queue_status()
         self._clear_throttle_state(job.id)
@@ -301,8 +320,8 @@ class RenderService:
         else:
             await self._repo.update_status(job.id, RenderStatus.FAILED, error_message=error_message)
             render_jobs_total.labels(status="failed").inc()
-            log.warning(
-                "render_service.job_failed_permanently",
+            log.error(
+                "render_job.failed",
                 retry_count=current.retry_count,
                 error=error_message,
             )
