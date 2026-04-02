@@ -235,11 +235,14 @@ class TestDurationHistogram:
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
-            with patch("stoat_ferret.render.service.render_duration_seconds") as mock_histogram:
+            # Use controlled monotonic times to avoid Windows timer granularity issues
+            monotonic_values = iter([100.0, 105.5])
+            with (
+                patch("stoat_ferret.render.service.render_duration_seconds") as mock_histogram,
+                patch("stoat_ferret.render.service.time.monotonic", side_effect=monotonic_values),
+            ):
                 await service.run_job(job, ["ffmpeg"])
-                mock_histogram.observe.assert_called_once()
-                observed_value = mock_histogram.observe.call_args[0][0]
-                assert observed_value > 0
+                mock_histogram.observe.assert_called_once_with(5.5)
 
 
 # ---------------------------------------------------------------------------
