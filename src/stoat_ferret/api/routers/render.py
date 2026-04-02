@@ -44,7 +44,7 @@ from stoat_ferret.render.render_repository import (
     AsyncRenderRepository,
     AsyncSQLiteRenderRepository,
 )
-from stoat_ferret.render.service import PreflightError, RenderService
+from stoat_ferret.render.service import PreflightError, RenderService, RenderUnavailableError
 
 logger = structlog.get_logger(__name__)
 
@@ -352,6 +352,11 @@ async def create_render_job(
             quality_preset=quality_preset,
             render_plan_json=body.render_plan,
         )
+    except RenderUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "RENDER_UNAVAILABLE", "message": str(exc)},
+        ) from exc
     except PreflightError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

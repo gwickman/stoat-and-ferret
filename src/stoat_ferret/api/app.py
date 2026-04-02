@@ -229,15 +229,40 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
-    # Shutdown: cancel active renders
+    # Shutdown: graceful render shutdown sequence (BL-227)
+    # Order: set flag → cancel via stdin 'q' → wait grace → SIGKILL → clean temp
     rs: RenderService | None = getattr(app.state, "render_service", None)
-    if rs is not None:
-        # Cancel any running render jobs gracefully
-        re: RenderExecutor | None = getattr(app.state, "render_executor", None)
-        if re is not None:
-            for job_id in list(re._active_processes.keys()):
-                with contextlib.suppress(Exception):
-                    await re.cancel(job_id)
+    re: RenderExecutor | None = getattr(app.state, "render_executor", None)
+    if rs is not None and re is not None:
+        # Step 1: Reject new requests
+        rs.initiate_shutdown()
+
+        # Step 2: Cancel active renders via stdin 'q'
+        cancelled_ids = await re.cancel_all()
+
+        if cancelled_ids:
+            # Step 3: Wait grace period for processes to finalize
+            grace = settings.render_cancel_grace_seconds
+            logger.info(
+                "render_shutdown.waiting_grace",
+                grace_seconds=grace,
+                active_count=len(cancelled_ids),
+            )
+            await asyncio.sleep(grace)
+
+            # Step 4: Kill remaining processes
+            killed_ids = await re.kill_remaining()
+            if killed_ids:
+                logger.warning(
+                    "render_shutdown.killed_remaining",
+                    killed_count=len(killed_ids),
+                )
+
+        # Step 5: Clean up temp files for all tracked jobs
+        cleaned_ids = re.cleanup_all_temp_files()
+        if cleaned_ids:
+            logger.info("render_shutdown.temp_files_cleaned", count=len(cleaned_ids))
+
         logger.info("render_services_shutdown")
 
     # Shutdown: cancel preview sessions first
