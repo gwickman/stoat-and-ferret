@@ -7,11 +7,13 @@ import os
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.models import ProxyStatus
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -74,6 +76,12 @@ async def readiness(request: Request) -> JSONResponse:
     proxy_check = await _check_proxy(request)
     checks["proxy"] = proxy_check
     if proxy_check["status"] != "ok":
+        any_degraded = True
+
+    # Render check (non-critical — degraded only, per LRN-136)
+    render_check = await _check_render(request)
+    checks["render"] = render_check
+    if render_check["status"] != "ok":
         any_degraded = True
 
     if not critical_healthy:
@@ -213,6 +221,72 @@ async def _check_proxy(request: Request) -> dict[str, Any]:
             "status": check_status,
             "proxy_dir_writable": dir_writable,
             "pending_proxies": pending_count,
+        }
+    except Exception as e:
+        return {"status": "degraded", "error": str(e)}
+
+
+async def _check_render(request: Request) -> dict[str, Any]:
+    """Check render subsystem health.
+
+    Reports active job count, queue depth, disk usage, and encoder
+    availability. Status is "unavailable" when FFmpeg is missing,
+    "degraded" when disk usage exceeds threshold or queue is near
+    capacity, and "ok" otherwise.
+
+    This is a non-critical component: degradation does not cause HTTP 503.
+
+    Args:
+        request: The FastAPI request object to access app.state.
+
+    Returns:
+        Dictionary with status, active_jobs, queue_depth,
+        disk_usage_percent, and encoder_available fields.
+    """
+    render_queue = getattr(request.app.state, "render_queue", None)
+
+    # Check encoder availability via PATH lookup (no subprocess)
+    encoder_available = shutil.which("ffmpeg") is not None
+
+    if render_queue is None:
+        return {
+            "status": "ok" if encoder_available else "unavailable",
+            "active_jobs": 0,
+            "queue_depth": 0,
+            "disk_usage_percent": 0.0,
+            "encoder_available": encoder_available,
+        }
+
+    try:
+        active_jobs = await render_queue.get_active_count()
+        queue_depth = await render_queue.get_queue_depth()
+
+        settings = get_settings()
+
+        # Disk usage for render output directory
+        output_dir = Path(settings.render_output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        usage = shutil.disk_usage(output_dir)
+        disk_usage_percent = (usage.used / usage.total * 100) if usage.total > 0 else 0.0
+
+        # Determine status
+        if not encoder_available:
+            check_status = "unavailable"
+        else:
+            disk_ratio = usage.used / usage.total if usage.total > 0 else 0.0
+            max_depth = render_queue._max_depth
+            queue_ratio = queue_depth / max_depth if max_depth > 0 else 0.0
+            if disk_ratio > settings.render_disk_degraded_threshold or queue_ratio > 0.8:
+                check_status = "degraded"
+            else:
+                check_status = "ok"
+
+        return {
+            "status": check_status,
+            "active_jobs": active_jobs,
+            "queue_depth": queue_depth,
+            "disk_usage_percent": round(disk_usage_percent, 1),
+            "encoder_available": encoder_available,
         }
     except Exception as e:
         return {"status": "degraded", "error": str(e)}

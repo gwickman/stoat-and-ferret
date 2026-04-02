@@ -135,6 +135,12 @@ class Settings(BaseSettings):
         le=60,
         description="Grace period for FFmpeg to finalize after cancel",
     )
+    render_disk_degraded_threshold: float = Field(
+        default=0.9,
+        ge=0.0,
+        le=1.0,
+        description="Disk usage ratio that triggers render health degradation (0.0-1.0)",
+    )
 
     # Version retention
     version_retention_count: int | None = Field(

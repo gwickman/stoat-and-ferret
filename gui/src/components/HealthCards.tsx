@@ -52,6 +52,7 @@ const COMPONENTS: Record<string, string> = {
   ffmpeg: 'FFmpeg',
   preview: 'Preview',
   proxy: 'Proxy',
+  render: 'Render',
 }
 
 interface HealthCardsProps {
