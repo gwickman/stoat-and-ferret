@@ -9,11 +9,11 @@ complete lifecycle log sequence.
 from __future__ import annotations
 
 import json
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import structlog
-from structlog.testing import capture_logs
 
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
@@ -28,19 +28,43 @@ _PATCH_NO_RUST_EXECUTOR = patch("stoat_ferret.render.executor._HAS_RUST_BINDINGS
 
 
 @pytest.fixture(autouse=True)
-def _reset_structlog() -> None:
-    """Reset structlog so capture_logs() works after configure_logging().
+def captured_logs() -> Generator[list[dict[str, object]]]:
+    """Configure structlog to capture log events for assertion.
 
-    Module-level loggers cache the bound logger when cache_logger_on_first_use
-    is True. Clearing _logger forces re-resolution on next use.
+    Replaces module-level loggers so cached stdlib.BoundLogger instances
+    from configure_logging() don't bypass the capture processor.
     """
-    from stoat_ferret.render import executor as _executor_mod
+    from stoat_ferret.render import executor as _exec_mod
     from stoat_ferret.render import queue as _queue_mod
-    from stoat_ferret.render import service as _service_mod
+    from stoat_ferret.render import service as _svc_mod
 
+    events: list[dict[str, object]] = []
+
+    def _capture(
+        _logger: object, method_name: str, event_dict: dict[str, object]
+    ) -> dict[str, object]:
+        event_dict["log_level"] = method_name
+        events.append(event_dict.copy())
+        raise structlog.DropEvent
+
+    old_loggers = (_svc_mod.logger, _exec_mod.logger, _queue_mod.logger)
+
+    structlog.configure(
+        processors=[_capture],
+        wrapper_class=structlog.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
+
+    _svc_mod.logger = structlog.get_logger(_svc_mod.__name__)
+    _exec_mod.logger = structlog.get_logger(_exec_mod.__name__)
+    _queue_mod.logger = structlog.get_logger(_queue_mod.__name__)
+
+    yield events
+
+    _svc_mod.logger, _exec_mod.logger, _queue_mod.logger = old_loggers
     structlog.reset_defaults()
-    for mod in (_service_mod, _executor_mod, _queue_mod):
-        mod.logger._logger = None
 
 
 def _make_plan_json(
@@ -102,37 +126,35 @@ def _build_service(
 class TestServiceLifecycleEvents:
     """Tests that all 7 lifecycle events are logged with correct names."""
 
-    async def test_render_job_created_logged(self) -> None:
+    async def test_render_job_created_logged(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.created is logged when a job is created."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
-            with capture_logs() as cap:
-                await service.submit_job(
-                    project_id="proj-1",
-                    output_path="/tmp/out.mp4",
-                    output_format=OutputFormat.MP4,
-                    quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
-                )
-            events = [e["event"] for e in cap]
-            assert "render_job.created" in events
+            await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+        events = [e["event"] for e in captured_logs]
+        assert "render_job.created" in events
 
-    async def test_render_job_queued_logged(self) -> None:
+    async def test_render_job_queued_logged(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.queued is logged when a job is enqueued."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
-            with capture_logs() as cap:
-                await service.submit_job(
-                    project_id="proj-1",
-                    output_path="/tmp/out.mp4",
-                    output_format=OutputFormat.MP4,
-                    quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
-                )
-            events = [e["event"] for e in cap]
-            assert "render_job.queued" in events
+            await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+        events = [e["event"] for e in captured_logs]
+        assert "render_job.queued" in events
 
-    async def test_render_job_started_logged(self) -> None:
+    async def test_render_job_started_logged(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.started is logged when a job begins execution."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
@@ -146,14 +168,14 @@ class TestServiceLifecycleEvents:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg", "-i", "input.mp4", "output.mp4"])
 
-            with capture_logs() as cap:
-                await service.run_job(job, ["ffmpeg", "-i", "input.mp4", "output.mp4"])
+        events = [e["event"] for e in captured_logs]
+        assert "render_job.started" in events
 
-            events = [e["event"] for e in cap]
-            assert "render_job.started" in events
-
-    async def test_render_job_completed_logged(self) -> None:
+    async def test_render_job_completed_logged(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """render_job.completed is logged when a job finishes successfully."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
@@ -167,14 +189,14 @@ class TestServiceLifecycleEvents:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg", "-i", "input.mp4", "output.mp4"])
 
-            with capture_logs() as cap:
-                await service.run_job(job, ["ffmpeg", "-i", "input.mp4", "output.mp4"])
+        events = [e["event"] for e in captured_logs]
+        assert "render_job.completed" in events
 
-            events = [e["event"] for e in cap]
-            assert "render_job.completed" in events
-
-    async def test_render_job_completed_includes_elapsed(self) -> None:
+    async def test_render_job_completed_includes_elapsed(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """render_job.completed includes elapsed_seconds."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
@@ -188,19 +210,16 @@ class TestServiceLifecycleEvents:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
 
-            with capture_logs() as cap:
-                await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
+        completed = [e for e in captured_logs if e["event"] == "render_job.completed"]
+        assert len(completed) == 1
+        assert "elapsed_seconds" in completed[0]
 
-            completed = [e for e in cap if e["event"] == "render_job.completed"]
-            assert len(completed) == 1
-            assert "elapsed_seconds" in completed[0]
-
-    async def test_render_job_failed_logged(self) -> None:
+    async def test_render_job_failed_logged(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.failed is logged when a job fails permanently."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
-            # Set retry count to 0 so failure is immediate
             service._max_retries = 0
 
             job = await service.submit_job(
@@ -212,14 +231,14 @@ class TestServiceLifecycleEvents:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg", "-i", "input.mp4", "output.mp4"])
 
-            with capture_logs() as cap:
-                await service.run_job(job, ["ffmpeg", "-i", "input.mp4", "output.mp4"])
+        events = [e["event"] for e in captured_logs]
+        assert "render_job.failed" in events
 
-            events = [e["event"] for e in cap]
-            assert "render_job.failed" in events
-
-    async def test_render_job_failed_includes_error(self) -> None:
+    async def test_render_job_failed_includes_error(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """render_job.failed includes error context."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
@@ -234,18 +253,18 @@ class TestServiceLifecycleEvents:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
 
-            with capture_logs() as cap:
-                await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
+        failed = [e for e in captured_logs if e["event"] == "render_job.failed"]
+        assert len(failed) == 1
+        assert "error" in failed[0]
 
-            failed = [e for e in cap if e["event"] == "render_job.failed"]
-            assert len(failed) == 1
-            assert "error" in failed[0]
-
-    async def test_render_job_cancelled_logged(self) -> None:
+    async def test_render_job_cancelled_logged(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """render_job.cancelled is logged when a job is cancelled."""
         with _PATCH_NO_RUST:
-            service, repo, _, _ = _build_service()
+            service, _, _, _ = _build_service()
 
             job = await service.submit_job(
                 project_id="proj-1",
@@ -254,15 +273,15 @@ class TestServiceLifecycleEvents:
                 quality_preset=QualityPreset.STANDARD,
                 render_plan_json=_make_plan_json(),
             )
+            result = await service.cancel_job(job.id)
 
-            with capture_logs() as cap:
-                result = await service.cancel_job(job.id)
+        assert result is True
+        events = [e["event"] for e in captured_logs]
+        assert "render_job.cancelled" in events
 
-            assert result is True
-            events = [e["event"] for e in cap]
-            assert "render_job.cancelled" in events
-
-    async def test_render_job_progress_milestone_logged(self) -> None:
+    async def test_render_job_progress_milestone_logged(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """render_job.progress_milestone is logged at 25/50/75/100%."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
@@ -276,7 +295,6 @@ class TestServiceLifecycleEvents:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
 
-            # Simulate progress callbacks during execute
             progress_values = [0.25, 0.50, 0.75, 1.0]
 
             async def fake_execute(
@@ -292,54 +310,50 @@ class TestServiceLifecycleEvents:
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
+            await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
 
-            with capture_logs() as cap:
-                await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
-
-            milestones = [e for e in cap if e["event"] == "render_job.progress_milestone"]
-            milestone_pcts = [e["milestone_pct"] for e in milestones]
-            assert 25 in milestone_pcts
-            assert 50 in milestone_pcts
-            assert 75 in milestone_pcts
-            assert 100 in milestone_pcts
+        milestones = [e for e in captured_logs if e["event"] == "render_job.progress_milestone"]
+        milestone_pcts = [e["milestone_pct"] for e in milestones]
+        assert 25 in milestone_pcts
+        assert 50 in milestone_pcts
+        assert 75 in milestone_pcts
+        assert 100 in milestone_pcts
 
 
 class TestCorrelationIds:
     """Tests that job_id is present on all render log entries."""
 
-    async def test_job_id_on_created_event(self) -> None:
+    async def test_job_id_on_created_event(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.created includes job_id."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
-            with capture_logs() as cap:
-                job = await service.submit_job(
-                    project_id="proj-1",
-                    output_path="/tmp/out.mp4",
-                    output_format=OutputFormat.MP4,
-                    quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
-                )
-            created = [e for e in cap if e["event"] == "render_job.created"]
-            assert len(created) == 1
-            assert created[0]["job_id"] == job.id
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+        created = [e for e in captured_logs if e["event"] == "render_job.created"]
+        assert len(created) == 1
+        assert created[0]["job_id"] == job.id
 
-    async def test_job_id_on_queued_event(self) -> None:
+    async def test_job_id_on_queued_event(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.queued includes job_id."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
-            with capture_logs() as cap:
-                job = await service.submit_job(
-                    project_id="proj-1",
-                    output_path="/tmp/out.mp4",
-                    output_format=OutputFormat.MP4,
-                    quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
-                )
-            queued = [e for e in cap if e["event"] == "render_job.queued"]
-            assert len(queued) == 1
-            assert queued[0]["job_id"] == job.id
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+        queued = [e for e in captured_logs if e["event"] == "render_job.queued"]
+        assert len(queued) == 1
+        assert queued[0]["job_id"] == job.id
 
-    async def test_job_id_on_cancelled_event(self) -> None:
+    async def test_job_id_on_cancelled_event(self, captured_logs: list[dict[str, object]]) -> None:
         """render_job.cancelled includes job_id."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
@@ -350,11 +364,10 @@ class TestCorrelationIds:
                 quality_preset=QualityPreset.STANDARD,
                 render_plan_json=_make_plan_json(),
             )
-            with capture_logs() as cap:
-                await service.cancel_job(job.id)
-            cancelled = [e for e in cap if e["event"] == "render_job.cancelled"]
-            assert len(cancelled) == 1
-            assert cancelled[0]["job_id"] == job.id
+            await service.cancel_job(job.id)
+        cancelled = [e for e in captured_logs if e["event"] == "render_job.cancelled"]
+        assert len(cancelled) == 1
+        assert cancelled[0]["job_id"] == job.id
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +378,9 @@ class TestCorrelationIds:
 class TestExecutorLogging:
     """Tests for FFmpeg command logging and stderr capture."""
 
-    async def test_ffmpeg_command_logged_at_debug(self) -> None:
+    async def test_ffmpeg_command_logged_at_debug(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """FFmpeg command is logged at DEBUG level."""
         with _PATCH_NO_RUST_EXECUTOR:
             executor = RenderExecutor()
@@ -386,18 +401,19 @@ class TestExecutorLogging:
             mock_process.pid = 12345
             mock_process.wait = AsyncMock(return_value=0)
 
-            with (
-                patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)),
-                capture_logs() as cap,
-            ):
+            with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)):
                 await executor.execute(job, command)
 
-            ffmpeg_cmd_logs = [e for e in cap if e["event"] == "render_executor.ffmpeg_command"]
-            assert len(ffmpeg_cmd_logs) == 1
-            assert ffmpeg_cmd_logs[0]["log_level"] == "debug"
-            assert "ffmpeg" in ffmpeg_cmd_logs[0]["command"]
+        ffmpeg_cmd_logs = [
+            e for e in captured_logs if e["event"] == "render_executor.ffmpeg_command"
+        ]
+        assert len(ffmpeg_cmd_logs) == 1
+        assert ffmpeg_cmd_logs[0]["log_level"] == "debug"
+        assert "ffmpeg" in str(ffmpeg_cmd_logs[0]["command"])
 
-    async def test_ffmpeg_stderr_logged_on_failure(self) -> None:
+    async def test_ffmpeg_stderr_logged_on_failure(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """FFmpeg stderr is logged at ERROR level on failure."""
         with _PATCH_NO_RUST_EXECUTOR:
             executor = RenderExecutor()
@@ -420,20 +436,17 @@ class TestExecutorLogging:
             mock_process.pid = 12345
             mock_process.wait = AsyncMock(return_value=1)
 
-            with (
-                patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)),
-                capture_logs() as cap,
-            ):
+            with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)):
                 result = await executor.execute(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
 
-            assert result is False
-            stderr_logs = [e for e in cap if e["event"] == "render_executor.ffmpeg_stderr"]
-            assert len(stderr_logs) == 1
-            assert stderr_logs[0]["log_level"] == "error"
-            assert "codec not found" in stderr_logs[0]["stderr"]
-            assert stderr_logs[0]["job_id"] == job.id
+        assert result is False
+        stderr_logs = [e for e in captured_logs if e["event"] == "render_executor.ffmpeg_stderr"]
+        assert len(stderr_logs) == 1
+        assert stderr_logs[0]["log_level"] == "error"
+        assert "codec not found" in str(stderr_logs[0]["stderr"])
+        assert stderr_logs[0]["job_id"] == job.id
 
-    async def test_hardware_detection_logged(self) -> None:
+    async def test_hardware_detection_logged(self, captured_logs: list[dict[str, object]]) -> None:
         """Hardware detection results are logged with encoder name."""
         with _PATCH_NO_RUST_EXECUTOR:
             executor = RenderExecutor()
@@ -453,20 +466,19 @@ class TestExecutorLogging:
             mock_process.pid = 12345
             mock_process.wait = AsyncMock(return_value=0)
 
-            with (
-                patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)),
-                capture_logs() as cap,
-            ):
+            with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)):
                 await executor.execute(
                     job, ["ffmpeg", "-i", "in.mp4", "-c:v", "h264_nvenc", "out.mp4"]
                 )
 
-            hw_logs = [e for e in cap if e["event"] == "render_executor.hardware_detection"]
-            assert len(hw_logs) == 1
-            assert hw_logs[0]["encoder_name"] == "h264_nvenc"
-            assert hw_logs[0]["encoder_type"] == "hardware"
+        hw_logs = [e for e in captured_logs if e["event"] == "render_executor.hardware_detection"]
+        assert len(hw_logs) == 1
+        assert hw_logs[0]["encoder_name"] == "h264_nvenc"
+        assert hw_logs[0]["encoder_type"] == "hardware"
 
-    async def test_software_encoder_classified(self) -> None:
+    async def test_software_encoder_classified(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """Software encoder is correctly classified."""
         with _PATCH_NO_RUST_EXECUTOR:
             executor = RenderExecutor()
@@ -486,16 +498,13 @@ class TestExecutorLogging:
             mock_process.pid = 12345
             mock_process.wait = AsyncMock(return_value=0)
 
-            with (
-                patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)),
-                capture_logs() as cap,
-            ):
+            with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=mock_process)):
                 await executor.execute(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
 
-            hw_logs = [e for e in cap if e["event"] == "render_executor.hardware_detection"]
-            assert len(hw_logs) == 1
-            assert hw_logs[0]["encoder_name"] == "libx264"
-            assert hw_logs[0]["encoder_type"] == "software"
+        hw_logs = [e for e in captured_logs if e["event"] == "render_executor.hardware_detection"]
+        assert len(hw_logs) == 1
+        assert hw_logs[0]["encoder_name"] == "libx264"
+        assert hw_logs[0]["encoder_type"] == "software"
 
 
 # ---------------------------------------------------------------------------
@@ -506,27 +515,8 @@ class TestExecutorLogging:
 class TestQueueLogging:
     """Tests for queue enqueue/dequeue event logging."""
 
-    async def test_enqueue_logged_with_job_id(self) -> None:
+    async def test_enqueue_logged_with_job_id(self, captured_logs: list[dict[str, object]]) -> None:
         """Queue enqueue is logged with job_id."""
-        repo = InMemoryRenderRepository()
-        queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
-        job = RenderJob.create(
-            project_id="proj-1",
-            output_path="/tmp/out.mp4",
-            output_format=OutputFormat.MP4,
-            quality_preset=QualityPreset.STANDARD,
-            render_plan=_make_plan_json(),
-        )
-
-        with capture_logs() as cap:
-            await queue.enqueue(job)
-
-        enqueue_logs = [e for e in cap if e["event"] == "render_queue.enqueue"]
-        assert len(enqueue_logs) == 1
-        assert enqueue_logs[0]["job_id"] == job.id
-
-    async def test_dequeue_logged_with_job_id(self) -> None:
-        """Queue dequeue is logged with job_id."""
         repo = InMemoryRenderRepository()
         queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
         job = RenderJob.create(
@@ -538,20 +528,36 @@ class TestQueueLogging:
         )
         await queue.enqueue(job)
 
-        with capture_logs() as cap:
-            dequeued = await queue.dequeue()
+        enqueue_logs = [e for e in captured_logs if e["event"] == "render_queue.enqueue"]
+        assert len(enqueue_logs) == 1
+        assert enqueue_logs[0]["job_id"] == job.id
+
+    async def test_dequeue_logged_with_job_id(self, captured_logs: list[dict[str, object]]) -> None:
+        """Queue dequeue is logged with job_id."""
+        repo = InMemoryRenderRepository()
+        queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+        job = RenderJob.create(
+            project_id="proj-1",
+            output_path="/tmp/out.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan=_make_plan_json(),
+        )
+        await queue.enqueue(job)
+        dequeued = await queue.dequeue()
 
         assert dequeued is not None
-        dequeue_logs = [e for e in cap if e["event"] == "render_queue.dequeue"]
+        dequeue_logs = [e for e in captured_logs if e["event"] == "render_queue.dequeue"]
         assert len(dequeue_logs) == 1
         assert dequeue_logs[0]["job_id"] == job.id
 
-    async def test_queue_full_rejection_logged(self) -> None:
+    async def test_queue_full_rejection_logged(
+        self, captured_logs: list[dict[str, object]]
+    ) -> None:
         """Queue full rejection is logged with job_id."""
         repo = InMemoryRenderRepository()
         queue = RenderQueue(repo, max_concurrent=1, max_depth=1)
 
-        # Fill the queue
         job1 = RenderJob.create(
             project_id="proj-1",
             output_path="/tmp/out1.mp4",
@@ -569,10 +575,10 @@ class TestQueueLogging:
             render_plan=_make_plan_json(),
         )
 
-        with capture_logs() as cap, pytest.raises(QueueFullError):
+        with pytest.raises(QueueFullError):
             await queue.enqueue(job2)
 
-        capacity_logs = [e for e in cap if e["event"] == "render_queue.capacity_reached"]
+        capacity_logs = [e for e in captured_logs if e["event"] == "render_queue.capacity_reached"]
         assert len(capacity_logs) == 1
         assert capacity_logs[0]["job_id"] == job2.id
 
@@ -585,32 +591,32 @@ class TestQueueLogging:
 class TestLifecycleSequence:
     """Tests that a complete lifecycle produces the expected log sequence."""
 
-    async def test_full_lifecycle_sequence(self) -> None:
+    async def test_full_lifecycle_sequence(self, captured_logs: list[dict[str, object]]) -> None:
         """Created -> queued -> started -> completed produces correct log order."""
         with _PATCH_NO_RUST, _PATCH_NO_RUST_EXECUTOR:
             service, repo, _, executor = _build_service()
 
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
-            with capture_logs() as cap:
-                job = await service.submit_job(
-                    project_id="proj-1",
-                    output_path="/tmp/out.mp4",
-                    output_format=OutputFormat.MP4,
-                    quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
-                )
-                await repo.update_status(job.id, RenderStatus.RUNNING)
-                await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            await service.run_job(job, ["ffmpeg", "-i", "in.mp4", "out.mp4"])
 
-            lifecycle_events = [e["event"] for e in cap if e["event"].startswith("render_job.")]
-            # Verify order: created before queued before started before completed
-            assert lifecycle_events.index("render_job.created") < lifecycle_events.index(
-                "render_job.queued"
-            )
-            assert lifecycle_events.index("render_job.queued") < lifecycle_events.index(
-                "render_job.started"
-            )
-            assert lifecycle_events.index("render_job.started") < lifecycle_events.index(
-                "render_job.completed"
-            )
+        lifecycle_events = [
+            e["event"] for e in captured_logs if str(e["event"]).startswith("render_job.")
+        ]
+        assert lifecycle_events.index("render_job.created") < lifecycle_events.index(
+            "render_job.queued"
+        )
+        assert lifecycle_events.index("render_job.queued") < lifecycle_events.index(
+            "render_job.started"
+        )
+        assert lifecycle_events.index("render_job.started") < lifecycle_events.index(
+            "render_job.completed"
+        )
