@@ -98,7 +98,24 @@ class RenderExecutor:
         log = logger.bind(job_id=job_id)
         encoder_name = self._extract_encoder_name(job)
 
-        log.info("render_executor.starting", command=command)
+        log.debug("render_executor.ffmpeg_command", command=" ".join(command))
+        log.info(
+            "render_executor.hardware_detection",
+            encoder_name=encoder_name,
+            encoder_type="hardware"
+            if encoder_name
+            in (
+                "h264_nvenc",
+                "hevc_nvenc",
+                "h264_qsv",
+                "hevc_qsv",
+                "h264_amf",
+                "hevc_amf",
+                "h264_videotoolbox",
+                "hevc_videotoolbox",
+            )
+            else "software",
+        )
         start = time.monotonic()
         self._job_start_times[job_id] = start
         self._job_durations_us[job_id] = total_duration_us
@@ -227,7 +244,30 @@ class RenderExecutor:
         # Wait for process to exit after stdout is exhausted
         await process.wait()
 
-        return process.returncode == 0
+        success = process.returncode == 0
+
+        # Capture and log stderr on failure for post-mortem analysis.
+        # Use a timeout to avoid blocking on Python 3.10 where pipe
+        # reads can hang after process cancellation/kill.
+        if not success and process.stderr is not None:
+            try:
+                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=2.0)
+                stderr_text = stderr_data.decode("utf-8", errors="replace").strip()
+                if stderr_text:
+                    logger.error(
+                        "render_executor.ffmpeg_stderr",
+                        job_id=job_id,
+                        stderr=stderr_text,
+                        returncode=process.returncode,
+                    )
+            except (asyncio.TimeoutError, Exception):
+                logger.debug(
+                    "render_executor.stderr_read_failed",
+                    job_id=job_id,
+                    exc_info=True,
+                )
+
+        return success
 
     async def _parse_and_report_progress(
         self,
