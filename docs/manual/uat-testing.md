@@ -207,6 +207,7 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 402 | `uat_journey_402.py` | **Proxy Management** — Navigates to the Library, verifies proxy status badges on video cards, waits for proxy generation, then starts a preview with proxy. Depends on journey 201. |
 | 403 | `uat_journey_403.py` | **Theater Mode** — Enters Theater Mode, verifies HUD auto-hide after 3 seconds, re-shows HUD on mouse move, tests keyboard shortcuts (Space, Escape), and exits. Independent. |
 | 404 | `uat_journey_404.py` | **Timeline Sync** — Plays the preview, verifies the playhead moves with playback, clicks a timeline position, and verifies the video seeks to match. Independent. |
+| 501 | `uat_journey_501.py` | **Render Page Navigation** — Navigates to the app root, verifies the Render tab is visible, clicks it to navigate to /gui/render, and verifies the render-page container, queue-status-bar, and start-render-btn are present. Independent. |
 
 ### Dependency graph
 
@@ -222,6 +223,7 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 
 403 (theater-mode)       ← independent
 404 (timeline-sync)      ← independent
+501 (render-page-navigation) ← independent
 ```
 
-If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, and 404 always run regardless of other journey results.
+If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results.

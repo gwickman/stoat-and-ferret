@@ -21,7 +21,7 @@ Seven end-user flows that the UAT script validates. Each journey represents a cr
 | 5 | Open browser to `http://localhost:8765/gui/` | Page loads without error |
 | 6 | Verify application shell renders | Navigation tabs visible in DOM |
 | 7 | Verify health indicator shows green | Dashboard fetches `/health/ready`, indicator green |
-| 8 | Verify all navigation tabs present | Dashboard, Library, Projects, Effects, Timeline tabs exist |
+| 8 | Verify all navigation tabs present | Dashboard, Library, Projects, Effects, Timeline, Render tabs exist |
 
 ### Screenshot Checkpoints
 
