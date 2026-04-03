@@ -5,6 +5,7 @@ import EffectsPage from './pages/EffectsPage'
 import LibraryPage from './pages/LibraryPage'
 import PreviewPage from './pages/PreviewPage'
 import ProjectsPage from './pages/ProjectsPage'
+import RenderPage from './pages/RenderPage'
 import TimelinePage from './pages/TimelinePage'
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Route path="effects" element={<EffectsPage />} />
         <Route path="timeline" element={<TimelinePage />} />
         <Route path="preview" element={<PreviewPage />} />
+        <Route path="render" element={<RenderPage />} />
       </Route>
     </Routes>
   )
