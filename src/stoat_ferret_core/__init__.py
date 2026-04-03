@@ -77,6 +77,7 @@ try:
         Position,
         PreviewQuality,
         ProgressInfo,
+        RenderSettings,
         SanitizationError,
         SpeedControl,
         TimeRange,
@@ -100,6 +101,7 @@ try:
         escape_filter_text,
         estimate_eta,
         estimate_filter_cost,
+        estimate_output_size,
         health_check,
         inject_preview_scale,
         is_expensive_filter,
@@ -114,6 +116,7 @@ try:
         validate_clips,
         validate_path,
         validate_preset,
+        validate_render_settings,
         validate_video_codec,
         validate_volume,
     )
@@ -187,6 +190,9 @@ except ImportError:
     FfmpegProgressUpdate = _not_built  # type: ignore[misc,assignment]
     parse_ffmpeg_progress = _not_built
     ProgressInfo = _not_built  # type: ignore[misc,assignment]
+    RenderSettings = _not_built  # type: ignore[misc,assignment]
+    estimate_output_size = _not_built
+    validate_render_settings = _not_built
     escape_filter_text = _not_built
     validate_path = _not_built
     validate_volume = _not_built
@@ -276,6 +282,10 @@ __all__ = [
     "validate_video_codec",
     "validate_audio_codec",
     "validate_preset",
+    # Render settings
+    "RenderSettings",
+    "estimate_output_size",
+    "validate_render_settings",
     # Encoder detection
     "EncoderInfo",
     "EncoderType",

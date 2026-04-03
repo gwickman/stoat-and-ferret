@@ -29,7 +29,7 @@ from stoat_ferret.render.queue import QueueFullError, RenderQueue
 from stoat_ferret.render.render_repository import AsyncRenderRepository
 
 try:
-    from stoat_ferret_core._core import (
+    from stoat_ferret_core import (
         RenderSettings,
         estimate_output_size,
         validate_render_settings,
