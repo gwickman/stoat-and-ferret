@@ -23,6 +23,7 @@ describe('Navigation', () => {
       expect(screen.getByTestId('nav-tab-dashboard')).toBeDefined()
       expect(screen.getByTestId('nav-tab-library')).toBeDefined()
       expect(screen.getByTestId('nav-tab-projects')).toBeDefined()
+      expect(screen.getByTestId('nav-tab-render')).toBeDefined()
     })
   })
 
@@ -40,6 +41,7 @@ describe('Navigation', () => {
       expect(screen.queryByTestId('nav-tab-dashboard')).toBeNull()
       expect(screen.queryByTestId('nav-tab-library')).toBeNull()
       expect(screen.queryByTestId('nav-tab-projects')).toBeNull()
+      expect(screen.queryByTestId('nav-tab-render')).toBeNull()
     })
   })
 
@@ -63,6 +65,7 @@ describe('Navigation', () => {
     })
     expect(screen.queryByTestId('nav-tab-library')).toBeNull()
     expect(screen.queryByTestId('nav-tab-projects')).toBeNull()
+    expect(screen.queryByTestId('nav-tab-render')).toBeNull()
   })
 
   it('shows tabs when endpoint returns 405 (Method Not Allowed)', async () => {
@@ -78,6 +81,7 @@ describe('Navigation', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('nav-tab-dashboard')).toBeDefined()
+      expect(screen.getByTestId('nav-tab-render')).toBeDefined()
     })
   })
 })
