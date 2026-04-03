@@ -43,6 +43,7 @@ Exceptions
 - ValidationError: Raised when input validation fails
 - CommandError: Raised when FFmpeg command building fails
 - SanitizationError: Raised when input sanitization fails
+- LayoutError: Raised when layout position validation fails
 """
 
 from __future__ import annotations
@@ -71,6 +72,7 @@ try:
         FilterChain,
         FilterGraph,
         FrameRate,
+        LayoutError,
         LayoutPosition,
         LayoutPreset,
         LayoutSpec,
@@ -203,6 +205,7 @@ except ImportError:
     ValidationError = RuntimeError  # type: ignore[misc,assignment]
     CommandError = RuntimeError  # type: ignore[misc,assignment]
     SanitizationError = RuntimeError  # type: ignore[misc,assignment]
+    LayoutError = RuntimeError  # type: ignore[misc,assignment]
 
 
 __all__ = [
@@ -296,4 +299,5 @@ __all__ = [
     "ValidationError",
     "CommandError",
     "SanitizationError",
+    "LayoutError",
 ]

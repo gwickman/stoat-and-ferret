@@ -51,6 +51,9 @@ from stoat_ferret_core._core import (
     TimeRange as TimeRange,
 )
 from stoat_ferret_core._core import (
+    LayoutError as LayoutError,
+)
+from stoat_ferret_core._core import (
     # Exceptions
     ValidationError as ValidationError,
 )
@@ -158,6 +161,7 @@ __all__ = [
     "ValidationError",
     "CommandError",
     "SanitizationError",
+    "LayoutError",
     # Encoder detection
     "EncoderInfo",
     "EncoderType",

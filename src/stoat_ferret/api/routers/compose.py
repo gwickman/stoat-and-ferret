@@ -15,7 +15,12 @@ from stoat_ferret.api.schemas.compose import (
 )
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.api.websocket.manager import ConnectionManager
-from stoat_ferret_core import LayoutPosition, LayoutPreset, build_overlay_filter
+from stoat_ferret_core import (
+    LayoutError,
+    LayoutPosition,
+    LayoutPreset,
+    build_overlay_filter,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -267,8 +272,6 @@ def _resolve_custom(
     Raises:
         HTTPException: 422 if any coordinate is out of range.
     """
-    from stoat_ferret_core._core import LayoutError
-
     result: list[LayoutPosition] = []
     for i, pos in enumerate(positions):
         lp = LayoutPosition(pos.x, pos.y, pos.width, pos.height, i)
