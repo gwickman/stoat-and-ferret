@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v030] - 2026-04-05
+
+GUI Render Page Shell + Public API Hygiene. Builds the user-facing render control center with routing, state management, page layout, and UAT coverage. Fixes LayoutError public API export and migrates compose.py imports.
+
+### Added
+
+- **Render Page Route & Navigation** — `/render` route in App.tsx, Render tab in Navigation with endpoint health check (BL-231, #255)
+- **Render Store & WebSocket Hook** — Zustand renderStore with job list, queue status, encoder/format state; useRenderEvents hook dispatching 8 WebSocket render event types with reconnection re-fetch (BL-231, #256)
+- **Render Page Layout** — RenderPage with Active/Pending/Completed job sections, queue status bar, disabled Start Render button, data-testid attributes (BL-228, #257)
+- **Render UAT Journey 501** — Playwright test validating render page navigation, layout elements, and data-testid selectors (BL-231, BL-228, #258)
+
+### Fixed
+
+- **LayoutError Public API Export** — re-exported LayoutError through stoat_ferret_core public API, migrated compose.py from internal `_core` import (BL-246, #259)
+
 ## [v028] - 2026-04-01
 
 Phase 5 Foundation: Rust Render Core + Render Job Infrastructure. Builds compute-intensive Rust render functions (plan, encoder, progress, command) with PyO3 bindings and proptest coverage, plus Python job infrastructure (model, queue, executor, checkpoints, service) for end-to-end render job lifecycle management.
