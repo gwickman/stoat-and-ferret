@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import StartRenderModal from '../StartRenderModal'
 import { useRenderStore } from '../../../stores/renderStore'
 import { useProjectStore } from '../../../stores/projectStore'
