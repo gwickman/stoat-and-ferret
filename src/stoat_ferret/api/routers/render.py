@@ -31,6 +31,8 @@ from stoat_ferret.api.schemas.render import (
     QueueStatusResponse,
     RenderJobResponse,
     RenderListResponse,
+    RenderPreviewRequest,
+    RenderPreviewResponse,
 )
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.render.encoder_cache import (
@@ -557,6 +559,116 @@ async def get_output_formats() -> FormatListResponse:
         All available output formats with codec and quality preset details.
     """
     return FormatListResponse(formats=_FORMAT_DATA)
+
+
+# ---------- Command preview ----------
+
+
+# Quality preset mapping: user-facing name → Rust QualityPreset enum variant.
+# Resolved lazily inside the handler to avoid import-time dependency on the
+# native extension (mirrors the pattern in _detect_encoders_sync).
+_QUALITY_PRESET_NAMES = ("draft", "standard", "high")
+
+
+@router.post("/render/preview", response_model=RenderPreviewResponse)
+def render_preview(body: RenderPreviewRequest) -> RenderPreviewResponse:
+    """Return a representative FFmpeg command string for the given render settings.
+
+    Stateless endpoint — no job creation, no disk I/O.  Calls Rust
+    ``validate_render_settings`` for input validation (422 on failure)
+    and ``build_render_command`` with placeholder segment data to
+    produce the command.
+
+    Args:
+        body: Render preview request with format, quality preset, and encoder.
+
+    Returns:
+        FFmpeg command string.
+
+    Raises:
+        HTTPException: 422 if settings are invalid.
+    """
+    from stoat_ferret_core import (
+        EncoderInfo,
+        EncoderType,
+        RenderSegment,
+        RenderSettings,
+        build_render_command,
+        validate_render_settings,
+    )
+    from stoat_ferret_core._core import (
+        QualityPreset as CoreQualityPreset,
+    )
+
+    # Validate quality_preset value
+    if body.quality_preset not in _QUALITY_PRESET_NAMES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "INVALID_QUALITY_PRESET",
+                "message": (
+                    f"Invalid quality_preset '{body.quality_preset}'. "
+                    f"Valid: {list(_QUALITY_PRESET_NAMES)}"
+                ),
+            },
+        )
+
+    # Build RenderSettings with placeholder resolution/fps for validation
+    settings = RenderSettings(
+        output_format=body.output_format,
+        width=1920,
+        height=1080,
+        codec=body.encoder,
+        quality_preset="medium",
+        fps=30.0,
+    )
+
+    try:
+        validate_render_settings(settings)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "INVALID_RENDER_SETTINGS",
+                "message": str(exc),
+            },
+        ) from exc
+
+    # Map user quality preset to Rust enum
+    quality_map = {
+        "draft": CoreQualityPreset.Draft,
+        "standard": CoreQualityPreset.Standard,
+        "high": CoreQualityPreset.High,
+    }
+    quality = quality_map[body.quality_preset]
+
+    # Placeholder segment: 10 s, 1920×1080, 300 frames @ 30 fps
+    segment = RenderSegment(
+        index=0,
+        timeline_start=0.0,
+        timeline_end=10.0,
+        frame_count=300,
+        cost_estimate=300.0,
+    )
+
+    encoder_info = EncoderInfo(
+        name=body.encoder,
+        codec=body.encoder,
+        is_hardware=False,
+        encoder_type=EncoderType.Software,
+        description=f"Software encoder {body.encoder}",
+    )
+
+    cmd = build_render_command(
+        segment,
+        encoder_info,
+        quality,
+        settings,
+        "/tmp/input.mp4",
+        f"/tmp/output.{body.output_format}",
+    )
+
+    return RenderPreviewResponse(command="ffmpeg " + " ".join(cmd.args()))
 
 
 # ---------- Queue status ----------

@@ -79,6 +79,8 @@ try:
         Position,
         PreviewQuality,
         ProgressInfo,
+        RenderCommand,
+        RenderSegment,
         RenderSettings,
         SanitizationError,
         SpeedControl,
@@ -93,6 +95,7 @@ try:
         build_composition_graph,
         build_encoding_args,
         build_overlay_filter,
+        build_render_command,
         build_scale_for_layout,
         calculate_batch_progress,
         calculate_composition_positions,
@@ -192,9 +195,12 @@ except ImportError:
     FfmpegProgressUpdate = _not_built  # type: ignore[misc,assignment]
     parse_ffmpeg_progress = _not_built
     ProgressInfo = _not_built  # type: ignore[misc,assignment]
+    RenderCommand = _not_built  # type: ignore[misc,assignment]
+    RenderSegment = _not_built  # type: ignore[misc,assignment]
     RenderSettings = _not_built  # type: ignore[misc,assignment]
     estimate_output_size = _not_built
     validate_render_settings = _not_built
+    build_render_command = _not_built
     escape_filter_text = _not_built
     validate_path = _not_built
     validate_volume = _not_built
@@ -285,8 +291,11 @@ __all__ = [
     "validate_video_codec",
     "validate_audio_codec",
     "validate_preset",
-    # Render settings
+    # Render settings and command builder
+    "RenderCommand",
+    "RenderSegment",
     "RenderSettings",
+    "build_render_command",
     "estimate_output_size",
     "validate_render_settings",
     # Encoder detection
