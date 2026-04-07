@@ -1,0 +1,1796 @@
+openapi: "3.1.0"
+info:
+  title: stoat-and-ferret API
+  description: >
+    AI-driven video editor REST API. The Python/FastAPI layer handles HTTP routing and
+    orchestration; compute-intensive operations (timeline math, filter generation,
+    input sanitization) are delegated to the Rust core via PyO3 bindings. The effects
+    engine provides 9 built-in effects with full CRUD on clip effect stacks and
+    transition application between adjacent clips. The WebSocket heartbeat interval is
+    configurable via the STOAT_WS_HEARTBEAT_INTERVAL environment variable. Structured
+    logging (JSON or console) is initialised on application startup via configure_logging().
+  version: "0.3.0"
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8765
+    description: Local development server
+
+paths:
+  /health/live:
+    get:
+      operationId: liveness
+      summary: Liveness probe
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /health/ready:
+    get:
+      operationId: readiness
+      summary: Readiness probe with dependency checks
+      tags: [Health]
+      responses:
+        "200":
+          description: All dependencies healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: One or more dependencies degraded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+
+  /api/v1/videos:
+    get:
+      operationId: listVideos
+      summary: List videos with pagination
+      tags: [Videos]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Paginated video list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoListResponse"
+
+  /api/v1/videos/search:
+    get:
+      operationId: searchVideos
+      summary: Search videos by filename or path (FTS5 full-text search)
+      tags: [Videos]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoSearchResponse"
+
+  /api/v1/videos/{video_id}:
+    get:
+      operationId: getVideo
+      summary: Get video by ID
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Video details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteVideo
+      summary: Delete video from library
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+        - name: delete_file
+          in: query
+          description: Also delete source file from disk
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "204":
+          description: Video deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/videos/{video_id}/thumbnail:
+    get:
+      operationId: getVideoThumbnail
+      summary: Get thumbnail image for a video
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: JPEG thumbnail image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/videos/scan:
+    post:
+      operationId: scanDirectory
+      summary: Submit directory scan as async job
+      description: >
+        Path validation is performed synchronously before job submission.
+        Returns a job_id for polling via GET /api/v1/jobs/{job_id}.
+      tags: [Videos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanRequest"
+      responses:
+        "202":
+          description: Scan job submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmitResponse"
+        "400":
+          description: Invalid path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Path not in allowed scan roots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/projects:
+    get:
+      operationId: listProjects
+      summary: List all projects
+      tags: [Projects]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Paginated project list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+    post:
+      operationId: createProject
+      summary: Create a new project
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreate"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+
+  /api/v1/projects/{project_id}:
+    get:
+      operationId: getProject
+      summary: Get project by ID
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteProject
+      summary: Delete project
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Project deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/clips:
+    get:
+      operationId: listClips
+      summary: List clips in project (ordered by timeline position)
+      tags: [Clips]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Clip list for project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipListResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: addClip
+      summary: Add clip to project
+      description: >
+        Clip time range validation is performed by the Rust core before persistence.
+      tags: [Clips]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClipCreate"
+      responses:
+        "201":
+          description: Clip added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipResponse"
+        "400":
+          description: Validation error (clip fails Rust validation)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/clips/{clip_id}:
+    patch:
+      operationId: updateClip
+      summary: Update clip
+      tags: [Clips]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClipUpdate"
+      responses:
+        "200":
+          description: Clip updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteClip
+      summary: Delete clip
+      tags: [Clips]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+      responses:
+        "204":
+          description: Clip deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/jobs/{job_id}:
+    get:
+      operationId: getJobStatus
+      summary: Get job status
+      description: >
+        Poll status of an async job submitted via POST /api/v1/videos/scan.
+      tags: [Jobs]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/jobs/{job_id}/cancel:
+    post:
+      operationId: cancelJob
+      summary: Request cancellation of a job
+      description: >
+        Sets the cancellation flag on a job. Returns 409 if the job is already
+        in a terminal state (COMPLETE, FAILED, TIMEOUT, CANCELLED).
+      tags: [Jobs]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job cancellation requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Job already in terminal state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/filesystem/directories:
+    get:
+      operationId: listDirectories
+      summary: List subdirectories within a path
+      description: >
+        Returns a flat list of immediate subdirectories. Hidden directories
+        (starting with '.') are excluded. Defaults to the first allowed scan
+        root or the user's home directory when no path is provided.
+      tags: [Filesystem]
+      parameters:
+        - name: path
+          in: query
+          description: Directory path to list. Defaults to a sensible starting location.
+          schema:
+            type: string
+            nullable: true
+      responses:
+        "200":
+          description: Directory listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryListResponse"
+        "400":
+          description: Path is not a directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Path not in allowed scan roots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Path does not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/effects:
+    get:
+      operationId: listEffects
+      summary: List all available effects with parameter schemas and AI hints
+      description: >
+        Returns all 9 registered effects from the EffectRegistry. Each effect
+        includes a JSON Schema for parameters, per-parameter AI guidance strings,
+        and a filter_preview showing the FFmpeg filter string generated by the
+        corresponding Rust builder.
+      tags: [Effects]
+      responses:
+        "200":
+          description: Available effects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EffectListResponse"
+
+  /api/v1/effects/preview:
+    post:
+      operationId: previewEffect
+      summary: Preview filter string without applying
+      description: >
+        Validates the effect type and parameters against the JSON Schema,
+        then returns the FFmpeg filter string that would be generated.
+        No clip or project modification occurs.
+      tags: [Effects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EffectPreviewRequest"
+      responses:
+        "200":
+          description: Filter string preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EffectPreviewResponse"
+        "400":
+          description: Unknown effect type or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/projects/{project_id}/clips/{clip_id}/effects:
+    post:
+      operationId: applyEffectToClip
+      summary: Apply effect to a clip
+      description: >
+        Validates the effect type via the registry, validates parameters against
+        the JSON Schema, generates a filter string via the Rust builder, and
+        appends the effect to the clip's effect stack. Returns the applied effect
+        with its generated filter string.
+      tags: [Effects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EffectApplyRequest"
+      responses:
+        "201":
+          description: Effect applied to clip
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EffectApplyResponse"
+        "400":
+          description: Unknown effect type or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/clips/{clip_id}/effects/{index}:
+    patch:
+      operationId: updateClipEffect
+      summary: Update effect at index on a clip
+      description: >
+        Updates the parameters of an existing effect at the specified index.
+        Validates the new parameters against the effect's JSON Schema,
+        regenerates the filter string, and updates in-place.
+      tags: [Effects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+        - $ref: "#/components/parameters/EffectIndex"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EffectUpdateRequest"
+      responses:
+        "200":
+          description: Effect updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EffectApplyResponse"
+        "400":
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteClipEffect
+      summary: Remove effect at index from a clip
+      description: >
+        Removes the effect at the specified index from the clip's effect stack.
+        Subsequent effects shift down by one index.
+      tags: [Effects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+        - $ref: "#/components/parameters/EffectIndex"
+      responses:
+        "200":
+          description: Effect removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EffectDeleteResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/effects/transition:
+    post:
+      operationId: applyTransition
+      summary: Apply transition between adjacent clips
+      description: >
+        Validates that both clips exist and are adjacent in the project timeline,
+        validates the transition type and parameters via the effect registry,
+        generates the FFmpeg filter string, and stores the transition in the
+        project model.
+      tags: [Transitions]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionRequest"
+      responses:
+        "201":
+          description: Transition applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransitionResponse"
+        "400":
+          description: Clips not adjacent, unknown transition type, or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Timeline endpoints ---
+
+  /api/v1/projects/{project_id}/timeline:
+    get:
+      operationId: getTimeline
+      summary: Get project timeline with tracks, clips, and transitions
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Timeline data
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateTimeline
+      summary: Update timeline properties
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Timeline updated
+
+  /api/v1/projects/{project_id}/timeline/tracks:
+    post:
+      operationId: createTrack
+      summary: Create a new track in the timeline
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201":
+          description: Track created
+
+  /api/v1/projects/{project_id}/timeline/clips/{clip_id}:
+    patch:
+      operationId: updateTimelineClip
+      summary: Update a clip's position/properties on the timeline
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+      responses:
+        "200":
+          description: Timeline clip updated
+    delete:
+      operationId: deleteTimelineClip
+      summary: Remove a clip from the timeline
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ClipId"
+      responses:
+        "204":
+          description: Timeline clip removed
+
+  /api/v1/projects/{project_id}/timeline/transitions:
+    post:
+      operationId: createTimelineTransition
+      summary: Create a transition between timeline clips
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201":
+          description: Timeline transition created
+
+  /api/v1/projects/{project_id}/timeline/transitions/{transition_id}:
+    delete:
+      operationId: deleteTimelineTransition
+      summary: Remove a transition from the timeline
+      tags: [Timeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: transition_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Transition removed
+
+  # --- Render endpoints ---
+
+  /api/v1/render:
+    post:
+      operationId: createRenderJob
+      summary: Create render job with pre-flight validation
+      tags: [Render]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenderRequest"
+      responses:
+        "201":
+          description: Render job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenderJobResponse"
+    get:
+      operationId: listRenderJobs
+      summary: List render jobs with pagination and status filtering
+      tags: [Render]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [queued, running, completed, failed, cancelled]
+      responses:
+        "200":
+          description: Render job list
+
+  /api/v1/render/{job_id}:
+    get:
+      operationId: getRenderJob
+      summary: Get render job status with progress, ETA, and speed
+      tags: [Render]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Render job details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenderJobResponse"
+    delete:
+      operationId: deleteRenderJob
+      summary: Delete render job metadata
+      tags: [Render]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "204":
+          description: Job deleted
+
+  /api/v1/render/{job_id}/cancel:
+    post:
+      operationId: cancelRenderJob
+      summary: Cancel a running or queued render job
+      tags: [Render]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job cancelled
+
+  /api/v1/render/{job_id}/retry:
+    post:
+      operationId: retryRenderJob
+      summary: Retry a failed render job
+      tags: [Render]
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "201":
+          description: Retry job created
+
+  /api/v1/render/batch:
+    post:
+      operationId: createBatchRender
+      summary: Submit batch render jobs
+      tags: [Render]
+      responses:
+        "201":
+          description: Batch submitted
+
+  /api/v1/render/batch/{batch_id}:
+    get:
+      operationId: getBatchProgress
+      summary: Track batch render progress
+      tags: [Render]
+      parameters:
+        - name: batch_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Batch status
+
+  /api/v1/render/encoders:
+    get:
+      operationId: getEncoders
+      summary: Get cached hardware encoders
+      tags: [Render]
+      responses:
+        "200":
+          description: Encoder list
+
+  /api/v1/render/encoders/refresh:
+    post:
+      operationId: refreshEncoders
+      summary: Re-run hardware encoder detection
+      tags: [Render]
+      responses:
+        "200":
+          description: Encoders refreshed
+
+  /api/v1/render/formats:
+    get:
+      operationId: getFormats
+      summary: Get supported output formats with codecs
+      tags: [Render]
+      responses:
+        "200":
+          description: Format list
+
+  /api/v1/render/preview:
+    post:
+      operationId: previewRenderCommand
+      summary: Return FFmpeg command string for render settings
+      tags: [Render]
+      responses:
+        "200":
+          description: Command preview string
+
+  /api/v1/render/queue:
+    get:
+      operationId: getRenderQueue
+      summary: Get queue status with capacity and throughput
+      tags: [Render]
+      responses:
+        "200":
+          description: Queue status
+
+  # --- Preview endpoints ---
+
+  /api/v1/projects/{project_id}/preview/start:
+    post:
+      operationId: startPreview
+      summary: Start new HLS preview session
+      tags: [Preview]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clip_id: { type: string }
+                quality: { type: string, enum: [low, medium, high] }
+      responses:
+        "201":
+          description: Preview session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewSessionResponse"
+
+  /api/v1/preview/{session_id}:
+    get:
+      operationId: getPreviewSession
+      summary: Get preview session status
+      tags: [Preview]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Session status
+    delete:
+      operationId: stopPreview
+      summary: Stop preview session
+      tags: [Preview]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "204":
+          description: Session stopped
+
+  /api/v1/preview/{session_id}/seek:
+    post:
+      operationId: seekPreview
+      summary: Seek to position in preview
+      tags: [Preview]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position]
+              properties:
+                position: { type: number }
+      responses:
+        "200":
+          description: Seek completed
+
+  /api/v1/preview/{session_id}/manifest.m3u8:
+    get:
+      operationId: getHlsManifest
+      summary: Serve HLS manifest
+      tags: [Preview]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: HLS manifest
+          content:
+            application/vnd.apple.mpegurl:
+              schema: { type: string }
+
+  /api/v1/preview/{session_id}/segment_{index}.ts:
+    get:
+      operationId: getHlsSegment
+      summary: Serve HLS segment
+      tags: [Preview]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - name: index
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: MPEG-TS segment
+          content:
+            video/mp2t:
+              schema: { type: string, format: binary }
+
+  /api/v1/preview/cache:
+    get:
+      operationId: getPreviewCache
+      summary: Get preview cache metrics
+      tags: [Preview]
+      responses:
+        "200":
+          description: Cache metrics
+    delete:
+      operationId: clearPreviewCache
+      summary: Clear all cached preview sessions
+      tags: [Preview]
+      responses:
+        "204":
+          description: Cache cleared
+
+  # --- Proxy endpoints ---
+
+  /api/v1/videos/{video_id}/proxy:
+    post:
+      operationId: createProxy
+      summary: Generate proxy file for video
+      tags: [Proxy]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "202":
+          description: Proxy generation started
+    get:
+      operationId: getProxyStatus
+      summary: Get proxy generation status
+      tags: [Proxy]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Proxy status
+    delete:
+      operationId: deleteProxy
+      summary: Delete proxy file
+      tags: [Proxy]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "204":
+          description: Proxy deleted
+
+  /api/v1/videos/proxy/batch:
+    post:
+      operationId: createProxyBatch
+      summary: Generate proxies for multiple videos
+      tags: [Proxy]
+      responses:
+        "202":
+          description: Batch proxy generation started
+
+  # --- Thumbnail strip endpoints ---
+
+  /api/v1/videos/{video_id}/thumbnails/strip:
+    post:
+      operationId: createThumbnailStrip
+      summary: Generate thumbnail strip for video
+      tags: [Thumbnails]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "202":
+          description: Strip generation started
+    get:
+      operationId: getThumbnailStripMetadata
+      summary: Get thumbnail strip metadata
+      tags: [Thumbnails]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Strip metadata
+
+  /api/v1/videos/{video_id}/thumbnails/strip.jpg:
+    get:
+      operationId: getThumbnailStripImage
+      summary: Serve thumbnail strip JPEG image
+      tags: [Thumbnails]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Thumbnail strip image
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+
+  # --- Waveform endpoints ---
+
+  /api/v1/videos/{video_id}/waveform:
+    post:
+      operationId: createWaveform
+      summary: Generate waveform for video
+      tags: [Waveform]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "202":
+          description: Waveform generation started
+    get:
+      operationId: getWaveformMetadata
+      summary: Get waveform metadata
+      tags: [Waveform]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Waveform metadata
+
+  /api/v1/videos/{video_id}/waveform.png:
+    get:
+      operationId: getWaveformPng
+      summary: Serve waveform PNG image
+      tags: [Waveform]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Waveform PNG
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+
+  /api/v1/videos/{video_id}/waveform/samples:
+    get:
+      operationId: getWaveformSamples
+      summary: Get waveform as JSON sample array
+      tags: [Waveform]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Waveform samples
+
+  # --- Compose endpoints ---
+
+  /api/v1/compose/presets:
+    get:
+      operationId: getLayoutPresets
+      summary: Get layout composition presets (PiP, SideBySide, Grid2x2, etc.)
+      tags: [Compose]
+      responses:
+        "200":
+          description: Layout preset list
+
+  /api/v1/projects/{project_id}/compose/layout:
+    post:
+      operationId: applyLayout
+      summary: Apply layout composition to project clips
+      tags: [Compose]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Layout applied
+
+  # --- Audio endpoints ---
+
+  /api/v1/projects/{project_id}/audio/mix:
+    put:
+      operationId: configureAudioMix
+      summary: Configure audio mix settings for project
+      tags: [Audio]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Audio mix configured
+
+  /api/v1/projects/{project_id}/audio/preview:
+    post:
+      operationId: previewAudioMix
+      summary: Preview audio mix filter string
+      tags: [Audio]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Audio preview filter
+
+  # --- Version endpoints ---
+
+  /api/v1/projects/{project_id}/versions:
+    get:
+      operationId: listVersions
+      summary: List project version snapshots
+      tags: [Versions]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Version list
+    post:
+      operationId: createVersion
+      summary: Create project version snapshot
+      tags: [Versions]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201":
+          description: Version created
+
+  /api/v1/projects/{project_id}/versions/{version_id}/restore:
+    post:
+      operationId: restoreVersion
+      summary: Restore project to a previous version
+      tags: [Versions]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: version_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Version restored
+
+  # --- Effect preview thumbnail ---
+
+  /api/v1/effects/preview/thumbnail:
+    post:
+      operationId: previewEffectThumbnail
+      summary: Generate effect preview thumbnail JPEG
+      tags: [Effects]
+      responses:
+        "200":
+          description: Preview thumbnail
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+
+  # --- Metrics ---
+
+  /metrics:
+    get:
+      operationId: getMetrics
+      summary: Prometheus metrics endpoint
+      tags: [Observability]
+      responses:
+        "200":
+          description: Prometheus text format
+          content:
+            text/plain:
+              schema: { type: string }
+
+components:
+  parameters:
+    VideoId:
+      name: video_id
+      in: path
+      required: true
+      schema:
+        type: string
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+    ClipId:
+      name: clip_id
+      in: path
+      required: true
+      schema:
+        type: string
+    JobId:
+      name: job_id
+      in: path
+      required: true
+      schema:
+        type: string
+    EffectIndex:
+      name: index
+      in: path
+      required: true
+      description: Zero-based index of the effect in the clip's effect stack
+      schema:
+        type: integer
+        minimum: 0
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    VideoResponse:
+      type: object
+      required: [id, path, filename, duration_frames, frame_rate_numerator, frame_rate_denominator, width, height, video_codec, file_size, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        path:
+          type: string
+        filename:
+          type: string
+        duration_frames:
+          type: integer
+        frame_rate_numerator:
+          type: integer
+        frame_rate_denominator:
+          type: integer
+        width:
+          type: integer
+        height:
+          type: integer
+        video_codec:
+          type: string
+        audio_codec:
+          type: string
+          nullable: true
+        file_size:
+          type: integer
+        thumbnail_path:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    VideoListResponse:
+      type: object
+      required: [videos, total, limit, offset]
+      properties:
+        videos:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoResponse"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    VideoSearchResponse:
+      type: object
+      required: [videos, total, query]
+      properties:
+        videos:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoResponse"
+        total:
+          type: integer
+        query:
+          type: string
+
+    ScanRequest:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+        recursive:
+          type: boolean
+          default: true
+
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        output_width:
+          type: integer
+          minimum: 1
+          default: 1920
+        output_height:
+          type: integer
+          minimum: 1
+          default: 1080
+        output_fps:
+          type: integer
+          minimum: 1
+          maximum: 120
+          default: 30
+
+    ProjectResponse:
+      type: object
+      required: [id, name, output_width, output_height, output_fps, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        output_width:
+          type: integer
+        output_height:
+          type: integer
+        output_fps:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProjectListResponse:
+      type: object
+      required: [projects, total]
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectResponse"
+        total:
+          type: integer
+
+    ClipCreate:
+      type: object
+      required: [source_video_id, in_point, out_point, timeline_position]
+      properties:
+        source_video_id:
+          type: string
+        in_point:
+          type: integer
+          minimum: 0
+          description: In point in frames (frame-accurate, validated by Rust core)
+        out_point:
+          type: integer
+          minimum: 0
+          description: Out point in frames (frame-accurate, validated by Rust core)
+        timeline_position:
+          type: integer
+          minimum: 0
+          description: Timeline position in frames
+
+    ClipUpdate:
+      type: object
+      properties:
+        in_point:
+          type: integer
+          minimum: 0
+          nullable: true
+        out_point:
+          type: integer
+          minimum: 0
+          nullable: true
+        timeline_position:
+          type: integer
+          minimum: 0
+          nullable: true
+
+    ClipResponse:
+      type: object
+      required: [id, project_id, source_video_id, in_point, out_point, timeline_position, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        project_id:
+          type: string
+        source_video_id:
+          type: string
+        in_point:
+          type: integer
+        out_point:
+          type: integer
+        timeline_position:
+          type: integer
+        effects:
+          type: array
+          nullable: true
+          description: Array of applied effects with type, parameters, and filter strings
+          items:
+            $ref: "#/components/schemas/EffectEntry"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ClipListResponse:
+      type: object
+      required: [clips, total]
+      properties:
+        clips:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClipResponse"
+        total:
+          type: integer
+
+    EffectEntry:
+      type: object
+      required: [effect_type, parameters, filter_string]
+      description: An effect stored on a clip's effect stack
+      properties:
+        effect_type:
+          type: string
+          example: text_overlay
+        parameters:
+          type: object
+          additionalProperties: true
+        filter_string:
+          type: string
+          description: FFmpeg filter string generated by the Rust builder
+
+    JobSubmitResponse:
+      type: object
+      required: [job_id]
+      properties:
+        job_id:
+          type: string
+
+    JobStatusResponse:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETE, FAILED, TIMEOUT, CANCELLED]
+        progress:
+          type: number
+          nullable: true
+        result: {}
+        error:
+          type: string
+          nullable: true
+
+    ReadinessResponse:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        checks:
+          type: object
+          required: [database, ffmpeg]
+          properties:
+            database:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                latency_ms:
+                  type: number
+                error:
+                  type: string
+            ffmpeg:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                version:
+                  type: string
+                error:
+                  type: string
+
+    EffectDefinitionResponse:
+      type: object
+      required: [effect_type, name, description, parameter_schema, ai_hints, filter_preview]
+      properties:
+        effect_type:
+          type: string
+          example: text_overlay
+        name:
+          type: string
+          example: Text Overlay
+        description:
+          type: string
+          example: Add styled text overlay with position presets
+        parameter_schema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema object describing effect parameters
+        ai_hints:
+          type: object
+          additionalProperties:
+            type: string
+          description: Per-parameter natural language guidance strings for AI clients
+          example:
+            text: "The text content to display on screen"
+            position: "Use bottom_center for subtitles, center for titles"
+        filter_preview:
+          type: string
+          description: Sample FFmpeg filter string generated by the Rust builder
+          example: "drawtext=text='Sample Text':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-text_h-20"
+
+    EffectListResponse:
+      type: object
+      required: [effects, total]
+      properties:
+        effects:
+          type: array
+          items:
+            $ref: "#/components/schemas/EffectDefinitionResponse"
+        total:
+          type: integer
+          example: 9
+
+    EffectApplyRequest:
+      type: object
+      required: [effect_type, parameters]
+      properties:
+        effect_type:
+          type: string
+          description: Effect type identifier (e.g. text_overlay, speed_control, volume)
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Effect parameters matching the effect's parameter_schema
+          example:
+            text: "Chapter 1: Introduction"
+            fontsize: 64
+            fontcolor: white
+            position: center
+
+    EffectApplyResponse:
+      type: object
+      required: [effect_type, parameters, filter_string]
+      properties:
+        effect_type:
+          type: string
+          example: text_overlay
+        parameters:
+          type: object
+          additionalProperties: true
+        filter_string:
+          type: string
+          description: >
+            FFmpeg filter string generated by the Rust builder. Special characters
+            are automatically escaped by the Rust sanitizer.
+          example: "drawtext=text='Chapter 1\\: Introduction':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2"
+
+    EffectPreviewRequest:
+      type: object
+      required: [effect_type, parameters]
+      properties:
+        effect_type:
+          type: string
+          description: Effect type identifier
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Effect parameters to preview
+
+    EffectPreviewResponse:
+      type: object
+      required: [effect_type, filter_string]
+      properties:
+        effect_type:
+          type: string
+        filter_string:
+          type: string
+          description: Generated FFmpeg filter string
+
+    EffectUpdateRequest:
+      type: object
+      required: [parameters]
+      properties:
+        parameters:
+          type: object
+          additionalProperties: true
+          description: New parameters for the effect (replaces existing)
+
+    EffectDeleteResponse:
+      type: object
+      required: [index, deleted_effect_type]
+      properties:
+        index:
+          type: integer
+          description: Zero-based index of the removed effect
+        deleted_effect_type:
+          type: string
+          description: Type of the effect that was removed
+
+    TransitionRequest:
+      type: object
+      required: [source_clip_id, target_clip_id, transition_type, parameters]
+      properties:
+        source_clip_id:
+          type: string
+          description: ID of the source (preceding) clip
+        target_clip_id:
+          type: string
+          description: ID of the target (following) clip
+        transition_type:
+          type: string
+          description: Transition type (e.g. xfade, acrossfade, video_fade)
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Transition parameters matching the type's parameter_schema
+
+    TransitionResponse:
+      type: object
+      required: [source_clip_id, target_clip_id, transition_type, parameters, filter_string]
+      properties:
+        source_clip_id:
+          type: string
+        target_clip_id:
+          type: string
+        transition_type:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        filter_string:
+          type: string
+          description: Generated FFmpeg filter string for the transition
+
+    DirectoryEntry:
+      type: object
+      required: [name, path]
+      description: A subdirectory entry in a directory listing
+      properties:
+        name:
+          type: string
+          description: Directory display name
+        path:
+          type: string
+          description: Fully resolved absolute path
+
+    DirectoryListResponse:
+      type: object
+      required: [path, directories]
+      properties:
+        path:
+          type: string
+          description: The parent directory that was listed
+        directories:
+          type: array
+          items:
+            $ref: "#/components/schemas/DirectoryEntry"
+
+    RenderRequest:
+      type: object
+      required: [project_id]
+      properties:
+        project_id:
+          type: string
+        output_path:
+          type: string
+        format:
+          type: string
+          enum: [mp4, webm, mov]
+        encoder:
+          type: string
+        quality:
+          type: string
+          enum: [draft, normal, high]
+
+    RenderJobResponse:
+      type: object
+      required: [id, project_id, status]
+      properties:
+        id:
+          type: string
+        project_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, cancelled]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1
+        eta_seconds:
+          type: number
+          nullable: true
+        speed_ratio:
+          type: number
+          nullable: true
+        output_path:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    PreviewSessionResponse:
+      type: object
+      required: [session_id, state]
+      properties:
+        session_id:
+          type: string
+        state:
+          type: string
+          enum: [initializing, generating, ready, seeking, error]
+        manifest_url:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - NOT_FOUND
+                - INVALID_INPUT
+                - INVALID_PATH
+                - PATH_NOT_ALLOWED
+                - INVALID_TIME_RANGE
+                - VALIDATION_ERROR
+                - UNSUPPORTED_FORMAT
+                - EFFECT_NOT_FOUND
+                - INVALID_EFFECT_PARAMS
+                - SAME_CLIP
+                - NOT_ADJACENT
+                - EMPTY_TIMELINE
+                - NOT_A_DIRECTORY
+                - PATH_NOT_FOUND
+                - ALREADY_TERMINAL
+                - UNSAFE_INPUT
+                - FFMPEG_ERROR
+                - RUST_CORE_ERROR
+                - INTERNAL_ERROR
+            message:
+              type: string
+            errors:
+              type: array
+              description: Detailed validation errors (for INVALID_EFFECT_PARAMS)
+              items:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  message:
+                    type: string
