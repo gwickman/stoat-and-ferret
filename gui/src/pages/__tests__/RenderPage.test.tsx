@@ -77,7 +77,7 @@ describe('RenderPage', () => {
     const section = screen.getByTestId('active-jobs-section')
     expect(section).toBeDefined()
     expect(section.textContent).toContain('j1')
-    expect(section.textContent).toContain('running')
+    expect(section.textContent).toContain('Rendering')
     expect(section.textContent).toContain('50%')
   })
 
@@ -89,7 +89,7 @@ describe('RenderPage', () => {
     const section = screen.getByTestId('pending-jobs-section')
     expect(section).toBeDefined()
     expect(section.textContent).toContain('j2')
-    expect(section.textContent).toContain('queued')
+    expect(section.textContent).toContain('Queued')
   })
 
   it('renders completed jobs section with completed/failed/cancelled jobs', () => {

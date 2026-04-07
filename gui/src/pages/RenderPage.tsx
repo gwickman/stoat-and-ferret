@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useRenderStore, type RenderJob } from '../stores/renderStore'
 import { useRenderEvents } from '../hooks/useRenderEvents'
+import RenderJobCard from '../components/render/RenderJobCard'
 
 /** Categorize jobs into active, pending, and completed buckets. */
 function categorizeJobs(jobs: RenderJob[]) {
@@ -106,14 +107,11 @@ export default function RenderPage() {
           {active.length === 0 ? (
             <p className="text-sm text-gray-500">No active jobs</p>
           ) : (
-            <ul className="space-y-2">
+            <div className="space-y-2">
               {active.map((job) => (
-                <li key={job.id} className="rounded border border-gray-700 bg-gray-800 p-3 text-sm">
-                  <span className="font-medium">{job.id}</span> — {job.status}
-                  {job.progress > 0 && <span className="ml-2 text-gray-400">({Math.round(job.progress * 100)}%)</span>}
-                </li>
+                <RenderJobCard key={job.id} job={job} />
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>
@@ -125,13 +123,11 @@ export default function RenderPage() {
           {pending.length === 0 ? (
             <p className="text-sm text-gray-500">No pending jobs</p>
           ) : (
-            <ul className="space-y-2">
+            <div className="space-y-2">
               {pending.map((job) => (
-                <li key={job.id} className="rounded border border-gray-700 bg-gray-800 p-3 text-sm">
-                  <span className="font-medium">{job.id}</span> — {job.status}
-                </li>
+                <RenderJobCard key={job.id} job={job} />
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>
@@ -143,13 +139,11 @@ export default function RenderPage() {
           {completed.length === 0 ? (
             <p className="text-sm text-gray-500">No completed jobs</p>
           ) : (
-            <ul className="space-y-2">
+            <div className="space-y-2">
               {completed.map((job) => (
-                <li key={job.id} className="rounded border border-gray-700 bg-gray-800 p-3 text-sm">
-                  <span className="font-medium">{job.id}</span> — {job.status}
-                </li>
+                <RenderJobCard key={job.id} job={job} />
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>
