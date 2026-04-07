@@ -145,13 +145,12 @@ describe('RenderPage', () => {
     expect(bar.textContent).toContain('Loading queue status')
   })
 
-  it('shows Start Render button that is visible and disabled', () => {
+  it('shows Start Render button that is visible and enabled', () => {
     renderPage()
     const btn = screen.getByTestId('start-render-btn')
     expect(btn).toBeDefined()
     expect(btn.textContent).toBe('Start Render')
-    expect((btn as HTMLButtonElement).disabled).toBe(true)
-    expect(btn.getAttribute('title')).toBe('Available in a future update')
+    expect((btn as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('has all required data-testid attributes', () => {
