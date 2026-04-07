@@ -493,7 +493,25 @@ class TestEventPayloadSchema:
             assert "status" in payload
 
     async def test_render_progress_payload(self) -> None:
-        """render.progress event includes job_id and progress."""
+        """render.progress event includes job_id, progress, eta_seconds, speed_ratio."""
+        with _PATCH_NO_RUST:
+            service, _, ws, _ = _build_service()
+
+            await service._broadcast_throttled_progress(
+                "job-1", 0.5, eta_seconds=10.0, speed_ratio=2.5
+            )
+
+            events = _get_broadcast_events(ws)
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            assert len(progress_events) == 1
+            payload = progress_events[0]["payload"]
+            assert payload["job_id"] == "job-1"
+            assert payload["progress"] == 0.5
+            assert payload["eta_seconds"] == 10.0
+            assert payload["speed_ratio"] == 2.5
+
+    async def test_render_progress_payload_null_fields(self) -> None:
+        """render.progress event includes null eta_seconds and speed_ratio when not available."""
         with _PATCH_NO_RUST:
             service, _, ws, _ = _build_service()
 
@@ -505,6 +523,8 @@ class TestEventPayloadSchema:
             payload = progress_events[0]["payload"]
             assert payload["job_id"] == "job-1"
             assert payload["progress"] == 0.5
+            assert payload["eta_seconds"] is None
+            assert payload["speed_ratio"] is None
 
     async def test_render_frame_available_payload(self) -> None:
         """render.frame_available event includes job_id, frame_url, resolution."""
@@ -523,6 +543,26 @@ class TestEventPayloadSchema:
             assert "frame_url" in payload
             assert payload["resolution"] == "540p"
             assert payload["progress"] == 0.5
+
+    async def test_render_progress_schema_contract(self) -> None:
+        """render.progress schema has job_id, progress, eta_seconds, speed_ratio."""
+        with _PATCH_NO_RUST:
+            service, _, ws, _ = _build_service()
+
+            await service._broadcast_throttled_progress(
+                "job-schema", 0.5, eta_seconds=15.0, speed_ratio=1.5
+            )
+
+            events = _get_broadcast_events(ws)
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            assert len(progress_events) == 1
+            payload = progress_events[0]["payload"]
+
+            # Contract: all four fields present
+            assert isinstance(payload["job_id"], str)
+            assert isinstance(payload["progress"], float)
+            assert isinstance(payload["eta_seconds"], (float, type(None)))
+            assert isinstance(payload["speed_ratio"], (float, type(None)))
 
     async def test_all_event_types_have_timestamp(self) -> None:
         """All broadcast events include a timestamp field."""
