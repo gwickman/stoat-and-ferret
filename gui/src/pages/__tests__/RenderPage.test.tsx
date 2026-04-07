@@ -28,6 +28,8 @@ function makeJob(overrides: Partial<RenderJob> & { id: string; status: string })
     output_format: 'mp4',
     quality_preset: 'standard',
     progress: 0,
+    eta_seconds: null,
+    speed_ratio: null,
     error_message: null,
     retry_count: 0,
     created_at: '2025-06-01T00:00:00Z',
