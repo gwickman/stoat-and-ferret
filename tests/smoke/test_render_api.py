@@ -166,6 +166,57 @@ async def test_render_queue(smoke_client: httpx.AsyncClient) -> None:
     assert body["disk_total_bytes"] > 0
 
 
+async def test_render_preview_endpoint(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/preview returns 200 with command field."""
+    resp = await smoke_client.post(
+        "/api/v1/render/preview",
+        json={
+            "output_format": "mp4",
+            "quality_preset": "standard",
+            "encoder": "libx264",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "command" in body
+    assert isinstance(body["command"], str)
+    assert body["command"].startswith("ffmpeg")
+
+
+async def test_render_preview_invalid(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/preview with invalid encoder returns 422."""
+    resp = await smoke_client.post(
+        "/api/v1/render/preview",
+        json={
+            "output_format": "mp4",
+            "quality_preset": "standard",
+            "encoder": "invalid_encoder",
+        },
+    )
+    assert resp.status_code == 422
+
+
+async def test_render_preview_formats(smoke_client: httpx.AsyncClient) -> None:
+    """Each supported format returns a valid command."""
+    for fmt, encoder in [
+        ("mp4", "libx264"),
+        ("webm", "libvpx-vp9"),
+        ("mkv", "libx265"),
+        ("avi", "libx264"),
+    ]:
+        resp = await smoke_client.post(
+            "/api/v1/render/preview",
+            json={
+                "output_format": fmt,
+                "quality_preset": "standard",
+                "encoder": encoder,
+            },
+        )
+        assert resp.status_code == 200, f"Failed for {fmt}/{encoder}"
+        body = resp.json()
+        assert body["command"].startswith("ffmpeg"), f"No ffmpeg prefix for {fmt}"
+
+
 async def test_render_delete(smoke_client: httpx.AsyncClient) -> None:
     """DELETE /api/v1/render/{job_id} returns 200 with deleted job."""
     # Create a project and render job to delete

@@ -1763,6 +1763,48 @@
         "title": "RenderListResponse",
         "type": "object"
       },
+      "RenderPreviewRequest": {
+        "description": "Request for FFmpeg command preview given render settings.",
+        "properties": {
+          "encoder": {
+            "description": "Video encoder name (e.g. libx264, libx265, libvpx-vp9)",
+            "title": "Encoder",
+            "type": "string"
+          },
+          "output_format": {
+            "description": "Output container format (mp4, webm, mkv, mov, avi)",
+            "title": "Output Format",
+            "type": "string"
+          },
+          "quality_preset": {
+            "description": "Quality preset (draft, standard, high)",
+            "title": "Quality Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "output_format",
+          "quality_preset",
+          "encoder"
+        ],
+        "title": "RenderPreviewRequest",
+        "type": "object"
+      },
+      "RenderPreviewResponse": {
+        "description": "Response containing a preview FFmpeg command string.",
+        "properties": {
+          "command": {
+            "description": "Complete FFmpeg command string",
+            "title": "Command",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "RenderPreviewResponse",
+        "type": "object"
+      },
       "RestoreResponse": {
         "description": "Response from restoring a previous version.\n\nAttributes:\n    restored_version: The source version number that was restored.\n    new_version: The newly created version number.\n    message: Confirmation message.",
         "properties": {
@@ -4992,6 +5034,48 @@
           }
         },
         "summary": "Get Output Formats",
+        "tags": [
+          "render"
+        ]
+      }
+    },
+    "/api/v1/render/preview": {
+      "post": {
+        "description": "Return a representative FFmpeg command string for the given render settings.\n\nStateless endpoint \u2014 no job creation, no disk I/O.  Calls Rust\n``validate_render_settings`` for input validation (422 on failure)\nand ``build_render_command`` with placeholder segment data to\nproduce the command.\n\nArgs:\n    body: Render preview request with format, quality preset, and encoder.\n\nReturns:\n    FFmpeg command string.\n\nRaises:\n    HTTPException: 422 if settings are invalid.",
+        "operationId": "render_preview_api_v1_render_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Render Preview",
         "tags": [
           "render"
         ]

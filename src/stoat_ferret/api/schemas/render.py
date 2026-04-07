@@ -111,3 +111,19 @@ class FormatListResponse(BaseModel):
     """All available output formats with codec and quality preset details."""
 
     formats: list[FormatInfo] = Field(..., description="Available output formats for rendering")
+
+
+class RenderPreviewRequest(BaseModel):
+    """Request for FFmpeg command preview given render settings."""
+
+    output_format: str = Field(
+        ..., description="Output container format (mp4, webm, mkv, mov, avi)"
+    )
+    quality_preset: str = Field(..., description="Quality preset (draft, standard, high)")
+    encoder: str = Field(..., description="Video encoder name (e.g. libx264, libx265, libvpx-vp9)")
+
+
+class RenderPreviewResponse(BaseModel):
+    """Response containing a preview FFmpeg command string."""
+
+    command: str = Field(..., description="Complete FFmpeg command string")
