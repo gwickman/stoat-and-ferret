@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRenderStore, type RenderJob } from '../stores/renderStore'
 import { useRenderEvents } from '../hooks/useRenderEvents'
 import RenderJobCard from '../components/render/RenderJobCard'
+import StartRenderModal from '../components/render/StartRenderModal'
 
 /** Categorize jobs into active, pending, and completed buckets. */
 function categorizeJobs(jobs: RenderJob[]) {
@@ -39,6 +40,7 @@ export default function RenderPage() {
   const fetchQueueStatus = useRenderStore((s) => s.fetchQueueStatus)
   const fetchEncoders = useRenderStore((s) => s.fetchEncoders)
   const fetchFormats = useRenderStore((s) => s.fetchFormats)
+  const [startModalOpen, setStartModalOpen] = useState(false)
 
   useRenderEvents()
 
@@ -57,10 +59,9 @@ export default function RenderPage() {
         <h2 className="text-2xl font-semibold">Render</h2>
         <button
           type="button"
-          disabled={true}
-          title="Available in a future update"
+          onClick={() => setStartModalOpen(true)}
           data-testid="start-render-btn"
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           Start Render
         </button>
@@ -147,6 +148,12 @@ export default function RenderPage() {
           )}
         </div>
       </div>
+
+      <StartRenderModal
+        open={startModalOpen}
+        onClose={() => setStartModalOpen(false)}
+        onSubmitted={() => fetchJobs()}
+      />
     </div>
   )
 }
