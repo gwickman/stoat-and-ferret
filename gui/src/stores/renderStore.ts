@@ -13,6 +13,8 @@ export interface RenderJob {
   output_format: string
   quality_preset: string
   progress: number
+  eta_seconds: number | null
+  speed_ratio: number | null
   error_message: string | null
   retry_count: number
   created_at: string
@@ -81,7 +83,7 @@ interface RenderStoreState {
   updateJob: (job: Partial<RenderJob> & { id: string }) => void
   removeJob: (jobId: string) => void
   setQueueStatus: (partial: Partial<QueueStatus>) => void
-  setProgress: (jobId: string, progress: number) => void
+  setProgress: (jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null) => void
   reset: () => void
 }
 
@@ -183,9 +185,13 @@ export const useRenderStore = create<RenderStoreState>((set) => ({
     }))
   },
 
-  setProgress: (jobId, progress) => {
+  setProgress: (jobId, progress, etaSeconds, speedRatio) => {
     set((state) => ({
-      jobs: state.jobs.map((j) => (j.id === jobId ? { ...j, progress } : j)),
+      jobs: state.jobs.map((j) =>
+        j.id === jobId
+          ? { ...j, progress, eta_seconds: etaSeconds ?? null, speed_ratio: speedRatio ?? null }
+          : j,
+      ),
     }))
   },
 

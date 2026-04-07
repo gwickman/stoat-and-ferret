@@ -109,6 +109,8 @@ describe('useRenderEvents', () => {
       output_format: 'mp4',
       quality_preset: 'standard',
       progress: 0,
+      eta_seconds: null,
+      speed_ratio: null,
       error_message: null,
       retry_count: 0,
       created_at: '',
@@ -128,6 +130,72 @@ describe('useRenderEvents', () => {
     expect(useRenderStore.getState().jobs[0].progress).toBe(0.42)
   })
 
+  it('dispatches render_progress with eta_seconds and speed_ratio to store', () => {
+    useRenderStore.getState().updateJob({
+      id: 'j1',
+      project_id: 'p1',
+      status: 'running',
+      output_path: '',
+      output_format: 'mp4',
+      quality_preset: 'standard',
+      progress: 0,
+      eta_seconds: null,
+      speed_ratio: null,
+      error_message: null,
+      retry_count: 0,
+      created_at: '',
+      updated_at: '',
+      completed_at: null,
+    })
+
+    renderHook(() => useRenderEvents())
+    act(() => { mockInstances[0].simulateOpen() })
+
+    act(() => {
+      mockInstances[0].simulateMessage(
+        makeEvent('render_progress', { job_id: 'j1', progress: 0.55, eta_seconds: 8.2, speed_ratio: 1.1 }),
+      )
+    })
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.progress).toBe(0.55)
+    expect(job.eta_seconds).toBe(8.2)
+    expect(job.speed_ratio).toBe(1.1)
+  })
+
+  it('handles render_progress without eta_seconds gracefully', () => {
+    useRenderStore.getState().updateJob({
+      id: 'j1',
+      project_id: 'p1',
+      status: 'running',
+      output_path: '',
+      output_format: 'mp4',
+      quality_preset: 'standard',
+      progress: 0,
+      eta_seconds: null,
+      speed_ratio: null,
+      error_message: null,
+      retry_count: 0,
+      created_at: '',
+      updated_at: '',
+      completed_at: null,
+    })
+
+    renderHook(() => useRenderEvents())
+    act(() => { mockInstances[0].simulateOpen() })
+
+    act(() => {
+      mockInstances[0].simulateMessage(
+        makeEvent('render_progress', { job_id: 'j1', progress: 0.3 }),
+      )
+    })
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.progress).toBe(0.3)
+    expect(job.eta_seconds).toBeNull()
+    expect(job.speed_ratio).toBeNull()
+  })
+
   it('dispatches render_frame_available to setProgress', () => {
     useRenderStore.getState().updateJob({
       id: 'j1',
@@ -137,6 +205,8 @@ describe('useRenderEvents', () => {
       output_format: 'mp4',
       quality_preset: 'standard',
       progress: 0,
+      eta_seconds: null,
+      speed_ratio: null,
       error_message: null,
       retry_count: 0,
       created_at: '',

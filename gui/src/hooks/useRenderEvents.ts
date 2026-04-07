@@ -59,7 +59,12 @@ export function useRenderEvents(): void {
         break
 
       case 'render_progress':
-        store.setProgress(payload.job_id as string, payload.progress as number)
+        store.setProgress(
+          payload.job_id as string,
+          payload.progress as number,
+          (payload.eta_seconds as number | undefined) ?? null,
+          (payload.speed_ratio as number | undefined) ?? null,
+        )
         break
 
       case 'render_frame_available':

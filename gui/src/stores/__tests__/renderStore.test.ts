@@ -10,6 +10,8 @@ const mockJob: RenderJob = {
   output_format: 'mp4',
   quality_preset: 'standard',
   progress: 0,
+  eta_seconds: null,
+  speed_ratio: null,
   error_message: null,
   retry_count: 0,
   created_at: '2025-06-01T00:00:00Z',
@@ -133,6 +135,26 @@ describe('renderStore', () => {
     useRenderStore.getState().setProgress('job-1', 0.75)
 
     expect(useRenderStore.getState().jobs[0].progress).toBe(0.75)
+  })
+
+  it('setProgress stores eta_seconds and speed_ratio', () => {
+    useRenderStore.getState().updateJob(mockJob)
+    useRenderStore.getState().setProgress('job-1', 0.5, 12.3, 1.05)
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.progress).toBe(0.5)
+    expect(job.eta_seconds).toBe(12.3)
+    expect(job.speed_ratio).toBe(1.05)
+  })
+
+  it('setProgress with null eta/speed stores null values', () => {
+    useRenderStore.getState().updateJob(mockJob)
+    useRenderStore.getState().setProgress('job-1', 0.3, null, null)
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.progress).toBe(0.3)
+    expect(job.eta_seconds).toBeNull()
+    expect(job.speed_ratio).toBeNull()
   })
 
   it('setQueueStatus performs partial merge preserving REST-only fields', () => {
