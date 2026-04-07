@@ -31,6 +31,7 @@ from stoat_ferret.render.render_repository import AsyncRenderRepository
 try:
     from stoat_ferret_core import (
         RenderSettings,
+        estimate_eta,
         estimate_output_size,
         validate_render_settings,
     )
@@ -231,8 +232,9 @@ class RenderService:
 
         # Track milestones already logged to avoid duplicates
         logged_milestones: set[int] = set()
+        total_duration_s = total_duration_us / 1_000_000 if total_duration_us > 0 else 0.0
 
-        async def progress_callback(jid: str, progress: float) -> None:
+        async def progress_callback(jid: str, progress: float, elapsed_seconds: float) -> None:
             # Log progress milestones at 25%, 50%, 75%, 100%
             pct = int(progress * 100)
             for milestone in (25, 50, 75, 100):
@@ -243,8 +245,21 @@ class RenderService:
                         milestone_pct=milestone,
                         progress=round(progress, 4),
                     )
+
+            # Compute ETA via Rust binding
+            eta_seconds: float | None = None
+            if _HAS_RUST_BINDINGS:
+                eta_seconds = estimate_eta(elapsed_seconds, progress)
+
+            # Compute speed ratio
+            speed_ratio: float | None = None
+            if elapsed_seconds > 0 and total_duration_s > 0 and progress > 0:
+                speed_ratio = (total_duration_s * progress) / elapsed_seconds
+
             await self._repo.update_progress(jid, progress)
-            await self._broadcast_throttled_progress(jid, progress)
+            await self._broadcast_throttled_progress(
+                jid, progress, eta_seconds=eta_seconds, speed_ratio=speed_ratio
+            )
             await self._broadcast_throttled_frame(jid, progress)
 
         # Wire progress callback into executor
@@ -429,7 +444,14 @@ class RenderService:
         self._last_broadcast_time[key] = now
         return False
 
-    async def _broadcast_throttled_progress(self, job_id: str, progress: float) -> None:
+    async def _broadcast_throttled_progress(
+        self,
+        job_id: str,
+        progress: float,
+        *,
+        eta_seconds: float | None = None,
+        speed_ratio: float | None = None,
+    ) -> None:
         """Broadcast render.progress with dual-threshold throttling.
 
         Applies both time interval (0.5s) and progress delta (5%) thresholds.
@@ -438,6 +460,8 @@ class RenderService:
         Args:
             job_id: The render job ID.
             progress: Current progress value 0.0-1.0.
+            eta_seconds: Estimated time remaining in seconds, or None.
+            speed_ratio: Render speed relative to real-time, or None.
         """
         is_final = progress >= 1.0
         last_progress = self._last_broadcast_progress.get(job_id, 0.0)
@@ -458,7 +482,12 @@ class RenderService:
         await self._ws.broadcast(
             build_event(
                 EventType.RENDER_PROGRESS,
-                {"job_id": job_id, "progress": progress},
+                {
+                    "job_id": job_id,
+                    "progress": progress,
+                    "eta_seconds": eta_seconds,
+                    "speed_ratio": speed_ratio,
+                },
             )
         )
 

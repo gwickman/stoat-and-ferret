@@ -666,3 +666,249 @@ class TestExtractDuration:
         """Returns 0 for invalid JSON."""
         result = RenderService._extract_duration_us("not json")
         assert result == 0
+
+
+# ---------------------------------------------------------------------------
+# ETA and speed ratio computation tests
+# ---------------------------------------------------------------------------
+
+
+class TestETAAndSpeedRatio:
+    """Tests for ETA and speed ratio computation in progress callback."""
+
+    async def test_progress_callback_computes_eta(self) -> None:
+        """Progress callback calls estimate_eta and includes result in broadcast."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            plan_json = _make_plan_json(total_duration=60.0)
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()
+
+            # Mock executor to invoke the progress callback with elapsed_seconds
+            async def fake_execute(
+                job_obj: RenderJob,
+                cmd: list[str],
+                *,
+                total_duration_us: int = 0,
+            ) -> bool:
+                cb = executor._progress_callback
+                if cb is not None:
+                    await cb(job_obj.id, 0.5, 10.0)  # 50% at 10s elapsed
+                return True
+
+            executor.execute = fake_execute  # type: ignore[assignment]
+
+            # Patch estimate_eta to return a known value
+            with (
+                patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", True),
+                patch("stoat_ferret.render.service.estimate_eta", return_value=10.0),
+            ):
+                await service.run_job(job, ["ffmpeg"])
+
+            events = [c[0][0] for c in ws.broadcast.call_args_list]
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            assert len(progress_events) >= 1
+            payload = progress_events[0]["payload"]
+            assert payload["eta_seconds"] == 10.0
+
+    async def test_progress_callback_computes_speed_ratio(self) -> None:
+        """Speed ratio = (total_duration_s * progress) / elapsed_seconds."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            plan_json = _make_plan_json(total_duration=60.0)
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()
+
+            async def fake_execute(
+                job_obj: RenderJob,
+                cmd: list[str],
+                *,
+                total_duration_us: int = 0,
+            ) -> bool:
+                cb = executor._progress_callback
+                if cb is not None:
+                    # 50% progress, 10s elapsed → speed = (60*0.5)/10 = 3.0
+                    await cb(job_obj.id, 0.5, 10.0)
+                return True
+
+            executor.execute = fake_execute  # type: ignore[assignment]
+
+            await service.run_job(job, ["ffmpeg"])
+
+            events = [c[0][0] for c in ws.broadcast.call_args_list]
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            assert len(progress_events) >= 1
+            payload = progress_events[0]["payload"]
+            assert payload["speed_ratio"] == pytest.approx(3.0)
+
+    async def test_eta_null_at_zero_progress(self) -> None:
+        """ETA is null when progress is 0."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            plan_json = _make_plan_json(total_duration=60.0)
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()
+
+            async def fake_execute(
+                job_obj: RenderJob,
+                cmd: list[str],
+                *,
+                total_duration_us: int = 0,
+            ) -> bool:
+                cb = executor._progress_callback
+                if cb is not None:
+                    await cb(job_obj.id, 0.0, 1.0)
+                return True
+
+            executor.execute = fake_execute  # type: ignore[assignment]
+
+            with (
+                patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", True),
+                patch("stoat_ferret.render.service.estimate_eta", return_value=None),
+            ):
+                await service.run_job(job, ["ffmpeg"])
+
+            events = [c[0][0] for c in ws.broadcast.call_args_list]
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            # Progress at 0.0 may be throttled (delta < 5%), check completed event instead
+            # But eta_seconds=None in any progress event that made it through
+            for pe in progress_events:
+                assert pe["payload"]["eta_seconds"] is None
+
+    async def test_eta_null_at_full_progress(self) -> None:
+        """ETA is null when progress is 1.0 (complete)."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            plan_json = _make_plan_json(total_duration=60.0)
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()
+
+            async def fake_execute(
+                job_obj: RenderJob,
+                cmd: list[str],
+                *,
+                total_duration_us: int = 0,
+            ) -> bool:
+                cb = executor._progress_callback
+                if cb is not None:
+                    await cb(job_obj.id, 1.0, 60.0)
+                return True
+
+            executor.execute = fake_execute  # type: ignore[assignment]
+
+            with (
+                patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", True),
+                patch("stoat_ferret.render.service.estimate_eta", return_value=None),
+            ):
+                await service.run_job(job, ["ffmpeg"])
+
+            events = [c[0][0] for c in ws.broadcast.call_args_list]
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            # Final progress (1.0) always sent
+            final_events = [e for e in progress_events if e["payload"]["progress"] == 1.0]
+            assert len(final_events) >= 1
+            assert final_events[0]["payload"]["eta_seconds"] is None
+
+    async def test_speed_ratio_null_when_elapsed_zero(self) -> None:
+        """Speed ratio is null when elapsed_seconds is 0."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            plan_json = _make_plan_json(total_duration=60.0)
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()
+
+            async def fake_execute(
+                job_obj: RenderJob,
+                cmd: list[str],
+                *,
+                total_duration_us: int = 0,
+            ) -> bool:
+                cb = executor._progress_callback
+                if cb is not None:
+                    await cb(job_obj.id, 0.5, 0.0)  # 0 elapsed
+                return True
+
+            executor.execute = fake_execute  # type: ignore[assignment]
+
+            await service.run_job(job, ["ffmpeg"])
+
+            events = [c[0][0] for c in ws.broadcast.call_args_list]
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            for pe in progress_events:
+                assert pe["payload"]["speed_ratio"] is None
+
+    async def test_speed_ratio_null_when_total_duration_zero(self) -> None:
+        """Speed ratio is null when total_duration_us is 0."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            plan_json = _make_plan_json(total_duration=0.0)
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()
+
+            async def fake_execute(
+                job_obj: RenderJob,
+                cmd: list[str],
+                *,
+                total_duration_us: int = 0,
+            ) -> bool:
+                cb = executor._progress_callback
+                if cb is not None:
+                    await cb(job_obj.id, 0.5, 10.0)
+                return True
+
+            executor.execute = fake_execute  # type: ignore[assignment]
+
+            await service.run_job(job, ["ffmpeg"])
+
+            events = [c[0][0] for c in ws.broadcast.call_args_list]
+            progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
+            for pe in progress_events:
+                assert pe["payload"]["speed_ratio"] is None

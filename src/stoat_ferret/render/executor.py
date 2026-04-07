@@ -27,8 +27,8 @@ except ImportError:
 
 logger = structlog.get_logger(__name__)
 
-# Type alias for progress callbacks (progress ratio 0.0-1.0)
-ProgressCallback = Callable[[str, float], Awaitable[None]]
+# Type alias for progress callbacks (job_id, progress 0.0-1.0, elapsed_seconds)
+ProgressCallback = Callable[[str, float, float], Awaitable[None]]
 
 
 class RenderExecutor:
@@ -42,7 +42,8 @@ class RenderExecutor:
     Args:
         timeout_seconds: Maximum render duration before killing the process.
         cancel_grace_seconds: Seconds to wait for FFmpeg to finalize after cancel.
-        progress_callback: Optional async callback invoked with (job_id, progress).
+        progress_callback: Optional async callback invoked with
+            (job_id, progress, elapsed_seconds).
         ffmpeg_path: Path to the ffmpeg executable.
     """
 
@@ -352,7 +353,11 @@ class RenderExecutor:
                 progress = calculate_progress(update.out_time_us, total_duration_us)
                 self._update_speed_ratio(job_id, progress)
                 if self._progress_callback is not None:
-                    await self._progress_callback(job_id, progress)
+                    start_time = self._job_start_times.get(job_id)
+                    elapsed_seconds = (
+                        time.monotonic() - start_time if start_time is not None else 0.0
+                    )
+                    await self._progress_callback(job_id, progress, elapsed_seconds)
         except Exception:
             logger.debug("render_executor.progress_parse_error", job_id=job_id, exc_info=True)
 
