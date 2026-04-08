@@ -23,6 +23,7 @@ export default function BottomHUD({ videoRef }: BottomHUDProps) {
   const activeJob = useRenderStore((s) => s.jobs.find((j) => j.status === 'running') ?? null)
   const progress = activeJob?.progress ?? null
   const etaSeconds = activeJob?.eta_seconds ?? null
+  const speedRatio = activeJob?.speed_ratio ?? null
 
   return (
     <div
@@ -37,9 +38,13 @@ export default function BottomHUD({ videoRef }: BottomHUDProps) {
               style={{ width: `${Math.min(100, Math.round(progress * 100))}%` }}
             />
           </div>
-          <span className="text-xs text-gray-300">
+          <span data-testid="render-stats" className="text-xs text-gray-300">
             {Math.round(progress * 100)}%
-            {etaSeconds !== null && ` — ETA ${formatEta(etaSeconds)}`}
+            {' — '}
+            {etaSeconds !== null ? `ETA ${formatEta(etaSeconds)}` : 'Calculating...'}
+            {speedRatio !== null && (
+              <span data-testid="render-speed"> · {speedRatio.toFixed(1)}x</span>
+            )}
           </span>
         </div>
       )}
