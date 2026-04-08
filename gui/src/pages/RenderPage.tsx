@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRenderStore, type RenderJob } from '../stores/renderStore'
-import { useRenderEvents } from '../hooks/useRenderEvents'
 import RenderJobCard from '../components/render/RenderJobCard'
 import StartRenderModal from '../components/render/StartRenderModal'
 
@@ -41,8 +40,6 @@ export default function RenderPage() {
   const fetchEncoders = useRenderStore((s) => s.fetchEncoders)
   const fetchFormats = useRenderStore((s) => s.fetchFormats)
   const [startModalOpen, setStartModalOpen] = useState(false)
-
-  useRenderEvents()
 
   useEffect(() => {
     fetchJobs()

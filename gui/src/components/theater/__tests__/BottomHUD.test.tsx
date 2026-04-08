@@ -2,16 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import BottomHUD from '../BottomHUD'
 import { usePreviewStore } from '../../../stores/previewStore'
-
-let mockLastMessage: MessageEvent | null = null
-
-vi.mock('../../../hooks/useWebSocket', () => ({
-  useWebSocket: () => ({
-    state: 'connected' as const,
-    send: vi.fn(),
-    lastMessage: mockLastMessage,
-  }),
-}))
+import { useRenderStore } from '../../../stores/renderStore'
+import type { RenderJob } from '../../../stores/renderStore'
 
 function createVideoRef() {
   const video = document.createElement('video')
@@ -35,9 +27,29 @@ function createVideoRef() {
   return { current: video }
 }
 
+function makeJob(overrides: Partial<RenderJob> = {}): RenderJob {
+  return {
+    id: 'job-1',
+    project_id: 'proj-1',
+    status: 'running',
+    output_path: '/out/video.mp4',
+    output_format: 'mp4',
+    quality_preset: 'high',
+    progress: 0,
+    eta_seconds: null,
+    speed_ratio: null,
+    error_message: null,
+    retry_count: 0,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    completed_at: null,
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   vi.restoreAllMocks()
-  mockLastMessage = null
+  useRenderStore.setState({ jobs: [] })
   usePreviewStore.setState({
     position: 0,
     duration: 60,
@@ -54,19 +66,16 @@ describe('BottomHUD', () => {
     expect(screen.getByTestId('player-controls')).toBeDefined()
   })
 
-  it('does not show render progress when no events received', () => {
+  it('does not show render progress when no active jobs', () => {
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
     expect(screen.queryByTestId('render-progress')).toBeNull()
   })
 
-  it('shows render progress when RENDER_PROGRESS event arrives', () => {
-    mockLastMessage = {
-      data: JSON.stringify({
-        type: 'render_progress',
-        payload: { progress: 0.45, eta_seconds: 120 },
-      }),
-    } as MessageEvent
+  it('shows render progress from renderStore for running job', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.45, eta_seconds: 120 })],
+    })
 
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
@@ -75,17 +84,24 @@ describe('BottomHUD', () => {
   })
 
   it('shows render progress without ETA when eta_seconds is null', () => {
-    mockLastMessage = {
-      data: JSON.stringify({
-        type: 'render_progress',
-        payload: { progress: 0.75, eta_seconds: null },
-      }),
-    } as MessageEvent
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.75, eta_seconds: null })],
+    })
 
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
     expect(screen.getByTestId('render-progress')).toBeDefined()
     expect(screen.getByText('75%')).toBeDefined()
+  })
+
+  it('does not show render progress for completed jobs', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ status: 'completed', progress: 1.0 })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.queryByTestId('render-progress')).toBeNull()
   })
 
   it('has correct data-testid', () => {
