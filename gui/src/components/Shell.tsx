@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { useRenderEvents } from '../hooks/useRenderEvents'
 import { useWebSocket } from '../hooks/useWebSocket'
 import HealthIndicator from './HealthIndicator'
 import Navigation from './Navigation'
@@ -11,6 +12,7 @@ function wsUrl(): string {
 
 export default function Shell() {
   const { state: connectionState } = useWebSocket(wsUrl())
+  useRenderEvents()
 
   return (
     <div className="flex h-screen flex-col bg-gray-950 text-gray-100">
