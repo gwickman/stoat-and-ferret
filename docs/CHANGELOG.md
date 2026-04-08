@@ -4,6 +4,18 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v031] - 2026-04-07
+
+Phase 5 GUI Render Interactive Components. Enriches render progress WebSocket events with ETA and speed data, builds reusable render job card components, and ships the StartRenderModal for configuring and launching render jobs.
+
+### Added
+
+- **Render Progress Enrichment** — `eta_seconds` and `speed_ratio` fields in `render.progress` WebSocket events, computed via Rust `estimate_eta()` and Python arithmetic; propagated through renderStore `setProgress` action (BL-243, #260, #261)
+- **StatusBadge Component** — Reusable color-coded dot + label component for render job status display across all 5 states (BL-229, #262)
+- **RenderJobCard Component** — Full job card with progress bar, ETA, speed ratio, StatusBadge, and cancel/retry/delete action buttons; integrated into RenderPage Active/Pending/Completed sections (BL-229, #263)
+- **Render Preview Endpoint** — `POST /api/v1/render/preview` returning FFmpeg command strings for format/quality/encoder combinations with Rust `build_render_command` (BL-230, #264)
+- **StartRenderModal** — Modal with cascading format/quality/encoder selectors, disk space bar, debounced FFmpeg command preview, inline validation, and render submission (BL-230, #265)
+
 ## [v030] - 2026-04-05
 
 GUI Render Page Shell + Public API Hygiene. Builds the user-facing render control center with routing, state management, page layout, and UAT coverage. Fixes LayoutError public API export and migrates compose.py imports.
