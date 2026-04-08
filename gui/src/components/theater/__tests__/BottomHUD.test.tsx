@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import BottomHUD from '../BottomHUD'
 import { usePreviewStore } from '../../../stores/previewStore'
@@ -72,7 +72,7 @@ describe('BottomHUD', () => {
     expect(screen.queryByTestId('render-progress')).toBeNull()
   })
 
-  it('shows render progress from renderStore for running job', () => {
+  it('shows render progress with percentage and ETA for running job', () => {
     useRenderStore.setState({
       jobs: [makeJob({ progress: 0.45, eta_seconds: 120 })],
     })
@@ -80,10 +80,22 @@ describe('BottomHUD', () => {
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
     expect(screen.getByTestId('render-progress')).toBeDefined()
-    expect(screen.getByText('45% — ETA 2m 0s')).toBeDefined()
+    const stats = screen.getByTestId('render-stats')
+    expect(stats.textContent).toContain('45%')
+    expect(stats.textContent).toContain('ETA 2m 0s')
   })
 
-  it('shows render progress without ETA when eta_seconds is null', () => {
+  it('formats ETA correctly for various durations', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, eta_seconds: 150 })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.getByTestId('render-stats').textContent).toContain('ETA 2m 30s')
+  })
+
+  it('shows "Calculating..." when eta_seconds is null', () => {
     useRenderStore.setState({
       jobs: [makeJob({ progress: 0.75, eta_seconds: null })],
     })
@@ -91,7 +103,30 @@ describe('BottomHUD', () => {
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
     expect(screen.getByTestId('render-progress')).toBeDefined()
-    expect(screen.getByText('75%')).toBeDefined()
+    const stats = screen.getByTestId('render-stats')
+    expect(stats.textContent).toContain('75%')
+    expect(stats.textContent).toContain('Calculating...')
+  })
+
+  it('shows speed ratio when available', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, eta_seconds: 60, speed_ratio: 1.5 })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.getByTestId('render-speed')).toBeDefined()
+    expect(screen.getByTestId('render-speed').textContent).toContain('1.5x')
+  })
+
+  it('omits speed ratio when speed_ratio is null', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, eta_seconds: 60, speed_ratio: null })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.queryByTestId('render-speed')).toBeNull()
   })
 
   it('does not show render progress for completed jobs', () => {
@@ -102,6 +137,40 @@ describe('BottomHUD', () => {
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
     expect(screen.queryByTestId('render-progress')).toBeNull()
+  })
+
+  it('hides indicators when job transitions from running to completed', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ status: 'running', progress: 0.9, eta_seconds: 10 })],
+    })
+
+    const videoRef = createVideoRef()
+    const { rerender } = render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.getByTestId('render-progress')).toBeDefined()
+
+    act(() => {
+      useRenderStore.setState({
+        jobs: [makeJob({ status: 'completed', progress: 1.0 })],
+      })
+    })
+    rerender(<BottomHUD videoRef={videoRef} />)
+    expect(screen.queryByTestId('render-progress')).toBeNull()
+  })
+
+  it('shows progress for the first running job when multiple jobs exist', () => {
+    useRenderStore.setState({
+      jobs: [
+        makeJob({ id: 'job-completed', status: 'completed', progress: 1.0 }),
+        makeJob({ id: 'job-active', status: 'running', progress: 0.33, eta_seconds: 200 }),
+        makeJob({ id: 'job-queued', status: 'queued', progress: 0 }),
+      ],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    const stats = screen.getByTestId('render-stats')
+    expect(stats.textContent).toContain('33%')
+    expect(stats.textContent).toContain('ETA 3m 20s')
   })
 
   it('has correct data-testid', () => {
