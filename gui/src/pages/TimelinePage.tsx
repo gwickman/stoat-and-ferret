@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import TimelineCanvas from '../components/TimelineCanvas'
 import LayoutSelector from '../components/LayoutSelector'
 import LayoutPreview from '../components/LayoutPreview'
 import LayerStack from '../components/LayerStack'
+import StartRenderModal from '../components/render/StartRenderModal'
 import { useProjects } from '../hooks/useProjects'
 import { useComposeStore } from '../stores/composeStore'
 import { useProjectStore } from '../stores/projectStore'
@@ -12,6 +13,7 @@ export default function TimelinePage() {
   const { projects } = useProjects()
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId)
   const setSelectedProjectId = useProjectStore((s) => s.setSelectedProjectId)
+  const [startModalOpen, setStartModalOpen] = useState(false)
 
   const tracks = useTimelineStore((s) => s.tracks)
   const duration = useTimelineStore((s) => s.duration)
@@ -76,7 +78,22 @@ export default function TimelinePage() {
 
   return (
     <div className="p-6" data-testid="timeline-page">
-      <h2 className="mb-4 text-2xl font-semibold">Timeline</h2>
+      <div className="mb-4 flex items-center gap-4">
+        <h2 className="text-2xl font-semibold">Timeline</h2>
+        <button
+          onClick={() => setStartModalOpen(true)}
+          disabled={!selectedProjectId}
+          title={!selectedProjectId ? 'Select a project first' : undefined}
+          className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Start Render
+        </button>
+      </div>
+      <StartRenderModal
+        open={startModalOpen}
+        onClose={() => setStartModalOpen(false)}
+        onSubmitted={() => {}}
+      />
       {isEmpty ? (
         <p className="text-gray-400" data-testid="timeline-empty">
           No timeline data. Select a project to view its timeline.
