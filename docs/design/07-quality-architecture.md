@@ -1000,6 +1000,88 @@ Browser-based acceptance tests using Playwright validate the complete preview an
 
 ---
 
+### Phase 5: Render Quality
+
+The render subsystem introduces smoke tests that validate all render API endpoints are registered and return expected status codes without executing real FFmpeg renders.
+
+**Render Smoke Tests (`tests/smoke/test_render_api.py`):**
+
+```
+tests/smoke/test_render_api.py
+├── test_render_create_returns_201
+├── test_render_list_returns_200
+├── test_render_get_returns_200
+├── test_render_cancel_returns_200
+├── test_render_retry_returns_200
+├── test_render_delete_returns_204
+├── test_render_queue_returns_200
+├── test_render_encoders_returns_200
+├── test_render_encoders_refresh_returns_200
+├── test_render_formats_returns_200
+└── test_render_preview_returns_200
+```
+
+**Render Job Lifecycle Testing:**
+
+Tests create a render job and verify status transitions. Since the render background worker is not connected (render jobs are enqueued but `RenderQueue.dequeue()` is never called from app lifespan), tests assert `status == "queued"` immediately after job creation — this is intentional and correct behavior for the current implementation.
+
+```python
+async def test_render_job_lifecycle(smoke_client):
+    """Create job → verify status is queued."""
+    response = await smoke_client.post("/api/v1/render", json={
+        "project_id": "...",
+        "output_path": "/tmp/out.mp4",
+        "format": "mp4",
+        "quality": "standard"
+    })
+    assert response.status_code == 201
+    job = response.json()
+    assert job["status"] == "queued"
+
+    status_response = await smoke_client.get(f"/api/v1/render/{job['job_id']}")
+    assert status_response.status_code == 200
+    assert status_response.json()["status"] == "queued"
+```
+
+**Encoder Discovery Testing:**
+
+Tests call the encoder list and refresh endpoints to confirm hardware detection integration is wired correctly:
+
+```python
+async def test_encoder_discovery(smoke_client):
+    """Encoder cache endpoint returns available encoders."""
+    response = await smoke_client.get("/api/v1/render/encoders")
+    assert response.status_code == 200
+    assert "encoders" in response.json()
+
+async def test_encoder_refresh(smoke_client):
+    """Encoder refresh endpoint updates cache and returns 200."""
+    response = await smoke_client.post("/api/v1/render/encoders/refresh")
+    assert response.status_code == 200
+```
+
+**Render Metrics:**
+
+The render subsystem emits a `render_jobs_total` counter with the following labels:
+
+| Label value | Meaning |
+|-------------|---------|
+| `created` | Job created via `POST /api/v1/render` |
+| `completed` | Job reached `completed` status |
+| `failed` | Job reached `failed` status |
+| `cancelled` | Job reached `cancelled` status |
+| `submitted` | Job submitted to the render queue |
+
+```python
+render_jobs_total = Counter(
+    "video_editor_render_jobs_total",
+    "Total render jobs by status",
+    ["status"]  # labels: created, completed, failed, cancelled, submitted
+)
+```
+
+---
+
 ### Contract Testing for Test Doubles
 
 ```python

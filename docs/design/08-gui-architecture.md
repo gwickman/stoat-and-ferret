@@ -428,9 +428,9 @@ Embedded video preview with controls, accessible at `/gui/preview`:
 - Render progress bar with ETA in Theater Mode bottom HUD
 - Lazy-loaded player component with React Suspense
 
-### 8. Render Control Center (Phase 5)
+### 8. Render Control Center (Phase 5) — Implemented
 
-Job queue management and progress monitoring:
+Job queue management and progress monitoring, accessible at `/gui/render`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -464,6 +464,35 @@ Job queue management and progress monitoring:
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Implemented Components:**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `RenderPage` | `pages/RenderPage.tsx` | Render Queue Panel page — job list, queue status, Start Render button |
+| `RenderJobCard` | `components/render/RenderJobCard.tsx` | Job card with status badge, progress bar, ETA, and cancel/retry/delete actions |
+| `StartRenderModal` | `components/render/StartRenderModal.tsx` | Render settings modal — format selector, quality preset, output path input |
+| `StatusBadge` | `components/render/StatusBadge.tsx` | Status display component for job state (queued/running/completed/failed/cancelled) |
+
+**Zustand Stores:**
+
+| Store | File | State |
+|-------|------|-------|
+| `useRenderStore` | `stores/renderStore.ts` | `jobs`, `queueStatus`, `encoders`, `formats`, `isLoading`, `error` |
+
+**Hooks:**
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useRenderEvents` | `hooks/useRenderEvents.ts` | WebSocket render event subscription — lifted to Shell component (BL-235) to share connection across pages |
+
+**Features:**
+- Render job list with status indicators and progress bars
+- Start Render modal with quality preset selector and format options
+- Cancel, retry, and delete actions per job
+- Hardware encoder status from `GET /api/v1/render/encoders`
+- Format listing from `GET /api/v1/render/formats`
+- WebSocket render events via `useRenderEvents` (lifted to `Shell` for shared connection)
 
 ---
 
@@ -661,16 +690,16 @@ interface PreviewUpdateEvent {
 ### Phase 5: Render Control
 
 **GUI Milestone 5.1: Render Queue Panel**
-- [ ] Build job list with status indicators
-- [ ] Add progress bars with ETA
-- [ ] Implement cancel and remove actions
-- [ ] Show completed jobs history
+- [x] Build job list with status indicators
+- [x] Add progress bars with ETA
+- [x] Implement cancel and remove actions
+- [x] Show completed jobs history
 
 **GUI Milestone 5.2: Render Settings**
-- [ ] Create quality preset selector
-- [ ] Add format options
-- [ ] Show hardware acceleration status
-- [ ] Implement disk space check display
+- [x] Create quality preset selector
+- [x] Add format options
+- [x] Show hardware acceleration status
+- [x] Implement disk space check display
 
 ### Phase 6: Unified Editor
 
@@ -754,17 +783,18 @@ stoat-and-ferret/
 │   │   │   │   ├── AIActionDisplay.tsx
 │   │   │   │   └── KeyboardHandler.tsx
 │   │   │   │
-│   │   │   └── render/
-│   │   │       ├── RenderPanel.tsx
-│   │   │       ├── JobCard.tsx
-│   │   │       └── RenderSettings.tsx
+│   │   │   └── render/                 # Phase 5 (implemented)
+│   │   │       ├── StatusBadge.tsx     # Status display (queued/running/completed/failed/cancelled)
+│   │   │       ├── RenderJobCard.tsx   # Job card with progress bar and actions
+│   │   │       └── StartRenderModal.tsx # Render settings modal
 │   │   │
 │   │   ├── hooks/
 │   │   │   ├── useWebSocket.ts
 │   │   │   ├── useApi.ts
 │   │   │   ├── useEffects.ts
 │   │   │   ├── useEffectPreview.ts
-│   │   │   └── useTheaterMode.ts
+│   │   │   ├── useTheaterMode.ts
+│   │   │   └── useRenderEvents.ts      # Phase 5: WebSocket render event subscription (lifted to Shell)
 │   │   │
 │   │   ├── stores/
 │   │   │   ├── appStore.ts
@@ -776,7 +806,8 @@ stoat-and-ferret/
 │   │   │   ├── timelineStore.ts        # Phase 3: tracks, clips, playhead
 │   │   │   ├── composeStore.ts         # Phase 3: presets, positions
 │   │   │   ├── previewStore.ts         # Phase 4: session, quality, position, volume
-│   │   │   └── theaterStore.ts         # Phase 4: fullscreen, HUD visibility
+│   │   │   ├── theaterStore.ts         # Phase 4: fullscreen, HUD visibility
+│   │   │   └── renderStore.ts          # Phase 5: jobs, queue status, encoders, formats
 │   │   │
 │   │   ├── api/
 │   │   │   ├── client.ts
