@@ -54,6 +54,20 @@
 - InMemoryRenderRepository: In-memory test implementation
   Location: render_repository.py:356-456
 
+### Encoder Cache
+
+#### `encoder_cache.py`
+
+**File**: `src/stoat_ferret/render/encoder_cache.py`
+
+Provides hardware encoder detection result caching using SQLite.
+
+| Class / Type | Description |
+|---|---|
+| `EncoderCacheEntry` | Dataclass storing encoder name, type, availability status, and detection timestamp |
+| `AsyncEncoderCacheRepository` | Abstract Protocol type for encoder cache persistence — pluggable implementation |
+| `AsyncSQLiteEncoderCacheRepository` | Concrete SQLite implementation of `AsyncEncoderCacheRepository` using aiosqlite |
+
 ## Dependencies
 
 Internal: stoat_ferret.api.settings, .api.websocket, .render.metrics, stoat_ferret_core
