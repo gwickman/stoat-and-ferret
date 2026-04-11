@@ -278,3 +278,110 @@ git diff --name-only HEAD~1 | grep -E 'scripts/seed_sample_project\.py|tests/smo
 ```
 
 **Action:** When any of the three artifacts changes, verify the changed values match across all three. Check that clip frame values (in/out points, timeline positions), effect type names and parameters, transition type names and parameters, video filenames, and output settings are identical in the seed script constants, the smoke test fixture, and the user guide content.
+
+### Render Job and Status Models (Phase 5)
+
+Changes to the render job data model and status enum affect the render API, queue logic, and job persistence.
+
+Python definitions:
+```bash
+grep -rn 'class.*RenderJob|class.*RenderStatus' src/
+```
+
+Rust definitions:
+```bash
+grep -rn 'pub struct RenderPlan|pub struct RenderSegment|pub struct RenderSettings' rust/
+```
+
+API usage:
+```bash
+grep -rn 'render_job|render_status|RenderJob|RenderStatus' src/stoat_ferret/api/
+```
+
+Smoke test coverage:
+```bash
+grep -rn 'test_render|render_api' tests/smoke/
+```
+
+### Output Format and Quality Preset Enums (Phase 5)
+
+Changes to output format or quality preset enums affect render job creation validation and GUI options.
+
+Python definitions:
+```bash
+grep -rn 'class.*OutputFormat|class.*QualityPreset' src/
+```
+
+Rust definitions: (No direct Rust equivalents)
+
+API usage:
+```bash
+grep -rn 'output_format|quality_preset|OutputFormat|QualityPreset' src/stoat_ferret/api/
+```
+
+Smoke test coverage:
+```bash
+grep -rn 'output_format|quality_preset|render_format' tests/smoke/
+```
+
+### Render Queue and Executor (Phase 5)
+
+Changes to the render queue or executor affect job dispatching and background processing.
+
+Python definitions:
+```bash
+grep -rn 'class.*RenderQueue|class.*RenderExecutor' src/
+```
+
+API usage:
+```bash
+grep -rn 'render_queue|render_executor|RenderQueue|RenderExecutor' src/stoat_ferret/
+```
+
+Smoke test coverage:
+```bash
+grep -rn 'queue_status|render_queue' tests/smoke/
+```
+
+### Render Service and Error Types (Phase 5)
+
+Changes to render service orchestration or error types affect the render API surface and error handling.
+
+Python definitions:
+```bash
+grep -rn 'class.*RenderService|class.*PreflightError|class.*RenderUnavailableError' src/
+```
+
+API usage:
+```bash
+grep -rn 'render_service|preflight_error|RenderService' src/stoat_ferret/api/
+```
+
+Smoke test coverage:
+```bash
+grep -rn 'render_service|preflight' tests/smoke/
+```
+
+### Hardware Encoder Detection and Cache (Phase 5)
+
+Changes to encoder detection or cache affect hardware encoder endpoint responses and render plan generation.
+
+Python definitions:
+```bash
+grep -rn 'class.*EncoderCacheEntry|AsyncEncoderCacheRepository' src/
+```
+
+Rust definitions:
+```bash
+grep -rn 'pub struct EncoderInfo|pub enum EncoderType' rust/
+```
+
+API usage:
+```bash
+grep -rn 'encoder_cache|hardware_encoder|EncoderCacheEntry' src/stoat_ferret/
+```
+
+Smoke test coverage:
+```bash
+grep -rn 'encoder|hardware_encoder' tests/smoke/test_render_api.py
+```
