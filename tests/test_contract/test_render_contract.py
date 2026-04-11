@@ -1,8 +1,9 @@
-"""Contract tests for render output format commands.
+"""Contract tests for render output format and encoder detection.
 
 Validates that render commands produce valid output files in all 4 supported
 formats (mp4, webm, mov, mkv) using real FFmpeg execution with lavfi virtual
-inputs (LRN-100).
+inputs (LRN-100), and that the encoder detection parser correctly identifies
+software encoders from real FFmpeg output.
 """
 
 from __future__ import annotations
@@ -15,7 +16,28 @@ from pathlib import Path
 import pytest
 
 from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
+from stoat_ferret_core import detect_hardware_encoders
 from tests.conftest import requires_ffmpeg
+
+
+@pytest.fixture(scope="session")
+def ffmpeg_encoder_output() -> str:
+    """Capture real ``ffmpeg -encoders`` output once per test session.
+
+    Used by encoder detection contract tests to avoid re-running FFmpeg for
+    each test method and to provide a stable snapshot for regression comparison.
+
+    Returns:
+        The raw stdout from ``ffmpeg -encoders``.
+    """
+    result = subprocess.run(
+        ["ffmpeg", "-encoders"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    return result.stdout
 
 
 def _run_ffprobe(output_path: Path) -> dict:
@@ -224,3 +246,125 @@ class TestRenderEdgeCases:
             assert total_frames == 0, (
                 f"Expected 0 video frames for zero-duration render, got {total_frames}"
             )
+
+
+@requires_ffmpeg
+@pytest.mark.contract
+class TestEncoderDetectionContract:
+    """Encoder detection parser correctly identifies encoders from real FFmpeg output.
+
+    Stage 1 tests use the ``ffmpeg_encoder_output`` session fixture to validate
+    the parser against the host's actual FFmpeg installation. Stage 2 tests use
+    synthetic input to validate specific edge cases in the parser.
+    """
+
+    def test_software_encoders_detected(self, ffmpeg_encoder_output: str) -> None:
+        """Real ``ffmpeg -encoders`` output contains expected software encoders.
+
+        FR-001, FR-002, FR-003: Runs ``ffmpeg -encoders``, parses via
+        ``detect_hardware_encoders``, and asserts libx264, libx265, and
+        libvpx-vp9 are in the results.
+        """
+        encoders = detect_hardware_encoders(ffmpeg_encoder_output)
+        names = {enc.name for enc in encoders}
+
+        assert "libx264" in names, f"libx264 not found in detected encoders: {sorted(names)}"
+        assert "libx265" in names, f"libx265 not found in detected encoders: {sorted(names)}"
+        assert "libvpx-vp9" in names, f"libvpx-vp9 not found in detected encoders: {sorted(names)}"
+
+    def test_encoder_output_captured_for_regression(self, ffmpeg_encoder_output: str) -> None:
+        """Captured ``ffmpeg -encoders`` output is non-empty and yields parseable results.
+
+        FR-004: The session fixture stores the captured output; this test asserts the
+        snapshot is non-empty so any future format change that breaks parsing is detected.
+        """
+        assert len(ffmpeg_encoder_output) > 0, (
+            "ffmpeg -encoders produced no stdout — output may have gone to stderr"
+        )
+        encoders = detect_hardware_encoders(ffmpeg_encoder_output)
+        assert len(encoders) > 0, (
+            "detect_hardware_encoders returned no video encoders from real FFmpeg output"
+        )
+
+    def test_audio_only_lines_filtered(self) -> None:
+        """Audio encoder lines (``A`` type flag) are excluded from detection results.
+
+        FR-005: Edge case — the ``A`` type flag must be filtered; only ``V`` lines
+        are returned.
+        """
+        synthetic = (
+            "Encoders:\n"
+            " V..... = Video\n"
+            " A..... = Audio\n"
+            " ------\n"
+            " A..... aac                  AAC (Advanced Audio Coding)\n"
+            " A..... mp3lame              libmp3lame MP3 (MPEG audio layer 3)\n"
+            " VFS... libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10\n"
+        )
+        encoders = detect_hardware_encoders(synthetic)
+        names = [enc.name for enc in encoders]
+
+        assert "aac" not in names, "Audio encoder 'aac' should be filtered out (A flag)"
+        assert "mp3lame" not in names, "Audio encoder 'mp3lame' should be filtered out (A flag)"
+        assert "libx264" in names, "Video encoder 'libx264' should be included (V flag)"
+
+    def test_optional_codec_suffix_extracted(self) -> None:
+        """Encoder with ``(codec xxx)`` suffix uses extracted codec, not encoder name.
+
+        FR-005: Edge case — when ``(codec xxx)`` is present, the codec field must be
+        the extracted value; when absent, the encoder name is used as the codec.
+        """
+        synthetic = (
+            "Encoders:\n"
+            " ------\n"
+            " V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)\n"
+            " VFS... libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10\n"
+        )
+        encoders = detect_hardware_encoders(synthetic)
+        by_name = {enc.name: enc for enc in encoders}
+
+        assert "h264_nvenc" in by_name, "h264_nvenc should be detected"
+        assert by_name["h264_nvenc"].codec == "h264", (
+            f"Expected codec 'h264' for h264_nvenc (from suffix), "
+            f"got '{by_name['h264_nvenc'].codec}'"
+        )
+
+        assert "libx264" in by_name, "libx264 should be detected"
+        assert by_name["libx264"].codec == "libx264", (
+            f"Expected codec 'libx264' for libx264 (no suffix, falls back to name), "
+            f"got '{by_name['libx264'].codec}'"
+        )
+
+    def test_varying_flag_positions_parsed(self) -> None:
+        """Encoders with varying flag combinations are all correctly parsed.
+
+        FR-005: Edge case — flag slots 2-6 (F, S, X, B, D) may be set or unset
+        in any combination; the parser must handle all variants.
+        """
+        synthetic = (
+            "Encoders:\n"
+            " ------\n"
+            # Minimal flags (no optional capabilities)
+            " V..... av1_amf              AMD AMF AV1 encoder (codec av1)\n"
+            # Frame-level multithreading only
+            " VF.... h264_amf             AMD AMF H.264 encoder (codec h264)\n"
+            # Frame + slice multithreading
+            " VFS... libx265              libx265 H.265 / HEVC\n"
+            # All six flags set
+            " VFSXBD libvpx-vp9           libvpx VP9\n"
+        )
+        encoders = detect_hardware_encoders(synthetic)
+        by_name = {enc.name: enc for enc in encoders}
+
+        assert "av1_amf" in by_name, "Encoder with minimal flags (V.....) should be parsed"
+        assert "h264_amf" in by_name, "Encoder with F flag (VF....) should be parsed"
+        assert "libx265" in by_name, "Encoder with FS flags (VFS...) should be parsed"
+        assert "libvpx-vp9" in by_name, "Encoder with all flags (VFSXBD) should be parsed"
+
+        # Hardware classification: AMF suffix → hardware; lib prefix → software
+        assert by_name["h264_amf"].is_hardware is True, (
+            "h264_amf should be classified as hardware (AMF suffix)"
+        )
+        assert by_name["libx265"].is_hardware is False, (
+            "libx265 should be classified as software (no hardware suffix)"
+        )
