@@ -4,6 +4,25 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v033 — Render Testing, UAT Journeys, and Metrics (2026-04-11)
+
+### Added
+- Render API smoke tests for cancel, retry, and encoder-refresh endpoints (BL-232, #269)
+- Render contract tests for output format validation (mp4/webm/mov/mkv via ffprobe), encoder detection against real FFmpeg output, and multi-segment concat duration integrity using lavfi virtual inputs (BL-233, #270, #271, #272)
+- UAT journeys J501–J504 for render export, render queue management, render settings, and render failure recovery (BL-234, #274, #275, #276, #277)
+- J401–J404 headless CI hardening with graceful no-project state handling; CI UAT timeout increased from 5 to 10 minutes (BL-205, #273)
+- `render_jobs_total` Prometheus counter `submitted` label on job creation for in-flight job tracking via Prometheus arithmetic (BL-245, #278)
+
+## v032 — Render Surface Integration (2026-04-08)
+
+### Added
+- Lifted `useRenderEvents` WebSocket hook to Shell component for application-wide render event listening (BL-235)
+- Render progress indicators (percentage, ETA, speed ratio) in Theater Mode BottomHUD (BL-235)
+- Start Render button on TimelinePage header with StartRenderModal integration (BL-236)
+
+### Changed
+- BottomHUD reads render state from shared `useRenderStore` instead of maintaining its own WebSocket connection
+
 ## [v031] - 2026-04-07
 
 Phase 5 GUI Render Interactive Components. Enriches render progress WebSocket events with ETA and speed data, builds reusable render job card components, and ships the StartRenderModal for configuring and launching render jobs.
