@@ -64,6 +64,7 @@ class SeedResult:
     clip_ids: list[str]
     effects_applied: int
     transitions_applied: int
+    job_id: str
 
 
 def parse_args() -> argparse.Namespace:
@@ -240,12 +241,24 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
         resp.raise_for_status()
         transitions_applied += 1
 
+    # 5. Queue render job
+    resp = client.post(
+        "/api/v1/render",
+        json={"project_id": project_id},
+    )
+    if resp.status_code != 201:
+        print(f"ERROR: Render failed with status {resp.status_code}: {resp.text}", file=sys.stderr)
+        sys.exit(1)
+    render_job = resp.json()
+    job_id = render_job["id"]
+
     return SeedResult(
         project_id=project_id,
         video_ids=video_ids,
         clip_ids=clip_ids,
         effects_applied=effects_applied,
         transitions_applied=transitions_applied,
+        job_id=job_id,
     )
 
 
@@ -279,6 +292,7 @@ def print_summary(result: SeedResult) -> None:
     print(f"  Clips added:   {len(result.clip_ids)}")
     print(f"  Effects:       {result.effects_applied}")
     print(f"  Transitions:   {result.transitions_applied}")
+    print(f"  Render job ID: {result.job_id} (status: queued)")
     print("  Output:        1280x720 @ 30fps")
     print("  Duration:      ~46.0s (1380 frames)")
     print(f"{'=' * 50}\n")

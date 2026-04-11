@@ -40,6 +40,12 @@ The test harness has two tiers:
 | `tests/smoke/test_preview.py` | Preview session: create session via POST with timeline, verify 202 and session_id (v026) |
 | `tests/smoke/test_render_api.py` | Render API: job CRUD (create, get, list, delete), encoder discovery and refresh, format listing, queue status, cancel, retry (v029–v033) |
 
+### Phase 3 — Sample Project Smoke Tests (v034)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_sample_project.py` | BL-128/BL-239: full sample project structure (metadata, clips, effects) and render job queueing — asserts `status=="queued"` only (render background worker not wired to lifespan) |
+
 ### Conftest Additions (v018–v019)
 
 | Item | Purpose |

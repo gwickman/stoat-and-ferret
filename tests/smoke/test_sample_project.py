@@ -1,7 +1,8 @@
-"""Regression smoke test for the Running Montage sample project (BL-128).
+"""Regression smoke test for the Running Montage sample project (BL-128, BL-239).
 
 Validates that the complete sample project structure — project metadata,
 clip frame values, and effect-to-clip mappings — matches canonical definitions.
+Also verifies that a render job can be queued for the sample project.
 """
 
 from __future__ import annotations
@@ -102,3 +103,25 @@ async def test_sample_project_structure(
                 )
         else:
             assert len(clip_effects) == 0, f"Clip {i}: expected no effects, got {len(clip_effects)}"
+
+
+async def test_sample_project_render(
+    smoke_client: httpx.AsyncClient,
+    sample_project: dict[str, Any],
+) -> None:
+    """Verify render job is successfully queued for the sample project.
+
+    Note: asserts status=="queued" only — the render background worker
+    (RenderQueue.dequeue) is not wired to FastAPI lifespan, so jobs remain
+    queued indefinitely in test mode. Output file existence is not asserted.
+    See BL-239 design investigation (comms/outbox/versions/design/v034/).
+    """
+    project_id = sample_project["project_id"]
+    response = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["status"] == "queued"
+    assert data["id"]  # non-empty string
