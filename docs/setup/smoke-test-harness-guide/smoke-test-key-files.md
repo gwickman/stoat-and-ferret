@@ -38,7 +38,7 @@ The test harness has two tiers:
 | `tests/smoke/test_negative_paths.py` | Negative paths: invalid inputs across timeline, audio, batch, compose (v019) |
 | `tests/smoke/test_proxy.py` | Proxy management: generate, status, delete, batch (v024) |
 | `tests/smoke/test_preview.py` | Preview session: create session via POST with timeline, verify 202 and session_id (v026) |
-| `tests/smoke/test_render_api.py` | Render API: job CRUD (create, get, list, delete), encoder discovery, format listing, queue status (v029) |
+| `tests/smoke/test_render_api.py` | Render API: job CRUD (create, get, list, delete), encoder discovery and refresh, format listing, queue status, cancel, retry (v029–v033) |
 
 ### Conftest Additions (v018–v019)
 

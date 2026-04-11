@@ -1,12 +1,15 @@
 """Smoke tests for render API endpoints.
 
 Validates render CRUD operations, encoder discovery, format listing,
-and queue status via the full fixture chain (HTTP -> FastAPI -> Services).
+queue status, cancel, retry, and encoder refresh via the full fixture chain
+(HTTP -> FastAPI -> Services).
 """
 
 from __future__ import annotations
 
 import httpx
+
+from stoat_ferret.render.models import RenderStatus
 
 
 async def test_render_create(smoke_client: httpx.AsyncClient) -> None:
@@ -240,3 +243,94 @@ async def test_render_delete(smoke_client: httpx.AsyncClient) -> None:
     # Verify the job is gone
     get_resp = await smoke_client.get(f"/api/v1/render/{job_id}")
     assert get_resp.status_code == 404
+
+
+async def test_render_cancel(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/{id}/cancel returns 200 on queued job, 404/409 on invalid states."""
+    # Create a project and render job
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Render Cancel Test"},
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    create_resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id},
+    )
+    assert create_resp.status_code == 201
+    job_id = create_resp.json()["id"]
+
+    # Cancel while in queued state — should return 200
+    cancel_resp = await smoke_client.post(f"/api/v1/render/{job_id}/cancel")
+    assert cancel_resp.status_code == 200
+    body = cancel_resp.json()
+    assert body["id"] == job_id
+    assert body["status"] == "cancelled"
+
+    # Cancel a non-existent job — should return 404
+    not_found_resp = await smoke_client.post("/api/v1/render/nonexistent-id/cancel")
+    assert not_found_resp.status_code == 404
+
+    # Cancel an already-cancelled job — should return 409
+    already_cancelled_resp = await smoke_client.post(f"/api/v1/render/{job_id}/cancel")
+    assert already_cancelled_resp.status_code == 409
+
+
+async def test_render_retry(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/{id}/retry returns 200 on failed job."""
+    # Create a project and render job
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Render Retry Test"},
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    create_resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id},
+    )
+    assert create_resp.status_code == 201
+    job_id = create_resp.json()["id"]
+
+    # Access render repository directly to set job to failed state.
+    # Jobs stay in QUEUED in smoke tests (no background render worker).
+    # Transition: queued -> running -> failed (both valid per the state machine).
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    render_repo = transport.app.state.render_repository  # type: ignore[union-attr]
+    await render_repo.update_status(job_id, RenderStatus.RUNNING)
+    await render_repo.update_status(job_id, RenderStatus.FAILED, error_message="test failure")
+
+    # Retry the failed job — should return 200 with status reset to queued
+    retry_resp = await smoke_client.post(f"/api/v1/render/{job_id}/retry")
+    assert retry_resp.status_code == 200
+    body = retry_resp.json()
+    assert body["id"] == job_id
+    assert body["status"] == "queued"
+
+    # Retry a non-existent job — should return 404
+    not_found_resp = await smoke_client.post("/api/v1/render/nonexistent-id/retry")
+    assert not_found_resp.status_code == 404
+
+
+async def test_render_encoder_refresh(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/encoders/refresh returns 200 with valid encoder list structure."""
+    resp = await smoke_client.post("/api/v1/render/encoders/refresh")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "encoders" in body
+    assert "cached" in body
+    assert isinstance(body["encoders"], list)
+    assert body["cached"] is False  # refresh always returns freshly detected data
+
+    # If encoders detected, verify structure of each entry
+    if body["encoders"]:
+        encoder = body["encoders"][0]
+        assert "name" in encoder
+        assert "codec" in encoder
+        assert "is_hardware" in encoder
+        assert "encoder_type" in encoder
+        assert "description" in encoder
+        assert "detected_at" in encoder

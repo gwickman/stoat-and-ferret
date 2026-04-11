@@ -570,7 +570,7 @@ Phase 2 smoke tests extend API coverage beyond the original 12 use cases, adding
 | `test_proxy_delete` | DELETE /api/v1/videos/{id}/proxy removes proxy, returns freed_bytes |
 | `test_proxy_batch` | POST /api/v1/proxy/batch returns queued and skipped lists |
 
-### Render API (`test_render_api.py`, v029)
+### Render API (`test_render_api.py`, v029–v033)
 
 Each render test creates its own project for isolation — no shared fixtures between tests.
 
@@ -583,6 +583,9 @@ Each render test creates its own project for isolation — no shared fixtures be
 | `test_render_formats` | GET /api/v1/render/formats returns all 4 output formats (200, verifies mp4/webm/mov/mkv with extension, mime_type, codecs, and quality presets) |
 | `test_render_queue` | GET /api/v1/render/queue returns queue status (200, verifies active_count, pending_count, max_concurrent, max_queue_depth, disk stats, completed/failed today) |
 | `test_render_delete` | DELETE /api/v1/render/{job_id} removes a render job (200/204, then verifies GET returns 404) |
+| `test_render_cancel` | POST /api/v1/render/{id}/cancel returns 200 on a queued job (verifies status=cancelled), 404 for nonexistent job, 409 for already-cancelled job (v033) |
+| `test_render_retry` | POST /api/v1/render/{id}/retry returns 200 on a failed job (verifies status reset to queued), 404 for nonexistent job; sets FAILED state via render repository to avoid background runner dependency (v033) |
+| `test_render_encoder_refresh` | POST /api/v1/render/encoders/refresh returns 200 with fresh encoder list (verifies encoders array, cached=false, and encoder structure when present) (v033) |
 
 **Health check render assertion** (`test_health.py`): The existing `test_uc08_monitor_system_health` test was extended to assert the `render` key in the `/health/ready` response, checking: status (ok/degraded/unavailable), active_jobs, queue_depth, disk_usage_percent, and encoder_available.
 
@@ -643,8 +646,11 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 | `GET /api/v1/render/{id}` | test_render_api.py |
 | `DELETE /api/v1/render/{id}` | test_render_api.py |
 | `GET /api/v1/render/encoders` | test_render_api.py |
+| `POST /api/v1/render/encoders/refresh` | test_render_api.py |
 | `GET /api/v1/render/formats` | test_render_api.py |
 | `GET /api/v1/render/queue` | test_render_api.py |
+| `POST /api/v1/render/{id}/cancel` | test_render_api.py |
+| `POST /api/v1/render/{id}/retry` | test_render_api.py |
 
 ### Residual Coverage Gaps
 
