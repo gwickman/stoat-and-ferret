@@ -14,7 +14,7 @@ from prometheus_client import Counter, Gauge, Histogram
 render_jobs_total = Counter(
     "stoat_ferret_render_jobs_total",
     "Total render jobs by status",
-    ["status"],  # completed, failed, cancelled
+    ["status"],  # submitted, completed, failed, cancelled
 )
 
 render_duration_seconds = Histogram(

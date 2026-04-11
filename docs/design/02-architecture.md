@@ -439,7 +439,7 @@ Responsibilities:
 ├── Progress tracking with metrics (Rust ETA calculation)
 ├── Hardware encoder selection (Rust detection)
 ├── Output format handling
-├── Emit metrics: render_jobs_total, render_duration_seconds
+├── Emit metrics: render_jobs_total{status: submitted|completed|failed|cancelled}, render_duration_seconds
 └── Audit log: render events
 ```
 

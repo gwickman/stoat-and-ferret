@@ -176,7 +176,7 @@ from prometheus_client import Counter, Histogram, Gauge
 render_jobs_total = Counter(
     "video_editor_render_jobs_total",
     "Total render jobs by status",
-    ["status", "output_format", "quality_preset"],
+    ["status", "output_format", "quality_preset"],  # status: submitted, completed, failed, cancelled
 )
 
 render_jobs_active = Gauge(

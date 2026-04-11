@@ -211,6 +211,24 @@ class TestJobCounters:
             after = _get_counter_value(render_jobs_total, {"status": "cancelled"})
             assert after == before + 1
 
+    async def test_counter_increments_on_submission(self) -> None:
+        """render_jobs_total(status=submitted) increments when job is created."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, _ = _build_service()
+
+            before = _get_counter_value(render_jobs_total, {"status": "submitted"})
+
+            await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+
+            after = _get_counter_value(render_jobs_total, {"status": "submitted"})
+            assert after == before + 1
+
 
 # ---------------------------------------------------------------------------
 # Histogram Tests — Duration
