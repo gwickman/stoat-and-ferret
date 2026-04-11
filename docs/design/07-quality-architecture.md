@@ -1102,7 +1102,7 @@ rust_core_calls_total = Counter(
 render_jobs_total = Counter(
     "video_editor_render_jobs_total",
     "Total render jobs",
-    ["status"],
+    ["status"],  # submitted, completed, failed, cancelled
 )
 
 render_duration_seconds = Histogram(

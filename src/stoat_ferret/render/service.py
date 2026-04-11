@@ -208,6 +208,7 @@ class RenderService:
             raise PreflightError(str(exc)) from exc
 
         log.info("render_job.queued", job_id=job.id)
+        render_jobs_total.labels(status="submitted").inc()
 
         await self._broadcast_event(EventType.RENDER_QUEUED, job)
         await self._broadcast_queue_status()
