@@ -207,7 +207,10 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 402 | `uat_journey_402.py` | **Proxy Management** — Navigates to the Library, verifies proxy status badges on video cards, waits for proxy generation, then starts a preview with proxy. Depends on journey 201. |
 | 403 | `uat_journey_403.py` | **Theater Mode** — Enters Theater Mode, verifies HUD auto-hide after 3 seconds, re-shows HUD on mouse move, tests keyboard shortcuts (Space, Escape), and exits. Independent. |
 | 404 | `uat_journey_404.py` | **Timeline Sync** — Plays the preview, verifies the playhead moves with playback, clicks a timeline position, and verifies the video seeks to match. Independent. |
-| 501 | `uat_journey_501.py` | **Render Page Navigation** — Navigates to the app root, verifies the Render tab is visible, clicks it to navigate to /gui/render, and verifies the render-page container, queue-status-bar, and start-render-btn are present. Independent. |
+| 501 | `uat_journey_501.py` | **Render Export Journey** — Navigates to the Timeline page to trigger project auto-selection, then navigates to /gui/render. Opens the Start Render modal, verifies format and quality defaults are populated, submits the render job, and verifies the job appears in the queue with an expected status badge. Independent. |
+| 502 | `uat_journey_502.py` | **Render Queue Journey** — Submits multiple render jobs to fill the queue, verifies queue ordering and concurrency limits, and checks that pending jobs are visible in the queue. Depends on journey 501. |
+| 503 | `uat_journey_503.py` | **Render Settings Journey** — Opens the Start Render modal and validates format, quality, and encoder selector options, verifies the FFmpeg command preview updates when settings change, and checks all available format/quality combinations. Depends on journey 501. |
+| 504 | `uat_journey_504.py` | **Render Failure Journey** — Creates a project with a clip pointing to a nonexistent source file, starts a render, and verifies the job transitions to failed status with an error message visible in the job card. Tests the retry button interaction. Depends on journey 501. |
 
 ### Dependency graph
 
@@ -223,7 +226,10 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 
 403 (theater-mode)       ← independent
 404 (timeline-sync)      ← independent
-501 (render-page-navigation) ← independent
+501 (render-export-journey) ← independent
+ ├─▶ 502 (render-queue-journey)
+ ├─▶ 503 (render-settings-journey)
+ └─▶ 504 (render-failure-journey)
 ```
 
-If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results.
+If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically.
