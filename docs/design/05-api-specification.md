@@ -59,7 +59,7 @@ Authorization: Bearer <token>
 | `/projects` | Project/timeline management | 1 |
 | `/clips` | Clip operations within projects | 1 |
 | `/effects` | Effect application, transitions, and discovery | 2 |
-| `/render` | Export job management | 1 |
+| `/api/v1/render` | Render job lifecycle: create, list, get, cancel, retry, delete, queue status, encoders, formats, preview | 5 |
 | `/filesystem` | Filesystem browsing (directory listing) | 1 |
 | `/health` | Health checks (liveness, readiness) | 1 |
 | `/system` | System information | 1 |
@@ -1137,11 +1137,13 @@ Lists subdirectories within a given path with pagination. Hidden directories (st
 
 ---
 
-### Rendering
+### Rendering (Phase 5)
 
-#### Start Render Job
+All render endpoints are under `/api/v1/render`. Render jobs are persisted in SQLite via `render_repository.py`. Job status values: `queued`, `running`, `completed`, `failed`, `cancelled`.
+
+#### Create Render Job
 ```http
-POST /render/start
+POST /api/v1/render
 ```
 
 **Request Body:**
@@ -1150,100 +1152,24 @@ POST /render/start
   "project_id": "proj_abc123",
   "output_path": "/home/user/output/video.mp4",
   "format": "mp4",
-  "quality": "high",
-  "hardware_accel": "auto"
+  "quality": "standard"
 }
 ```
 
-**Quality Options:** `draft`, `medium`, `high`, `lossless`
+**Quality Options:** `draft`, `standard`, `high`
 
-**Hardware Accel Options:** `auto`, `nvenc`, `vaapi`, `qsv`, `none`
+**Output Format Options:** `mp4`, `webm`, `mov`, `mkv`
 
 **Note:** FFmpeg command is built by Rust core. Output path is validated by Rust core.
 
-**Response:** `202 Accepted`
+**Response:** `201 Created`
 ```json
 {
   "job_id": "job_render_001",
   "status": "queued",
   "project_id": "proj_abc123",
   "output_path": "/home/user/output/video.mp4",
-  "created_at": "2024-01-15T12:00:00Z",
-  "ffmpeg_command_preview": "ffmpeg -i ... -filter_complex ... output.mp4"
-}
-```
-
----
-
-#### Get Render Status
-```http
-GET /render/status/{job_id}
-```
-
-**Response (Queued):** `200 OK`
-```json
-{
-  "job_id": "job_render_001",
-  "status": "queued",
-  "position": 2,
   "created_at": "2024-01-15T12:00:00Z"
-}
-```
-
-**Response (Running):** `200 OK`
-```json
-{
-  "job_id": "job_render_001",
-  "status": "running",
-  "progress": 0.45,
-  "current_frame": 1350,
-  "total_frames": 3000,
-  "fps": 45.2,
-  "eta_seconds": 37,
-  "started_at": "2024-01-15T12:00:05Z"
-}
-```
-
-**Response (Completed):** `200 OK`
-```json
-{
-  "job_id": "job_render_001",
-  "status": "completed",
-  "progress": 1.0,
-  "output_path": "/home/user/output/video.mp4",
-  "output_size": 52000000,
-  "duration": 45.5,
-  "render_time": 32.5,
-  "completed_at": "2024-01-15T12:00:38Z"
-}
-```
-
-**Response (Failed):** `200 OK`
-```json
-{
-  "job_id": "job_render_001",
-  "status": "failed",
-  "error": "FFmpeg encoding error",
-  "error_details": "Error while opening encoder for output stream #0:0",
-  "suggestion": "Try using software encoding (hardware_accel: none)",
-  "ffmpeg_command": "ffmpeg -i ... (full command for debugging)",
-  "failed_at": "2024-01-15T12:00:15Z"
-}
-```
-
----
-
-#### Cancel Render
-```http
-POST /render/cancel/{job_id}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "job_id": "job_render_001",
-  "status": "cancelled",
-  "cancelled_at": "2024-01-15T12:00:20Z"
 }
 ```
 
@@ -1251,14 +1177,8 @@ POST /render/cancel/{job_id}
 
 #### List Render Jobs
 ```http
-GET /render/jobs
+GET /api/v1/render
 ```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `status` | string | all | Filter by status |
-| `limit` | int | 20 | Results per page |
 
 **Response:** `200 OK`
 ```json
@@ -1271,6 +1191,198 @@ GET /render/jobs
       "created_at": "2024-01-15T12:00:00Z"
     }
   ]
+}
+```
+
+---
+
+#### Get Render Job Status
+```http
+GET /api/v1/render/{job_id}
+```
+
+**Response (Queued):** `200 OK`
+```json
+{
+  "job_id": "job_render_001",
+  "status": "queued",
+  "project_id": "proj_abc123",
+  "created_at": "2024-01-15T12:00:00Z"
+}
+```
+
+**Response (Running):** `200 OK`
+```json
+{
+  "job_id": "job_render_001",
+  "status": "running",
+  "progress": 0.45,
+  "started_at": "2024-01-15T12:00:05Z"
+}
+```
+
+**Response (Completed):** `200 OK`
+```json
+{
+  "job_id": "job_render_001",
+  "status": "completed",
+  "output_path": "/home/user/output/video.mp4",
+  "completed_at": "2024-01-15T12:00:38Z"
+}
+```
+
+**Response (Failed):** `200 OK`
+```json
+{
+  "job_id": "job_render_001",
+  "status": "failed",
+  "error": "FFmpeg encoding error",
+  "failed_at": "2024-01-15T12:00:15Z"
+}
+```
+
+---
+
+#### Cancel a Render Job
+```http
+POST /api/v1/render/{job_id}/cancel
+```
+
+**Response:** `200 OK`
+```json
+{
+  "job_id": "job_render_001",
+  "status": "cancelled"
+}
+```
+
+---
+
+#### Retry a Failed Render Job
+```http
+POST /api/v1/render/{job_id}/retry
+```
+
+Re-queues a `failed` or `cancelled` job with the same parameters.
+
+**Response:** `200 OK`
+```json
+{
+  "job_id": "job_render_001",
+  "status": "queued",
+  "created_at": "2024-01-15T12:05:00Z"
+}
+```
+
+---
+
+#### Delete a Render Job Record
+```http
+DELETE /api/v1/render/{job_id}
+```
+
+Removes the job record from the database. Only allowed for `completed`, `failed`, or `cancelled` jobs.
+
+**Response:** `204 No Content`
+
+---
+
+#### Get Render Queue Status
+```http
+GET /api/v1/render/queue
+```
+
+**Response:** `200 OK`
+```json
+{
+  "queued": 2,
+  "running": 1,
+  "completed": 15,
+  "failed": 0
+}
+```
+
+---
+
+#### List Available Hardware Encoders
+```http
+GET /api/v1/render/encoders
+```
+
+Returns the cached list of encoders detected by the Rust `detect_hardware_encoders()` function.
+
+**Response:** `200 OK`
+```json
+{
+  "encoders": [
+    {"name": "h264_nvenc", "type": "hardware", "available": true},
+    {"name": "libx264", "type": "software", "available": true}
+  ],
+  "cached_at": "2024-01-15T11:00:00Z"
+}
+```
+
+---
+
+#### Refresh Encoder Cache
+```http
+POST /api/v1/render/encoders/refresh
+```
+
+Re-runs Rust hardware encoder detection and updates the SQLite encoder cache.
+
+**Response:** `200 OK`
+```json
+{
+  "encoders": [
+    {"name": "h264_nvenc", "type": "hardware", "available": true},
+    {"name": "libx264", "type": "software", "available": true}
+  ],
+  "refreshed_at": "2024-01-15T12:10:00Z"
+}
+```
+
+---
+
+#### List Supported Output Formats
+```http
+GET /api/v1/render/formats
+```
+
+**Response:** `200 OK`
+```json
+{
+  "formats": [
+    {"id": "mp4", "label": "MP4 (H.264)", "extension": ".mp4"},
+    {"id": "webm", "label": "WebM (VP9)", "extension": ".webm"},
+    {"id": "mov", "label": "QuickTime MOV", "extension": ".mov"},
+    {"id": "mkv", "label": "Matroska MKV", "extension": ".mkv"}
+  ]
+}
+```
+
+---
+
+#### Render Preview (Stateless)
+```http
+POST /api/v1/render/preview
+```
+
+Stateless endpoint — returns a representative FFmpeg command for the given settings without creating a render job. Used by the GUI to display the command before committing to a render.
+
+**Request Body:**
+```json
+{
+  "project_id": "proj_abc123",
+  "format": "mp4",
+  "quality": "standard"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "ffmpeg_command": "ffmpeg -i /path/to/source.mp4 -filter_complex ... -c:v libx264 output.mp4"
 }
 ```
 

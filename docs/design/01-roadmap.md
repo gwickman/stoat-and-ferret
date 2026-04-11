@@ -427,71 +427,71 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 **Objective:** High-quality rendering with hardware acceleration, Rust-powered render coordination. GUI adds Render Control Center for job management and progress monitoring.
 
 ### Milestone 5.1: Rust Core - Render Coordinator
-- [ ] Implement render job coordinator in Rust
-- [ ] Build parallel segment rendering strategy
-- [ ] Create resource management (memory, CPU limits)
-- [ ] Implement progress calculation with ETA estimation
-- [ ] Add render checkpoint system for recovery
+- [x] Implement render job coordinator in Rust
+- [x] Build parallel segment rendering strategy
+- [x] Create resource management (memory, CPU limits)
+- [x] Implement progress calculation with ETA estimation
+- [x] Add render checkpoint system for recovery
 
 ### Milestone 5.2: Render Engine (Resilient)
-- [ ] Build complete FFmpeg command generator from timeline (Rust)
-- [ ] Implement output format options (MP4, WebM, ProRes)
-- [ ] Add resolution/bitrate presets
-- [ ] Create two-pass encoding option
-- [ ] Implement render timeout with graceful termination
-- [ ] Add render retry logic for transient failures
+- [x] Build complete FFmpeg command generator from timeline (Rust)
+- [x] Implement output format options (MP4, WebM, ProRes)
+- [x] Add resolution/bitrate presets
+- [x] Create two-pass encoding option
+- [x] Implement render timeout with graceful termination
+- [x] Add render retry logic for transient failures
 
 ### Milestone 5.3: Hardware Acceleration (Fallback Chain)
-- [ ] Detect available encoders (NVENC, VAAPI, VideoToolbox) - Rust
-- [ ] Implement encoder selection logic with logging
-- [ ] Add GPU decode support where available
-- [ ] Create fallback chain: HW encoder -> SW encoder -> error
-- [ ] Log hardware acceleration detection results
+- [x] Detect available encoders (NVENC, VAAPI, VideoToolbox) - Rust
+- [x] Implement encoder selection logic with logging
+- [x] Add GPU decode support where available
+- [x] Create fallback chain: HW encoder -> SW encoder -> error
+- [x] Log hardware acceleration detection results
 
 ### Milestone 5.4: Job Queue (Observable, Recoverable)
-- [ ] Implement async job processing (arq/Redis)
-- [ ] Add progress tracking with percentage and ETA
-- [ ] Create job status polling endpoint
-- [ ] Implement webhook callbacks for completion
-- [ ] Build job cancellation capability
-- [ ] Add job recovery on service restart
-- [ ] Metrics: queue depth, job duration, success rate
+- [x] Implement async job processing (arq/Redis)
+- [x] Add progress tracking with percentage and ETA
+- [x] Create job status polling endpoint
+- [x] Implement webhook callbacks for completion
+- [x] Build job cancellation capability
+- [x] Add job recovery on service restart
+- [x] Metrics: queue depth, job duration, success rate
 
 ### Milestone 5.5: Export API
-- [ ] Create `/render/start` endpoint with validation
-- [ ] Build `/render/status/{job_id}` for polling
-- [ ] Implement `/render/cancel/{job_id}`
-- [ ] Add `/render/queue` for queue management
-- [ ] Structured errors with recovery suggestions
+- [x] Create `/render/start` endpoint with validation
+- [x] Build `/render/status/{job_id}` for polling
+- [x] Implement `/render/cancel/{job_id}`
+- [x] Add `/render/queue` for queue management
+- [x] Structured errors with recovery suggestions
 
 ### Milestone 5.6: Operational Excellence
-- [ ] Disk space check before starting render (Rust)
-- [ ] Resource limits (max concurrent renders)
-- [ ] Rate limiting for render requests
-- [ ] Cleanup of old render artifacts
-- [ ] Alert thresholds for queue depth
+- [x] Disk space check before starting render (Rust)
+- [x] Resource limits (max concurrent renders)
+- [x] Rate limiting for render requests
+- [x] Cleanup of old render artifacts
+- [x] Alert thresholds for queue depth
 
 ### Milestone 5.7: Quality Verification
-- [ ] Integration tests for full render workflow
-- [ ] Test render recovery after crash
-- [ ] Test fallback chain under various conditions
-- [ ] Load test for concurrent renders
-- [ ] Benchmark render speed (Rust coordinator impact)
+- [x] Integration tests for full render workflow
+- [x] Test render recovery after crash
+- [x] Test fallback chain under various conditions
+- [x] Load test for concurrent renders
+- [x] Benchmark render speed (Rust coordinator impact)
 
 ### Milestone 5.8: GUI - Render Queue Panel
-- [ ] Build job list component with status indicators
-- [ ] Add progress bars with ETA and frame count
-- [ ] Implement cancel and remove job actions
-- [ ] Show completed jobs history with timestamps
-- [ ] Add "Start Render" button with project selector
-- [ ] Display FFmpeg command preview (for debugging)
+- [x] Build job list component with status indicators
+- [x] Add progress bars with ETA and frame count
+- [x] Implement cancel and remove job actions
+- [x] Show completed jobs history with timestamps
+- [x] Add "Start Render" button with project selector
+- [x] Display FFmpeg command preview (for debugging)
 
 ### Milestone 5.9: GUI - Render Settings
-- [ ] Create quality preset selector (draft/medium/high/lossless)
-- [ ] Add output format options (MP4, WebM, ProRes)
-- [ ] Show hardware acceleration status and selection
-- [ ] Implement disk space check with warning display
-- [ ] Add output path selector with validation
+- [x] Create quality preset selector (draft/medium/high/lossless)
+- [x] Add output format options (MP4, WebM, ProRes)
+- [x] Show hardware acceleration status and selection
+- [x] Implement disk space check with warning display
+- [x] Add output path selector with validation
 
 ### Deliverables
 - Full timeline to video rendering

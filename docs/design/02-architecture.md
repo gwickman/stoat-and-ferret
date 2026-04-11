@@ -486,6 +486,54 @@ Session state machine: `INITIALIZING → GENERATING → READY → SEEKING → ER
 
 All long-running operations return `202 Accepted` with a session/job ID for async polling. The preview manager enforces concurrent session limits and graceful shutdown with cooperative cancellation.
 
+**Phase 5: Render Subsystem**
+
+The render subsystem manages full-timeline video export with hardware acceleration, job lifecycle tracking, checkpoint-based recovery, and hardware encoder caching.
+
+```
+Render Subsystem Architecture:
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Render Service                                 │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐          │
+│  │  Job Lifecycle │  │ Encoder        │  │ Checkpoint /   │          │
+│  │  Management    │  │ Detection      │  │ Recovery       │          │
+│  │  (QUEUED →     │  │ (Rust detect_  │  │ (restart from  │          │
+│  │  RUNNING →     │  │  hardware_     │  │  last saved    │          │
+│  │  COMPLETED /   │  │  encoders())   │  │  checkpoint)   │          │
+│  │  FAILED /      │  └────────────────┘  └────────────────┘          │
+│  │  CANCELLED)    │                                                    │
+│  └────────────────┘                                                    │
+├──────────────────────────────────────────────────────────────────────┤
+│                         Render Queue                                   │
+│  • In-process async queue (RenderQueue)                               │
+│  • Job dequeue and execution via RenderExecutor                       │
+│  • Metrics: render_jobs_total{status} counter                         │
+├──────────────────────────────────────────────────────────────────────┤
+│                    Hardware Encoder Cache                              │
+│  • SQLite-backed encoder cache (AsyncSQLiteEncoderCacheRepository)    │
+│  • TTL-based refresh via POST /api/v1/render/encoders/refresh         │
+│  • Encoder entries: EncoderCacheEntry                                 │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Render Package Modules:**
+
+| Module | Responsibility |
+|--------|---------------|
+| `models.py` | `RenderJob`, `RenderStatus` (QUEUED/RUNNING/COMPLETED/FAILED/CANCELLED), `OutputFormat`, `QualityPreset` |
+| `queue.py` | `RenderQueue` — async job queue with dequeue and cancellation |
+| `executor.py` | `RenderExecutor` — runs FFmpeg for a render job |
+| `checkpoints.py` | Checkpoint serialization and recovery logic |
+| `service.py` | `RenderService` — orchestrates job creation, preflight checks, and status |
+| `render_repository.py` | SQLite persistence for render job records |
+| `encoder_cache.py` | `EncoderCacheEntry`, `AsyncEncoderCacheRepository`, `AsyncSQLiteEncoderCacheRepository` |
+
+Job lifecycle state machine: `QUEUED → RUNNING → COMPLETED / FAILED / CANCELLED`
+
+Hardware encoder detection flow: Rust `detect_hardware_encoders()` → `AsyncSQLiteEncoderCacheRepository` (SQLite cache) → exposed via `GET /api/v1/render/encoders`. Cache is invalidated on demand via `POST /api/v1/render/encoders/refresh`.
+
+Checkpoint/recovery: on job failure, the last saved checkpoint is used to resume the render from the last completed segment rather than restarting from scratch.
+
 ### 3. Rust Core Library
 
 The performance-critical heart of the system. All compute-intensive operations are implemented here with compile-time safety guarantees.
