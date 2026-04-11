@@ -59,7 +59,7 @@
 | Versions | test_versions.py | 9 | `/projects/{id}/versions` CRUD, restore, retention |
 | Filesystem | test_filesystem.py | 3 | `/filesystem/directories` listing, hidden exclusion |
 | Negative Paths | test_negative_paths.py | 6 | Invalid inputs, nonexistent resources → 404/422 |
-| Regression | test_sample_project.py | 1 | Running Montage canonical structure validation |
+| Regression | test_sample_project.py | 1 | Running Montage canonical structure and render job queueing validation (BL-239) |
 
 ## Test Inventory
 
@@ -87,7 +87,7 @@
 | test_versions.py | 9 | List empty, create/list, restore (success/404/nonexistent), retention (default/prune/keep_more) |
 | test_filesystem.py | 3 | Directory listing with pagination, not found, hidden excluded |
 | test_negative_paths.py | 6 | Invalid track type, nonexistent resources, empty tracks, insufficient inputs |
-| test_sample_project.py | 1 | Running Montage regression: clip frames, source videos, effect mappings |
+| test_sample_project.py | 1 | Running Montage regression: clip frames, source videos, effect mappings, render job queueing (BL-239) |
 | conftest.py | 0 | Fixtures and helpers (no direct tests) |
 
 ## Dependencies
