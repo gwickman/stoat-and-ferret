@@ -52,6 +52,9 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     403: [],
     404: [],
     501: [],
+    502: [501],
+    503: [501],
+    504: [501],
 }
 
 # Human-readable journey names for screenshot directories and reports
@@ -65,7 +68,10 @@ JOURNEY_NAMES: dict[int, str] = {
     402: "proxy-management",
     403: "theater-mode",
     404: "timeline-sync",
-    501: "render-page-navigation",
+    501: "render-export-journey",
+    502: "render-queue-journey",
+    503: "render-settings-journey",
+    504: "render-failure-journey",
 }
 
 # Known benign console error patterns to exclude from reports
