@@ -105,7 +105,7 @@
 
 #### `useRenderEvents(): void`
 - **Location**: `gui/src/hooks/useRenderEvents.ts:28`
-- **Description**: Subscribes to all 8 render event types (queued, started, progress, completed, failed, cancelled, frame_available, queue_status) via WebSocket. Dispatches to renderStore. Re-fetches jobs/queue on reconnection.
+- **Description**: Subscribes to all 8 render event types (queued, started, progress, completed, failed, cancelled, frame_available, queue_status) via WebSocket. Dispatches to renderStore. Re-fetches jobs/queue on reconnection. Consumed at `gui/src/components/Shell.tsx` (not RenderPage) — WebSocket subscription consolidated to shell level for cross-page access (BL-235).
 - **Signature**: `useRenderEvents(): void`
 - **Event Types**: 8 render-prefixed event types (internal set constant)
 - **Dependencies**: `useWebSocket`, `react.useEffect`, `react.useRef`, `useRenderStore`, JSON parsing
