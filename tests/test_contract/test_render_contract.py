@@ -250,6 +250,99 @@ class TestRenderEdgeCases:
 
 @requires_ffmpeg
 @pytest.mark.contract
+class TestMultiSegmentConcatContract:
+    """Multi-segment concat via FFmpeg concat demuxer produces continuous output.
+
+    Validates FR-001 through FR-004: two lavfi segments are encoded to temporary
+    mp4 files, an ffconcat manifest is written, FFmpeg concat runs, and the output
+    duration matches the sum of the segment durations within 0.1 s tolerance.
+    """
+
+    def test_concat_duration_equals_sum_of_segments(self, tmp_path: Path) -> None:
+        """Concat of two segments produces output with duration ≈ segment1 + segment2.
+
+        FR-001: 2 segments created via lavfi, ffconcat manifest written.
+        FR-002: Concat executed with RealFFmpegExecutor.
+        FR-003: Output duration ≈ sum of inputs (0.1 s tolerance).
+        FR-004: All inputs are lavfi virtual sources.
+        NFR-001: Completes within 30 s using short 2 s segments.
+        """
+        real = RealFFmpegExecutor()
+
+        # Encode two 2-second lavfi segments to mp4 with libx264
+        seg1 = tmp_path / "seg1.mp4"
+        seg2 = tmp_path / "seg2.mp4"
+        segment_duration = 2
+
+        for seg_path in (seg1, seg2):
+            result = real.run(
+                [
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    f"testsrc2=duration={segment_duration}:size=320x240:rate=24",
+                    "-c:v",
+                    "libx264",
+                    "-an",
+                    "-t",
+                    str(segment_duration),
+                    "-f",
+                    "mp4",
+                    "-y",
+                    str(seg_path),
+                ],
+                timeout=30,
+            )
+            assert result.returncode == 0, (
+                f"FFmpeg failed to create segment {seg_path.name}: "
+                f"{result.stderr.decode('utf-8', errors='replace')}"
+            )
+
+        # Write ffconcat manifest using absolute paths (safe=0 required for abs paths)
+        manifest = tmp_path / "concat.txt"
+        manifest.write_text(
+            f"ffconcat version 1.0\nfile '{seg1}'\nfile '{seg2}'\n",
+            encoding="utf-8",
+        )
+
+        # Concatenate via concat demuxer
+        output_path = tmp_path / "output.mp4"
+        concat_result = real.run(
+            [
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(manifest),
+                "-c",
+                "copy",
+                "-y",
+                str(output_path),
+            ],
+            timeout=30,
+        )
+
+        assert concat_result.returncode == 0, (
+            f"FFmpeg concat failed: {concat_result.stderr.decode('utf-8', errors='replace')}"
+        )
+        assert output_path.exists(), "Concat output file was not created"
+        assert output_path.stat().st_size > 0, "Concat output file is empty"
+
+        # Validate duration via ffprobe
+        probe_data = _run_ffprobe(output_path)
+        duration_str = probe_data.get("format", {}).get("duration", "")
+        assert duration_str, "ffprobe returned no duration for concat output"
+        actual_duration = float(duration_str)
+        expected_duration = float(segment_duration * 2)
+        assert abs(actual_duration - expected_duration) <= 0.1, (
+            f"Concat duration {actual_duration:.3f}s differs from expected "
+            f"{expected_duration:.3f}s by more than 0.1 s"
+        )
+
+
+@requires_ffmpeg
+@pytest.mark.contract
 class TestEncoderDetectionContract:
     """Encoder detection parser correctly identifies encoders from real FFmpeg output.
 
