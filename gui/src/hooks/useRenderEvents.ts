@@ -26,62 +26,65 @@ function wsUrl(): string {
  * Handles all 8 render event types and triggers a re-fetch on reconnection.
  */
 export function useRenderEvents(): void {
-  const { lastMessage, state } = useWebSocket(wsUrl())
+  const { messages, state } = useWebSocket(wsUrl())
   const prevStateRef = useRef<ConnectionState>(state)
 
   // Dispatch incoming WS messages to store actions
   useEffect(() => {
-    if (!lastMessage) return
-
-    let parsed: { type: string; payload: Record<string, unknown> }
-    try {
-      parsed = JSON.parse(lastMessage.data)
-    } catch {
-      return // Ignore malformed JSON
-    }
-
-    if (!parsed.type || !RENDER_EVENT_TYPES.has(parsed.type)) return
+    if (messages.length === 0) return
 
     const store = useRenderStore.getState()
-    const payload = parsed.payload
 
-    switch (parsed.type) {
-      case 'render_queued':
-      case 'render_started':
-      case 'render_completed':
-      case 'render_failed':
-      case 'render_cancelled':
-        store.updateJob({
-          id: payload.job_id as string,
-          project_id: payload.project_id as string,
-          status: payload.status as string,
-        })
-        break
+    for (const msg of messages) {
+      let parsed: { type: string; payload: Record<string, unknown> }
+      try {
+        parsed = JSON.parse(msg.data)
+      } catch {
+        continue // Ignore malformed JSON
+      }
 
-      case 'render_progress':
-        store.setProgress(
-          payload.job_id as string,
-          payload.progress as number,
-          (payload.eta_seconds as number | undefined) ?? null,
-          (payload.speed_ratio as number | undefined) ?? null,
-        )
-        break
+      if (!parsed.type || !RENDER_EVENT_TYPES.has(parsed.type)) continue
 
-      case 'render_frame_available':
-        // Frame events update progress on the job; frame_url is informational
-        store.setProgress(payload.job_id as string, payload.progress as number)
-        break
+      const payload = parsed.payload
 
-      case 'render_queue_status':
-        store.setQueueStatus({
-          active_count: payload.active_count as number,
-          pending_count: payload.pending_count as number,
-          max_concurrent: payload.max_concurrent as number,
-          max_queue_depth: payload.max_queue_depth as number,
-        })
-        break
+      switch (parsed.type) {
+        case 'render_queued':
+        case 'render_started':
+        case 'render_completed':
+        case 'render_failed':
+        case 'render_cancelled':
+          store.updateJob({
+            id: payload.job_id as string,
+            project_id: payload.project_id as string,
+            status: payload.status as string,
+          })
+          break
+
+        case 'render_progress':
+          store.setProgress(
+            payload.job_id as string,
+            payload.progress as number,
+            (payload.eta_seconds as number | undefined) ?? null,
+            (payload.speed_ratio as number | undefined) ?? null,
+          )
+          break
+
+        case 'render_frame_available':
+          // Frame events update progress on the job; frame_url is informational
+          store.setProgress(payload.job_id as string, payload.progress as number)
+          break
+
+        case 'render_queue_status':
+          store.setQueueStatus({
+            active_count: payload.active_count as number,
+            pending_count: payload.pending_count as number,
+            max_concurrent: payload.max_concurrent as number,
+            max_queue_depth: payload.max_queue_depth as number,
+          })
+          break
+      }
     }
-  }, [lastMessage])
+  }, [messages])
 
   // Re-fetch on reconnection (reconnecting → connected)
   useEffect(() => {

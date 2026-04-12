@@ -139,6 +139,25 @@ describe('useJobProgress', () => {
     expect(result.current.progress).toBeNull()
   })
 
+  it('processes all 3 progress messages in a burst; final progress reflects last message', async () => {
+    const { result } = renderHook(() => useJobProgress('job-1'))
+
+    act(() => {
+      mockInstances[0].simulateOpen()
+    })
+
+    // Simulate 3 rapid messages outside act (burst simulation)
+    mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.25))
+    mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.5))
+    mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.75, 'complete'))
+
+    // Flush all pending state updates and effects
+    await act(async () => {})
+
+    expect(result.current.progress).toBe(0.75)
+    expect(result.current.status).toBe('complete')
+  })
+
   it('resets state when jobId changes', () => {
     const { result, rerender } = renderHook(
       ({ jobId }: { jobId: string | null }) => useJobProgress(jobId),

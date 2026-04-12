@@ -36,7 +36,7 @@ function wsUrl(): string {
  * Wraps useWebSocket and filters for JOB_PROGRESS events matching the given jobId.
  */
 export function useJobProgress(jobId: string | null): JobProgressState {
-  const { lastMessage } = useWebSocket(wsUrl())
+  const { messages } = useWebSocket(wsUrl())
   const [state, setState] = useState<JobProgressState>({
     progress: null,
     status: null,
@@ -44,22 +44,24 @@ export function useJobProgress(jobId: string | null): JobProgressState {
   })
 
   useEffect(() => {
-    if (!lastMessage || !jobId) return
+    if (messages.length === 0 || !jobId) return
 
-    try {
-      const event: JobProgressEvent = JSON.parse(lastMessage.data)
-      if (event.type !== 'job_progress') return
-      if (event.payload.job_id !== jobId) return
+    for (const msg of messages) {
+      try {
+        const event: JobProgressEvent = JSON.parse(msg.data)
+        if (event.type !== 'job_progress') continue
+        if (event.payload.job_id !== jobId) continue
 
-      setState({
-        progress: event.payload.progress,
-        status: event.payload.status,
-        error: event.payload.error ?? null,
-      })
-    } catch {
-      // Ignore non-JSON messages
+        setState({
+          progress: event.payload.progress,
+          status: event.payload.status,
+          error: event.payload.error ?? null,
+        })
+      } catch {
+        // Ignore non-JSON messages
+      }
     }
-  }, [lastMessage, jobId])
+  }, [messages, jobId])
 
   // Reset state when jobId changes
   useEffect(() => {
