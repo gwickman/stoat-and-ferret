@@ -40,6 +40,9 @@
 - **State Management**:
   - `retryError: string | null` — Error message from failed retry attempt
   - `retryDisabled: boolean` — Tracks if retry was permanently disabled (e.g., retry limit reached)
+  - `cancelLoading: boolean` — True while cancel API request is in-flight; disables cancel button
+  - `retryLoading: boolean` — True while retry API request is in-flight; disables retry button
+  - `deleteLoading: boolean` — True while delete API request is in-flight; disables delete button
 - **Key Behaviors**:
   - Renders progress bar with percentage (clamped 0-100%)
   - Shows ETA and speed ratio if available (eta_seconds, speed_ratio not null)

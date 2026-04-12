@@ -222,4 +222,61 @@ describe('RenderJobCard', () => {
     render(<RenderJobCard job={makeJob({ id: 'abc-123' })} />)
     expect(screen.getByTestId('render-job-card-abc-123')).toBeDefined()
   })
+
+  // --- Loading states ---
+
+  it('cancel button is disabled while cancel request is in-flight', async () => {
+    let resolveFetch!: () => void
+    const okResponse = new Response('{}', { status: 200 })
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
+      () => new Promise<Response>((res) => { resolveFetch = () => res(okResponse) }),
+    )
+
+    render(<RenderJobCard job={makeJob({ status: 'running' })} />)
+    fireEvent.click(screen.getByTestId('cancel-btn'))
+
+    expect((screen.getByTestId('cancel-btn') as HTMLButtonElement).disabled).toBe(true)
+
+    resolveFetch()
+    await waitFor(() =>
+      expect((screen.getByTestId('cancel-btn') as HTMLButtonElement).disabled).toBe(false),
+    )
+  })
+
+  it('retry button is disabled while retry request is in-flight', async () => {
+    let resolveFetch!: () => void
+    const okResponse = new Response('{}', { status: 200 })
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
+      () => new Promise<Response>((res) => { resolveFetch = () => res(okResponse) }),
+    )
+
+    render(<RenderJobCard job={makeJob({ status: 'failed' })} />)
+    fireEvent.click(screen.getByTestId('retry-btn'))
+
+    expect((screen.getByTestId('retry-btn') as HTMLButtonElement).disabled).toBe(true)
+
+    resolveFetch()
+    await waitFor(() =>
+      expect((screen.getByTestId('retry-btn') as HTMLButtonElement).disabled).toBe(false),
+    )
+  })
+
+  it('delete button is disabled while delete request is in-flight', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    let resolveFetch!: () => void
+    const okResponse = new Response('{}', { status: 200 })
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
+      () => new Promise<Response>((res) => { resolveFetch = () => res(okResponse) }),
+    )
+
+    render(<RenderJobCard job={makeJob({ status: 'completed' })} />)
+    fireEvent.click(screen.getByTestId('delete-btn'))
+
+    expect((screen.getByTestId('delete-btn') as HTMLButtonElement).disabled).toBe(true)
+
+    resolveFetch()
+    await waitFor(() =>
+      expect((screen.getByTestId('delete-btn') as HTMLButtonElement).disabled).toBe(false),
+    )
+  })
 })
