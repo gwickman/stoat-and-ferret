@@ -6,6 +6,7 @@ export interface WebSocketHook {
   state: ConnectionState
   send: (data: string) => void
   lastMessage: MessageEvent | null
+  messages: MessageEvent[]
 }
 
 const BASE_DELAY = 1000
@@ -13,7 +14,9 @@ const MAX_DELAY = 30_000
 
 export function useWebSocket(url: string): WebSocketHook {
   const [state, setState] = useState<ConnectionState>('disconnected')
-  const [lastMessage, setLastMessage] = useState<MessageEvent | null>(null)
+  const [messages, setMessages] = useState<MessageEvent[]>([])
+  const [tick, setTick] = useState(0)
+  const queueRef = useRef<MessageEvent[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const retryCount = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -33,7 +36,8 @@ export function useWebSocket(url: string): WebSocketHook {
 
     ws.onmessage = (event: MessageEvent) => {
       if (unmountedRef.current) return
-      setLastMessage(event)
+      queueRef.current.push(event)
+      setTick((n) => n + 1)
     }
 
     ws.onclose = () => {
@@ -67,11 +71,20 @@ export function useWebSocket(url: string): WebSocketHook {
     }
   }, [connect])
 
+  useEffect(() => {
+    if (queueRef.current.length === 0) return
+    const drained = [...queueRef.current]
+    queueRef.current = []
+    setMessages(drained)
+  }, [tick])
+
+  const lastMessage = messages.at(-1) ?? null
+
   const send = useCallback((data: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(data)
     }
   }, [])
 
-  return { state, send, lastMessage }
+  return { state, send, lastMessage, messages }
 }
