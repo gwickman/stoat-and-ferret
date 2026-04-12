@@ -493,6 +493,11 @@ _QUALITY_PRESETS: dict[str, list[QualityPresetInfo]] = {
         QualityPresetInfo(preset="standard", video_bitrate_kbps=60_000),
         QualityPresetInfo(preset="high", video_bitrate_kbps=120_000),
     ],
+    "av1": [
+        QualityPresetInfo(preset="draft", video_bitrate_kbps=2_000),
+        QualityPresetInfo(preset="standard", video_bitrate_kbps=4_000),
+        QualityPresetInfo(preset="high", video_bitrate_kbps=8_000),
+    ],
 }
 
 _FORMAT_DATA: list[FormatInfo] = [
@@ -540,12 +545,39 @@ _FORMAT_DATA: list[FormatInfo] = [
             CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
             CodecInfo(name="h265", quality_presets=_QUALITY_PRESETS["h265"]),
             CodecInfo(name="vp9", quality_presets=_QUALITY_PRESETS["vp9"]),
+            CodecInfo(name="av1", quality_presets=_QUALITY_PRESETS["av1"]),
         ],
         supports_hw_accel=True,
         supports_two_pass=True,
         supports_alpha=True,
     ),
 ]
+
+
+def _encoder_codec_family(encoder: str) -> str | None:
+    """Map an encoder name to its codec family string.
+
+    Args:
+        encoder: FFmpeg encoder name (e.g., 'libx264', 'libvpx-vp9').
+
+    Returns:
+        Codec family string (e.g., 'h264', 'vp9'), or None if unknown.
+    """
+    _ENCODER_MAP = {
+        "libx264": "h264",
+        "libx265": "h265",
+        "libvpx": "vp8",
+        "libvpx-vp9": "vp9",
+        "prores_ks": "prores",
+        "libaom-av1": "av1",
+    }
+    if encoder in _ENCODER_MAP:
+        return _ENCODER_MAP[encoder]
+    if encoder.startswith("h264_"):
+        return "h264"
+    if encoder.startswith("hevc_"):
+        return "h265"
+    return None
 
 
 @router.get("/render/formats", response_model=FormatListResponse)
@@ -612,6 +644,29 @@ def render_preview(body: RenderPreviewRequest) -> RenderPreviewResponse:
                 ),
             },
         )
+
+    # Format-encoder compatibility check (Python-side, before Rust validation)
+    fmt_info = next((f for f in _FORMAT_DATA if f.format == body.output_format), None)
+    if fmt_info is not None:
+        codec_family = _encoder_codec_family(body.encoder)
+        allowed = [c.name for c in fmt_info.codecs]
+        if codec_family is not None and codec_family not in allowed:
+            logger.info(
+                "render_preview_incompatible",
+                encoder=body.encoder,
+                output_format=body.output_format,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "INCOMPATIBLE_FORMAT_ENCODER",
+                    "message": (
+                        f"Encoder '{body.encoder}' is not compatible with format "
+                        f"'{body.output_format}'. Supported codec families for "
+                        f"{body.output_format}: {allowed}"
+                    ),
+                },
+            )
 
     # Build RenderSettings with placeholder resolution/fps for validation
     settings = RenderSettings(
