@@ -22,11 +22,12 @@
 
 #### `useWebSocket(url: string): WebSocketHook`
 - **Location**: `gui/src/hooks/useWebSocket.ts:14`
-- **Description**: Manages a WebSocket connection with exponential backoff reconnection (1s → 2s → 4s ... max 30s). Resets retry count on successful connection. Provides state, send function, and lastMessage buffer.
+- **Description**: Manages a WebSocket connection with exponential backoff reconnection (1s → 2s → 4s ... max 30s). Resets retry count on successful connection. Uses a ref-queue pattern (`queueRef` + `tick` counter) to survive React 18 automatic batching: `onmessage` pushes events to `queueRef` and increments `tick`; a drain `useEffect([tick])` flushes the queue into `messages[]` each render cycle. Exposes `messages: MessageEvent[]` (all messages received since last drain) and `lastMessage` (backward-compat alias for `messages.at(-1)`).
 - **Signature**: `useWebSocket(url: string): WebSocketHook`
 - **Constants**: `BASE_DELAY = 1000`, `MAX_DELAY = 30_000`
-- **Exports**: `ConnectionState` type, `WebSocketHook` interface (`{ state, lastMessage, send }`)
+- **Exports**: `ConnectionState` type, `WebSocketHook` interface (`{ state, lastMessage, messages, send }`)
 - **Dependencies**: `react.useState`, `react.useEffect`, `react.useCallback`, `react.useRef`, WebSocket API
+- **Tests**: 10 tests in `gui/src/hooks/__tests__/useWebSocket.test.ts` (8 existing + 2 new: burst delivery, backward-compat)
 
 #### `useMetrics(intervalMs?: number): Metrics`
 - **Location**: `gui/src/hooks/useMetrics.ts:40`

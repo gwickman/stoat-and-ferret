@@ -148,4 +148,41 @@ describe('useWebSocket', () => {
     // All reconnects should have happened (max delay is 30s)
     expect(mockInstances.length).toBeGreaterThan(5)
   })
+
+  it('delivers all messages in a burst without loss (FR-001, FR-002)', async () => {
+    const { result } = renderHook(() => useWebSocket('ws://localhost/ws'))
+
+    act(() => {
+      mockInstances[0].simulateOpen()
+    })
+
+    // Simulate 10 messages outside of act — all push to queueRef before any render
+    for (let i = 0; i < 10; i++) {
+      mockInstances[0].simulateMessage(`msg-${i}`)
+    }
+    // No-op act flushes all pending React state updates and effects
+    await act(async () => {})
+
+    expect(result.current.messages).toHaveLength(10)
+    expect(result.current.messages[0].data).toBe('msg-0')
+    expect(result.current.messages[9].data).toBe('msg-9')
+    expect(result.current.lastMessage?.data).toBe('msg-9')
+  })
+
+  it('lastMessage equals messages.at(-1) for backward compatibility (FR-003)', async () => {
+    const { result } = renderHook(() => useWebSocket('ws://localhost/ws'))
+
+    act(() => {
+      mockInstances[0].simulateOpen()
+    })
+
+    for (let i = 0; i < 3; i++) {
+      mockInstances[0].simulateMessage(`msg-${i}`)
+    }
+    await act(async () => {})
+
+    const { messages, lastMessage } = result.current
+    expect(messages.length).toBeGreaterThan(0)
+    expect(lastMessage).toBe(messages.at(-1))
+  })
 })
