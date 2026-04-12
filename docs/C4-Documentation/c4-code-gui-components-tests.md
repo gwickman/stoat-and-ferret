@@ -13,10 +13,10 @@
 
 ### Test Files by Functional Area
 
-#### Timeline & Editing (10 files, 58 tests)
+#### Timeline & Editing (10 files, 64 tests)
 - **TimelineCanvas.test.tsx** (10 tests): Rendering, panning, scrolling, and event handling
 - **TimelineClip.test.tsx** (10 tests): Clip positioning, zoom, selection, and in/out point editing
-- **TimelinePage.test.tsx** (7 tests): Page layout, store integration, keyboard navigation
+- **TimelinePage.test.tsx** (13 tests): Page layout, store integration, keyboard navigation, Start Render button, modal open/close
 - **Track.test.tsx** (6 tests): Track rendering, clip management, drop zones
 - **TimeRuler.test.tsx** (6 tests): Time tick rendering, zoom scaling, position indicators
 - **Playhead.test.tsx** (6 tests): Playhead positioning, scrubbing, tooltip rendering
@@ -84,8 +84,8 @@
 | Metric | Count |
 |--------|-------|
 | Total test files | 38 |
-| Total test cases | 318 |
-| Avg tests per file | 8.4 |
+| Total test cases | 324 |
+| Avg tests per file | 8.5 |
 
 ### Testing Patterns Used
 - **Component rendering**: `render()` with props and state
@@ -144,6 +144,7 @@ graph TB
 
 ## Notes
 
+- **BL-247 resolved**: Three pre-existing `TimelinePage.test.tsx` failures (introduced pre-v023, tracked as BL-247) were resolved by commit `cbe2fa5` (April 2026). That commit added a defensive guard against undefined `projects` in `TimelinePage.tsx` and fixed test mocks to use per-endpoint mock responses with fresh `Response` objects per call. As of v035 verification, all 13 `TimelinePage.test.tsx` tests pass with 0 failures.
 - **Test coverage focus**: Highest coverage on interactive components (PlayerControls: 38, EffectParameterForm: 17, SeekTooltip: 18, PreviewPlayer: 17)
 - **Mocking strategy**: Zustand stores reset in `beforeEach`, DOM mocks for video/canvas elements
 - **Common patterns**: Builder functions for test fixtures, isolated store state per test
