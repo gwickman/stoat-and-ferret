@@ -58,7 +58,7 @@
 
 ### Navigation & Shell Components
 
-- `Shell` — Root layout wrapper with header (Navigation, HealthIndicator), main outlet (React Router), StatusBar footer; props: none (gui/src/components/Shell.tsx)
+- `Shell` — Root layout wrapper with header (Navigation, HealthIndicator), main outlet (React Router), StatusBar footer; mounts `useRenderEvents()` WebSocket listener at application level (BL-235); props: none (gui/src/components/Shell.tsx)
 - `Navigation` — Tab navigation to Dashboard, Library, Projects, Effects, Timeline, Preview, Render; checks endpoint availability on mount; props: none (gui/src/components/Navigation.tsx)
 - `StatusBar` — Footer status bar showing WebSocket connection state; props: `connectionState: ConnectionState` (gui/src/components/StatusBar.tsx)
 

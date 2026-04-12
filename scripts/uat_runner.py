@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import signal
@@ -245,30 +246,34 @@ def start_server(
         output_dir: UAT evidence directory for this run.
 
     Returns:
-        Tuple of (Popen handle, list of open file handles to close at teardown).
+        Tuple of (Popen handle, empty list — log files are closed after Popen inherits them).
     """
     print(f"  Starting server on port {SERVER_PORT}...")
-    stdout_fh = open(output_dir / "server-stdout.log", "w", encoding="utf-8")
-    stderr_fh = open(output_dir / "server-stderr.log", "w", encoding="utf-8")
-    # Use uvicorn module directly for cross-platform compatibility
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "stoat_ferret.api.app:create_app",
-            "--factory",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(SERVER_PORT),
-        ],
-        cwd=PROJECT_ROOT,
-        stdout=stdout_fh,
-        stderr=stderr_fh,
-        text=True,
-    )
-    return proc, [stdout_fh, stderr_fh]
+    # Use uvicorn module directly for cross-platform compatibility.
+    # Open log files via context manager; Popen inherits the file descriptors
+    # before the with block exits, so the subprocess can still write to them.
+    with (
+        open(output_dir / "server-stdout.log", "w", encoding="utf-8") as stdout_fh,
+        open(output_dir / "server-stderr.log", "w", encoding="utf-8") as stderr_fh,
+    ):
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "stoat_ferret.api.app:create_app",
+                "--factory",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(SERVER_PORT),
+            ],
+            cwd=PROJECT_ROOT,
+            stdout=stdout_fh,
+            stderr=stderr_fh,
+            text=True,
+        )
+    return proc, []
 
 
 def wait_for_healthy(timeout: float = HEALTH_POLL_TIMEOUT) -> None:
@@ -363,10 +368,8 @@ def _close_handles(handles: list[Any] | None) -> None:
     if not handles:
         return
     for fh in handles:
-        try:
+        with contextlib.suppress(OSError):
             fh.close()
-        except OSError:
-            pass
 
 
 # ---------------------------------------------------------------------------

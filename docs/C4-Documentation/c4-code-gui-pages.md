@@ -156,7 +156,6 @@
 - **Props**: None
 - **State Management**:
   - `useRenderStore()` -- jobs, queueStatus, isLoading, error, fetchJobs, fetchQueueStatus, fetchEncoders, fetchFormats
-  - `useRenderEvents()` -- subscribes to WebSocket render events
 - **Local State**: `startModalOpen` (boolean)
 - **Helper Function**: `categorizeJobs(jobs)` -- returns { active (running), pending (queued), completed (completed|failed|cancelled) }
 - **Child Components**: RenderJobCard (map over each job), StartRenderModal
