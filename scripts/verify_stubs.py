@@ -86,8 +86,7 @@ def extract_names_from_stub(stub_path: Path) -> tuple[set[str], set[str]]:
                 classes.add(node.name)
             elif isinstance(node, ast.FunctionDef):
                 # Only top-level functions, not methods
-                if isinstance(node, ast.FunctionDef):
-                    functions.add(node.name)
+                functions.add(node.name)
     except SyntaxError:
         # Fallback to regex if AST parsing fails
         classes = set(re.findall(r"^class\s+(\w+)", content, re.MULTILINE))

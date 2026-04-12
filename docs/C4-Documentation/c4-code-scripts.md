@@ -93,7 +93,7 @@ Maps sample video filenames to database IDs.
 ```python
 def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult
 ```
-Creates full sample project: project settings (1280x720@30fps), 4 clips, video track, 5 effects, 1 transition.
+Creates full sample project: project settings (1280x720@30fps), 4 clips, video track, 5 effects, 1 transition, and queues a render job (BL-239).
 
 ```python
 def verify_project(client: httpx.Client, result: SeedResult) -> None
@@ -153,6 +153,7 @@ class SeedResult:
     clip_ids: list[str]
     effects_applied: int
     transitions_applied: int
+    job_id: str  # render job ID (BL-239)
 ```
 
 #### `JourneyResult` (`uat_runner.py`)
