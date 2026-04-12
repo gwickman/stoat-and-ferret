@@ -71,6 +71,7 @@
   - `submitting: boolean` — Loading state during form submission
   - `submitError: string | null` — Error message from failed submission
   - `previewCommand: string | null` — FFmpeg command preview
+  - `previewError: string | null` — Error message from 422 preview response (e.g., incompatible format-encoder)
   - `debouncedFormat, debouncedQuality, debouncedEncoder` — Debounced values for preview
 - **Key Behaviors**:
   - Auto-selects first format on mount if formats available
@@ -171,6 +172,7 @@ classDiagram
             -encoder: string
             -errors: FormErrors
             -previewCommand: string | null
+            -previewError: string | null
             +getQualityPresets(formats, format): QualityPreset[]
             +selectBestEncoder(encoders): string
             +handleSubmit(e): Promise~void~
@@ -205,3 +207,5 @@ classDiagram
 - Form validation is client-side only; server validates project_id, format, preset, encoder availability
 - Disk space warning (>= 90% used) is calculated from queueStatus.disk_total_bytes and disk_available_bytes
 - Preview command is optional; some format/encoder/quality combinations may not generate one
+- `previewError` replaces `previewCommand` in the preview area when the backend returns 422 (e.g., `INCOMPATIBLE_FORMAT_ENCODER`); cleared on successful preview response
+- `render.py` `_FORMAT_DATA` now includes `av1` codec in `mkv` (added v035); `libaom-av1 + mkv` is a valid combination and returns 200 from `render_preview`
