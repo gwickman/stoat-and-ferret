@@ -10,7 +10,7 @@ beforeEach(() => {
 
 describe('ActivityLog', () => {
   it('shows empty state when no events', () => {
-    render(<ActivityLog lastMessage={null} />)
+    render(<ActivityLog messages={[]} />)
 
     expect(screen.getByTestId('activity-empty')).toBeDefined()
     expect(screen.getByText('No recent activity')).toBeDefined()
@@ -23,8 +23,8 @@ describe('ActivityLog', () => {
       timestamp: '2025-01-01T12:00:00Z',
     })
 
-    const { rerender } = render(<ActivityLog lastMessage={null} />)
-    rerender(<ActivityLog lastMessage={msg} />)
+    const { rerender } = render(<ActivityLog messages={[]} />)
+    rerender(<ActivityLog messages={[msg]} />)
 
     const entries = screen.getAllByTestId('activity-entry')
     expect(entries).toHaveLength(1)
@@ -38,8 +38,8 @@ describe('ActivityLog', () => {
       timestamp: '2025-01-01T12:00:00Z',
     })
 
-    const { rerender } = render(<ActivityLog lastMessage={null} />)
-    rerender(<ActivityLog lastMessage={msg} />)
+    const { rerender } = render(<ActivityLog messages={[]} />)
+    rerender(<ActivityLog messages={[msg]} />)
 
     expect(screen.getByText(/test-project/)).toBeDefined()
   })
@@ -61,8 +61,8 @@ describe('ActivityLog', () => {
       timestamp: '2025-01-01T13:00:00Z',
     })
 
-    const { rerender } = render(<ActivityLog lastMessage={null} />)
-    rerender(<ActivityLog lastMessage={msg} />)
+    const { rerender } = render(<ActivityLog messages={[]} />)
+    rerender(<ActivityLog messages={[msg]} />)
 
     const entries = screen.getAllByTestId('activity-entry')
     expect(entries.length).toBeLessThanOrEqual(50)
@@ -73,9 +73,36 @@ describe('ActivityLog', () => {
   it('ignores non-JSON messages', () => {
     const msg = new MessageEvent('message', { data: 'not json' })
 
-    const { rerender } = render(<ActivityLog lastMessage={null} />)
-    rerender(<ActivityLog lastMessage={msg} />)
+    const { rerender } = render(<ActivityLog messages={[]} />)
+    rerender(<ActivityLog messages={[msg]} />)
 
     expect(screen.getByTestId('activity-empty')).toBeDefined()
+  })
+
+  it('processes all messages in a burst; all entries visible', () => {
+    const msg1 = makeMessage({
+      type: 'scan_started',
+      payload: { project_id: '123' },
+      timestamp: '2025-01-01T12:00:00Z',
+    })
+    const msg2 = makeMessage({
+      type: 'render_queued',
+      payload: { job_id: 'j1' },
+      timestamp: '2025-01-01T12:00:01Z',
+    })
+    const msg3 = makeMessage({
+      type: 'render_completed',
+      payload: { job_id: 'j1' },
+      timestamp: '2025-01-01T12:00:02Z',
+    })
+
+    const { rerender } = render(<ActivityLog messages={[]} />)
+    rerender(<ActivityLog messages={[msg1, msg2, msg3]} />)
+
+    const entries = screen.getAllByTestId('activity-entry')
+    expect(entries).toHaveLength(3)
+    expect(screen.getByText('scan started')).toBeDefined()
+    expect(screen.getByText('render queued')).toBeDefined()
+    expect(screen.getByText('render completed')).toBeDefined()
   })
 })

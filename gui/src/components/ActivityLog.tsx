@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useActivityStore } from '../stores/activityStore'
 
 interface ActivityLogProps {
-  lastMessage: MessageEvent | null
+  messages: MessageEvent[]
 }
 
 function formatTimestamp(iso: string): string {
@@ -17,29 +17,31 @@ function formatType(type: string): string {
   return type.replace(/_/g, ' ')
 }
 
-export default function ActivityLog({ lastMessage }: ActivityLogProps) {
+export default function ActivityLog({ messages }: ActivityLogProps) {
   const entries = useActivityStore((s) => s.entries)
   const addEntry = useActivityStore((s) => s.addEntry)
 
   useEffect(() => {
-    if (!lastMessage) return
+    if (messages.length === 0) return
 
-    try {
-      const event = JSON.parse(lastMessage.data) as {
-        type: string
-        payload: Record<string, unknown>
-        timestamp: string
+    for (const msg of messages) {
+      try {
+        const event = JSON.parse(msg.data) as {
+          type: string
+          payload: Record<string, unknown>
+          timestamp: string
+        }
+
+        addEntry({
+          type: event.type,
+          timestamp: event.timestamp,
+          details: event.payload,
+        })
+      } catch {
+        // Ignore non-JSON messages
       }
-
-      addEntry({
-        type: event.type,
-        timestamp: event.timestamp,
-        details: event.payload,
-      })
-    } catch {
-      // Ignore non-JSON messages
     }
-  }, [lastMessage, addEntry])
+  }, [messages, addEntry])
 
   return (
     <div data-testid="activity-log">
