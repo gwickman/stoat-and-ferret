@@ -288,6 +288,46 @@ describe('StartRenderModal', () => {
     })
   })
 
+  // --- Preview error ---
+
+  it('shows previewError when fetch returns 422 with detail.message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            detail: {
+              code: 'INCOMPATIBLE_FORMAT_ENCODER',
+              message: "Encoder 'libvpx' is not compatible with format 'mp4'.",
+            },
+          }),
+          { status: 422 },
+        ),
+      ),
+    )
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      const errorEl = screen.getByTestId('preview-error')
+      expect(errorEl).toBeDefined()
+      expect(errorEl.textContent).toContain("Encoder 'libvpx' is not compatible with format 'mp4'.")
+    })
+  })
+
+  it('previewError is null when fetch returns 200', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg -i in.mp4 out.mp4' }), { status: 200 }),
+      ),
+    )
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('preview-error')).toBeNull()
+    })
+  })
+
   // --- Modal visibility ---
 
   it('returns null when open is false', () => {

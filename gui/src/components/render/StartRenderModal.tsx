@@ -49,6 +49,7 @@ export default function StartRenderModal({
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [previewCommand, setPreviewCommand] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   // Debounce the combination of format + quality + encoder for preview
   const debouncedFormat = useDebounce(outputFormat, 300)
@@ -100,15 +101,23 @@ export default function StartRenderModal({
           }),
         })
         if (!res.ok) {
-          setPreviewCommand(null)
+          if (!cancelled) {
+            const body = await res.json()
+            setPreviewError(body?.detail?.message ?? 'Preview failed')
+            setPreviewCommand(null)
+          }
           return
         }
         const json = await res.json()
         if (!cancelled) {
           setPreviewCommand(json.command ?? null)
+          setPreviewError(null)
         }
       } catch {
-        if (!cancelled) setPreviewCommand(null)
+        if (!cancelled) {
+          setPreviewCommand(null)
+          setPreviewError(null)
+        }
       }
     }
 
@@ -127,6 +136,7 @@ export default function StartRenderModal({
     setSubmitting(false)
     setSubmitError(null)
     setPreviewCommand(null)
+    setPreviewError(null)
   }, [formats, encoders])
 
   const handleClose = useCallback(() => {
@@ -312,6 +322,9 @@ export default function StartRenderModal({
                 <code>{previewCommand}</code>
               </pre>
             </div>
+          )}
+          {previewError && (
+            <p className="text-sm text-red-400" data-testid="preview-error">{previewError}</p>
           )}
 
           {submitError && (

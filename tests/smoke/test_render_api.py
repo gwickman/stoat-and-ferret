@@ -315,6 +315,39 @@ async def test_render_retry(smoke_client: httpx.AsyncClient) -> None:
     assert not_found_resp.status_code == 404
 
 
+async def test_render_preview_incompatible_format_encoder(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/preview with incompatible format-encoder returns 422."""
+    resp = await smoke_client.post(
+        "/api/v1/render/preview",
+        json={
+            "output_format": "mp4",
+            "quality_preset": "standard",
+            "encoder": "libvpx",
+        },
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["detail"]["code"] == "INCOMPATIBLE_FORMAT_ENCODER"
+
+
+async def test_render_preview_avi_passthrough(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render/preview with avi format skips format-encoder check (no crash)."""
+    resp = await smoke_client.post(
+        "/api/v1/render/preview",
+        json={
+            "output_format": "avi",
+            "quality_preset": "standard",
+            "encoder": "libvpx",
+        },
+    )
+    # avi is not in _FORMAT_DATA so the format-encoder check is skipped.
+    # The endpoint may return 200 or 422 from other validation — not from format check.
+    assert resp.status_code != 500
+    if resp.status_code == 422:
+        body = resp.json()
+        assert body.get("detail", {}).get("code") != "INCOMPATIBLE_FORMAT_ENCODER"
+
+
 async def test_render_encoder_refresh(smoke_client: httpx.AsyncClient) -> None:
     """POST /api/v1/render/encoders/refresh returns 200 with valid encoder list structure."""
     resp = await smoke_client.post("/api/v1/render/encoders/refresh")

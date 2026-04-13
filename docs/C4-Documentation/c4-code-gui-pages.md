@@ -106,15 +106,15 @@
 
 #### `TimelinePage(): JSX.Element`
 - **Location**: `gui/src/pages/TimelinePage.tsx:11`
-- **Description**: Timeline editor with track visualization, layout presets, and composition controls. Auto-selects first project, fetches timeline and presets on mount. Shows loading/error states and empty state message.
+- **Description**: Timeline editor with track visualization, layout presets, and composition controls. Auto-selects first project, fetches timeline and presets on mount. Shows loading/error states and empty state message. Header includes a Start Render button (added in BL-236) that opens StartRenderModal; button disabled when no project is selected.
 - **Props**: None
 - **State Management**:
   - `useTimelineStore()` -- tracks, duration, isLoading, error, fetchTimeline
   - `useComposeStore()` -- presets, isLoading, error, fetchPresets
   - `useProjectStore()` -- selectedProjectId, setSelectedProjectId
   - `useProjects()` -- returns { projects }
-- **Local State**: None
-- **Child Components**: TimelineCanvas, LayoutSelector, LayoutPreview, LayerStack
+- **Local State**: `startModalOpen` (boolean) -- controls StartRenderModal visibility
+- **Child Components**: TimelineCanvas, LayoutSelector, LayoutPreview, LayerStack, StartRenderModal
 - **Lifecycle**:
   1. Auto-select first project if none selected
   2. Fetch timeline for selected project

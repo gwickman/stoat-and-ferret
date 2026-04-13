@@ -162,6 +162,7 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | Version | Mode | Date | Source Commit | Files |
 |---------|------|------|---------------|-------|
 | v031 | full | 2026-04-07 | 1b13f1e | 82 (1 context + 1 container + 9 component + 69 code + 1 API spec + 1 README) |
+| v034 | delta | 2026-04-11 | HEAD | encoder_cache.py gap; post-v031 GUI drift (BL-241) |
 
 ## Regeneration Instructions
 

@@ -22,11 +22,12 @@
 
 #### `useWebSocket(url: string): WebSocketHook`
 - **Location**: `gui/src/hooks/useWebSocket.ts:14`
-- **Description**: Manages a WebSocket connection with exponential backoff reconnection (1s → 2s → 4s ... max 30s). Resets retry count on successful connection. Provides state, send function, and lastMessage buffer.
+- **Description**: Manages a WebSocket connection with exponential backoff reconnection (1s → 2s → 4s ... max 30s). Resets retry count on successful connection. Uses a ref-queue pattern (`queueRef` + `tick` counter) to survive React 18 automatic batching: `onmessage` pushes events to `queueRef` and increments `tick`; a drain `useEffect([tick])` flushes the queue into `messages[]` each render cycle. Exposes `messages: MessageEvent[]` (all messages received since last drain) and `lastMessage` (backward-compat alias for `messages.at(-1)`).
 - **Signature**: `useWebSocket(url: string): WebSocketHook`
 - **Constants**: `BASE_DELAY = 1000`, `MAX_DELAY = 30_000`
-- **Exports**: `ConnectionState` type, `WebSocketHook` interface (`{ state, lastMessage, send }`)
+- **Exports**: `ConnectionState` type, `WebSocketHook` interface (`{ state, lastMessage, messages, send }`)
 - **Dependencies**: `react.useState`, `react.useEffect`, `react.useCallback`, `react.useRef`, WebSocket API
+- **Tests**: 10 tests in `gui/src/hooks/__tests__/useWebSocket.test.ts` (8 existing + 2 new: burst delivery, backward-compat)
 
 #### `useMetrics(intervalMs?: number): Metrics`
 - **Location**: `gui/src/hooks/useMetrics.ts:40`
@@ -99,16 +100,20 @@
 
 #### `useJobProgress(jobId: string | null): JobProgressState`
 - **Location**: `gui/src/hooks/useJobProgress.ts:38`
-- **Description**: Subscribes to real-time job progress via WebSocket. Filters for JOB_PROGRESS events matching jobId. Resets state on jobId change.
+- **Description**: Subscribes to real-time job progress via WebSocket. Iterates `messages[]` from `useWebSocket` each effect cycle with `for (const msg of messages)`. Filters for JOB_PROGRESS events matching jobId. Effect dependency is `[messages, jobId]`; guard skips when `messages.length === 0` or jobId is null. Resets state on jobId change.
 - **Signature**: `useJobProgress(jobId: string | null): JobProgressState`
 - **Dependencies**: `useWebSocket`, `react.useEffect`, `react.useState`, JSON parsing
 
 #### `useRenderEvents(): void`
 - **Location**: `gui/src/hooks/useRenderEvents.ts:28`
-- **Description**: Subscribes to all 8 render event types (queued, started, progress, completed, failed, cancelled, frame_available, queue_status) via WebSocket. Dispatches to renderStore. Re-fetches jobs/queue on reconnection.
+- **Description**: Subscribes to all 8 render event types (queued, started, progress, completed, failed, cancelled, frame_available, queue_status) via WebSocket. Iterates `messages[]` from `useWebSocket` each effect cycle with `for (const msg of messages)`. Effect dependency is `[messages]`; guard skips when `messages.length === 0`. Dispatches to renderStore. Re-fetches jobs/queue on reconnection. Consumed at `gui/src/components/Shell.tsx` (not RenderPage) — WebSocket subscription consolidated to shell level for cross-page access (BL-235).
 - **Signature**: `useRenderEvents(): void`
 - **Event Types**: 8 render-prefixed event types (internal set constant)
 - **Dependencies**: `useWebSocket`, `react.useEffect`, `react.useRef`, `useRenderStore`, JSON parsing
+
+### Consumer Notes
+
+`ActivityLog` (`gui/src/components/ActivityLog.tsx`) is NOT a hook but consumes `messages[]` as a prop. `DashboardPage` calls `useWebSocket` and passes `messages={messages}` to `<ActivityLog />`. `ActivityLog`'s prop interface is `{ messages: MessageEvent[] }` and its `useEffect` iterates `for (const msg of messages)` with dependency `[messages, addEntry]`. This follows the same parity pattern as the hook consumers (useRenderEvents, useJobProgress).
 
 ## Dependencies
 

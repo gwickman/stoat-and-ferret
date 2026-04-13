@@ -290,6 +290,27 @@ describe('useRenderEvents', () => {
     expect(useRenderStore.getState().jobs).toHaveLength(0)
   })
 
+  // -- Burst delivery --
+
+  it('processes 3 burst render events; all produce state transitions in store', async () => {
+    renderHook(() => useRenderEvents())
+    act(() => { mockInstances[0].simulateOpen() })
+
+    // Simulate 3 rapid messages outside act (burst simulation)
+    mockInstances[0].simulateMessage(makeEvent('render_queued', { job_id: 'j1', project_id: 'p1', status: 'pending' }))
+    mockInstances[0].simulateMessage(makeEvent('render_queued', { job_id: 'j2', project_id: 'p1', status: 'pending' }))
+    mockInstances[0].simulateMessage(makeEvent('render_queued', { job_id: 'j3', project_id: 'p1', status: 'pending' }))
+
+    // Flush all pending state updates and effects
+    await act(async () => {})
+
+    const jobs = useRenderStore.getState().jobs
+    expect(jobs).toHaveLength(3)
+    expect(jobs.map((j) => j.id)).toContain('j1')
+    expect(jobs.map((j) => j.id)).toContain('j2')
+    expect(jobs.map((j) => j.id)).toContain('j3')
+  })
+
   // -- Reconnection re-fetch --
 
   it('re-fetches jobs and queue status on reconnection', async () => {
