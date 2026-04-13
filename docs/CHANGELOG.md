@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v035 — Frontend Reliability and Render GUI Polish (2026-04-12)
+
+### Changed
+
+- **useWebSocket Burst Safety** — Replaced direct `setState` in `onmessage` with a ref-queue pattern (`queueRef` + `tick` counter) to survive React 18 automatic batching; hook now exposes `messages: MessageEvent[]` array alongside `lastMessage` for burst-complete delivery (BL-248, #283)
+- **WebSocket Consumers** — `useRenderEvents`, `useJobProgress`, and `ActivityLog` updated to iterate `messages[]` array with `for (const msg of messages)` pattern; `DashboardPage` passes `messages` to `ActivityLog` (BL-248, #284)
+
+### Added
+
+- **Format-Encoder Compatibility Validation** — `render_preview` endpoint returns HTTP 422 with `INCOMPATIBLE_FORMAT_ENCODER` for invalid format-encoder combinations (e.g., `libvpx + mp4`); `av1` codec added to `mkv` format; `StartRenderModal` surfaces 422 error message in preview area (BL-252, #286)
+- **RenderJobCard Loading States** — Per-button `cancelLoading`, `retryLoading`, `deleteLoading` flags with `try/finally` reset; buttons disabled during in-flight API calls to prevent duplicate requests (BL-253, #287)
+
+### Fixed
+
+- **TimelinePage Test Hygiene** — Corrected stale test counts in C4 documentation (TimelinePage: 7→13, total: 318→324); confirmed all 13 TimelinePage tests pass following the cbe2fa5 fix (BL-247, #285)
+
 ## v033 — Render Testing, UAT Journeys, and Metrics (2026-04-11)
 
 ### Added
