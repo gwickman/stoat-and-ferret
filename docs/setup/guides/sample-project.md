@@ -152,6 +152,43 @@ curl http://localhost:8765/api/v1/effects | python -m json.tool
 
 See the [API Reference](../../manual/03_api-reference.md) for full endpoint documentation.
 
+## Export / Render
+
+Once the project is composed, you can queue a render job via the render API:
+
+```bash
+curl -X POST http://localhost:8765/api/v1/render \
+  -H "Content-Type: application/json" \
+  -d '{"project_id": "{project_id}"}' | python -m json.tool
+```
+
+Expected response (`HTTP 201`):
+
+```json
+{
+  "id": "<job-uuid>",
+  "project_id": "<project-uuid>",
+  "status": "queued",
+  "output_format": "mp4",
+  "quality_preset": "standard",
+  ...
+}
+```
+
+The render job is accepted and assigned `status: "queued"`. In quickstart mode the render background worker (`RenderQueue.dequeue`) is not connected to the FastAPI lifespan, so the job remains queued and no output file is produced. This is by design for local development — the render infrastructure is fully functional but the executor is not started automatically.
+
+To customise the output format or quality, include `output_format` and `quality_preset` in the request body:
+
+```json
+{
+  "project_id": "{project_id}",
+  "output_format": "mp4",
+  "quality_preset": "high"
+}
+```
+
+Available quality presets: `draft`, `standard`, `high`.
+
 ## Resetting the Sample Project
 
 Delete and recreate:

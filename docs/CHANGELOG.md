@@ -4,6 +4,16 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v034 — Documentation Catch-Up: Phase 4 and Phase 5 (2026-04-11)
+
+### Documentation
+
+- Verified Phase 4 design documents (01-roadmap.md, 02-architecture.md, 05-api-specification.md, 07-quality-architecture.md, 08-gui-architecture.md) — all Phase 4 content confirmed present (BL-208, #PR-001)
+- Verified Phase 4 IMPACT_ASSESSMENT.md grep patterns — PreviewSession, ProxyFile, ThumbnailStrip, Waveform, TheaterMode pattern groups confirmed present (BL-209)
+- Updated design documents with Phase 5 render subsystem: milestones [x] in roadmap, render state machine in architecture, 11 render endpoints in API spec, render test patterns in quality architecture, RenderPage/RenderJobCard/StartRenderModal in GUI architecture (BL-237, #279)
+- Added Phase 5 grep patterns to IMPACT_ASSESSMENT.md: RenderJob/RenderStatus, OutputFormat/QualityPreset, RenderQueue/RenderExecutor, RenderService/PreflightError, EncoderCacheEntry/AsyncEncoderCacheRepository pattern groups (BL-238, #280)
+- Extended sample project seed script with render step (POST /api/v1/render); added smoke test asserting status==queued; documented export workflow in sample-project.md (BL-239, #281)
+- C4 architecture delta: documented encoder_cache.py in c4-code-stoat-ferret-render.md; updated useRenderEvents to Shell in c4-code-gui-hooks.md; updated BottomHUD in c4-code-gui-components-theater.md; added Start Render button to c4-code-gui-pages.md TimelinePage; added v034 delta row to C4 README (BL-241, #282)
 ## v035 — Frontend Reliability and Render GUI Polish (2026-04-12)
 
 ### Changed
