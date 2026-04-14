@@ -137,6 +137,23 @@ export default function StartRenderModal({
     }
     const previewEncoder = debouncedEncoder
 
+    // Guard against the debounce settling window: after a format change, debouncedFormat
+    // may update ~2ms before debouncedEncoder (the encoder update comes from a useEffect
+    // that runs after the first render). Skip the preview silently if the encoder's codec
+    // is not compatible with the selected format to avoid a 422 console error.
+    const previewEncoderObj = encoders.find((e) => e.name === previewEncoder)
+    if (previewEncoderObj) {
+      const fmt = formats.find((f) => f.format === debouncedFormat)
+      if (fmt && fmt.codecs.length > 0) {
+        const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
+        if (!allowedCodecs.has(previewEncoderObj.codec)) {
+          setPreviewCommand(null)
+          setPreviewError(null)
+          return
+        }
+      }
+    }
+
     let cancelled = false
 
     async function fetchPreview() {
@@ -175,7 +192,7 @@ export default function StartRenderModal({
     return () => {
       cancelled = true
     }
-  }, [debouncedFormat, debouncedQuality, debouncedEncoder])
+  }, [debouncedFormat, debouncedQuality, debouncedEncoder, encoders, formats])
 
   const resetForm = useCallback(() => {
     const firstFormat = formats.length > 0 ? formats[0].format : ''
