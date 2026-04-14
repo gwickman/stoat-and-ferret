@@ -352,9 +352,28 @@ jobs:
           uv sync
           uv pip install pip
 
+      - name: Build Python module
+        run: uv run maturin develop
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: gui/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('gui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: gui
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: gui
 
       - name: Install UAT dependencies
         run: uv pip install -e ".[uat]"
@@ -381,7 +400,8 @@ jobs:
         run: uv run playwright install-deps chromium
 
       - name: Run UAT suite
-        run: uv run python scripts/uat_runner.py --headless
+        # Budget: ~2m pre-build + ~1m server start + ~5m journeys = ~8m; 10m allows margin
+        run: uv run python scripts/uat_runner.py --headless --no-build
 
       - name: Upload UAT evidence
         if: always()
@@ -451,7 +471,7 @@ jobs:
             echo "Smoke tests failed"
             exit 1
           fi
-          if [[ "${{ needs.uat.result }}" == "failure" ]]; then
+          if [[ "${{ needs.uat.result }}" == "failure" || "${{ needs.uat.result }}" == "cancelled" ]]; then
             echo "UAT tests failed"
             exit 1
           fi
