@@ -25,9 +25,18 @@ function getQualityPresets(
 }
 
 /**
- * Pick the best encoder: prefer hardware, then alphabetical.
- * When formats and outputFormat are provided, restricts to encoders
- * compatible with the selected format (encoder.codec in format.codecs[].name).
+ * Encoders whose names are accepted by the Rust command builder (VIDEO_CODECS allowlist).
+ * Used to filter both the encoder dropdown and the preview fetch, ensuring we never send
+ * an unrecognised encoder name (e.g. h264_v4l2m2m) to the preview endpoint.
+ */
+const PREVIEW_SAFE_ENCODERS = new Set([
+  'libx264', 'libx265', 'libvpx', 'libvpx-vp9', 'libaom-av1', 'prores_ks',
+])
+
+/**
+ * Pick the best encoder from the given list: prefer hardware, then first in list.
+ * When formats and outputFormat are provided, restricts to encoders compatible with
+ * the selected format (encoder.codec in format.codecs[].name).
  * Falls back to any encoder if no compatible one is found.
  */
 function selectBestEncoder(
@@ -76,15 +85,17 @@ export default function StartRenderModal({
 
   const qualityPresets = getQualityPresets(formats, outputFormat)
 
-  // Filter encoders to those whose codec family is compatible with the selected format.
-  // Falls back to all encoders if no compatible ones are found (e.g. format not yet loaded).
+  // Encoder options for the dropdown: only PREVIEW_SAFE_ENCODERS that are also compatible
+  // with the selected format. Restricting to safe encoders means the dropdown and the
+  // preview command stay in sync — every selectable encoder produces a distinct preview.
   const formatCompatibleEncoders = (() => {
-    if (!outputFormat) return encoders
+    const safe = encoders.filter((e) => PREVIEW_SAFE_ENCODERS.has(e.name))
+    if (!outputFormat) return safe
     const fmt = formats.find((f) => f.format === outputFormat)
-    if (!fmt || fmt.codecs.length === 0) return encoders
+    if (!fmt || fmt.codecs.length === 0) return safe
     const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
-    const compatible = encoders.filter((e) => allowedCodecs.has(e.codec))
-    return compatible.length > 0 ? compatible : encoders
+    const compatible = safe.filter((e) => allowedCodecs.has(e.codec))
+    return compatible.length > 0 ? compatible : safe
   })()
 
   // Auto-select defaults when formats/encoders load
@@ -104,9 +115,10 @@ export default function StartRenderModal({
     }
   }, [formats, outputFormat])
 
-  // Auto-select best encoder whenever encoders, formats, or outputFormat changes
+  // Auto-select best encoder from the safe+compatible pool whenever dependencies change
   useEffect(() => {
-    setEncoder(selectBestEncoder(encoders, formats, outputFormat))
+    const safeEncoders = encoders.filter((e) => PREVIEW_SAFE_ENCODERS.has(e.name))
+    setEncoder(selectBestEncoder(safeEncoders, formats, outputFormat))
   }, [encoders, formats, outputFormat])
 
   // Fetch command preview when debounced values change
@@ -116,57 +128,14 @@ export default function StartRenderModal({
       return
     }
 
-    // The command builder (Rust validator) only accepts a fixed set of software encoder names.
-    // Rather than relying on is_hardware classification (which may misclassify platform-specific
-    // encoders like h264_v4l2m2m), we use an explicit allowlist of known-safe encoder names.
-    const PREVIEW_SAFE_ENCODERS = new Set([
-      'libx264', 'libx265', 'libvpx', 'libvpx-vp9', 'libaom-av1', 'prores_ks',
-    ])
-
-    let previewEncoder: string
-    if (PREVIEW_SAFE_ENCODERS.has(debouncedEncoder)) {
-      previewEncoder = debouncedEncoder
-    } else {
-      // Find a safe encoder whose codec family is compatible with the selected format.
-      const fmt = formats.find((f) => f.format === debouncedFormat)
-      const allowedCodecs = fmt && fmt.codecs.length > 0
-        ? new Set(fmt.codecs.map((c) => c.name))
-        : null
-      const selectedEncoder = encoders.find((e) => e.name === debouncedEncoder)
-      const fallback = encoders.find(
-        (e) =>
-          PREVIEW_SAFE_ENCODERS.has(e.name) &&
-          (!allowedCodecs || allowedCodecs.has(e.codec)) &&
-          (!selectedEncoder || e.codec === selectedEncoder.codec),
-      ) ?? encoders.find(
-        (e) =>
-          PREVIEW_SAFE_ENCODERS.has(e.name) &&
-          (!allowedCodecs || allowedCodecs.has(e.codec)),
-      )
-      if (!fallback) {
-        // No safe encoder available for this format — skip preview silently
-        setPreviewCommand(null)
-        setPreviewError(null)
-        return
-      }
-      previewEncoder = fallback.name
+    // The encoder is always from PREVIEW_SAFE_ENCODERS (enforced by formatCompatibleEncoders
+    // and selectBestEncoder). Guard defensively in case of stale debounce state.
+    if (!PREVIEW_SAFE_ENCODERS.has(debouncedEncoder)) {
+      setPreviewCommand(null)
+      setPreviewError(null)
+      return
     }
-
-    // Verify the preview encoder's codec is compatible with the selected format.
-    // Skipping silently avoids a 422 console error when the encoder family doesn't
-    // match the format (e.g. h264 encoder selected for webm which requires vp8/vp9).
-    const previewEncoderObj = encoders.find((e) => e.name === previewEncoder)
-    if (previewEncoderObj) {
-      const fmt = formats.find((f) => f.format === debouncedFormat)
-      if (fmt && fmt.codecs.length > 0) {
-        const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
-        if (!allowedCodecs.has(previewEncoderObj.codec)) {
-          setPreviewCommand(null)
-          setPreviewError(null)
-          return
-        }
-      }
-    }
+    const previewEncoder = debouncedEncoder
 
     let cancelled = false
 
@@ -206,13 +175,15 @@ export default function StartRenderModal({
     return () => {
       cancelled = true
     }
-  }, [debouncedFormat, debouncedQuality, debouncedEncoder, encoders, formats])
+  }, [debouncedFormat, debouncedQuality, debouncedEncoder])
 
   const resetForm = useCallback(() => {
-    setOutputFormat(formats.length > 0 ? formats[0].format : '')
-    const presets = formats.length > 0 ? getQualityPresets(formats, formats[0].format) : []
+    const firstFormat = formats.length > 0 ? formats[0].format : ''
+    setOutputFormat(firstFormat)
+    const presets = firstFormat ? getQualityPresets(formats, firstFormat) : []
     setQualityPreset(presets.length > 0 ? presets[0].preset : '')
-    setEncoder(selectBestEncoder(encoders, formats, formats.length > 0 ? formats[0].format : ''))
+    const safeEncoders = encoders.filter((e) => PREVIEW_SAFE_ENCODERS.has(e.name))
+    setEncoder(selectBestEncoder(safeEncoders, formats, firstFormat))
     setErrors({})
     setSubmitting(false)
     setSubmitError(null)

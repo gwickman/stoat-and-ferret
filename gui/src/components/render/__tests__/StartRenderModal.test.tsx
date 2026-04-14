@@ -138,10 +138,11 @@ describe('StartRenderModal', () => {
 
   // --- Encoder auto-select ---
 
-  it('auto-selects best available encoder (hardware preferred)', () => {
+  it('auto-selects first preview-safe encoder for the format', () => {
     render(<StartRenderModal {...defaultProps} />)
     const encoderSelect = screen.getByTestId('select-encoder') as HTMLSelectElement
-    expect(encoderSelect.value).toBe('h264_nvenc')
+    // h264_nvenc is not in PREVIEW_SAFE_ENCODERS, so only libx264 appears
+    expect(encoderSelect.value).toBe('libx264')
   })
 
   // --- Disk space bar ---
