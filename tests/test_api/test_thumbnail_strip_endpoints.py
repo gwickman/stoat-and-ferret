@@ -57,7 +57,7 @@ def _make_pending_strip(video_id: str) -> ThumbnailStrip:
 def mock_thumbnail_service() -> MagicMock:
     """Create a mock ThumbnailService."""
     svc = MagicMock(spec=ThumbnailService)
-    svc.get_strip = MagicMock(return_value=None)
+    svc.get_strip = AsyncMock(return_value=None)
     svc.generate_strip = AsyncMock(return_value=None)
     return svc
 

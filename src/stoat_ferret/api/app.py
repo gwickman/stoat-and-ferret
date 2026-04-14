@@ -59,8 +59,10 @@ from stoat_ferret.db.models import ProxyQuality, ProxyStatus
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.proxy_repository import AsyncProxyRepository, SQLiteProxyRepository
 from stoat_ferret.db.schema import create_tables_async
+from stoat_ferret.db.thumbnail_strip_repository import SQLiteThumbnailStripRepository
 from stoat_ferret.db.timeline_repository import AsyncTimelineRepository
 from stoat_ferret.db.version_repository import AsyncVersionRepository
+from stoat_ferret.db.waveform_repository import SQLiteWaveformRepository
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.async_executor import RealAsyncFFmpegExecutor
 from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
@@ -132,6 +134,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create proxy repository backed by the same database
     app.state.proxy_repository = SQLiteProxyRepository(app.state.db)
 
+    # Create thumbnail strip and waveform repositories
+    app.state.thumbnail_strip_repository = SQLiteThumbnailStripRepository(app.state.db)
+    app.state.waveform_repository = SQLiteWaveformRepository(app.state.db)
+
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db, audit_logger=audit_logger)
@@ -142,6 +148,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         thumbnail_dir=settings.thumbnail_dir,
         async_executor=async_executor,
         ws_manager=app.state.ws_manager,
+        strip_repository=app.state.thumbnail_strip_repository,
     )
     app.state.thumbnail_service = thumbnail_service
 
@@ -150,6 +157,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         async_executor=async_executor,
         waveform_dir=settings.waveform_dir,
         ws_manager=app.state.ws_manager,
+        waveform_repository=app.state.waveform_repository,
     )
 
     # Create proxy service before scan handler so it can be injected

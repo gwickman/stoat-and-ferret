@@ -6,7 +6,7 @@ import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -43,7 +43,7 @@ def _make_ready_waveform(
 def mock_waveform_service() -> MagicMock:
     """Create a mock WaveformService."""
     svc = MagicMock(spec=WaveformService)
-    svc.get_waveform = MagicMock(return_value=None)
+    svc.get_waveform = AsyncMock(return_value=None)
     return svc
 
 

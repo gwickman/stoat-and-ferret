@@ -410,7 +410,7 @@ class TestGeneratePng:
             duration_seconds=30.0,
         )
 
-        result = service.get_waveform("vid1", WaveformFormat.PNG)
+        result = await service.get_waveform("vid1", WaveformFormat.PNG)
         assert result is not None
         assert result.status == WaveformStatus.READY
 
@@ -559,7 +559,7 @@ class TestGenerateJson:
             duration_seconds=30.0,
         )
 
-        result = service.get_waveform("vid1", WaveformFormat.JSON)
+        result = await service.get_waveform("vid1", WaveformFormat.JSON)
         assert result is not None
         assert result.status == WaveformStatus.READY
 
@@ -735,7 +735,7 @@ class TestWaveformThumbnailParity:
                 duration_seconds=30.0,
             )
 
-        waveform = service.get_waveform("vid1", WaveformFormat.PNG)
+        waveform = await service.get_waveform("vid1", WaveformFormat.PNG)
         assert waveform is not None
         assert waveform.status == WaveformStatus.ERROR
 

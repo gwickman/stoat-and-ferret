@@ -20,6 +20,7 @@ from stoat_ferret.ffmpeg.executor import FFmpegExecutor
 
 if TYPE_CHECKING:
     from stoat_ferret.api.websocket.manager import ConnectionManager
+    from stoat_ferret.db.thumbnail_strip_repository import AsyncThumbnailStripRepository
     from stoat_ferret.ffmpeg.async_executor import AsyncFFmpegExecutor
 
 logger = structlog.get_logger(__name__)
@@ -147,6 +148,7 @@ class ThumbnailService:
         async_executor: Optional async FFmpeg executor for strip generation.
         ws_manager: Optional WebSocket manager for progress broadcasting.
         strip_interval: Seconds between frames in sprite sheets.
+        strip_repository: Optional repository for persisting strip records.
     """
 
     def __init__(
@@ -158,6 +160,7 @@ class ThumbnailService:
         async_executor: AsyncFFmpegExecutor | None = None,
         ws_manager: ConnectionManager | None = None,
         strip_interval: float = 5.0,
+        strip_repository: AsyncThumbnailStripRepository | None = None,
     ) -> None:
         self._executor = executor
         self._thumbnail_dir = Path(thumbnail_dir)
@@ -165,7 +168,8 @@ class ThumbnailService:
         self._async_executor = async_executor
         self._ws_manager = ws_manager
         self._strip_interval = strip_interval
-        self._strips: dict[str, ThumbnailStrip] = {}  # video_id -> strip
+        self._strip_repository = strip_repository
+        self._strips: dict[str, ThumbnailStrip] = {}  # video_id -> strip (in-memory fallback)
 
     def generate(self, video_path: str, video_id: str) -> str | None:
         """Generate a thumbnail for a video file.
@@ -308,7 +312,7 @@ class ThumbnailService:
             return str(path)
         return None
 
-    def get_strip(self, video_id: str) -> ThumbnailStrip | None:
+    async def get_strip(self, video_id: str) -> ThumbnailStrip | None:
         """Get the thumbnail strip metadata for a video.
 
         Args:
@@ -317,6 +321,8 @@ class ThumbnailService:
         Returns:
             ThumbnailStrip if one has been generated, or None.
         """
+        if self._strip_repository is not None:
+            return await self._strip_repository.get_by_video(video_id)
         return self._strips.get(video_id)
 
     async def generate_strip(
@@ -355,6 +361,22 @@ class ThumbnailService:
         if self._async_executor is None:
             raise RuntimeError("Async executor required for strip generation")
 
+        # Get-or-create guard: return existing strip if ready or generating
+        if self._strip_repository is not None:
+            existing = await self._strip_repository.get_by_video(video_id)
+            if existing is not None and existing.status in (
+                ThumbnailStripStatus.READY,
+                ThumbnailStripStatus.GENERATING,
+            ):
+                return existing
+        elif video_id in self._strips:
+            existing_mem = self._strips[video_id]
+            if existing_mem.status in (
+                ThumbnailStripStatus.READY,
+                ThumbnailStripStatus.GENERATING,
+            ):
+                return existing_mem
+
         effective_interval = interval if interval is not None else self._strip_interval
         effective_columns = min(columns, MAX_COLUMNS)
 
@@ -379,8 +401,13 @@ class ThumbnailService:
         )
 
         # Store strip for later retrieval and transition to generating
-        self._strips[video_id] = strip
+        if self._strip_repository is not None:
+            await self._strip_repository.add(strip)
+        else:
+            self._strips[video_id] = strip
         strip.status = ThumbnailStripStatus.GENERATING
+        if self._strip_repository is not None:
+            await self._strip_repository.update_status(sid, ThumbnailStripStatus.GENERATING)
 
         # Prepare output
         strip_dir = self._thumbnail_dir / "strips"
@@ -413,6 +440,8 @@ class ThumbnailService:
             )
         except Exception:
             strip.status = ThumbnailStripStatus.ERROR
+            if self._strip_repository is not None:
+                await self._strip_repository.update_status(sid, ThumbnailStripStatus.ERROR)
             logger.error(
                 "thumbnail_strip_generation_error",
                 strip_id=sid,
@@ -425,6 +454,8 @@ class ThumbnailService:
 
         if result.returncode != 0:
             strip.status = ThumbnailStripStatus.ERROR
+            if self._strip_repository is not None:
+                await self._strip_repository.update_status(sid, ThumbnailStripStatus.ERROR)
             error_msg = result.stderr.decode("utf-8", errors="replace")[:500]
             logger.error(
                 "thumbnail_strip_generation_failed",
@@ -440,6 +471,14 @@ class ThumbnailService:
         strip.file_path = output_path
         strip.frame_count = frame_count
         strip.rows = rows
+        if self._strip_repository is not None:
+            await self._strip_repository.update_status(
+                sid,
+                ThumbnailStripStatus.READY,
+                file_path=output_path,
+                frame_count=frame_count,
+                rows=rows,
+            )
 
         strip_size_bytes = os.path.getsize(output_path) if os.path.exists(output_path) else 0
 
