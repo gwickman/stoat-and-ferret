@@ -167,7 +167,7 @@ async def get_waveform_metadata(
         HTTPException: 404 if no waveform exists for this video and format.
     """
     fmt = WaveformFormat(format)
-    waveform = waveform_service.get_waveform(video_id, fmt)
+    waveform = await waveform_service.get_waveform(video_id, fmt)
     if waveform is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -208,7 +208,7 @@ async def get_waveform_image(
     Raises:
         HTTPException: 404 if no waveform exists or file not ready.
     """
-    waveform = waveform_service.get_waveform(video_id, WaveformFormat.PNG)
+    waveform = await waveform_service.get_waveform(video_id, WaveformFormat.PNG)
     if waveform is None or waveform.file_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -251,7 +251,7 @@ async def get_waveform_json(
     Raises:
         HTTPException: 404 if no JSON waveform exists or file not ready.
     """
-    waveform = waveform_service.get_waveform(video_id, WaveformFormat.JSON)
+    waveform = await waveform_service.get_waveform(video_id, WaveformFormat.JSON)
     if waveform is None or waveform.file_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

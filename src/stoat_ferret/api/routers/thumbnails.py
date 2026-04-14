@@ -151,7 +151,7 @@ async def get_strip_metadata(
     Raises:
         HTTPException: 404 if no strip exists for this video.
     """
-    strip = thumbnail_service.get_strip(video_id)
+    strip = await thumbnail_service.get_strip(video_id)
     if strip is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -191,7 +191,7 @@ async def get_strip_image(
     Raises:
         HTTPException: 404 if no strip exists or file not ready.
     """
-    strip = thumbnail_service.get_strip(video_id)
+    strip = await thumbnail_service.get_strip(video_id)
     if strip is None or strip.file_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
