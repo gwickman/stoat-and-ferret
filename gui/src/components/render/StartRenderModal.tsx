@@ -105,12 +105,22 @@ export default function StartRenderModal({
       return
     }
 
-    // Hardware encoders are not supported by the command preview builder (software codecs only)
+    // Command builder only supports software codecs. For hardware encoders, fall back to
+    // the software equivalent in the same codec family so the preview remains useful.
     const selectedEncoder = encoders.find((e) => e.name === debouncedEncoder)
+    let previewEncoder = debouncedEncoder
     if (selectedEncoder?.is_hardware) {
-      setPreviewCommand(null)
-      setPreviewError(null)
-      return
+      const swEquivalent = encoders.find(
+        (e) => e.codec === selectedEncoder.codec && !e.is_hardware,
+      )
+      if (swEquivalent) {
+        previewEncoder = swEquivalent.name
+      } else {
+        // No software equivalent available — skip preview silently
+        setPreviewCommand(null)
+        setPreviewError(null)
+        return
+      }
     }
 
     let cancelled = false
@@ -123,7 +133,7 @@ export default function StartRenderModal({
           body: JSON.stringify({
             output_format: debouncedFormat,
             quality_preset: debouncedQuality,
-            encoder: debouncedEncoder,
+            encoder: previewEncoder,
           }),
         })
         if (!res.ok) {
