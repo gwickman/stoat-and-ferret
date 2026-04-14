@@ -24,12 +24,30 @@ function getQualityPresets(
   return fmt.codecs[0].quality_presets
 }
 
-/** Pick the best encoder: prefer hardware, then alphabetical. */
-function selectBestEncoder(encoders: Encoder[]): string {
+/**
+ * Pick the best encoder: prefer hardware, then alphabetical.
+ * When formats and outputFormat are provided, restricts to encoders
+ * compatible with the selected format (encoder.codec in format.codecs[].name).
+ * Falls back to any encoder if no compatible one is found.
+ */
+function selectBestEncoder(
+  encoders: Encoder[],
+  formats?: OutputFormat[],
+  outputFormat?: string,
+): string {
   if (encoders.length === 0) return ''
-  const hw = encoders.filter((e) => e.is_hardware)
+  let pool = encoders
+  if (formats && outputFormat) {
+    const fmt = formats.find((f) => f.format === outputFormat)
+    if (fmt && fmt.codecs.length > 0) {
+      const allowed = new Set(fmt.codecs.map((c) => c.name))
+      const compatible = encoders.filter((e) => allowed.has(e.codec))
+      if (compatible.length > 0) pool = compatible
+    }
+  }
+  const hw = pool.filter((e) => e.is_hardware)
   if (hw.length > 0) return hw[0].name
-  return encoders[0].name
+  return pool[0].name
 }
 
 export default function StartRenderModal({
@@ -75,10 +93,10 @@ export default function StartRenderModal({
     }
   }, [formats, outputFormat])
 
-  // Auto-select best encoder
+  // Auto-select best encoder whenever encoders, formats, or outputFormat changes
   useEffect(() => {
-    setEncoder(selectBestEncoder(encoders))
-  }, [encoders])
+    setEncoder(selectBestEncoder(encoders, formats, outputFormat))
+  }, [encoders, formats, outputFormat])
 
   // Fetch command preview when debounced values change
   useEffect(() => {
@@ -131,7 +149,7 @@ export default function StartRenderModal({
     setOutputFormat(formats.length > 0 ? formats[0].format : '')
     const presets = formats.length > 0 ? getQualityPresets(formats, formats[0].format) : []
     setQualityPreset(presets.length > 0 ? presets[0].preset : '')
-    setEncoder(selectBestEncoder(encoders))
+    setEncoder(selectBestEncoder(encoders, formats, formats.length > 0 ? formats[0].format : ''))
     setErrors({})
     setSubmitting(false)
     setSubmitError(null)
