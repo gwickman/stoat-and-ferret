@@ -219,7 +219,7 @@ async def _auto_queue_proxies(
             continue
 
         # Check for stale proxies on existing videos
-        existing_proxies = await proxy_service._repo.list_by_video(video.id)
+        existing_proxies = await proxy_service.list_by_video(video.id)
         for existing_proxy in existing_proxies:
             if existing_proxy.status == ProxyStatus.READY:
                 try:
