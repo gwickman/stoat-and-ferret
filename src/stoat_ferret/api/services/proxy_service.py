@@ -355,6 +355,17 @@ class ProxyService:
             )
             raise
 
+    async def list_by_video(self, video_id: str) -> list[ProxyFile]:
+        """Return all proxies for the given video ID.
+
+        Args:
+            video_id: The source video UUID.
+
+        Returns:
+            List of proxy files for the video.
+        """
+        return await self._repo.list_by_video(video_id)
+
     async def check_stale(self, proxy_id: str, source_path: str) -> bool:
         """Check if a proxy is stale by comparing source checksums.
 

@@ -507,6 +507,45 @@ class TestStructuredLogging:
         assert proxy.status == ProxyStatus.READY
 
 
+class TestListByVideo:
+    """Tests for ProxyService.list_by_video() delegation (FR-001)."""
+
+    async def test_list_by_video_delegates_to_repo(
+        self,
+        proxy_service: ProxyService,
+        proxy_repo: InMemoryProxyRepository,
+        source_file: str,
+        tmp_path: Path,
+    ) -> None:
+        """list_by_video() returns proxies for the given video ID via repo delegation."""
+        # Generate a proxy so there is something to list
+        proxy_dir = tmp_path / "proxies"
+        proxy_dir.mkdir(parents=True, exist_ok=True)
+
+        await proxy_service.generate_proxy(
+            video_id="vid-list-001",
+            source_path=source_file,
+            source_width=1920,
+            source_height=1080,
+            duration_us=10_000_000,
+        )
+
+        result = await proxy_service.list_by_video("vid-list-001")
+        expected = await proxy_repo.list_by_video("vid-list-001")
+
+        assert result == expected
+        assert len(result) == 1
+        assert result[0].source_video_id == "vid-list-001"
+
+    async def test_list_by_video_empty_for_unknown_video(
+        self,
+        proxy_service: ProxyService,
+    ) -> None:
+        """list_by_video() returns an empty list for an unknown video ID."""
+        result = await proxy_service.list_by_video("no-such-video")
+        assert result == []
+
+
 class TestJobHandlerRegistration:
     """Tests for job handler registration (FR-009)."""
 
