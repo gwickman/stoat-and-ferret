@@ -176,7 +176,7 @@ class TestDegradation:
                 repository=mock_repo,
                 proxy_service=mock_proxy_service,
                 queue=mock_queue,
-                scan_path="/test/path",
+                video_ids=[],
             )
 
         # No proxy jobs should have been submitted
