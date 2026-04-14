@@ -30,6 +30,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **TimelinePage Test Hygiene** — Corrected stale test counts in C4 documentation (TimelinePage: 7→13, total: 318→324); confirmed all 13 TimelinePage tests pass following the cbe2fa5 fix (BL-247, #285)
 
+## v036 — Service Quality & Persistence (2026-04-14)
+
+### Fixed
+
+- **UAT CI Timeout Fix** — Fixed UAT CI job hanging by implementing pre-build artifact caching and `--no-build` flag in uat_runner.py; timeout budget documented in workflow (BL-261, #288)
+
+### Added
+
+- **DB Persistence for Services** — Wired SQLiteThumbnailStripRepository and SQLiteWaveformRepository into ThumbnailService and WaveformService via DI; services now survive restarts (BL-251, #289)
+- **ProxyService Public API** — Added `list_by_video(video_id: str)` public method to ProxyService; removed scan.py encapsulation breach (BL-249, #290)
+- **Proxy Auto-Generation Optimization** — Refactored `_auto_queue_proxies()` to accept video IDs from scan result instead of re-walking directory; eliminated redundant filesystem traversal (BL-250, #291)
+- **Frontend Testing Guidance** — Added async `act()` documentation to FRAMEWORK_CONTEXT.md with multi-phase hook test patterns (BL-260)
+
 ## v033 — Render Testing, UAT Journeys, and Metrics (2026-04-11)
 
 ### Added
