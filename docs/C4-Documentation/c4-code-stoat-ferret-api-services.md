@@ -62,8 +62,8 @@
   - Location: scan.py:276
   - Dependencies: AsyncVideoRepository, ffprobe_video, Video, ScanResponse
 
-- `_auto_queue_proxies(*, result: ScanResponse, repository: AsyncVideoRepository, proxy_service: ProxyService, queue: AsyncJobQueue, scan_path: str) -> None`
-  - Description: Auto-queue proxy generation for new videos and detect stale proxies via checksums.
+- `_auto_queue_proxies(*, result: ScanResponse, repository: AsyncVideoRepository, proxy_service: ProxyService, queue: AsyncJobQueue, video_ids: list[str]) -> None`
+  - Description: Auto-queue proxy generation for new videos and detect stale proxies via checksums. Uses video IDs collected during the scan loop instead of re-walking the filesystem.
   - Location: scan.py:160
   - Dependencies: ProxyService, AsyncJobQueue
 

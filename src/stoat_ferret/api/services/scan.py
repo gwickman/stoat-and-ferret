@@ -112,6 +112,7 @@ def make_scan_handler(
             logger.info("scan_broadcast_started", path=str(scan_path))
             await ws_manager.broadcast(build_event(EventType.SCAN_STARTED, {"path": scan_path}))
 
+        video_ids: list[str] = []
         result = await scan_directory(
             path=scan_path,
             recursive=payload.get("recursive", True),
@@ -119,6 +120,7 @@ def make_scan_handler(
             thumbnail_service=thumbnail_service,
             progress_callback=progress_callback,
             cancel_event=cancel_event,
+            video_ids_out=video_ids,
         )
 
         # Auto-queue proxy generation for new videos if enabled
@@ -128,7 +130,7 @@ def make_scan_handler(
                 repository=repository,
                 proxy_service=proxy_service,
                 queue=queue,
-                scan_path=scan_path,
+                video_ids=video_ids,
             )
 
         # Broadcast SCAN_COMPLETED first, then JOB_PROGRESS(complete) last.
@@ -163,7 +165,7 @@ async def _auto_queue_proxies(
     repository: AsyncVideoRepository,
     proxy_service: ProxyService,
     queue: AsyncJobQueue,
-    scan_path: str,
+    video_ids: list[str],
 ) -> None:
     """Auto-queue proxy generation for new videos and detect stale proxies.
 
@@ -176,14 +178,14 @@ async def _auto_queue_proxies(
         repository: Video repository for looking up video metadata.
         proxy_service: Proxy service for stale detection.
         queue: Job queue for submitting proxy generation jobs.
-        scan_path: The scanned directory path (for logging context).
+        video_ids: IDs of videos discovered during the scan.
     """
     settings = get_settings()
 
     if not settings.proxy_auto_generate:
         logger.info(
             "proxy_auto_queue_skipped",
-            scan_path=scan_path,
+            video_count=len(video_ids),
             reason="auto_generate_disabled",
         )
         return
@@ -191,30 +193,23 @@ async def _auto_queue_proxies(
     if shutil.which("ffmpeg") is None:
         logger.warning(
             "proxy_auto_queue_skipped",
-            scan_path=scan_path,
+            video_count=len(video_ids),
             reason="ffmpeg_unavailable",
         )
         return
 
     logger.info(
         "proxy_auto_queue_started",
-        scan_path=scan_path,
+        video_count=len(video_ids),
         new_videos=result.new,
         updated_videos=result.updated,
     )
 
-    # Re-discover video files in the scan path to look up their DB records
-    root = Path(scan_path)
-    video_files = [
-        f for f in root.glob("**/*") if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS
-    ]
-
     queued_count = 0
     stale_count = 0
 
-    for file_path in video_files:
-        str_path = str(file_path.absolute())
-        video = await repository.get_by_path(str_path)
+    for video_id in video_ids:
+        video = await repository.get(video_id)
         if video is None:
             continue
 
@@ -267,7 +262,7 @@ async def _auto_queue_proxies(
 
     logger.info(
         "proxy_auto_queue_complete",
-        scan_path=scan_path,
+        video_count=len(video_ids),
         queued=queued_count,
         stale_detected=stale_count,
     )
@@ -281,6 +276,7 @@ async def scan_directory(
     *,
     progress_callback: Callable[[float], Awaitable[None]] | None = None,
     cancel_event: asyncio.Event | None = None,
+    video_ids_out: list[str] | None = None,
 ) -> ScanResponse:
     """Scan directory for video files.
 
@@ -295,6 +291,7 @@ async def scan_directory(
         thumbnail_service: Optional thumbnail service for generating thumbnails.
         progress_callback: Optional async callback invoked with progress 0.0-1.0 after each file.
         cancel_event: Optional event; when set, scan breaks and returns partial results.
+        video_ids_out: Optional list to collect IDs of all processed videos.
 
     Returns:
         ScanResponse with counts of scanned, new, updated, skipped files and errors.
@@ -345,6 +342,9 @@ async def scan_directory(
             metadata = await ffprobe_video(str_path)
 
             video_id = existing.id if existing else Video.new_id()
+
+            if video_ids_out is not None:
+                video_ids_out.append(video_id)
 
             # Generate thumbnail if service is available
             thumbnail_path: str | None = None
