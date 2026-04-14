@@ -77,6 +77,16 @@ Headless mode runs the browser without a visible window. Use this for CI pipelin
 uv run python scripts/uat_runner.py --headless
 ```
 
+### Pre-built artifacts (CI mode)
+
+If you have already built the Rust module, installed Python packages, and built the GUI, use `--no-build` to skip those steps while still having the runner start and manage the server for you:
+
+```bash
+uv run python scripts/uat_runner.py --headless --no-build
+```
+
+This is the mode used by the CI UAT job. CI pre-builds everything in explicit steps, then calls the runner with `--no-build` so the full budget is available for the server and journeys.
+
 ### Against a running server
 
 ```bash

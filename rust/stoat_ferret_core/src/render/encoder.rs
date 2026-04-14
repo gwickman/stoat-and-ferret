@@ -21,6 +21,7 @@ const HARDWARE_PLATFORMS: &[(&str, EncoderType)] = &[
     ("nvenc", EncoderType::Nvenc),
     ("qsv", EncoderType::Qsv),
     ("vaapi", EncoderType::Vaapi),
+    ("v4l2m2m", EncoderType::Vaapi), // Video4Linux2 M2M hardware encoder interface
     ("amf", EncoderType::Amf),
     ("mf", EncoderType::Mf),
 ];

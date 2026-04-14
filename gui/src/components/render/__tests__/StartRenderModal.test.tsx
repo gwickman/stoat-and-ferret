@@ -12,7 +12,7 @@ const FORMATS: OutputFormat[] = [
     mime_type: 'video/mp4',
     codecs: [
       {
-        name: 'libx264',
+        name: 'h264',
         quality_presets: [
           { preset: 'draft', video_bitrate_kbps: 2000 },
           { preset: 'standard', video_bitrate_kbps: 5000 },
@@ -30,7 +30,7 @@ const FORMATS: OutputFormat[] = [
     mime_type: 'video/webm',
     codecs: [
       {
-        name: 'libvpx-vp9',
+        name: 'vp9',
         quality_presets: [
           { preset: 'standard', video_bitrate_kbps: 4000 },
           { preset: 'high', video_bitrate_kbps: 8000 },
@@ -138,10 +138,11 @@ describe('StartRenderModal', () => {
 
   // --- Encoder auto-select ---
 
-  it('auto-selects best available encoder (hardware preferred)', () => {
+  it('auto-selects first preview-safe encoder for the format', () => {
     render(<StartRenderModal {...defaultProps} />)
     const encoderSelect = screen.getByTestId('select-encoder') as HTMLSelectElement
-    expect(encoderSelect.value).toBe('h264_nvenc')
+    // h264_nvenc is not in PREVIEW_SAFE_ENCODERS, so only libx264 appears
+    expect(encoderSelect.value).toBe('libx264')
   })
 
   // --- Disk space bar ---
@@ -172,6 +173,8 @@ describe('StartRenderModal', () => {
   // --- Command preview ---
 
   it('calls POST /render/preview for command preview', async () => {
+    // Use an encoder in PREVIEW_SAFE_ENCODERS (libx264); unknown encoders skip the preview
+    setupStore({ encoders: [ENCODERS[0]] })
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
       Promise.resolve(
         new Response(JSON.stringify({ command: 'ffmpeg -i in.mp4 out.mp4' }), { status: 200 }),
@@ -291,6 +294,8 @@ describe('StartRenderModal', () => {
   // --- Preview error ---
 
   it('shows previewError when fetch returns 422 with detail.message', async () => {
+    // Use an encoder in PREVIEW_SAFE_ENCODERS (libx264) so the preview fetch fires
+    setupStore({ encoders: [ENCODERS[0]] })
     vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
       Promise.resolve(
         new Response(

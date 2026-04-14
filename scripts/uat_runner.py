@@ -8,6 +8,7 @@ fail-fast behavior, and timestamped output directories.
 Usage:
     python scripts/uat_runner.py --headless
     python scripts/uat_runner.py --headed --journey 201
+    python scripts/uat_runner.py --headless --no-build
     python scripts/uat_runner.py --headless --skip-build
     python scripts/uat_runner.py --headless --output-dir ./my-results
 """
@@ -131,6 +132,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Examples:\n"
             "  python scripts/uat_runner.py --headless\n"
             "  python scripts/uat_runner.py --headed --journey 201\n"
+            "  python scripts/uat_runner.py --headless --no-build\n"
             "  python scripts/uat_runner.py --headless --skip-build\n"
         ),
     )
@@ -153,6 +155,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar="N",
         default=None,
         help="Run only the specified journey number (e.g. 201)",
+    )
+    parser.add_argument(
+        "--no-build",
+        action="store_true",
+        default=False,
+        help="Skip build steps; still manages server lifecycle",
     )
     parser.add_argument(
         "--skip-build",
@@ -846,10 +854,11 @@ def main(argv: list[str] | None = None) -> int:
     server_log_handles: list[Any] | None = None
 
     try:
-        # 2. Build (unless --skip-build)
+        # 2. Build (unless --skip-build or --no-build)
         if not args.skip_build:
-            print("\n[Build Phase]")
-            run_build_steps()
+            if not args.no_build:
+                print("\n[Build Phase]")
+                run_build_steps()
 
             # 3. Start server
             print("\n[Boot Phase]")

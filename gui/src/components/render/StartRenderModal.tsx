@@ -24,12 +24,39 @@ function getQualityPresets(
   return fmt.codecs[0].quality_presets
 }
 
-/** Pick the best encoder: prefer hardware, then alphabetical. */
-function selectBestEncoder(encoders: Encoder[]): string {
+/**
+ * Encoders whose names are accepted by the Rust command builder (VIDEO_CODECS allowlist).
+ * Used to filter both the encoder dropdown and the preview fetch, ensuring we never send
+ * an unrecognised encoder name (e.g. h264_v4l2m2m) to the preview endpoint.
+ */
+const PREVIEW_SAFE_ENCODERS = new Set([
+  'libx264', 'libx265', 'libvpx', 'libvpx-vp9', 'libaom-av1', 'prores_ks',
+])
+
+/**
+ * Pick the best encoder from the given list: prefer hardware, then first in list.
+ * When formats and outputFormat are provided, restricts to encoders compatible with
+ * the selected format (encoder.codec in format.codecs[].name).
+ * Falls back to any encoder if no compatible one is found.
+ */
+function selectBestEncoder(
+  encoders: Encoder[],
+  formats?: OutputFormat[],
+  outputFormat?: string,
+): string {
   if (encoders.length === 0) return ''
-  const hw = encoders.filter((e) => e.is_hardware)
+  let pool = encoders
+  if (formats && outputFormat) {
+    const fmt = formats.find((f) => f.format === outputFormat)
+    if (fmt && fmt.codecs.length > 0) {
+      const allowed = new Set(fmt.codecs.map((c) => c.name))
+      const compatible = encoders.filter((e) => allowed.has(e.codec))
+      if (compatible.length > 0) pool = compatible
+    }
+  }
+  const hw = pool.filter((e) => e.is_hardware)
   if (hw.length > 0) return hw[0].name
-  return encoders[0].name
+  return pool[0].name
 }
 
 export default function StartRenderModal({
@@ -58,6 +85,19 @@ export default function StartRenderModal({
 
   const qualityPresets = getQualityPresets(formats, outputFormat)
 
+  // Encoder options for the dropdown: only PREVIEW_SAFE_ENCODERS that are also compatible
+  // with the selected format. Restricting to safe encoders means the dropdown and the
+  // preview command stay in sync — every selectable encoder produces a distinct preview.
+  const formatCompatibleEncoders = (() => {
+    const safe = encoders.filter((e) => PREVIEW_SAFE_ENCODERS.has(e.name))
+    if (!outputFormat) return safe
+    const fmt = formats.find((f) => f.format === outputFormat)
+    if (!fmt || fmt.codecs.length === 0) return safe
+    const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
+    const compatible = safe.filter((e) => allowedCodecs.has(e.codec))
+    return compatible.length > 0 ? compatible : safe
+  })()
+
   // Auto-select defaults when formats/encoders load
   useEffect(() => {
     if (formats.length > 0 && !outputFormat) {
@@ -75,16 +115,43 @@ export default function StartRenderModal({
     }
   }, [formats, outputFormat])
 
-  // Auto-select best encoder
+  // Auto-select best encoder from the safe+compatible pool whenever dependencies change
   useEffect(() => {
-    setEncoder(selectBestEncoder(encoders))
-  }, [encoders])
+    const safeEncoders = encoders.filter((e) => PREVIEW_SAFE_ENCODERS.has(e.name))
+    setEncoder(selectBestEncoder(safeEncoders, formats, outputFormat))
+  }, [encoders, formats, outputFormat])
 
   // Fetch command preview when debounced values change
   useEffect(() => {
     if (!debouncedFormat || !debouncedQuality || !debouncedEncoder) {
       setPreviewCommand(null)
       return
+    }
+
+    // The encoder is always from PREVIEW_SAFE_ENCODERS (enforced by formatCompatibleEncoders
+    // and selectBestEncoder). Guard defensively in case of stale debounce state.
+    if (!PREVIEW_SAFE_ENCODERS.has(debouncedEncoder)) {
+      setPreviewCommand(null)
+      setPreviewError(null)
+      return
+    }
+    const previewEncoder = debouncedEncoder
+
+    // Guard against the debounce settling window: after a format change, debouncedFormat
+    // may update ~2ms before debouncedEncoder (the encoder update comes from a useEffect
+    // that runs after the first render). Skip the preview silently if the encoder's codec
+    // is not compatible with the selected format to avoid a 422 console error.
+    const previewEncoderObj = encoders.find((e) => e.name === previewEncoder)
+    if (previewEncoderObj) {
+      const fmt = formats.find((f) => f.format === debouncedFormat)
+      if (fmt && fmt.codecs.length > 0) {
+        const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
+        if (!allowedCodecs.has(previewEncoderObj.codec)) {
+          setPreviewCommand(null)
+          setPreviewError(null)
+          return
+        }
+      }
     }
 
     let cancelled = false
@@ -97,7 +164,7 @@ export default function StartRenderModal({
           body: JSON.stringify({
             output_format: debouncedFormat,
             quality_preset: debouncedQuality,
-            encoder: debouncedEncoder,
+            encoder: previewEncoder,
           }),
         })
         if (!res.ok) {
@@ -125,13 +192,15 @@ export default function StartRenderModal({
     return () => {
       cancelled = true
     }
-  }, [debouncedFormat, debouncedQuality, debouncedEncoder])
+  }, [debouncedFormat, debouncedQuality, debouncedEncoder, encoders, formats])
 
   const resetForm = useCallback(() => {
-    setOutputFormat(formats.length > 0 ? formats[0].format : '')
-    const presets = formats.length > 0 ? getQualityPresets(formats, formats[0].format) : []
+    const firstFormat = formats.length > 0 ? formats[0].format : ''
+    setOutputFormat(firstFormat)
+    const presets = firstFormat ? getQualityPresets(formats, firstFormat) : []
     setQualityPreset(presets.length > 0 ? presets[0].preset : '')
-    setEncoder(selectBestEncoder(encoders))
+    const safeEncoders = encoders.filter((e) => PREVIEW_SAFE_ENCODERS.has(e.name))
+    setEncoder(selectBestEncoder(safeEncoders, formats, firstFormat))
     setErrors({})
     setSubmitting(false)
     setSubmitError(null)
@@ -281,7 +350,7 @@ export default function StartRenderModal({
               className="w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:outline-none"
               data-testid="select-encoder"
             >
-              {encoders.map((enc) => (
+              {formatCompatibleEncoders.map((enc) => (
                 <option key={enc.name} value={enc.name}>
                   {enc.name} {enc.is_hardware ? '(HW)' : '(SW)'}
                 </option>
