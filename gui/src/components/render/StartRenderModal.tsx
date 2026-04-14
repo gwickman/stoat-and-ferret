@@ -105,6 +105,14 @@ export default function StartRenderModal({
       return
     }
 
+    // Hardware encoders are not supported by the command preview builder (software codecs only)
+    const selectedEncoder = encoders.find((e) => e.name === debouncedEncoder)
+    if (selectedEncoder?.is_hardware) {
+      setPreviewCommand(null)
+      setPreviewError(null)
+      return
+    }
+
     let cancelled = false
 
     async function fetchPreview() {
@@ -143,7 +151,7 @@ export default function StartRenderModal({
     return () => {
       cancelled = true
     }
-  }, [debouncedFormat, debouncedQuality, debouncedEncoder])
+  }, [debouncedFormat, debouncedQuality, debouncedEncoder, encoders])
 
   const resetForm = useCallback(() => {
     setOutputFormat(formats.length > 0 ? formats[0].format : '')
