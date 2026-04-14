@@ -12,7 +12,7 @@ const FORMATS: OutputFormat[] = [
     mime_type: 'video/mp4',
     codecs: [
       {
-        name: 'libx264',
+        name: 'h264',
         quality_presets: [
           { preset: 'draft', video_bitrate_kbps: 2000 },
           { preset: 'standard', video_bitrate_kbps: 5000 },
@@ -30,7 +30,7 @@ const FORMATS: OutputFormat[] = [
     mime_type: 'video/webm',
     codecs: [
       {
-        name: 'libvpx-vp9',
+        name: 'vp9',
         quality_presets: [
           { preset: 'standard', video_bitrate_kbps: 4000 },
           { preset: 'high', video_bitrate_kbps: 8000 },

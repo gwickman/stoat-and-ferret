@@ -76,6 +76,17 @@ export default function StartRenderModal({
 
   const qualityPresets = getQualityPresets(formats, outputFormat)
 
+  // Filter encoders to those whose codec family is compatible with the selected format.
+  // Falls back to all encoders if no compatible ones are found (e.g. format not yet loaded).
+  const formatCompatibleEncoders = (() => {
+    if (!outputFormat) return encoders
+    const fmt = formats.find((f) => f.format === outputFormat)
+    if (!fmt || fmt.codecs.length === 0) return encoders
+    const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
+    const compatible = encoders.filter((e) => allowedCodecs.has(e.codec))
+    return compatible.length > 0 ? compatible : encoders
+  })()
+
   // Auto-select defaults when formats/encoders load
   useEffect(() => {
     if (formats.length > 0 && !outputFormat) {
@@ -120,6 +131,22 @@ export default function StartRenderModal({
         setPreviewCommand(null)
         setPreviewError(null)
         return
+      }
+    }
+
+    // Verify the preview encoder's codec is compatible with the selected format.
+    // Skipping silently avoids a 422 console error when the encoder family doesn't
+    // match the format (e.g. h264 encoder selected for webm which requires vp8/vp9).
+    const previewEncoderObj = encoders.find((e) => e.name === previewEncoder)
+    if (previewEncoderObj) {
+      const fmt = formats.find((f) => f.format === debouncedFormat)
+      if (fmt && fmt.codecs.length > 0) {
+        const allowedCodecs = new Set(fmt.codecs.map((c) => c.name))
+        if (!allowedCodecs.has(previewEncoderObj.codec)) {
+          setPreviewCommand(null)
+          setPreviewError(null)
+          return
+        }
       }
     }
 
@@ -317,7 +344,7 @@ export default function StartRenderModal({
               className="w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:outline-none"
               data-testid="select-encoder"
             >
-              {encoders.map((enc) => (
+              {formatCompatibleEncoders.map((enc) => (
                 <option key={enc.name} value={enc.name}>
                   {enc.name} {enc.is_hardware ? '(HW)' : '(SW)'}
                 </option>
