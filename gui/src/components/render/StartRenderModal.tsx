@@ -116,22 +116,40 @@ export default function StartRenderModal({
       return
     }
 
-    // Command builder only supports software codecs. For hardware encoders, fall back to
-    // the software equivalent in the same codec family so the preview remains useful.
-    const selectedEncoder = encoders.find((e) => e.name === debouncedEncoder)
-    let previewEncoder = debouncedEncoder
-    if (selectedEncoder?.is_hardware) {
-      const swEquivalent = encoders.find(
-        (e) => e.codec === selectedEncoder.codec && !e.is_hardware,
+    // The command builder (Rust validator) only accepts a fixed set of software encoder names.
+    // Rather than relying on is_hardware classification (which may misclassify platform-specific
+    // encoders like h264_v4l2m2m), we use an explicit allowlist of known-safe encoder names.
+    const PREVIEW_SAFE_ENCODERS = new Set([
+      'libx264', 'libx265', 'libvpx', 'libvpx-vp9', 'libaom-av1', 'prores_ks',
+    ])
+
+    let previewEncoder: string
+    if (PREVIEW_SAFE_ENCODERS.has(debouncedEncoder)) {
+      previewEncoder = debouncedEncoder
+    } else {
+      // Find a safe encoder whose codec family is compatible with the selected format.
+      const fmt = formats.find((f) => f.format === debouncedFormat)
+      const allowedCodecs = fmt && fmt.codecs.length > 0
+        ? new Set(fmt.codecs.map((c) => c.name))
+        : null
+      const selectedEncoder = encoders.find((e) => e.name === debouncedEncoder)
+      const fallback = encoders.find(
+        (e) =>
+          PREVIEW_SAFE_ENCODERS.has(e.name) &&
+          (!allowedCodecs || allowedCodecs.has(e.codec)) &&
+          (!selectedEncoder || e.codec === selectedEncoder.codec),
+      ) ?? encoders.find(
+        (e) =>
+          PREVIEW_SAFE_ENCODERS.has(e.name) &&
+          (!allowedCodecs || allowedCodecs.has(e.codec)),
       )
-      if (swEquivalent) {
-        previewEncoder = swEquivalent.name
-      } else {
-        // No software equivalent available — skip preview silently
+      if (!fallback) {
+        // No safe encoder available for this format — skip preview silently
         setPreviewCommand(null)
         setPreviewError(null)
         return
       }
+      previewEncoder = fallback.name
     }
 
     // Verify the preview encoder's codec is compatible with the selected format.
@@ -188,7 +206,7 @@ export default function StartRenderModal({
     return () => {
       cancelled = true
     }
-  }, [debouncedFormat, debouncedQuality, debouncedEncoder, encoders])
+  }, [debouncedFormat, debouncedQuality, debouncedEncoder, encoders, formats])
 
   const resetForm = useCallback(() => {
     setOutputFormat(formats.length > 0 ? formats[0].format : '')

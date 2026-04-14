@@ -172,7 +172,7 @@ describe('StartRenderModal', () => {
   // --- Command preview ---
 
   it('calls POST /render/preview for command preview', async () => {
-    // Use software-only encoders: hardware encoders skip the preview (command builder limitation)
+    // Use an encoder in PREVIEW_SAFE_ENCODERS (libx264); unknown encoders skip the preview
     setupStore({ encoders: [ENCODERS[0]] })
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
       Promise.resolve(
@@ -293,7 +293,7 @@ describe('StartRenderModal', () => {
   // --- Preview error ---
 
   it('shows previewError when fetch returns 422 with detail.message', async () => {
-    // Use software-only encoders: hardware encoders skip the preview (command builder limitation)
+    // Use an encoder in PREVIEW_SAFE_ENCODERS (libx264) so the preview fetch fires
     setupStore({ encoders: [ENCODERS[0]] })
     vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
       Promise.resolve(
