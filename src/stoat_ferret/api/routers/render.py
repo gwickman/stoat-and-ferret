@@ -19,6 +19,7 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import Response
 
 from stoat_ferret.api.schemas.render import (
     CodecInfo,
@@ -807,6 +808,41 @@ async def get_queue_status(
 
 
 # ---------- Render job endpoints ----------
+
+# Frame preview must be registered before /render/{job_id} to avoid path-param conflicts.
+
+
+@router.get("/render/{job_id}/frame_preview.jpg")
+async def get_render_frame_preview(
+    job_id: str,
+    render_service: RenderServiceDep,
+) -> Response:
+    """Return the latest rendered frame for a job at 540p resolution as JPEG.
+
+    Frame data is captured in the background during active renders and cached
+    in the service's frame buffer. Returns 404 when no frame is available yet
+    (e.g., render not started or encoder does not support mid-render extraction).
+
+    Args:
+        job_id: The render job UUID.
+        render_service: Render service dependency.
+
+    Returns:
+        JPEG image response at 540p resolution.
+
+    Raises:
+        HTTPException: 404 if no frame is cached for this job.
+    """
+    frame_bytes = render_service.get_frame_bytes(job_id)
+    if frame_bytes is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "FRAME_UNAVAILABLE",
+                "message": f"No preview frame available for job {job_id}",
+            },
+        )
+    return Response(content=frame_bytes, media_type="image/jpeg")
 
 
 @router.get("/render/{job_id}", response_model=RenderJobResponse)

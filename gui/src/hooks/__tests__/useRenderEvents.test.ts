@@ -226,6 +226,43 @@ describe('useRenderEvents', () => {
     expect(useRenderStore.getState().jobs[0].progress).toBe(0.6)
   })
 
+  it('dispatches render_frame_available frame_url to store via setFrameUrl (FR-003)', async () => {
+    useRenderStore.getState().updateJob({
+      id: 'j1',
+      project_id: 'p1',
+      status: 'running',
+      output_path: '',
+      output_format: 'mp4',
+      quality_preset: 'standard',
+      progress: 0,
+      eta_seconds: null,
+      speed_ratio: null,
+      error_message: null,
+      retry_count: 0,
+      created_at: '',
+      updated_at: '',
+      completed_at: null,
+    })
+
+    renderHook(() => useRenderEvents())
+    act(() => { mockInstances[0].simulateOpen() })
+
+    await act(async () => {
+      mockInstances[0].simulateMessage(
+        makeEvent('render_frame_available', {
+          job_id: 'j1',
+          frame_url: '/api/v1/render/j1/frame_preview.jpg',
+          resolution: '540p',
+          progress: 0.7,
+        }),
+      )
+    })
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.frame_url).toBe('/api/v1/render/j1/frame_preview.jpg')
+    expect(job.progress).toBe(0.7)
+  })
+
   it('dispatches render_queue_status to setQueueStatus with partial merge', () => {
     // Pre-populate with full REST data
     const fullStatus: QueueStatus = {

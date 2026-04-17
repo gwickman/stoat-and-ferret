@@ -19,6 +19,8 @@ export interface RenderJob {
   fps: number | null
   encoder_name: string | null
   encoder_type: string | null
+  /** Latest 540p frame preview URL from render.frame_available WebSocket events. */
+  frame_url?: string | null
   error_message: string | null
   retry_count: number
   created_at: string
@@ -88,6 +90,7 @@ interface RenderStoreState {
   removeJob: (jobId: string) => void
   setQueueStatus: (partial: Partial<QueueStatus>) => void
   setProgress: (jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null, frameCount?: number | null, fps?: number | null, encoderName?: string | null, encoderType?: string | null) => void
+  setFrameUrl: (jobId: string, frameUrl: string | null) => void
   reset: () => void
 }
 
@@ -204,6 +207,14 @@ export const useRenderStore = create<RenderStoreState>((set) => ({
               encoder_type: encoderType !== undefined ? encoderType : j.encoder_type,
             }
           : j,
+      ),
+    }))
+  },
+
+  setFrameUrl: (jobId, frameUrl) => {
+    set((state) => ({
+      jobs: state.jobs.map((j) =>
+        j.id === jobId ? { ...j, frame_url: frameUrl } : j,
       ),
     }))
   },

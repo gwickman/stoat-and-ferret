@@ -74,8 +74,11 @@ export function useRenderEvents(): void {
           break
 
         case 'render_frame_available':
-          // Frame events update progress on the job; frame_url is informational
           store.setProgress(payload.job_id as string, payload.progress as number)
+          store.setFrameUrl(
+            payload.job_id as string,
+            (payload.frame_url as string | null) ?? null,
+          )
           break
 
         case 'render_queue_status':
