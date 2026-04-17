@@ -5326,6 +5326,32 @@
         ]
       }
     },
+    "/api/v1/version": {
+      "get": {
+        "description": "Return application version and Rust core status.\n\nReads app_version from the FastAPI application version string and\ncore_status from the Rust core health_check() function. No database\nqueries \u2014 this endpoint is intentionally lightweight.\n\nArgs:\n    request: The FastAPI request object to access app.version.\n\nReturns:\n    Dictionary with app_version and core_status string fields.",
+        "operationId": "get_version_api_v1_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Version Api V1 Version Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Version",
+        "tags": [
+          "version"
+        ]
+      }
+    },
     "/api/v1/videos": {
       "get": {
         "description": "List videos with pagination.\n\nArgs:\n    limit: Maximum number of videos to return (1-100, default 20).\n    offset: Number of videos to skip (default 0).\n    repo: Video repository dependency.\n\nReturns:\n    Paginated list of videos.",
