@@ -6103,7 +6103,7 @@
     },
     "/health/ready": {
       "get": {
-        "description": "Readiness probe - indicates all dependencies are healthy.\n\nChecks database, FFmpeg, preview, and proxy subsystem status.\nPreview and proxy issues result in \"degraded\" (not \"unhealthy\") overall\nstatus. Only database and FFmpeg failures cause 503.\n\nArgs:\n    request: The FastAPI request object, used to access app state.\n\nReturns:\n    JSON response with status and individual check results.\n    Returns 200 if all checks pass, 503 if a critical check fails.",
+        "description": "Readiness probe - indicates all dependencies are healthy.\n\nChecks startup gate and subsystem status (database, FFmpeg, Rust core,\nfilesystem). Preview, proxy, and render issues result in \"degraded\" (not\n\"unhealthy\") overall status. Only the critical checks cause HTTP 503.\n\nReturns HTTP 503 with ready=false until the startup gate is open and all\ncritical checks pass. Returns HTTP 200 with ready=true when ready.\n\nArgs:\n    request: The FastAPI request object, used to access app state.\n\nReturns:\n    JSON response with ready, status, version info, operational metrics,\n    and individual check results.\n    Returns 200 if startup complete and all critical checks pass,\n    503 if startup is in progress or a critical check fails.",
         "operationId": "readiness_health_ready_get",
         "responses": {
           "200": {

@@ -146,6 +146,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Skip DB and worker setup when dependencies are injected (test mode)
     if getattr(app.state, "_deps_injected", False):
+        # In DI/test mode, mark startup complete so health checks work normally
+        app.state._startup_ready = True
+        app.state._startup_timestamp = datetime.utcnow().isoformat()
         yield
         return
 
