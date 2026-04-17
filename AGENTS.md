@@ -65,6 +65,22 @@ command > nul
 
 The project `.gitignore` already includes a `nul` entry as a safety net, but avoid creating it in the first place.
 
+### Branch State Persistence
+
+All git operations for a feature must be chained in a single bash invocation. MSYS2 does not persist branch state reliably across separate shell invocations.
+
+```bash
+# Correct — all operations chained in one call
+git checkout -b feat/my-feature && git add src/ && git commit -m "feat: ..." && git push -u origin HEAD
+
+# Risky — branch created in one shell, push in another may target wrong branch
+git checkout -b feat/my-feature
+# ... separate shell invocation ...
+git push -u origin HEAD
+```
+
+Always run `git status` before `git push` to verify the current branch is correct.
+
 ## Type Stubs
 
 Python type stubs for the Rust PyO3 bindings are maintained in `stubs/stoat_ferret_core/`.
@@ -117,6 +133,16 @@ cd rust/stoat_ferret_core
 cargo clippy -- -D warnings
 cargo test
 ```
+
+### OpenAPI Schema Sync
+
+`gui/openapi.json` must stay in sync with the live FastAPI spec. CI enforces this via a boot-and-compare step, but failures are preventable by regenerating before every push when API routes or schemas change:
+
+```bash
+uv run python -m scripts.generate_openapi
+```
+
+Run this command any time you add, remove, or modify an API endpoint, Pydantic request/response model, or route decorator. Forgetting to regenerate is the most common cause of CI failures across versions.
 
 ### Coverage Thresholds
 

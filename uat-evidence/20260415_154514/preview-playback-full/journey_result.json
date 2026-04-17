@@ -1,0 +1,10 @@
+{
+  "name": "preview-playback-full",
+  "journey_id": 401,
+  "steps_total": 6,
+  "steps_passed": 6,
+  "steps_failed": 0,
+  "console_errors": [],
+  "issues": [],
+  "duration_seconds": 2.1
+}

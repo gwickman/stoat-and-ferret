@@ -1,0 +1,138 @@
+{
+  "timestamp": "2026-04-15T15:42:01.644085+00:00",
+  "mode": "headed",
+  "duration_seconds": 0.33,
+  "overall_status": "fail",
+  "journeys": [
+    {
+      "name": "scan-library",
+      "journey_id": 201,
+      "status": "failed",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "project-clip",
+      "journey_id": 202,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "effects-timeline",
+      "journey_id": 203,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "export-render",
+      "journey_id": 204,
+      "status": "failed",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "preview-playback",
+      "journey_id": 205,
+      "status": "failed",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "preview-playback-full",
+      "journey_id": 401,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "proxy-management",
+      "journey_id": 402,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "theater-mode",
+      "journey_id": 403,
+      "status": "failed",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "timeline-sync",
+      "journey_id": 404,
+      "status": "failed",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "render-export-journey",
+      "journey_id": 501,
+      "status": "failed",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "render-queue-journey",
+      "journey_id": 502,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "render-settings-journey",
+      "journey_id": 503,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    },
+    {
+      "name": "render-failure-journey",
+      "journey_id": 504,
+      "status": "skipped",
+      "steps_total": 0,
+      "steps_passed": 0,
+      "steps_failed": 0,
+      "console_errors": [],
+      "issues": []
+    }
+  ]
+}

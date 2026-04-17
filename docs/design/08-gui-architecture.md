@@ -701,19 +701,13 @@ interface PreviewUpdateEvent {
 - [x] Show hardware acceleration status
 - [x] Implement disk space check display
 
-### Phase 6: Unified Editor
+### Phase 6: Unified Workspace & Agent-Testability
 
 **GUI Milestone 6.1: Workspace Layout**
 - [ ] Implement dockable/resizable panels
 - [ ] Add layout presets
 - [ ] Create settings panel
 - [ ] Build keyboard shortcut reference
-
-**GUI Milestone 6.2: AI Integration Panel**
-- [ ] Add chat-like AI command interface
-- [ ] Show AI action history
-- [ ] Implement "Undo AI Action" functionality
-- [ ] Display suggested operations
 
 ---
 

@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v037] - 2026-04-17
+
+WebSocket Enrichment, Container Deployment, and Developer Quality. Enriches render WebSocket events with frame/fps/encoder metadata, implements live frame streaming to Theater Mode, ships a production-ready multi-stage Dockerfile with health checks and Docker Compose dev stack, and improves developer quality with jest-dom Vitest setup and updated test harness documentation.
+
+### Added
+
+- **Format-Encoder Validation on Submission** — `POST /render` enforces format-encoder compatibility at submission time, returning 422 for invalid combinations (BL-258, #293)
+- **Enriched Render WebSocket Progress Events** — `render.progress` events now include `frame`, `fps`, and `encoder` metadata fields for richer client-side display (BL-254, #294)
+- **Live Frame Streaming to Theater Mode** — Frame streaming endpoint delivers 540p frames to Theater Mode during active renders (BL-255, #295)
+- **Production Dockerfile** — Multi-stage Dockerfile for containerized production deployment with minimal runtime image and non-root user (BL-262, #296)
+- **Container Health Checks** — Startup gate and liveness/readiness health check endpoints for container orchestration (BL-265, #297)
+- **Docker Compose Dev Stack** — `docker-compose.yml` orchestrating API, frontend, and dependencies for local development (BL-264, #298)
+- **Deployment Smoke Script** — `scripts/deploy_smoke.sh` and `GET /api/v1/version` endpoint for smoke-testing deployed containers (BL-263, #299)
+- **Jest-dom Vitest Setup** — Jest-dom matchers configured in Vitest setup for expressive DOM assertions in GUI tests (BL-259, #300)
+
+### Changed
+
+- **RenderJobCard C4 Diagram** — Updated C4 component diagram to reflect v035 `cancelLoading`/`retryLoading`/`deleteLoading` flags (BL-257)
+
+### Documentation
+
+- **Three-Tier Test Harness Guide** — Test harness documentation updated with contract test tier description and guidance (BL-256, #301)
+
 ## v034 — Documentation Catch-Up: Phase 4 and Phase 5 (2026-04-11)
 
 ### Documentation

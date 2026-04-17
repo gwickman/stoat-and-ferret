@@ -10,7 +10,7 @@ An FFmpeg audio filter that creates a crossfade between two audio inputs. Suppor
 
 ### AI Theater Mode
 
-**[Planned]** A future feature providing a specialized interface for AI-driven editing sessions with natural language commands and real-time preview.
+A full-screen immersive viewing mode for watching AI-driven video generation and editing sessions. Provides a full-screen video canvas with a minimal auto-hiding overlay that displays real-time AI actions and render progress, along with keyboard shortcuts for hands-free control.
 
 ### Clip
 

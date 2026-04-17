@@ -516,9 +516,9 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 
 ---
 
-## Phase 6: Deployability & AI Integration
+## Phase 6: Deployability & AI-Testability
 
-**Objective:** Production deployment readiness, container support, and AI integration refinement. GUI matures into a unified workspace with AI integration panel.
+**Objective:** Production deployment readiness, container support, and AI-testability infrastructure. Hardens the system for automated external agent testing and provides the documentation and tooling to support AI-driven operations.
 
 ### Milestone 6.1: Container Deployment
 - [ ] Create production Dockerfile with multi-stage build (Python + Rust)
@@ -548,6 +548,10 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 - [ ] Document common workflows
 - [ ] Write operational runbook
 - [ ] Create troubleshooting guide
+- [ ] Create agent operator guide with canonical API sequences
+- [ ] Document preferred ordering of preview, render, and verification operations for automated agents
+- [ ] Add troubleshooting guidance aimed at automated operators
+- [ ] Document WebSocket event vocabulary with terminal states and expected transitions
 
 ### Milestone 6.5: Final Quality Gate
 - [ ] Complete security review (Python + Rust)
@@ -563,14 +567,26 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 - [ ] Build keyboard shortcut reference/help overlay
 - [ ] Add panel visibility toggles
 
-### Milestone 6.7: GUI - AI Integration Panel
-- [ ] Create chat-like AI command interface
-- [ ] Display AI action history with timestamps
-- [ ] Implement "Undo AI Action" functionality
-- [ ] Show suggested operations based on context
-- [ ] Add natural language command input
+### Milestone 6.7: API Testability for External Agents
 
-### Milestone 6.8: GUI - Final Polish
+- [ ] Harden WebSocket message delivery (reconnection handling, event sequence guarantees)
+- [ ] Add WebSocket event replay/catch-up for agents that reconnect mid-operation
+- [ ] Close persistence gaps for proxy, thumbnail, and waveform services (survive restarts)
+- [ ] Add system state snapshot endpoint (`GET /api/v1/system/state`) returning projects, active jobs, preview sessions, and queue status in one call
+- [ ] Add test fixture seed endpoint (`POST /api/v1/testing/seed`) for creating known-good project states (guarded by config flag, disabled in production)
+- [ ] Add long-poll or event-based "wait for completion" pattern for async operations (render, preview, scan)
+- [ ] Enhance OpenAPI annotations with operation state machine documentation (which states allow which transitions)
+
+### Milestone 6.8: Agent Operator Documentation & Workflow Support
+
+- [ ] Write agent operator guide (compact reference for AI operators)
+- [ ] Create prompt recipes for common testing scenarios (scan + project + render cycle)
+- [ ] Document canonical multi-step workflows with expected event sequences
+- [ ] Create sample seeded test workflow (known-good media + project for repeatable validation)
+- [ ] Add example scripts for common agent operations (wait-for-render, dump-ws-events)
+- [ ] Document decision criteria for when MCP abstraction becomes justified
+
+### Milestone 6.9: GUI - Final Polish
 - [ ] Accessibility audit and fixes (WCAG AA)
 - [ ] E2E tests for critical workflows (Playwright)
 - [ ] Performance optimization (bundle size, virtual scrolling)
@@ -582,14 +598,17 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 - Complete deployment documentation
 - AI-friendly API discovery
 - Operational runbook
+- API testability infrastructure for external AI agents
+- Agent operator guide and prompt recipes
 - **Quality:**
   - Smoke tests for deployment verification
   - Rollback procedures documented
   - Version tracking for deployments (including Rust core)
   - Security review completed
+  - WebSocket delivery reliability verified
+  - Persistence consistency for generated assets verified
 - **GUI:**
   - Unified workspace with dockable panels
-  - AI Integration panel for natural language commands
   - Fully accessible (WCAG AA compliant)
   - Complete E2E test coverage
 
@@ -606,7 +625,7 @@ This roadmap outlines the phased implementation of an AI-driven video editing sy
 | Phase 3 | Create PIP, split-screen, multi-track timeline | Project versioning works, **black box tests for composition**, audit logging | Complex layouts <10ms | Visual timeline with multi-track support |
 | Phase 4 | Preview timeline with scrubbing, proxy workflow, HLS streaming | Preview metrics collected, **smoke tests + UAT passing**, graceful degradation | Preview >30fps at 1080p | HLS.js player, quality selector, **AI Theater Mode** functional |
 | Phase 5 | Render complete timeline with HW acceleration | Job recovery tested, **black box render workflow tests**, fallback works | Render >1x realtime | Render queue with progress monitoring |
-| Phase 6 | API is self-documenting and AI-discoverable | Smoke tests pass, **full black box coverage**, security review done | Deploy <5min | Unified workspace, AI panel, WCAG AA compliant |
+| Phase 6 | API is self-documenting and AI-discoverable; external agent can complete E2E test workflow | Smoke tests pass, **full black box coverage**, security review done, WebSocket delivery reliable | Deploy <5min | Unified workspace, WCAG AA compliant |
 
 ### Quality Gates (Every Phase)
 
