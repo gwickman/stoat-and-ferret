@@ -6,9 +6,12 @@ import asyncio
 import contextlib
 import inspect
 import logging
+import os
 import sqlite3
+import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
 import aiosqlite
@@ -83,6 +86,33 @@ from stoat_ferret.render.service import RenderService
 logger = structlog.get_logger(__name__)
 
 
+def _get_git_sha() -> str:
+    """Get the current git SHA for the deployment.startup event.
+
+    Checks the GIT_SHA environment variable first (set during Docker build),
+    then falls back to running git rev-parse in development environments.
+
+    Returns:
+        Short git SHA string, or "unknown" if unavailable.
+    """
+    git_sha = os.environ.get("GIT_SHA", "")
+    if git_sha:
+        return git_sha
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application lifespan resources.
@@ -110,8 +140,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if not getattr(app.state, "ws_manager", None):
         app.state.ws_manager = ConnectionManager()
 
+    # Initialize startup gate (False until all subsystems ready)
+    app.state._startup_ready = False
+    app.state._startup_timestamp = None
+
     # Skip DB and worker setup when dependencies are injected (test mode)
     if getattr(app.state, "_deps_injected", False):
+        # In DI/test mode, mark startup complete so health checks work normally
+        app.state._startup_ready = True
+        app.state._startup_timestamp = datetime.utcnow().isoformat()
         yield
         return
 
@@ -235,6 +272,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     worker_task = asyncio.create_task(job_queue.process_jobs())
     logger.info("job_worker_started")
 
+    # Collect version info for startup event
+    from stoat_ferret_core import health_check
+
+    core_version_str = health_check()
+    try:
+        cursor = await app.state.db.execute("SELECT sqlite_version()")
+        row = await cursor.fetchone()
+        db_version_str: str = row[0] if row else "unknown"
+    except Exception:
+        db_version_str = "unknown"
+
+    # Mark startup complete and emit structured log event
+    app.state._startup_ready = True
+    app.state._startup_timestamp = datetime.utcnow().isoformat()
+    logger.info(
+        "deployment.startup",
+        app_version=app.version,
+        core_version=core_version_str,
+        git_sha=_get_git_sha(),
+        database_version=db_version_str,
+    )
+
     yield
 
     # Shutdown: graceful render shutdown sequence (BL-227)
@@ -354,6 +413,10 @@ def create_app(
         lifespan=lifespan,
         debug=settings.debug,
     )
+
+    # Initialize startup gate so it is always present on app.state
+    app.state._startup_ready = False
+    app.state._startup_timestamp = None
 
     # Store injected dependencies on app.state
     has_injected = any(

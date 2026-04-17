@@ -262,5 +262,5 @@ class TestRenderParity:
             response = client.get("/health/ready")
 
         checks = response.json()["checks"]
-        expected = {"database", "ffmpeg", "preview", "proxy", "render"}
+        expected = {"database", "ffmpeg", "preview", "proxy", "render", "rust_core", "filesystem"}
         assert set(checks.keys()) == expected

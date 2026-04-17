@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import shutil
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +17,8 @@ from fastapi.responses import JSONResponse
 
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.models import ProxyStatus
+from stoat_ferret.models.health import HealthStatus
+from stoat_ferret_core import health_check as _rust_health_check
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -39,50 +43,108 @@ async def liveness() -> dict[str, str]:
 async def readiness(request: Request) -> JSONResponse:
     """Readiness probe - indicates all dependencies are healthy.
 
-    Checks database, FFmpeg, preview, and proxy subsystem status.
-    Preview and proxy issues result in "degraded" (not "unhealthy") overall
-    status. Only database and FFmpeg failures cause 503.
+    Checks startup gate and subsystem status (database, FFmpeg, Rust core,
+    filesystem). Preview, proxy, and render issues result in "degraded" (not
+    "unhealthy") overall status. Only the critical checks cause HTTP 503.
+
+    Returns HTTP 503 with ready=false until the startup gate is open and all
+    critical checks pass. Returns HTTP 200 with ready=true when ready.
 
     Args:
         request: The FastAPI request object, used to access app state.
 
     Returns:
-        JSON response with status and individual check results.
-        Returns 200 if all checks pass, 503 if a critical check fails.
+        JSON response with ready, status, version info, operational metrics,
+        and individual check results.
+        Returns 200 if startup complete and all critical checks pass,
+        503 if startup is in progress or a critical check fails.
     """
+    # Startup gate: return 503 immediately if startup not yet complete
+    if not getattr(request.app.state, "_startup_ready", False):
+        return JSONResponse(
+            content={
+                "ready": False,
+                "status": "starting",
+                "app_version": str(request.app.version),
+            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
     checks: dict[str, dict[str, Any]] = {}
     critical_healthy = True
     any_degraded = False
 
     # Database check (critical)
-    db_check = await _check_database(request)
+    try:
+        db_check = await asyncio.wait_for(_check_database(request), timeout=5.0)
+    except asyncio.TimeoutError:
+        db_check = {"status": "error", "error": "check timed out"}
+        critical_healthy = False
     checks["database"] = db_check
     if db_check["status"] != "ok":
         critical_healthy = False
 
     # FFmpeg check (critical)
-    ffmpeg_check = await _check_ffmpeg()
+    try:
+        ffmpeg_check = await asyncio.wait_for(_check_ffmpeg(), timeout=5.0)
+    except asyncio.TimeoutError:
+        ffmpeg_check = {"status": "error", "error": "check timed out"}
+        critical_healthy = False
     checks["ffmpeg"] = ffmpeg_check
     if ffmpeg_check["status"] != "ok":
         critical_healthy = False
 
+    # Rust core check (critical)
+    try:
+        rust_check = await asyncio.wait_for(_check_rust_core(), timeout=5.0)
+    except asyncio.TimeoutError:
+        rust_check = {"status": "error", "error": "check timed out"}
+        critical_healthy = False
+    checks["rust_core"] = rust_check
+    if rust_check["status"] != "ok":
+        critical_healthy = False
+
+    # Filesystem check (critical)
+    try:
+        fs_check = await asyncio.wait_for(_check_filesystem(), timeout=5.0)
+    except asyncio.TimeoutError:
+        fs_check = {"status": "error", "error": "check timed out"}
+        critical_healthy = False
+    checks["filesystem"] = fs_check
+    if fs_check["status"] != "ok":
+        critical_healthy = False
+
     # Preview check (non-critical — degraded only)
-    preview_check = await _check_preview(request)
+    try:
+        preview_check = await asyncio.wait_for(_check_preview(request), timeout=5.0)
+    except asyncio.TimeoutError:
+        preview_check = {"status": "degraded", "error": "check timed out"}
+        any_degraded = True
     checks["preview"] = preview_check
     if preview_check["status"] != "ok":
         any_degraded = True
 
     # Proxy check (non-critical — degraded only)
-    proxy_check = await _check_proxy(request)
+    try:
+        proxy_check = await asyncio.wait_for(_check_proxy(request), timeout=5.0)
+    except asyncio.TimeoutError:
+        proxy_check = {"status": "degraded", "error": "check timed out"}
+        any_degraded = True
     checks["proxy"] = proxy_check
     if proxy_check["status"] != "ok":
         any_degraded = True
 
     # Render check (non-critical — degraded only, per LRN-136)
-    render_check = await _check_render(request)
+    try:
+        render_check = await asyncio.wait_for(_check_render(request), timeout=5.0)
+    except asyncio.TimeoutError:
+        render_check = {"status": "degraded", "error": "check timed out"}
+        any_degraded = True
     checks["render"] = render_check
     if render_check["status"] != "ok":
         any_degraded = True
+
+    is_ready = critical_healthy
 
     if not critical_healthy:
         overall = "degraded"
@@ -94,28 +156,93 @@ async def readiness(request: Request) -> JSONResponse:
         overall = "ok"
         status_code = status.HTTP_200_OK
 
-    response = {"status": overall, "checks": checks}
-    return JSONResponse(content=response, status_code=status_code)
+    # Extract version info from check results
+    database_version: str | None = db_check.get("version")
+    core_version: str | None = rust_check.get("version")
+
+    # Compute uptime since startup completed
+    startup_ts = getattr(request.app.state, "_startup_timestamp", None)
+    uptime: float | None = None
+    if startup_ts is not None:
+        uptime = (datetime.utcnow() - datetime.fromisoformat(startup_ts)).total_seconds()
+
+    # Compute WebSocket buffer utilization (active connections / assumed max 100)
+    ws_manager = getattr(request.app.state, "ws_manager", None)
+    ws_util = 0.0
+    if ws_manager is not None:
+        ws_util = min(float(ws_manager.active_connections), 100.0)
+
+    response_body = HealthStatus(
+        ready=is_ready,
+        status=overall,
+        app_version=str(request.app.version),
+        database_version=database_version,
+        core_version=core_version,
+        ws_buffer_utilization=ws_util,
+        uptime_seconds=uptime,
+        checks=checks,
+    )
+    return JSONResponse(content=response_body.model_dump(), status_code=status_code)
 
 
 async def _check_database(request: Request) -> dict[str, Any]:
-    """Check database connectivity by executing a simple query.
+    """Check database connectivity and retrieve the SQLite version.
 
     Args:
         request: The FastAPI request object to access app.state.db.
 
     Returns:
-        Dictionary with status and latency_ms on success, or status and error on failure.
+        Dictionary with status, latency_ms, and version on success,
+        or status and error on failure.
     """
     db = getattr(request.app.state, "db", None)
     if db is None:
-        return {"status": "ok", "latency_ms": 0.0}
+        return {"status": "ok", "latency_ms": 0.0, "version": None}
     try:
         start = time.perf_counter()
-        cursor = await db.execute("SELECT 1")
-        await cursor.fetchone()
+        cursor = await db.execute("SELECT sqlite_version()")
+        row = await cursor.fetchone()
         latency_ms = (time.perf_counter() - start) * 1000
-        return {"status": "ok", "latency_ms": round(latency_ms, 2)}
+        version: str | None = row[0] if row else None
+        return {"status": "ok", "latency_ms": round(latency_ms, 2), "version": version}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def _check_rust_core() -> dict[str, Any]:
+    """Check Rust core availability by calling health_check().
+
+    Returns:
+        Dictionary with status and version on success, or status and error on failure.
+    """
+    try:
+        version = await asyncio.to_thread(_rust_health_check)
+        return {"status": "ok", "version": version}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def _check_filesystem() -> dict[str, Any]:
+    """Check filesystem write access in the data directory.
+
+    Attempts to create and delete a temporary file in the directory containing
+    the database, verifying the filesystem is writable.
+
+    Returns:
+        Dictionary with status "ok" on success, or status and error on failure.
+    """
+    settings = get_settings()
+    data_dir = Path(settings.database_path).parent
+    test_file = data_dir / ".healthcheck_write_test"
+
+    def _do_check() -> None:
+        test_file.write_text("ok")
+        with contextlib.suppress(OSError):
+            test_file.unlink()
+
+    try:
+        await asyncio.to_thread(_do_check)
+        return {"status": "ok"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
