@@ -4,11 +4,13 @@
 
 ## What is the Test Harness?
 
-The test harness has two tiers:
+The test harness has three tiers:
 
-1. **Smoke tests** — An API-level integration test suite that runs in-process using `httpx.ASGITransport` (no real HTTP server). It exercises the full application stack including the real Rust core (`stoat_ferret_core`). Tests verify API endpoint contracts, request/response schemas, and end-to-end behaviour from HTTP request through to Rust-level processing.
+1. **Smoke Tests** (`tests/smoke/`) — An API-level integration test suite that runs in-process using `httpx.ASGITransport` (no real HTTP server). It exercises the full application stack including the real Rust core (`stoat_ferret_core`). Tests verify API endpoint contracts, request/response schemas, and end-to-end behaviour from HTTP request through to Rust-level processing.
 
-2. **UAT journeys** — Playwright-based Python scripts that drive a real browser against a live server, validating complete user workflows. Each journey captures screenshot evidence and produces structured pass/fail reports. See [`docs/manual/uat-testing.md`](../../manual/uat-testing.md) for full details.
+2. **Contract Tests** (`tests/test_contract/`) — Real FFmpeg execution with synthetic lavfi virtual inputs (LRN-100). Validates encoder output format, codec detection, multi-segment concatenation, and WebSocket event schemas. Covered by the 80% minimum coverage gate. Establishes patterns for future FFmpeg-integration features.
+
+3. **UAT Journeys** (`scripts/uat_journey_*.py`) — Playwright-based Python scripts that drive a real browser against a live server, validating complete user workflows. Each journey captures screenshot evidence and produces structured pass/fail reports. See [`docs/manual/uat-testing.md`](../../manual/uat-testing.md) for full details.
 
 ## Key Files
 
@@ -52,6 +54,38 @@ The test harness has two tiers:
 |------|---------|
 | `create_adjacent_clips_timeline()` | Helper to set up two adjacent clips on a timeline track for transition tests |
 | `create_version_repo()` | Factory to create `AsyncSQLiteVersionRepository` from the live ASGI transport DB |
+
+## Contract Test Key Files
+
+### Contract Tests (v033)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/test_contract/test_render_contract.py` | Render output format validation (mp4/webm/mov/mkv), encoder detection, multi-segment concat, WebSocket progress schema, and frame streaming endpoint (BL-254, BL-255) |
+
+### Contract Test Patterns
+
+Contract tests use lavfi virtual inputs (LRN-100) to exercise real FFmpeg code paths without requiring pre-recorded media files. Key characteristics:
+
+- `@requires_ffmpeg` guard — skips tests when FFmpeg is not installed
+- `@pytest.mark.contract` marker — for selective test execution (`pytest -m contract`)
+- Session-scoped fixtures for expensive FFmpeg operations (e.g. `ffmpeg_encoder_output`)
+- `lavfi testsrc2` synthetic input — no pre-recorded media files needed
+- `ffprobe` validation — verifies output codec name and container format
+
+Example structure from `test_render_contract.py`:
+
+```python
+@requires_ffmpeg
+@pytest.mark.contract
+class TestRenderOutputFormatContract:
+    def test_render_format_produces_valid_output(self, tmp_path: Path, ...) -> None:
+        """Uses lavfi testsrc2 virtual input to avoid requiring real media files."""
+        real = RealFFmpegExecutor()
+        result = real.run(["-f", "lavfi", "-i", "testsrc2=duration=1:size=320x240:rate=24", ...])
+```
+
+Use this pattern as precedent when adding FFmpeg-integration tests for new encoders or output formats. See LRN-100 for the full established pattern.
 
 ## UAT Journey Key Files
 
