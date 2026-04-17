@@ -27,7 +27,7 @@ htmlcov
 coverage.xml
 
 # Rust build artifacts
-rust/stoat_ferret_core/target
+target/
 
 # IDE
 .idea
@@ -46,14 +46,31 @@ rust/stoat_ferret_core/target
 .DS_Store
 Thumbs.db
 
-# Docker
+# Node.js
+node_modules/
+
+# Data files (videos, thumbnails — mount as volumes in production)
+data/
+
+# Docker build files
 Dockerfile
+Dockerfile.ci
 docker-compose.yml
 .dockerignore
 
-# Comms/docs (not needed for testing)
-comms
-docs/auto-dev
+# Documentation (not needed at runtime)
+docs/
+README.md
+CHANGELOG.md
+AGENTS.md
+CLAUDE.md
 
-# Benchmarks (not needed for testing)
+# Comms/auto-dev artifacts
+comms
+
+# Benchmarks (not needed at runtime)
 benchmarks
+
+# Logs and test evidence
+logs/
+uat-evidence/

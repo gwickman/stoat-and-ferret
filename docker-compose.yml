@@ -1,6 +1,8 @@
 services:
   test:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
     # Mount source for faster iteration — edits are reflected without rebuild.
     volumes:
       - ./src:/app/src:ro
