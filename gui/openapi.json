@@ -417,10 +417,17 @@
         "description": "Request to start a new render job.",
         "properties": {
           "encoder": {
-            "default": "libx264",
-            "description": "Video encoder name (e.g. libx264, libvpx-vp9)",
-            "title": "Encoder",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.",
+            "title": "Encoder"
           },
           "output_format": {
             "default": "mp4",

@@ -2269,10 +2269,10 @@ export interface components {
         CreateRenderRequest: {
             /**
              * Encoder
-             * @description Video encoder name (e.g. libx264, libvpx-vp9)
-             * @default libx264
+             * @description Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.
+             * @default null
              */
-            encoder: string;
+            encoder: string | null;
             /**
              * Output Format
              * @description Output container format
