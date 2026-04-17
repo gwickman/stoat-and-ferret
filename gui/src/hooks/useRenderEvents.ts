@@ -66,6 +66,10 @@ export function useRenderEvents(): void {
             payload.progress as number,
             (payload.eta_seconds as number | undefined) ?? null,
             (payload.speed_ratio as number | undefined) ?? null,
+            (payload.frame_count as number | undefined) ?? null,
+            (payload.fps as number | undefined) ?? null,
+            (payload.encoder_name as string | undefined) ?? null,
+            (payload.encoder_type as string | undefined) ?? null,
           )
           break
 

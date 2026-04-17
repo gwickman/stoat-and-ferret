@@ -306,7 +306,7 @@ class TestServiceLifecycleEvents:
                 cb = executor._progress_callback
                 if cb:
                     for pv in progress_values:
-                        await cb(j.id, pv, 10.0)
+                        await cb(j.id, pv, 10.0, None, None)
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]

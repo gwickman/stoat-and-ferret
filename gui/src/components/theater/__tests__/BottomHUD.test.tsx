@@ -38,6 +38,10 @@ function makeJob(overrides: Partial<RenderJob> = {}): RenderJob {
     progress: 0,
     eta_seconds: null,
     speed_ratio: null,
+    frame_count: null,
+    fps: null,
+    encoder_name: null,
+    encoder_type: null,
     error_message: null,
     retry_count: 0,
     created_at: '2026-01-01T00:00:00Z',
@@ -177,5 +181,104 @@ describe('BottomHUD', () => {
     const videoRef = createVideoRef()
     render(<BottomHUD videoRef={videoRef} />)
     expect(screen.getByTestId('theater-bottom-hud')).toBeDefined()
+  })
+
+  it('shows encoder name and type when both are non-null', async () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, encoder_name: 'h264_nvenc', encoder_type: 'HW' })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    const encoder = screen.getByTestId('render-encoder')
+    expect(encoder.textContent).toContain('h264_nvenc')
+    const encoderType = screen.getByTestId('render-encoder-type')
+    expect(encoderType.textContent).toContain('HW')
+  })
+
+  it('shows encoder name without type when encoder_type is null', async () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, encoder_name: 'libx264', encoder_type: null })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    const encoder = screen.getByTestId('render-encoder')
+    expect(encoder.textContent).toContain('libx264')
+    expect(screen.queryByTestId('render-encoder-type')).toBeNull()
+  })
+
+  it('hides encoder section when encoder_name is null', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, encoder_name: null })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.queryByTestId('render-encoder')).toBeNull()
+  })
+
+  it('shows frame count when non-null', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, frame_count: 1200 })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    const frameCount = screen.getByTestId('render-frame-count')
+    expect(frameCount.textContent).toContain('1200f')
+  })
+
+  it('hides frame count when null', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, frame_count: null })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.queryByTestId('render-frame-count')).toBeNull()
+  })
+
+  it('shows fps when non-null', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, fps: 29.97 })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    const fpsEl = screen.getByTestId('render-fps')
+    expect(fpsEl.textContent).toContain('30.0 fps')
+  })
+
+  it('hides fps when null', () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ progress: 0.5, fps: null })],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.queryByTestId('render-fps')).toBeNull()
+  })
+
+  it('shows all enriched fields together for SW encoder', () => {
+    useRenderStore.setState({
+      jobs: [
+        makeJob({
+          progress: 0.6,
+          eta_seconds: 30,
+          encoder_name: 'libx264',
+          encoder_type: 'SW',
+          frame_count: 600,
+          fps: 24.0,
+        }),
+      ],
+    })
+
+    const videoRef = createVideoRef()
+    render(<BottomHUD videoRef={videoRef} />)
+    expect(screen.getByTestId('render-encoder').textContent).toContain('libx264')
+    expect(screen.getByTestId('render-encoder-type').textContent).toContain('SW')
+    expect(screen.getByTestId('render-frame-count').textContent).toContain('600f')
+    expect(screen.getByTestId('render-fps').textContent).toContain('24.0 fps')
   })
 })

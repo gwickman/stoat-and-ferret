@@ -24,6 +24,10 @@ export default function BottomHUD({ videoRef }: BottomHUDProps) {
   const progress = activeJob?.progress ?? null
   const etaSeconds = activeJob?.eta_seconds ?? null
   const speedRatio = activeJob?.speed_ratio ?? null
+  const frameCount = activeJob?.frame_count ?? null
+  const fps = activeJob?.fps ?? null
+  const encoderName = activeJob?.encoder_name ?? null
+  const encoderType = activeJob?.encoder_type ?? null
 
   return (
     <div
@@ -44,6 +48,21 @@ export default function BottomHUD({ videoRef }: BottomHUDProps) {
             {etaSeconds !== null ? `ETA ${formatEta(etaSeconds)}` : 'Calculating...'}
             {speedRatio !== null && (
               <span data-testid="render-speed"> · {speedRatio.toFixed(1)}x</span>
+            )}
+            {encoderName !== null && (
+              <span data-testid="render-encoder">
+                {' · '}
+                {encoderName}
+                {encoderType !== null && (
+                  <span data-testid="render-encoder-type"> ({encoderType})</span>
+                )}
+              </span>
+            )}
+            {frameCount !== null && (
+              <span data-testid="render-frame-count"> · {frameCount}f</span>
+            )}
+            {fps !== null && (
+              <span data-testid="render-fps"> · {fps.toFixed(1)} fps</span>
             )}
           </span>
         </div>
