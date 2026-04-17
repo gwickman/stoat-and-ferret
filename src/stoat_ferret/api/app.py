@@ -36,6 +36,7 @@ from stoat_ferret.api.routers import (
     render,
     thumbnails,
     timeline,
+    version,
     versions,
     videos,
     waveform,
@@ -472,6 +473,7 @@ def create_app(
         app.state.waveform_service = waveform_service
 
     app.include_router(health.router)
+    app.include_router(version.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
     app.include_router(jobs.router)
