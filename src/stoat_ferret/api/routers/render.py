@@ -344,6 +344,29 @@ async def create_render_job(
             },
         ) from err
 
+    # Validate format-encoder compatibility (reuses _encoder_codec_family from render_preview)
+    fmt_info = next((f for f in _FORMAT_DATA if f.format == body.output_format), None)
+    if fmt_info is not None:
+        codec_family = _encoder_codec_family(body.encoder)
+        allowed = [c.name for c in fmt_info.codecs]
+        if codec_family is not None and codec_family not in allowed:
+            logger.info(
+                "render.validation_failed",
+                format=body.output_format,
+                encoder=body.encoder,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "INCOMPATIBLE_FORMAT_ENCODER",
+                    "message": (
+                        f"Encoder '{body.encoder}' is not compatible with format "
+                        f"'{body.output_format}'. Supported codec families for "
+                        f"{body.output_format}: {allowed}"
+                    ),
+                },
+            )
+
     output_path = str(Path(settings.render_output_dir) / f"{body.project_id}.{output_format.value}")
 
     try:

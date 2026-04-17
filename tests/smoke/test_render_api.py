@@ -348,6 +348,28 @@ async def test_render_preview_avi_passthrough(smoke_client: httpx.AsyncClient) -
         assert body.get("detail", {}).get("code") != "INCOMPATIBLE_FORMAT_ENCODER"
 
 
+async def test_create_render_invalid_format_encoder(smoke_client: httpx.AsyncClient) -> None:
+    """POST /api/v1/render with incompatible format-encoder pair returns 422."""
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Render Validation Test"},
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={
+            "project_id": project_id,
+            "output_format": "webm",
+            "encoder": "libx264",
+        },
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["detail"]["code"] == "INCOMPATIBLE_FORMAT_ENCODER"
+
+
 async def test_render_encoder_refresh(smoke_client: httpx.AsyncClient) -> None:
     """POST /api/v1/render/encoders/refresh returns 200 with valid encoder list structure."""
     resp = await smoke_client.post("/api/v1/render/encoders/refresh")
