@@ -15,6 +15,10 @@ export interface RenderJob {
   progress: number
   eta_seconds: number | null
   speed_ratio: number | null
+  frame_count: number | null
+  fps: number | null
+  encoder_name: string | null
+  encoder_type: string | null
   error_message: string | null
   retry_count: number
   created_at: string
@@ -83,7 +87,7 @@ interface RenderStoreState {
   updateJob: (job: Partial<RenderJob> & { id: string }) => void
   removeJob: (jobId: string) => void
   setQueueStatus: (partial: Partial<QueueStatus>) => void
-  setProgress: (jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null) => void
+  setProgress: (jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null, frameCount?: number | null, fps?: number | null, encoderName?: string | null, encoderType?: string | null) => void
   reset: () => void
 }
 
@@ -185,11 +189,20 @@ export const useRenderStore = create<RenderStoreState>((set) => ({
     }))
   },
 
-  setProgress: (jobId, progress, etaSeconds, speedRatio) => {
+  setProgress: (jobId, progress, etaSeconds, speedRatio, frameCount, fps, encoderName, encoderType) => {
     set((state) => ({
       jobs: state.jobs.map((j) =>
         j.id === jobId
-          ? { ...j, progress, eta_seconds: etaSeconds ?? null, speed_ratio: speedRatio ?? null }
+          ? {
+              ...j,
+              progress,
+              eta_seconds: etaSeconds ?? null,
+              speed_ratio: speedRatio ?? null,
+              frame_count: frameCount !== undefined ? frameCount : j.frame_count,
+              fps: fps !== undefined ? fps : j.fps,
+              encoder_name: encoderName !== undefined ? encoderName : j.encoder_name,
+              encoder_type: encoderType !== undefined ? encoderType : j.encoder_type,
+            }
           : j,
       ),
     }))

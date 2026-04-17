@@ -42,6 +42,23 @@ except ImportError:
 
 logger = structlog.get_logger(__name__)
 
+# Hardware encoder names — used to derive encoder_type ("HW" vs "SW") from encoder name.
+_HARDWARE_ENCODERS = frozenset(
+    {
+        "h264_nvenc",
+        "hevc_nvenc",
+        "h264_qsv",
+        "hevc_qsv",
+        "h264_amf",
+        "hevc_amf",
+        "h264_videotoolbox",
+        "hevc_videotoolbox",
+        "av1_nvenc",
+        "av1_qsv",
+        "av1_amf",
+    }
+)
+
 
 class PreflightError(Exception):
     """Raised when pre-flight checks fail before queuing a render job.
@@ -231,11 +248,26 @@ class RenderService:
         # Parse total duration for progress calculation
         total_duration_us = self._extract_duration_us(job.render_plan)
 
+        # Extract encoder metadata for WebSocket enrichment.
+        # encoder_name comes from the job's render plan settings.codec field.
+        # encoder_type is "HW" for hardware encoders, "SW" for software, or None
+        # if the encoder name is unknown/absent.
+        encoder_name: str | None = self._extract_encoder_name(job.render_plan)
+        encoder_type: str | None = None
+        if encoder_name is not None:
+            encoder_type = "HW" if encoder_name in _HARDWARE_ENCODERS else "SW"
+
         # Track milestones already logged to avoid duplicates
         logged_milestones: set[int] = set()
         total_duration_s = total_duration_us / 1_000_000 if total_duration_us > 0 else 0.0
 
-        async def progress_callback(jid: str, progress: float, elapsed_seconds: float) -> None:
+        async def progress_callback(
+            jid: str,
+            progress: float,
+            elapsed_seconds: float,
+            frame: int | None,
+            fps: float | None,
+        ) -> None:
             # Log progress milestones at 25%, 50%, 75%, 100%
             pct = int(progress * 100)
             for milestone in (25, 50, 75, 100):
@@ -259,7 +291,14 @@ class RenderService:
 
             await self._repo.update_progress(jid, progress)
             await self._broadcast_throttled_progress(
-                jid, progress, eta_seconds=eta_seconds, speed_ratio=speed_ratio
+                jid,
+                progress,
+                eta_seconds=eta_seconds,
+                speed_ratio=speed_ratio,
+                frame_count=frame,
+                fps=fps,
+                encoder_name=encoder_name,
+                encoder_type=encoder_type,
             )
             await self._broadcast_throttled_frame(jid, progress)
 
@@ -452,6 +491,10 @@ class RenderService:
         *,
         eta_seconds: float | None = None,
         speed_ratio: float | None = None,
+        frame_count: int | None = None,
+        fps: float | None = None,
+        encoder_name: str | None = None,
+        encoder_type: str | None = None,
     ) -> None:
         """Broadcast render.progress with dual-threshold throttling.
 
@@ -463,6 +506,14 @@ class RenderService:
             progress: Current progress value 0.0-1.0.
             eta_seconds: Estimated time remaining in seconds, or None.
             speed_ratio: Render speed relative to real-time, or None.
+            frame_count: Current frame count from FFmpeg, or None.
+            fps: Current encoding rate in frames/sec from FFmpeg, or None.
+            encoder_name: Encoder name (e.g., "libx264", "h264_nvenc"), or None.
+            encoder_type: "HW" for hardware, "SW" for software, or None.
+
+        Note:
+            frame_count resets at segment boundaries in multi-segment renders.
+            Consumers should treat frame_count as per-segment, not cumulative.
         """
         is_final = progress >= 1.0
         last_progress = self._last_broadcast_progress.get(job_id, 0.0)
@@ -488,6 +539,10 @@ class RenderService:
                     "progress": progress,
                     "eta_seconds": eta_seconds,
                     "speed_ratio": speed_ratio,
+                    "frame_count": frame_count,
+                    "fps": fps,
+                    "encoder_name": encoder_name,
+                    "encoder_type": encoder_type,
                 },
             )
         )
@@ -635,6 +690,23 @@ class RenderService:
                 "render_service.disk_check_skipped",
                 reason=str(exc),
             )
+
+    @staticmethod
+    def _extract_encoder_name(render_plan_json: str) -> str | None:
+        """Extract the encoder name from render plan JSON settings.
+
+        Args:
+            render_plan_json: Serialized RenderPlan JSON.
+
+        Returns:
+            Encoder name string (e.g., "libx264", "h264_nvenc"), or None if absent.
+        """
+        try:
+            plan_data = json.loads(render_plan_json)
+            codec = plan_data.get("settings", {}).get("codec")
+            return str(codec) if codec is not None else None
+        except (json.JSONDecodeError, AttributeError):
+            return None
 
     @staticmethod
     def _extract_duration_us(render_plan_json: str) -> int:

@@ -4,6 +4,9 @@ Validates that render commands produce valid output files in all 4 supported
 formats (mp4, webm, mov, mkv) using real FFmpeg execution with lavfi virtual
 inputs (LRN-100), and that the encoder detection parser correctly identifies
 software encoders from real FFmpeg output.
+
+Also verifies the RENDER_PROGRESS WebSocket event schema includes the enriched
+fields: frame_count, fps, encoder_name, encoder_type (BL-254).
 """
 
 from __future__ import annotations
@@ -12,10 +15,17 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from stoat_ferret.api.settings import Settings
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
+from stoat_ferret.render.executor import RenderExecutor
+from stoat_ferret.render.queue import RenderQueue
+from stoat_ferret.render.render_repository import InMemoryRenderRepository
+from stoat_ferret.render.service import RenderService
 from stoat_ferret_core import detect_hardware_encoders
 from tests.conftest import requires_ffmpeg
 
@@ -461,3 +471,141 @@ class TestEncoderDetectionContract:
         assert by_name["libx265"].is_hardware is False, (
             "libx265 should be classified as software (no hardware suffix)"
         )
+
+
+def _build_render_service() -> tuple[RenderService, ConnectionManager]:
+    """Build a minimal RenderService with a mock WebSocket manager.
+
+    Returns:
+        Tuple of (service, ws_manager) where ws_manager.broadcast is an AsyncMock.
+    """
+    repo = InMemoryRenderRepository()
+    ws: ConnectionManager = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock()
+    checkpoint_mgr = MagicMock()
+    checkpoint_mgr.recover = AsyncMock(return_value=[])
+    checkpoint_mgr.cleanup_stale = AsyncMock(return_value=0)
+    queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+    service = RenderService(
+        repository=repo,
+        queue=queue,
+        executor=RenderExecutor(),
+        checkpoint_manager=checkpoint_mgr,
+        connection_manager=ws,
+        settings=Settings(render_retry_count=0),
+    )
+    return service, ws
+
+
+@pytest.mark.contract
+class TestRenderProgressEnrichedSchema:
+    """RENDER_PROGRESS WebSocket event carries enriched fields (BL-254).
+
+    Validates that the WebSocket broadcast payload includes frame_count, fps,
+    encoder_name, and encoder_type fields as required by FR-001 through FR-005.
+    """
+
+    async def test_progress_event_includes_enriched_fields(self) -> None:
+        """_broadcast_throttled_progress emits frame_count, fps, encoder_name, encoder_type.
+
+        FR-001: frame_count present; FR-002: fps present;
+        FR-003: encoder_name present; FR-004: encoder_type present.
+        """
+        service, ws = _build_render_service()
+
+        await service._broadcast_throttled_progress(
+            "job-1",
+            0.5,
+            eta_seconds=30.0,
+            speed_ratio=1.2,
+            frame_count=600,
+            fps=29.97,
+            encoder_name="libx264",
+            encoder_type="SW",
+        )
+
+        ws.broadcast.assert_called_once()
+        event = ws.broadcast.call_args[0][0]
+        payload = event["payload"]
+
+        assert payload["job_id"] == "job-1"
+        assert payload["progress"] == 0.5
+        assert payload["frame_count"] == 600
+        assert abs(payload["fps"] - 29.97) < 1e-6
+        assert payload["encoder_name"] == "libx264"
+        assert payload["encoder_type"] == "SW"
+
+    async def test_progress_event_null_fields_do_not_raise(self) -> None:
+        """Null enriched fields are serialised without error.
+
+        FR-005: nullable fields must not cause parsing errors in consumers.
+        """
+        service, ws = _build_render_service()
+
+        await service._broadcast_throttled_progress(
+            "job-2",
+            0.3,
+            frame_count=None,
+            fps=None,
+            encoder_name=None,
+            encoder_type=None,
+        )
+
+        ws.broadcast.assert_called_once()
+        event = ws.broadcast.call_args[0][0]
+        payload = event["payload"]
+
+        assert payload["frame_count"] is None
+        assert payload["fps"] is None
+        assert payload["encoder_name"] is None
+        assert payload["encoder_type"] is None
+
+        # Confirm the entire payload is JSON-serialisable
+        serialised = json.dumps(event)
+        assert "frame_count" in serialised
+        assert "encoder_name" in serialised
+
+    async def test_hardware_encoder_type_emitted(self) -> None:
+        """encoder_type is 'HW' when a hardware encoder name is provided.
+
+        FR-004: encoder_type carries 'HW', 'SW', or null.
+        """
+        service, ws = _build_render_service()
+
+        await service._broadcast_throttled_progress(
+            "job-3",
+            0.6,
+            encoder_name="h264_nvenc",
+            encoder_type="HW",
+        )
+
+        event = ws.broadcast.call_args[0][0]
+        assert event["payload"]["encoder_type"] == "HW"
+
+    async def test_final_progress_always_broadcast(self) -> None:
+        """Final progress (1.0) is always broadcast regardless of throttle state.
+
+        NFR-001: callback overhead — final event bypasses throttle gate.
+        """
+        service, ws = _build_render_service()
+
+        # First call sets throttle state
+        await service._broadcast_throttled_progress("job-4", 0.5)
+        first_call_count = ws.broadcast.call_count
+
+        # Final progress must be broadcast even within throttle window
+        await service._broadcast_throttled_progress(
+            "job-4",
+            1.0,
+            frame_count=1200,
+            fps=24.0,
+            encoder_name="libx264",
+            encoder_type="SW",
+        )
+
+        assert ws.broadcast.call_count == first_call_count + 1, (
+            "Final progress (1.0) must be broadcast even within throttle window"
+        )
+        final_event = ws.broadcast.call_args[0][0]
+        assert final_event["payload"]["progress"] == 1.0
+        assert final_event["payload"]["frame_count"] == 1200

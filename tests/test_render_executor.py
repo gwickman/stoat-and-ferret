@@ -72,7 +72,7 @@ class TestProgressParsing:
     """FR-002: Progress parsed from FFmpeg output and broadcast via callback."""
 
     async def test_progress_callback_invoked(self) -> None:
-        """Progress callback receives (job_id, progress, elapsed_seconds)."""
+        """Progress callback receives (job_id, progress, elapsed_seconds, frame, fps)."""
         callback = AsyncMock()
         executor = RenderExecutor(
             timeout_seconds=5,
@@ -83,6 +83,8 @@ class TestProgressParsing:
         # Progress parsing depends on Rust bindings; mock them
         mock_update = MagicMock()
         mock_update.out_time_us = 500_000
+        mock_update.frame = 120
+        mock_update.fps = 24.0
 
         # Use printf to emit progress-like output line by line
         if sys.platform == "win32":
@@ -107,13 +109,16 @@ class TestProgressParsing:
             await executor.execute(job, command, total_duration_us=1_000_000)
 
         callback.assert_awaited()
-        # Verify the callback received (job_id, progress, elapsed_seconds)
+        # Verify the callback received (job_id, progress, elapsed_seconds, frame, fps)
         call_args = callback.call_args_list[0]
         assert call_args[0][0] == job.id
         assert call_args[0][1] == 0.5
         # elapsed_seconds should be a non-negative float
         assert isinstance(call_args[0][2], float)
         assert call_args[0][2] >= 0.0
+        # frame and fps are passed from FfmpegProgressUpdate
+        assert call_args[0][3] == 120
+        assert call_args[0][4] == 24.0
 
     async def test_no_callback_when_total_duration_zero(self) -> None:
         """Progress parsing is skipped when total_duration_us is 0."""

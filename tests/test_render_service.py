@@ -701,7 +701,7 @@ class TestETAAndSpeedRatio:
             ) -> bool:
                 cb = executor._progress_callback
                 if cb is not None:
-                    await cb(job_obj.id, 0.5, 10.0)  # 50% at 10s elapsed
+                    await cb(job_obj.id, 0.5, 10.0, None, None)  # 50% at 10s elapsed
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
@@ -744,7 +744,7 @@ class TestETAAndSpeedRatio:
                 cb = executor._progress_callback
                 if cb is not None:
                     # 50% progress, 10s elapsed → speed = (60*0.5)/10 = 3.0
-                    await cb(job_obj.id, 0.5, 10.0)
+                    await cb(job_obj.id, 0.5, 10.0, None, None)
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
@@ -781,7 +781,7 @@ class TestETAAndSpeedRatio:
             ) -> bool:
                 cb = executor._progress_callback
                 if cb is not None:
-                    await cb(job_obj.id, 0.0, 1.0)
+                    await cb(job_obj.id, 0.0, 1.0, None, None)
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
@@ -823,7 +823,7 @@ class TestETAAndSpeedRatio:
             ) -> bool:
                 cb = executor._progress_callback
                 if cb is not None:
-                    await cb(job_obj.id, 1.0, 60.0)
+                    await cb(job_obj.id, 1.0, 60.0, None, None)
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
@@ -865,7 +865,7 @@ class TestETAAndSpeedRatio:
             ) -> bool:
                 cb = executor._progress_callback
                 if cb is not None:
-                    await cb(job_obj.id, 0.5, 0.0)  # 0 elapsed
+                    await cb(job_obj.id, 0.5, 0.0, None, None)  # 0 elapsed
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
@@ -901,7 +901,7 @@ class TestETAAndSpeedRatio:
             ) -> bool:
                 cb = executor._progress_callback
                 if cb is not None:
-                    await cb(job_obj.id, 0.5, 10.0)
+                    await cb(job_obj.id, 0.5, 10.0, None, None)
                 return True
 
             executor.execute = fake_execute  # type: ignore[assignment]
