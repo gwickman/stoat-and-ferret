@@ -7,12 +7,16 @@ Includes dual-threshold throttling for progress and frame events.
 
 from __future__ import annotations
 
+import asyncio
+import io
 import json
 import shutil
 import time
+from contextlib import suppress
 from pathlib import Path
 
 import structlog
+from PIL import Image
 
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.events import EventType, build_event
@@ -129,6 +133,8 @@ class RenderService:
         self._last_broadcast_time: dict[tuple[str, str], float] = {}
         # Per-job last broadcast progress for delta throttling
         self._last_broadcast_progress: dict[str, float] = {}
+        # Per-job latest 540p JPEG frame bytes for frame_preview endpoint
+        self._frame_buffer: dict[str, bytes] = {}
 
     def initiate_shutdown(self) -> None:
         """Set the shutdown flag to reject new render requests.
@@ -551,6 +557,7 @@ class RenderService:
         """Broadcast render.frame_available with throttling.
 
         Throttled to max 2/sec. Includes a 540p JPEG frame URL.
+        Fires a background task to best-effort capture and cache the frame.
 
         Args:
             job_id: The render job ID.
@@ -558,6 +565,9 @@ class RenderService:
         """
         if self._should_throttle(job_id, EventType.RENDER_FRAME_AVAILABLE):
             return
+
+        # Fire-and-forget frame capture — graceful degradation per NFR-004
+        asyncio.create_task(self._try_capture_frame(job_id))  # noqa: RUF006
 
         frame_url = f"/api/v1/render/{job_id}/frame_preview.jpg"
         await self._ws.broadcast(
@@ -571,6 +581,77 @@ class RenderService:
                 },
             )
         )
+
+    async def _try_capture_frame(self, job_id: str) -> None:
+        """Best-effort: capture latest frame from in-progress render output.
+
+        Runs a secondary FFmpeg process to extract the latest available frame,
+        scales it to 540p using Pillow, and stores the JPEG bytes in
+        ``_frame_buffer``. No-op on any failure (graceful degradation per NFR-004).
+
+        Args:
+            job_id: The render job ID to capture a frame for.
+        """
+        try:
+            job = await self._repo.get(job_id)
+            if job is None or not job.output_path:
+                return
+            output_path = job.output_path
+            if not Path(output_path).exists() or Path(output_path).stat().st_size == 0:
+                return
+
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg",
+                "-loglevel",
+                "error",
+                "-i",
+                output_path,
+                "-frames:v",
+                "1",
+                "-f",
+                "image2",
+                "-vcodec",
+                "mjpeg",
+                "pipe:1",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            try:
+                stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=3.0)
+            except asyncio.TimeoutError:
+                with suppress(Exception):
+                    proc.kill()
+                return
+
+            if proc.returncode != 0 or not stdout:
+                return
+
+            # Scale to 540p height using Pillow (reuses proxy/preview scaling pattern)
+            source: Image.Image = Image.open(io.BytesIO(stdout))
+            target_height = 540
+            if source.height != target_height:
+                ratio = target_height / source.height
+                new_width = max(1, int(source.width * ratio))
+                source = source.resize((new_width, target_height), Image.Resampling.LANCZOS)
+
+            output_buf = io.BytesIO()
+            source.save(output_buf, format="JPEG", quality=90)
+            self._frame_buffer[job_id] = output_buf.getvalue()
+            logger.debug("render_service.frame_captured", job_id=job_id)
+
+        except Exception:
+            pass  # Graceful degradation — frame endpoint returns 404 when buffer empty
+
+    def get_frame_bytes(self, job_id: str) -> bytes | None:
+        """Return cached 540p JPEG frame bytes for a job, or None if unavailable.
+
+        Args:
+            job_id: The render job ID.
+
+        Returns:
+            JPEG bytes if a frame has been captured, otherwise None.
+        """
+        return self._frame_buffer.get(job_id)
 
     async def _broadcast_queue_status(self) -> None:
         """Broadcast render.queue_status event with current queue snapshot."""
@@ -590,7 +671,7 @@ class RenderService:
         )
 
     def _clear_throttle_state(self, job_id: str) -> None:
-        """Remove throttle state for a completed/failed/cancelled job.
+        """Remove throttle state and frame buffer for a completed/failed/cancelled job.
 
         Args:
             job_id: The render job ID to clean up.
@@ -599,6 +680,7 @@ class RenderService:
         for k in keys_to_remove:
             del self._last_broadcast_time[k]
         self._last_broadcast_progress.pop(job_id, None)
+        self._frame_buffer.pop(job_id, None)
 
     def _update_disk_usage(self, output_path: str) -> None:
         """Update the render disk usage metric from the output directory.

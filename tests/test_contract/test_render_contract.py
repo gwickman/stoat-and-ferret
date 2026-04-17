@@ -7,18 +7,27 @@ software encoders from real FFmpeg output.
 
 Also verifies the RENDER_PROGRESS WebSocket event schema includes the enriched
 fields: frame_count, fps, encoder_name, encoder_type (BL-254).
+
+Also verifies the frame streaming endpoint and render.frame_available
+throttling behaviour for Theater Mode (BL-255).
 """
 
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from PIL import Image
 
+from stoat_ferret.api.app import create_app
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.ffmpeg.executor import RealFFmpegExecutor
@@ -609,3 +618,166 @@ class TestRenderProgressEnrichedSchema:
         final_event = ws.broadcast.call_args[0][0]
         assert final_event["payload"]["progress"] == 1.0
         assert final_event["payload"]["frame_count"] == 1200
+
+
+def _make_minimal_jpeg(width: int = 960, height: int = 540) -> bytes:
+    """Build a minimal in-memory JPEG at the given dimensions.
+
+    Args:
+        width: Image width in pixels.
+        height: Image height in pixels.
+
+    Returns:
+        Raw JPEG bytes.
+    """
+    img = Image.new("RGB", (width, height), color=(128, 64, 32))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=90)
+    return buf.getvalue()
+
+
+def _make_test_app_with_service(service: RenderService) -> FastAPI:
+    """Build a FastAPI test app with a real render service wired in.
+
+    Args:
+        service: The RenderService instance to inject.
+
+    Returns:
+        A FastAPI app with render_service set on app.state.
+    """
+    repo = InMemoryRenderRepository()
+    app = create_app(
+        render_repository=repo,
+        render_service=service,
+    )
+    return app
+
+
+@pytest.mark.contract
+class TestFrameStreamingContract:
+    """Frame streaming endpoint and event throttling for Theater Mode (BL-255).
+
+    Verifies that:
+    - GET /render/{job_id}/frame_preview.jpg returns 200 + valid JPEG when
+      a frame is cached in the service frame buffer.
+    - GET /render/{job_id}/frame_preview.jpg returns 404 when no frame is cached.
+    - render.frame_available events are throttled to ≤2/sec.
+    - Each render.frame_available event carries the expected payload schema.
+    """
+
+    def test_render_frame_preview_endpoint_returns_jpeg(self) -> None:
+        """Frame endpoint returns HTTP 200 with valid 540p JPEG when buffer populated.
+
+        FR-002: GET /api/v1/render/{job_id}/frame_preview.jpg returns 540p JPEG.
+        NFR-002: Response carries image/jpeg content-type.
+        """
+        service, _ = _build_render_service()
+        job_id = "frame-test-job-1"
+        jpeg_bytes = _make_minimal_jpeg(960, 540)
+        service._frame_buffer[job_id] = jpeg_bytes
+
+        app = _make_test_app_with_service(service)
+        with TestClient(app) as client:
+            resp = client.get(f"/api/v1/render/{job_id}/frame_preview.jpg")
+
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+        assert resp.headers["content-type"] == "image/jpeg", (
+            f"Expected image/jpeg, got {resp.headers['content-type']}"
+        )
+
+        # Validate the returned bytes are a valid JPEG at the expected dimensions
+        returned_img = Image.open(io.BytesIO(resp.content))
+        assert returned_img.format == "JPEG", f"Expected JPEG format, got {returned_img.format}"
+        assert returned_img.height == 540, f"Expected height=540, got {returned_img.height}"
+
+    def test_render_frame_preview_endpoint_returns_404_when_no_frame(self) -> None:
+        """Frame endpoint returns 404 when no frame is cached for the job.
+
+        NFR-004: Graceful fallback — endpoint returns 404 when frame capture
+        unavailable (e.g., encoder does not support mid-render extraction).
+        """
+        service, _ = _build_render_service()
+        job_id = "no-frame-job"
+
+        app = _make_test_app_with_service(service)
+        with TestClient(app) as client:
+            resp = client.get(f"/api/v1/render/{job_id}/frame_preview.jpg")
+
+        assert resp.status_code == 404, f"Expected 404 for missing frame, got {resp.status_code}"
+        assert resp.json()["detail"]["code"] == "FRAME_UNAVAILABLE"
+
+    async def test_frame_events_emitted_and_throttled(self) -> None:
+        """render.frame_available events are emitted and throttled to ≤2/sec.
+
+        FR-001: Events emitted at throttled rate (≤2/sec = THROTTLE_INTERVAL=0.5s).
+        NFR-001: At most 2 frame events per second.
+        """
+        service, ws = _build_render_service()
+
+        # Fire multiple _broadcast_throttled_frame calls in rapid succession
+        # All within the 0.5s throttle window — only the first should broadcast.
+        await service._broadcast_throttled_frame("job-throttle-1", 0.1)
+        await service._broadcast_throttled_frame("job-throttle-1", 0.2)
+        await service._broadcast_throttled_frame("job-throttle-1", 0.3)
+
+        # Exactly 1 frame event broadcast (throttle suppressed 2nd and 3rd)
+        frame_calls = [
+            c for c in ws.broadcast.call_args_list if c[0][0]["type"] == "render_frame_available"
+        ]
+        assert len(frame_calls) == 1, f"Expected 1 frame event (throttled), got {len(frame_calls)}"
+
+    async def test_frame_event_payload_schema(self) -> None:
+        """render.frame_available event carries required payload fields.
+
+        FR-001: Events include job_id, frame_url, resolution, progress.
+        """
+        service, ws = _build_render_service()
+
+        await service._broadcast_throttled_frame("job-schema-1", 0.42)
+
+        frame_calls = [
+            c for c in ws.broadcast.call_args_list if c[0][0]["type"] == "render_frame_available"
+        ]
+        assert len(frame_calls) == 1
+        payload = frame_calls[0][0][0]["payload"]
+
+        assert payload["job_id"] == "job-schema-1"
+        assert payload["frame_url"] == "/api/v1/render/job-schema-1/frame_preview.jpg"
+        assert payload["resolution"] == "540p"
+        assert abs(payload["progress"] - 0.42) < 1e-6
+
+    def test_frame_buffer_cleared_on_throttle_state_clear(self) -> None:
+        """Frame buffer is cleared when job throttle state is cleared.
+
+        Ensures no stale frame data persists after job completion.
+        """
+        service, _ = _build_render_service()
+        job_id = "clear-test-job"
+        service._frame_buffer[job_id] = _make_minimal_jpeg()
+        assert service.get_frame_bytes(job_id) is not None
+
+        service._clear_throttle_state(job_id)
+
+        assert service.get_frame_bytes(job_id) is None, (
+            "Frame buffer should be cleared after _clear_throttle_state"
+        )
+
+    def test_frame_endpoint_timing_under_100ms(self) -> None:
+        """Frame endpoint responds in under 100ms when frame is pre-cached.
+
+        NFR-002: Frame endpoint response time <100ms.
+        """
+        service, _ = _build_render_service()
+        job_id = "timing-test-job"
+        service._frame_buffer[job_id] = _make_minimal_jpeg()
+
+        app = _make_test_app_with_service(service)
+        with TestClient(app) as client:
+            start = time.monotonic()
+            resp = client.get(f"/api/v1/render/{job_id}/frame_preview.jpg")
+            elapsed_ms = (time.monotonic() - start) * 1000
+
+        assert resp.status_code == 200
+        assert elapsed_ms < 100, (
+            f"Frame endpoint took {elapsed_ms:.1f}ms — expected <100ms (NFR-002)"
+        )

@@ -2,6 +2,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import TheaterMode from '../TheaterMode'
 import { useTheaterStore } from '../../../stores/theaterStore'
+import { useRenderStore } from '../../../stores/renderStore'
+import type { RenderJob } from '../../../stores/renderStore'
 
 vi.mock('../../../hooks/useWebSocket', () => ({
   useWebSocket: () => ({
@@ -21,10 +23,35 @@ vi.mock('../../../hooks/useProjects', () => ({
   }),
 }))
 
+function makeRunningJob(overrides: Partial<RenderJob> = {}): RenderJob {
+  return {
+    id: 'job-1',
+    project_id: 'proj-1',
+    status: 'running',
+    output_path: '/out/video.mp4',
+    output_format: 'mp4',
+    quality_preset: 'standard',
+    progress: 0.5,
+    eta_seconds: null,
+    speed_ratio: null,
+    frame_count: null,
+    fps: null,
+    encoder_name: null,
+    encoder_type: null,
+    error_message: null,
+    retry_count: 0,
+    created_at: '',
+    updated_at: '',
+    completed_at: null,
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   vi.restoreAllMocks()
   vi.useFakeTimers()
   useTheaterStore.getState().reset()
+  useRenderStore.getState().reset()
 })
 
 afterEach(() => {
@@ -134,5 +161,50 @@ describe('TheaterMode', () => {
 
     const hud = screen.getByTestId('theater-hud-wrapper')
     expect(hud.className).toContain('opacity-100')
+  })
+
+  // -- Frame streaming overlay (FR-003, FR-004) --
+
+  it('shows frame overlay when active running job has frame_url (FR-003)', () => {
+    useTheaterStore.setState({ isFullscreen: true })
+    useRenderStore.setState({
+      jobs: [makeRunningJob({ frame_url: '/api/v1/render/job-1/frame_preview.jpg' })],
+    })
+    renderTheater()
+
+    const overlay = screen.getByTestId('theater-frame-overlay')
+    expect(overlay).toBeDefined()
+    expect((overlay as HTMLImageElement).src).toContain('frame_preview.jpg')
+  })
+
+  it('hides frame overlay when no running job exists (FR-004)', () => {
+    useTheaterStore.setState({ isFullscreen: true })
+    useRenderStore.setState({
+      jobs: [makeRunningJob({ status: 'completed', frame_url: '/api/v1/render/job-1/frame_preview.jpg' })],
+    })
+    renderTheater()
+
+    expect(screen.queryByTestId('theater-frame-overlay')).toBeNull()
+  })
+
+  it('hides frame overlay when running job has no frame_url', () => {
+    useTheaterStore.setState({ isFullscreen: true })
+    useRenderStore.setState({
+      jobs: [makeRunningJob({ frame_url: null })],
+    })
+    renderTheater()
+
+    expect(screen.queryByTestId('theater-frame-overlay')).toBeNull()
+  })
+
+  it('hides frame overlay when not in fullscreen (FR-004)', () => {
+    useRenderStore.setState({
+      jobs: [makeRunningJob({ frame_url: '/api/v1/render/job-1/frame_preview.jpg' })],
+    })
+    // isFullscreen is false by default
+    renderTheater()
+
+    // In non-fullscreen mode, children pass through directly — no theater container
+    expect(screen.queryByTestId('theater-frame-overlay')).toBeNull()
   })
 })

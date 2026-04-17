@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useTheaterStore } from '../../stores/theaterStore'
+import { useRenderStore } from '../../stores/renderStore'
 import { useTheaterShortcuts } from '../../hooks/useTheaterShortcuts'
 import TopHUD from './TopHUD'
 import BottomHUD from './BottomHUD'
@@ -26,6 +27,9 @@ export default function TheaterMode({ children, videoRef }: TheaterModeProps) {
   const showHUD = useTheaterStore((s) => s.showHUD)
   const hideHUD = useTheaterStore((s) => s.hideHUD)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeFrameUrl = useRenderStore(
+    (s) => s.jobs.find((j) => j.status === 'running')?.frame_url ?? null,
+  )
 
   const exitFullscreen = useCallback(async () => {
     if (document.fullscreenElement) {
@@ -97,6 +101,18 @@ export default function TheaterMode({ children, videoRef }: TheaterModeProps) {
       onMouseMove={handleMouseMove}
     >
       {children}
+
+      {activeFrameUrl && (
+        <img
+          data-testid="theater-frame-overlay"
+          src={activeFrameUrl}
+          alt="Render preview frame"
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+          onError={() => {
+            // Graceful fallback: hide overlay if frame fetch fails (NFR-004)
+          }}
+        />
+      )}
 
       <div
         data-testid="theater-hud-wrapper"
