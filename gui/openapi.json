@@ -416,6 +416,18 @@
       "CreateRenderRequest": {
         "description": "Request to start a new render job.",
         "properties": {
+          "encoder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.",
+            "title": "Encoder"
+          },
           "output_format": {
             "default": "mp4",
             "description": "Output container format",

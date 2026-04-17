@@ -13,6 +13,11 @@ class CreateRenderRequest(BaseModel):
     project_id: str = Field(..., description="Project UUID to render")
     output_format: str = Field(default="mp4", description="Output container format")
     quality_preset: str = Field(default="standard", description="Quality preset")
+    encoder: str | None = Field(
+        default=None,
+        description="Video encoder name (e.g. libx264, libvpx-vp9). "
+        "When omitted the format default is used.",
+    )
     render_plan: str = Field(default="{}", description="Serialized render plan JSON")
 
 
