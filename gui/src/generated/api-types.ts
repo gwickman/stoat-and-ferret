@@ -2270,9 +2270,8 @@ export interface components {
             /**
              * Encoder
              * @description Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.
-             * @default null
              */
-            encoder: string | null;
+            encoder?: string | null;
             /**
              * Output Format
              * @description Output container format

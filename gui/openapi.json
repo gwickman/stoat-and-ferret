@@ -425,7 +425,6 @@
                 "type": "null"
               }
             ],
-            "default": null,
             "description": "Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.",
             "title": "Encoder"
           },
