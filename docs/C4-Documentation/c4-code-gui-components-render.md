@@ -163,6 +163,9 @@ classDiagram
         class RenderJobCard {
             -retryError: string | null
             -retryDisabled: boolean
+            -cancelLoading: boolean
+            -retryLoading: boolean
+            -deleteLoading: boolean
             +handleCancel(): Promise~void~
             +handleRetry(): Promise~void~
             +handleDelete(): Promise~void~
