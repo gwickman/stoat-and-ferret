@@ -135,10 +135,8 @@ pub fn parse_ffmpeg_progress(output: &str) -> Vec<FfmpegProgressUpdate> {
             }
             // NFR-002: out_time_ms actually reports microseconds, not milliseconds.
             // Use it as fallback if out_time_us wasn't set yet.
-            "out_time_ms" => {
-                if out_time_us == 0 {
-                    out_time_us = value.parse().unwrap_or(0);
-                }
+            "out_time_ms" if out_time_us == 0 => {
+                out_time_us = value.parse().unwrap_or(0);
             }
             "bitrate" => {
                 bitrate = value.to_string();
