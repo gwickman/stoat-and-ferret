@@ -242,6 +242,14 @@ class Settings(BaseSettings):
         default=False,
         description="Enable synthetic monitoring probes (STOAT_SYNTHETIC_MONITORING).",
     )
+    synthetic_monitoring_interval_seconds: int = Field(
+        default=60,
+        ge=1,
+        description=(
+            "Interval in seconds between synthetic monitoring probe cycles "
+            "(STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS)."
+        ),
+    )
     batch_rendering: bool = Field(
         default=True,
         description="Enable batch rendering support (STOAT_BATCH_RENDERING).",
