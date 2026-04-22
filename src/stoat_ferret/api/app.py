@@ -20,6 +20,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from prometheus_client import make_asgi_app
 
+from stoat_ferret.api.lifespan import run_startup_migrations
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import (
@@ -152,6 +153,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state._startup_timestamp = datetime.utcnow().isoformat()
         yield
         return
+
+    # Apply any pending Alembic migrations with pre-migration backup and
+    # audit logging (BL-266) before opening the long-lived connection.
+    await run_startup_migrations(app=app, settings=settings)
 
     # Startup: open database connection
     app.state.db = await aiosqlite.connect(settings.database_path_resolved)

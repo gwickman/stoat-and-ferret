@@ -223,6 +223,12 @@ class Settings(BaseSettings):
         description="Allowed root directories for scanning. Empty list allows all directories.",
     )
 
+    # Migration safety (BL-266)
+    migration_backup_dir: str = Field(
+        default="data/migration_backups",
+        description="Directory for storing pre-migration SQLite backup files.",
+    )
+
     @property
     def database_path_resolved(self) -> Path:
         """Get database path as a Path object.
