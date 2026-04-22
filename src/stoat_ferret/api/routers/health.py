@@ -8,7 +8,7 @@ import os
 import shutil
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -166,7 +166,7 @@ async def readiness(request: Request) -> JSONResponse:
     startup_ts = getattr(request.app.state, "_startup_timestamp", None)
     uptime: float | None = None
     if startup_ts is not None:
-        uptime = (datetime.utcnow() - datetime.fromisoformat(startup_ts)).total_seconds()
+        uptime = (datetime.now(timezone.utc) - datetime.fromisoformat(startup_ts)).total_seconds()
 
     # Compute WebSocket buffer utilization (active connections / assumed max 100)
     ws_manager = getattr(request.app.state, "ws_manager", None)

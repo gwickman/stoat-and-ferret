@@ -11,7 +11,7 @@ import sqlite3
 import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -154,7 +154,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if getattr(app.state, "_deps_injected", False):
         # In DI/test mode, mark startup complete so health checks work normally
         app.state._startup_ready = True
-        app.state._startup_timestamp = datetime.utcnow().isoformat()
+        app.state._startup_timestamp = datetime.now(timezone.utc).isoformat()
         yield
         return
 
@@ -299,7 +299,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Mark startup complete and emit structured log event
     app.state._startup_ready = True
-    app.state._startup_timestamp = datetime.utcnow().isoformat()
+    app.state._startup_timestamp = datetime.now(timezone.utc).isoformat()
     logger.info(
         "deployment.startup",
         app_version=app.version,

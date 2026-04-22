@@ -4,6 +4,32 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v038] - 2026-04-22
+
+Deployment Safety and Operational Visibility. Establishes database migration safeguards with automatic backup and rollback, feature flag infrastructure for gradual rollout control, version metadata exposure for deployment verification, and Prometheus-backed synthetic monitoring for continuous self-health probing.
+
+### Added
+
+- **Migration Safety** — `MigrationService` wraps Alembic `upgrade head` with a timestamped SQLite backup (VACUUM INTO with `shutil.copy` fallback for SQLite <3.37), `migration_history` audit table, and `deployment.migration`/`deployment.migration_rollback` structured events (BL-266, #302)
+- **Feature Flags** — Four `STOAT_*` boolean environment flags (`testing_mode`, `seed_endpoint`, `synthetic_monitoring`, `batch_rendering`) resolved once at startup, persisted to `feature_flag_log` audit table, and exposed via `GET /api/v1/flags` endpoint (BL-268, #303)
+- **Version Endpoint** — `GET /api/v1/version` returns six deployment-metadata fields: `app_version`, `core_version` (Rust compile-time constant), `build_timestamp` (compile-time), `git_sha` (compile-time), `python_version`, and `database_version` (current alembic revision hash) (BL-267, #304)
+- **Synthetic Monitoring** — `SyntheticMonitoringTask` background task probes `/health/ready`, `/api/v1/version`, and `/api/v1/system/state` on a configurable interval; emits `stoat_synthetic_check_total` Prometheus counter and `stoat_synthetic_check_duration_seconds` histogram per probe; feature-gated via `STOAT_SYNTHETIC_MONITORING` (BL-269)
+- **Pre-commit OpenAPI Hook** — `openapi-schema-sync` pre-commit hook regenerates and validates `gui/openapi.json` freshness on API file changes, preventing schema drift (BL-268)
+- **Prometheus Metrics Endpoint** — `/metrics` exposition endpoint serves all registered Prometheus metrics; synthetic check metrics appear in output regardless of feature flag state
+
+### Changed
+
+- **Health Endpoint Field Rename** — `HealthStatus.database_version` (previously the SQLite runtime version string) is renamed to `sqlite_version`; `database_version` now refers to the alembic revision hash exposed by `/api/v1/version`
+
+### Migration Notes
+
+- Two new Alembic migrations added (revision count 7 → 9): `d7a1b2c3e4f5` creates `migration_history` table; `e5b2c4f1a9d8` creates `feature_flag_log` table
+- Both audit tables use `CREATE TABLE IF NOT EXISTS` and are preserved on downgrade
+- `STOAT_MIGRATION_BACKUP_DIR` setting configures where pre-migration backups are stored (defaults to `data/migration_backups/`)
+- All four feature flags default to `false` except `batch_rendering` (default `true`)
+
+---
+
 ## [v037] - 2026-04-17
 
 WebSocket Enrichment, Container Deployment, and Developer Quality. Enriches render WebSocket events with frame/fps/encoder metadata, implements live frame streaming to Theater Mode, ships a production-ready multi-stage Dockerfile with health checks and Docker Compose dev stack, and improves developer quality with jest-dom Vitest setup and updated test harness documentation.
