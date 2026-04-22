@@ -60,7 +60,8 @@ def _mock_client(handler: httpx.MockTransport | object) -> httpx.AsyncClient:
         transport = handler
     else:
         transport = httpx.MockTransport(handler)  # type: ignore[arg-type]
-    return httpx.AsyncClient(transport=transport, base_url="http://test")
+    # NOSONAR: MockTransport is in-process, no network I/O.
+    return httpx.AsyncClient(transport=transport, base_url="http://test")  # NOSONAR
 
 
 # ---------------------------------------------------------------------------
