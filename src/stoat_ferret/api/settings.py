@@ -229,6 +229,36 @@ class Settings(BaseSettings):
         description="Directory for storing pre-migration SQLite backup files.",
     )
 
+    # Feature flags (BL-268)
+    testing_mode: bool = Field(
+        default=False,
+        description="Enable deployment-time testing mode (STOAT_TESTING_MODE).",
+    )
+    seed_endpoint: bool = Field(
+        default=False,
+        description="Enable the test seed endpoint (STOAT_SEED_ENDPOINT).",
+    )
+    synthetic_monitoring: bool = Field(
+        default=False,
+        description="Enable synthetic monitoring probes (STOAT_SYNTHETIC_MONITORING).",
+    )
+    batch_rendering: bool = Field(
+        default=True,
+        description="Enable batch rendering support (STOAT_BATCH_RENDERING).",
+    )
+
+    # WebSocket replay buffer (BL-313)
+    ws_replay_buffer_size: int = Field(
+        default=1000,
+        ge=0,
+        description="Maximum number of messages retained per WebSocket replay buffer.",
+    )
+    ws_replay_ttl_seconds: int = Field(
+        default=300,
+        ge=0,
+        description="Time-to-live for buffered replay messages in seconds.",
+    )
+
     @property
     def database_path_resolved(self) -> Path:
         """Get database path as a Path object.
