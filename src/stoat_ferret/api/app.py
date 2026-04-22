@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 import aiosqlite
+import httpx
 import structlog
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -50,6 +51,7 @@ from stoat_ferret.api.services.proxy_service import (
     make_proxy_handler,
 )
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
+from stoat_ferret.api.services.synthetic_monitoring import SyntheticMonitoringTask
 from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.api.services.waveform import WaveformService
 from stoat_ferret.api.settings import get_settings
@@ -306,7 +308,39 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         sqlite_version=db_version_str,
     )
 
+    # Synthetic monitoring background task (BL-269). Gated by the
+    # synthetic_monitoring feature flag; uses ASGITransport so the task
+    # probes the same FastAPI instance without binding a network port.
+    synthetic_client: httpx.AsyncClient | None = None
+    synthetic_task_handle: asyncio.Task[None] | None = None
+    if settings.synthetic_monitoring:
+        synthetic_client = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://synthetic-monitor",
+        )
+        synthetic_task = SyntheticMonitoringTask(
+            client=synthetic_client,
+            interval_seconds=settings.synthetic_monitoring_interval_seconds,
+        )
+        synthetic_task_handle = asyncio.create_task(synthetic_task.run())
+        app.state.synthetic_monitoring_task = synthetic_task
+        app.state.synthetic_monitoring_task_handle = synthetic_task_handle
+        app.state.synthetic_monitoring_client = synthetic_client
+        logger.info(
+            "synthetic.task_started",
+            interval_seconds=settings.synthetic_monitoring_interval_seconds,
+        )
+
     yield
+
+    # Shutdown: cancel the synthetic monitoring task (BL-269) first so
+    # subsequent probes cannot race with the rest of teardown.
+    if synthetic_task_handle is not None:
+        synthetic_task_handle.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await synthetic_task_handle
+    if synthetic_client is not None:
+        await synthetic_client.aclose()
 
     # Shutdown: graceful render shutdown sequence (BL-227)
     # Order: set flag → cancel via stdin 'q' → wait grace → SIGKILL → clean temp
