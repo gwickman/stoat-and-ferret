@@ -199,9 +199,7 @@ mod tests {
 
     fn run_translator<F>(build: F) -> Vec<ParameterSchema>
     where
-        F: for<'py> FnOnce(
-            Python<'py>,
-        ) -> (Bound<'py, PyDict>, Bound<'py, PyDict>),
+        F: for<'py> FnOnce(Python<'py>) -> (Bound<'py, PyDict>, Bound<'py, PyDict>),
     {
         pyo3::prepare_freethreaded_python();
         Python::with_gil(|py| {
@@ -388,7 +386,12 @@ mod proptests {
 
     fn build_synthetic_schema<'py>(
         py: Python<'py>,
-        entries: &[(String, &'static str, Option<(f64, f64)>, Option<Vec<String>>)],
+        entries: &[(
+            String,
+            &'static str,
+            Option<(f64, f64)>,
+            Option<Vec<String>>,
+        )],
     ) -> Bound<'py, PyDict> {
         let schema = PyDict::new(py);
         let props = PyDict::new(py);
