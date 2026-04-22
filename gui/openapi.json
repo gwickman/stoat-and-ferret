@@ -58,7 +58,7 @@
           "version"
         ],
         "summary": "Get Version",
-        "description": "Return deployment version metadata for the running build (BL-267).\n\nThe response combines three sources:\n\n- FastAPI app version (``app.version``) for ``app_version``.\n- Rust :class:`stoat_ferret_core.VersionInfo` for ``core_version``,\n  ``build_timestamp``, and ``git_sha``; populated at compile time by\n  ``build.rs``.\n- The current alembic revision (``alembic_version.version_num``) for\n  ``database_version``. Returns ``\"none\"`` when the table is empty or\n  missing so the response always validates.\n\nNo expensive work runs inside the handler \u2014 the alembic lookup is a\nsingle indexed row read, and the Rust binding returns compile-time\nconstants. The sqlite3 call is run on the default thread pool via\n:func:`asyncio.to_thread` so the event loop stays responsive.\n\nArgs:\n    request: The FastAPI request object; used to reach ``app.state``\n        for settings resolution and the app version string.\n\nReturns:\n    A :class:`VersionResponse` with the six deployment metadata fields.",
+        "description": "Return deployment version metadata for the running build (BL-267).\n\nThe response combines three sources:\n\n- FastAPI app version (``app.version``) for ``app_version``.\n- Rust :class:`stoat_ferret_core.VersionInfo` for ``core_version``,\n  ``build_timestamp``, and ``git_sha``; populated at compile time by\n  ``build.rs``.\n- The current alembic revision (``alembic_version.version_num``) for\n  ``database_version``. Returns ``\"none\"`` when the table is empty or\n  missing so the response always validates.\n\nNo expensive work runs inside the handler \u2014 the alembic lookup is a\nsingle indexed row read, and the Rust binding returns compile-time\nconstants. The sqlite3 call is run on the default thread pool via\n:func:`asyncio.to_thread` so the event loop stays responsive.\n\nArgs:\n    request: The FastAPI request object; used to reach ``app.state``\n        for settings resolution and the app version string.\n\nReturns:\n    A :class:`AppVersionResponse` with the six deployment metadata fields.",
         "operationId": "get_version_api_v1_version_get",
         "responses": {
           "200": {
@@ -66,7 +66,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VersionResponse"
+                  "$ref": "#/components/schemas/AppVersionResponse"
                 }
               }
             }
@@ -3080,7 +3080,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/stoat_ferret__api__schemas__version__VersionResponse"
+                  "$ref": "#/components/schemas/VersionResponse"
                 }
               }
             }
@@ -3371,6 +3371,45 @@
         ],
         "title": "AdjustedClipPosition",
         "description": "Clip position after transition offset adjustment."
+      },
+      "AppVersionResponse": {
+        "properties": {
+          "app_version": {
+            "type": "string",
+            "title": "App Version"
+          },
+          "core_version": {
+            "type": "string",
+            "title": "Core Version"
+          },
+          "build_timestamp": {
+            "type": "string",
+            "title": "Build Timestamp"
+          },
+          "git_sha": {
+            "type": "string",
+            "title": "Git Sha"
+          },
+          "python_version": {
+            "type": "string",
+            "title": "Python Version"
+          },
+          "database_version": {
+            "type": "string",
+            "title": "Database Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app_version",
+          "core_version",
+          "build_timestamp",
+          "git_sha",
+          "python_version",
+          "database_version"
+        ],
+        "title": "AppVersionResponse",
+        "description": "Deployment version metadata returned by GET /api/v1/version.\n\nNamed ``AppVersionResponse`` rather than ``VersionResponse`` to avoid\nan OpenAPI schema-name collision with the pre-existing project\nsnapshot model at ``stoat_ferret.api.schemas.version.VersionResponse``.\n\nThe response is assembled from three sources:\n\n- ``app_version`` comes from the FastAPI application version string.\n- ``core_version``, ``build_timestamp``, and ``git_sha`` come from the\n  Rust :class:`stoat_ferret_core.VersionInfo` class populated at compile\n  time by ``build.rs``. ``git_sha`` is the literal string ``\"unknown\"``\n  when the build system did not capture a SHA.\n- ``python_version`` is the running interpreter version (``sys.version_info``).\n- ``database_version`` is the current ``alembic_version.version_num``\n  revision hash (e.g., ``\"1e895699ad50\"``) or the literal ``\"none\"`` when\n  the table is empty or missing."
       },
       "AudioMixRequest": {
         "properties": {
@@ -5794,7 +5833,7 @@
           },
           "versions": {
             "items": {
-              "$ref": "#/components/schemas/stoat_ferret__api__schemas__version__VersionResponse"
+              "$ref": "#/components/schemas/VersionResponse"
             },
             "type": "array",
             "title": "Versions"
@@ -5812,42 +5851,27 @@
       },
       "VersionResponse": {
         "properties": {
-          "app_version": {
-            "type": "string",
-            "title": "App Version"
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
           },
-          "core_version": {
+          "created_at": {
             "type": "string",
-            "title": "Core Version"
+            "title": "Created At"
           },
-          "build_timestamp": {
+          "checksum": {
             "type": "string",
-            "title": "Build Timestamp"
-          },
-          "git_sha": {
-            "type": "string",
-            "title": "Git Sha"
-          },
-          "python_version": {
-            "type": "string",
-            "title": "Python Version"
-          },
-          "database_version": {
-            "type": "string",
-            "title": "Database Version"
+            "title": "Checksum"
           }
         },
         "type": "object",
         "required": [
-          "app_version",
-          "core_version",
-          "build_timestamp",
-          "git_sha",
-          "python_version",
-          "database_version"
+          "version_number",
+          "created_at",
+          "checksum"
         ],
         "title": "VersionResponse",
-        "description": "Deployment version metadata returned by GET /api/v1/version.\n\nThe response is assembled from three sources:\n\n- ``app_version`` comes from the FastAPI application version string.\n- ``core_version``, ``build_timestamp``, and ``git_sha`` come from the\n  Rust :class:`stoat_ferret_core.VersionInfo` class populated at compile\n  time by ``build.rs``. ``git_sha`` is the literal string ``\"unknown\"``\n  when the build system did not capture a SHA.\n- ``python_version`` is the running interpreter version (``sys.version_info``).\n- ``database_version`` is the current ``alembic_version.version_num``\n  revision hash (e.g., ``\"1e895699ad50\"``) or the literal ``\"none\"`` when\n  the table is empty or missing."
+        "description": "Single version entry in a project's history.\n\nAttributes:\n    version_number: Auto-incremented version number.\n    created_at: ISO-8601 timestamp of when the version was created.\n    checksum: SHA-256 hex digest of the timeline data."
       },
       "VideoListResponse": {
         "properties": {
@@ -6185,30 +6209,6 @@
         ],
         "title": "WaveformSamplesResponse",
         "description": "JSON waveform data with amplitude samples array."
-      },
-      "stoat_ferret__api__schemas__version__VersionResponse": {
-        "properties": {
-          "version_number": {
-            "type": "integer",
-            "title": "Version Number"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "checksum": {
-            "type": "string",
-            "title": "Checksum"
-          }
-        },
-        "type": "object",
-        "required": [
-          "version_number",
-          "created_at",
-          "checksum"
-        ],
-        "title": "VersionResponse",
-        "description": "Single version entry in a project's history.\n\nAttributes:\n    version_number: Auto-incremented version number.\n    created_at: ISO-8601 timestamp of when the version was created.\n    checksum: SHA-256 hex digest of the timeline data."
       },
       "ProxyStatus": {
         "enum": [

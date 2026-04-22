@@ -10,7 +10,7 @@ import structlog
 from fastapi import APIRouter, Request
 
 from stoat_ferret.api.settings import Settings, get_settings
-from stoat_ferret.models.version import VersionResponse
+from stoat_ferret.models.version import AppVersionResponse
 from stoat_ferret_core import VersionInfo
 
 logger = structlog.get_logger(__name__)
@@ -61,8 +61,8 @@ def _python_version_string() -> str:
     return f"{info.major}.{info.minor}.{info.micro}"
 
 
-@router.get("/version", response_model=VersionResponse)
-async def get_version(request: Request) -> VersionResponse:
+@router.get("/version", response_model=AppVersionResponse)
+async def get_version(request: Request) -> AppVersionResponse:
     """Return deployment version metadata for the running build (BL-267).
 
     The response combines three sources:
@@ -85,12 +85,12 @@ async def get_version(request: Request) -> VersionResponse:
             for settings resolution and the app version string.
 
     Returns:
-        A :class:`VersionResponse` with the six deployment metadata fields.
+        A :class:`AppVersionResponse` with the six deployment metadata fields.
     """
     settings = _settings_from_request(request)
     info = VersionInfo.current()
     database_version = await asyncio.to_thread(_read_alembic_revision, settings.database_path)
-    response = VersionResponse(
+    response = AppVersionResponse(
         app_version=str(request.app.version),
         core_version=info.core_version,
         build_timestamp=info.build_timestamp,

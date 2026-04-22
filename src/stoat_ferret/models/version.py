@@ -5,8 +5,12 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
-class VersionResponse(BaseModel):
+class AppVersionResponse(BaseModel):
     """Deployment version metadata returned by GET /api/v1/version.
+
+    Named ``AppVersionResponse`` rather than ``VersionResponse`` to avoid
+    an OpenAPI schema-name collision with the pre-existing project
+    snapshot model at ``stoat_ferret.api.schemas.version.VersionResponse``.
 
     The response is assembled from three sources:
 

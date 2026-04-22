@@ -1,4 +1,10 @@
-"""Tests for VersionResponse and GET /api/v1/version (BL-267)."""
+"""Tests for AppVersionResponse and GET /api/v1/version (BL-267).
+
+The endpoint model is named ``AppVersionResponse`` to avoid an OpenAPI
+schema-name collision with the pre-existing
+``stoat_ferret.api.schemas.version.VersionResponse`` (project snapshot
+metadata).
+"""
 
 from __future__ import annotations
 
@@ -12,7 +18,7 @@ import pytest
 
 from stoat_ferret.api.app import create_app, lifespan
 from stoat_ferret.api.settings import get_settings
-from stoat_ferret.models.version import VersionResponse
+from stoat_ferret.models.version import AppVersionResponse
 from stoat_ferret_core import VersionInfo
 
 # ---------------------------------------------------------------------------
@@ -21,7 +27,7 @@ from stoat_ferret_core import VersionInfo
 
 
 def test_version_response_has_required_fields() -> None:
-    """VersionResponse validates when all six required fields are supplied."""
+    """AppVersionResponse validates when all six required fields are supplied."""
     payload = {
         "app_version": "0.1.0",
         "core_version": "0.1.0",
@@ -30,7 +36,7 @@ def test_version_response_has_required_fields() -> None:
         "python_version": "3.12.0",
         "database_version": "1e895699ad50",
     }
-    parsed = VersionResponse.model_validate(payload)
+    parsed = AppVersionResponse.model_validate(payload)
     assert parsed.app_version == "0.1.0"
     assert parsed.core_version == "0.1.0"
     assert parsed.build_timestamp == "2026-04-22T12:00:00Z"
@@ -42,7 +48,7 @@ def test_version_response_has_required_fields() -> None:
 def test_version_response_rejects_missing_fields() -> None:
     """Omitting any of the six required fields is a validation error."""
     with pytest.raises(ValueError):
-        VersionResponse.model_validate(
+        AppVersionResponse.model_validate(
             {
                 "app_version": "0.1.0",
                 "core_version": "0.1.0",
@@ -103,19 +109,19 @@ async def test_version_endpoint_calls_rust_binding(
 
 
 # ---------------------------------------------------------------------------
-# FR-001/FR-006: Contract — response body round-trips through VersionResponse
+# FR-001/FR-006: Contract — response body round-trips through AppVersionResponse
 # ---------------------------------------------------------------------------
 
 
 async def test_version_endpoint_schema(
     version_client: httpx.AsyncClient,
 ) -> None:
-    """GET /api/v1/version returns a body that deserialises to VersionResponse."""
+    """GET /api/v1/version returns a body that deserialises to AppVersionResponse."""
     resp = await version_client.get("/api/v1/version")
     assert resp.status_code == 200
 
     body = resp.json()
-    parsed = VersionResponse.model_validate(body)
+    parsed = AppVersionResponse.model_validate(body)
     assert parsed.app_version
     assert parsed.core_version
     assert parsed.build_timestamp
