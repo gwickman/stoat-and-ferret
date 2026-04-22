@@ -14,6 +14,7 @@
 //! - [`batch`] - Batch render progress aggregation
 //! - [`preview`] - Preview filter graph simplification
 //! - [`render`] - Render plan builder and settings validation
+//! - [`schema`] - Parameter schema translator for AI-facing effect discovery
 //! - [`version`] - Deployment version metadata (build timestamp, git SHA)
 
 use pyo3::prelude::*;
@@ -27,6 +28,7 @@ pub mod layout;
 pub mod preview;
 pub mod render;
 pub mod sanitize;
+pub mod schema;
 pub mod timeline;
 pub mod version;
 
@@ -133,6 +135,10 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register render plan types and functions
     render::register(m)?;
+
+    // Register parameter schema type and translator
+    m.add_class::<schema::ParameterSchema>()?;
+    m.add_function(wrap_pyfunction!(schema::py_parameter_schemas_from_dict, m)?)?;
 
     // Register version metadata type
     m.add_class::<version::VersionInfo>()?;

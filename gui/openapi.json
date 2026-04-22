@@ -848,7 +848,7 @@
           "effects"
         ],
         "summary": "List Effects",
-        "description": "List all available effects with metadata, schemas, and previews.\n\nReturns:\n    List of all registered effects with their parameter schemas,\n    AI hints, and filter preview strings.",
+        "description": "List all available effects with metadata, schemas, and previews.\n\nReturns:\n    List of all registered effects with their parameter schemas,\n    AI hints, filter preview strings, structured parameter list,\n    AI summary, and example prompt.",
         "operationId": "list_effects_api_v1_effects_get",
         "responses": {
           "200": {
@@ -4054,6 +4054,21 @@
           "filter_preview": {
             "type": "string",
             "title": "Filter Preview"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterSchemaResponse"
+            },
+            "type": "array",
+            "title": "Parameters"
+          },
+          "ai_summary": {
+            "type": "string",
+            "title": "Ai Summary"
+          },
+          "example_prompt": {
+            "type": "string",
+            "title": "Example Prompt"
           }
         },
         "type": "object",
@@ -4063,10 +4078,13 @@
           "description",
           "parameter_schema",
           "ai_hints",
-          "filter_preview"
+          "filter_preview",
+          "parameters",
+          "ai_summary",
+          "example_prompt"
         ],
         "title": "EffectResponse",
-        "description": "Response schema for a single effect.\n\nContains the effect metadata, parameter schema, AI hints,\nand a filter preview string."
+        "description": "Response schema for a single effect.\n\nContains the effect metadata, parameter schema, AI hints,\nand a filter preview string. The ``parameters`` list is a structured\ndecomposition of ``parameter_schema`` intended for AI agent discovery;\n``ai_summary`` and ``example_prompt`` give agents a one-line description\nand a natural-language invocation example."
       },
       "EffectThumbnailRequest": {
         "properties": {
@@ -4556,6 +4574,91 @@
         ],
         "title": "LayoutResponsePosition",
         "description": "A positioned element in the layout response."
+      },
+      "ParameterSchemaResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "param_type": {
+            "type": "string",
+            "title": "Param Type"
+          },
+          "default_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "enum_values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enum Values"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "ai_hint": {
+            "type": "string",
+            "title": "Ai Hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "param_type",
+          "description",
+          "ai_hint"
+        ],
+        "title": "ParameterSchemaResponse",
+        "description": "Structured parameter metadata for a single effect parameter.\n\nEmitted as an element of ``EffectResponse.parameters``. Mirrors the\nRust ``ParameterSchema`` PyO3 type so AI agents can discover valid\nparameter types, bounds, enum domains, and natural-language hints."
       },
       "PositionModel": {
         "properties": {
