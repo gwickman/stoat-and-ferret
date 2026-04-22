@@ -156,8 +156,10 @@ async def readiness(request: Request) -> JSONResponse:
         overall = "ok"
         status_code = status.HTTP_200_OK
 
-    # Extract version info from check results
-    database_version: str | None = db_check.get("version")
+    # Extract version info from check results.
+    # sqlite_version is the SQLite runtime version (e.g., "3.50.4") — distinct
+    # from the alembic revision hash returned by /api/v1/version.database_version.
+    sqlite_version: str | None = db_check.get("version")
     core_version: str | None = rust_check.get("version")
 
     # Compute uptime since startup completed
@@ -176,7 +178,7 @@ async def readiness(request: Request) -> JSONResponse:
         ready=is_ready,
         status=overall,
         app_version=str(request.app.version),
-        database_version=database_version,
+        sqlite_version=sqlite_version,
         core_version=core_version,
         ws_buffer_utilization=ws_util,
         uptime_seconds=uptime,

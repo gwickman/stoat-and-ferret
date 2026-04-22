@@ -303,7 +303,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app_version=app.version,
         core_version=core_version_str,
         git_sha=_get_git_sha(),
-        database_version=db_version_str,
+        sqlite_version=db_version_str,
     )
 
     yield

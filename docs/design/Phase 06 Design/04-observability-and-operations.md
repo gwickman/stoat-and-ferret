@@ -6,7 +6,7 @@
 
 | Event | Level | Fields | When |
 |-------|-------|--------|------|
-| `deployment.startup` | INFO | `app_version`, `core_version`, `git_sha`, `database_version` | Application startup |
+| `deployment.startup` | INFO | `app_version`, `core_version`, `git_sha`, `sqlite_version` | Application startup |
 | `deployment.migration` | INFO | `from_version`, `to_version`, `backup_path`, `duration_ms` | Migration applied |
 | `deployment.migration_rollback` | WARN | `version`, `rollback_sql_len`, `reason` | Migration rolled back |
 | `deployment.health_check` | DEBUG | `live`, `ready`, `database`, `rust_core` | Health endpoint called |
