@@ -1,15 +1,22 @@
-"""Application lifespan helpers for deployment-safety services (BL-266).
+"""Application lifespan helpers for deployment-safety services (BL-266, BL-268).
 
-This module holds the migration-safety portion of the FastAPI lifespan so
-:mod:`stoat_ferret.api.app` can delegate to it during startup. The main
-``lifespan`` context in ``app.py`` calls :func:`run_startup_migrations`
-before opening the long-lived aiosqlite connection so that any pending
-schema migration is applied — and backed up — before application code
-begins to use the database.
+This module holds the migration-safety and feature-flag audit portions of
+the FastAPI lifespan so :mod:`stoat_ferret.api.app` can delegate to them
+during startup. The main ``lifespan`` context in ``app.py`` calls
+:func:`run_startup_migrations` before opening the long-lived aiosqlite
+connection so that any pending schema migration is applied — and backed
+up — before application code begins to use the database.
+
+:func:`record_feature_flags` writes one ``feature_flag_log`` row per
+STOAT_* feature flag and emits a ``deployment.feature_flag`` structured
+event so the flag state that was active at startup is captured in an
+append-only audit log.
 """
 
 from __future__ import annotations
 
+import sqlite3
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import structlog
@@ -21,6 +28,13 @@ if TYPE_CHECKING:
 
     from stoat_ferret.api.settings import Settings
     from stoat_ferret.models.migrations import MigrationResult
+
+FEATURE_FLAG_NAMES: tuple[str, ...] = (
+    "testing_mode",
+    "seed_endpoint",
+    "synthetic_monitoring",
+    "batch_rendering",
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -74,4 +88,60 @@ async def run_startup_migrations(
     return result
 
 
-__all__ = ["run_startup_migrations"]
+def _ensure_feature_flag_log_table(conn: sqlite3.Connection) -> None:
+    """Idempotently create the ``feature_flag_log`` table if missing.
+
+    Mirrors the ``migration_history`` self-heal pattern: alembic
+    revision ``e5b2c4f1a9d8`` also creates the table, but the
+    service-level helper guards against the case where the alembic
+    chain has not been applied (e.g., tests that use ``IF NOT EXISTS``
+    schema creation without running migrations).
+    """
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS feature_flag_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            flag_name TEXT NOT NULL,
+            flag_value INTEGER NOT NULL,
+            logged_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def record_feature_flags(*, settings: Settings, db_path: str) -> None:
+    """Record current feature flag values to ``feature_flag_log``.
+
+    Inserts one row per :data:`FEATURE_FLAG_NAMES` entry and emits a
+    ``deployment.feature_flag`` structured log event for each flag.
+    The write and the log happen via a short-lived synchronous
+    connection so this helper can be called from both async lifespan
+    paths and from synchronous test setup.
+
+    Args:
+        settings: Application settings carrying the resolved flag values.
+        db_path: Filesystem path to the SQLite database that should
+            receive the audit rows.
+    """
+    logged_at = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(db_path) as conn:
+        _ensure_feature_flag_log_table(conn)
+        for name in FEATURE_FLAG_NAMES:
+            value = bool(getattr(settings, name))
+            conn.execute(
+                "INSERT INTO feature_flag_log (flag_name, flag_value, logged_at) VALUES (?, ?, ?)",
+                (name, int(value), logged_at),
+            )
+            logger.info(
+                "deployment.feature_flag",
+                flag_name=name,
+                flag_value=value,
+            )
+        conn.commit()
+
+
+__all__ = [
+    "FEATURE_FLAG_NAMES",
+    "record_feature_flags",
+    "run_startup_migrations",
+]

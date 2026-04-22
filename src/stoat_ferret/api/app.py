@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from prometheus_client import make_asgi_app
 
-from stoat_ferret.api.lifespan import run_startup_migrations
+from stoat_ferret.api.lifespan import record_feature_flags, run_startup_migrations
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import (
@@ -29,6 +29,7 @@ from stoat_ferret.api.routers import (
     compose,
     effects,
     filesystem,
+    flags,
     health,
     jobs,
     preview,
@@ -132,6 +133,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Configure structured logging before anything else
     settings = get_settings()
+    app.state._settings = settings
     configure_logging(
         level=getattr(logging, settings.log_level),
         max_bytes=settings.log_max_bytes,
@@ -164,6 +166,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Ensure schema exists (idempotent, uses IF NOT EXISTS)
     await create_tables_async(app.state.db)
+
+    # Record feature flag state to feature_flag_log (BL-268) after schema
+    # creation so the table definitely exists for the insert.
+    record_feature_flags(settings=settings, db_path=str(settings.database_path_resolved))
 
     # Open a separate sync connection for audit logging
     sync_conn = sqlite3.connect(str(settings.database_path_resolved))
@@ -479,6 +485,7 @@ def create_app(
 
     app.include_router(health.router)
     app.include_router(version.router)
+    app.include_router(flags.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
     app.include_router(jobs.router)

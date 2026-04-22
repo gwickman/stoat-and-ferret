@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: openapi-schema-sync
+        name: OpenAPI Schema Sync
+        entry: bash -c 'uv run python -m scripts.export_openapi && uv run python scripts/check_openapi_freshness.py'
+        language: system
+        files: 'src/stoat_ferret/api'
+        stages: [commit]
+        pass_filenames: false
