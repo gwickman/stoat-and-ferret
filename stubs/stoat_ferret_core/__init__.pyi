@@ -121,6 +121,10 @@ from stoat_ferret_core._core import (
 from stoat_ferret_core._core import (
     select_encoder as select_encoder,
 )
+from stoat_ferret_core._core import (
+    # Version metadata
+    VersionInfo as VersionInfo,
+)
 
 __all__ = [
     # Utility
@@ -168,4 +172,6 @@ __all__ = [
     "detect_hardware_encoders",
     "select_encoder",
     "build_encoding_args",
+    # Version metadata
+    "VersionInfo",
 ]

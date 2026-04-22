@@ -89,6 +89,7 @@ try:
         TransitionSpec,
         TransitionType,
         ValidationError,
+        VersionInfo,
         VolumeBuilder,
         XfadeBuilder,
         aggregate_segment_progress,
@@ -212,6 +213,7 @@ except ImportError:
     CommandError = RuntimeError  # type: ignore[misc,assignment]
     SanitizationError = RuntimeError  # type: ignore[misc,assignment]
     LayoutError = RuntimeError  # type: ignore[misc,assignment]
+    VersionInfo = _not_built  # type: ignore[misc,assignment]
 
 
 __all__ = [
@@ -309,4 +311,6 @@ __all__ = [
     "CommandError",
     "SanitizationError",
     "LayoutError",
+    # Version metadata
+    "VersionInfo",
 ]

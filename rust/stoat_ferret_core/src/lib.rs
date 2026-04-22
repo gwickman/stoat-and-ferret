@@ -14,6 +14,7 @@
 //! - [`batch`] - Batch render progress aggregation
 //! - [`preview`] - Preview filter graph simplification
 //! - [`render`] - Render plan builder and settings validation
+//! - [`version`] - Deployment version metadata (build timestamp, git SHA)
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -27,6 +28,7 @@ pub mod preview;
 pub mod render;
 pub mod sanitize;
 pub mod timeline;
+pub mod version;
 
 // Define custom Python exceptions for domain errors
 pyo3::create_exception!(
@@ -131,6 +133,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register render plan types and functions
     render::register(m)?;
+
+    // Register version metadata type
+    m.add_class::<version::VersionInfo>()?;
 
     // Register sanitization functions
     m.add_function(wrap_pyfunction!(sanitize::py_escape_filter_text, m)?)?;

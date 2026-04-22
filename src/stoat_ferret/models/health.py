@@ -13,6 +13,12 @@ class HealthStatus(BaseModel):
     Represents the complete health status of the application, including
     startup gate state, subsystem check results, version information,
     and operational metrics.
+
+    ``sqlite_version`` holds the SQLite runtime version string (e.g.,
+    ``"3.50.4"``) reported by ``SELECT sqlite_version()``. It was renamed
+    from ``database_version`` in BL-267 to avoid a semantic collision with
+    the new ``/api/v1/version`` endpoint, where ``database_version`` refers
+    to the alembic revision hash of the schema.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -20,7 +26,7 @@ class HealthStatus(BaseModel):
     ready: bool
     status: str
     app_version: str
-    database_version: str | None = None
+    sqlite_version: str | None = None
     core_version: str | None = None
     ws_buffer_utilization: float = 0.0
     uptime_seconds: float | None = None

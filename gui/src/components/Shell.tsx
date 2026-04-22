@@ -20,7 +20,7 @@ export default function Shell() {
         <Navigation />
         <HealthIndicator />
       </header>
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto" tabIndex={0}>
         <Outlet />
       </main>
       <StatusBar connectionState={connectionState} />

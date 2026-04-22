@@ -2670,3 +2670,39 @@ def aggregate_segment_progress(segments: list[tuple[float, float]]) -> float:
         Weighted aggregate progress clamped to [0.0, 1.0].
     """
     ...
+
+# ========== Version Metadata ==========
+
+class VersionInfo:
+    """Build-time deployment metadata captured at compile time.
+
+    Populated by ``build.rs``:
+
+    - ``core_version`` is the crate version from ``Cargo.toml``.
+    - ``build_timestamp`` is an ISO 8601 UTC timestamp.
+    - ``git_sha`` is the short git SHA of HEAD, or the literal ``"unknown"``
+      when neither the ``GIT_SHA`` env var nor ``git rev-parse`` could
+      resolve a value at build time.
+
+    Instantiate via :meth:`VersionInfo.current`.
+    """
+
+    @property
+    def core_version(self) -> str:
+        """Semver version from Cargo.toml (``CARGO_PKG_VERSION``)."""
+        ...
+
+    @property
+    def build_timestamp(self) -> str:
+        """ISO 8601 UTC timestamp captured at build time."""
+        ...
+
+    @property
+    def git_sha(self) -> str:
+        """Short git SHA of HEAD, or ``"unknown"`` when unavailable."""
+        ...
+
+    @staticmethod
+    def current() -> VersionInfo:
+        """Return a :class:`VersionInfo` populated from the build metadata."""
+        ...
