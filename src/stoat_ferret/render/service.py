@@ -19,7 +19,7 @@ import structlog
 from PIL import Image
 
 from stoat_ferret.api.settings import Settings
-from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.events import EventType, build_event, clear_event_counter
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.render.checkpoints import RenderCheckpointManager
 from stoat_ferret.render.executor import RenderExecutor
@@ -469,6 +469,7 @@ class RenderService:
                     "project_id": job.project_id,
                     "status": job.status.value,
                 },
+                job_id=job.id,
             )
         )
 
@@ -550,6 +551,7 @@ class RenderService:
                     "encoder_name": encoder_name,
                     "encoder_type": encoder_type,
                 },
+                job_id=job_id,
             )
         )
 
@@ -579,6 +581,7 @@ class RenderService:
                     "resolution": "540p",
                     "progress": progress,
                 },
+                job_id=job_id,
             )
         )
 
@@ -681,6 +684,7 @@ class RenderService:
             del self._last_broadcast_time[k]
         self._last_broadcast_progress.pop(job_id, None)
         self._frame_buffer.pop(job_id, None)
+        clear_event_counter(job_id)
 
     def _update_disk_usage(self, output_path: str) -> None:
         """Update the render disk usage metric from the output directory.
