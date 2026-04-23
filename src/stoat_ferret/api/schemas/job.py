@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class JobSubmitResponse(BaseModel):
@@ -13,7 +13,12 @@ class JobSubmitResponse(BaseModel):
     Contains the unique job ID for polling status.
     """
 
-    job_id: str
+    job_id: str = Field(
+        description="Unique identifier for the submitted job. Use this id "
+        "with ``GET /api/v1/jobs/{job_id}``, "
+        "``GET /api/v1/jobs/{job_id}/wait``, or ``POST "
+        "/api/v1/jobs/{job_id}/cancel``."
+    )
 
 
 class JobStatusResponse(BaseModel):
@@ -23,8 +28,29 @@ class JobStatusResponse(BaseModel):
     and error message on failure.
     """
 
-    job_id: str
-    status: str
-    progress: float | None = None
-    result: Any = None
-    error: str | None = None
+    job_id: str = Field(description="Unique identifier for the job.")
+    status: str = Field(
+        description=(
+            "Current job status. One of ``pending``, ``running``, ``complete``, "
+            "``failed``, ``timeout``, ``cancelled``. Valid transitions: "
+            "``pending -> running -> (complete | failed | timeout | cancelled)``. "
+            "Terminal states are ``complete``, ``failed``, ``timeout``, and "
+            "``cancelled`` — once reached, the status never changes. See the "
+            "``JobStatus`` schema for the enumerated values."
+        ),
+    )
+    progress: float | None = Field(
+        default=None,
+        description="Progress value in ``[0.0, 1.0]`` reported by the handler "
+        "while ``status == 'running'``; ``null`` otherwise.",
+    )
+    result: Any = Field(
+        default=None,
+        description="Handler return value when ``status == 'complete'``; "
+        "``null`` for non-terminal states and for failure/timeout/cancelled.",
+    )
+    error: str | None = Field(
+        default=None,
+        description="Error message when ``status`` is ``failed`` or "
+        "``timeout``; ``null`` otherwise.",
+    )

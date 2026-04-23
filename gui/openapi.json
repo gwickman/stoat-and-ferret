@@ -807,7 +807,7 @@
           "jobs"
         ],
         "summary": "Get Job Status",
-        "description": "Get the status of a submitted job.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job status including progress and result when complete.\n\nRaises:\n    HTTPException: 404 if job ID is not found.",
+        "description": "Get the current status of a submitted job.\n\nReturns a point-in-time snapshot of the job's state in the queue.\nThe ``status`` field is one of the six ``JobStatus`` values, three\nnon-terminal (``pending``, ``running``) and four terminal\n(``complete``, ``failed``, ``timeout``, ``cancelled``). Callers that\nneed to block until a terminal state can use\n``GET /api/v1/jobs/{id}/wait`` instead of polling.\n\nValid state transitions are: ``pending -> running -> (complete |\nfailed | timeout | cancelled)``. Terminal states never change.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job status including progress and result when complete.\n\nRaises:\n    HTTPException: 404 if job ID is not found.",
         "operationId": "get_job_status_api_v1_jobs__job_id__get",
         "parameters": [
           {
@@ -850,7 +850,7 @@
           "jobs"
         ],
         "summary": "Cancel Job",
-        "description": "Request cancellation of a job.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Updated job status.\n\nRaises:\n    HTTPException: 404 if job not found, 409 if already in terminal state.",
+        "description": "Request cancellation of a job.\n\nDrives the ``pending -> cancelled`` or ``running -> cancelled`` state\ntransition. Cancellation is rejected with 409 when the job is already\nin a terminal state (``complete``, ``failed``, ``timeout``, or\n``cancelled``) because terminal states are final.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Updated job status after the cancellation signal has been\n    recorded. The returned ``status`` may still be ``running`` if\n    the worker has not yet observed the cancellation flag; callers\n    should poll ``GET /api/v1/jobs/{id}`` or use\n    ``GET /api/v1/jobs/{id}/wait`` to observe the final\n    ``cancelled`` terminal state.\n\nRaises:\n    HTTPException: 404 if job not found, 409 if already in terminal state.",
         "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
         "parameters": [
           {
@@ -893,7 +893,7 @@
           "jobs"
         ],
         "summary": "Wait For Job Completion",
-        "description": "Block until the job reaches a terminal state, then return its final status.\n\nIntended as a deterministic alternative to polling or WebSocket\nsubscription for test authors. When the job is already terminal the\nhandler returns immediately without allocating an :class:`asyncio.Event`\n(INV-LP-2). Otherwise it awaits the per-job event that queue workers\nsignal after writing the terminal status (INV-LP-1).\n\nArgs:\n    job_id: The job identifier to wait on.\n    request: The FastAPI request (used to resolve the job queue).\n    timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.\n\nReturns:\n    Final :class:`JobStatusResponse` once the job is terminal.\n\nRaises:\n    HTTPException: 404 when ``job_id`` is unknown. 408 when the job\n        does not reach a terminal state within ``timeout`` seconds.",
+        "description": "Block until the job reaches a terminal state, then return its final status.\n\nLong-poll helper intended as a deterministic alternative to polling\n``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at\n``/ws``. The endpoint waits for the job to enter one of the terminal\nstates (``complete``, ``failed``, ``timeout``, ``cancelled``) and\nthen returns the same payload as ``GET /api/v1/jobs/{id}``.\n\nSemantics:\n\n- If the job is already terminal at call time the handler returns\n  immediately without allocating an :class:`asyncio.Event`\n  (INV-LP-2).\n- Otherwise it awaits the per-job event that queue workers signal\n  after writing the terminal status (INV-LP-1).\n- The endpoint returns HTTP 408 (``code=\"JOB_WAIT_TIMEOUT\"``) when\n  the job is still non-terminal after ``timeout`` seconds \u2014 the job\n  itself continues running; the timeout is client-side only.\n- Not durable: if the server restarts while a waiter is blocked,\n  the waiter sees a timeout rather than a replay. Treat a restart\n  as equivalent to a timeout.\n\nArgs:\n    job_id: The job identifier to wait on.\n    request: The FastAPI request (used to resolve the job queue).\n    timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.\n\nReturns:\n    Final :class:`JobStatusResponse` once the job is terminal.\n\nRaises:\n    HTTPException: 404 when ``job_id`` is unknown. 408 when the job\n        does not reach a terminal state within ``timeout`` seconds.",
         "operationId": "wait_for_job_completion_api_v1_jobs__job_id__wait_get",
         "parameters": [
           {
@@ -4558,11 +4558,13 @@
         "properties": {
           "job_id": {
             "type": "string",
-            "title": "Job Id"
+            "title": "Job Id",
+            "description": "Unique identifier for the job."
           },
           "status": {
             "type": "string",
-            "title": "Status"
+            "title": "Status",
+            "description": "Current job status. One of ``pending``, ``running``, ``complete``, ``failed``, ``timeout``, ``cancelled``. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states are ``complete``, ``failed``, ``timeout``, and ``cancelled`` \u2014 once reached, the status never changes. See the ``JobStatus`` schema for the enumerated values."
           },
           "progress": {
             "anyOf": [
@@ -4573,10 +4575,12 @@
                 "type": "null"
               }
             ],
-            "title": "Progress"
+            "title": "Progress",
+            "description": "Progress value in ``[0.0, 1.0]`` reported by the handler while ``status == 'running'``; ``null`` otherwise."
           },
           "result": {
-            "title": "Result"
+            "title": "Result",
+            "description": "Handler return value when ``status == 'complete'``; ``null`` for non-terminal states and for failure/timeout/cancelled."
           },
           "error": {
             "anyOf": [
@@ -4587,7 +4591,8 @@
                 "type": "null"
               }
             ],
-            "title": "Error"
+            "title": "Error",
+            "description": "Error message when ``status`` is ``failed`` or ``timeout``; ``null`` otherwise."
           }
         },
         "type": "object",
@@ -4602,7 +4607,8 @@
         "properties": {
           "job_id": {
             "type": "string",
-            "title": "Job Id"
+            "title": "Job Id",
+            "description": "Unique identifier for the submitted job. Use this id with ``GET /api/v1/jobs/{job_id}``, ``GET /api/v1/jobs/{job_id}/wait``, or ``POST /api/v1/jobs/{job_id}/cancel``."
           }
         },
         "type": "object",
@@ -6687,6 +6693,66 @@
         "title": "ProxyQuality",
         "type": "string",
         "description": "Quality level for a proxy file."
+      },
+      "JobStatus": {
+        "enum": [
+          "pending",
+          "running",
+          "complete",
+          "failed",
+          "timeout",
+          "cancelled"
+        ],
+        "title": "JobStatus",
+        "type": "string",
+        "description": "Job lifecycle state. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states (``complete``, ``failed``, ``timeout``, ``cancelled``) are final."
+      },
+      "WebSocketEvent": {
+        "description": "Documentation-only schema for a broadcast WebSocket event envelope.\n\nEvery event sent on the ``/ws`` endpoint is a JSON object with the\nfields enumerated below. Event-type-specific payload fields live\ninside the ``payload`` object and vary per ``type`` \u2014 consult the\n``EventType`` values in\n:mod:`stoat_ferret.api.websocket.events` for the catalogue of\nrecognised ``type`` strings.",
+        "properties": {
+          "type": {
+            "description": "Event type discriminator. Values are drawn from the ``EventType`` enum and include render lifecycle events (``render_started``, ``render_progress``, ``render_completed``, ``render_failed``, ``render_cancelled``, ``render_queued``, ``render_frame_available``, ``render_queue_status``), scan events (``scan_started``, ``scan_completed``), proxy events (``proxy.ready``), preview events (``preview.generating``, ``preview.ready``, ``preview.seeking``, ``preview.error``), timeline events (``timeline_updated``, ``layout_applied``, ``audio_mix_changed``, ``transition_applied``), AI events (``ai_action``), generic job events (``job_progress``), project events (``project_created``), and system events (``health_status``, ``heartbeat``).",
+            "title": "Type",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "description": "Event-specific payload. Fields vary with ``type``; always a JSON object (may be empty).",
+            "title": "Payload",
+            "type": "object"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional correlation identifier propagated from the triggering HTTP request (``X-Correlation-ID`` header). ``null`` for server-originated events (e.g. heartbeat) with no inbound correlation context.",
+            "title": "Correlation Id"
+          },
+          "timestamp": {
+            "description": "ISO-8601 UTC timestamp at which the event was built. Example: ``2026-04-23T12:34:56.789012+00:00``.",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "event_id": {
+            "description": "Monotonic event identifier in the format ``event-NNNNN`` (zero-padded to 5 digits; widens beyond 5 digits once the scope counter exceeds 99999). Counter is scoped per ``job_id`` \u2014 job-scoped events carry a sequence local to that job, while events without a job scope share a single global counter. Within a single scope the identifier is strictly increasing, which lets clients detect gaps, reconnect with ``Last-Event-ID``, and replay missed events from the server buffer.",
+            "title": "Event Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "payload",
+          "timestamp",
+          "event_id"
+        ],
+        "title": "WebSocketEvent",
+        "type": "object"
       }
     }
   }
