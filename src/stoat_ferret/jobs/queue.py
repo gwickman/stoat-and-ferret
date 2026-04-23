@@ -12,6 +12,8 @@ from typing import Any, Protocol
 
 import structlog
 
+from stoat_ferret.api.services.job_completion import notify_job_terminal
+
 logger = structlog.get_logger(__name__)
 
 
@@ -296,6 +298,10 @@ class InMemoryJobQueue:
                 )
 
         self._jobs[job_id] = entry
+        # INV-LP-1: registry write above precedes the terminal notification
+        # so any /wait waiter refetches the final state rather than the
+        # prior pending/running one.
+        notify_job_terminal(job_id)
         return job_id
 
     async def get_status(self, job_id: str) -> JobStatus:
@@ -533,6 +539,8 @@ class AsyncioJobQueue:
                         job_id=job_id,
                         job_type=entry.job_type,
                     )
+                    # INV-LP-1: registry write above precedes notification.
+                    notify_job_terminal(job_id)
                     self._queue.task_done()
                     continue
 
@@ -581,6 +589,11 @@ class AsyncioJobQueue:
                         error=str(exc),
                     )
                 finally:
+                    # INV-LP-1: entry.status is always set by one of the
+                    # branches above before we reach this finally — issuing
+                    # the terminal notification here guarantees waiters
+                    # observe the final status on refetch.
+                    notify_job_terminal(job_id)
                     self._queue.task_done()
         except asyncio.CancelledError:
             logger.info("worker_stopped")

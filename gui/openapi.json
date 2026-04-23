@@ -887,6 +887,63 @@
         }
       }
     },
+    "/api/v1/jobs/{job_id}/wait": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Wait For Job Completion",
+        "description": "Block until the job reaches a terminal state, then return its final status.\n\nIntended as a deterministic alternative to polling or WebSocket\nsubscription for test authors. When the job is already terminal the\nhandler returns immediately without allocating an :class:`asyncio.Event`\n(INV-LP-2). Otherwise it awaits the per-job event that queue workers\nsignal after writing the terminal status (INV-LP-1).\n\nArgs:\n    job_id: The job identifier to wait on.\n    request: The FastAPI request (used to resolve the job queue).\n    timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.\n\nReturns:\n    Final :class:`JobStatusResponse` once the job is terminal.\n\nRaises:\n    HTTPException: 404 when ``job_id`` is unknown. 408 when the job\n        does not reach a terminal state within ``timeout`` seconds.",
+        "operationId": "wait_for_job_completion_api_v1_jobs__job_id__wait_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3600.0,
+              "minimum": 1.0,
+              "description": "Maximum seconds to wait for the job to reach a terminal state. Server returns HTTP 408 if the job is still non-terminal when the deadline expires.",
+              "default": 30.0,
+              "title": "Timeout"
+            },
+            "description": "Maximum seconds to wait for the job to reach a terminal state. Server returns HTTP 408 if the job is still non-terminal when the deadline expires."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/effects": {
       "get": {
         "tags": [
