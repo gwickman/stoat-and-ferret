@@ -1,4 +1,26 @@
-"""Job status endpoints."""
+"""Job status endpoints.
+
+Job state machine (documented for external AI agents):
+
+- ``pending``    — submitted, not yet picked up by a worker.
+- ``running``    — worker is executing the handler.
+- ``complete``   — handler returned successfully (**terminal**).
+- ``failed``     — handler raised an exception (**terminal**).
+- ``timeout``    — handler exceeded the per-job-type timeout (**terminal**).
+- ``cancelled``  — caller invoked ``POST /api/v1/jobs/{id}/cancel`` before
+  a terminal state was reached (**terminal**).
+
+Valid transitions::
+
+    pending -> running
+    running -> complete | failed | timeout | cancelled
+    pending -> cancelled   (when cancel is requested before the worker
+                            claims the entry)
+
+Terminal states (``complete``, ``failed``, ``timeout``, ``cancelled``) are
+final: once a job enters a terminal state its status never changes again.
+See :class:`stoat_ferret.jobs.queue.JobStatus` for the authoritative enum.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +38,17 @@ async def get_job_status(
     job_id: str,
     request: Request,
 ) -> JobStatusResponse:
-    """Get the status of a submitted job.
+    """Get the current status of a submitted job.
+
+    Returns a point-in-time snapshot of the job's state in the queue.
+    The ``status`` field is one of the six ``JobStatus`` values, three
+    non-terminal (``pending``, ``running``) and four terminal
+    (``complete``, ``failed``, ``timeout``, ``cancelled``). Callers that
+    need to block until a terminal state can use
+    ``GET /api/v1/jobs/{id}/wait`` instead of polling.
+
+    Valid state transitions are: ``pending -> running -> (complete |
+    failed | timeout | cancelled)``. Terminal states never change.
 
     Args:
         job_id: The unique job identifier.
@@ -56,12 +88,22 @@ async def cancel_job(
 ) -> JobStatusResponse:
     """Request cancellation of a job.
 
+    Drives the ``pending -> cancelled`` or ``running -> cancelled`` state
+    transition. Cancellation is rejected with 409 when the job is already
+    in a terminal state (``complete``, ``failed``, ``timeout``, or
+    ``cancelled``) because terminal states are final.
+
     Args:
         job_id: The unique job identifier.
         request: The FastAPI request object for accessing app state.
 
     Returns:
-        Updated job status.
+        Updated job status after the cancellation signal has been
+        recorded. The returned ``status`` may still be ``running`` if
+        the worker has not yet observed the cancellation flag; callers
+        should poll ``GET /api/v1/jobs/{id}`` or use
+        ``GET /api/v1/jobs/{id}/wait`` to observe the final
+        ``cancelled`` terminal state.
 
     Raises:
         HTTPException: 404 if job not found, 409 if already in terminal state.
@@ -114,11 +156,25 @@ async def wait_for_job_completion(
 ) -> JobStatusResponse:
     """Block until the job reaches a terminal state, then return its final status.
 
-    Intended as a deterministic alternative to polling or WebSocket
-    subscription for test authors. When the job is already terminal the
-    handler returns immediately without allocating an :class:`asyncio.Event`
-    (INV-LP-2). Otherwise it awaits the per-job event that queue workers
-    signal after writing the terminal status (INV-LP-1).
+    Long-poll helper intended as a deterministic alternative to polling
+    ``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at
+    ``/ws``. The endpoint waits for the job to enter one of the terminal
+    states (``complete``, ``failed``, ``timeout``, ``cancelled``) and
+    then returns the same payload as ``GET /api/v1/jobs/{id}``.
+
+    Semantics:
+
+    - If the job is already terminal at call time the handler returns
+      immediately without allocating an :class:`asyncio.Event`
+      (INV-LP-2).
+    - Otherwise it awaits the per-job event that queue workers signal
+      after writing the terminal status (INV-LP-1).
+    - The endpoint returns HTTP 408 (``code="JOB_WAIT_TIMEOUT"``) when
+      the job is still non-terminal after ``timeout`` seconds — the job
+      itself continues running; the timeout is client-side only.
+    - Not durable: if the server restarts while a waiter is blocked,
+      the waiter sees a timeout rather than a replay. Treat a restart
+      as equivalent to a timeout.
 
     Args:
         job_id: The job identifier to wait on.

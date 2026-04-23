@@ -48,6 +48,7 @@ from stoat_ferret.api.routers import (
     waveform,
 )
 from stoat_ferret.api.routers.ws import websocket_endpoint
+from stoat_ferret.api.schemas.websocket_event import WebSocketEvent
 from stoat_ferret.api.services.proxy_service import (
     PROXY_JOB_TYPE,
     ProxyService,
@@ -78,7 +79,7 @@ from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.async_executor import RealAsyncFFmpegExecutor
 from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
 from stoat_ferret.ffmpeg.observable import ObservableFFmpegExecutor
-from stoat_ferret.jobs.queue import AsyncioJobQueue
+from stoat_ferret.jobs.queue import AsyncioJobQueue, JobStatus
 from stoat_ferret.logging import configure_logging
 from stoat_ferret.preview.cache import PreviewCache
 from stoat_ferret.preview.manager import PreviewManager
@@ -605,6 +606,36 @@ def create_app(
                 "description": inspect.cleandoc(ProxyQuality.__doc__ or ""),
             },
         )
+        # BL-278: inject the JobStatus enum so external AI agents can
+        # learn the job state machine's valid values directly from the
+        # OpenAPI spec. JobStatus is a plain Python enum that is never
+        # serialised as a response body (JobStatusResponse.status is a
+        # bare string), so FastAPI cannot discover it on its own.
+        schemas.setdefault(
+            "JobStatus",
+            {
+                "enum": [e.value for e in JobStatus],
+                "title": "JobStatus",
+                "type": "string",
+                "description": (
+                    "Job lifecycle state. Valid transitions: "
+                    "``pending -> running -> (complete | failed | timeout "
+                    "| cancelled)``. Terminal states (``complete``, "
+                    "``failed``, ``timeout``, ``cancelled``) are final."
+                ),
+            },
+        )
+        # BL-278: inject the WebSocketEvent envelope schema. WebSocket
+        # events at /ws are dict-typed on the wire, so no route
+        # references the Pydantic model and FastAPI does not include
+        # it automatically.
+        ws_event_schema = WebSocketEvent.model_json_schema(
+            ref_template="#/components/schemas/{model}"
+        )
+        defs = ws_event_schema.pop("$defs", {})
+        for ref_name, ref_schema in defs.items():
+            schemas.setdefault(ref_name, ref_schema)
+        schemas.setdefault("WebSocketEvent", ws_event_schema)
         return schema
 
     app.openapi = _custom_openapi  # type: ignore[method-assign]
