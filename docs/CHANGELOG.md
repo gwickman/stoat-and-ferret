@@ -4,6 +4,16 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v039] - 2026-04-23
+
+AI Integration & Schema Discovery. Delivers a Rust ParameterSchema translator for AI-friendly effect discovery, a schema introspection REST endpoint for dynamic resource discovery by external agents, and a comprehensive AI integration patterns guide documenting how external systems can interact with the API.
+
+### Added
+
+- **ParameterSchema Rust Translator** — `ParameterSchema` Rust type with PyO3 bindings translating stoat-and-ferret effect parameter schemas into a normalized, AI-consumable format; enables external agents to programmatically enumerate effect capabilities and constraints (BL-270, #306)
+- **Schema Introspection Endpoint** — `GET /api/v1/schema/{resource}` REST endpoint returning JSON Schema descriptions for API resources; supports AI agent discovery of available data shapes without prior knowledge of the API (BL-271, #307)
+- **AI Integration Patterns Guide** — `docs/manual/ai-integration-patterns.md` documenting recommended patterns for external agents interacting with the stoat-and-ferret API, including effect discovery, parameter validation, and session management (BL-272, #308)
+
 ## [v037] - 2026-04-17
 
 WebSocket Enrichment, Container Deployment, and Developer Quality. Enriches render WebSocket events with frame/fps/encoder metadata, implements live frame streaming to Theater Mode, ships a production-ready multi-stage Dockerfile with health checks and Docker Compose dev stack, and improves developer quality with jest-dom Vitest setup and updated test harness documentation.
