@@ -4,6 +4,20 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v040] - 2026-04-23
+
+### Features
+- Event ID and timestamp on all WebSocket events
+- WebSocket replay buffer with reconnection support
+- System state snapshot endpoint for external agent orientation
+- Test fixture seeding endpoints for repeatable agent workflows
+- Long-poll job completion endpoint with configurable timeouts
+- OpenAPI state machine documentation for job lifecycle
+
+### Improvements
+- All quality gates pass (2352 tests, 100% coverage)
+- Comprehensive WebSocket observability and testability improvements
+
 ## [v039] - 2026-04-23
 
 AI Integration & Schema Discovery. Delivers a Rust ParameterSchema translator for AI-friendly effect discovery, a schema introspection REST endpoint for dynamic resource discovery by external agents, and a comprehensive AI integration patterns guide documenting how external systems can interact with the API.
