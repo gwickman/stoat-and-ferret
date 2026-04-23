@@ -2724,6 +2724,78 @@ class QualityPreset:
     def __int__(self) -> int: ...
     def __repr__(self) -> str: ...
 
+# ========== Parameter Schema ==========
+
+class ParameterSchema:
+    """Structured parameter metadata for a single effect parameter.
+
+    Fields mirror the JSON Schema-style descriptors emitted by the Python
+    effect registry, with normalised ``param_type`` values and an AI hint
+    sourced from the per-effect ``ai_hints`` dict. All bound and enum
+    fields are optional.
+    """
+
+    @property
+    def name(self) -> str:
+        """Parameter name (key in the JSON Schema ``properties`` dict)."""
+        ...
+
+    @property
+    def param_type(self) -> str:
+        """Normalised type: ``int``, ``float``, ``string``, ``bool``, ``enum``, or ``array``."""
+        ...
+
+    @property
+    def default_value(self) -> int | float | str | bool | None:
+        """Default value from the schema, or ``None`` when omitted."""
+        ...
+
+    @property
+    def min_value(self) -> float | None:
+        """Lower numeric bound from JSON Schema ``minimum``."""
+        ...
+
+    @property
+    def max_value(self) -> float | None:
+        """Upper numeric bound from JSON Schema ``maximum``."""
+        ...
+
+    @property
+    def enum_values(self) -> list[str] | None:
+        """Allowed string values when the parameter is an enum."""
+        ...
+
+    @property
+    def description(self) -> str:
+        """Human-readable description from JSON Schema ``description``."""
+        ...
+
+    @property
+    def ai_hint(self) -> str:
+        """AI-oriented natural-language hint for this parameter."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+def parameter_schemas_from_dict(
+    schema: dict[str, object],
+    ai_hints: dict[str, str],
+) -> list[ParameterSchema]:
+    """Translate a JSON Schema parameter dict into a list of ParameterSchema.
+
+    Iterates ``schema["properties"]`` and extracts a structured record for
+    each property. Returns an empty list when ``schema`` has no
+    ``properties`` key.
+
+    Args:
+        schema: JSON Schema-style dict (e.g. ``{"properties": {"x": {...}}}``).
+        ai_hints: Map of parameter name -> AI hint string.
+
+    Returns:
+        List of :class:`ParameterSchema` objects, one per property.
+    """
+    ...
+
 # ========== Version Metadata ==========
 
 class VersionInfo:

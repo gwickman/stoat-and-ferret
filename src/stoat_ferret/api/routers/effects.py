@@ -23,6 +23,7 @@ from stoat_ferret.api.schemas.effect import (
     EffectThumbnailRequest,
     EffectTransitionResponse,
     EffectUpdateRequest,
+    ParameterSchemaResponse,
     TransitionRequest,
 )
 from stoat_ferret.api.services.thumbnail import ThumbnailService
@@ -34,6 +35,7 @@ from stoat_ferret.db.project_repository import (
 from stoat_ferret.effects.definitions import create_default_registry
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
+from stoat_ferret_core import parameter_schemas_from_dict
 
 logger = structlog.get_logger(__name__)
 
@@ -118,10 +120,24 @@ async def list_effects(registry: RegistryDep) -> EffectListResponse:
 
     Returns:
         List of all registered effects with their parameter schemas,
-        AI hints, and filter preview strings.
+        AI hints, filter preview strings, structured parameter list,
+        AI summary, and example prompt.
     """
     effects = []
     for effect_type, definition in registry.list_all():
+        parameters = [
+            ParameterSchemaResponse(
+                name=p.name,
+                param_type=p.param_type,
+                default_value=p.default_value,
+                min_value=p.min_value,
+                max_value=p.max_value,
+                enum_values=p.enum_values,
+                description=p.description,
+                ai_hint=p.ai_hint,
+            )
+            for p in parameter_schemas_from_dict(definition.parameter_schema, definition.ai_hints)
+        ]
         effects.append(
             EffectResponse(
                 effect_type=effect_type,
@@ -130,6 +146,9 @@ async def list_effects(registry: RegistryDep) -> EffectListResponse:
                 parameter_schema=definition.parameter_schema,
                 ai_hints=definition.ai_hints,
                 filter_preview=definition.preview_fn(),
+                parameters=parameters,
+                ai_summary=definition.ai_summary,
+                example_prompt=definition.example_prompt,
             )
         )
     return EffectListResponse(effects=effects, total=len(effects))

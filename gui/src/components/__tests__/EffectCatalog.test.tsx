@@ -12,6 +12,9 @@ const mockEffects: Effect[] = [
     parameter_schema: {},
     ai_hints: { text: 'The text content to overlay' },
     filter_preview: 'drawtext=text=Sample',
+    parameters: [],
+    ai_summary: '',
+    example_prompt: '',
   },
   {
     effect_type: 'volume',
@@ -20,6 +23,9 @@ const mockEffects: Effect[] = [
     parameter_schema: {},
     ai_hints: { volume: 'Volume multiplier' },
     filter_preview: 'volume=1.5',
+    parameters: [],
+    ai_summary: '',
+    example_prompt: '',
   },
   {
     effect_type: 'xfade',
@@ -28,6 +34,9 @@ const mockEffects: Effect[] = [
     parameter_schema: {},
     ai_hints: { transition: 'Effect type: fade, wipeleft' },
     filter_preview: 'xfade=transition=fade',
+    parameters: [],
+    ai_summary: '',
+    example_prompt: '',
   },
 ]
 

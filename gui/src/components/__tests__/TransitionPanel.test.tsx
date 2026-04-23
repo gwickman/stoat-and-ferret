@@ -41,6 +41,9 @@ const mockTransitionEffects: Effect[] = [
     },
     ai_hints: { transition: 'fade' },
     filter_preview: 'xfade=transition=fade',
+    parameters: [],
+    ai_summary: '',
+    example_prompt: '',
   },
   {
     effect_type: 'acrossfade',
@@ -54,6 +57,9 @@ const mockTransitionEffects: Effect[] = [
     },
     ai_hints: { transition: 'acrossfade' },
     filter_preview: 'acrossfade=d=1',
+    parameters: [],
+    ai_summary: '',
+    example_prompt: '',
   },
 ]
 
@@ -65,6 +71,9 @@ const mockAllEffects: Effect[] = [
     parameter_schema: {},
     ai_hints: {},
     filter_preview: 'drawtext=text=hello',
+    parameters: [],
+    ai_summary: '',
+    example_prompt: '',
   },
   ...mockTransitionEffects,
 ]
