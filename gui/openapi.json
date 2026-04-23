@@ -96,6 +96,51 @@
         }
       }
     },
+    "/api/v1/schema/{resource}": {
+      "get": {
+        "tags": [
+          "schema"
+        ],
+        "summary": "Get Resource Schema",
+        "description": "Return the Pydantic JSON Schema for a domain resource.\n\nThe schema is generated directly from the Pydantic response model's\n``model_json_schema()`` method \u2014 no custom serialization. Pydantic V2\ncaches the result after the first call, so repeated lookups are cheap.\n\nArgs:\n    resource: One of ``project``, ``clip``, ``timeline``, ``render_job``,\n        ``effect``, ``video``. Any other value returns 404.\n\nReturns:\n    The JSON Schema dict for the requested resource.\n\nRaises:\n    HTTPException: 404 when ``resource`` is not a supported name.",
+        "operationId": "get_resource_schema_api_v1_schema__resource__get",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Resource Schema Api V1 Schema  Resource  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/videos": {
       "get": {
         "tags": [

@@ -140,6 +140,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/schema/{resource}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Resource Schema
+         * @description Return the Pydantic JSON Schema for a domain resource.
+         *
+         *     The schema is generated directly from the Pydantic response model's
+         *     ``model_json_schema()`` method — no custom serialization. Pydantic V2
+         *     caches the result after the first call, so repeated lookups are cheap.
+         *
+         *     Args:
+         *         resource: One of ``project``, ``clip``, ``timeline``, ``render_job``,
+         *             ``effect``, ``video``. Any other value returns 404.
+         *
+         *     Returns:
+         *         The JSON Schema dict for the requested resource.
+         *
+         *     Raises:
+         *         HTTPException: 404 when ``resource`` is not a supported name.
+         */
+        get: operations["get_resource_schema_api_v1_schema__resource__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos": {
         parameters: {
             query?: never;
@@ -3841,6 +3875,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FlagsResponse"];
+                };
+            };
+        };
+    };
+    get_resource_schema_api_v1_schema__resource__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resource: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

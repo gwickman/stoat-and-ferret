@@ -37,6 +37,7 @@ from stoat_ferret.api.routers import (
     projects,
     proxy,
     render,
+    schema,
     thumbnails,
     timeline,
     version,
@@ -521,6 +522,7 @@ def create_app(
     app.include_router(health.router)
     app.include_router(version.router)
     app.include_router(flags.router)
+    app.include_router(schema.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
     app.include_router(jobs.router)
