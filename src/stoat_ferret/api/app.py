@@ -38,6 +38,7 @@ from stoat_ferret.api.routers import (
     proxy,
     render,
     schema,
+    system,
     thumbnails,
     timeline,
     version,
@@ -540,6 +541,7 @@ def create_app(
     app.include_router(preview.router)
     app.include_router(proxy.router)
     app.include_router(render.router)
+    app.include_router(system.router)
     app.include_router(thumbnails.router)
     app.include_router(versions.router)
     app.include_router(waveform.router)
