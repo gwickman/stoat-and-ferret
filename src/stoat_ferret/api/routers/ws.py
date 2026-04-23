@@ -26,17 +26,48 @@ async def _heartbeat_loop(ws: WebSocket, interval: float) -> None:
         await ws.send_json(build_event(EventType.HEARTBEAT))
 
 
+async def _replay_missed_events(websocket: WebSocket, manager: ConnectionManager) -> None:
+    """Replay buffered events when the client supplies ``Last-Event-ID``.
+
+    Parses the ``Last-Event-ID`` handshake header (case-insensitive) and
+    streams every non-expired buffered event after that id in order
+    (FR-003, FR-004). Clients that do not send the header are treated as
+    fresh subscribers and receive no history. Called once, immediately
+    after the WebSocket upgrade completes.
+
+    Args:
+        websocket: The freshly accepted WebSocket.
+        manager: ConnectionManager holding the shared replay buffer.
+    """
+    last_event_id = websocket.headers.get("last-event-id")
+    if not last_event_id:
+        return
+    replay = manager.replay_since(last_event_id)
+    if not replay:
+        return
+    logger.info(
+        "ws_replay_dispatch",
+        last_event_id=last_event_id,
+        count=len(replay),
+    )
+    for event in replay:
+        await websocket.send_json(event)
+
+
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Handle WebSocket connections at /ws.
 
-    Accepts the connection via ConnectionManager, starts a heartbeat
-    task, and listens for incoming messages until disconnect.
+    Accepts the connection via ConnectionManager, replays any buffered
+    events the client missed (using the ``Last-Event-ID`` header),
+    starts a heartbeat task, and listens for incoming messages until
+    disconnect.
 
     Args:
         websocket: The WebSocket connection.
     """
     manager: ConnectionManager = websocket.app.state.ws_manager
     await manager.connect(websocket)
+    await _replay_missed_events(websocket, manager)
 
     heartbeat_interval = get_settings().ws_heartbeat_interval
     heartbeat_task = asyncio.create_task(_heartbeat_loop(websocket, heartbeat_interval))
