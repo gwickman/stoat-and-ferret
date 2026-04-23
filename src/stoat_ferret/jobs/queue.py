@@ -7,11 +7,17 @@ import enum
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+
+def _utcnow() -> datetime:
+    """Return the current UTC time as a timezone-aware ``datetime``."""
+    return datetime.now(timezone.utc)
 
 
 class JobStatus(enum.Enum):
@@ -50,6 +56,21 @@ class JobResult:
     result: Any = None
     error: str | None = None
     progress: float | None = None
+
+
+@dataclass(frozen=True)
+class JobSnapshot:
+    """Immutable summary of a job's current state for snapshot endpoints.
+
+    Used by ``/api/v1/system/state`` to report job status without leaking
+    internal queue entry types. ``submitted_at`` is timezone-aware UTC.
+    """
+
+    job_id: str
+    job_type: str
+    status: JobStatus
+    progress: float | None
+    submitted_at: datetime
 
 
 class AsyncJobQueue(Protocol):
@@ -116,6 +137,15 @@ class AsyncJobQueue(Protocol):
         """
         ...
 
+    def list_jobs(self) -> list[JobSnapshot]:
+        """Return a snapshot of every tracked job.
+
+        Returns:
+            List of ``JobSnapshot`` records, one per known job, in
+            submission order (oldest first).
+        """
+        ...
+
 
 @dataclass
 class _JobEntry:
@@ -124,6 +154,7 @@ class _JobEntry:
     job_id: str
     job_type: str
     payload: dict[str, Any]
+    submitted_at: datetime = field(default_factory=_utcnow)
     result: JobResult = field(init=False)
 
     def __post_init__(self) -> None:
@@ -299,6 +330,24 @@ class InMemoryJobQueue:
             raise KeyError(f"Job {job_id} not found")
         return self._jobs[job_id].result
 
+    def list_jobs(self) -> list[JobSnapshot]:
+        """Return a snapshot of every tracked job in submission order.
+
+        Returns:
+            List of ``JobSnapshot`` records for all jobs submitted to
+            this queue instance (insertion order is preserved).
+        """
+        return [
+            JobSnapshot(
+                job_id=entry.job_id,
+                job_type=entry.job_type,
+                status=entry.result.status,
+                progress=entry.result.progress,
+                submitted_at=entry.submitted_at,
+            )
+            for entry in self._jobs.values()
+        ]
+
 
 # Type alias for job handler functions
 JobHandler = Callable[[str, dict[str, Any]], Awaitable[Any]]
@@ -315,6 +364,7 @@ class _AsyncJobEntry:
     result: Any = None
     error: str | None = None
     progress: float | None = None
+    submitted_at: datetime = field(default_factory=_utcnow)
     cancel_event: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -438,6 +488,25 @@ class AsyncioJobQueue:
             error=entry.error,
             progress=entry.progress,
         )
+
+    def list_jobs(self) -> list[JobSnapshot]:
+        """Return a snapshot of every tracked job in submission order.
+
+        Returns:
+            List of ``JobSnapshot`` records for every job known to the
+            queue (pending, running, or terminal). Insertion order of
+            ``self._jobs`` preserves submission order.
+        """
+        return [
+            JobSnapshot(
+                job_id=entry.job_id,
+                job_type=entry.job_type,
+                status=entry.status,
+                progress=entry.progress,
+                submitted_at=entry.submitted_at,
+            )
+            for entry in self._jobs.values()
+        ]
 
     async def process_jobs(self) -> None:
         """Worker coroutine that processes jobs from the queue.
