@@ -76,6 +76,7 @@ try:
         LayoutPosition,
         LayoutPreset,
         LayoutSpec,
+        ParameterSchema,
         Position,
         PreviewQuality,
         ProgressInfo,
@@ -111,6 +112,7 @@ try:
         health_check,
         inject_preview_scale,
         is_expensive_filter,
+        parameter_schemas_from_dict,
         parse_ffmpeg_progress,
         scale_filter,
         select_encoder,
@@ -183,6 +185,8 @@ except ImportError:
     LayoutPosition = _not_built  # type: ignore[misc,assignment]
     LayoutPreset = _not_built  # type: ignore[misc,assignment]
     LayoutSpec = _not_built  # type: ignore[misc,assignment]
+    ParameterSchema = _not_built  # type: ignore[misc,assignment]
+    parameter_schemas_from_dict = _not_built
     TransitionSpec = _not_built  # type: ignore[misc,assignment]
     build_composition_graph = _not_built
     build_overlay_filter = _not_built
@@ -265,6 +269,9 @@ __all__ = [
     "LayoutPosition",
     "LayoutPreset",
     "LayoutSpec",
+    # Parameter schema discovery
+    "ParameterSchema",
+    "parameter_schemas_from_dict",
     # Composition timeline
     "CompositionClip",
     "TransitionSpec",

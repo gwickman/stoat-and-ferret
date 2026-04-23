@@ -7,11 +7,32 @@ from typing import Any
 from pydantic import BaseModel
 
 
+class ParameterSchemaResponse(BaseModel):
+    """Structured parameter metadata for a single effect parameter.
+
+    Emitted as an element of ``EffectResponse.parameters``. Mirrors the
+    Rust ``ParameterSchema`` PyO3 type so AI agents can discover valid
+    parameter types, bounds, enum domains, and natural-language hints.
+    """
+
+    name: str
+    param_type: str
+    default_value: int | float | str | bool | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    enum_values: list[str] | None = None
+    description: str
+    ai_hint: str
+
+
 class EffectResponse(BaseModel):
     """Response schema for a single effect.
 
     Contains the effect metadata, parameter schema, AI hints,
-    and a filter preview string.
+    and a filter preview string. The ``parameters`` list is a structured
+    decomposition of ``parameter_schema`` intended for AI agent discovery;
+    ``ai_summary`` and ``example_prompt`` give agents a one-line description
+    and a natural-language invocation example.
     """
 
     effect_type: str
@@ -20,6 +41,9 @@ class EffectResponse(BaseModel):
     parameter_schema: dict[str, Any]
     ai_hints: dict[str, str]
     filter_preview: str
+    parameters: list[ParameterSchemaResponse]
+    ai_summary: str
+    example_prompt: str
 
 
 class EffectListResponse(BaseModel):

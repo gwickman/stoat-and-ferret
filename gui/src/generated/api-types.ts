@@ -595,7 +595,8 @@ export interface paths {
          *
          *     Returns:
          *         List of all registered effects with their parameter schemas,
-         *         AI hints, and filter preview strings.
+         *         AI hints, filter preview strings, structured parameter list,
+         *         AI summary, and example prompt.
          */
         get: operations["list_effects_api_v1_effects_get"];
         put?: never;
@@ -2581,7 +2582,10 @@ export interface components {
          * @description Response schema for a single effect.
          *
          *     Contains the effect metadata, parameter schema, AI hints,
-         *     and a filter preview string.
+         *     and a filter preview string. The ``parameters`` list is a structured
+         *     decomposition of ``parameter_schema`` intended for AI agent discovery;
+         *     ``ai_summary`` and ``example_prompt`` give agents a one-line description
+         *     and a natural-language invocation example.
          */
         EffectResponse: {
             /** Effect Type */
@@ -2600,6 +2604,12 @@ export interface components {
             };
             /** Filter Preview */
             filter_preview: string;
+            /** Parameters */
+            parameters: components["schemas"]["ParameterSchemaResponse"][];
+            /** Ai Summary */
+            ai_summary: string;
+            /** Example Prompt */
+            example_prompt: string;
         };
         /**
          * EffectThumbnailRequest
@@ -2877,6 +2887,32 @@ export interface components {
             height: number;
             /** Z Index */
             z_index: number;
+        };
+        /**
+         * ParameterSchemaResponse
+         * @description Structured parameter metadata for a single effect parameter.
+         *
+         *     Emitted as an element of ``EffectResponse.parameters``. Mirrors the
+         *     Rust ``ParameterSchema`` PyO3 type so AI agents can discover valid
+         *     parameter types, bounds, enum domains, and natural-language hints.
+         */
+        ParameterSchemaResponse: {
+            /** Name */
+            name: string;
+            /** Param Type */
+            param_type: string;
+            /** Default Value */
+            default_value?: number | string | boolean | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Enum Values */
+            enum_values?: string[] | null;
+            /** Description */
+            description: string;
+            /** Ai Hint */
+            ai_hint: string;
         };
         /**
          * PositionModel

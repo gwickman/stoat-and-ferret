@@ -35,6 +35,8 @@ class EffectDefinition:
         preview_fn: Callable that returns an FFmpeg filter string preview
                      using default parameters.
         build_fn: Callable that receives parameter dict and returns FFmpeg filter string.
+        ai_summary: One-sentence natural-language summary for AI agent discovery.
+        example_prompt: Example natural-language prompt that would invoke this effect.
     """
 
     name: str
@@ -43,6 +45,8 @@ class EffectDefinition:
     ai_hints: dict[str, str]
     preview_fn: Callable[[], str] = field(repr=False)
     build_fn: Callable[[dict[str, Any]], str] = field(repr=False)
+    ai_summary: str = ""
+    example_prompt: str = ""
 
 
 def _text_overlay_preview() -> str:
@@ -300,6 +304,8 @@ TEXT_OVERLAY = EffectDefinition(
             "text": {"type": "string", "description": "The text to display"},
             "fontsize": {
                 "type": "integer",
+                "minimum": 8,
+                "maximum": 256,
                 "default": 48,
                 "description": "Font size in pixels",
             },
@@ -343,6 +349,8 @@ TEXT_OVERLAY = EffectDefinition(
     },
     preview_fn=_text_overlay_preview,
     build_fn=_build_text_overlay,
+    ai_summary="Burn captions, titles, or watermark text onto a video clip.",
+    example_prompt='Add the caption "Breaking News" in the bottom center of the clip.',
 )
 
 SPEED_CONTROL = EffectDefinition(
@@ -374,6 +382,8 @@ SPEED_CONTROL = EffectDefinition(
     },
     preview_fn=_speed_control_preview,
     build_fn=_build_speed_control,
+    ai_summary="Speed up or slow down video playback with matched audio retiming.",
+    example_prompt="Play this clip back at 2x speed to create a fast-forward effect.",
 )
 
 AUDIO_MIX = EffectDefinition(
@@ -416,6 +426,8 @@ AUDIO_MIX = EffectDefinition(
     },
     preview_fn=_audio_mix_preview,
     build_fn=_build_audio_mix,
+    ai_summary="Combine multiple audio tracks into a single mixed stream.",
+    example_prompt="Mix the narration and background music tracks into one output.",
 )
 
 VOLUME = EffectDefinition(
@@ -446,6 +458,8 @@ VOLUME = EffectDefinition(
     },
     preview_fn=_volume_preview,
     build_fn=_build_volume,
+    ai_summary="Adjust audio loudness up or down using a linear multiplier or dB value.",
+    example_prompt="Reduce the audio volume on this clip to 50%.",
 )
 
 AUDIO_FADE = EffectDefinition(
@@ -500,6 +514,8 @@ AUDIO_FADE = EffectDefinition(
     },
     preview_fn=_audio_fade_preview,
     build_fn=_build_audio_fade,
+    ai_summary="Fade audio in from silence or out to silence over a duration.",
+    example_prompt="Fade the audio in over 2 seconds at the start of the clip.",
 )
 
 AUDIO_DUCKING = EffectDefinition(
@@ -546,6 +562,8 @@ AUDIO_DUCKING = EffectDefinition(
     },
     preview_fn=_audio_ducking_preview,
     build_fn=_build_audio_ducking,
+    ai_summary="Automatically lower music volume when a voice track is active.",
+    example_prompt="Duck the background music whenever the narrator is speaking.",
 )
 
 VIDEO_FADE = EffectDefinition(
@@ -593,6 +611,8 @@ VIDEO_FADE = EffectDefinition(
     },
     preview_fn=_video_fade_preview,
     build_fn=_build_video_fade,
+    ai_summary="Fade a clip in from a solid color or out to a solid color.",
+    example_prompt="Fade out to black over the final 1.5 seconds of this clip.",
 )
 
 XFADE = EffectDefinition(
@@ -629,6 +649,8 @@ XFADE = EffectDefinition(
     },
     preview_fn=_xfade_preview,
     build_fn=_build_xfade,
+    ai_summary="Crossfade between two video clips using a selectable transition style.",
+    example_prompt='Transition between these two clips with a 1-second "wipeleft" effect.',
 )
 
 ACROSSFADE = EffectDefinition(
@@ -696,6 +718,8 @@ ACROSSFADE = EffectDefinition(
     },
     preview_fn=_acrossfade_preview,
     build_fn=_build_acrossfade,
+    ai_summary="Crossfade the audio of two adjacent clips so they blend smoothly.",
+    example_prompt="Crossfade the audio of these two clips over 2 seconds.",
 )
 
 

@@ -38,6 +38,20 @@ async def test_uc05_effects_catalog_and_apply(
     assert "parameter_schema" in text_effect
     assert "ai_hints" in text_effect
 
+    # --- Enriched AI-discovery fields (BL-270) ---
+    assert "parameters" in text_effect
+    assert len(text_effect["parameters"]) > 0
+    assert text_effect["ai_summary"]
+    assert text_effect["example_prompt"]
+
+    params_by_name = {p["name"]: p for p in text_effect["parameters"]}
+    assert "fontsize" in params_by_name
+    fontsize = params_by_name["fontsize"]
+    assert fontsize["param_type"] == "int"
+    assert fontsize["min_value"] is not None
+    assert fontsize["max_value"] is not None
+    assert fontsize["ai_hint"]
+
     # --- Preview ---
     resp = await client.post(
         "/api/v1/effects/preview",
