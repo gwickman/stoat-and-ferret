@@ -11,6 +11,16 @@ from fastapi.testclient import TestClient
 from stoat_ferret.jobs.queue import InMemoryJobQueue, JobResult, JobStatus, _JobEntry
 
 
+def _parse_iso(value: str) -> datetime:
+    """Parse an ISO8601 timestamp, accepting the ``Z`` UTC suffix.
+
+    Pydantic V2 serializes UTC datetimes with a trailing ``Z``; Python
+    3.10's ``datetime.fromisoformat`` rejects that form (fixed in 3.11).
+    Normalizing the suffix keeps the tests portable across the CI matrix.
+    """
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 @pytest.mark.api
 def test_system_state_empty_snapshot_is_valid(client: TestClient) -> None:
     """Endpoint returns 200 with a well-formed payload when nothing is in flight."""
@@ -22,7 +32,7 @@ def test_system_state_empty_snapshot_is_valid(client: TestClient) -> None:
     assert data["active_connections"] == 0
     assert isinstance(data["uptime_seconds"], float)
     # Timestamp is ISO8601 and parseable as UTC-aware datetime.
-    parsed = datetime.fromisoformat(data["timestamp"])
+    parsed = _parse_iso(data["timestamp"])
     assert parsed.tzinfo is not None
 
 
@@ -55,8 +65,8 @@ def test_system_state_lists_submitted_jobs(
     for summary in data["active_jobs"]:
         assert summary["job_type"] == "scan"
         assert summary["progress"] == 0.5
-        # submitted_at must round-trip through fromisoformat.
-        datetime.fromisoformat(summary["submitted_at"])
+        # submitted_at must round-trip through fromisoformat (with Z→+00:00).
+        _parse_iso(summary["submitted_at"])
 
 
 @pytest.mark.api
@@ -99,7 +109,7 @@ def test_system_state_timestamp_is_recent(client: TestClient) -> None:
     after = datetime.now(timezone.utc)
     assert response.status_code == 200
 
-    ts = datetime.fromisoformat(response.json()["timestamp"])
+    ts = _parse_iso(response.json()["timestamp"])
     assert before.replace(microsecond=0) <= ts <= after.replace(microsecond=999999)
 
 
