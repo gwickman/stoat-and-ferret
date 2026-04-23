@@ -31,6 +31,9 @@ from fastapi import HTTPException, status
 if TYPE_CHECKING:
     from stoat_ferret.jobs.queue import AsyncJobQueue, JobResult
 
+# Terminal state values are stored as strings (not JobStatus enum members) to
+# avoid a module-level import cycle with stoat_ferret.jobs.queue, which imports
+# notify_job_terminal from this module.
 _TERMINAL_STATUS_VALUES = frozenset({"complete", "failed", "timeout", "cancelled"})
 
 _terminal_events: dict[str, asyncio.Event] = {}
