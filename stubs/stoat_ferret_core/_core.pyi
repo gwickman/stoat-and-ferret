@@ -2268,20 +2268,6 @@ class EncoderType:
     def __eq__(self, other: object) -> bool: ...
     def __hash__(self) -> int: ...
 
-class QualityPreset:
-    """Quality preset for encoding output.
-
-    Maps to encoder-specific parameters (CRF, CQ, QP, etc.) rather than
-    FFmpeg's built-in preset names.
-    """
-
-    Draft: QualityPreset
-    Standard: QualityPreset
-    High: QualityPreset
-
-    def __eq__(self, other: object) -> bool: ...
-    def __hash__(self) -> int: ...
-
 class EncoderInfo:
     """Information about a detected video encoder.
 

@@ -6,12 +6,6 @@ These stubs are generated from the Rust code using pyo3-stub-gen.
 
 # Re-export all types from _core
 from stoat_ferret_core._core import (
-    aggregate_segment_progress as aggregate_segment_progress,
-)
-from stoat_ferret_core._core import (
-    calculate_progress as calculate_progress,
-)
-from stoat_ferret_core._core import (
     # Clip types
     Clip as Clip,
 )
@@ -25,8 +19,18 @@ from stoat_ferret_core._core import (
     Duration as Duration,
 )
 from stoat_ferret_core._core import (
+    # Encoder detection
+    EncoderInfo as EncoderInfo,
+)
+from stoat_ferret_core._core import (
+    EncoderType as EncoderType,
+)
+from stoat_ferret_core._core import (
     # FFmpeg command building
     FFmpegCommand as FFmpegCommand,
+)
+from stoat_ferret_core._core import (
+    FfmpegProgressUpdate as FfmpegProgressUpdate,
 )
 from stoat_ferret_core._core import (
     Filter as Filter,
@@ -42,7 +46,13 @@ from stoat_ferret_core._core import (
     FrameRate as FrameRate,
 )
 from stoat_ferret_core._core import (
+    LayoutError as LayoutError,
+)
+from stoat_ferret_core._core import (
     Position as Position,
+)
+from stoat_ferret_core._core import (
+    ProgressInfo as ProgressInfo,
 )
 from stoat_ferret_core._core import (
     SanitizationError as SanitizationError,
@@ -51,14 +61,27 @@ from stoat_ferret_core._core import (
     TimeRange as TimeRange,
 )
 from stoat_ferret_core._core import (
-    LayoutError as LayoutError,
-)
-from stoat_ferret_core._core import (
     # Exceptions
     ValidationError as ValidationError,
 )
 from stoat_ferret_core._core import (
+    # Version metadata
+    VersionInfo as VersionInfo,
+)
+from stoat_ferret_core._core import (
+    aggregate_segment_progress as aggregate_segment_progress,
+)
+from stoat_ferret_core._core import (
+    build_encoding_args as build_encoding_args,
+)
+from stoat_ferret_core._core import (
+    calculate_progress as calculate_progress,
+)
+from stoat_ferret_core._core import (
     concat_filter as concat_filter,
+)
+from stoat_ferret_core._core import (
+    detect_hardware_encoders as detect_hardware_encoders,
 )
 from stoat_ferret_core._core import (
     # Sanitization functions
@@ -68,9 +91,6 @@ from stoat_ferret_core._core import (
     estimate_eta as estimate_eta,
 )
 from stoat_ferret_core._core import (
-    FfmpegProgressUpdate as FfmpegProgressUpdate,
-)
-from stoat_ferret_core._core import (
     # Utility
     health_check as health_check,
 )
@@ -78,11 +98,11 @@ from stoat_ferret_core._core import (
     parse_ffmpeg_progress as parse_ffmpeg_progress,
 )
 from stoat_ferret_core._core import (
-    ProgressInfo as ProgressInfo,
-)
-from stoat_ferret_core._core import (
     # Filter helpers
     scale_filter as scale_filter,
+)
+from stoat_ferret_core._core import (
+    select_encoder as select_encoder,
 )
 from stoat_ferret_core._core import (
     validate_audio_codec as validate_audio_codec,
@@ -104,26 +124,6 @@ from stoat_ferret_core._core import (
 )
 from stoat_ferret_core._core import (
     validate_volume as validate_volume,
-)
-from stoat_ferret_core._core import (
-    # Encoder detection
-    EncoderInfo as EncoderInfo,
-)
-from stoat_ferret_core._core import (
-    EncoderType as EncoderType,
-)
-from stoat_ferret_core._core import (
-    build_encoding_args as build_encoding_args,
-)
-from stoat_ferret_core._core import (
-    detect_hardware_encoders as detect_hardware_encoders,
-)
-from stoat_ferret_core._core import (
-    select_encoder as select_encoder,
-)
-from stoat_ferret_core._core import (
-    # Version metadata
-    VersionInfo as VersionInfo,
 )
 
 __all__ = [
