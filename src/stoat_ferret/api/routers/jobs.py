@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from stoat_ferret.api.schemas.job import JobStatusResponse
+from stoat_ferret.api.services.job_completion import wait_for_job_terminal
 from stoat_ferret.jobs.queue import JobStatus
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -87,6 +88,52 @@ async def cancel_job(
 
     # Re-fetch to get updated status
     result = await job_queue.get_result(job_id)
+    return JobStatusResponse(
+        job_id=result.job_id,
+        status=result.status.value,
+        progress=result.progress,
+        result=result.result,
+        error=result.error,
+    )
+
+
+@router.get("/{job_id}/wait", response_model=JobStatusResponse)
+async def wait_for_job_completion(
+    job_id: str,
+    request: Request,
+    timeout: float = Query(
+        30.0,
+        ge=1.0,
+        le=3600.0,
+        description=(
+            "Maximum seconds to wait for the job to reach a terminal state. "
+            "Server returns HTTP 408 if the job is still non-terminal when "
+            "the deadline expires."
+        ),
+    ),
+) -> JobStatusResponse:
+    """Block until the job reaches a terminal state, then return its final status.
+
+    Intended as a deterministic alternative to polling or WebSocket
+    subscription for test authors. When the job is already terminal the
+    handler returns immediately without allocating an :class:`asyncio.Event`
+    (INV-LP-2). Otherwise it awaits the per-job event that queue workers
+    signal after writing the terminal status (INV-LP-1).
+
+    Args:
+        job_id: The job identifier to wait on.
+        request: The FastAPI request (used to resolve the job queue).
+        timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.
+
+    Returns:
+        Final :class:`JobStatusResponse` once the job is terminal.
+
+    Raises:
+        HTTPException: 404 when ``job_id`` is unknown. 408 when the job
+            does not reach a terminal state within ``timeout`` seconds.
+    """
+    job_queue = request.app.state.job_queue
+    result = await wait_for_job_terminal(job_queue, job_id, timeout)
     return JobStatusResponse(
         job_id=result.job_id,
         status=result.status.value,
