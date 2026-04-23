@@ -139,7 +139,7 @@ cargo test
 `gui/openapi.json` must stay in sync with the live FastAPI spec. CI enforces this via a boot-and-compare step, but failures are preventable by regenerating before every push when API routes or schemas change:
 
 ```bash
-uv run python -m scripts.generate_openapi
+uv run python -m scripts.export_openapi
 ```
 
 Run this command any time you add, remove, or modify an API endpoint, Pydantic request/response model, or route decorator. Forgetting to regenerate is the most common cause of CI failures across versions.
