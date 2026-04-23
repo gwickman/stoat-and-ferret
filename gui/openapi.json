@@ -2906,6 +2906,94 @@
         }
       }
     },
+    "/api/v1/testing/seed": {
+      "post": {
+        "tags": [
+          "testing"
+        ],
+        "summary": "Create Seed Fixture",
+        "description": "Create a named test fixture (FR-001).\n\nThe ``fixture_type`` field dispatches to the owning repository. All\nstored names carry the ``seeded_`` prefix (INV-SEED-2) so callers\ncan enumerate seeded records without special indexes. Only\n``testing_mode=True`` deployments reach this handler \u2014 the guard is\nenforced by :func:`require_testing_mode`.\n\nArgs:\n    seed_request: Parsed request body (fixture_type, name, data).\n    _settings: Settings instance returned by the testing-mode guard.\n        The argument is accepted only to enforce the dependency \u2014\n        handler logic reads from the repository, not the settings.\n    project_repo: Injected project repository (in-memory in tests,\n        SQLite in production).\n\nReturns:\n    :class:`SeedResponse` echoing the fixture id, type, and final\n    stored name.\n\nRaises:\n    HTTPException: 422 when ``fixture_type`` is not supported. 403\n        is raised earlier by :func:`require_testing_mode` when the\n        guard fails.",
+        "operationId": "create_seed_fixture_api_v1_testing_seed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/testing/seed/{fixture_id}": {
+      "delete": {
+        "tags": [
+          "testing"
+        ],
+        "summary": "Delete Seed Fixture",
+        "description": "Remove a previously seeded fixture (FR-004).\n\nThe ``fixture_type`` query parameter routes the delete to the\ncorrect repository; it defaults to ``project`` because that is the\nonly supported type in this release (NFR-002 allows adding more).\nOnly ``testing_mode=True`` deployments reach this handler.\n\nArgs:\n    fixture_id: Identifier returned by the prior POST.\n    _settings: Settings instance returned by the testing-mode guard.\n    project_repo: Injected project repository.\n    fixture_type: Which repository owns the fixture (query string).\n\nReturns:\n    Empty ``204 No Content`` response on success.\n\nRaises:\n    HTTPException: 404 when no fixture with that id exists, 422 when\n        ``fixture_type`` is not recognised.",
+        "operationId": "delete_seed_fixture_api_v1_testing_seed__fixture_id__delete",
+        "parameters": [
+          {
+            "name": "fixture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fixture Id"
+            }
+          },
+          {
+            "name": "fixture_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "project",
+              "title": "Fixture Type"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/videos/{video_id}/thumbnails/strip": {
       "post": {
         "tags": [
@@ -5468,6 +5556,62 @@
         ],
         "title": "ScanRequest",
         "description": "Directory scan request.\n\nSpecifies the directory to scan and whether to recurse into subdirectories."
+      },
+      "SeedRequest": {
+        "properties": {
+          "fixture_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Fixture Type",
+            "description": "Discriminator for the fixture category (e.g. ``project``). The server rejects unknown values with HTTP 422."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Caller-supplied fixture name. The server prepends ``seeded_`` before persistence (INV-SEED-2); callers must not pre-prefix the value."
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "Fixture-type-specific creation payload. For ``project`` fixtures, keys ``output_width``, ``output_height`` and ``output_fps`` are honored; missing keys take project defaults."
+          }
+        },
+        "type": "object",
+        "required": [
+          "fixture_type",
+          "name"
+        ],
+        "title": "SeedRequest",
+        "description": "Request body for creating a seeded test fixture.\n\nThe ``fixture_type`` field selects which in-memory domain object is\ncreated. Type-specific parameters are carried in ``data`` to keep the\nwire format stable as new fixture types are added; the router\nvalidates type-specific constraints before dispatching to the\nmatching repository (NFR-002)."
+      },
+      "SeedResponse": {
+        "properties": {
+          "fixture_id": {
+            "type": "string",
+            "title": "Fixture Id",
+            "description": "Unique identifier returned by the underlying repository."
+          },
+          "fixture_type": {
+            "type": "string",
+            "title": "Fixture Type",
+            "description": "Echoes the request's ``fixture_type`` so the caller can fan-out cleanup."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Final stored name, always beginning with ``seeded_`` (INV-SEED-2). Useful for querying pass-through GET endpoints."
+          }
+        },
+        "type": "object",
+        "required": [
+          "fixture_id",
+          "fixture_type",
+          "name"
+        ],
+        "title": "SeedResponse",
+        "description": "Response body for a successful seed fixture creation (HTTP 201)."
       },
       "SystemState": {
         "properties": {
