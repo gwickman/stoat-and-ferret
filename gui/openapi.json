@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "stoat-and-ferret",
-    "description": "AI-driven video editor API",
+    "description": "AI-driven video editor API. For AI agent integration patterns (discovery, schema learning, execute, batch, reconnection) see `docs/manual/ai-integration-patterns.md`.",
     "version": "0.3.0"
   },
   "paths": {
