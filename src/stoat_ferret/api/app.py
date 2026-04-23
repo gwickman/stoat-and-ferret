@@ -456,7 +456,12 @@ def create_app(
     settings = get_settings()
     app = FastAPI(
         title="stoat-and-ferret",
-        description="AI-driven video editor API",
+        description=(
+            "AI-driven video editor API. "
+            "For AI agent integration patterns (discovery, schema learning, "
+            "execute, batch, reconnection) see "
+            "`docs/manual/ai-integration-patterns.md`."
+        ),
         version="0.3.0",
         lifespan=lifespan,
         debug=settings.debug,
