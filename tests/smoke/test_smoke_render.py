@@ -330,3 +330,66 @@ async def test_theater_mode_frame_endpoint_returns_jpeg_when_buffer_populated() 
     assert retrieved_img.height == 540, (
         f"Expected height=540, got {retrieved_img.height} (FR-002: 540p requirement)"
     )
+
+
+async def test_render_events_include_monotonic_event_id() -> None:
+    """Render WebSocket events include a monotonic per-job ``event_id`` (BL-273).
+
+    FR-001: every ``build_event`` output carries ``event_id`` in ``event-NNNNN`` form.
+    INV-002: values within a single job are strictly monotonically increasing.
+    INV-007 (theme): counter is cleared when throttle state is cleared (terminal state).
+    """
+    import re
+
+    from stoat_ferret.api.websocket.events import reset_event_counters
+
+    reset_event_counters()
+    service, captured = _build_service_with_capture()
+    job_id = "event-id-smoke-1"
+
+    # Emit multiple RENDER_PROGRESS events followed by a frame event.
+    for progress in (0.2, 0.4, 0.6, 0.8, 1.0):
+        await service._broadcast_throttled_progress(
+            job_id,
+            progress,
+            frame_count=int(progress * 100),
+            fps=30.0,
+            encoder_name="libx264",
+            encoder_type="SW",
+        )
+
+    events_for_job = [e for e in captured if e.get("payload", {}).get("job_id") == job_id]
+    assert len(events_for_job) >= 2, (
+        f"Expected multiple broadcast events for job, got {len(events_for_job)}"
+    )
+
+    pattern = re.compile(r"^event-\d{5,}$")
+    for event in events_for_job:
+        assert "event_id" in event, "event_id missing from broadcast payload (FR-004)"
+        assert pattern.match(event["event_id"]), (
+            f"event_id '{event['event_id']}' does not match event-NNNNN format (FR-001)"
+        )
+
+    # Strictly monotonically increasing within a single job (NFR-002).
+    numeric_ids = [int(e["event_id"].split("-")[1]) for e in events_for_job]
+    for prev, nxt in zip(numeric_ids, numeric_ids[1:], strict=False):
+        assert nxt > prev, f"event_id must strictly increase within job: {prev} -> {nxt}"
+
+    # Terminal cleanup: clearing throttle state also clears the event counter.
+    service._clear_throttle_state(job_id)
+    resumed = await service._broadcast_throttled_progress(
+        job_id,
+        0.1,
+        frame_count=10,
+        fps=30.0,
+        encoder_name="libx264",
+        encoder_type="SW",
+    )
+    del resumed  # not used; broadcast captured via callback
+    new_events = [
+        e for e in captured[len(events_for_job) :] if e.get("payload", {}).get("job_id") == job_id
+    ]
+    assert new_events, "Expected a broadcast after resume"
+    assert new_events[0]["event_id"] == "event-00000", (
+        "Counter must reset to event-00000 after terminal cleanup (FR-002)"
+    )
