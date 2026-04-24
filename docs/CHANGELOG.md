@@ -4,6 +4,17 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v041] - 2026-04-24
+
+Documentation and Operational Excellence. Validates the OpenAPI specification against Phase 6 endpoints, enriches Rust core with rustdoc examples, delivers canonical API usage workflows, and ships an operational runbook with decision-tree troubleshooting.
+
+### Documentation
+
+- **OpenAPI Specification Validation** — Validated OpenAPI spec against all Phase 6 endpoints; documented endpoint contracts and response schemas for the full API surface (BL-279, #316)
+- **Rust Core rustdoc Examples** — Added rustdoc examples to all public Rust types and functions; consolidated stubs to `src/` for co-location with implementations (BL-280, #317)
+- **API Usage Examples** — `docs/manual/api-usage-examples.md` with 5 canonical workflows demonstrating end-to-end API interactions for scan, project creation, clip management, effects, and render (BL-281, #318)
+- **Operational Runbook** — `docs/manual/operational-runbook.md` with decision-tree troubleshooting guides for common failure modes, health check interpretation, and recovery procedures (BL-282, #319)
+
 ## [v040] - 2026-04-23
 
 ### Features
