@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class JobSubmitResponse(BaseModel):
@@ -27,6 +27,20 @@ class JobStatusResponse(BaseModel):
     Contains the current status, optional progress, result when complete,
     and error message on failure.
     """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "job_id": "job_a1b2c3d4",
+                    "status": "complete",
+                    "progress": 1.0,
+                    "result": {"output_path": "data/renders/clip_01.mp4"},
+                    "error": None,
+                }
+            ]
+        },
+    )
 
     job_id: str = Field(description="Unique identifier for the job.")
     status: str = Field(

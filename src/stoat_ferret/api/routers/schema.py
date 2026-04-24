@@ -36,7 +36,43 @@ _RESOURCE_MODELS: dict[str, type[BaseModel]] = {
 }
 
 
-@router.get("/schema/{resource}")
+@router.get(
+    "/schema/{resource}",
+    responses={
+        200: {
+            "description": (
+                "JSON Schema for the requested resource, as produced by "
+                "Pydantic V2's ``model_json_schema()``."
+            ),
+            "content": {
+                "application/json": {
+                    "example": {
+                        "title": "ProjectResponse",
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string", "title": "Id"},
+                            "name": {"type": "string", "title": "Name"},
+                        },
+                        "required": ["id", "name"],
+                    },
+                },
+            },
+        },
+        404: {
+            "description": (
+                "``resource`` is not one of ``project``, ``clip``, "
+                "``timeline``, ``render_job``, ``effect``, ``video``."
+            ),
+        },
+        422: {
+            "description": (
+                "Path parameter failed FastAPI validation (reserved — the "
+                "router accepts any string, then dispatches to the lookup "
+                "table that raises 404 for unknown resources)."
+            ),
+        },
+    },
+)
 async def get_resource_schema(resource: str) -> dict[str, Any]:
     """Return the Pydantic JSON Schema for a domain resource.
 

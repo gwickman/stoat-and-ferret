@@ -23,6 +23,22 @@ class SeedRequest(BaseModel):
     matching repository (NFR-002).
     """
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "fixture_type": "project",
+                    "name": "demo_timeline",
+                    "data": {
+                        "output_width": 1920,
+                        "output_height": 1080,
+                        "output_fps": 30,
+                    },
+                }
+            ]
+        },
+    )
+
     fixture_type: str = Field(
         description=(
             "Discriminator for the fixture category (e.g. ``project``). "
@@ -52,7 +68,18 @@ class SeedRequest(BaseModel):
 class SeedResponse(BaseModel):
     """Response body for a successful seed fixture creation (HTTP 201)."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "fixture_id": "proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X",
+                    "fixture_type": "project",
+                    "name": "seeded_demo_timeline",
+                }
+            ]
+        },
+    )
 
     fixture_id: str = Field(
         description="Unique identifier returned by the underlying repository.",

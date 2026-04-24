@@ -117,26 +117,40 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "JSON Schema for the requested resource, as produced by Pydantic V2's ``model_json_schema()``.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Get Resource Schema Api V1 Schema  Resource  Get"
+                },
+                "example": {
+                  "title": "ProjectResponse",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "title": "Id"
+                    },
+                    "name": {
+                      "type": "string",
+                      "title": "Name"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
                 }
               }
             }
           },
+          "404": {
+            "description": "``resource`` is not one of ``project``, ``clip``, ``timeline``, ``render_job``, ``effect``, ``video``."
+          },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Path parameter failed FastAPI validation (reserved \u2014 the router accepts any string, then dispatches to the lookup table that raises 404 for unknown resources)."
           }
         }
       }
@@ -931,15 +945,14 @@
               }
             }
           },
+          "404": {
+            "description": "No job with the supplied ``job_id`` exists in the queue. The response carries ``{\"detail\": {\"code\": \"NOT_FOUND\", \"message\": ...}}``."
+          },
+          "408": {
+            "description": "The job did not reach a terminal state within ``timeout`` seconds. The job continues running server-side; clients may call ``GET /api/v1/jobs/{id}/wait`` again to resume waiting. The body carries ``{\"detail\": {\"code\": \"JOB_WAIT_TIMEOUT\", \"message\": ...}}``."
+          },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "``timeout`` query parameter outside ``[1.0, 3600.0]`` or otherwise invalid."
           }
         }
       }
@@ -2992,15 +3005,11 @@
               }
             }
           },
+          "403": {
+            "description": "Testing mode is disabled. Set ``STOAT_TESTING_MODE=true`` to enable seed endpoints; the response body carries ``{\"detail\": {\"code\": \"TESTING_MODE_DISABLED\", \"message\": ...}}``."
+          },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Request failed validation. Sent when ``fixture_type`` is not one of the supported values or the body is malformed; the ``detail`` field includes a structured error code."
           }
         }
       }
@@ -3020,8 +3029,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identifier returned by ``POST /api/v1/testing/seed``.",
+              "examples": [
+                "proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X"
+              ],
               "title": "Fixture Id"
-            }
+            },
+            "description": "Identifier returned by ``POST /api/v1/testing/seed``."
           },
           {
             "name": "fixture_type",
@@ -3029,24 +3043,28 @@
             "required": false,
             "schema": {
               "type": "string",
+              "description": "Repository that owns the fixture. Currently only ``project`` is supported.",
+              "examples": [
+                "project"
+              ],
               "default": "project",
               "title": "Fixture Type"
-            }
+            },
+            "description": "Repository that owns the fixture. Currently only ``project`` is supported."
           }
         ],
         "responses": {
           "204": {
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Testing mode is disabled. Set ``STOAT_TESTING_MODE=true`` to enable seed endpoints."
+          },
+          "404": {
+            "description": "No seeded fixture with the supplied ``fixture_id`` exists for the selected ``fixture_type``. The response carries ``{\"detail\": {\"code\": \"NOT_FOUND\", \"message\": ...}}``."
+          },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Unsupported ``fixture_type`` query parameter (only ``project`` is currently supported)."
           }
         }
       }
@@ -4444,19 +4462,23 @@
         "properties": {
           "testing_mode": {
             "type": "boolean",
-            "title": "Testing Mode"
+            "title": "Testing Mode",
+            "description": "``STOAT_TESTING_MODE`` \u2014 unlocks test-only endpoints (e.g. seed fixtures)."
           },
           "seed_endpoint": {
             "type": "boolean",
-            "title": "Seed Endpoint"
+            "title": "Seed Endpoint",
+            "description": "``STOAT_SEED_ENDPOINT`` \u2014 legacy alias retained for ops dashboards."
           },
           "synthetic_monitoring": {
             "type": "boolean",
-            "title": "Synthetic Monitoring"
+            "title": "Synthetic Monitoring",
+            "description": "``STOAT_SYNTHETIC_MONITORING`` \u2014 enables background probe traffic."
           },
           "batch_rendering": {
             "type": "boolean",
-            "title": "Batch Rendering"
+            "title": "Batch Rendering",
+            "description": "``STOAT_BATCH_RENDERING`` \u2014 permits multi-clip batch render jobs."
           }
         },
         "type": "object",
@@ -4467,7 +4489,15 @@
           "batch_rendering"
         ],
         "title": "FlagsResponse",
-        "description": "Current state of the STOAT_* feature flags.\n\nReturned by GET /api/v1/flags. Values reflect the application's\nSettings (Pydantic BaseSettings) as resolved from environment\nvariables at startup. Flags are immutable for the life of the\napplication process."
+        "description": "Current state of the STOAT_* feature flags.\n\nReturned by GET /api/v1/flags. Values reflect the application's\nSettings (Pydantic BaseSettings) as resolved from environment\nvariables at startup. Flags are immutable for the life of the\napplication process.",
+        "examples": [
+          {
+            "batch_rendering": true,
+            "seed_endpoint": false,
+            "synthetic_monitoring": true,
+            "testing_mode": false
+          }
+        ]
       },
       "FormatInfo": {
         "properties": {
@@ -4601,7 +4631,17 @@
           "status"
         ],
         "title": "JobStatusResponse",
-        "description": "Response for job status queries.\n\nContains the current status, optional progress, result when complete,\nand error message on failure."
+        "description": "Response for job status queries.\n\nContains the current status, optional progress, result when complete,\nand error message on failure.",
+        "examples": [
+          {
+            "job_id": "job_a1b2c3d4",
+            "progress": 1.0,
+            "result": {
+              "output_path": "data/renders/clip_01.mp4"
+            },
+            "status": "complete"
+          }
+        ]
       },
       "JobSubmitResponse": {
         "properties": {
@@ -5647,7 +5687,18 @@
           "name"
         ],
         "title": "SeedRequest",
-        "description": "Request body for creating a seeded test fixture.\n\nThe ``fixture_type`` field selects which in-memory domain object is\ncreated. Type-specific parameters are carried in ``data`` to keep the\nwire format stable as new fixture types are added; the router\nvalidates type-specific constraints before dispatching to the\nmatching repository (NFR-002)."
+        "description": "Request body for creating a seeded test fixture.\n\nThe ``fixture_type`` field selects which in-memory domain object is\ncreated. Type-specific parameters are carried in ``data`` to keep the\nwire format stable as new fixture types are added; the router\nvalidates type-specific constraints before dispatching to the\nmatching repository (NFR-002).",
+        "examples": [
+          {
+            "data": {
+              "output_fps": 30,
+              "output_height": 1080,
+              "output_width": 1920
+            },
+            "fixture_type": "project",
+            "name": "demo_timeline"
+          }
+        ]
       },
       "SeedResponse": {
         "properties": {
@@ -5674,7 +5725,14 @@
           "name"
         ],
         "title": "SeedResponse",
-        "description": "Response body for a successful seed fixture creation (HTTP 201)."
+        "description": "Response body for a successful seed fixture creation (HTTP 201).",
+        "examples": [
+          {
+            "fixture_id": "proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X",
+            "fixture_type": "project",
+            "name": "seeded_demo_timeline"
+          }
+        ]
       },
       "SystemState": {
         "properties": {
@@ -5713,7 +5771,23 @@
           "uptime_seconds"
         ],
         "title": "SystemState",
-        "description": "Aggregate in-memory system state returned by ``/api/v1/system/state``.\n\nProduced by a single-pass scan over the in-process job queue and\nWebSocket connection manager (INV-SNAP-1). The handler never issues\ndatabase round-trips."
+        "description": "Aggregate in-memory system state returned by ``/api/v1/system/state``.\n\nProduced by a single-pass scan over the in-process job queue and\nWebSocket connection manager (INV-SNAP-1). The handler never issues\ndatabase round-trips.",
+        "examples": [
+          {
+            "active_connections": 3,
+            "active_jobs": [
+              {
+                "job_id": "job_a1b2c3d4",
+                "job_type": "render",
+                "progress": 0.42,
+                "status": "running",
+                "submitted_at": "2026-04-24T17:04:10Z"
+              }
+            ],
+            "timestamp": "2026-04-24T17:05:00Z",
+            "uptime_seconds": 1820.5
+          }
+        ]
       },
       "ThumbnailStripGenerateRequest": {
         "properties": {
