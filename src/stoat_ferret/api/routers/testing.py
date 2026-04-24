@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 
 from stoat_ferret.api.routers.projects import (
     ProjectRepoDep,
@@ -81,6 +81,22 @@ TestingModeDep = Annotated[Settings, Depends(require_testing_mode)]
     "/seed",
     response_model=SeedResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        403: {
+            "description": (
+                "Testing mode is disabled. Set ``STOAT_TESTING_MODE=true`` to "
+                "enable seed endpoints; the response body carries "
+                '``{"detail": {"code": "TESTING_MODE_DISABLED", "message": ...}}``.'
+            ),
+        },
+        422: {
+            "description": (
+                "Request failed validation. Sent when ``fixture_type`` is not "
+                "one of the supported values or the body is malformed; the "
+                "``detail`` field includes a structured error code."
+            ),
+        },
+    },
 )
 async def create_seed_fixture(
     seed_request: SeedRequest,
@@ -147,12 +163,40 @@ async def create_seed_fixture(
 @router.delete(
     "/seed/{fixture_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        403: {
+            "description": (
+                "Testing mode is disabled. Set ``STOAT_TESTING_MODE=true`` to "
+                "enable seed endpoints."
+            ),
+        },
+        404: {
+            "description": (
+                "No seeded fixture with the supplied ``fixture_id`` exists for "
+                "the selected ``fixture_type``. The response carries "
+                '``{"detail": {"code": "NOT_FOUND", "message": ...}}``.'
+            ),
+        },
+        422: {
+            "description": (
+                "Unsupported ``fixture_type`` query parameter (only ``project`` "
+                "is currently supported)."
+            ),
+        },
+    },
 )
 async def delete_seed_fixture(
-    fixture_id: str,
     _settings: TestingModeDep,
     project_repo: ProjectRepoDep,
-    fixture_type: str = "project",
+    fixture_id: str = Path(
+        description="Identifier returned by ``POST /api/v1/testing/seed``.",
+        examples=["proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X"],
+    ),
+    fixture_type: str = Query(
+        default="project",
+        description=("Repository that owns the fixture. Currently only ``project`` is supported."),
+        examples=["project"],
+    ),
 ) -> Response:
     """Remove a previously seeded fixture (FR-004).
 

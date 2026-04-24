@@ -139,7 +139,33 @@ async def cancel_job(
     )
 
 
-@router.get("/{job_id}/wait", response_model=JobStatusResponse)
+@router.get(
+    "/{job_id}/wait",
+    response_model=JobStatusResponse,
+    responses={
+        404: {
+            "description": (
+                "No job with the supplied ``job_id`` exists in the queue. The "
+                'response carries ``{"detail": {"code": "NOT_FOUND", '
+                '"message": ...}}``.'
+            ),
+        },
+        408: {
+            "description": (
+                "The job did not reach a terminal state within ``timeout`` "
+                "seconds. The job continues running server-side; clients may "
+                "call ``GET /api/v1/jobs/{id}/wait`` again to resume waiting. "
+                'The body carries ``{"detail": {"code": '
+                '"JOB_WAIT_TIMEOUT", "message": ...}}``.'
+            ),
+        },
+        422: {
+            "description": (
+                "``timeout`` query parameter outside ``[1.0, 3600.0]`` or otherwise invalid."
+            ),
+        },
+    },
+)
 async def wait_for_job_completion(
     job_id: str,
     request: Request,

@@ -531,7 +531,17 @@ export interface paths {
         };
         /**
          * Get Job Status
-         * @description Get the status of a submitted job.
+         * @description Get the current status of a submitted job.
+         *
+         *     Returns a point-in-time snapshot of the job's state in the queue.
+         *     The ``status`` field is one of the six ``JobStatus`` values, three
+         *     non-terminal (``pending``, ``running``) and four terminal
+         *     (``complete``, ``failed``, ``timeout``, ``cancelled``). Callers that
+         *     need to block until a terminal state can use
+         *     ``GET /api/v1/jobs/{id}/wait`` instead of polling.
+         *
+         *     Valid state transitions are: ``pending -> running -> (complete |
+         *     failed | timeout | cancelled)``. Terminal states never change.
          *
          *     Args:
          *         job_id: The unique job identifier.
@@ -565,17 +575,79 @@ export interface paths {
          * Cancel Job
          * @description Request cancellation of a job.
          *
+         *     Drives the ``pending -> cancelled`` or ``running -> cancelled`` state
+         *     transition. Cancellation is rejected with 409 when the job is already
+         *     in a terminal state (``complete``, ``failed``, ``timeout``, or
+         *     ``cancelled``) because terminal states are final.
+         *
          *     Args:
          *         job_id: The unique job identifier.
          *         request: The FastAPI request object for accessing app state.
          *
          *     Returns:
-         *         Updated job status.
+         *         Updated job status after the cancellation signal has been
+         *         recorded. The returned ``status`` may still be ``running`` if
+         *         the worker has not yet observed the cancellation flag; callers
+         *         should poll ``GET /api/v1/jobs/{id}`` or use
+         *         ``GET /api/v1/jobs/{id}/wait`` to observe the final
+         *         ``cancelled`` terminal state.
          *
          *     Raises:
          *         HTTPException: 404 if job not found, 409 if already in terminal state.
          */
         post: operations["cancel_job_api_v1_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/wait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wait For Job Completion
+         * @description Block until the job reaches a terminal state, then return its final status.
+         *
+         *     Long-poll helper intended as a deterministic alternative to polling
+         *     ``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at
+         *     ``/ws``. The endpoint waits for the job to enter one of the terminal
+         *     states (``complete``, ``failed``, ``timeout``, ``cancelled``) and
+         *     then returns the same payload as ``GET /api/v1/jobs/{id}``.
+         *
+         *     Semantics:
+         *
+         *     - If the job is already terminal at call time the handler returns
+         *       immediately without allocating an :class:`asyncio.Event`
+         *       (INV-LP-2).
+         *     - Otherwise it awaits the per-job event that queue workers signal
+         *       after writing the terminal status (INV-LP-1).
+         *     - The endpoint returns HTTP 408 (``code="JOB_WAIT_TIMEOUT"``) when
+         *       the job is still non-terminal after ``timeout`` seconds — the job
+         *       itself continues running; the timeout is client-side only.
+         *     - Not durable: if the server restarts while a waiter is blocked,
+         *       the waiter sees a timeout rather than a replay. Treat a restart
+         *       as equivalent to a timeout.
+         *
+         *     Args:
+         *         job_id: The job identifier to wait on.
+         *         request: The FastAPI request (used to resolve the job queue).
+         *         timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.
+         *
+         *     Returns:
+         *         Final :class:`JobStatusResponse` once the job is terminal.
+         *
+         *     Raises:
+         *         HTTPException: 404 when ``job_id`` is unknown. 408 when the job
+         *             does not reach a terminal state within ``timeout`` seconds.
+         */
+        get: operations["wait_for_job_completion_api_v1_jobs__job_id__wait_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1910,6 +1982,119 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get System State
+         * @description Return aggregate in-memory system state.
+         *
+         *     Performs a single-pass scan over the job queue and WebSocket
+         *     connection manager (INV-SNAP-1). No database I/O. Missing or
+         *     transiently-broken subsystems are reported as empty collections
+         *     rather than raising (NFR-003): the snapshot is best-effort.
+         *
+         *     Args:
+         *         request: FastAPI request, used to reach ``app.state``.
+         *
+         *     Returns:
+         *         ``SystemState`` describing active jobs, open WebSocket
+         *         connections, and process uptime.
+         */
+        get: operations["get_system_state_api_v1_system_state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/testing/seed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Seed Fixture
+         * @description Create a named test fixture (FR-001).
+         *
+         *     The ``fixture_type`` field dispatches to the owning repository. All
+         *     stored names carry the ``seeded_`` prefix (INV-SEED-2) so callers
+         *     can enumerate seeded records without special indexes. Only
+         *     ``testing_mode=True`` deployments reach this handler — the guard is
+         *     enforced by :func:`require_testing_mode`.
+         *
+         *     Args:
+         *         seed_request: Parsed request body (fixture_type, name, data).
+         *         _settings: Settings instance returned by the testing-mode guard.
+         *             The argument is accepted only to enforce the dependency —
+         *             handler logic reads from the repository, not the settings.
+         *         project_repo: Injected project repository (in-memory in tests,
+         *             SQLite in production).
+         *
+         *     Returns:
+         *         :class:`SeedResponse` echoing the fixture id, type, and final
+         *         stored name.
+         *
+         *     Raises:
+         *         HTTPException: 422 when ``fixture_type`` is not supported. 403
+         *             is raised earlier by :func:`require_testing_mode` when the
+         *             guard fails.
+         */
+        post: operations["create_seed_fixture_api_v1_testing_seed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/testing/seed/{fixture_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Seed Fixture
+         * @description Remove a previously seeded fixture (FR-004).
+         *
+         *     The ``fixture_type`` query parameter routes the delete to the
+         *     correct repository; it defaults to ``project`` because that is the
+         *     only supported type in this release (NFR-002 allows adding more).
+         *     Only ``testing_mode=True`` deployments reach this handler.
+         *
+         *     Args:
+         *         fixture_id: Identifier returned by the prior POST.
+         *         _settings: Settings instance returned by the testing-mode guard.
+         *         project_repo: Injected project repository.
+         *         fixture_type: Which repository owns the fixture (query string).
+         *
+         *     Returns:
+         *         Empty ``204 No Content`` response on success.
+         *
+         *     Raises:
+         *         HTTPException: 404 when no fixture with that id exists, 422 when
+         *             ``fixture_type`` is not recognised.
+         */
+        delete: operations["delete_seed_fixture_api_v1_testing_seed__fixture_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/{video_id}/thumbnails/strip": {
         parameters: {
             query?: never;
@@ -2694,15 +2879,33 @@ export interface components {
          *     Settings (Pydantic BaseSettings) as resolved from environment
          *     variables at startup. Flags are immutable for the life of the
          *     application process.
+         * @example {
+         *       "batch_rendering": true,
+         *       "seed_endpoint": false,
+         *       "synthetic_monitoring": true,
+         *       "testing_mode": false
+         *     }
          */
         FlagsResponse: {
-            /** Testing Mode */
+            /**
+             * Testing Mode
+             * @description ``STOAT_TESTING_MODE`` — unlocks test-only endpoints (e.g. seed fixtures).
+             */
             testing_mode: boolean;
-            /** Seed Endpoint */
+            /**
+             * Seed Endpoint
+             * @description ``STOAT_SEED_ENDPOINT`` — legacy alias retained for ops dashboards.
+             */
             seed_endpoint: boolean;
-            /** Synthetic Monitoring */
+            /**
+             * Synthetic Monitoring
+             * @description ``STOAT_SYNTHETIC_MONITORING`` — enables background probe traffic.
+             */
             synthetic_monitoring: boolean;
-            /** Batch Rendering */
+            /**
+             * Batch Rendering
+             * @description ``STOAT_BATCH_RENDERING`` — permits multi-clip batch render jobs.
+             */
             batch_rendering: boolean;
         };
         /**
@@ -2768,17 +2971,40 @@ export interface components {
          *
          *     Contains the current status, optional progress, result when complete,
          *     and error message on failure.
+         * @example {
+         *       "job_id": "job_a1b2c3d4",
+         *       "progress": 1,
+         *       "result": {
+         *         "output_path": "data/renders/clip_01.mp4"
+         *       },
+         *       "status": "complete"
+         *     }
          */
         JobStatusResponse: {
-            /** Job Id */
+            /**
+             * Job Id
+             * @description Unique identifier for the job.
+             */
             job_id: string;
-            /** Status */
+            /**
+             * Status
+             * @description Current job status. One of ``pending``, ``running``, ``complete``, ``failed``, ``timeout``, ``cancelled``. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states are ``complete``, ``failed``, ``timeout``, and ``cancelled`` — once reached, the status never changes. See the ``JobStatus`` schema for the enumerated values.
+             */
             status: string;
-            /** Progress */
+            /**
+             * Progress
+             * @description Progress value in ``[0.0, 1.0]`` reported by the handler while ``status == 'running'``; ``null`` otherwise.
+             */
             progress?: number | null;
-            /** Result */
+            /**
+             * Result
+             * @description Handler return value when ``status == 'complete'``; ``null`` for non-terminal states and for failure/timeout/cancelled.
+             */
             result?: unknown;
-            /** Error */
+            /**
+             * Error
+             * @description Error message when ``status`` is ``failed`` or ``timeout``; ``null`` otherwise.
+             */
             error?: string | null;
         };
         /**
@@ -2788,8 +3014,48 @@ export interface components {
          *     Contains the unique job ID for polling status.
          */
         JobSubmitResponse: {
-            /** Job Id */
+            /**
+             * Job Id
+             * @description Unique identifier for the submitted job. Use this id with ``GET /api/v1/jobs/{job_id}``, ``GET /api/v1/jobs/{job_id}/wait``, or ``POST /api/v1/jobs/{job_id}/cancel``.
+             */
             job_id: string;
+        };
+        /**
+         * JobSummary
+         * @description Minimal per-job summary included in the system state snapshot.
+         *
+         *     Contains only the fields an external agent needs to orient on a
+         *     running workload without a follow-up ``GET /api/v1/jobs/{id}`` call.
+         *     Full job detail (result payload, error message) is intentionally
+         *     omitted — snapshot is a lightweight fleet view.
+         */
+        JobSummary: {
+            /**
+             * Job Id
+             * @description Unique identifier for the job.
+             */
+            job_id: string;
+            /**
+             * Job Type
+             * @description Registered job-type label (e.g. ``scan``, ``render``).
+             */
+            job_type: string;
+            /**
+             * Status
+             * @description Current job status (``pending``/``running``/``complete``/``failed``/``timeout``/``cancelled``).
+             */
+            status: string;
+            /**
+             * Progress
+             * @description Progress value in ``[0.0, 1.0]`` when reported by the handler; ``null`` otherwise.
+             */
+            progress?: number | null;
+            /**
+             * Submitted At
+             * Format: date-time
+             * @description UTC timestamp (timezone-aware) when the job was submitted.
+             */
+            submitted_at: string;
         };
         /**
          * LayoutPresetListResponse
@@ -3321,6 +3587,115 @@ export interface components {
             recursive: boolean;
         };
         /**
+         * SeedRequest
+         * @description Request body for creating a seeded test fixture.
+         *
+         *     The ``fixture_type`` field selects which in-memory domain object is
+         *     created. Type-specific parameters are carried in ``data`` to keep the
+         *     wire format stable as new fixture types are added; the router
+         *     validates type-specific constraints before dispatching to the
+         *     matching repository (NFR-002).
+         * @example {
+         *       "data": {
+         *         "output_fps": 30,
+         *         "output_height": 1080,
+         *         "output_width": 1920
+         *       },
+         *       "fixture_type": "project",
+         *       "name": "demo_timeline"
+         *     }
+         */
+        SeedRequest: {
+            /**
+             * Fixture Type
+             * @description Discriminator for the fixture category (e.g. ``project``). The server rejects unknown values with HTTP 422.
+             */
+            fixture_type: string;
+            /**
+             * Name
+             * @description Caller-supplied fixture name. The server prepends ``seeded_`` before persistence (INV-SEED-2); callers must not pre-prefix the value.
+             */
+            name: string;
+            /**
+             * Data
+             * @description Fixture-type-specific creation payload. For ``project`` fixtures, keys ``output_width``, ``output_height`` and ``output_fps`` are honored; missing keys take project defaults.
+             */
+            data?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * SeedResponse
+         * @description Response body for a successful seed fixture creation (HTTP 201).
+         * @example {
+         *       "fixture_id": "proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X",
+         *       "fixture_type": "project",
+         *       "name": "seeded_demo_timeline"
+         *     }
+         */
+        SeedResponse: {
+            /**
+             * Fixture Id
+             * @description Unique identifier returned by the underlying repository.
+             */
+            fixture_id: string;
+            /**
+             * Fixture Type
+             * @description Echoes the request's ``fixture_type`` so the caller can fan-out cleanup.
+             */
+            fixture_type: string;
+            /**
+             * Name
+             * @description Final stored name, always beginning with ``seeded_`` (INV-SEED-2). Useful for querying pass-through GET endpoints.
+             */
+            name: string;
+        };
+        /**
+         * SystemState
+         * @description Aggregate in-memory system state returned by ``/api/v1/system/state``.
+         *
+         *     Produced by a single-pass scan over the in-process job queue and
+         *     WebSocket connection manager (INV-SNAP-1). The handler never issues
+         *     database round-trips.
+         * @example {
+         *       "active_connections": 3,
+         *       "active_jobs": [
+         *         {
+         *           "job_id": "job_a1b2c3d4",
+         *           "job_type": "render",
+         *           "progress": 0.42,
+         *           "status": "running",
+         *           "submitted_at": "2026-04-24T17:04:10Z"
+         *         }
+         *       ],
+         *       "timestamp": "2026-04-24T17:05:00Z",
+         *       "uptime_seconds": 1820.5
+         *     }
+         */
+        SystemState: {
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description UTC timestamp (timezone-aware) at which the snapshot was captured.
+             */
+            timestamp: string;
+            /**
+             * Active Jobs
+             * @description Jobs currently tracked by the in-memory job queue, in submission order.
+             */
+            active_jobs: components["schemas"]["JobSummary"][];
+            /**
+             * Active Connections
+             * @description Number of currently open WebSocket connections.
+             */
+            active_connections: number;
+            /**
+             * Uptime Seconds
+             * @description Seconds elapsed since the application startup gate opened. ``0.0`` before startup completes.
+             */
+            uptime_seconds: number;
+        };
+        /**
          * ThumbnailStripGenerateRequest
          * @description Request body for thumbnail strip generation.
          *
@@ -3788,6 +4163,53 @@ export interface components {
          * @enum {string}
          */
         ProxyQuality: "low" | "medium" | "high";
+        /**
+         * JobStatus
+         * @description Job lifecycle state. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states (``complete``, ``failed``, ``timeout``, ``cancelled``) are final.
+         * @enum {string}
+         */
+        JobStatus: "pending" | "running" | "complete" | "failed" | "timeout" | "cancelled";
+        /**
+         * WebSocketEvent
+         * @description Documentation-only schema for a broadcast WebSocket event envelope.
+         *
+         *     Every event sent on the ``/ws`` endpoint is a JSON object with the
+         *     fields enumerated below. Event-type-specific payload fields live
+         *     inside the ``payload`` object and vary per ``type`` — consult the
+         *     ``EventType`` values in
+         *     :mod:`stoat_ferret.api.websocket.events` for the catalogue of
+         *     recognised ``type`` strings.
+         */
+        WebSocketEvent: {
+            /**
+             * Type
+             * @description Event type discriminator. Values are drawn from the ``EventType`` enum and include render lifecycle events (``render_started``, ``render_progress``, ``render_completed``, ``render_failed``, ``render_cancelled``, ``render_queued``, ``render_frame_available``, ``render_queue_status``), scan events (``scan_started``, ``scan_completed``), proxy events (``proxy.ready``), preview events (``preview.generating``, ``preview.ready``, ``preview.seeking``, ``preview.error``), timeline events (``timeline_updated``, ``layout_applied``, ``audio_mix_changed``, ``transition_applied``), AI events (``ai_action``), generic job events (``job_progress``), project events (``project_created``), and system events (``health_status``, ``heartbeat``).
+             */
+            type: string;
+            /**
+             * Payload
+             * @description Event-specific payload. Fields vary with ``type``; always a JSON object (may be empty).
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Correlation Id
+             * @description Optional correlation identifier propagated from the triggering HTTP request (``X-Correlation-ID`` header). ``null`` for server-originated events (e.g. heartbeat) with no inbound correlation context.
+             * @default null
+             */
+            correlation_id: string | null;
+            /**
+             * Timestamp
+             * @description ISO-8601 UTC timestamp at which the event was built. Example: ``2026-04-23T12:34:56.789012+00:00``.
+             */
+            timestamp: string;
+            /**
+             * Event Id
+             * @description Monotonic event identifier in the format ``event-NNNNN`` (zero-padded to 5 digits; widens beyond 5 digits once the scope counter exceeds 99999). Counter is scoped per ``job_id`` — job-scoped events carry a sequence local to that job, while events without a job scope share a single global counter. Within a single scope the identifier is strictly increasing, which lets clients detect gaps, reconnect with ``Last-Event-ID``, and replay missed events from the server buffer.
+             */
+            event_id: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -3890,25 +4312,50 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description JSON Schema for the requested resource, as produced by Pydantic V2's ``model_json_schema()``. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "title": "ProjectResponse",
+                     *       "type": "object",
+                     *       "properties": {
+                     *         "id": {
+                     *           "type": "string",
+                     *           "title": "Id"
+                     *         },
+                     *         "name": {
+                     *           "type": "string",
+                     *           "title": "Name"
+                     *         }
+                     *       },
+                     *       "required": [
+                     *         "id",
+                     *         "name"
+                     *       ]
+                     *     }
+                     */
                     "application/json": {
                         [key: string]: unknown;
                     };
                 };
             };
-            /** @description Validation Error */
+            /** @description ``resource`` is not one of ``project``, ``clip``, ``timeline``, ``render_job``, ``effect``, ``video``. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path parameter failed FastAPI validation (reserved — the router accepts any string, then dispatches to the lookup table that raises 404 for unknown resources). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -4420,6 +4867,52 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    wait_for_job_completion_api_v1_jobs__job_id__wait_get: {
+        parameters: {
+            query?: {
+                /** @description Maximum seconds to wait for the job to reach a terminal state. Server returns HTTP 408 if the job is still non-terminal when the deadline expires. */
+                timeout?: number;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatusResponse"];
+                };
+            };
+            /** @description No job with the supplied ``job_id`` exists in the queue. The response carries ``{"detail": {"code": "NOT_FOUND", "message": ...}}``. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The job did not reach a terminal state within ``timeout`` seconds. The job continues running server-side; clients may call ``GET /api/v1/jobs/{id}/wait`` again to resume waiting. The body carries ``{"detail": {"code": "JOB_WAIT_TIMEOUT", "message": ...}}``. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ``timeout`` query parameter outside ``[1.0, 3600.0]`` or otherwise invalid. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5800,6 +6293,109 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_system_state_api_v1_system_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemState"];
+                };
+            };
+        };
+    };
+    create_seed_fixture_api_v1_testing_seed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeedRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeedResponse"];
+                };
+            };
+            /** @description Testing mode is disabled. Set ``STOAT_TESTING_MODE=true`` to enable seed endpoints; the response body carries ``{"detail": {"code": "TESTING_MODE_DISABLED", "message": ...}}``. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation. Sent when ``fixture_type`` is not one of the supported values or the body is malformed; the ``detail`` field includes a structured error code. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_seed_fixture_api_v1_testing_seed__fixture_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Repository that owns the fixture. Currently only ``project`` is supported. */
+                fixture_type?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Identifier returned by ``POST /api/v1/testing/seed``. */
+                fixture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Testing mode is disabled. Set ``STOAT_TESTING_MODE=true`` to enable seed endpoints. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No seeded fixture with the supplied ``fixture_id`` exists for the selected ``fixture_type``. The response carries ``{"detail": {"code": "NOT_FOUND", "message": ...}}``. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unsupported ``fixture_type`` query parameter (only ``project`` is currently supported). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

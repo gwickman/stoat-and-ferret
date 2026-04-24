@@ -44,7 +44,27 @@ class SystemState(BaseModel):
     database round-trips.
     """
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "timestamp": "2026-04-24T17:05:00Z",
+                    "active_jobs": [
+                        {
+                            "job_id": "job_a1b2c3d4",
+                            "job_type": "render",
+                            "status": "running",
+                            "progress": 0.42,
+                            "submitted_at": "2026-04-24T17:04:10Z",
+                        }
+                    ],
+                    "active_connections": 3,
+                    "uptime_seconds": 1820.5,
+                }
+            ]
+        },
+    )
 
     timestamp: datetime = Field(
         description="UTC timestamp (timezone-aware) at which the snapshot was captured.",
