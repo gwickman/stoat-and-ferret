@@ -4,7 +4,7 @@
 This script:
 1. Runs pyo3-stub-gen to generate stubs from Rust code
 2. Extracts class and function names from the generated stubs
-3. Compares against the manual stubs in stubs/stoat_ferret_core/
+3. Compares against the manual stubs in src/stoat_ferret_core/
 4. Reports any types defined in Rust but missing from manual stubs
 
 This is a "drift detector" - it catches when new Rust types are added
@@ -110,7 +110,7 @@ def main() -> int:
 
     # Paths
     generated_stub = project_root / ".generated-stubs" / "stoat_ferret_core" / "_core.pyi"
-    manual_stub = project_root / "stubs" / "stoat_ferret_core" / "_core.pyi"
+    manual_stub = project_root / "src" / "stoat_ferret_core" / "_core.pyi"
 
     if not generated_stub.exists():
         print(f"ERROR: Generated stub not found at {generated_stub}", file=sys.stderr)
@@ -144,7 +144,7 @@ def main() -> int:
         has_errors = True
 
     if has_errors:
-        print("\nPlease update stubs/stoat_ferret_core/_core.pyi to include these types.")
+        print("\nPlease update src/stoat_ferret_core/_core.pyi to include these types.")
         return 1
 
     print("OK: All generated types are present in manual stubs.")

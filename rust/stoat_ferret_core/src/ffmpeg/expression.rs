@@ -191,7 +191,7 @@ impl fmt::Display for FuncName {
 /// A type-safe FFmpeg filter expression tree.
 ///
 /// Expressions are built using constructors and operator overloading,
-/// then serialized to FFmpeg syntax via [`Display`].
+/// then serialized to FFmpeg syntax via [`std::fmt::Display`].
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     /// A constant numeric value.

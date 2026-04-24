@@ -11,8 +11,8 @@
 //!   at build time.
 //!
 //! The Python `/api/v1/version` endpoint instantiates this type via
-//! [`VersionInfo::current`] to report deployment metadata alongside the
-//! alembic revision of the database.
+//! `VersionInfo::current()` (see [`VersionInfo`]) to report deployment
+//! metadata alongside the alembic revision of the database.
 //!
 //! The `option_env!("GIT_SHA")` macro reads the env value captured at build
 //! time rather than the runtime environment, so the returned struct reflects
@@ -41,21 +41,53 @@ pub struct VersionInfo {
     pub git_sha: String,
 }
 
-#[gen_stub_pymethods]
-#[pymethods]
 impl VersionInfo {
     /// Return a [`VersionInfo`] populated from the build-time metadata.
     ///
-    /// Exposed to Python as `VersionInfo.current()`. This is a pure accessor
-    /// over compile-time constants, so the call is cheap and never fails.
-    #[staticmethod]
-    #[pyo3(name = "current")]
-    fn py_current() -> Self {
+    /// Pure accessor over compile-time constants; cheap and never fails. The
+    /// PyO3 binding (`py_current`) delegates to this function and exposes it
+    /// to Python as `VersionInfo.current()`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use stoat_ferret_core::version::VersionInfo;
+    ///
+    /// let info = VersionInfo::current();
+    /// // core_version is the crate version from Cargo.toml (semver).
+    /// assert_eq!(info.core_version.split('.').count(), 3);
+    /// // git_sha is always populated; "unknown" when GIT_SHA was unset.
+    /// assert!(!info.git_sha.is_empty());
+    /// ```
+    pub fn current() -> Self {
         Self {
             core_version: env!("CARGO_PKG_VERSION").to_string(),
             build_timestamp: env!("BUILD_TIMESTAMP").to_string(),
             git_sha: option_env!("GIT_SHA").unwrap_or("unknown").to_string(),
         }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl VersionInfo {
+    /// PyO3 binding for [`VersionInfo::current`].
+    ///
+    /// Exposed to Python as `VersionInfo.current()` (via `#[pyo3(name =
+    /// "current")]`).
+    ///
+    /// # Example (Python)
+    ///
+    /// ```python
+    /// from stoat_ferret_core import VersionInfo
+    ///
+    /// info = VersionInfo.current()
+    /// print(info.core_version, info.build_timestamp, info.git_sha)
+    /// ```
+    #[staticmethod]
+    #[pyo3(name = "current")]
+    fn py_current() -> Self {
+        Self::current()
     }
 }
 
