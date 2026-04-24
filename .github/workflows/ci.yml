@@ -26,7 +26,6 @@ jobs:
               - 'rust/**'
               - 'tests/**'
               - 'scripts/**'
-              - 'stubs/**'
               - 'alembic/**'
               - 'pyproject.toml'
               - 'Cargo.toml'
@@ -91,9 +90,7 @@ jobs:
         run: uv run python -c "from stoat_ferret_core import health_check; print(health_check())"
 
       - name: Verify stubs exist
-        run: |
-          test -f stubs/stoat_ferret_core/__init__.pyi
-          test -f stubs/stoat_ferret_core/_core.pyi
+        run: test -f src/stoat_ferret_core/_core.pyi
         shell: bash
 
       - name: Verify stub completeness

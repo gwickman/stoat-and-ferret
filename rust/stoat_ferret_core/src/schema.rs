@@ -1,13 +1,16 @@
 //! Parameter schema translator for AI-facing effect discovery.
 //!
 //! Decomposes JSON Schema-style parameter descriptors (as emitted by the
-//! Python [`stoat_ferret.effects.definitions`] module) into structured
+//! Python `stoat_ferret.effects.definitions` module) into structured
 //! [`ParameterSchema`] records. AI agents consuming `/api/v1/effects` use
 //! the resulting list to discover valid parameter types, bounds, enum
 //! domains, and natural-language hints without reasoning about raw JSON
 //! Schema.
 //!
-//! # Example
+//! The entry point is [`py_parameter_schemas_from_dict`], exposed to Python
+//! as `parameter_schemas_from_dict` (via `#[pyo3(name = "...")]`).
+//!
+//! # Shape
 //!
 //! ```text
 //! input schema   = {"type": "object", "properties": {"fontsize": {...}}}
@@ -84,7 +87,11 @@ impl ParameterSchema {
 /// Allowed set of normalised `param_type` values emitted by the translator.
 const VALID_PARAM_TYPES: &[&str] = &["int", "float", "string", "bool", "enum", "array"];
 
-/// Returns `true` when `value` is a member of [`VALID_PARAM_TYPES`].
+/// Returns `true` when `value` is one of the normalised parameter-type strings
+/// emitted by the translator.
+///
+/// The allowed set is `"int"`, `"float"`, `"string"`, `"bool"`, `"enum"`, and
+/// `"array"`. Any value outside this set returns `false`.
 pub fn is_valid_param_type(value: &str) -> bool {
     VALID_PARAM_TYPES.contains(&value)
 }
@@ -108,16 +115,40 @@ fn map_json_type(json_type: Option<&str>) -> String {
 /// property. Returns an empty list when `schema` has no `properties` key
 /// (including the empty-dict case).
 ///
-/// Args:
-///     schema: JSON Schema-style dict (e.g. `{"properties": {"x": {...}}}`).
-///     ai_hints: Map of parameter name -> AI hint string.
+/// Exposed to Python as `parameter_schemas_from_dict` (via `#[pyo3(name =
+/// "...")]`).
 ///
-/// Returns:
-///     List of `ParameterSchema` objects, one per property, in iteration order.
+/// # Args
 ///
-/// Raises:
-///     TypeError / ValueError: if a property entry is not a dict, or a field
-///         cannot be coerced to its expected type.
+/// - `schema`: JSON Schema-style dict (e.g. `{"properties": {"x": {...}}}`).
+/// - `ai_hints`: Map of parameter name -> AI hint string.
+///
+/// # Returns
+///
+/// List of `ParameterSchema` objects, one per property, in iteration order.
+///
+/// # Errors
+///
+/// Returns a Python `TypeError` / `ValueError` if a property entry is not a
+/// dict, or if a field cannot be coerced to its expected type.
+///
+/// # Example (Python)
+///
+/// ```python
+/// from stoat_ferret_core import parameter_schemas_from_dict
+///
+/// schema = {
+///     "properties": {
+///         "fontsize": {"type": "integer", "default": 48, "minimum": 8, "maximum": 256},
+///     },
+/// }
+/// ai_hints = {"fontsize": "Font size in pixels"}
+///
+/// params = parameter_schemas_from_dict(schema, ai_hints)
+/// assert params[0].name == "fontsize"
+/// assert params[0].param_type == "int"
+/// assert params[0].ai_hint == "Font size in pixels"
+/// ```
 #[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "parameter_schemas_from_dict")]
