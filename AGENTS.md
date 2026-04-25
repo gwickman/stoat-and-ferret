@@ -7,9 +7,9 @@ AI-driven video editor with hybrid Python/Rust architecture.
 ```
 stoat-and-ferret/
 ├── src/                    # Python source (FastAPI, orchestration)
+│   └── stoat_ferret_core/  # Python package with type stubs for Rust bindings (_core.pyi)
 ├── rust/stoat_ferret_core/ # Rust crate (filters, timeline math, FFmpeg, expressions)
 ├── gui/                    # Frontend (React/TypeScript/Vite)
-├── stubs/                  # Python type stubs for Rust bindings
 ├── tests/                  # Python tests (pytest)
 ├── docs/design/            # Architecture and design documents
 ├── docs/auto-dev/          # Auto-dev process documentation
@@ -83,7 +83,7 @@ Always run `git status` before `git push` to verify the current branch is correc
 
 ## Type Stubs
 
-Python type stubs for the Rust PyO3 bindings are maintained in `stubs/stoat_ferret_core/`.
+Python type stubs for the Rust PyO3 bindings are maintained in `src/stoat_ferret_core/` (the `_core.pyi` file lives alongside the Python package).
 
 **Manual vs Generated Stubs**: The stubs are manually maintained because `pyo3-stub-gen` generates incomplete stubs (class docstrings only, no method signatures). The generated stubs serve as a baseline for detecting new types added to Rust.
 
@@ -100,7 +100,7 @@ Python type stubs for the Rust PyO3 bindings are maintained in `stubs/stoat_ferr
    uv run python scripts/verify_stubs.py
    ```
 
-3. If verification fails, update `stubs/stoat_ferret_core/_core.pyi` to include the missing types with proper method signatures.
+3. If verification fails, update `src/stoat_ferret_core/_core.pyi` to include the missing types with proper method signatures.
 
 4. Commit both the Rust changes and updated stubs.
 

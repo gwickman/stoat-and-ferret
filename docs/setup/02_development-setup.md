@@ -215,12 +215,11 @@ stoat-and-ferret/
       effects/            # Video effects registry
       ffmpeg/             # FFmpeg executor
       jobs/               # Async job queue
-    stoat_ferret_core/    # Python package wrapping Rust extension
+    stoat_ferret_core/    # Python package wrapping Rust extension (includes _core.pyi type stubs)
   rust/
     stoat_ferret_core/    # Rust source (PyO3 bindings)
   gui/                    # React/Vite/Tailwind frontend
   tests/                  # Python test suite
-  stubs/                  # Type stubs for the Rust extension
   alembic/                # Database migration scripts
   scripts/                # Utility scripts
   data/                   # Runtime data (database, thumbnails)
