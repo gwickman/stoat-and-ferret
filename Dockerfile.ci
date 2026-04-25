@@ -59,7 +59,6 @@ RUN uv pip install /tmp/wheels/*.whl && rm -rf /tmp/wheels
 # Copy the rest of the project source
 COPY src/ src/
 COPY tests/ tests/
-COPY stubs/ stubs/
 COPY scripts/ scripts/
 COPY alembic/ alembic/
 COPY alembic.ini .

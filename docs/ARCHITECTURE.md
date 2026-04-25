@@ -54,7 +54,7 @@ stoat-and-ferret is an AI-driven video editor built on a **hybrid Python/Rust ar
 
 - **Non-destructive editing**: Source media files are never modified. All edits are stored as project metadata and applied at render time.
 - **Rust for compute, Python for orchestration**: CPU-intensive operations (filter generation, timeline math, input sanitization) run in Rust for performance and safety. Python handles HTTP routing, database access, and subprocess management.
-- **PyO3 bindings**: Rust types are exposed to Python via PyO3 with type stubs maintained in `stubs/`. CI enforces stub completeness.
+- **PyO3 bindings**: Rust types are exposed to Python via PyO3 with type stubs maintained in `src/stoat_ferret_core/`. CI enforces stub completeness.
 - **Dependency injection**: Services use constructor injection via `app.state`, enabling testing with fakes and making dependencies explicit.
 - **Transparency**: API responses include generated FFmpeg filter strings so users and AI agents can inspect what will be executed.
 - **AI discoverability**: FastAPI auto-generates OpenAPI schemas. Effect definitions include AI hints and parameter schemas for agent integration.

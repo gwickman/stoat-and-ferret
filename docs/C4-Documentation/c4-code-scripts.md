@@ -205,7 +205,7 @@ All journey scripts use Playwright `sync_api` and follow a common pattern: struc
 | Module | Relationship |
 |--------|-------------|
 | `stoat_ferret.api.app.create_app` | Used by `export_openapi.py` and `check_openapi_freshness.py` |
-| `stubs/stoat_ferret_core/_core.pyi` | Compared by `verify_stubs.py` |
+| `src/stoat_ferret_core/_core.pyi` | Compared by `verify_stubs.py` |
 | `.generated-stubs/` | Generated output compared by `verify_stubs.py` |
 
 ### External Dependencies
@@ -260,7 +260,7 @@ graph TD
     BROWSER -->|"requests"| SERVER
 
     subgraph "Build Artifacts"
-        STUBS["stubs/stoat_ferret_core/"]
+        STUBS["src/stoat_ferret_core/"]
         OPENAPI["gui/openapi.json"]
         RUST["rust/stoat_ferret_core/"]
     end

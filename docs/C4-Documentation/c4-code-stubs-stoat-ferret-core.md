@@ -3,7 +3,7 @@
 ## Overview
 - **Name**: Stoat Ferret Core Type Stubs
 - **Description**: Manually maintained Python type stubs providing full method signatures for the Rust PyO3 bindings.
-- **Location**: `stubs/stoat_ferret_core/`
+- **Location**: `src/stoat_ferret_core/`
 - **Language**: Python (`.pyi` stub files)
 - **Purpose**: Provides complete type information (method signatures, docstrings, property types) for IDE autocompletion and static analysis tools (mypy, pyright) against the Rust extension. These stubs are manually maintained because `pyo3-stub-gen` only generates class docstrings without method signatures.
 - **Parent Component**: [Python Bindings Layer](./c4-component-python-bindings.md)
@@ -79,7 +79,7 @@ None (stub files have no runtime dependencies).
 
 ```mermaid
 graph TD
-    subgraph "stubs/stoat_ferret_core"
+    subgraph "src/stoat_ferret_core"
         INIT_PYI["__init__.pyi<br/>Re-export stubs"]
         CORE_PYI["_core.pyi<br/>~900 lines, full API"]
     end

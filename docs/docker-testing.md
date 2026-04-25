@@ -47,8 +47,10 @@ The `Dockerfile` uses a multi-stage build:
    dependencies with `uv`, and copies the pre-built wheel. No Rust toolchain in
    the final image.
 
-Source directories (`src/`, `tests/`, `stubs/`, `scripts/`) are bind-mounted at
+Source directories (`src/`, `tests/`, `scripts/`) are bind-mounted at
 runtime so you can edit code on the host and re-run tests without rebuilding.
+Type stubs for the PyO3 bindings live under `src/stoat_ferret_core/` and are
+included via the `src/` mount.
 
 ## When to Rebuild
 
