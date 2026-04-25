@@ -1632,6 +1632,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+examples = [
+    { name = "websockets" },
+]
 uat = [
     { name = "playwright" },
 ]
@@ -1663,8 +1666,9 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "structlog", specifier = ">=24.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.27" },
+    { name = "websockets", marker = "extra == 'examples'", specifier = ">=12.0" },
 ]
-provides-extras = ["uat"]
+provides-extras = ["uat", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
