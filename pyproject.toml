@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 uat = ["playwright>=1.58,<2.0"]
+examples = ["websockets>=12.0"]
 
 # Build system: Use maturin when building with Rust component
 # Requires: Visual Studio Build Tools with C++ workload + Windows SDK
