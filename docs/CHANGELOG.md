@@ -4,6 +4,19 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v042] - 2026-04-26
+
+Agent Operator Documentation and Residual Closure. Delivers targeted documentation for AI agent operators (operator guide, prompt recipes, WebSocket event vocabulary) and closes residual v039/v041 documentation gaps (CHANGELOG verification, AGENTS.md path corrections, manual TOC completeness).
+
+### Documentation
+
+- **Agent Operator Guide** — `docs/manual/operator-guide.md` compact reference for AI agents orchestrating stoat-and-ferret over HTTP/WebSocket; covers API orientation, canonical sequences, state machines, testing mode, and MCP abstraction criteria; all endpoint paths live-verified (BL-283, #323)
+- **Prompt Recipes and Example Scripts** — `docs/manual/prompt-recipes.md` with 6 copy-paste recipes; `scripts/wait-for-render.py` and `scripts/dump-ws-events.py` executable utilities for common agent workflows (BL-284, #324)
+- **WebSocket Event Vocabulary** — `docs/manual/ws-event-vocabulary.md` documenting all 24 event types with payloads, state transitions, and live-captured evidence; 9 frames captured for validation (BL-285, #325)
+- **AGENTS.md Path Fix** — Updated 8 stale `stubs/` directory references to `src/` following the v041 stub consolidation (BL-303, #321)
+- **Manual TOC Update** — Added 6 missing TOC entries to `docs/manual/00_README.md` for v041 and pre-v041 manual files (BL-304, #322)
+- **CHANGELOG Verification** — Confirmed v039 (BL-301) and v041 (BL-302) CHANGELOG sections are present and accurate; no edits required
+
 ## [v041] - 2026-04-24
 
 Documentation and Operational Excellence. Validates the OpenAPI specification against Phase 6 endpoints, enriches Rust core with rustdoc examples, delivers canonical API usage workflows, and ships an operational runbook with decision-tree troubleshooting.
