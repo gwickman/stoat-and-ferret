@@ -26,6 +26,8 @@ Stoat & Ferret is an AI-driven programmatic video editor built on a hybrid Pytho
 | [AI Integration](08_ai-integration.md) | AI-driven workflows, OpenAPI schema, effect discovery |
 | [Glossary](09_glossary.md) | Definitions of key terms and concepts |
 | [Operator Guide](operator-guide.md) | Compact (under 100 lines) HTTP/WebSocket reference for AI agents |
+| [Prompt Recipes](prompt-recipes.md) | Copy-paste prompts and API sequences for AI agents (canonical workflows) |
+| [WebSocket Event Vocabulary](ws-event-vocabulary.md) | Authoritative reference for every event emitted on `/ws` (24 types, schemas, replay semantics) |
 | [AI Integration Patterns](ai-integration-patterns.md) | Five canonical patterns for AI agents integrating with the API |
 | [API Usage Examples](api-usage-examples.md) | Validated request/response flows for the five primary API workflows |
 | [Runbook](runbook.md) | Operator reference for starting, stopping, backing up, and monitoring the service |
