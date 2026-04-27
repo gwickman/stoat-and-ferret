@@ -1,0 +1,384 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "SLI dashboard for stoat-and-ferret v043 — request latency, error rate, render throughput, WebSocket health, synthetic probes, and active jobs.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Latency P99",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 0.2}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "HTTP P99 (all routes)"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(stoat_system_state_duration_seconds_bucket[5m])))",
+          "legendFormat": "system/state P99"
+        },
+        {
+          "refId": "C",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(stoat_seed_duration_seconds_bucket[5m])))",
+          "legendFormat": "seed P99"
+        },
+        {
+          "refId": "D",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "histogram_quantile(0.99, sum by (le, result) (rate(stoat_migration_duration_seconds_bucket[1h])))",
+          "legendFormat": "migration P99 ({{result}})"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (5xx / total)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 0.01}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1)",
+          "legendFormat": "5xx error rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Render Throughput (jobs/min)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "60 * sum by (job_type) (rate(stoat_active_jobs_count[5m]))",
+          "legendFormat": "{{job_type}} (delta/min)"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "60 * rate(stoat_seed_duration_seconds_count[5m])",
+          "legendFormat": "seed jobs/min"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "WebSocket Connections",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "stoat_ws_connected_clients",
+          "legendFormat": "Connected clients"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "WebSocket Buffer Utilization",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "stoat_ws_buffer_size",
+          "legendFormat": "Buffered events"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Synthetic Checks (health probes & feature flags)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum(increase(http_requests_total{path=\"/health\"}[5m]))",
+          "legendFormat": "/health probes (5m)"
+        },
+        {
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "stoat_feature_flag_state",
+          "legendFormat": "{{flag}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Active Jobs by Type",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "right", "values": ["value"]},
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum by (job_type) (stoat_active_jobs_count)",
+          "legendFormat": "{{job_type}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["stoat-and-ferret", "sli", "v043"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "stoat-and-ferret SLI Dashboard",
+  "uid": "stoat-sli-v043",
+  "version": 1,
+  "weekStart": "",
+  "alerts": [
+    {
+      "name": "P99 Latency SLO Breach",
+      "condition": "A",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "datasourceUid": "prometheus",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "model": {
+            "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 0.2",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "HTTP request P99 latency exceeded 200ms for 5 minutes (SLO breach).",
+        "summary": "High latency alert: P99 > 200ms"
+      },
+      "labels": {
+        "severity": "warning",
+        "service": "stoat-and-ferret"
+      }
+    },
+    {
+      "name": "Error Budget Exceeded",
+      "condition": "A",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "datasourceUid": "prometheus",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "model": {
+            "expr": "(sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1)) > 0.01",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "5xx error rate exceeded 1% for 5 minutes (error budget burn).",
+        "summary": "Error budget alert: error rate > 1%"
+      },
+      "labels": {
+        "severity": "warning",
+        "service": "stoat-and-ferret"
+      }
+    }
+  ]
+}
