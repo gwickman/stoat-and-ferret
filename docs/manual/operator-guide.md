@@ -63,6 +63,15 @@ Enable fixtures by starting the server with `STOAT_TESTING_MODE=true`. Endpoints
 - Canonical agent test loop: seed project → add timeline clip → POST `/api/v1/render` with `render_plan: "dry_run"` → assert `status == complete` without writing output → delete fixture.
 - Fixtures live in the same SQLite database as production data; use a dedicated `STOAT_DATA_DIR` for isolation.
 
+### Synthetic render mode (`STOAT_RENDER_MODE`)
+
+`STOAT_RENDER_MODE` selects how the render service treats incoming jobs:
+
+- `real` (default): real FFmpeg execution; `POST /api/v1/render` requires `ffmpeg` on `PATH` or returns `503 RENDER_UNAVAILABLE`.
+- `noop`: synthetic short-circuit. The render service still validates the request, enqueues the job, and broadcasts `render_queued` / `render_started` / `render_completed`, but no FFmpeg process is spawned. `ffmpeg_available` is forced to `True` so the load-test harness can run on hosts without FFmpeg installed.
+
+Reserved for load testing (see `docs/benchmarks/load-test-results.md` and `tests/loadtests/locustfile.py`). Unknown values are rejected at startup. Production deployments must keep `STOAT_RENDER_MODE` unset (or `real`).
+
 ## When to Add an MCP Abstraction (vs. direct HTTP)
 
 Stay on direct HTTP + this guide until **two or more** of the following apply; then introduce an MCP server under `mcp/` and expose typed tools.

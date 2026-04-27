@@ -127,8 +127,11 @@ class RenderService:
         self._checkpoint_manager = checkpoint_manager
         self._ws = connection_manager
         self._max_retries = settings.render_retry_count
+        self._render_mode = settings.render_mode
         self._shutting_down = False
-        self._ffmpeg_available = shutil.which("ffmpeg") is not None
+        # In noop mode FFmpeg is irrelevant — always treat as available so
+        # synthetic load tests can submit jobs on hosts without FFmpeg.
+        self._ffmpeg_available = self._render_mode == "noop" or shutil.which("ffmpeg") is not None
         # Per-job-per-event-type throttle state: (job_id, event_type) -> last_broadcast_time
         self._last_broadcast_time: dict[tuple[str, str], float] = {}
         # Per-job last broadcast progress for delta throttling
@@ -236,6 +239,17 @@ class RenderService:
         await self._broadcast_event(EventType.RENDER_QUEUED, job)
         await self._broadcast_queue_status()
         await self._broadcast_event(EventType.RENDER_STARTED, job)
+
+        if self._render_mode == "noop":
+            # Synthetic short-circuit (BL-289): skip FFmpeg execution and drive
+            # the job through queued -> running -> completed so load tests see
+            # a terminal state without spawning processes. Real render flow
+            # proceeds normally.
+            log.info("render_job.noop_short_circuit", job_id=job.id)
+            await self._repo.update_status(job.id, RenderStatus.RUNNING)
+            await self._complete_job(job)
+            return await self._repo.get(job.id) or job
+
         return job
 
     async def run_job(self, job: RenderJob, command: list[str]) -> None:

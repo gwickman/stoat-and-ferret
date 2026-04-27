@@ -249,6 +249,75 @@ class TestJobLifecycle:
             event_types = [c[0][0]["type"] for c in broadcast_calls]
             assert EventType.RENDER_COMPLETED.value in event_types
 
+    async def test_noop_mode_short_circuits_to_completed(self) -> None:
+        """In noop mode, submit_job drives the job to COMPLETED without execution."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service(
+                settings=Settings(render_mode="noop"),
+            )
+            executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            plan_json = _make_plan_json()
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=plan_json,
+            )
+
+            assert job.status == RenderStatus.COMPLETED
+            persisted = await repo.get(job.id)
+            assert persisted is not None
+            assert persisted.status == RenderStatus.COMPLETED
+
+            # Executor must NOT be invoked in noop mode.
+            executor.execute.assert_not_called()
+
+            broadcast_calls = ws.broadcast.call_args_list
+            event_types = [c[0][0]["type"] for c in broadcast_calls]
+            assert EventType.RENDER_COMPLETED.value in event_types
+
+    async def test_noop_mode_treats_ffmpeg_as_available(self) -> None:
+        """In noop mode, missing FFmpeg does not block submission."""
+        with (
+            _PATCH_NO_RUST,
+            patch("stoat_ferret.render.service.shutil.which", return_value=None),
+        ):
+            service, _, _, _ = _build_service(
+                settings=Settings(render_mode="noop"),
+            )
+            assert service.ffmpeg_available is True
+
+            job = await service.submit_job(
+                project_id="proj-1",
+                output_path="/tmp/out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            assert job.status == RenderStatus.COMPLETED
+
+    async def test_real_mode_without_ffmpeg_rejects_submission(self) -> None:
+        """In real mode, missing FFmpeg causes RenderUnavailableError."""
+        with (
+            _PATCH_NO_RUST,
+            patch("stoat_ferret.render.service.shutil.which", return_value=None),
+        ):
+            service, _, _, _ = _build_service(settings=Settings(render_mode="real"))
+            assert service.ffmpeg_available is False
+
+            from stoat_ferret.render.service import RenderUnavailableError
+
+            with pytest.raises(RenderUnavailableError, match="FFmpeg is not installed"):
+                await service.submit_job(
+                    project_id="proj-1",
+                    output_path="/tmp/out.mp4",
+                    output_format=OutputFormat.MP4,
+                    quality_preset=QualityPreset.STANDARD,
+                    render_plan_json=_make_plan_json(),
+                )
+
     async def test_full_lifecycle_submit_to_completion(self) -> None:
         """Full lifecycle: submit -> dequeue -> execute -> complete."""
         with _PATCH_NO_RUST:

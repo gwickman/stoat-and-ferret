@@ -136,6 +136,24 @@ class TestSettings:
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("version_retention_count",) for e in errors)
 
+    def test_render_mode_default(self) -> None:
+        """render_mode defaults to 'real'."""
+        settings = Settings()
+        assert settings.render_mode == "real"
+
+    def test_render_mode_noop_via_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """STOAT_RENDER_MODE=noop selects synthetic mode."""
+        monkeypatch.setenv("STOAT_RENDER_MODE", "noop")
+        settings = Settings()
+        assert settings.render_mode == "noop"
+
+    def test_render_mode_invalid_rejected(self) -> None:
+        """Unknown render_mode values are rejected at construction."""
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(render_mode="bogus")  # type: ignore[arg-type]
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("render_mode",) for e in errors)
+
 
 class TestGetSettings:
     """Tests for the get_settings function."""

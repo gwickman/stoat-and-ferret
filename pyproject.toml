@@ -51,6 +51,9 @@ dev = [
     "types-jsonschema>=4.26.0.20260202",
     "pytest-timeout>=2.0",
     "openapi-spec-validator>=0.7.0",
+    # Load testing (BL-289) — on-demand only; excluded from default pytest.
+    "locust>=2.0",
+    "websocket-client>=1.6",
 ]
 
 [tool.ruff]
@@ -74,7 +77,7 @@ exclude = ["src/stoat_ferret_core/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src --cov-report=term-missing --ignore=tests/smoke --ignore=tests/benchmarks"
+addopts = "--cov=src --cov-report=term-missing --ignore=tests/smoke --ignore=tests/benchmarks --ignore=tests/loadtests"
 asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

@@ -123,6 +123,14 @@ class Settings(BaseSettings):
     )
 
     # Render executor
+    render_mode: Literal["real", "noop"] = Field(
+        default="real",
+        description=(
+            "Render execution mode (STOAT_RENDER_MODE): 'real' invokes FFmpeg "
+            "(default); 'noop' short-circuits the render service for synthetic "
+            "load testing without spawning FFmpeg processes."
+        ),
+    )
     render_timeout_seconds: int = Field(
         default=3600,
         ge=60,
