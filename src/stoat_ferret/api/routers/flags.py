@@ -5,6 +5,7 @@ from __future__ import annotations
 import structlog
 from fastapi import APIRouter, Request
 
+from stoat_ferret.api.middleware.metrics import stoat_feature_flag_state
 from stoat_ferret.api.settings import Settings, get_settings
 from stoat_ferret.models.flags import FlagsResponse
 
@@ -43,9 +44,20 @@ async def get_flags(request: Request) -> FlagsResponse:
         A :class:`FlagsResponse` with the four STOAT_* boolean flags.
     """
     settings = _settings_from_request(request)
-    return FlagsResponse(
+    response = FlagsResponse(
         testing_mode=settings.testing_mode,
         seed_endpoint=settings.seed_endpoint,
         synthetic_monitoring=settings.synthetic_monitoring,
         batch_rendering=settings.batch_rendering,
     )
+    # BL-288: refresh the feature-flag gauge whenever the endpoint is
+    # called so /metrics reflects the latest configured state. Settings
+    # are immutable for the life of the process, so this is idempotent.
+    for flag_name, flag_value in (
+        ("testing_mode", response.testing_mode),
+        ("seed_endpoint", response.seed_endpoint),
+        ("synthetic_monitoring", response.synthetic_monitoring),
+        ("batch_rendering", response.batch_rendering),
+    ):
+        stoat_feature_flag_state.labels(flag=flag_name).set(int(flag_value))
+    return response

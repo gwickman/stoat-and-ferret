@@ -10,6 +10,10 @@ from typing import Any
 import structlog
 from starlette.websockets import WebSocket, WebSocketState
 
+from stoat_ferret.api.middleware.metrics import (
+    stoat_ws_buffer_size,
+    stoat_ws_connected_clients,
+)
 from stoat_ferret.api.settings import get_settings
 
 logger = structlog.get_logger(__name__)
@@ -77,6 +81,7 @@ class ConnectionManager:
         """
         await websocket.accept()
         self._connections.add(websocket)
+        stoat_ws_connected_clients.set(len(self._connections))
         logger.info("websocket_connected", active=len(self._connections))
 
     def disconnect(self, websocket: WebSocket) -> None:
@@ -86,6 +91,7 @@ class ConnectionManager:
             websocket: The WebSocket connection to remove.
         """
         self._connections.discard(websocket)
+        stoat_ws_connected_clients.set(len(self._connections))
         logger.info("websocket_disconnected", active=len(self._connections))
 
     async def broadcast(self, message: dict[str, Any]) -> None:
@@ -121,6 +127,7 @@ class ConnectionManager:
                 logger.info("websocket_dead_connection_removed", active=len(self._connections))
         if self._buffer_size > 0:
             self._replay_buffer.append(message)
+            stoat_ws_buffer_size.set(len(self._replay_buffer))
 
     def replay_since(self, last_event_id: str | None) -> list[dict[str, Any]]:
         """Return buffered events for a reconnecting client, filtered by age and id.

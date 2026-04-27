@@ -12,6 +12,7 @@ from typing import Any, Protocol
 
 import structlog
 
+from stoat_ferret.api.middleware.metrics import stoat_active_jobs_count
 from stoat_ferret.api.services.job_completion import notify_job_terminal
 
 logger = structlog.get_logger(__name__)
@@ -453,6 +454,10 @@ class AsyncioJobQueue:
         entry = _AsyncJobEntry(job_id=job_id, job_type=job_type, payload=payload)
         self._jobs[job_id] = entry
         await self._queue.put(job_id)
+        # BL-288: gauge tracks non-terminal jobs by type. The matching
+        # decrement runs in the worker's `finally` once the job reaches a
+        # terminal status.
+        stoat_active_jobs_count.labels(job_type=job_type).inc()
         logger.info("job_submitted", job_id=job_id, job_type=job_type)
         return job_id
 
@@ -541,6 +546,7 @@ class AsyncioJobQueue:
                     )
                     # INV-LP-1: registry write above precedes notification.
                     notify_job_terminal(job_id)
+                    stoat_active_jobs_count.labels(job_type=entry.job_type).dec()
                     self._queue.task_done()
                     continue
 
@@ -594,6 +600,7 @@ class AsyncioJobQueue:
                     # the terminal notification here guarantees waiters
                     # observe the final status on refetch.
                     notify_job_terminal(job_id)
+                    stoat_active_jobs_count.labels(job_type=entry.job_type).dec()
                     self._queue.task_done()
         except asyncio.CancelledError:
             logger.info("worker_stopped")

@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from stoat_ferret.api.middleware.metrics import stoat_feature_flag_state
 from stoat_ferret.api.services.migrations import MigrationService
 
 if TYPE_CHECKING:
@@ -132,6 +133,10 @@ def record_feature_flags(*, settings: Settings, db_path: str) -> None:
                 "INSERT INTO feature_flag_log (flag_name, flag_value, logged_at) VALUES (?, ?, ?)",
                 (name, int(value), logged_at),
             )
+            # BL-288: Phase 6 stoat_feature_flag_state gauge — populated
+            # at startup so /metrics reflects flag state even before the
+            # /api/v1/flags endpoint has been hit.
+            stoat_feature_flag_state.labels(flag=name).set(int(value))
             logger.info(
                 "deployment.feature_flag",
                 flag_name=name,
