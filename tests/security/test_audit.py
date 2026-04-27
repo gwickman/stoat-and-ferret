@@ -62,7 +62,7 @@ SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
         ("src/stoat_ferret/db/schema.py", 359),
         ("src/stoat_ferret/db/schema.py", 425),
         ("src/stoat_ferret/db/schema.py", 441),
-        ("src/stoat_ferret/api/services/migrations.py", 428),
+        ("src/stoat_ferret/api/services/migrations.py", 434),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound
         # through the second argument to ``.execute()``.

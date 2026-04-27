@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 import structlog
 from fastapi import APIRouter, Request
 
+from stoat_ferret.api.middleware.metrics import stoat_system_state_duration_seconds
 from stoat_ferret.api.schemas.system_state import JobSummary, SystemState
 
 logger = structlog.get_logger(__name__)
@@ -57,6 +58,12 @@ async def get_system_state(request: Request) -> SystemState:
         ``SystemState`` describing active jobs, open WebSocket
         connections, and process uptime.
     """
+    with stoat_system_state_duration_seconds.time():
+        return await _build_system_state(request)
+
+
+async def _build_system_state(request: Request) -> SystemState:
+    """Inner helper kept separate so the histogram timer wraps it cleanly."""
     app_state = request.app.state
 
     active_jobs: list[JobSummary] = []

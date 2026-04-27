@@ -26,6 +26,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 
 from alembic import command
+from stoat_ferret.api.middleware.metrics import stoat_migration_duration_seconds
 from stoat_ferret.models.migrations import MigrationResult, RollbackResult
 
 logger = structlog.get_logger(__name__)
@@ -241,6 +242,7 @@ class MigrationService:
 
         if head_revision is None:
             duration_ms = (time.perf_counter() - start) * 1000.0
+            stoat_migration_duration_seconds.labels(result="failure").observe(duration_ms / 1000.0)
             logger.warning(
                 "deployment.migration.no_head",
                 duration_ms=duration_ms,
@@ -256,6 +258,7 @@ class MigrationService:
 
         if from_revision == head_revision:
             duration_ms = (time.perf_counter() - start) * 1000.0
+            stoat_migration_duration_seconds.labels(result="success").observe(duration_ms / 1000.0)
             logger.info(
                 "deployment.migration.already_current",
                 from_revision=from_revision,
@@ -275,6 +278,7 @@ class MigrationService:
             backup_path = self._create_backup()
         except (OSError, sqlite3.Error) as exc:
             duration_ms = (time.perf_counter() - start) * 1000.0
+            stoat_migration_duration_seconds.labels(result="failure").observe(duration_ms / 1000.0)
             logger.warning(
                 "deployment.migration_rollback",
                 reason="backup_failed",
@@ -296,6 +300,7 @@ class MigrationService:
             command.upgrade(config, "head")
         except Exception as exc:
             duration_ms = (time.perf_counter() - start) * 1000.0
+            stoat_migration_duration_seconds.labels(result="failure").observe(duration_ms / 1000.0)
             logger.warning(
                 "deployment.migration_rollback",
                 reason="upgrade_failed",
@@ -323,6 +328,7 @@ class MigrationService:
         )
 
         duration_ms = (time.perf_counter() - start) * 1000.0
+        stoat_migration_duration_seconds.labels(result="success").observe(duration_ms / 1000.0)
         logger.info(
             "deployment.migration",
             from_revision=from_revision,

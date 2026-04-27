@@ -19,6 +19,7 @@ from typing import Annotated
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 
+from stoat_ferret.api.middleware.metrics import stoat_seed_duration_seconds
 from stoat_ferret.api.routers.projects import (
     ProjectRepoDep,
     get_project_repository,
@@ -142,10 +143,13 @@ async def create_seed_fixture(
 
     prefixed_name = f"{SEEDED_PREFIX}{seed_request.name}"
 
-    if seed_request.fixture_type == "project":
-        fixture_id = await _create_project_fixture(project_repo, prefixed_name, seed_request.data)
-    else:  # pragma: no cover — guarded above
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    with stoat_seed_duration_seconds.time():
+        if seed_request.fixture_type == "project":
+            fixture_id = await _create_project_fixture(
+                project_repo, prefixed_name, seed_request.data
+            )
+        else:  # pragma: no cover — guarded above
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     logger.info(
         "testing.seed.created",
