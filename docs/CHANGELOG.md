@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v043] - 2026-04-27
+
+Phase 6 Quality & Security Gate. Delivers two themes: a security-audit theme (Python API and Rust core security audits) and a performance-observability theme (performance benchmarks with Phase 6 metrics, load testing harness with noop render mode, and Grafana SLI dashboard).
+
+### Security
+
+- **Python API Security Audit** — Enumerated 8 potential vulnerability classes with grep-based AST probes; zero P0/P1 findings; SQL injection defense confirmed via parameterized queries and AST-walk detection; path traversal enforced via `STOAT_ALLOWED_SCAN_ROOTS`; introduced `tests/security/` test category with 3 probe scripts (BL-286, #327)
+- **Rust Core Security Audit** — Full audit of all Rust sanitization and filter-building code; zero `unsafe` blocks confirmed across entire codebase; DrawtextBuilder injection surface validated with 20 additional property-based tests; single shared security report approach adopted (BL-287, #328)
+
+### Performance & Observability
+
+- **Performance Benchmarks and Phase 6 Metrics** — `tests/benchmarks/` suite with pytest-benchmark against live FastAPI endpoints; 7 new Prometheus metrics registered in `metrics.py` (`stoat_seed_duration_seconds`, `stoat_system_state_duration_seconds`, `stoat_ws_buffer_size`, `stoat_ws_connected_clients`, `stoat_active_jobs_count`, `stoat_feature_flag_state`, `stoat_migration_duration_seconds`); baseline results documented in `docs/design/11-performance-benchmarks.md` (BL-288, #329)
+- **Load Test Harness** — Locust-based load test harness in `tests/load/`; `STOAT_RENDER_MODE=noop` setting short-circuits FFmpeg for synthetic throughput testing; `websocket-client` (gevent-compatible) for WebSocket load simulation; hardware-variable results deferred to operator runs (BL-289, #330)
+- **Grafana SLI Dashboard** — `docs/observability/grafana-sli-dashboard.json` with 7 SLI panels (request rate, error rate, latency p50/p95/p99, WebSocket clients, active jobs); test-time source parsing validates metric truth set against live registrations (BL-290, #331)
+
 ## [v042] - 2026-04-26
 
 Agent Operator Documentation and Residual Closure. Delivers targeted documentation for AI agent operators (operator guide, prompt recipes, WebSocket event vocabulary) and closes residual v039/v041 documentation gaps (CHANGELOG verification, AGENTS.md path corrections, manual TOC completeness).

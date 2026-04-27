@@ -72,7 +72,30 @@ C4Container
 
 - **WebSocket**: `/ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT) with configurable `ws_heartbeat_interval` (default 30s)
 - **Static GUI**: `/gui` -- Serves built React SPA assets
-- **Configuration**: Environment variables with `STOAT_` prefix (api_host, api_port, database_path, allowed_scan_roots, gui_static_path, ws_heartbeat_interval, debug)
+- **Configuration**: Environment variables with `STOAT_` prefix
+
+  | Variable (STOAT_*) | Type | Description |
+  |--------------------|------|-------------|
+  | api_host | str | API server host (default: 127.0.0.1) |
+  | api_port | int | API server port (default: 8765) |
+  | database_path | str | SQLite database file path (default: data/stoat.db) |
+  | allowed_scan_roots | list[str] | Allowed directory prefixes for scan path validation |
+  | gui_static_path | str | Path to built GUI static files |
+  | ws_heartbeat_interval | float | WebSocket heartbeat interval in seconds (default: 30) |
+  | debug | bool | FastAPI debug mode (default: false) |
+  | render_mode | Literal["real", "noop"] | Render execution mode: 'real' for FFmpeg-based rendering, 'noop' for synthetic load testing without rendering (default: real) |
+
+- **Prometheus Metrics**: Phase 6 application-level metrics registered in `src/stoat_ferret/api/middleware/metrics.py`
+
+  | Metric | Type | Labels | Description |
+  |--------|------|--------|-------------|
+  | stoat_seed_duration_seconds | Histogram | — | POST /api/v1/testing/seed duration |
+  | stoat_system_state_duration_seconds | Histogram | — | GET /api/v1/system/state duration |
+  | stoat_ws_buffer_size | Gauge | — | WebSocket replay deque current size |
+  | stoat_ws_connected_clients | Gauge | — | Currently connected WebSocket clients |
+  | stoat_active_jobs_count | Gauge | job_type | Non-terminal async job queue entries |
+  | stoat_feature_flag_state | Gauge | flag | STOAT_* feature flag values as 0/1 |
+  | stoat_migration_duration_seconds | Histogram | result | Alembic upgrade duration |
 
 #### Dependencies
 
