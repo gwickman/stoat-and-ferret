@@ -1997,6 +1997,49 @@
         }
       }
     },
+    "/api/v1/render/batch/{job_id}": {
+      "delete": {
+        "tags": [
+          "batch"
+        ],
+        "summary": "Cancel Batch Job",
+        "description": "Cancel a single batch job by job_id.\n\nReturns the updated job status after cancellation. Queued jobs are\ntransitioned directly to ``cancelled``; running jobs are cancelled\nvia task cancellation, with the running task's CancelledError\nhandler performing the status transition.\n\nArgs:\n    job_id: The unique job identifier to cancel.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    BatchJobStatusResponse reflecting the post-cancel job state.\n\nRaises:\n    HTTPException: 404 if no job with the given ID exists; 409 if\n        the job is already in a terminal state.",
+        "operationId": "cancel_batch_job_api_v1_render_batch__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchJobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/preview/cache": {
       "get": {
         "tags": [

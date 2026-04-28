@@ -420,24 +420,20 @@ def test_delete_unknown_job_returns_404(client: TestClient) -> None:
 
 
 @pytest.mark.api
-def test_delete_completed_job_returns_409(
+async def test_delete_completed_job_returns_409(
     client: TestClient,
     batch_repository: InMemoryBatchRepository,
 ) -> None:
     """DELETE on an already-completed job returns 409."""
-
-    async def _seed() -> None:
-        await batch_repository.create_batch_job(
-            batch_id="b1",
-            job_id="job-completed",
-            project_id="p1",
-            output_path="/out/1.mp4",
-            quality="medium",
-        )
-        await batch_repository.update_status("job-completed", "running")
-        await batch_repository.update_status("job-completed", "completed")
-
-    asyncio.run(_seed())
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-completed",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-completed", "running")
+    await batch_repository.update_status("job-completed", "completed")
 
     response = client.delete("/api/v1/render/batch/job-completed")
     assert response.status_code == 409
@@ -446,69 +442,57 @@ def test_delete_completed_job_returns_409(
 
 
 @pytest.mark.api
-def test_delete_failed_job_returns_409(
+async def test_delete_failed_job_returns_409(
     client: TestClient,
     batch_repository: InMemoryBatchRepository,
 ) -> None:
     """DELETE on an already-failed job returns 409."""
-
-    async def _seed() -> None:
-        await batch_repository.create_batch_job(
-            batch_id="b1",
-            job_id="job-failed",
-            project_id="p1",
-            output_path="/out/1.mp4",
-            quality="medium",
-        )
-        await batch_repository.update_status("job-failed", "running")
-        await batch_repository.update_status("job-failed", "failed", error="boom")
-
-    asyncio.run(_seed())
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-failed",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-failed", "running")
+    await batch_repository.update_status("job-failed", "failed", error="boom")
 
     response = client.delete("/api/v1/render/batch/job-failed")
     assert response.status_code == 409
 
 
 @pytest.mark.api
-def test_delete_already_cancelled_returns_409(
+async def test_delete_already_cancelled_returns_409(
     client: TestClient,
     batch_repository: InMemoryBatchRepository,
 ) -> None:
     """DELETE on an already-cancelled job returns 409 (idempotent guard)."""
-
-    async def _seed() -> None:
-        await batch_repository.create_batch_job(
-            batch_id="b1",
-            job_id="job-cancelled",
-            project_id="p1",
-            output_path="/out/1.mp4",
-            quality="medium",
-        )
-        await batch_repository.update_status("job-cancelled", "cancelled")
-
-    asyncio.run(_seed())
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-cancelled",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-cancelled", "cancelled")
 
     response = client.delete("/api/v1/render/batch/job-cancelled")
     assert response.status_code == 409
 
 
 @pytest.mark.api
-def test_delete_queued_job_returns_200_with_cancelled_status(
+async def test_delete_queued_job_returns_200_with_cancelled_status(
     client: TestClient,
     batch_repository: InMemoryBatchRepository,
 ) -> None:
     """DELETE on a queued job transitions it to cancelled and returns 200."""
-
-    async def _seed() -> None:
-        await batch_repository.create_batch_job(
-            batch_id="b1",
-            job_id="job-queued",
-            project_id="p1",
-            output_path="/out/1.mp4",
-            quality="medium",
-        )
-
-    asyncio.run(_seed())
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-queued",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
 
     response = client.delete("/api/v1/render/batch/job-queued")
     assert response.status_code == 200
@@ -518,23 +502,19 @@ def test_delete_queued_job_returns_200_with_cancelled_status(
 
 
 @pytest.mark.api
-def test_delete_running_job_without_task_falls_back_to_status_update(
+async def test_delete_running_job_without_task_falls_back_to_status_update(
     client: TestClient,
     batch_repository: InMemoryBatchRepository,
 ) -> None:
     """If task is missing from registry, DELETE still transitions status."""
-
-    async def _seed() -> None:
-        await batch_repository.create_batch_job(
-            batch_id="b1",
-            job_id="job-detached",
-            project_id="p1",
-            output_path="/out/1.mp4",
-            quality="medium",
-        )
-        await batch_repository.update_status("job-detached", "running")
-
-    asyncio.run(_seed())
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-detached",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-detached", "running")
 
     response = client.delete("/api/v1/render/batch/job-detached")
     assert response.status_code == 200

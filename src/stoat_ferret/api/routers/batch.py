@@ -171,9 +171,7 @@ async def submit_batch(
 
     handler: BatchRenderHandler | None = getattr(request.app.state, "batch_render_handler", None)
     semaphore = asyncio.Semaphore(settings.batch_parallel_limit)
-    task_registry: dict[str, asyncio.Task[None]] = getattr(
-        request.app.state, "batch_tasks", {}
-    )
+    task_registry: dict[str, asyncio.Task[None]] = getattr(request.app.state, "batch_tasks", {})
     request.app.state.batch_tasks = task_registry
     for record in job_records:
         task = asyncio.create_task(
@@ -296,9 +294,7 @@ async def cancel_batch_job(
             },
         )
 
-    task_registry: dict[str, asyncio.Task[None]] = getattr(
-        request.app.state, "batch_tasks", {}
-    )
+    task_registry: dict[str, asyncio.Task[None]] = getattr(request.app.state, "batch_tasks", {})
     task = task_registry.get(job_id)
 
     if job.status == "queued":
