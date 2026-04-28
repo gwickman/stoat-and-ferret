@@ -10,6 +10,17 @@ export interface ShortcutBinding {
   action: string
   /** Handler invoked when the combo fires. */
   handler: () => void
+  /**
+   * Optional human-readable description shown in the keyboard shortcut
+   * overlay. Falls back to `action` when omitted.
+   */
+  description?: string
+  /**
+   * Optional section name used to group bindings in the overlay (e.g.,
+   * "Global", "Render", "Navigation"). Bindings without a section are
+   * grouped under "Other".
+   */
+  section?: string
 }
 
 interface ParsedCombo {
@@ -55,7 +66,11 @@ function parseCombo(combo: string): ParsedCombo {
 function eventMatches(combo: ParsedCombo, event: KeyboardEvent): boolean {
   if (combo.ctrlOrMeta && !(event.ctrlKey || event.metaKey)) return false
   if (!combo.ctrlOrMeta && (event.ctrlKey || event.metaKey)) return false
-  if (combo.shift !== event.shiftKey) return false
+  // A combo that explicitly names Shift requires Shift; otherwise we accept
+  // both shifted and non-shifted events. Strict equality on Shift would
+  // reject combos whose key is itself a shifted character (e.g. "?" produced
+  // by Shift+/), forcing callers to write "Shift+?".
+  if (combo.shift && !event.shiftKey) return false
   if (combo.alt !== event.altKey) return false
   return event.key.toLowerCase() === combo.key
 }
@@ -117,6 +132,17 @@ export function useKeyboardShortcuts(bindings: ShortcutBinding[]): void {
       for (const combo of added) registry.delete(combo)
     }
   }, [bindings])
+}
+
+/**
+ * Snapshot of the bindings currently in the module-level registry, in
+ * registration order. Used by the keyboard shortcut overlay (BL-294) to
+ * render a read-only reference of every registered combo without hardcoding
+ * the list. The returned array is a copy — mutating it does not affect the
+ * registry.
+ */
+export function getRegisteredShortcuts(): ShortcutBinding[] {
+  return Array.from(registry.values()).map((entry) => entry.binding)
 }
 
 /** @internal Test-only helper for resetting module state between cases. */
