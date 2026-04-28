@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   TERMINAL_BATCH_STATUSES,
   useBatchStore,
@@ -152,8 +152,10 @@ function JobRow({ job, now }: JobRowProps) {
  * non-terminal jobs).
  */
 export default function BatchJobList({ batchId, now = Date.now }: BatchJobListProps) {
-  const jobs = useBatchStore((s) =>
-    batchId === undefined ? s.jobs : s.jobs.filter((j) => j.batch_id === batchId),
+  const allJobs = useBatchStore((s) => s.jobs)
+  const jobs = useMemo(
+    () => (batchId === undefined ? allJobs : allJobs.filter((j) => j.batch_id === batchId)),
+    [allJobs, batchId],
   )
 
   if (jobs.length === 0) {
