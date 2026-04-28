@@ -72,6 +72,18 @@ function mockFlags(batchRendering: boolean): void {
         { status: 200 },
       )
     }
+    if (url === '/api/v1/render/queue') {
+      return new Response(JSON.stringify(mockQueueStatus), { status: 200 })
+    }
+    if (url === '/api/v1/render/encoders') {
+      return new Response(
+        JSON.stringify({ encoders: [], cached: false }),
+        { status: 200 },
+      )
+    }
+    if (url === '/api/v1/render/formats') {
+      return new Response(JSON.stringify({ formats: [] }), { status: 200 })
+    }
     return new Response('{}', { status: 200 })
   })
 }
