@@ -66,6 +66,15 @@ export default function Shell() {
       </header>
       <main
         className={isWorkspaceActive ? 'flex-1 overflow-hidden' : 'flex-1 overflow-auto'}
+        // Scrollable regions must be keyboard-accessible (axe
+        // `scrollable-region-focusable`). When the workspace is inactive,
+        // <main> hosts the routed Outlet directly and is the scroll
+        // container — `tabIndex={0}` keeps it reachable. When the workspace
+        // is active, <main> is overflow-hidden and the inner Group provides
+        // its own scroll surfaces, so the tabIndex is unnecessary and would
+        // re-introduce the BL-291 axe `focusable-content` violation that
+        // was scoped to `[data-testid="workspace-panel-preview"]`.
+        tabIndex={isWorkspaceActive ? undefined : 0}
       >
         {isWorkspaceActive ? (
           <WorkspaceLayout>
