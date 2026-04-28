@@ -50,7 +50,7 @@ export interface UseBatchJobsResult {
   hasError: boolean
   /** True after RECONNECTING_THRESHOLD consecutive errors. */
   isReconnecting: boolean
-  /** Force an immediate refresh (bypasses the current backoff timer). */
+  /** Force a refresh: clear error state. */
   refresh: () => void
 }
 
@@ -68,17 +68,15 @@ export interface UseBatchJobsResult {
  * Pass `null` to disable polling (e.g. when no batch has been submitted yet).
  */
 export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
-  const [errorCount, setErrorCount] = useState(0)
-  // Update queue holds raw API job rows that have not yet been merged into
-  // the store. Flushed in a microtask so a burst of polls collapses to a
-  // single coherent batch of `updateJob` calls.
+  const [hasError, setHasError] = useState(false)
+  const [isReconnecting, setIsReconnecting] = useState(false)
+  // Refs that survive across renders without re-triggering the effect.
+  const errorCountRef = useRef(0)
   const updateQueueRef = useRef<BatchProgressApiResponse['jobs']>([])
   const flushScheduledRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollingRef = useRef(false)
   const cancelledRef = useRef(false)
-  // Tracks the last computed delay so `refresh` can skip the pending wait.
-  const refreshNonceRef = useRef(0)
 
   const flushQueue = useCallback(() => {
     flushScheduledRef.current = false
@@ -119,6 +117,9 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
   useEffect(() => {
     if (batchId === null) return undefined
     cancelledRef.current = false
+    errorCountRef.current = 0
+    setHasError(false)
+    setIsReconnecting(false)
 
     const computeBackoff = (errors: number): number => {
       if (errors === 0) return NORMAL_INTERVAL_MS
@@ -137,33 +138,37 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
         }
         const json = (await res.json()) as BatchProgressApiResponse
         queueUpdates(json.jobs)
-        if (!cancelledRef.current) setErrorCount(0)
+        if (cancelledRef.current) return
+        errorCountRef.current = 0
+        setHasError(false)
+        setIsReconnecting(false)
       } catch {
-        if (!cancelledRef.current) setErrorCount((n) => n + 1)
+        if (cancelledRef.current) return
+        errorCountRef.current += 1
+        setHasError(true)
+        if (errorCountRef.current >= RECONNECTING_THRESHOLD) setIsReconnecting(true)
       } finally {
         pollingRef.current = false
       }
     }
 
-    const schedule = (delay: number, nonce: number): void => {
+    const schedule = (delay: number): void => {
       if (timerRef.current !== null) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
         if (cancelledRef.current) return
-        if (nonce !== refreshNonceRef.current) return
         if (allJobsTerminal(batchId)) return
         void pollOnce().then(() => {
           if (cancelledRef.current) return
           if (allJobsTerminal(batchId)) return
-          schedule(computeBackoff(errorCount), refreshNonceRef.current)
+          schedule(computeBackoff(errorCountRef.current))
         })
       }, delay)
     }
 
-    // Kick off an immediate poll, then settle into the cadence.
     void pollOnce().then(() => {
       if (cancelledRef.current) return
       if (allJobsTerminal(batchId)) return
-      schedule(computeBackoff(errorCount), refreshNonceRef.current)
+      schedule(computeBackoff(errorCountRef.current))
     })
 
     return () => {
@@ -173,23 +178,17 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
         timerRef.current = null
       }
     }
-    // We deliberately re-establish the polling chain when errorCount
-    // changes so the next scheduled tick uses the updated backoff.
-  }, [batchId, errorCount, allJobsTerminal, queueUpdates])
+  }, [batchId, allJobsTerminal, queueUpdates])
 
   const refresh = useCallback(() => {
-    refreshNonceRef.current += 1
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-    if (batchId === null) return
-    setErrorCount(0)
-  }, [batchId])
+    errorCountRef.current = 0
+    setHasError(false)
+    setIsReconnecting(false)
+  }, [])
 
   return {
-    hasError: errorCount > 0,
-    isReconnecting: errorCount >= RECONNECTING_THRESHOLD,
+    hasError,
+    isReconnecting,
     refresh,
   }
 }

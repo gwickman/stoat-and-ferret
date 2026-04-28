@@ -28,7 +28,6 @@ function makeResponse(jobs: ApiJobRow[]): Response {
 beforeEach(() => {
   vi.useFakeTimers()
   useBatchStore.getState().reset()
-  // Seed a couple of queued jobs so updates are visible.
   useBatchStore.getState().addJob({
     job_id: 'j1',
     batch_id: 'b1',
@@ -54,10 +53,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-async function flush(): Promise<void> {
-  // Drain pending microtasks (queueMicrotask flushes here) and any
-  // additional async callbacks scheduled by fetch.then chains.
+async function settle(): Promise<void> {
   await act(async () => {
+    await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
@@ -68,16 +66,20 @@ describe('useBatchJobs', () => {
   it('does not poll when batchId is null', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     renderHook(() => useBatchJobs(null))
-    await flush()
+    await settle()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('issues an immediate poll when batchId is provided', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(makeResponse([{ job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.25, error: null }]))
+      .mockResolvedValue(
+        makeResponse([
+          { job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.25, error: null },
+        ]),
+      )
     renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     expect(fetchSpy).toHaveBeenCalledWith('/api/v1/render/batch/b1')
   })
 
@@ -89,7 +91,7 @@ describe('useBatchJobs', () => {
       ]),
     )
     renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     const jobs = useBatchStore.getState().jobs
     expect(jobs.find((j) => j.job_id === 'j1')?.status).toBe('running')
     expect(jobs.find((j) => j.job_id === 'j1')?.progress).toBe(0.5)
@@ -99,14 +101,18 @@ describe('useBatchJobs', () => {
   it('continues polling at NORMAL_INTERVAL_MS while jobs are non-terminal', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(makeResponse([{ job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.5, error: null }]))
+      .mockResolvedValue(
+        makeResponse([
+          { job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.5, error: null },
+        ]),
+      )
     renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     const callsAfterImmediate = fetchSpy.mock.calls.length
     await act(async () => {
-      vi.advanceTimersByTime(__test.NORMAL_INTERVAL_MS)
+      await vi.advanceTimersByTimeAsync(__test.NORMAL_INTERVAL_MS + 50)
     })
-    await flush()
+    await settle()
     expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsAfterImmediate)
   })
 
@@ -120,19 +126,19 @@ describe('useBatchJobs', () => {
         ]),
       )
     renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     const callsAfterImmediate = fetchSpy.mock.calls.length
     await act(async () => {
-      vi.advanceTimersByTime(5 * __test.NORMAL_INTERVAL_MS)
+      await vi.advanceTimersByTimeAsync(5 * __test.NORMAL_INTERVAL_MS)
     })
-    await flush()
+    await settle()
     expect(fetchSpy.mock.calls.length).toBe(callsAfterImmediate)
   })
 
   it('reports hasError on a single failed poll', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
     const { result } = renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     expect(result.current.hasError).toBe(true)
     expect(result.current.isReconnecting).toBe(false)
   })
@@ -140,28 +146,24 @@ describe('useBatchJobs', () => {
   it('reports isReconnecting after two consecutive failed polls', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
     const { result } = renderHook(() => useBatchJobs('b1'))
-    await flush()
-    // Advance enough for the second poll to fire (initial delay then backoff).
+    await settle()
     await act(async () => {
-      vi.advanceTimersByTime(__test.INITIAL_BACKOFF_MS + 100)
+      await vi.advanceTimersByTimeAsync(__test.INITIAL_BACKOFF_MS + 100)
     })
-    await flush()
+    await settle()
     expect(result.current.isReconnecting).toBe(true)
   })
 
   it('caps exponential backoff at MAX_BACKOFF_MS', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
     renderHook(() => useBatchJobs('b1'))
-    await flush()
-    // After many errors, the next scheduled delay should still be <= MAX.
+    await settle()
     for (let i = 0; i < 6; i++) {
       await act(async () => {
-        vi.advanceTimersByTime(__test.MAX_BACKOFF_MS + 1)
+        await vi.advanceTimersByTimeAsync(__test.MAX_BACKOFF_MS + 100)
       })
-      await flush()
+      await settle()
     }
-    // We can't directly observe the delay, but no infinite loop / crash =
-    // backoff math handled. Sanity: hook is still running.
     expect(true).toBe(true)
   })
 
@@ -174,58 +176,56 @@ describe('useBatchJobs', () => {
     expect(__test.coerceStatus('garbage')).toBe('queued')
   })
 
-  it('refresh forces an immediate re-poll and clears errors', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(makeResponse([{ job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.1, error: null }]))
+  it('refresh resets error state', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
     const { result } = renderHook(() => useBatchJobs('b1'))
-    await flush()
-    fetchSpy.mockClear()
+    await settle()
+    expect(result.current.hasError).toBe(true)
     act(() => {
       result.current.refresh()
     })
-    await flush()
-    // refresh resets errorCount which re-runs the effect; one immediate poll fires.
-    expect(fetchSpy).toHaveBeenCalled()
+    await settle()
+    expect(result.current.hasError).toBe(false)
   })
 
   it('cleans up on unmount (no further fetch after timer fires)', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(makeResponse([{ job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.5, error: null }]))
+      .mockResolvedValue(
+        makeResponse([
+          { job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.5, error: null },
+        ]),
+      )
     const { unmount } = renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     const before = fetchSpy.mock.calls.length
     unmount()
     await act(async () => {
-      vi.advanceTimersByTime(5 * __test.NORMAL_INTERVAL_MS)
+      await vi.advanceTimersByTimeAsync(5 * __test.NORMAL_INTERVAL_MS)
     })
-    await flush()
+    await settle()
     expect(fetchSpy.mock.calls.length).toBe(before)
   })
 
-  it('does not drop updates under burst (ref-queue NFR-001)', async () => {
-    // Simulate a burst by issuing multiple fetch responses back to back
-    // with different progress values — the final state in the store
-    // should reflect the most recently observed progress, with no
-    // intermediate tearing.
+  it('does not regress progress under burst (NFR-001 / INV-003)', async () => {
     let progress = 0.1
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
       const value = progress
       progress = Math.min(progress + 0.2, 1.0)
-      return makeResponse([{ job_id: 'j1', project_id: 'p1', status: 'running', progress: value, error: null }])
+      return makeResponse([
+        { job_id: 'j1', project_id: 'p1', status: 'running', progress: value, error: null },
+      ])
     })
     renderHook(() => useBatchJobs('b1'))
-    await flush()
+    await settle()
     for (let i = 0; i < 4; i++) {
       await act(async () => {
-        vi.advanceTimersByTime(__test.NORMAL_INTERVAL_MS)
+        await vi.advanceTimersByTimeAsync(__test.NORMAL_INTERVAL_MS + 50)
       })
-      await flush()
+      await settle()
     }
     const job = useBatchStore.getState().jobs.find((j) => j.job_id === 'j1')
     expect(job).toBeDefined()
-    // INV-003 — progress only increases on a non-queued job.
     expect(job!.progress).toBeGreaterThanOrEqual(0.1)
   })
 })
