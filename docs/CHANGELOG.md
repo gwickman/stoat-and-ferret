@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v044] - 2026-04-28
+
+Phase 6: GUI Unified Workspace. Delivers two themes: a workspace layout foundation (dockable resizable panels with persistent sizing and layout presets with keyboard shortcuts) and workspace feature panels (settings panel with theme selector and shortcut editor, keyboard shortcut reference overlay, and batch panel GUI with job monitoring and cancellation).
+
+### Workspace Layout
+
+- **Dockable Resizable Panel Layout** — Resizable panel infrastructure with `workspaceStore` (Zustand) and `WorkspaceLayout` component; persistent panel sizing via localStorage; conditional Shell mounting for backward-compatible routed pages (BL-291, #332)
+- **Workspace Layout Presets** — PRESETS constants (Edit/Review/Render); `setPreset` action with Ctrl+1/2/3 keyboard bindings; per-preset size preservation via `sizesByPreset`; `useRef` guard prevents bidirectional preset/resize loops (BL-292, #333)
+
+### Workspace Feature Panels
+
+- **Settings Panel** — Theme selector and shortcut editor integrated into workspace sidebar; settings persist to localStorage (BL-293, #334)
+- **Keyboard Shortcut Reference Overlay** — Dynamic shortcut enumeration from registry; focus trap with Escape-to-dismiss (BL-294, #335)
+- **Batch Panel GUI** — Batch job submission form, live progress polling, job cancellation, and real-time status updates; async DELETE handler fix for correct post-cancel state (BL-295, #336)
+
 ## [v043] - 2026-04-27
 
 Phase 6 Quality & Security Gate. Delivers two themes: a security-audit theme (Python API and Rust core security audits) and a performance-observability theme (performance benchmarks with Phase 6 metrics, load testing harness with noop render mode, and Grafana SLI dashboard).
