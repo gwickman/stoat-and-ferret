@@ -13,8 +13,10 @@ beforeEach(() => {
   window.localStorage.clear()
   useWorkspaceStore.setState({
     preset: 'edit',
+    anchorPreset: 'edit',
     panelSizes: { ...DEFAULT_PANEL_SIZES },
     panelVisibility: { ...DEFAULT_PANEL_VISIBILITY },
+    sizesByPreset: {},
   })
 })
 
@@ -33,16 +35,19 @@ describe('PanelVisibilityToggle', () => {
 
   it('reflects current visibility via aria-pressed', () => {
     render(<PanelVisibilityToggle />)
+    // Edit preset (default): preview and library visible; batch hidden.
     expect(screen.getByTestId('panel-toggle-preview').getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByTestId('panel-toggle-library').getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByTestId('panel-toggle-library').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByTestId('panel-toggle-batch').getAttribute('aria-pressed')).toBe('false')
   })
 
   it('toggles panel visibility on click', () => {
     render(<PanelVisibilityToggle />)
-    fireEvent.click(screen.getByTestId('panel-toggle-library'))
-    expect(useWorkspaceStore.getState().panelVisibility.library).toBe(true)
+    // Library starts visible in the edit preset; first click hides, second reveals.
     fireEvent.click(screen.getByTestId('panel-toggle-library'))
     expect(useWorkspaceStore.getState().panelVisibility.library).toBe(false)
+    fireEvent.click(screen.getByTestId('panel-toggle-library'))
+    expect(useWorkspaceStore.getState().panelVisibility.library).toBe(true)
   })
 
   it('reset button restores defaults and clears localStorage', () => {

@@ -46,7 +46,9 @@ describe('App', () => {
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Library')).toBeDefined()
+    // Use the heading role to disambiguate from the workspace library panel
+    // placeholder, which also displays the text "Library".
+    expect(screen.getByRole('heading', { name: 'Library' })).toBeDefined()
   })
 
   it('renders projects page at /projects', () => {
@@ -55,6 +57,6 @@ describe('App', () => {
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Projects')).toBeDefined()
+    expect(screen.getByRole('heading', { name: 'Projects' })).toBeDefined()
   })
 })
