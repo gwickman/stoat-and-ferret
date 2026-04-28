@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import RenderPage from '../RenderPage'
 import { useRenderStore } from '../../stores/renderStore'
 import type { RenderJob, QueueStatus } from '../../stores/renderStore'
+import { useBatchStore } from '../../stores/batchStore'
 
 // Mock useRenderEvents — it opens a real WebSocket; not needed for page tests
 vi.mock('../../hooks/useRenderEvents', () => ({
@@ -46,9 +47,34 @@ function makeJob(overrides: Partial<RenderJob> & { id: string; status: string })
 beforeEach(() => {
   vi.restoreAllMocks()
   useRenderStore.getState().reset()
+  useBatchStore.getState().reset()
   // Suppress fetch calls from useEffect
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No mock'))
 })
+
+function mockFlags(batchRendering: boolean): void {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = typeof input === 'string' ? input : input.toString()
+    if (url === '/api/v1/flags') {
+      return new Response(
+        JSON.stringify({
+          testing_mode: false,
+          seed_endpoint: false,
+          synthetic_monitoring: false,
+          batch_rendering: batchRendering,
+        }),
+        { status: 200 },
+      )
+    }
+    if (url === '/api/v1/render') {
+      return new Response(
+        JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
+        { status: 200 },
+      )
+    }
+    return new Response('{}', { status: 200 })
+  })
+}
 
 function renderPage() {
   return render(
@@ -184,5 +210,83 @@ describe('RenderPage', () => {
       expect(fetchSpy).toHaveBeenCalledWith('/api/v1/render/encoders')
       expect(fetchSpy).toHaveBeenCalledWith('/api/v1/render/formats')
     })
+  })
+
+  // ---- Batch tab tests (FR-004) ----
+
+  it('renders the Render Queue tab and hides the Batch tab when flag is false', async () => {
+    mockFlags(false)
+    renderPage()
+    expect(screen.getByTestId('render-tab-queue')).toBeDefined()
+    await waitFor(() => {
+      expect(screen.queryByTestId('render-tab-batch')).toBeNull()
+    })
+  })
+
+  it('shows the Batch tab when batch_rendering flag is true', async () => {
+    mockFlags(true)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('render-tab-batch')).toBeDefined()
+    })
+  })
+
+  it('switching to the Batch tab renders BatchPanel and BatchJobList', async () => {
+    mockFlags(true)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('render-tab-batch')).toBeDefined()
+    })
+    fireEvent.click(screen.getByTestId('render-tab-batch'))
+    expect(screen.getByTestId('render-tab-batch-content')).toBeDefined()
+    expect(screen.getByTestId('batch-panel')).toBeDefined()
+    expect(screen.getByTestId('batch-job-list-section')).toBeDefined()
+  })
+
+  it('hides the Render Queue content when the Batch tab is active', async () => {
+    mockFlags(true)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByTestId('render-tab-batch')).toBeDefined()
+    })
+    fireEvent.click(screen.getByTestId('render-tab-batch'))
+    expect(screen.queryByTestId('render-tab-queue-content')).toBeNull()
+    expect(screen.queryByTestId('start-render-btn')).toBeNull()
+  })
+
+  it('treats batch_rendering as false on flag fetch failure', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url === '/api/v1/flags') {
+        throw new Error('flags endpoint down')
+      }
+      return new Response(
+        JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
+        { status: 200 },
+      )
+    })
+    renderPage()
+    // Allow the failed fetch to settle.
+    await new Promise((r) => setTimeout(r, 10))
+    expect(screen.queryByTestId('render-tab-batch')).toBeNull()
+  })
+
+  it('treats missing batch_rendering field in flags response as false', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url === '/api/v1/flags') {
+        return new Response(
+          JSON.stringify({ testing_mode: false, seed_endpoint: false }),
+          { status: 200 },
+        )
+      }
+      return new Response(
+        JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
+        { status: 200 },
+      )
+    })
+    renderPage()
+    await new Promise((r) => setTimeout(r, 10))
+    expect(screen.queryByTestId('render-tab-batch')).toBeNull()
   })
 })
