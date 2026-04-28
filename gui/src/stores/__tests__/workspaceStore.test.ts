@@ -168,11 +168,11 @@ describe('workspaceStore', () => {
     })
 
     it('persists visibility changes to localStorage', () => {
-      // From the edit default, library is visible; toggle hides it.
-      expect(useWorkspaceStore.getState().panelVisibility.library).toBe(true)
+      // First-run defaults: library is hidden. Toggle reveals it.
+      expect(useWorkspaceStore.getState().panelVisibility.library).toBe(false)
       useWorkspaceStore.getState().togglePanel('library')
       const persisted = JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? '{}')
-      expect(persisted.panelVisibility.library).toBe(false)
+      expect(persisted.panelVisibility.library).toBe(true)
     })
   })
 

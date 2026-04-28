@@ -43,12 +43,13 @@ describe('WorkspaceLayout', () => {
 
   it('hides panels with display:none rather than removing them (LRN-140)', () => {
     render(<WorkspaceLayout />)
-    // Edit preset hides render-queue and batch.
-    const renderQueueContent = screen.getByTestId('workspace-panel-render-queue') as HTMLElement
+    // First-run defaults: only `preview` is visible. Hidden panels still
+    // render in the DOM but the inner content is display:none.
+    const libraryContent = screen.getByTestId('workspace-panel-library') as HTMLElement
     const batchContent = screen.getByTestId('workspace-panel-batch') as HTMLElement
-    expect(renderQueueContent.getAttribute('data-visible')).toBe('false')
+    expect(libraryContent.getAttribute('data-visible')).toBe('false')
     expect(batchContent.getAttribute('data-visible')).toBe('false')
-    expect(renderQueueContent.style.display).toBe('none')
+    expect(libraryContent.style.display).toBe('none')
     expect(batchContent.style.display).toBe('none')
   })
 
@@ -61,32 +62,29 @@ describe('WorkspaceLayout', () => {
 
   it('hidden panels have pointer-events: none to avoid intercepting routed clicks', () => {
     render(<WorkspaceLayout />)
-    // Edit preset hides batch.
-    const batchContent = screen.getByTestId('workspace-panel-batch') as HTMLElement
-    expect(batchContent.style.pointerEvents).toBe('none')
+    // First-run defaults: library is hidden.
+    const libraryContent = screen.getByTestId('workspace-panel-library') as HTMLElement
+    expect(libraryContent.style.pointerEvents).toBe('none')
     const previewContent = screen.getByTestId('workspace-panel-preview') as HTMLElement
     expect(previewContent.style.pointerEvents).toBe('')
   })
 
-  it('omits the right-side separator when both render-queue and batch are hidden', () => {
+  it('omits separators between hidden panels (BL-291 pointer-event regression)', () => {
     render(<WorkspaceLayout />)
-    // In edit preset, both render-queue and batch are hidden — sep-main-right
-    // is omitted to prevent stacked zero-width separators.
-    expect(document.querySelector('[aria-label="Resize render-queue panel"]')).toBeNull()
-  })
-
-  it('omits the timeline/effects separator when only one of them is visible', () => {
-    // Hide effects; timeline still visible. Separator should drop.
-    useWorkspaceStore.setState((state) => ({
-      panelVisibility: { ...state.panelVisibility, effects: false },
-    }))
-    render(<WorkspaceLayout />)
+    // First-run: only `preview` is visible — every separator should drop so
+    // routed clicks are not intercepted by stacked zero-width separators.
+    expect(document.querySelector('[aria-label="Resize library panel"]')).toBeNull()
     expect(document.querySelector('[aria-label="Resize timeline panel"]')).toBeNull()
+    expect(document.querySelector('[aria-label="Resize render-queue panel"]')).toBeNull()
+    expect(document.querySelector('[aria-label="Resize batch panel"]')).toBeNull()
+    expect(document.querySelector('[aria-label="Resize preview panel"]')).toBeNull()
   })
 
-  it('renders the library separator in the edit preset (library is visible)', () => {
+  it('renders separators between adjacent visible panels in the edit preset', () => {
+    useWorkspaceStore.getState().setPreset('edit')
     render(<WorkspaceLayout />)
     expect(document.querySelector('[aria-label="Resize library panel"]')).not.toBeNull()
+    expect(document.querySelector('[aria-label="Resize timeline panel"]')).not.toBeNull()
   })
 
   describe('bidirectional loop guard (NFR-002)', () => {

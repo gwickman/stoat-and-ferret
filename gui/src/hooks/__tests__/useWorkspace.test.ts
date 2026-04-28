@@ -49,11 +49,7 @@ describe('useWorkspace', () => {
 
   it('reflects panel visibility toggles', () => {
     const { result } = renderHook(() => useWorkspace())
-    // Edit preset (default) shows library; toggle hides it.
-    expect(result.current.panelVisibility.library).toBe(true)
-    act(() => {
-      result.current.togglePanel('library')
-    })
+    // First-run defaults: only `preview` is visible. Toggle reveals library.
     expect(result.current.panelVisibility.library).toBe(false)
     act(() => {
       result.current.togglePanel('library')

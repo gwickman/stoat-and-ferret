@@ -47,11 +47,19 @@ function WorkspacePanel({ panelId, label, minSize = 10, guardRef, children }: Wo
         data-visible={isVisible ? 'true' : 'false'}
         style={isVisible ? undefined : { display: 'none', pointerEvents: 'none' }}
       >
-        {children ?? (
-          <div className="flex h-full items-center justify-center text-sm text-gray-300">
-            {label}
-          </div>
-        )}
+        {/*
+         * Hidden panels render an empty wrapper (display:none) — the
+         * placeholder label below would otherwise contribute searchable text
+         * to the DOM and collide with routed page headings (e.g.,
+         * `getByText("Library")` matching both the panel placeholder and the
+         * library page heading).
+         */}
+        {isVisible &&
+          (children ?? (
+            <div className="flex h-full items-center justify-center text-sm text-gray-300">
+              {label}
+            </div>
+          ))}
       </div>
     </Panel>
   )

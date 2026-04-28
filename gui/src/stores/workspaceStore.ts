@@ -79,15 +79,34 @@ function presetVisibility(preset: NamedPreset): PanelVisibility {
 }
 
 /**
- * Default panel sizes — derived from the Edit preset so first-run renders
- * the canonical Edit layout (library + timeline + effects + preview).
+ * Default panel sizes (first-run / unconfigured state). Preview takes the full
+ * width so existing routed pages render at their pre-BL-291 dimensions.
+ * Switching to a named preset via `setPreset` writes the preset's canonical
+ * percentages.
  */
-export const DEFAULT_PANEL_SIZES: PanelSizes = { ...PRESETS.edit.sizes }
+export const DEFAULT_PANEL_SIZES: PanelSizes = {
+  library: 20,
+  timeline: 25,
+  effects: 25,
+  preview: 100,
+  'render-queue': 25,
+  batch: 25,
+}
 
 /**
- * Default panel visibility — derived from the Edit preset's panel list.
+ * Default panel visibility (first-run / unconfigured state). Only the preview
+ * panel is visible so the routed Outlet renders full-width without competing
+ * with empty placeholder panels. `setPreset('edit')` flips this to the Edit
+ * layout when the user opts in.
  */
-export const DEFAULT_PANEL_VISIBILITY: PanelVisibility = presetVisibility('edit')
+export const DEFAULT_PANEL_VISIBILITY: PanelVisibility = {
+  library: false,
+  timeline: false,
+  preview: true,
+  effects: false,
+  'render-queue': false,
+  batch: false,
+}
 
 /** Custom-mode size overrides keyed by the originating named preset. */
 export type SizesByPreset = Partial<Record<NamedPreset, Partial<PanelSizes>>>
