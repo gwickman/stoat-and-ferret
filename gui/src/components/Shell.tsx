@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useRenderEvents } from '../hooks/useRenderEvents'
 import {
@@ -5,9 +6,11 @@ import {
   type ShortcutBinding,
 } from '../hooks/useKeyboardShortcuts'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import HealthIndicator from './HealthIndicator'
 import Navigation from './Navigation'
+import SettingsPanel from './settings/SettingsPanel'
 import StatusBar from './StatusBar'
 import WorkspaceLayout from './workspace/WorkspaceLayout'
 import WorkspacePresetSelector from './workspace/WorkspacePresetSelector'
@@ -17,33 +20,45 @@ function wsUrl(): string {
   return `${proto}//${window.location.host}/ws`
 }
 
-/**
- * Module-level shortcut bindings for the Shell. Pulled from the store via
- * `getState()` so the handlers are stable references (avoids re-registering
- * on every render and preserves first-registered-wins semantics).
- */
-const SHELL_SHORTCUTS: ShortcutBinding[] = [
-  {
-    combo: 'Ctrl+1',
-    action: 'workspace.preset.edit',
-    handler: () => useWorkspaceStore.getState().setPreset('edit'),
-  },
-  {
-    combo: 'Ctrl+2',
-    action: 'workspace.preset.review',
-    handler: () => useWorkspaceStore.getState().setPreset('review'),
-  },
-  {
-    combo: 'Ctrl+3',
-    action: 'workspace.preset.render',
-    handler: () => useWorkspaceStore.getState().setPreset('render'),
-  },
-]
-
 export default function Shell() {
   const { state: connectionState } = useWebSocket(wsUrl())
   useRenderEvents()
-  useKeyboardShortcuts(SHELL_SHORTCUTS)
+
+  // Bindings derive from settingsStore so a rebind in the settings panel
+  // applies immediately (FR-004). The array identity changes when the
+  // shortcut map changes, prompting `useKeyboardShortcuts` to unregister
+  // the stale combos and register the new ones.
+  const shortcuts = useSettingsStore((s) => s.shortcuts)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const toggleSettings = useCallback(() => setSettingsOpen((open) => !open), [])
+  const closeSettings = useCallback(() => setSettingsOpen(false), [])
+
+  const bindings = useMemo<ShortcutBinding[]>(
+    () => [
+      {
+        combo: shortcuts['workspace.preset.edit'],
+        action: 'workspace.preset.edit',
+        handler: () => useWorkspaceStore.getState().setPreset('edit'),
+      },
+      {
+        combo: shortcuts['workspace.preset.review'],
+        action: 'workspace.preset.review',
+        handler: () => useWorkspaceStore.getState().setPreset('review'),
+      },
+      {
+        combo: shortcuts['workspace.preset.render'],
+        action: 'workspace.preset.render',
+        handler: () => useWorkspaceStore.getState().setPreset('render'),
+      },
+      {
+        combo: shortcuts['settings.toggle'],
+        action: 'settings.toggle',
+        handler: toggleSettings,
+      },
+    ],
+    [shortcuts, toggleSettings],
+  )
+  useKeyboardShortcuts(bindings)
 
   // Only mount the WorkspaceLayout chrome when at least one non-preview panel
   // is visible. In the first-run / unconfigured state (preview-only) the
@@ -85,6 +100,7 @@ export default function Shell() {
         )}
       </main>
       <StatusBar connectionState={connectionState} />
+      <SettingsPanel open={settingsOpen} onClose={closeSettings} />
     </div>
   )
 }

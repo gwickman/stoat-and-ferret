@@ -13,6 +13,34 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-fg: #111827;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0a0a0a;
+  --color-fg: #f3f4f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --color-bg: #0a0a0a;
+    --color-fg: #f3f4f6;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    color-scheme: light;
+    --color-bg: #ffffff;
+    --color-fg: #111827;
+  }
+}
+
 body {
   margin: 0;
   min-width: 320px;
