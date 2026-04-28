@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BatchPanel from '../BatchPanel'
 import { useBatchStore } from '../../../stores/batchStore'
@@ -60,25 +60,14 @@ describe('BatchPanel', () => {
     const onSubmitted = vi.fn()
     render(<BatchPanel onBatchSubmitted={onSubmitted} />)
     fillFirstRow('proj-1', '/out/1.mp4')
-    await new Promise<void>((resolve) => {
-      fetchSpy.mockImplementation(async () => {
-        resolve()
-        return new Response(
-          JSON.stringify({ batch_id: 'b-100', jobs_queued: 1, status: 'accepted' }),
-          { status: 202 },
-        )
-      })
-      fireEvent.click(screen.getByTestId('batch-submit'))
+    fireEvent.click(screen.getByTestId('batch-submit'))
+    await waitFor(() => {
+      expect(onSubmitted).toHaveBeenCalledWith('b-100')
     })
-    // Wait for the submit promise to resolve.
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/v1/render/batch',
       expect.objectContaining({ method: 'POST' }),
     )
-    expect(onSubmitted).toHaveBeenCalledWith('b-100')
     const jobs = useBatchStore.getState().jobs
     expect(jobs).toHaveLength(1)
     expect(jobs[0].batch_id).toBe('b-100')
@@ -96,11 +85,9 @@ describe('BatchPanel', () => {
     render(<BatchPanel />)
     fillFirstRow('proj-1', '/out/1.mp4')
     fireEvent.click(screen.getByTestId('batch-submit'))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(screen.getByTestId('batch-submit-error').textContent).toContain('too many')
-    // Form input values are preserved (not cleared).
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-submit-error').textContent).toContain('too many')
+    })
     const projectInput = screen.getByTestId('batch-project-0') as HTMLInputElement
     expect(projectInput.value).toBe('proj-1')
   })
@@ -112,10 +99,9 @@ describe('BatchPanel', () => {
     render(<BatchPanel />)
     fillFirstRow('proj-1', '/out/1.mp4')
     fireEvent.click(screen.getByTestId('batch-submit'))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(screen.getByTestId('batch-submit-error').textContent).toMatch(/Server error \(503\)/)
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-submit-error').textContent).toMatch(/Server error \(503\)/)
+    })
     const projectInput = screen.getByTestId('batch-project-0') as HTMLInputElement
     expect(projectInput.value).toBe('proj-1')
   })
@@ -130,14 +116,15 @@ describe('BatchPanel', () => {
     render(<BatchPanel />)
     fillFirstRow('p1', '/out/1.mp4')
     fireEvent.click(screen.getByTestId('batch-submit'))
-    await Promise.resolve()
-    expect((screen.getByTestId('batch-submit') as HTMLButtonElement).disabled).toBe(true)
+    await waitFor(() => {
+      expect((screen.getByTestId('batch-submit') as HTMLButtonElement).disabled).toBe(true)
+    })
     resolveFetch(new Response(
       JSON.stringify({ batch_id: 'b1', jobs_queued: 1, status: 'accepted' }),
       { status: 202 },
     ))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    await waitFor(() => {
+      expect((screen.getByTestId('batch-submit') as HTMLButtonElement).disabled).toBe(false)
+    })
   })
 })

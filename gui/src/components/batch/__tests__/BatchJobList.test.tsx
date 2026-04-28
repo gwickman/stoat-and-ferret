@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BatchJobList from '../BatchJobList'
 import { useBatchStore, type BatchJob } from '../../../stores/batchStore'
@@ -96,12 +96,10 @@ describe('BatchJobList', () => {
     useBatchStore.getState().addJob(makeJob({ job_id: 'r', status: 'running', progress: 0.5 }))
     render(<BatchJobList />)
     fireEvent.click(screen.getByTestId('batch-cancel-r'))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    await waitFor(() => {
+      expect(useBatchStore.getState().jobs[0].status).toBe('cancelled')
+    })
     expect(fetchSpy).toHaveBeenCalledWith('/api/v1/render/batch/r', { method: 'DELETE' })
-    const job = useBatchStore.getState().jobs[0]
-    expect(job.status).toBe('cancelled')
   })
 
   it('removes the job and surfaces "Job not found" on 404', async () => {
@@ -109,11 +107,9 @@ describe('BatchJobList', () => {
     useBatchStore.getState().addJob(makeJob({ job_id: 'r', status: 'running', progress: 0.5 }))
     render(<BatchJobList />)
     fireEvent.click(screen.getByTestId('batch-cancel-r'))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-    // After 404 the row is removed from the store.
-    expect(useBatchStore.getState().jobs).toHaveLength(0)
+    await waitFor(() => {
+      expect(useBatchStore.getState().jobs).toHaveLength(0)
+    })
   })
 
   it('surfaces "Job already finished" on 409', async () => {
@@ -121,10 +117,9 @@ describe('BatchJobList', () => {
     useBatchStore.getState().addJob(makeJob({ job_id: 'r', status: 'running', progress: 0.5 }))
     render(<BatchJobList />)
     fireEvent.click(screen.getByTestId('batch-cancel-r'))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(screen.getByTestId('batch-error-r').textContent).toContain('already finished')
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-error-r').textContent).toContain('already finished')
+    })
   })
 
   it('shows generic server error on 5xx and re-enables the cancel button', async () => {
@@ -132,10 +127,9 @@ describe('BatchJobList', () => {
     useBatchStore.getState().addJob(makeJob({ job_id: 'r', status: 'running', progress: 0.5 }))
     render(<BatchJobList />)
     fireEvent.click(screen.getByTestId('batch-cancel-r'))
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(screen.getByTestId('batch-error-r').textContent).toMatch(/503/)
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-error-r').textContent).toMatch(/503/)
+    })
     const btn = screen.getByTestId('batch-cancel-r') as HTMLButtonElement
     expect(btn.disabled).toBe(false)
   })
