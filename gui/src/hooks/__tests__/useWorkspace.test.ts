@@ -12,8 +12,10 @@ beforeEach(() => {
   window.localStorage.clear()
   useWorkspaceStore.setState({
     preset: 'edit',
+    anchorPreset: 'edit',
     panelSizes: { ...DEFAULT_PANEL_SIZES },
     panelVisibility: { ...DEFAULT_PANEL_VISIBILITY },
+    sizesByPreset: {},
   })
 })
 
@@ -47,6 +49,7 @@ describe('useWorkspace', () => {
 
   it('reflects panel visibility toggles', () => {
     const { result } = renderHook(() => useWorkspace())
+    // First-run defaults: only `preview` is visible. Toggle reveals library.
     expect(result.current.panelVisibility.library).toBe(false)
     act(() => {
       result.current.togglePanel('library')
@@ -57,10 +60,10 @@ describe('useWorkspace', () => {
   it('resetLayout restores defaults via the hook', () => {
     const { result } = renderHook(() => useWorkspace())
     act(() => {
+      // Resize via the hook to flip preset to custom and record an override.
       result.current.resizePanel('library', 5)
-      result.current.setPreset('render')
     })
-    expect(result.current.preset).toBe('render')
+    expect(result.current.preset).toBe('custom')
     expect(result.current.panelSizes.library).toBe(5)
 
     act(() => {

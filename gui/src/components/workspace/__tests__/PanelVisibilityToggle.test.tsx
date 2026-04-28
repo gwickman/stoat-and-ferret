@@ -13,8 +13,10 @@ beforeEach(() => {
   window.localStorage.clear()
   useWorkspaceStore.setState({
     preset: 'edit',
+    anchorPreset: 'edit',
     panelSizes: { ...DEFAULT_PANEL_SIZES },
     panelVisibility: { ...DEFAULT_PANEL_VISIBILITY },
+    sizesByPreset: {},
   })
 })
 
@@ -33,6 +35,7 @@ describe('PanelVisibilityToggle', () => {
 
   it('reflects current visibility via aria-pressed', () => {
     render(<PanelVisibilityToggle />)
+    // First-run defaults: only `preview` is visible.
     expect(screen.getByTestId('panel-toggle-preview').getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByTestId('panel-toggle-library').getAttribute('aria-pressed')).toBe('false')
   })
