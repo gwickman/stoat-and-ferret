@@ -1,0 +1,72 @@
+import { act, renderHook } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { useWorkspace } from '../useWorkspace'
+import {
+  DEFAULT_PANEL_SIZES,
+  DEFAULT_PANEL_VISIBILITY,
+  WORKSPACE_STORAGE_KEY,
+  useWorkspaceStore,
+} from '../../stores/workspaceStore'
+
+beforeEach(() => {
+  window.localStorage.clear()
+  useWorkspaceStore.setState({
+    preset: 'edit',
+    panelSizes: { ...DEFAULT_PANEL_SIZES },
+    panelVisibility: { ...DEFAULT_PANEL_VISIBILITY },
+  })
+})
+
+afterEach(() => {
+  window.localStorage.clear()
+})
+
+describe('useWorkspace', () => {
+  it('exposes current store state', () => {
+    const { result } = renderHook(() => useWorkspace())
+    expect(result.current.preset).toBe('edit')
+    expect(result.current.panelSizes).toEqual(DEFAULT_PANEL_SIZES)
+    expect(result.current.panelVisibility).toEqual(DEFAULT_PANEL_VISIBILITY)
+  })
+
+  it('triggers re-render when preset changes', () => {
+    const { result } = renderHook(() => useWorkspace())
+    act(() => {
+      result.current.setPreset('review')
+    })
+    expect(result.current.preset).toBe('review')
+  })
+
+  it('reflects panel resize updates', () => {
+    const { result } = renderHook(() => useWorkspace())
+    act(() => {
+      result.current.resizePanel('library', 33)
+    })
+    expect(result.current.panelSizes.library).toBe(33)
+  })
+
+  it('reflects panel visibility toggles', () => {
+    const { result } = renderHook(() => useWorkspace())
+    act(() => {
+      result.current.togglePanel('preview')
+    })
+    expect(result.current.panelVisibility.preview).toBe(false)
+  })
+
+  it('resetLayout restores defaults via the hook', () => {
+    const { result } = renderHook(() => useWorkspace())
+    act(() => {
+      result.current.resizePanel('library', 5)
+      result.current.setPreset('render')
+    })
+    expect(result.current.preset).toBe('render')
+    expect(result.current.panelSizes.library).toBe(5)
+
+    act(() => {
+      result.current.resetLayout()
+    })
+    expect(result.current.preset).toBe('edit')
+    expect(result.current.panelSizes).toEqual(DEFAULT_PANEL_SIZES)
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull()
+  })
+})

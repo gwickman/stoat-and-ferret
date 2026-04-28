@@ -37,7 +37,7 @@ describe('App', () => {
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Dashboard')).toBeDefined()
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeDefined()
   })
 
   it('renders library page at /library', () => {
@@ -46,7 +46,7 @@ describe('App', () => {
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Library')).toBeDefined()
+    expect(screen.getByRole('heading', { name: 'Library' })).toBeDefined()
   })
 
   it('renders projects page at /projects', () => {
@@ -55,6 +55,6 @@ describe('App', () => {
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Projects')).toBeDefined()
+    expect(screen.getByRole('heading', { name: 'Projects' })).toBeDefined()
   })
 })
