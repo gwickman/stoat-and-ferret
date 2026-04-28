@@ -10,6 +10,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import HealthIndicator from './HealthIndicator'
 import Navigation from './Navigation'
+import KeyboardShortcutOverlay from './settings/KeyboardShortcutOverlay'
 import SettingsPanel from './settings/SettingsPanel'
 import StatusBar from './StatusBar'
 import WorkspaceLayout from './workspace/WorkspaceLayout'
@@ -38,21 +39,29 @@ export default function Shell() {
       {
         combo: shortcuts['workspace.preset.edit'],
         action: 'workspace.preset.edit',
+        description: 'Switch to Edit preset',
+        section: 'Global',
         handler: () => useWorkspaceStore.getState().setPreset('edit'),
       },
       {
         combo: shortcuts['workspace.preset.review'],
         action: 'workspace.preset.review',
+        description: 'Switch to Review preset',
+        section: 'Global',
         handler: () => useWorkspaceStore.getState().setPreset('review'),
       },
       {
         combo: shortcuts['workspace.preset.render'],
         action: 'workspace.preset.render',
+        description: 'Switch to Render preset',
+        section: 'Global',
         handler: () => useWorkspaceStore.getState().setPreset('render'),
       },
       {
         combo: shortcuts['settings.toggle'],
         action: 'settings.toggle',
+        description: 'Toggle settings panel',
+        section: 'Global',
         handler: toggleSettings,
       },
     ],
@@ -101,6 +110,7 @@ export default function Shell() {
       </main>
       <StatusBar connectionState={connectionState} />
       <SettingsPanel open={settingsOpen} onClose={closeSettings} />
+      <KeyboardShortcutOverlay />
     </div>
   )
 }
