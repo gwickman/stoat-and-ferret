@@ -272,13 +272,24 @@ describe('RenderPage', () => {
       if (url === '/api/v1/flags') {
         throw new Error('flags endpoint down')
       }
-      return new Response(
-        JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
-        { status: 200 },
-      )
+      if (url === '/api/v1/render') {
+        return new Response(
+          JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
+          { status: 200 },
+        )
+      }
+      if (url === '/api/v1/render/queue') {
+        return new Response(JSON.stringify(mockQueueStatus), { status: 200 })
+      }
+      if (url === '/api/v1/render/encoders') {
+        return new Response(JSON.stringify({ encoders: [], cached: false }), { status: 200 })
+      }
+      if (url === '/api/v1/render/formats') {
+        return new Response(JSON.stringify({ formats: [] }), { status: 200 })
+      }
+      return new Response('{}', { status: 200 })
     })
     renderPage()
-    // Allow the failed fetch to settle.
     await new Promise((r) => setTimeout(r, 10))
     expect(screen.queryByTestId('render-tab-batch')).toBeNull()
   })
@@ -292,10 +303,22 @@ describe('RenderPage', () => {
           { status: 200 },
         )
       }
-      return new Response(
-        JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
-        { status: 200 },
-      )
+      if (url === '/api/v1/render') {
+        return new Response(
+          JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
+          { status: 200 },
+        )
+      }
+      if (url === '/api/v1/render/queue') {
+        return new Response(JSON.stringify(mockQueueStatus), { status: 200 })
+      }
+      if (url === '/api/v1/render/encoders') {
+        return new Response(JSON.stringify({ encoders: [], cached: false }), { status: 200 })
+      }
+      if (url === '/api/v1/render/formats') {
+        return new Response(JSON.stringify({ formats: [] }), { status: 200 })
+      }
+      return new Response('{}', { status: 200 })
     })
     renderPage()
     await new Promise((r) => setTimeout(r, 10))
