@@ -21,22 +21,32 @@ export type PanelVisibility = Record<PanelId, boolean>
 const STORAGE_KEY = 'stoat-workspace-layout'
 const VALID_PRESETS: ReadonlySet<WorkspacePreset> = new Set(['edit', 'review', 'render', 'custom'])
 
-/** Default panel sizes (percentages, summing to 100 within each PanelGroup). */
+/**
+ * Default panel sizes (percentages). Designed so that when only the `preview`
+ * panel is visible (the first-run state), it takes the full Group width and
+ * existing routed pages render at the same dimensions as before BL-291.
+ * Feature 002 (BL-292) introduces preset-driven sizing for the remaining
+ * panels; for now they retain non-zero sizes for when a user toggles them on.
+ */
 export const DEFAULT_PANEL_SIZES: PanelSizes = {
   library: 20,
   timeline: 25,
   effects: 25,
-  preview: 30,
-  'render-queue': 50,
-  batch: 50,
+  preview: 100,
+  'render-queue': 25,
+  batch: 25,
 }
 
-/** Default panel visibility — Edit preset shows core panels, hides render/batch. */
+/**
+ * Default panel visibility — only `preview` is visible on first-run so the
+ * routed Outlet renders full-width (FR-004). Workspace presets in Feature 002
+ * will flip these defaults per preset.
+ */
 export const DEFAULT_PANEL_VISIBILITY: PanelVisibility = {
-  library: true,
-  timeline: true,
+  library: false,
+  timeline: false,
   preview: true,
-  effects: true,
+  effects: false,
   'render-queue': false,
   batch: false,
 }

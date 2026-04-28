@@ -40,27 +40,23 @@ describe('WorkspaceLayout', () => {
   })
 
   it('hides panels with display:none rather than removing them (LRN-140)', () => {
-    useWorkspaceStore.setState({
-      panelVisibility: { ...DEFAULT_PANEL_VISIBILITY, batch: false, 'render-queue': false },
-    })
     render(<WorkspaceLayout />)
 
-    // Hidden panels still render in the DOM (state and listeners preserved)
+    // First-run defaults: only `preview` is visible. Hidden panels (library,
+    // timeline, effects, render-queue, batch) still render in the DOM but the
+    // inner content is display:none so component state is preserved.
+    const libraryContent = screen.getByTestId('workspace-panel-library') as HTMLElement
     const batchContent = screen.getByTestId('workspace-panel-batch') as HTMLElement
-    const renderContent = screen.getByTestId('workspace-panel-render-queue') as HTMLElement
-    expect(batchContent).toBeDefined()
-    expect(renderContent).toBeDefined()
-
+    expect(libraryContent.getAttribute('data-visible')).toBe('false')
     expect(batchContent.getAttribute('data-visible')).toBe('false')
-    expect(renderContent.getAttribute('data-visible')).toBe('false')
+    expect(libraryContent.style.display).toBe('none')
     expect(batchContent.style.display).toBe('none')
-    expect(renderContent.style.display).toBe('none')
   })
 
   it('marks visible panels with data-visible="true" and no inline display', () => {
     render(<WorkspaceLayout />)
-    const libraryContent = screen.getByTestId('workspace-panel-library') as HTMLElement
-    expect(libraryContent.getAttribute('data-visible')).toBe('true')
-    expect(libraryContent.style.display).toBe('')
+    const previewContent = screen.getByTestId('workspace-panel-preview') as HTMLElement
+    expect(previewContent.getAttribute('data-visible')).toBe('true')
+    expect(previewContent.style.display).toBe('')
   })
 })

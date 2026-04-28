@@ -60,11 +60,11 @@ describe('workspaceStore', () => {
 
   describe('togglePanel', () => {
     it('flips visibility for known panels', () => {
-      expect(useWorkspaceStore.getState().panelVisibility.library).toBe(true)
-      useWorkspaceStore.getState().togglePanel('library')
-      expect(useWorkspaceStore.getState().panelVisibility.library).toBe(false)
-      useWorkspaceStore.getState().togglePanel('library')
-      expect(useWorkspaceStore.getState().panelVisibility.library).toBe(true)
+      expect(useWorkspaceStore.getState().panelVisibility.preview).toBe(true)
+      useWorkspaceStore.getState().togglePanel('preview')
+      expect(useWorkspaceStore.getState().panelVisibility.preview).toBe(false)
+      useWorkspaceStore.getState().togglePanel('preview')
+      expect(useWorkspaceStore.getState().panelVisibility.preview).toBe(true)
     })
 
     it('logs warning and ignores unknown panelId', () => {
@@ -77,9 +77,9 @@ describe('workspaceStore', () => {
     })
 
     it('persists visibility changes to localStorage', () => {
-      useWorkspaceStore.getState().togglePanel('batch')
+      useWorkspaceStore.getState().togglePanel('library')
       const persisted = JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? '{}')
-      expect(persisted.panelVisibility.batch).toBe(true)
+      expect(persisted.panelVisibility.library).toBe(true)
     })
   })
 
@@ -132,7 +132,7 @@ describe('workspaceStore', () => {
     it('restores defaults and clears localStorage (FR-005)', () => {
       useWorkspaceStore.getState().resizePanel('library', 5)
       useWorkspaceStore.getState().setPreset('review')
-      useWorkspaceStore.getState().togglePanel('batch')
+      useWorkspaceStore.getState().togglePanel('library')
       expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).not.toBeNull()
 
       useWorkspaceStore.getState().resetLayout()
@@ -173,7 +173,7 @@ describe('workspaceStore', () => {
             'phantom-panel': 50,
           },
           panelVisibility: {
-            library: false,
+            library: true,
             'phantom-panel': true,
           },
         }),
@@ -182,7 +182,7 @@ describe('workspaceStore', () => {
       expect(state.panelSizes.library).toBe(25)
       expect(state.panelSizes.timeline).toBe(DEFAULT_PANEL_SIZES.timeline)
       expect(state.panelSizes.preview).toBe(DEFAULT_PANEL_SIZES.preview)
-      expect(state.panelVisibility.library).toBe(false)
+      expect(state.panelVisibility.library).toBe(true)
       expect((state.panelSizes as Record<string, unknown>)['phantom-panel']).toBeUndefined()
     })
 
@@ -190,13 +190,13 @@ describe('workspaceStore', () => {
       const persisted = {
         preset: 'render',
         panelSizes: { ...DEFAULT_PANEL_SIZES, preview: 60 },
-        panelVisibility: { ...DEFAULT_PANEL_VISIBILITY, batch: true },
+        panelVisibility: { ...DEFAULT_PANEL_VISIBILITY, library: true },
       }
       window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(persisted))
       const state = loadWorkspaceState()
       expect(state.preset).toBe('render')
       expect(state.panelSizes.preview).toBe(60)
-      expect(state.panelVisibility.batch).toBe(true)
+      expect(state.panelVisibility.library).toBe(true)
     })
 
     it('falls back to defaults when persisted preset is invalid', () => {

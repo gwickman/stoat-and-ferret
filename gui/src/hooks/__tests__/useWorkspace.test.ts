@@ -47,10 +47,11 @@ describe('useWorkspace', () => {
 
   it('reflects panel visibility toggles', () => {
     const { result } = renderHook(() => useWorkspace())
+    expect(result.current.panelVisibility.library).toBe(false)
     act(() => {
-      result.current.togglePanel('preview')
+      result.current.togglePanel('library')
     })
-    expect(result.current.panelVisibility.preview).toBe(false)
+    expect(result.current.panelVisibility.library).toBe(true)
   })
 
   it('resetLayout restores defaults via the hook', () => {

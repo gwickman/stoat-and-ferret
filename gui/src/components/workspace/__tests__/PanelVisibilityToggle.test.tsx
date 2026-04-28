@@ -33,16 +33,16 @@ describe('PanelVisibilityToggle', () => {
 
   it('reflects current visibility via aria-pressed', () => {
     render(<PanelVisibilityToggle />)
-    expect(screen.getByTestId('panel-toggle-library').getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByTestId('panel-toggle-batch').getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByTestId('panel-toggle-preview').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByTestId('panel-toggle-library').getAttribute('aria-pressed')).toBe('false')
   })
 
   it('toggles panel visibility on click', () => {
     render(<PanelVisibilityToggle />)
     fireEvent.click(screen.getByTestId('panel-toggle-library'))
-    expect(useWorkspaceStore.getState().panelVisibility.library).toBe(false)
-    fireEvent.click(screen.getByTestId('panel-toggle-library'))
     expect(useWorkspaceStore.getState().panelVisibility.library).toBe(true)
+    fireEvent.click(screen.getByTestId('panel-toggle-library'))
+    expect(useWorkspaceStore.getState().panelVisibility.library).toBe(false)
   })
 
   it('reset button restores defaults and clears localStorage', () => {

@@ -11,19 +11,26 @@ interface WorkspacePanelProps {
 }
 
 /**
- * Single workspace panel: respects visibility (CSS display:none, LRN-140) and
- * forwards size changes back to workspaceStore.
+ * Single workspace panel. When the panel is hidden (visibility=false), the
+ * inner content uses CSS `display: none` (LRN-140 — preserve component state)
+ * and the outer Panel is collapsed to a zero-width slot so the surrounding
+ * layout reclaims the space without DOM removal.
  */
 function WorkspacePanel({ panelId, label, minSize = 10, children }: WorkspacePanelProps) {
   const { panelSizes, panelVisibility, resizePanel } = useWorkspace()
   const isVisible = panelVisibility[panelId] !== false
+  const size = isVisible ? panelSizes[panelId] : 0
+  const min = isVisible ? minSize : 0
 
   return (
     <Panel
       id={panelId}
-      defaultSize={panelSizes[panelId]}
-      minSize={minSize}
-      onResize={(size) => resizePanel(panelId, size.asPercentage)}
+      defaultSize={size}
+      minSize={min}
+      onResize={(value) => {
+        if (!isVisible) return
+        resizePanel(panelId, value.asPercentage)
+      }}
       className="h-full overflow-hidden"
       data-panel-id={panelId}
     >
@@ -34,7 +41,7 @@ function WorkspacePanel({ panelId, label, minSize = 10, children }: WorkspacePan
         style={isVisible ? undefined : { display: 'none' }}
       >
         {children ?? (
-          <div className="flex h-full items-center justify-center text-sm text-gray-500">
+          <div className="flex h-full items-center justify-center text-sm text-gray-300">
             {label}
           </div>
         )}
@@ -54,7 +61,9 @@ interface WorkspaceLayoutProps {
 /**
  * Root workspace layout. Wraps the canonical six panels (library, timeline,
  * effects, preview, render-queue, batch) in nested resizable groups and
- * persists size/visibility through workspaceStore (BL-291).
+ * persists size/visibility through workspaceStore (BL-291). The `preview`
+ * panel hosts the routed Outlet so existing pages render at full width when
+ * other panels are hidden (the default first-run state).
  */
 export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   return (
@@ -74,7 +83,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
         <Panel id="workspace-main" minSize={30} className="h-full overflow-hidden">
           <Group id="workspace-main-vertical" orientation="vertical" className="h-full w-full">
-            <Panel id="workspace-top" minSize={20} className="overflow-hidden">
+            <Panel id="workspace-top" minSize={0} className="overflow-hidden">
               <Group id="workspace-top-horizontal" orientation="horizontal" className="h-full w-full">
                 <WorkspacePanel panelId="timeline" label="Timeline" minSize={15} />
                 <Separator
@@ -104,7 +113,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
           aria-label="Resize render-queue panel"
         />
 
-        <Panel id="workspace-right" minSize={10} className="h-full overflow-hidden">
+        <Panel id="workspace-right" minSize={0} className="h-full overflow-hidden">
           <Group id="workspace-right-vertical" orientation="vertical" className="h-full w-full">
             <WorkspacePanel panelId="render-queue" label="Render Queue" minSize={15} />
             <Separator
