@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 
 import pytest
 from fastapi.testclient import TestClient
@@ -404,3 +405,235 @@ async def test_batch_job_status_transitions() -> None:
     assert job is not None
     assert job.status == "completed"
     assert job.progress == 1.0
+
+
+# ---- DELETE endpoint tests ----
+
+
+@pytest.mark.api
+def test_delete_unknown_job_returns_404(client: TestClient) -> None:
+    """DELETE /render/batch/{id} with unknown job_id returns 404."""
+    response = client.delete("/api/v1/render/batch/nonexistent-job")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_delete_completed_job_returns_409(
+    client: TestClient,
+    batch_repository: InMemoryBatchRepository,
+) -> None:
+    """DELETE on an already-completed job returns 409."""
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-completed",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-completed", "running")
+    await batch_repository.update_status("job-completed", "completed")
+
+    response = client.delete("/api/v1/render/batch/job-completed")
+    assert response.status_code == 409
+    data = response.json()
+    assert data["detail"]["code"] == "JOB_ALREADY_TERMINAL"
+
+
+@pytest.mark.api
+async def test_delete_failed_job_returns_409(
+    client: TestClient,
+    batch_repository: InMemoryBatchRepository,
+) -> None:
+    """DELETE on an already-failed job returns 409."""
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-failed",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-failed", "running")
+    await batch_repository.update_status("job-failed", "failed", error="boom")
+
+    response = client.delete("/api/v1/render/batch/job-failed")
+    assert response.status_code == 409
+
+
+@pytest.mark.api
+async def test_delete_already_cancelled_returns_409(
+    client: TestClient,
+    batch_repository: InMemoryBatchRepository,
+) -> None:
+    """DELETE on an already-cancelled job returns 409 (idempotent guard)."""
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-cancelled",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-cancelled", "cancelled")
+
+    response = client.delete("/api/v1/render/batch/job-cancelled")
+    assert response.status_code == 409
+
+
+@pytest.mark.api
+async def test_delete_queued_job_returns_200_with_cancelled_status(
+    client: TestClient,
+    batch_repository: InMemoryBatchRepository,
+) -> None:
+    """DELETE on a queued job transitions it to cancelled and returns 200."""
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-queued",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+
+    response = client.delete("/api/v1/render/batch/job-queued")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["job_id"] == "job-queued"
+    assert data["status"] == "cancelled"
+
+
+@pytest.mark.api
+async def test_delete_running_job_without_task_falls_back_to_status_update(
+    client: TestClient,
+    batch_repository: InMemoryBatchRepository,
+) -> None:
+    """If task is missing from registry, DELETE still transitions status."""
+    await batch_repository.create_batch_job(
+        batch_id="b1",
+        job_id="job-detached",
+        project_id="p1",
+        output_path="/out/1.mp4",
+        quality="medium",
+    )
+    await batch_repository.update_status("job-detached", "running")
+
+    response = client.delete("/api/v1/render/batch/job-detached")
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+
+
+@pytest.mark.api
+async def test_run_batch_job_cancellation_transitions_status() -> None:
+    """_run_batch_job sets status to 'cancelled' when its task is cancelled."""
+    started = asyncio.Event()
+    block = asyncio.Event()
+
+    async def blocking_handler(project_id: str, output_path: str, quality: str) -> None:
+        started.set()
+        await block.wait()
+
+    repo = InMemoryBatchRepository()
+    record = await repo.create_batch_job(
+        batch_id="b",
+        job_id="cancel-me",
+        project_id="p1",
+        output_path="/out/1",
+        quality="medium",
+    )
+    semaphore = asyncio.Semaphore(4)
+    registry: dict[str, asyncio.Task[None]] = {}
+    task = asyncio.create_task(
+        _run_batch_job(
+            record.job_id,
+            record.project_id,
+            record.output_path,
+            record.quality,
+            semaphore,
+            blocking_handler,
+            repo,
+            registry,
+        )
+    )
+    registry[record.job_id] = task
+
+    await asyncio.wait_for(started.wait(), timeout=2.0)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    job = await repo.get_by_job_id("cancel-me")
+    assert job is not None
+    assert job.status == "cancelled"
+    assert "cancel-me" not in registry  # cleaned up by finally
+
+
+@pytest.mark.api
+async def test_run_batch_job_skips_if_already_cancelled() -> None:
+    """If status is 'cancelled' before semaphore acquisition, body short-circuits."""
+    repo = InMemoryBatchRepository()
+    record = await repo.create_batch_job(
+        batch_id="b",
+        job_id="pre-cancelled",
+        project_id="p1",
+        output_path="/out/1",
+        quality="medium",
+    )
+    await repo.update_status("pre-cancelled", "cancelled")
+
+    semaphore = asyncio.Semaphore(4)
+    registry: dict[str, asyncio.Task[None]] = {}
+    await _run_batch_job(
+        record.job_id,
+        record.project_id,
+        record.output_path,
+        record.quality,
+        semaphore,
+        None,
+        repo,
+        registry,
+    )
+
+    job = await repo.get_by_job_id("pre-cancelled")
+    assert job is not None
+    assert job.status == "cancelled"
+
+
+# ---- Repository transition tests ----
+
+
+def test_repository_allows_queued_to_cancelled() -> None:
+    """Repository allows queued -> cancelled transition."""
+    from stoat_ferret.db.batch_repository import _validate_status_transition
+
+    _validate_status_transition("queued", "cancelled")
+
+
+def test_repository_allows_running_to_cancelled() -> None:
+    """Repository allows running -> cancelled transition."""
+    from stoat_ferret.db.batch_repository import _validate_status_transition
+
+    _validate_status_transition("running", "cancelled")
+
+
+def test_repository_rejects_cancelled_outgoing() -> None:
+    """Cancelled is terminal — no outgoing transitions allowed."""
+    from stoat_ferret.db.batch_repository import _validate_status_transition
+
+    with pytest.raises(ValueError):
+        _validate_status_transition("cancelled", "running")
+
+
+@pytest.mark.api
+async def test_inmemory_repository_persists_cancelled_status() -> None:
+    """InMemory repository persists 'cancelled' through update_status."""
+    repo = InMemoryBatchRepository()
+    await repo.create_batch_job(
+        batch_id="b",
+        job_id="j-cancel",
+        project_id="p1",
+        output_path="/o",
+        quality="m",
+    )
+    await repo.update_status("j-cancel", "cancelled")
+    job = await repo.get_by_job_id("j-cancel")
+    assert job is not None
+    assert job.status == "cancelled"
