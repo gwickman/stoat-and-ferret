@@ -9,6 +9,7 @@ is sequential-only. Batch state is persisted via AsyncBatchRepository.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -71,6 +72,7 @@ async def _run_batch_job(
     semaphore: asyncio.Semaphore,
     handler: BatchRenderHandler | None,
     repository: AsyncBatchRepository,
+    task_registry: dict[str, asyncio.Task[None]] | None = None,
 ) -> None:
     """Run a single batch job with semaphore-limited concurrency.
 
@@ -82,19 +84,44 @@ async def _run_batch_job(
         semaphore: Semaphore limiting parallel execution.
         handler: Optional render handler to call for each job.
         repository: Batch repository for persisting state changes.
+        task_registry: Optional dict (job_id -> Task) cleaned up on exit.
     """
-    async with semaphore:
-        await repository.update_status(job_id, "running")
-        logger.info("batch_job_started", job_id=job_id, project_id=project_id)
-        try:
-            if handler is not None:
-                await handler(project_id, output_path, quality)
-            await repository.update_status(job_id, "completed")
-            await repository.update_progress(job_id, 1.0)
-            logger.info("batch_job_completed", job_id=job_id)
-        except Exception as exc:
-            await repository.update_status(job_id, "failed", error=str(exc))
-            logger.error("batch_job_failed", job_id=job_id, error=str(exc))
+    try:
+        async with semaphore:
+            # If the job was cancelled (or already terminal) while waiting
+            # for the semaphore, skip execution. This handles the DELETE-
+            # on-queued race where the repo already shows 'cancelled'.
+            current = await repository.get_by_job_id(job_id)
+            if current is None or current.status != "queued":
+                logger.info(
+                    "batch_job_skipped",
+                    job_id=job_id,
+                    status=current.status if current else None,
+                )
+                return
+
+            await repository.update_status(job_id, "running")
+            logger.info("batch_job_started", job_id=job_id, project_id=project_id)
+            try:
+                if handler is not None:
+                    await handler(project_id, output_path, quality)
+                await repository.update_status(job_id, "completed")
+                await repository.update_progress(job_id, 1.0)
+                logger.info("batch_job_completed", job_id=job_id)
+            except asyncio.CancelledError:
+                # Transition running -> cancelled. Only update if still
+                # in 'running' to stay idempotent under concurrent cancels.
+                latest = await repository.get_by_job_id(job_id)
+                if latest is not None and latest.status == "running":
+                    await repository.update_status(job_id, "cancelled")
+                logger.info("batch_job_cancelled", job_id=job_id)
+                raise
+            except Exception as exc:
+                await repository.update_status(job_id, "failed", error=str(exc))
+                logger.error("batch_job_failed", job_id=job_id, error=str(exc))
+    finally:
+        if task_registry is not None:
+            task_registry.pop(job_id, None)
 
 
 @router.post("/batch", status_code=status.HTTP_202_ACCEPTED, response_model=BatchResponse)
@@ -144,8 +171,12 @@ async def submit_batch(
 
     handler: BatchRenderHandler | None = getattr(request.app.state, "batch_render_handler", None)
     semaphore = asyncio.Semaphore(settings.batch_parallel_limit)
+    task_registry: dict[str, asyncio.Task[None]] = getattr(
+        request.app.state, "batch_tasks", {}
+    )
+    request.app.state.batch_tasks = task_registry
     for record in job_records:
-        asyncio.create_task(
+        task = asyncio.create_task(
             _run_batch_job(
                 record.job_id,
                 record.project_id,
@@ -154,8 +185,10 @@ async def submit_batch(
                 semaphore,
                 handler,
                 repository,
+                task_registry,
             )
         )
+        task_registry[record.job_id] = task
 
     logger.info("batch_submitted", batch_id=batch_id, job_count=len(job_records))
 
@@ -216,4 +249,84 @@ async def get_batch_progress(
         failed_jobs=progress.failed_jobs,
         total_jobs=progress.total_jobs,
         jobs=job_statuses,
+    )
+
+
+_TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "failed", "cancelled"})
+
+
+@router.delete("/batch/{job_id}", response_model=BatchJobStatusResponse)
+async def cancel_batch_job(
+    job_id: str,
+    request: Request,
+) -> BatchJobStatusResponse:
+    """Cancel a single batch job by job_id.
+
+    Returns the updated job status after cancellation. Queued jobs are
+    transitioned directly to ``cancelled``; running jobs are cancelled
+    via task cancellation, with the running task's CancelledError
+    handler performing the status transition.
+
+    Args:
+        job_id: The unique job identifier to cancel.
+        request: The FastAPI request object for accessing app state.
+
+    Returns:
+        BatchJobStatusResponse reflecting the post-cancel job state.
+
+    Raises:
+        HTTPException: 404 if no job with the given ID exists; 409 if
+            the job is already in a terminal state.
+    """
+    repository = _get_batch_repository(request)
+    job = await repository.get_by_job_id(job_id)
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Job {job_id} not found"},
+        )
+
+    if job.status in _TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "JOB_ALREADY_TERMINAL",
+                "message": f"Job {job_id} already finished with status {job.status!r}",
+            },
+        )
+
+    task_registry: dict[str, asyncio.Task[None]] = getattr(
+        request.app.state, "batch_tasks", {}
+    )
+    task = task_registry.get(job_id)
+
+    if job.status == "queued":
+        await repository.update_status(job_id, "cancelled")
+        if task is not None and not task.done():
+            task.cancel()
+        logger.info("batch_job_cancel_queued", job_id=job_id)
+    else:
+        # status == "running" — cancel the task; CancelledError handler
+        # transitions the repository status to 'cancelled'.
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+        else:
+            await repository.update_status(job_id, "cancelled")
+        logger.info("batch_job_cancel_running", job_id=job_id)
+
+    updated = await repository.get_by_job_id(job_id)
+    if updated is None:  # pragma: no cover — record exists, never deleted
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Job {job_id} not found"},
+        )
+    return BatchJobStatusResponse(
+        job_id=updated.job_id,
+        project_id=updated.project_id,
+        status=updated.status,
+        progress=updated.progress,
+        error=updated.error,
     )

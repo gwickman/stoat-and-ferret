@@ -16,10 +16,11 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
-# Valid status transitions: from -> set of allowed targets
+# Valid status transitions: from -> set of allowed targets.
+# Terminal states (completed, failed, cancelled) have no outgoing transitions.
 _VALID_TRANSITIONS: dict[str, set[str]] = {
-    "queued": {"running"},
-    "running": {"completed", "failed"},
+    "queued": {"running", "cancelled"},
+    "running": {"completed", "failed", "cancelled"},
 }
 
 
@@ -34,7 +35,7 @@ class BatchJobRecord:
         project_id: The project to render.
         output_path: Output file path for rendered video.
         quality: Render quality preset.
-        status: Job status (queued, running, completed, failed).
+        status: Job status (queued, running, completed, failed, cancelled).
         progress: Render progress 0.0-1.0.
         error: Error message when status is failed.
         created_at: When this job was created.
@@ -135,7 +136,7 @@ class AsyncBatchRepository(Protocol):
         """Update the status of a batch job.
 
         Validates state transitions per the allowed transitions:
-        queued -> running -> completed | failed.
+        queued -> running | cancelled; running -> completed | failed | cancelled.
 
         Args:
             job_id: The job UUID to update.
