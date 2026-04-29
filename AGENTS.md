@@ -187,6 +187,20 @@ This rule applies to all future `STOAT_*` variables, not just security-sensitive
 
 ---
 
+## Startup Ordering
+
+### Startup Ordering Rule
+
+New services and background tasks added to the `lifespan()` function in `src/stoat_ferret/api/app.py` must follow the 14-phase ordering contract:
+
+- **New services** must initialize **after Phase 6** (database connection open, line 170) and **before Phase 9** (AuditLogger initialized, line 181). If the service depends on a repository, initialize after Phase 10 (repositories initialized, line 186).
+- **New background tasks** must start **after Phase 12** (background job worker started, line 289) and **before Phase 13** (gate cleared, line 305). Do not start tasks that probe the application (e.g., via ASGITransport) before Phase 13.
+- **Never** insert code that reads or writes the database before Phase 5 (Alembic migrations, line 167) completes — schema state is undefined until migrations apply.
+
+See `docs/design/FRAMEWORK_CONTEXT.md` §3, Startup Initialization Sequence for the full 14-phase table and ordering constraints.
+
+---
+
 ## PyO3 Bindings
 
 ### Incremental Binding Rule
