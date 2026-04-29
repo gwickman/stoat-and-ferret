@@ -52,7 +52,7 @@
 - **Dependencies**: `useProjectStore`, `useProjects` hook, `AIActionIndicator` component
 
 #### BottomHUD
-- **Description**: Bottom HUD overlay with full playback controls and optional render progress bar with percentage and ETA, updated via RENDER_PROGRESS WebSocket events. Render progress bar and status indicators were added in BL-235.
+- **Description**: Bottom HUD overlay with full playback controls and a frame streaming overlay showing render progress with percentage and ETA. The frame streaming overlay updates in real time via RENDER_PROGRESS WebSocket events and was added in BL-235.
 - **Location**: `gui/src/components/theater/BottomHUD.tsx:42-83`
 - **Props Interface**:
   ```typescript
