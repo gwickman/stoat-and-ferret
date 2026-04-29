@@ -418,6 +418,23 @@ For `explore_project` tasks called by the MCP server:
 
 ---
 
+## Sequential Feature Handoffs
+
+When a feature produces artifacts consumed by a downstream sequential feature, the executor must
+complete a handoff document before the downstream feature begins. Use the template at
+`docs/auto-dev/handoff-template.md`.
+
+Required sections:
+- **Files Modified** — every file created or changed, with a one-line description
+- **Framework Conflicts Encountered** — any rule conflicts and their resolutions
+- **Cross-Feature Ordering Constraints** — startup phases, migration parents, schema dependencies
+- **Known Limitations for Dependent Features** — deferred scope, out-of-scope gaps
+
+A handoff is complete when all four sections are filled (or explicitly stated as none) and the
+document is committed to main before the downstream feature begins execution.
+
+---
+
 ## Branch Protection
 
 The `ci-status` job is the required check for branch protection.

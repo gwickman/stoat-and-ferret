@@ -16,6 +16,13 @@ Phase 6: Configuration Documentation Convergence. Documents all STOAT_* environm
 
 - **Operator Security Configuration Guide** — `docs/manual/configuration-reference.md` with 13 security-sensitive STOAT_* variables covering production hazards, security implications, and recommended values; `KNOWN_UNDOCUMENTED_SETTINGS_VARS` allowlist in `tests/security/test_audit.py` reduced to empty `frozenset()` to enforce zero-drift audit baseline (BL-317, #339)
 
+## [v046] - 2026-04-29
+
+- docs(v046): Document startup initialization sequence, Alembic migration conventions, and structured event naming
+- PR #341: Startup Initialization Sequence documentation
+- PR #342: Alembic Migration Conventions documentation
+- PR #343: Structured Event Naming Conventions documentation
+
 ## [v044] - 2026-04-28
 
 Phase 6: GUI Unified Workspace. Delivers two themes: a workspace layout foundation (dockable resizable panels with persistent sizing and layout presets with keyboard shortcuts) and workspace feature panels (settings panel with theme selector and shortcut editor, keyboard shortcut reference overlay, and batch panel GUI with job monitoring and cancellation).
