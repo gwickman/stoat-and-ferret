@@ -366,23 +366,7 @@ def test_path_traversal_symlink_escape_blocked(
 # finding tracked in ``docs/security/review-phase6.md``. New undocumented
 # vars added to ``Settings`` must either be referenced in the manual or
 # explicitly added here as a recognised gap.
-KNOWN_UNDOCUMENTED_SETTINGS_VARS: frozenset[str] = frozenset(
-    {
-        "STOAT_BATCH_MAX_JOBS",
-        "STOAT_BATCH_RENDERING",
-        "STOAT_PREVIEW_CACHE_MAX_BYTES",
-        "STOAT_PREVIEW_CACHE_MAX_SESSIONS",
-        "STOAT_PREVIEW_SEGMENT_DURATION",
-        "STOAT_PREVIEW_SESSION_TTL_SECONDS",
-        "STOAT_PROXY_AUTO_GENERATE",
-        "STOAT_PROXY_CLEANUP_THRESHOLD",
-        "STOAT_SEED_ENDPOINT",
-        "STOAT_SYNTHETIC_MONITORING",
-        "STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS",
-        "STOAT_THUMBNAIL_STRIP_INTERVAL",
-        "STOAT_VERSION_RETENTION_COUNT",
-    }
-)
+KNOWN_UNDOCUMENTED_SETTINGS_VARS: frozenset[str] = frozenset()
 
 
 _STOAT_VAR_PATTERN = re.compile(r"STOAT_[A-Z][A-Z0-9_]*")

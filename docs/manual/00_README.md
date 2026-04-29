@@ -31,6 +31,7 @@ Stoat & Ferret is an AI-driven programmatic video editor built on a hybrid Pytho
 | [AI Integration Patterns](ai-integration-patterns.md) | Five canonical patterns for AI agents integrating with the API |
 | [API Usage Examples](api-usage-examples.md) | Validated request/response flows for the five primary API workflows |
 | [Runbook](runbook.md) | Operator reference for starting, stopping, backing up, and monitoring the service |
+| [Configuration Reference (Operator / Security)](configuration-reference.md) | Security-focused operator guide for `STOAT_*` variables that govern deployment surface, retention, and resource ceilings |
 | [Troubleshooting](troubleshooting.md) | Decision trees for on-call engineers responding to runtime incidents |
 | [UAT Testing](uat-testing.md) | UAT framework: end-to-end browser-driven validation of user journeys |
 
