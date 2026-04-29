@@ -217,6 +217,40 @@ See `docs/design/FRAMEWORK_CONTEXT.md` §3, Database Migrations for the pattern,
 
 ---
 
+## Structured Event Naming
+
+### Event Namespace Rule
+
+All structured log events (`logger.info("event_name", key=value)`) must use an approved namespace. Event names are part of the observability contract — renaming them breaks log queries, dashboards, and alerting rules.
+
+**Approved namespaces:**
+
+| Namespace | Category | Purpose |
+|-----------|----------|---------|
+| `deployment.*` | Infrastructure | Startup, migrations, feature flag recording |
+| `synthetic.*` | Infrastructure | Synthetic monitoring probes |
+| `schema.*` | Infrastructure | Schema consistency checks |
+| `preview.*` | Domain | Preview workflow WebSocket events |
+| `proxy.*` | Domain | Proxy workflow WebSocket events |
+| `render.*` | Domain | Render workflow events |
+| `testing.*` | Domain (gated) | Testing/debug operations (feature-gated) |
+| (no namespace) | Domain background | High-volume background job lifecycle events (batch, scan, thumbnail) |
+
+**Boundary rule:** `deployment.*` and `synthetic.*` are reserved for infrastructure events (startup, migrations, monitoring probes). Do not use `deployment.*` for domain or user-visible workflow events.
+
+**No-namespace rule:** Background job lifecycle events (batch_*, job_*, scan_*, thumbnail_*) intentionally carry no namespace prefix. This reduces log verbosity at high event rates. Log queries that filter by namespace automatically exclude this category.
+
+**Declaration-before-use process:**
+1. Propose the new namespace in the PR description.
+2. Add the namespace to `docs/design/FRAMEWORK_CONTEXT.md` §3, Structured Logging & Event Naming, and merge to main.
+3. Use the namespace in code only after the FRAMEWORK_CONTEXT.md update is merged.
+
+Ad-hoc event names without an approved namespace are not permitted.
+
+See `docs/design/FRAMEWORK_CONTEXT.md` §3, Structured Logging & Event Naming for the complete namespace taxonomy and production exemplars.
+
+---
+
 ## PyO3 Bindings
 
 ### Incremental Binding Rule
