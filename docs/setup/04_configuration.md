@@ -50,6 +50,8 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `STOAT_WS_HEARTBEAT_INTERVAL` | `int` | `30` | WebSocket heartbeat interval in seconds (minimum: 1). The server sends periodic pings to keep connections alive. |
+| `STOAT_WS_REPLAY_BUFFER_SIZE` | `int` | `1000` | Maximum number of messages retained in the server-global WebSocket replay buffer (minimum: 0). Clients use the `Last-Event-ID` header to recover missed events on reconnect. Memory cost is O(buffer_size), not per-connection. |
+| `STOAT_WS_REPLAY_TTL_SECONDS` | `int` | `300` | Time-to-live in seconds for buffered replay messages (minimum: 0). Events older than this are excluded from replay even when still resident in the buffer. |
 
 ### Proxy Storage
 
@@ -58,6 +60,7 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | `STOAT_PROXY_OUTPUT_DIR` | `str` | `data/proxies` | Directory for storing generated proxy files. Created automatically if it does not exist. |
 | `STOAT_PROXY_MAX_STORAGE_BYTES` | `int` | `10737418240` | Maximum total storage for proxy files in bytes (default 10 GB, 0 = unlimited). |
 | `STOAT_PROXY_CLEANUP_THRESHOLD` | `float` | `0.8` | Storage usage ratio (0.0-1.0) that triggers automatic proxy cleanup. When total proxy storage exceeds this fraction of `STOAT_PROXY_MAX_STORAGE_BYTES`, least-recently-accessed proxies are deleted. |
+| `STOAT_PROXY_AUTO_GENERATE` | `bool` | `false` | When `true`, automatically queues proxy generation for newly scanned videos. Default is `false`; operators must explicitly enable to pre-generate proxies during ingest. |
 
 ### Preview
 
@@ -65,6 +68,9 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 |----------|------|---------|-------------|
 | `STOAT_PREVIEW_OUTPUT_DIR` | `str` | `data/previews` | Directory for storing generated preview files. Created automatically if it does not exist. |
 | `STOAT_PREVIEW_SESSION_TTL_SECONDS` | `int` | `3600` | Preview session time-to-live in seconds (minimum: 1). Sessions that exceed this TTL are eligible for expiry cleanup. |
+| `STOAT_PREVIEW_SEGMENT_DURATION` | `float` | `2.0` | HLS segment duration in seconds for preview generation (valid range: 1.0-6.0). Smaller values reduce playback startup latency at the cost of producing more segment files per session. |
+| `STOAT_PREVIEW_CACHE_MAX_SESSIONS` | `int` | `5` | Maximum number of concurrent preview sessions retained in cache (valid range: 1-100). Oldest sessions are evicted when this limit is exceeded. |
+| `STOAT_PREVIEW_CACHE_MAX_BYTES` | `int` | `1073741824` | Maximum total storage for the preview cache in bytes (default 1 GB, 0 = unlimited). When exceeded, least-recently-used preview sessions are evicted. |
 
 ### Render
 
@@ -75,6 +81,8 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | `STOAT_RENDER_TIMEOUT_SECONDS` | `int` | `3600` | Render job timeout in seconds (valid range: 60-86400). |
 | `STOAT_RENDER_CANCEL_GRACE_SECONDS` | `int` | `10` | Grace period in seconds for FFmpeg to finalize after cancel (valid range: 1-60). |
 | `STOAT_RENDER_RETRY_COUNT` | `int` | `2` | Maximum retry attempts for transient render failures (valid range: 0-5). |
+| `STOAT_RENDER_MODE` | `str` | `real` | Render execution mode. One of: `real` (default; invokes FFmpeg) or `noop` (short-circuits the render service for synthetic load testing without spawning FFmpeg processes). |
+| `STOAT_RENDER_DISK_DEGRADED_THRESHOLD` | `float` | `0.9` | Disk usage ratio (0.0-1.0) at which the render service reports a degraded health status. Use to alert operators before the disk fills and render jobs begin failing. |
 
 ### Security
 
@@ -87,6 +95,55 @@ To set a list value via environment variable, use a JSON array:
 ```bash
 export STOAT_ALLOWED_SCAN_ROOTS='["/home/user/videos", "/mnt/media"]'
 ```
+
+### Batch Rendering
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_BATCH_RENDERING` | `bool` | `true` | Enable batch rendering support. When `false`, the `/api/v1/batch/*` routes return 404 and batch jobs cannot be submitted. |
+| `STOAT_BATCH_PARALLEL_LIMIT` | `int` | `4` | Maximum number of batch render jobs executed in parallel (valid range: 1-16). Bounds CPU and FFmpeg process pressure during batch processing. |
+| `STOAT_BATCH_MAX_JOBS` | `int` | `20` | Maximum number of jobs allowed in a single batch request (valid range: 1-100). Requests exceeding this limit are rejected with a validation error. |
+
+### Version Retention
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_VERSION_RETENTION_COUNT` | `int` (optional) | unset | Keep-last-N version retention per project (minimum: 1). When unset (the default), all versions are retained indefinitely. Older versions beyond the keep count are eligible for cleanup. |
+
+### Thumbnail Strips
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_THUMBNAIL_STRIP_INTERVAL` | `float` | `5.0` | Seconds between frames in thumbnail strip sprite sheets (minimum: 0.5). Smaller values produce denser strips at the cost of larger sprite files and longer extraction time. |
+
+### Waveforms
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_WAVEFORM_DIR` | `str` | `data/waveforms` | Directory for storing generated audio waveform files. Created automatically if it does not exist. |
+
+### Render Storage
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_RENDER_OUTPUT_DIR` | `str` | `data/renders` | Directory for storing rendered output files. Created automatically if it does not exist. |
+
+### Migration Safety
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_MIGRATION_BACKUP_DIR` | `str` | `data/migration_backups` | Directory for storing pre-migration SQLite backup files. Backups are written before each Alembic upgrade so a failed migration can be rolled back to a known-good database file. |
+
+### Testing and Synthetic Monitoring
+
+> **Production hazard:** `STOAT_TESTING_MODE` and `STOAT_SEED_ENDPOINT` disable security gates on testing routes and expose seed data injection. Never enable either in a production deployment.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_TESTING_MODE` | `bool` | `false` | Enable deployment-time testing mode. When `true`, security gates on `/api/v1/testing/*` routes are disabled to allow integration test fixtures. **Must never be set in production.** |
+| `STOAT_SEED_ENDPOINT` | `bool` | `false` | Enable the test seed endpoint (`POST /api/v1/testing/seed`). Requires `STOAT_TESTING_MODE=true`; the endpoint registers as 404 when either flag is unset. **Must never be set in production.** |
+| `STOAT_SYNTHETIC_MONITORING` | `bool` | `false` | Enable synthetic monitoring probes that emit periodic health/metric events. Probes are observable on the `/metrics` endpoint and via WebSocket; consider the resulting information-disclosure surface before enabling on internet-facing deployments. |
+| `STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS` | `int` | `60` | Interval in seconds between synthetic monitoring probe cycles (minimum: 1). Lower values produce more frequent probes at the cost of additional load. |
 
 ## .env File Support
 

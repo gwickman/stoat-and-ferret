@@ -171,6 +171,22 @@ Default to KISS + YAGNI for new code. Refactor to DRY and SOLID (SRP/DIP/ISP bas
 
 ---
 
+## Documentation Standards
+
+### Configuration Documentation Rule
+
+When a new `STOAT_*` environment variable is introduced in `src/stoat_ferret/api/settings.py`, the same backlog item must:
+
+1. Add an entry for the variable in `docs/setup/04_configuration.md` (operator-facing reference covering name, type, default, valid range, and a plain-English description).
+2. Add an entry for the variable in `docs/manual/configuration-reference.md` (security-focused operator guide covering production hazards, security implications, and recommended values).
+3. Keep the `KNOWN_UNDOCUMENTED_SETTINGS_VARS` allowlist in `tests/security/test_audit.py` empty. The drift baseline is enforced as a frozenset; adding a variable without documenting it will fail the security audit probe.
+
+This rule applies to all future `STOAT_*` variables, not just security-sensitive ones — uniform enforcement is cheaper than selective review and keeps the audit baseline at zero. The rule is forward-looking; existing gaps are closed in v045 (Feature 001 + Feature 002).
+
+`docs/manual/configuration-reference.md` cross-references this section as the authoritative process anchor; do not duplicate the rule text elsewhere.
+
+---
+
 ## PyO3 Bindings
 
 ### Incremental Binding Rule
