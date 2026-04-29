@@ -4,6 +4,18 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v045] - 2026-04-29
+
+Phase 6: Configuration Documentation Convergence. Documents all STOAT_* environment variables with operator-facing setup references and security-focused guidance, and enforces zero-drift by reducing the security audit baseline to an empty frozenset.
+
+### Configuration Reference
+
+- **STOAT_* Environment Variable Coverage** — 41 STOAT_* variables documented in `docs/setup/04_configuration.md` with name, type, default, valid range, and plain-English description; Configuration Documentation Rule added to AGENTS.md enforcing documentation for all future variables (BL-316, #338)
+
+### Operator Security Configuration
+
+- **Operator Security Configuration Guide** — `docs/manual/configuration-reference.md` with 13 security-sensitive STOAT_* variables covering production hazards, security implications, and recommended values; `KNOWN_UNDOCUMENTED_SETTINGS_VARS` allowlist in `tests/security/test_audit.py` reduced to empty `frozenset()` to enforce zero-drift audit baseline (BL-317, #339)
+
 ## [v044] - 2026-04-28
 
 Phase 6: GUI Unified Workspace. Delivers two themes: a workspace layout foundation (dockable resizable panels with persistent sizing and layout presets with keyboard shortcuts) and workspace feature panels (settings panel with theme selector and shortcut editor, keyboard shortcut reference overlay, and batch panel GUI with job monitoring and cancellation).
