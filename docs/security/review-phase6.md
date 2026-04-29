@@ -83,6 +83,13 @@ existing security tests in `tests/test_security/`.
 
 ### 4.1. P2-CONFIG-001 — `STOAT_*` env vars missing from manual
 
+**Status:** RESOLVED in v045 with Feature 002 (operator-security-configuration-guide).
+The 13 audit-baseline variables are now documented in
+`docs/manual/configuration-reference.md` with operator and security
+context, and `KNOWN_UNDOCUMENTED_SETTINGS_VARS` in
+`tests/security/test_audit.py` has been shrunk to an empty
+`frozenset()`. Both drift probes pass.
+
 **Severity:** P2 (medium — operator/documentation risk; no security
 exploit, no data exposure).
 
@@ -116,22 +123,18 @@ STOAT_THUMBNAIL_STRIP_INTERVAL
 STOAT_VERSION_RETENTION_COUNT
 ```
 
-**Recommendation:** Treat as a documentation-only follow-up. The next
-operator-guide / manual maintenance pass should either:
-
-1. Add a settings reference section that enumerates each `STOAT_*` var,
-   default value, and operator-relevant guidance; or
-2. Mark vars as "internal/experimental" if they are not intended to be
-   set by operators (e.g., `STOAT_SEED_ENDPOINT`, which overlaps with
-   `STOAT_TESTING_MODE`).
-
-**Tracking:** No separate backlog item required — fold into the next
-manual-curation theme. The probe's drift baseline is the single source
-of truth for the open list.
-
-**Backlog cross-reference:** add a `BL-XXX` follow-up if/when the manual
-team commits to a fix window. Until then, the probe enforces "no new
+**Recommendation:** Addressed in v045. The 13 drift-baseline variables
+are now documented in `docs/manual/configuration-reference.md` with
+operational and security context, and the canonical setup reference at
+`docs/setup/04_configuration.md` covers all 41 `STOAT_*` variables.
+Going forward, the process rule in `AGENTS.md § Documentation
+Standards` requires both setup and manual entries (and an empty drift
+baseline) for any new `STOAT_*` variable; the probe enforces "no new
 drift" automatically.
+
+**Tracking:** Closed under v045 Feature 002 (BL-317). The probe's drift
+baseline is now empty; new undocumented variables will fail
+`test_settings_env_vars_documented_or_known_drift` immediately.
 
 ---
 
