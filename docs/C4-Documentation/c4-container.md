@@ -52,13 +52,13 @@ C4Container
 
 | Group | Prefix | Count | Key Operations |
 |-------|--------|-------|----------------|
-| Health | `/health` | 2 | Liveness, readiness (DB + FFmpeg) |
+| Health | `/health` | 2 | Liveness, readiness (database, Rust core, filesystem, startup gate) |
 | Videos | `/api/v1/videos` | 6 | CRUD, FTS5 search, scan, thumbnail |
 | Projects | `/api/v1/projects` | 4 | CRUD |
 | Clips | `/api/v1/projects/{id}/clips` | 4 | CRUD with Rust validation |
 | Timeline | `/api/v1/projects/{id}/timeline` | 7 | Timeline/track/clip/transition management |
 | Effects | `/api/v1/effects` | 8 | Catalog, preview, thumbnail, apply/update/remove, transitions |
-| Render | `/api/v1/render` | 13 | Jobs, batch, cancel, retry, encoders, formats, preview, queue |
+| Render | `/api/v1/render` | 12 | Jobs, cancel, retry, encoders, formats, preview, queue, `GET /render/{job_id}/frame_preview.jpg` |
 | Preview | `/api/v1/preview` | 8 | HLS sessions, seek, manifest, segments, cache |
 | Proxy | `/api/v1/videos/{id}/proxy` | 4 | Generate, status, delete, batch |
 | Thumbnails | `/api/v1/videos/{id}/thumbnails` | 3 | Strip generation and serving |
@@ -68,9 +68,17 @@ C4Container
 | Versions | `/api/v1/projects/{id}/versions` | 3 | Snapshot, list, restore |
 | Jobs | `/api/v1/jobs` | 2 | Status and cancel |
 | Filesystem | `/api/v1/filesystem` | 1 | Directory browsing |
+| Version | `/api/v1/version` | 1 | App version, Rust core version, schema revision, Python version |
+| Flags | `/api/v1/flags` | 1 | Feature flag state (STOAT_* boolean flags: testing_mode, seed_endpoint, synthetic_monitoring, batch_rendering) |
 | Metrics | `/metrics` | 1 | Prometheus endpoint |
 
-- **WebSocket**: `/ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT) with configurable `ws_heartbeat_interval` (default 30s)
+- **WebSocket**: `/ws` -- Real-time events (HEALTH_STATUS, SCAN_STARTED, SCAN_COMPLETED, PROJECT_CREATED, HEARTBEAT, RENDER_PROGRESS, RENDER_FRAME_AVAILABLE, and more) with configurable `ws_heartbeat_interval` (default 30s)
+
+  | Event | Payload Fields | Description |
+  |-------|---------------|-------------|
+  | `render_progress` | `job_id: string`, `progress: number (0–1)`, `eta_seconds: number \| null`, `speed_ratio: number`, `frame_count: number`, `fps: number`, `encoder_name: string`, `encoder_type: string` | Incremental render completion with ETA, encoding speed, and frame statistics; throttled to prevent flooding |
+  | `render_frame_available` | `job_id: string`, `frame_url: string`, `resolution: string`, `progress: number` | Notifies clients that a mid-render 540p JPEG preview frame is available at `frame_url` (e.g., `/api/v1/render/{job_id}/frame_preview.jpg`) |
+
 - **Static GUI**: `/gui` -- Serves built React SPA assets
 - **Configuration**: Environment variables with `STOAT_` prefix
 
@@ -96,6 +104,8 @@ C4Container
   | stoat_active_jobs_count | Gauge | job_type | Non-terminal async job queue entries |
   | stoat_feature_flag_state | Gauge | flag | STOAT_* feature flag values as 0/1 |
   | stoat_migration_duration_seconds | Histogram | result | Alembic upgrade duration |
+  | stoat_synthetic_check_total | Counter | check_name, status | Total synthetic monitoring probe executions (check_name: health_ready \| version \| system_state; status: success \| degraded \| failure \| error \| timeout) |
+  | stoat_synthetic_check_duration_seconds | Histogram | check_name | Duration of each synthetic monitoring probe in seconds |
 
 #### Dependencies
 
@@ -167,7 +177,7 @@ C4Container
 - **Description**: Embedded file-based database. Not a separate process -- accessed in-process via aiosqlite.
 - **Type**: Database (embedded)
 - **Technology**: SQLite 3, aiosqlite, Alembic
-- **Deployment**: File at `data/stoat.db`. Schema managed by 7 Alembic migrations.
+- **Deployment**: File at `data/stoat.db`. Schema managed by 9 Alembic migrations.
 
 #### Components Deployed
 
@@ -176,9 +186,9 @@ C4Container
 #### Interfaces
 
 - **SQL**: aiosqlite (async) from API Server process
-  - Tables: `videos`, `projects`, `clips`, `render_jobs`, `preview_sessions`, `proxy_files`, `audit_log`
+  - Tables: `videos`, `projects`, `clips`, `render_jobs`, `preview_sessions`, `proxy_files`, `audit_log`, `migration_history`, `feature_flag_log`
   - Indexes: FTS5 on `videos(filename, path)`
-  - Migrations: 7 versions (initial_schema → audit_log → projects → clips → transitions_effects → preview_sessions → thumbnail_strips)
+  - Migrations: 9 versions (initial_schema → audit_log → projects → clips → transitions_effects → preview_sessions → thumbnail_strips → migration_history → feature_flag_log)
 
 ---
 
@@ -217,8 +227,9 @@ C4Container
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile` | Multi-stage build for containerized testing (builder: Rust/maturin, runtime: Python/uv) |
-| `docker-compose.yml` | Test runner service with source mounts |
+| `Dockerfile` | Production multi-stage image: Stage 1 compiles Rust with maturin; Stage 2 creates slim Python runtime with uv and a non-root user for production deployment |
+| `Dockerfile.ci` | CI-specific build configuration — optimised for test matrix speed, distinct from the production Dockerfile |
+| `docker-compose.yml` | Local development deployment: starts API server, frontend dev proxy, and supporting services with source directory mounts for live-reload development |
 | `.github/workflows/ci.yml` | CI: test matrix (3 OS x 3 Python), Rust coverage, frontend, E2E, smoke, UAT, OpenAPI freshness |
 | `pyproject.toml` | Python/Rust build config, dependencies, tool settings |
 | `gui/package.json` | Frontend dependencies, build scripts, type generation |

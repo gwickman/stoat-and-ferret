@@ -25,6 +25,8 @@ This layer bridges the API Gateway (which handles HTTP concerns) and the Data Ac
 - **Render Pipeline**: RenderJob state machine, RenderQueue (persistent FIFO), RenderExecutor (FFmpeg subprocess), RenderService orchestration
 - **Render Checkpointing**: RenderCheckpointManager for resumable render operations
 - **Preview System**: PreviewCache (LRU+TTL), HLSGenerator (FFmpeg HLS VOD), PreviewManager session state machine (INITIALIZING→GENERATING→READY/SEEKING)
+- **Migration Safety Service**: MigrationService wraps Alembic `upgrade` with pre-upgrade backup, `migration_history` audit rows, and structured `deployment.migration` events; stored on `app.state.migration_service`
+- **Synthetic Monitoring**: SyntheticMonitoringTask is a conditional background asyncio task that periodically probes `/health/ready`, `/api/v1/version`, and `/api/v1/system/state`; activated only when the `STOAT_SYNTHETIC_MONITORING` feature flag is enabled
 - **Benchmark Tooling**: Python wrapper benchmarks comparing Rust vs Python implementations (timeline math, filter escape, path validation)
 - **Dev Scripts**: export_openapi.py, check_openapi_freshness.py, seed_sample_project.py, uat_runner.py
 
@@ -89,6 +91,20 @@ This component contains:
   - `ThumbnailService.generate(video_path: str, video_id: str) -> str | None`
   - `WaveformService.generate(video_path: str, video_id: str) -> tuple[str, str] | None`
   - `ProxyService.generate_proxy(video: Video) -> str | None`
+
+### MigrationService
+- **Protocol**: Function calls (internal); accessible via `app.state.migration_service`
+- **Lifecycle**: Initialized at startup before the database connection opens; executes Alembic migrations with pre-upgrade SQLite backup and rollback support
+- **Operations**:
+  - `MigrationService.upgrade(target: str) -> MigrationResult` — Apply migrations up to `target` revision with backup; writes `migration_history` audit row on success
+  - `MigrationService.downgrade(target: str) -> RollbackResult` — Revert to `target` revision; updates `migration_history` row status to `rolled_back`
+- **Emitted events**: `deployment.migration` (success), `deployment.migration_rollback` (rollback)
+
+### SyntheticMonitoringTask
+- **Protocol**: asyncio background task (conditional; not a public API)
+- **Activation**: Started at Phase 14 of lifespan startup when the `STOAT_SYNTHETIC_MONITORING` feature flag is `true`; inactive otherwise
+- **Probed endpoints**: `GET /health/ready`, `GET /api/v1/version`, `GET /api/v1/system/state`
+- **Metrics emitted**: `stoat_synthetic_check_total` (counter, labels: check_name, status) and `stoat_synthetic_check_duration_seconds` (histogram, label: check_name)
 
 ## Dependencies
 
