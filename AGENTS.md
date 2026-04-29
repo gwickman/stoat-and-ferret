@@ -201,6 +201,22 @@ See `docs/design/FRAMEWORK_CONTEXT.md` §3, Startup Initialization Sequence for 
 
 ---
 
+## Database Migrations
+
+### Migration Safeguard Rule
+
+All future migrations for audit or operational (append-only) tables must:
+
+1. Use `CREATE TABLE IF NOT EXISTS table_name (...)` in the upgrade path — the `IF NOT EXISTS` clause is mandatory for idempotency.
+2. Use `CREATE INDEX IF NOT EXISTS idx_name ON table(col)` for any accompanying indexes.
+3. Never use `DROP TABLE` or any other destructive statement in the downgrade path. Downgrade for append-only tables is a no-op (`pass`), or may raise an explicit error if the schema version is critical.
+
+**Rationale**: MigrationService self-heals by re-applying missing revisions on retry. `CREATE TABLE IF NOT EXISTS` makes re-application safe — a table that already exists is silently skipped. A destructive downgrade erases audit data, including the record of the downgrade itself, corrupting the audit trail.
+
+See `docs/design/FRAMEWORK_CONTEXT.md` §3, Database Migrations for the pattern, rationale, and production exemplars.
+
+---
+
 ## PyO3 Bindings
 
 ### Incremental Binding Rule
