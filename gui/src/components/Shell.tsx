@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useRenderEvents } from '../hooks/useRenderEvents'
 import {
   useKeyboardShortcuts,
@@ -16,6 +16,9 @@ import StatusBar from './StatusBar'
 import WorkspaceLayout from './workspace/WorkspaceLayout'
 import WorkspacePresetSelector from './workspace/WorkspacePresetSelector'
 
+const VALID_URL_PRESETS = new Set(['edit', 'review', 'render'] as const)
+type UrlPreset = 'edit' | 'review' | 'render'
+
 function wsUrl(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${proto}//${window.location.host}/ws`
@@ -24,6 +27,25 @@ function wsUrl(): string {
 export default function Shell() {
   const { state: connectionState } = useWebSocket(wsUrl())
   useRenderEvents()
+
+  // Apply ?workspace=<name> query param on mount (AC: URL preset deep link).
+  // Valid values: 'edit', 'review', 'render'. Invalid values emit console.warn
+  // and are ignored (localStorage preset is used instead). Missing param is a
+  // no-op — workspaceStore initializes from localStorage (existing behavior).
+  const [searchParams] = useSearchParams()
+  const setPreset = useWorkspaceStore((s) => s.setPreset)
+  useEffect(() => {
+    const workspaceParam = searchParams.get('workspace')
+    if (!workspaceParam) return
+    if (VALID_URL_PRESETS.has(workspaceParam as UrlPreset)) {
+      setPreset(workspaceParam as UrlPreset)
+    } else {
+      console.warn(
+        `workspace: invalid preset "${workspaceParam}". Valid values are 'edit', 'review', 'render'. Using stored preset.`,
+      )
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Bindings derive from settingsStore so a rebind in the settings panel
   // applies immediately (FR-004). The array identity changes when the
@@ -79,9 +101,7 @@ export default function Shell() {
         </div>
       </header>
       <main className="flex-1 overflow-hidden">
-        <WorkspaceLayout>
-          <Outlet />
-        </WorkspaceLayout>
+        <WorkspaceLayout />
       </main>
       <StatusBar connectionState={connectionState} />
       <SettingsPanel open={settingsOpen} onClose={closeSettings} />

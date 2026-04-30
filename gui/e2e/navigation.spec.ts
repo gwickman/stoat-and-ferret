@@ -1,35 +1,24 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Navigation", () => {
-  test("navigates between Dashboard, Library, and Projects tabs", async ({
-    page,
-  }) => {
-    await page.goto("/gui/");
+  test("navigates between tabs and updates URL", async ({ page }) => {
+    // Start with edit preset so all panels are visible and pages render.
+    await page.goto("/gui/?workspace=edit");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
-    // Dashboard loads by default
-    await expect(
-      page.getByRole("heading", { name: "Dashboard" }),
-    ).toBeVisible();
+    // Library panel is visible with LibraryPage in edit preset.
+    await expect(page.getByTestId("library-page")).toBeVisible();
 
-    // Navigate to Library
+    // Click Library nav tab — URL should update.
     await page.getByTestId("nav-tab-library").click();
     await expect(page).toHaveURL(/\/gui\/library/);
-    await expect(
-      page.getByRole("heading", { name: "Library" }),
-    ).toBeVisible();
 
-    // Navigate to Projects
+    // Click Projects nav tab — URL should update.
     await page.getByTestId("nav-tab-projects").click();
     await expect(page).toHaveURL(/\/gui\/projects/);
-    await expect(
-      page.getByRole("heading", { name: "Projects" }),
-    ).toBeVisible();
 
-    // Navigate back to Dashboard
+    // Click Dashboard nav tab — URL should update.
     await page.getByTestId("nav-tab-dashboard").click();
     await expect(page).toHaveURL(/\/gui\/?$/);
-    await expect(
-      page.getByRole("heading", { name: "Dashboard" }),
-    ).toBeVisible();
   });
 });
