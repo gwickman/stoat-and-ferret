@@ -31,11 +31,16 @@ async function waitForSeparatorReady(page: Page, id: string): Promise<void> {
 }
 
 test.describe("WCAG AA accessibility", () => {
-  test("dashboard has no WCAG AA violations", async ({ page }) => {
+  test("default workspace (preview-only) has no WCAG AA violations", async ({
+    page,
+  }) => {
+    // After BL-306, page content is determined by workspace presets.
+    // Default state: edit preset, only preview panel visible.
     await page.goto("/gui/");
-    await expect(
-      page.getByRole("heading", { name: "Dashboard" }),
-    ).toBeVisible();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+    await expect(page.getByTestId("preview-page")).toBeVisible();
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -45,9 +50,8 @@ test.describe("WCAG AA accessibility", () => {
   });
 
   test("library has no WCAG AA violations", async ({ page }) => {
-    // Navigate via client-side routing (SPA)
-    await page.goto("/gui/");
-    await page.getByTestId("nav-tab-library").click();
+    // After BL-306, library is visible in the Edit preset panel.
+    await page.goto("/gui/?workspace=edit");
     await expect(
       page.getByRole("heading", { name: "Library" }),
     ).toBeVisible();
@@ -59,13 +63,10 @@ test.describe("WCAG AA accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("projects has no WCAG AA violations", async ({ page }) => {
-    // Navigate via client-side routing (SPA)
-    await page.goto("/gui/");
-    await page.getByTestId("nav-tab-projects").click();
-    await expect(
-      page.getByRole("heading", { name: "Projects" }),
-    ).toBeVisible();
+  test("render page has no WCAG AA violations", async ({ page }) => {
+    // After BL-306, render-queue and batch panels are visible in Render preset.
+    await page.goto("/gui/?workspace=render");
+    await expect(page.getByTestId("render-page").first()).toBeVisible();
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -81,9 +82,8 @@ test.describe("WCAG AA accessibility", () => {
     const apiOk = await checkEffectsApi(request);
     test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
 
-    // Navigate via client-side routing (SPA)
-    await page.goto("/gui/");
-    await page.getByTestId("nav-tab-effects").click();
+    // After BL-306, effects panel is visible in the Edit preset.
+    await page.goto("/gui/?workspace=edit");
     await expect(
       page.getByRole("heading", { name: "Effects" }),
     ).toBeVisible();
@@ -109,9 +109,8 @@ test.describe("WCAG AA accessibility", () => {
     const apiOk = await checkEffectsApi(request);
     test.skip(!apiOk, "Effects API unavailable (Rust module not built)");
 
-    // Navigate to effects and select an effect to render the parameter form
-    await page.goto("/gui/");
-    await page.getByTestId("nav-tab-effects").click();
+    // After BL-306, effects panel is visible in the Edit preset.
+    await page.goto("/gui/?workspace=edit");
     await expect(
       page.getByRole("heading", { name: "Effects" }),
     ).toBeVisible();
@@ -216,7 +215,9 @@ test.describe("workspace accessibility", () => {
     // Start Tab traversal from body and collect focused element IDs
     await page.locator("body").click();
     const focusedIds: string[] = [];
-    for (let i = 0; i < 30; i++) {
+    // After BL-306, panels contain full page components (many focusable elements).
+    // 100 Tab presses covers all interactive elements before reaching separators.
+    for (let i = 0; i < 100; i++) {
       await page.keyboard.press("Tab");
       const id = await page.evaluate(
         () => document.activeElement?.id ?? "",

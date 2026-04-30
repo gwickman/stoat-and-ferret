@@ -4,9 +4,8 @@ test.describe("Library scan", () => {
   test("triggers scan from library browser and shows feedback", async ({
     page,
   }) => {
-    // Navigate to library via client-side routing (SPA)
-    await page.goto("/gui/");
-    await page.getByTestId("nav-tab-library").click();
+    // After BL-306, library panel is visible in the Edit preset.
+    await page.goto("/gui/?workspace=edit");
     await expect(
       page.getByRole("heading", { name: "Library" }),
     ).toBeVisible();

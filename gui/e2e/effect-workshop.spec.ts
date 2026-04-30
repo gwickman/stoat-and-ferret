@@ -29,10 +29,11 @@ async function checkEffectsApi(request: APIRequestContext): Promise<boolean> {
   }
 }
 
-/** Navigate to the Effects page via client-side routing (SPA). */
+/** Navigate to the Effects page via the Edit workspace preset (BL-306). */
 async function navigateToEffects(page: Page) {
-  await page.goto("/gui/");
-  await page.getByTestId("nav-tab-effects").click();
+  // After BL-306, page content comes from PRESETS routes, not the URL path.
+  // The Edit preset shows the effects panel which renders EffectsPage.
+  await page.goto("/gui/?workspace=edit");
   await expect(page.getByRole("heading", { name: "Effects" })).toBeVisible();
   // Wait for catalog (may take longer in CI due to cold start)
   await expect(page.getByTestId("effect-catalog")).toBeVisible({
