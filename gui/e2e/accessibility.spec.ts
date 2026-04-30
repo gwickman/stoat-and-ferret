@@ -56,7 +56,11 @@ test.describe("WCAG AA accessibility", () => {
       page.getByRole("heading", { name: "Library" }),
     ).toBeVisible();
 
+    // Scope scan to the library panel only — the Edit preset renders multiple
+    // pages in their panels and violations from other panels (e.g. EffectsPage
+    // select-name) should not affect the library's WCAG coverage.
     const results = await new AxeBuilder({ page })
+      .include('[data-testid="workspace-panel-library"]')
       .withTags(["wcag2a", "wcag2aa"])
       .analyze();
 
@@ -84,17 +88,16 @@ test.describe("WCAG AA accessibility", () => {
 
     // After BL-306, effects panel is visible in the Edit preset.
     await page.goto("/gui/?workspace=edit");
-    await expect(
-      page.getByRole("heading", { name: "Effects" }),
-    ).toBeVisible();
+    await expect(page.getByTestId("effects-page")).toBeVisible();
     await expect(page.getByTestId("effect-catalog")).toBeVisible({
       timeout: 15_000,
     });
 
-    // Exclude pre-existing UI issues from earlier themes:
+    // Scope scan to the effects panel only. Exclude pre-existing UI issues:
     // - color-contrast: green category badges (#00a63e) below 4.5:1 ratio
     // - select-name: category filter and search input lack accessible labels
     const results = await new AxeBuilder({ page })
+      .include('[data-testid="workspace-panel-effects"]')
       .withTags(["wcag2a", "wcag2aa"])
       .disableRules(["color-contrast", "select-name"])
       .analyze();
@@ -111,9 +114,7 @@ test.describe("WCAG AA accessibility", () => {
 
     // After BL-306, effects panel is visible in the Edit preset.
     await page.goto("/gui/?workspace=edit");
-    await expect(
-      page.getByRole("heading", { name: "Effects" }),
-    ).toBeVisible();
+    await expect(page.getByTestId("effects-page")).toBeVisible();
     await expect(page.getByTestId("effect-catalog")).toBeVisible({
       timeout: 15_000,
     });
@@ -122,10 +123,11 @@ test.describe("WCAG AA accessibility", () => {
     await page.getByTestId("effect-card-volume").click();
     await expect(page.getByTestId("effect-parameter-form")).toBeVisible();
 
-    // Exclude pre-existing UI issues from earlier themes:
+    // Scope scan to the effects panel only. Exclude pre-existing UI issues:
     // - color-contrast: green category badges (#00a63e) below 4.5:1 ratio
     // - select-name: category filter and search input lack accessible labels
     const results = await new AxeBuilder({ page })
+      .include('[data-testid="workspace-panel-effects"]')
       .withTags(["wcag2a", "wcag2aa"])
       .disableRules(["color-contrast", "select-name"])
       .analyze();

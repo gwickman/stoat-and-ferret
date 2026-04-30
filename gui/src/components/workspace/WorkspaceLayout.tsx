@@ -111,11 +111,17 @@ export default function WorkspaceLayout() {
   const effectivePreset = preset === 'custom' ? anchorPreset : preset
   const routes = PRESETS[effectivePreset]?.routes
 
-  // Bidirectional-loop guard (LRN-141 / BL-292 NFR-002). When `preset` changes
-  // via `setPreset` we set the flag synchronously so the transient `onResize`
-  // callbacks fired by react-resizable-panels do not feed back into the store.
+  // Bidirectional-loop guard (LRN-141 / BL-292 NFR-002). When `preset` or
+  // `panelVisibility` changes via `setPreset` we set the flag synchronously
+  // so the transient `onResize` callbacks fired by react-resizable-panels
+  // do not feed back into the store. Watching `panelVisibility` is necessary
+  // because `setPreset('edit')` when already on 'edit' (default preset with
+  // preview-only visibility) keeps `preset` unchanged but updates
+  // `panelVisibility` — without this the guard never fires and the layout
+  // resize callbacks flip the preset to 'custom'.
   const guardRef = useRef(false)
   const prevPresetRef = useRef<string | null>(null)
+  const prevVisibilityRef = useRef<typeof visibility | null>(null)
 
   useEffect(() => {
     // Subscribe directly to the store so we can flip the guard before React
@@ -123,10 +129,14 @@ export default function WorkspaceLayout() {
     return useWorkspaceStore.subscribe((state) => {
       if (prevPresetRef.current === null) {
         prevPresetRef.current = state.preset
+        prevVisibilityRef.current = state.panelVisibility
         return
       }
-      if (state.preset !== prevPresetRef.current) {
-        prevPresetRef.current = state.preset
+      const presetChanged = state.preset !== prevPresetRef.current
+      const visibilityChanged = state.panelVisibility !== prevVisibilityRef.current
+      prevPresetRef.current = state.preset
+      prevVisibilityRef.current = state.panelVisibility
+      if (presetChanged || visibilityChanged) {
         guardRef.current = true
         // Release the guard after layout has settled. Two RAFs gives
         // react-resizable-panels' internal observers time to flush.

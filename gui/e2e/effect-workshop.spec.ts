@@ -34,7 +34,7 @@ async function navigateToEffects(page: Page) {
   // After BL-306, page content comes from PRESETS routes, not the URL path.
   // The Edit preset shows the effects panel which renders EffectsPage.
   await page.goto("/gui/?workspace=edit");
-  await expect(page.getByRole("heading", { name: "Effects" })).toBeVisible();
+  await expect(page.getByTestId("effects-page")).toBeVisible();
   // Wait for catalog (may take longer in CI due to cold start)
   await expect(page.getByTestId("effect-catalog")).toBeVisible({
     timeout: 15_000,
