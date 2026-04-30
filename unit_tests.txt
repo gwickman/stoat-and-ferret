@@ -1,0 +1,115 @@
+warning: `VIRTUAL_ENV=C:\Users\grant\tools\auto-dev-mcp\.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+============================= test session starts =============================
+platform win32 -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\grant\Documents\projects\stoat-and-ferret\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+hypothesis profile 'default'
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: C:\Users\grant\Documents\projects\stoat-and-ferret
+configfile: pyproject.toml
+plugins: anyio-4.12.1, hypothesis-6.151.5, locust-2.43.4, asyncio-1.3.0, benchmark-5.2.3, cov-7.0.0, timeout-2.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 83 items
+
+tests/unit/test_graceful_shutdown.py::TestStdinPipe::test_real_executor_uses_stdin_pipe PASSED [  1%]
+tests/unit/test_graceful_shutdown.py::TestDegradation::test_app_starts_without_ffmpeg PASSED [  2%]
+tests/unit/test_graceful_shutdown.py::TestDegradation::test_start_preview_returns_503_without_ffmpeg PASSED [  3%]
+tests/unit/test_graceful_shutdown.py::TestDegradation::test_seek_preview_returns_503_without_ffmpeg PASSED [  4%]
+tests/unit/test_graceful_shutdown.py::TestDegradation::test_preview_endpoints_work_when_ffmpeg_available PASSED [  6%]
+tests/unit/test_graceful_shutdown.py::TestDegradation::test_proxy_auto_queue_skipped_without_ffmpeg PASSED [  7%]
+tests/unit/test_graceful_shutdown.py::TestDegradation::test_non_preview_endpoints_unaffected PASSED [  8%]
+tests/unit/test_graceful_shutdown.py::TestGracefulShutdown::test_cancel_all_no_active_sessions PASSED [  9%]
+tests/unit/test_graceful_shutdown.py::TestGracefulShutdown::test_cancel_all_cancels_active_tasks PASSED [ 10%]
+tests/unit/test_graceful_shutdown.py::TestGracefulShutdown::test_cancel_all_cleans_up_temp_files PASSED [ 12%]
+tests/unit/test_graceful_shutdown.py::TestGracefulShutdown::test_cancel_all_logs_lifecycle_events PASSED [ 13%]
+tests/unit/test_graceful_shutdown.py::TestGracefulShutdown::test_cancel_all_completes_within_timeout PASSED [ 14%]
+tests/unit/test_health_preview.py::TestCheckPreview::test_returns_ok_when_no_preview_cache PASSED [ 15%]
+tests/unit/test_health_preview.py::TestCheckPreview::test_returns_ok_when_cache_below_threshold PASSED [ 16%]
+tests/unit/test_health_preview.py::TestCheckPreview::test_returns_degraded_when_cache_above_threshold PASSED [ 18%]
+tests/unit/test_health_preview.py::TestCheckPreview::test_returns_ok_at_exactly_threshold PASSED [ 19%]
+tests/unit/test_health_preview.py::TestCheckPreview::test_returns_degraded_on_exception PASSED [ 20%]
+tests/unit/test_health_preview.py::TestCheckPreview::test_response_structure PASSED [ 21%]
+tests/unit/test_health_preview.py::TestCheckProxy::test_returns_ok_when_no_proxy_service PASSED [ 22%]
+tests/unit/test_health_preview.py::TestCheckProxy::test_returns_ok_when_dir_writable PASSED [ 24%]
+tests/unit/test_health_preview.py::TestCheckProxy::test_returns_degraded_when_dir_not_writable PASSED [ 25%]
+tests/unit/test_health_preview.py::TestCheckProxy::test_counts_pending_and_generating PASSED [ 26%]
+tests/unit/test_health_preview.py::TestCheckProxy::test_returns_degraded_on_exception PASSED [ 27%]
+tests/unit/test_health_preview.py::TestCheckProxy::test_response_structure PASSED [ 28%]
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_readiness_includes_preview_and_proxy_keys PASSED [ 30%]
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_overall_degraded_not_unhealthy_when_preview_degraded PASSED [ 31%]
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_overall_ok_when_all_healthy PASSED [ 32%]
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_503_when_critical_fails_even_with_preview_ok PASSED [ 33%]
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_readiness_response_preserves_existing_keys PASSED [ 34%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_session_created_event PASSED [ 36%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_generation_started_event PASSED [ 37%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_segment_generated_event PASSED [ 38%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_session_ready_event PASSED [ 39%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_seek_requested_event PASSED [ 40%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_generation_failed_event PASSED [ 42%]
+tests/unit/test_preview_logging.py::TestPreviewSessionLogging::test_session_expired_event PASSED [ 43%]
+tests/unit/test_preview_logging.py::TestPreviewSessionNamingConvention::test_all_event_names_follow_convention PASSED [ 44%]
+tests/unit/test_preview_logging.py::TestProxyLogging::test_proxy_stale_detected_event PASSED [ 45%]
+tests/unit/test_preview_logging.py::TestProxyLogging::test_proxy_cache_eviction_event PASSED [ 46%]
+tests/unit/test_preview_logging.py::TestCacheLogging::test_preview_cache_eviction_event PASSED [ 48%]
+tests/unit/test_preview_logging.py::TestCacheLogging::test_preview_cache_full_event PASSED [ 49%]
+tests/unit/test_preview_logging.py::TestThumbnailLogging::test_thumbnail_generated_has_duration_ms PASSED [ 50%]
+tests/unit/test_preview_logging.py::TestWaveformLogging::test_waveform_generated_has_duration_ms PASSED [ 51%]
+tests/unit/test_preview_logging.py::TestFFmpegCommandLogging::test_hls_generation_started_includes_ffmpeg_command PASSED [ 53%]
+tests/unit/test_preview_logging.py::TestCorrelationIdPropagation::test_correlation_id_in_session_events PASSED [ 54%]
+tests/unit/test_preview_metrics.py::TestPreviewMetricDefinitions::test_sessions_total_is_counter_with_quality_label PASSED [ 55%]
+tests/unit/test_preview_metrics.py::TestPreviewMetricDefinitions::test_sessions_active_is_gauge PASSED [ 56%]
+tests/unit/test_preview_metrics.py::TestPreviewMetricDefinitions::test_generation_seconds_buckets PASSED [ 57%]
+tests/unit/test_preview_metrics.py::TestPreviewMetricDefinitions::test_segment_seconds_buckets PASSED [ 59%]
+tests/unit/test_preview_metrics.py::TestPreviewMetricDefinitions::test_seek_latency_buckets PASSED [ 60%]
+tests/unit/test_preview_metrics.py::TestPreviewMetricDefinitions::test_errors_total_accepts_error_type_label PASSED [ 61%]
+tests/unit/test_preview_metrics.py::TestProxyMetricDefinitions::test_proxy_generation_seconds_buckets PASSED [ 62%]
+tests/unit/test_preview_metrics.py::TestProxyMetricDefinitions::test_proxy_files_total_accepts_status_label PASSED [ 63%]
+tests/unit/test_preview_metrics.py::TestProxyMetricDefinitions::test_proxy_storage_bytes_is_gauge PASSED [ 65%]
+tests/unit/test_preview_metrics.py::TestProxyMetricDefinitions::test_proxy_evictions_total_accepts_reason_label PASSED [ 66%]
+tests/unit/test_preview_metrics.py::TestCacheMetricDefinitions::test_cache_bytes_is_gauge PASSED [ 67%]
+tests/unit/test_preview_metrics.py::TestCacheMetricDefinitions::test_cache_max_bytes_is_gauge PASSED [ 68%]
+tests/unit/test_preview_metrics.py::TestCacheMetricDefinitions::test_cache_evictions_total_accepts_reason_label PASSED [ 69%]
+tests/unit/test_preview_metrics.py::TestCacheMetricDefinitions::test_cache_hit_ratio_is_gauge PASSED [ 71%]
+tests/unit/test_preview_metrics.py::TestPreviewManagerMetrics::test_start_increments_sessions_total_and_active PASSED [ 72%]
+tests/unit/test_preview_metrics.py::TestPreviewManagerMetrics::test_cleanup_decrements_sessions_active PASSED [ 73%]
+tests/unit/test_preview_metrics.py::TestPreviewManagerMetrics::test_generation_error_increments_errors_total PASSED [ 74%]
+tests/unit/test_preview_metrics.py::TestPreviewManagerMetrics::test_generation_success_observes_duration PASSED [ 75%]
+tests/unit/test_preview_metrics.py::TestPreviewManagerMetrics::test_seek_generation_observes_latency PASSED [ 77%]
+tests/unit/test_preview_metrics.py::TestCacheMetricsInstrumentation::test_register_updates_cache_bytes PASSED [ 78%]
+tests/unit/test_preview_metrics.py::TestCacheMetricsInstrumentation::test_max_bytes_set_on_init PASSED [ 79%]
+tests/unit/test_preview_metrics.py::TestCacheMetricsInstrumentation::test_eviction_increments_evictions_total PASSED [ 80%]
+tests/unit/test_preview_metrics.py::TestCacheMetricsInstrumentation::test_touch_miss_updates_hit_ratio PASSED [ 81%]
+tests/unit/test_preview_metrics.py::TestCacheMetricsInstrumentation::test_touch_hit_updates_hit_ratio PASSED [ 83%]
+tests/unit/test_preview_metrics.py::TestCacheMetricsInstrumentation::test_clear_all_resets_cache_bytes PASSED [ 84%]
+tests/unit/test_preview_metrics.py::TestProxyServiceMetrics::test_successful_generation_records_metrics PASSED [ 85%]
+tests/unit/test_preview_metrics.py::TestProxyServiceMetrics::test_eviction_increments_proxy_evictions PASSED [ 86%]
+tests/unit/test_websocket_progress.py::TestProgressCallbackBroadcast::test_progress_callback_broadcasts_job_progress PASSED [ 87%]
+tests/unit/test_websocket_progress.py::TestProgressCallbackBroadcast::test_progress_callback_payload_schema PASSED [ 89%]
+tests/unit/test_websocket_progress.py::TestProgressCallbackBroadcast::test_progress_1_always_broadcasts PASSED [ 90%]
+tests/unit/test_websocket_progress.py::TestProgressThrottling::test_rapid_calls_throttled PASSED [ 91%]
+tests/unit/test_websocket_progress.py::TestProgressThrottling::test_calls_after_throttle_interval_broadcast PASSED [ 92%]
+tests/unit/test_websocket_progress.py::TestProgressWithStateTransitions::test_start_emits_progress_and_state_events PASSED [ 93%]
+tests/unit/test_websocket_progress.py::TestProgressWithStateTransitions::test_seek_emits_progress_and_state_events PASSED [ 95%]
+tests/unit/test_websocket_progress.py::TestProgressWithStateTransitions::test_generator_receives_progress_callback PASSED [ 96%]
+tests/unit/test_websocket_progress.py::TestProgressCallbackPerformance::test_callback_execution_under_5ms PASSED [ 97%]
+tests/unit/test_websocket_progress.py::TestProgressCallbackEdgeCases::test_progress_zero_broadcasts PASSED [ 98%]
+tests/unit/test_websocket_progress.py::TestProgressCallbackEdgeCases::test_multiple_sessions_independent_throttling PASSED [100%]
+
+============================== warnings summary ===============================
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_readiness_includes_preview_and_proxy_keys
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_overall_degraded_not_unhealthy_when_preview_degraded
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_overall_ok_when_all_healthy
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_503_when_critical_fails_even_with_preview_ok
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_readiness_response_preserves_existing_keys
+  C:\Users\grant\Documents\projects\stoat-and-ferret\src\stoat_ferret\api\app.py:161: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    app.state._startup_timestamp = datetime.utcnow().isoformat()
+
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_readiness_includes_preview_and_proxy_keys
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_overall_degraded_not_unhealthy_when_preview_degraded
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_overall_ok_when_all_healthy
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_503_when_critical_fails_even_with_preview_ok
+tests/unit/test_health_preview.py::TestReadinessWithPreviewProxy::test_readiness_response_preserves_existing_keys
+  C:\Users\grant\Documents\projects\stoat-and-ferret\src\stoat_ferret\api\routers\health.py:169: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    uptime = (datetime.utcnow() - datetime.fromisoformat(startup_ts)).total_seconds()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 83 passed, 10 warnings in 1.94s =======================
