@@ -4,6 +4,15 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v048] - 2026-04-30
+
+### Added
+- Explicit `python-dotenv>=1.2.2` lower-bound constraint in `pyproject.toml` to clear CVE-2026-28684 and enforce minimum version with required security fixes (#347).
+- Security audit cadence formalization: `docs/security/audit-cadence.md` documents quarterly review triggers, Python/FFmpeg/PyO3 major upgrade audits, and new unsafe Rust pattern scans. Integrated into `AGENTS.md` and `docs/design/FRAMEWORK_CONTEXT.md` as authoritative process artifact (#348).
+
+### Changed
+- `docs/security/review-phase6.md` §9: Replaced inline audit cadence prose with reference pointer to new `audit-cadence.md` for single-source-of-truth maintenance.
+
 ## [v047] - 2026-04-30
 
 - docs(v047): C4 architecture refresh and load-test baseline documentation
