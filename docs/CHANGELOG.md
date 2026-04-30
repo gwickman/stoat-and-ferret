@@ -4,6 +4,12 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v047] - 2026-04-30
+
+- docs(v047): C4 architecture refresh and load-test baseline documentation
+- PR #344: Update C4 architecture diagrams for v037–v046 changes
+- PR #345: Execute and record load-test baseline
+
 ## [v045] - 2026-04-29
 
 Phase 6: Configuration Documentation Convergence. Documents all STOAT_* environment variables with operator-facing setup references and security-focused guidance, and enforces zero-drift by reducing the security audit baseline to an empty frozenset.
