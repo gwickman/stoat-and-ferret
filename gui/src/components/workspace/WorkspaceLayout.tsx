@@ -46,6 +46,7 @@ function WorkspacePanel({ panelId, label, minSize = 10, guardRef, children }: Wo
         data-testid={`workspace-panel-${panelId}`}
         data-visible={isVisible ? 'true' : 'false'}
         style={isVisible ? undefined : { display: 'none', pointerEvents: 'none' }}
+        tabIndex={isVisible ? 0 : undefined}
       >
         {/*
          * Hidden panels render an empty wrapper (display:none) — the
@@ -119,14 +120,15 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     })
   }, [])
 
-  // Skip a separator if either of the adjacent panels is hidden — keeps the
-  // total separator width within the visible portion of the group, preventing
-  // stacked zero-width separators from intercepting routed clicks.
-  const showLibrarySep = visibility.library
-  const showRightSep = visibility['render-queue'] || visibility.batch
-  const showTimelineEffectsSep = visibility.timeline && visibility.effects
-  const showRenderBatchSep = visibility['render-queue'] && visibility.batch
-  const showTopPreviewSep = (visibility.timeline || visibility.effects) && visibility.preview
+  // Separator culling: separators adjacent to hidden panels are excluded from
+  // the DOM. react-resizable-panels v4.10.0 always overrides tabIndex after
+  // rest prop spread, making tabIndex={-1} inert — DOM removal is the only
+  // mechanism for WCAG-compliant tab order management (BL-305).
+  const librarySepVisible = visibility.library
+  const rightPanelSepVisible = visibility['render-queue'] || visibility.batch
+  const timelineEffectsSepVisible = visibility.timeline && visibility.effects
+  const renderBatchSepVisible = visibility['render-queue'] && visibility.batch
+  const topPreviewSepVisible = (visibility.timeline || visibility.effects) && visibility.preview
 
   return (
     <div className="h-full w-full" data-testid="workspace-layout">
@@ -137,7 +139,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
       >
         <WorkspacePanel panelId="library" label="Library" minSize={10} guardRef={guardRef} />
 
-        {showLibrarySep && (
+        {librarySepVisible && (
           <Separator
             id="sep-library-main"
             className={RESIZE_HANDLE_CLASS}
@@ -155,7 +157,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                   minSize={15}
                   guardRef={guardRef}
                 />
-                {showTimelineEffectsSep && (
+                {timelineEffectsSepVisible && (
                   <Separator
                     id="sep-timeline-effects"
                     className={RESIZE_HANDLE_CLASS}
@@ -171,7 +173,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
               </Group>
             </Panel>
 
-            {showTopPreviewSep && (
+            {topPreviewSepVisible && (
               <Separator
                 id="sep-top-preview"
                 className={RESIZE_HANDLE_CLASS}
@@ -185,7 +187,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
           </Group>
         </Panel>
 
-        {showRightSep && (
+        {rightPanelSepVisible && (
           <Separator
             id="sep-main-right"
             className={RESIZE_HANDLE_CLASS}
@@ -201,7 +203,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
               minSize={15}
               guardRef={guardRef}
             />
-            {showRenderBatchSep && (
+            {renderBatchSepVisible && (
               <Separator
                 id="sep-render-batch"
                 className={RESIZE_HANDLE_CLASS}
