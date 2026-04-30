@@ -8,11 +8,29 @@ import {
   useWorkspaceStore,
 } from '../../../stores/workspaceStore'
 
+// Stub page components so WorkspaceLayout routing tests are isolated from
+// page-level side effects (async fetches, JSDOM resource loading for thumbnails).
+vi.mock('../../../pages/DashboardPage', () => ({
+  default: () => <div data-testid="dashboard-page">Dashboard</div>,
+}))
+vi.mock('../../../pages/LibraryPage', () => ({
+  default: () => <div data-testid="library-page">Library</div>,
+}))
+vi.mock('../../../pages/TimelinePage', () => ({
+  default: () => <div data-testid="timeline-page">Timeline</div>,
+}))
+vi.mock('../../../pages/PreviewPage', () => ({
+  default: () => <div data-testid="preview-page">Preview</div>,
+}))
+vi.mock('../../../pages/RenderPage', () => ({
+  default: () => <div data-testid="render-page">Render</div>,
+}))
+vi.mock('../../../pages/EffectsPage', () => ({
+  default: () => <div data-testid="effects-page">Effects</div>,
+}))
+
 beforeEach(() => {
   window.localStorage.clear()
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify([]), { status: 200 }),
-  )
   useWorkspaceStore.setState({
     preset: 'edit',
     anchorPreset: 'edit',
@@ -23,7 +41,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  vi.restoreAllMocks()
+  vi.clearAllMocks()
   window.localStorage.clear()
 })
 
@@ -37,19 +55,13 @@ describe('WorkspaceLayout', () => {
 
   it('renders per-panel route content in visible panels (BL-306 per-panel routing)', () => {
     // Default state: edit preset, only preview visible.
-    // preview panel routes to /preview → PreviewPage renders "Preview" heading.
+    // preview panel routes to /preview → PreviewPage stub renders data-testid="preview-page".
     render(<WorkspaceLayout />)
     const previewPanel = screen.getByTestId('workspace-panel-preview')
-    // PreviewPage renders data-testid="preview-page" when no project is selected.
     expect(previewPanel.querySelector('[data-testid="preview-page"]')).not.toBeNull()
   })
 
-  it('renders placeholder label when panel has no route configured', () => {
-    // Default state: library panel is hidden. When visible with no-route preset
-    // (custom with routes=undefined fallback to anchorPreset's routes), library
-    // panel receives its /library route from PRESETS.edit. But in DEFAULT state
-    // library is hidden, so just verify the mechanism via a visible panel.
-    // Render with edit preset, all panels visible.
+  it('renders panel content for all visible panels in edit preset', () => {
     useWorkspaceStore.setState({
       preset: 'edit',
       anchorPreset: 'edit',
@@ -61,7 +73,11 @@ describe('WorkspaceLayout', () => {
       sizesByPreset: {},
     })
     render(<WorkspaceLayout />)
-    // render-queue panel is hidden — not visible, so nothing renders inside it.
+    const libraryPanel = screen.getByTestId('workspace-panel-library')
+    expect(libraryPanel.querySelector('[data-testid="library-page"]')).not.toBeNull()
+    const previewPanel = screen.getByTestId('workspace-panel-preview')
+    expect(previewPanel.querySelector('[data-testid="preview-page"]')).not.toBeNull()
+    // render-queue panel is hidden in edit preset.
     const rqPanel = screen.getByTestId('workspace-panel-render-queue') as HTMLElement
     expect(rqPanel.getAttribute('data-visible')).toBe('false')
   })
@@ -122,7 +138,7 @@ describe('WorkspaceLayout', () => {
       sizesByPreset: {},
     })
     render(<WorkspaceLayout />)
-    // Review preset routes: preview → /preview. Preview panel should have PreviewPage.
+    // Review preset routes: preview → /preview. Preview panel should have PreviewPage stub.
     const previewPanel = screen.getByTestId('workspace-panel-preview') as HTMLElement
     expect(previewPanel.querySelector('[data-testid="preview-page"]')).not.toBeNull()
   })
