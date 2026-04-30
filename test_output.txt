@@ -109,4 +109,4 @@ tests/test_contract/test_health.py::test_filesystem_check_in_response
     app.state._startup_timestamp = datetime.utcnow().isoformat()
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2394 passed, 2 skipped, 594 warnings in 352.56s (0:05:52)
+2394 passed, 2 skipped, 594 warnings in 347.41s (0:05:47)
