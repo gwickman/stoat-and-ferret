@@ -120,18 +120,20 @@ export default function WorkspaceLayout() {
   // `panelVisibility` — without this the guard never fires and the layout
   // resize callbacks flip the preset to 'custom'.
   const guardRef = useRef(false)
-  const prevPresetRef = useRef<string | null>(null)
-  const prevVisibilityRef = useRef<typeof visibility | null>(null)
+  const prevPresetRef = useRef(useWorkspaceStore.getState().preset)
+  const prevVisibilityRef = useRef(useWorkspaceStore.getState().panelVisibility)
 
   useEffect(() => {
+    // Initialise refs with the current store state so the FIRST subscription
+    // call correctly detects a change (the null-initialise-and-return pattern
+    // would silently skip the guard on the very first setPreset call, allowing
+    // react-resizable-panels resize callbacks to flip the preset to 'custom').
+    prevPresetRef.current = useWorkspaceStore.getState().preset
+    prevVisibilityRef.current = useWorkspaceStore.getState().panelVisibility
+
     // Subscribe directly to the store so we can flip the guard before React
     // commits the preset-driven re-render.
     return useWorkspaceStore.subscribe((state) => {
-      if (prevPresetRef.current === null) {
-        prevPresetRef.current = state.preset
-        prevVisibilityRef.current = state.panelVisibility
-        return
-      }
       const presetChanged = state.preset !== prevPresetRef.current
       const visibilityChanged = state.panelVisibility !== prevVisibilityRef.current
       prevPresetRef.current = state.preset
