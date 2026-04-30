@@ -35,6 +35,17 @@ interface PresetDefinition {
   panels: readonly PanelId[]
   /** Canonical sizes (percentages) keyed by panelId. Hidden panels get 0. */
   sizes: PanelSizes
+  /**
+   * Optional per-panel route paths. Keys are PanelId values; values are
+   * absolute route paths (e.g., "/library", "/preview"). Empty string means
+   * no routed content for that panel (renders placeholder label instead).
+   *
+   * Constraints (INV-001, INV-002):
+   * - Keys must be valid PanelId values (enforced by Record<PanelId, string>).
+   * - Values must be relative route paths (no protocol or hostname).
+   * - Routes are read-only from the PRESETS const; not URL-encodable.
+   */
+  routes?: Record<PanelId, string>
 }
 
 /** Canonical initial/preset size defaults (percentages) for all workspace panels. */
@@ -65,14 +76,38 @@ export const PRESETS: Readonly<Record<NamedPreset, PresetDefinition>> = {
   edit: {
     panels: ['library', 'timeline', 'effects', 'preview'],
     sizes: { ...zeroSizes(), library: PANEL_DEFAULTS.library, timeline: 35, effects: 15, preview: 30 },
+    routes: {
+      library: '/library',
+      timeline: '/timeline',
+      effects: '/effects',
+      preview: '/preview',
+      'render-queue': '',
+      batch: '',
+    },
   },
   review: {
     panels: ['preview', 'timeline'],
     sizes: { ...zeroSizes(), preview: 60, timeline: 40 },
+    routes: {
+      preview: '/preview',
+      timeline: '/timeline',
+      library: '',
+      effects: '',
+      'render-queue': '',
+      batch: '',
+    },
   },
   render: {
     panels: ['render-queue', 'batch', 'preview'],
     sizes: { ...zeroSizes(), 'render-queue': 30, batch: 30, preview: 40 },
+    routes: {
+      'render-queue': '/render',
+      batch: '/render',
+      preview: '/preview',
+      library: '',
+      timeline: '',
+      effects: '',
+    },
   },
 }
 

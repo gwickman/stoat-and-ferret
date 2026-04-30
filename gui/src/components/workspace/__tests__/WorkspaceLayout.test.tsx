@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspaceLayout from '../WorkspaceLayout'
 import {
   DEFAULT_PANEL_SIZES,
@@ -7,6 +7,27 @@ import {
   PANEL_IDS,
   useWorkspaceStore,
 } from '../../../stores/workspaceStore'
+
+// Stub page components so WorkspaceLayout routing tests are isolated from
+// page-level side effects (async fetches, JSDOM resource loading for thumbnails).
+vi.mock('../../../pages/DashboardPage', () => ({
+  default: () => <div data-testid="dashboard-page">Dashboard</div>,
+}))
+vi.mock('../../../pages/LibraryPage', () => ({
+  default: () => <div data-testid="library-page">Library</div>,
+}))
+vi.mock('../../../pages/TimelinePage', () => ({
+  default: () => <div data-testid="timeline-page">Timeline</div>,
+}))
+vi.mock('../../../pages/PreviewPage', () => ({
+  default: () => <div data-testid="preview-page">Preview</div>,
+}))
+vi.mock('../../../pages/RenderPage', () => ({
+  default: () => <div data-testid="render-page">Render</div>,
+}))
+vi.mock('../../../pages/EffectsPage', () => ({
+  default: () => <div data-testid="effects-page">Effects</div>,
+}))
 
 beforeEach(() => {
   window.localStorage.clear()
@@ -20,6 +41,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.clearAllMocks()
   window.localStorage.clear()
 })
 
@@ -31,14 +53,33 @@ describe('WorkspaceLayout', () => {
     }
   })
 
-  it('renders children inside the preview panel (Outlet integration)', () => {
-    render(
-      <WorkspaceLayout>
-        <div data-testid="route-content">routed-page</div>
-      </WorkspaceLayout>,
-    )
+  it('renders per-panel route content in visible panels (BL-306 per-panel routing)', () => {
+    // Default state: edit preset, only preview visible.
+    // preview panel routes to /preview → PreviewPage stub renders data-testid="preview-page".
+    render(<WorkspaceLayout />)
     const previewPanel = screen.getByTestId('workspace-panel-preview')
-    expect(previewPanel.querySelector('[data-testid="route-content"]')).not.toBeNull()
+    expect(previewPanel.querySelector('[data-testid="preview-page"]')).not.toBeNull()
+  })
+
+  it('renders panel content for all visible panels in edit preset', () => {
+    useWorkspaceStore.setState({
+      preset: 'edit',
+      anchorPreset: 'edit',
+      panelSizes: { ...DEFAULT_PANEL_SIZES },
+      panelVisibility: {
+        library: true, timeline: true, effects: true, preview: true,
+        'render-queue': false, batch: false,
+      },
+      sizesByPreset: {},
+    })
+    render(<WorkspaceLayout />)
+    const libraryPanel = screen.getByTestId('workspace-panel-library')
+    expect(libraryPanel.querySelector('[data-testid="library-page"]')).not.toBeNull()
+    const previewPanel = screen.getByTestId('workspace-panel-preview')
+    expect(previewPanel.querySelector('[data-testid="preview-page"]')).not.toBeNull()
+    // render-queue panel is hidden in edit preset.
+    const rqPanel = screen.getByTestId('workspace-panel-render-queue') as HTMLElement
+    expect(rqPanel.getAttribute('data-visible')).toBe('false')
   })
 
   it('hides panels with display:none rather than removing them (LRN-140)', () => {
@@ -85,6 +126,21 @@ describe('WorkspaceLayout', () => {
     render(<WorkspaceLayout />)
     expect(document.querySelector('[aria-label="Resize library panel"]')).not.toBeNull()
     expect(document.querySelector('[aria-label="Resize timeline panel"]')).not.toBeNull()
+  })
+
+  it('custom preset falls back to anchorPreset routes', () => {
+    // Set review preset, then flip to custom (simulating a manual resize).
+    useWorkspaceStore.setState({
+      preset: 'custom',
+      anchorPreset: 'review',
+      panelSizes: { ...DEFAULT_PANEL_SIZES },
+      panelVisibility: { library: false, timeline: true, preview: true, effects: false, 'render-queue': false, batch: false },
+      sizesByPreset: {},
+    })
+    render(<WorkspaceLayout />)
+    // Review preset routes: preview → /preview. Preview panel should have PreviewPage stub.
+    const previewPanel = screen.getByTestId('workspace-panel-preview') as HTMLElement
+    expect(previewPanel.querySelector('[data-testid="preview-page"]')).not.toBeNull()
   })
 
   describe('bidirectional loop guard (NFR-002)', () => {

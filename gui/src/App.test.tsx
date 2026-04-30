@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+import { DEFAULT_PANEL_SIZES, DEFAULT_PANEL_VISIBILITY, useWorkspaceStore } from './stores/workspaceStore'
 
 class MockWebSocket {
   static readonly OPEN = 1
@@ -15,9 +16,17 @@ class MockWebSocket {
 }
 
 beforeEach(() => {
+  window.localStorage.clear()
+  useWorkspaceStore.setState({
+    preset: 'edit',
+    anchorPreset: 'edit',
+    panelSizes: { ...DEFAULT_PANEL_SIZES },
+    panelVisibility: { ...DEFAULT_PANEL_VISIBILITY },
+    sizesByPreset: {},
+  })
   vi.stubGlobal('WebSocket', MockWebSocket)
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify({ status: 'ok', checks: {} }), { status: 200 }),
+    new Response(JSON.stringify([]), { status: 200 }),
   )
 })
 
@@ -31,30 +40,26 @@ describe('App', () => {
     expect(screen.getByTestId('status-bar')).toBeDefined()
   })
 
-  it('renders dashboard page at root', () => {
+  it('renders preview page in preview panel in default state (BL-306 per-panel routing)', () => {
+    // Default state: edit preset, only preview visible.
+    // WorkspaceLayout renders PreviewPage in preview panel via PRESETS.edit.routes.preview.
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter>
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Dashboard')).toBeDefined()
+    expect(screen.getByTestId('preview-page')).toBeDefined()
   })
 
-  it('renders library page at /library', () => {
+  it('renders library page in library panel when edit preset is fully active', () => {
+    // Apply edit preset so library, timeline, effects, preview panels are all visible.
+    useWorkspaceStore.getState().setPreset('edit')
     render(
-      <MemoryRouter initialEntries={['/library']}>
+      <MemoryRouter>
         <App />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Library')).toBeDefined()
-  })
-
-  it('renders projects page at /projects', () => {
-    render(
-      <MemoryRouter initialEntries={['/projects']}>
-        <App />
-      </MemoryRouter>,
-    )
-    expect(screen.getByText('Projects')).toBeDefined()
+    // LibraryPage heading is rendered inside the library panel.
+    expect(screen.getByRole('heading', { name: 'Library' })).toBeDefined()
   })
 })

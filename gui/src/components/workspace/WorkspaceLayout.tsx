@@ -1,16 +1,38 @@
 import { useEffect, useRef } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
-import type { ReactNode } from 'react'
+import type { ComponentType } from 'react'
 import { useWorkspace } from '../../hooks/useWorkspace'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { PRESETS, useWorkspaceStore } from '../../stores/workspaceStore'
 import type { PanelId } from '../../stores/workspaceStore'
+import DashboardPage from '../../pages/DashboardPage'
+import EffectsPage from '../../pages/EffectsPage'
+import LibraryPage from '../../pages/LibraryPage'
+import PreviewPage from '../../pages/PreviewPage'
+import RenderPage from '../../pages/RenderPage'
+import TimelinePage from '../../pages/TimelinePage'
+
+/** Route path → page component mapping for per-panel rendering. */
+const ROUTE_COMPONENTS: Record<string, ComponentType> = {
+  '/library': LibraryPage,
+  '/timeline': TimelinePage,
+  '/preview': PreviewPage,
+  '/render': RenderPage,
+  '/effects': EffectsPage,
+  '/': DashboardPage,
+}
+
+function PanelContent({ route }: { route: string }) {
+  const Component = ROUTE_COMPONENTS[route]
+  if (!Component) return null
+  return <Component />
+}
 
 interface WorkspacePanelProps {
   panelId: PanelId
   label: string
   minSize?: number
   guardRef: React.MutableRefObject<boolean>
-  children?: ReactNode
+  children?: React.ReactNode
 }
 
 /**
@@ -69,41 +91,54 @@ function WorkspacePanel({ panelId, label, minSize = 10, guardRef, children }: Wo
 const RESIZE_HANDLE_CLASS =
   'group flex items-center justify-center bg-gray-800 hover:bg-blue-600/70 active:bg-blue-500 transition-colors data-[separator]:h-full data-[separator]:w-1 data-[orientation=vertical]:w-full data-[orientation=vertical]:h-1'
 
-interface WorkspaceLayoutProps {
-  /** Content rendered inside the preview/main panel — typically a routed Outlet. */
-  children?: ReactNode
-}
-
 /**
  * Root workspace layout. Wraps the canonical six panels (library, timeline,
  * effects, preview, render-queue, batch) in nested resizable groups and
- * persists size/visibility through workspaceStore (BL-291). The `preview`
- * panel hosts the routed Outlet so existing pages render at full width when
- * other panels are hidden.
+ * persists size/visibility through workspaceStore (BL-291). Each panel
+ * renders its configured page component from PRESETS[preset].routes (BL-306).
  *
  * Separators between panels are conditionally rendered: a separator is omitted
  * when either neighbouring panel is hidden, which prevents stacked zero-width
  * separators from claiming pointer events for routed content (a regression
  * observed during BL-291's UAT cycle).
  */
-export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
+export default function WorkspaceLayout() {
   const visibility = useWorkspace().panelVisibility
-  // Bidirectional-loop guard (LRN-141 / BL-292 NFR-002). When `preset` changes
-  // via `setPreset` we set the flag synchronously so the transient `onResize`
-  // callbacks fired by react-resizable-panels do not feed back into the store.
+  const preset = useWorkspaceStore((s) => s.preset)
+  const anchorPreset = useWorkspaceStore((s) => s.anchorPreset)
+
+  // Resolve effective preset for route lookup: custom falls back to anchorPreset.
+  const effectivePreset = preset === 'custom' ? anchorPreset : preset
+  const routes = PRESETS[effectivePreset]?.routes
+
+  // Bidirectional-loop guard (LRN-141 / BL-292 NFR-002). When `preset` or
+  // `panelVisibility` changes via `setPreset` we set the flag synchronously
+  // so the transient `onResize` callbacks fired by react-resizable-panels
+  // do not feed back into the store. Watching `panelVisibility` is necessary
+  // because `setPreset('edit')` when already on 'edit' (default preset with
+  // preview-only visibility) keeps `preset` unchanged but updates
+  // `panelVisibility` — without this the guard never fires and the layout
+  // resize callbacks flip the preset to 'custom'.
   const guardRef = useRef(false)
-  const prevPresetRef = useRef<string | null>(null)
+  const prevPresetRef = useRef(useWorkspaceStore.getState().preset)
+  const prevVisibilityRef = useRef(useWorkspaceStore.getState().panelVisibility)
 
   useEffect(() => {
+    // Initialise refs with the current store state so the FIRST subscription
+    // call correctly detects a change (the null-initialise-and-return pattern
+    // would silently skip the guard on the very first setPreset call, allowing
+    // react-resizable-panels resize callbacks to flip the preset to 'custom').
+    prevPresetRef.current = useWorkspaceStore.getState().preset
+    prevVisibilityRef.current = useWorkspaceStore.getState().panelVisibility
+
     // Subscribe directly to the store so we can flip the guard before React
     // commits the preset-driven re-render.
     return useWorkspaceStore.subscribe((state) => {
-      if (prevPresetRef.current === null) {
-        prevPresetRef.current = state.preset
-        return
-      }
-      if (state.preset !== prevPresetRef.current) {
-        prevPresetRef.current = state.preset
+      const presetChanged = state.preset !== prevPresetRef.current
+      const visibilityChanged = state.panelVisibility !== prevVisibilityRef.current
+      prevPresetRef.current = state.preset
+      prevVisibilityRef.current = state.panelVisibility
+      if (presetChanged || visibilityChanged) {
         guardRef.current = true
         // Release the guard after layout has settled. Two RAFs gives
         // react-resizable-panels' internal observers time to flush.
@@ -137,7 +172,9 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
         orientation="horizontal"
         className="h-full w-full bg-gray-950"
       >
-        <WorkspacePanel panelId="library" label="Library" minSize={10} guardRef={guardRef} />
+        <WorkspacePanel panelId="library" label="Library" minSize={10} guardRef={guardRef}>
+          {routes?.library ? <PanelContent route={routes.library} /> : undefined}
+        </WorkspacePanel>
 
         {librarySepVisible && (
           <Separator
@@ -156,7 +193,9 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                   label="Timeline"
                   minSize={15}
                   guardRef={guardRef}
-                />
+                >
+                  {routes?.timeline ? <PanelContent route={routes.timeline} /> : undefined}
+                </WorkspacePanel>
                 {timelineEffectsSepVisible && (
                   <Separator
                     id="sep-timeline-effects"
@@ -169,7 +208,9 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                   label="Effects"
                   minSize={15}
                   guardRef={guardRef}
-                />
+                >
+                  {routes?.effects ? <PanelContent route={routes.effects} /> : undefined}
+                </WorkspacePanel>
               </Group>
             </Panel>
 
@@ -182,7 +223,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
             )}
 
             <WorkspacePanel panelId="preview" label="Preview" minSize={20} guardRef={guardRef}>
-              {children}
+              {routes?.preview ? <PanelContent route={routes.preview} /> : undefined}
             </WorkspacePanel>
           </Group>
         </Panel>
@@ -202,7 +243,9 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
               label="Render Queue"
               minSize={15}
               guardRef={guardRef}
-            />
+            >
+              {routes?.['render-queue'] ? <PanelContent route={routes['render-queue']} /> : undefined}
+            </WorkspacePanel>
             {renderBatchSepVisible && (
               <Separator
                 id="sep-render-batch"
@@ -215,7 +258,9 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
               label="Batch"
               minSize={15}
               guardRef={guardRef}
-            />
+            >
+              {routes?.batch ? <PanelContent route={routes.batch} /> : undefined}
+            </WorkspacePanel>
           </Group>
         </Panel>
       </Group>
