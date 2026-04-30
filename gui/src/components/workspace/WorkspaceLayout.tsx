@@ -46,6 +46,7 @@ function WorkspacePanel({ panelId, label, minSize = 10, guardRef, children }: Wo
         data-testid={`workspace-panel-${panelId}`}
         data-visible={isVisible ? 'true' : 'false'}
         style={isVisible ? undefined : { display: 'none', pointerEvents: 'none' }}
+        tabIndex={isVisible ? 0 : undefined}
       >
         {/*
          * Hidden panels render an empty wrapper (display:none) — the
