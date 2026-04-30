@@ -37,6 +37,16 @@ interface PresetDefinition {
   sizes: PanelSizes
 }
 
+/** Canonical initial/preset size defaults (percentages) for all workspace panels. */
+export const PANEL_DEFAULTS: Record<PanelId, number> = {
+  library: 20,
+  timeline: 25,
+  effects: 25,
+  preview: 100,
+  'render-queue': 25,
+  batch: 25,
+}
+
 const zeroSizes = (): PanelSizes => ({
   library: 0,
   timeline: 0,
@@ -54,7 +64,7 @@ const zeroSizes = (): PanelSizes => ({
 export const PRESETS: Readonly<Record<NamedPreset, PresetDefinition>> = {
   edit: {
     panels: ['library', 'timeline', 'effects', 'preview'],
-    sizes: { ...zeroSizes(), library: 20, timeline: 35, effects: 15, preview: 30 },
+    sizes: { ...zeroSizes(), library: PANEL_DEFAULTS.library, timeline: 35, effects: 15, preview: 30 },
   },
   review: {
     panels: ['preview', 'timeline'],
@@ -83,15 +93,10 @@ function presetVisibility(preset: NamedPreset): PanelVisibility {
  * width so existing routed pages render at their pre-BL-291 dimensions.
  * Switching to a named preset via `setPreset` writes the preset's canonical
  * percentages.
+ *
+ * @alias PANEL_DEFAULTS — single source of truth for default sizes.
  */
-export const DEFAULT_PANEL_SIZES: PanelSizes = {
-  library: 20,
-  timeline: 25,
-  effects: 25,
-  preview: 100,
-  'render-queue': 25,
-  batch: 25,
-}
+export const DEFAULT_PANEL_SIZES: PanelSizes = PANEL_DEFAULTS
 
 /**
  * Default panel visibility (first-run / unconfigured state). Only the preview
