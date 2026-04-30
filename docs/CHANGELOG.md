@@ -4,6 +4,19 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v049] - 2026-04-30
+
+Workspace Shell Polish. Delivers two themes: workspace accessibility cleanup (a11y focus order fix with E2E coverage) and workspace panel routing (per-panel URL routing with PRESETS routes field and PANEL_DEFAULTS consolidation). 18/18 ACs met, 0 regressions.
+
+### Workspace Accessibility
+
+- **A11y Focus Order Fix** — Removed conditional-mount guard that broke focus order on initial workspace load; added workspace a11y E2E tests covering focus-order and keyboard navigation regressions (BL-305, #350)
+
+### Workspace Panel Routing
+
+- **Per-Panel Routing** — PRESETS routes field wires per-panel URL routing with URL params; `003-routing-design-validation` design document captures the routing design and validation approach (BL-306, #352, #353)
+- **PANEL_DEFAULTS Consolidation** — Extracted `PANEL_DEFAULTS` const to eliminate duplicate panel size definitions across workspace layout components (BL-307, #351)
+
 ## [v048] - 2026-04-30
 
 ### Added
