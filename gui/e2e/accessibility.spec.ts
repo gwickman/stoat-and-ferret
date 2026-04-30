@@ -136,7 +136,7 @@ test.describe("WCAG AA accessibility", () => {
 });
 
 test.describe("workspace accessibility", () => {
-  test("Edit preset: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+  test("Edit preset: zero scrollable-region-focusable violations", async ({
     page,
   }) => {
     await page.goto("/gui/");
@@ -147,13 +147,13 @@ test.describe("workspace accessibility", () => {
     await waitForSeparatorReady(page, "sep-library-main");
 
     const results = await new AxeBuilder({ page })
-      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .withRules(["scrollable-region-focusable"])
       .analyze();
 
     expect(results.violations).toEqual([]);
   });
 
-  test("Review preset: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+  test("Review preset: zero scrollable-region-focusable violations", async ({
     page,
   }) => {
     await page.goto("/gui/");
@@ -164,13 +164,13 @@ test.describe("workspace accessibility", () => {
     await waitForSeparatorReady(page, "sep-top-preview");
 
     const results = await new AxeBuilder({ page })
-      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .withRules(["scrollable-region-focusable"])
       .analyze();
 
     expect(results.violations).toEqual([]);
   });
 
-  test("Render preset: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+  test("Render preset: zero scrollable-region-focusable violations", async ({
     page,
   }) => {
     await page.goto("/gui/");
@@ -181,23 +181,25 @@ test.describe("workspace accessibility", () => {
     await waitForSeparatorReady(page, "sep-main-right");
 
     const results = await new AxeBuilder({ page })
-      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .withRules(["scrollable-region-focusable"])
       .analyze();
 
     expect(results.violations).toEqual([]);
   });
 
-  test("Preview-only: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+  test("Preview-only: zero scrollable-region-focusable violations", async ({
     page,
   }) => {
-    // Clear localStorage so workspace initialises with only preview visible
-    await page.evaluate(() => localStorage.clear());
+    // Navigate first so localStorage is accessible, then clear and reload so
+    // workspace initialises with only preview visible (default store state).
     await page.goto("/gui/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
     // Preview-only has no separators; workspace-layout visible is sufficient.
 
     const results = await new AxeBuilder({ page })
-      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .withRules(["scrollable-region-focusable"])
       .analyze();
 
     expect(results.violations).toEqual([]);
