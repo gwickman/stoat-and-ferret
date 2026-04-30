@@ -25,7 +25,9 @@ beforeEach(() => {
     sizesByPreset: {},
   })
   vi.stubGlobal('WebSocket', MockWebSocket)
-  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('no-fetch'))
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify([]), { status: 200 }),
+  )
 })
 
 describe('App', () => {

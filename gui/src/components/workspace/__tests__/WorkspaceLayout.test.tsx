@@ -10,7 +10,9 @@ import {
 
 beforeEach(() => {
   window.localStorage.clear()
-  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('no-fetch'))
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify([]), { status: 200 }),
+  )
   useWorkspaceStore.setState({
     preset: 'edit',
     anchorPreset: 'edit',
