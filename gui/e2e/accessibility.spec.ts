@@ -115,3 +115,97 @@ test.describe("WCAG AA accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+test.describe("workspace accessibility", () => {
+  test("Edit preset: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await page.selectOption('[data-testid="workspace-preset-selector"]', "edit");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Review preset: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await page.selectOption(
+      '[data-testid="workspace-preset-selector"]',
+      "review",
+    );
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Render preset: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await page.selectOption(
+      '[data-testid="workspace-preset-selector"]',
+      "render",
+    );
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Preview-only: zero scrollable-region-focusable and focus-order-semantics violations", async ({
+    page,
+  }) => {
+    // Clear localStorage so workspace initialises with only preview visible
+    await page.evaluate(() => localStorage.clear());
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withRules(["scrollable-region-focusable", "focus-order-semantics"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("keyboard navigation: Tab reaches workspace separators in Edit preset without trapping", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await page.selectOption('[data-testid="workspace-preset-selector"]', "edit");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Start Tab traversal from body and collect focused element IDs
+    await page.locator("body").click();
+    const focusedIds: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press("Tab");
+      const id = await page.evaluate(
+        () => document.activeElement?.id ?? "",
+      );
+      if (id) focusedIds.push(id);
+    }
+
+    // Edit preset: library, timeline, effects, preview visible.
+    // These separators must appear in the tab order.
+    expect(focusedIds).toContain("sep-library-main");
+    expect(focusedIds).toContain("sep-timeline-effects");
+    expect(focusedIds).toContain("sep-top-preview");
+
+    // Right-panel separators must NOT appear (render-queue and batch hidden).
+    expect(focusedIds).not.toContain("sep-main-right");
+    expect(focusedIds).not.toContain("sep-render-batch");
+  });
+});
