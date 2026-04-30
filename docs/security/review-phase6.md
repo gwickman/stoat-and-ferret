@@ -296,6 +296,8 @@ encode a static or pre-validated invariant.
 
 #### 10.3.1. P3-RUST-DOTENV — `python-dotenv` 1.2.1 transitive CVE-2026-28684
 
+> **✓ Resolved in v048** — `python-dotenv>=1.2.2` added to `pyproject.toml` [project].dependencies; uv.lock now pins 1.2.2. See BL-318.
+
 **Severity:** P3 (low — vulnerability advisory exists but exploitation
 preconditions are absent in this codebase).
 
