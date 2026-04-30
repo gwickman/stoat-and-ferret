@@ -149,6 +149,10 @@ Run this command any time you add, remove, or modify an API endpoint, Pydantic r
 - Python: 80% minimum
 - Rust: 90% minimum
 
+## Security Audit Cadence
+
+Security audits are conducted on a recurring schedule defined in `docs/security/audit-cadence.md`. Triggers include quarterly review, Python/FFmpeg/PyO3 major version upgrades, and new unsafe Rust patterns. Findings are filed as backlog items per the BL-filing pattern established in v043. See `docs/security/audit-cadence.md` for scope, deliverables, and review schedule.
+
 ## Coding Standards
 
 ### Python

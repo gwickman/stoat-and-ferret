@@ -231,18 +231,9 @@ baseline list and tracked there until the manual catches up.
 
 ---
 
-## 9. Re-Audit Cadence
+## §9 Audit Cadence
 
-This is the first formal audit since v021. Recommended cadence:
-
-- **Per release (lightweight):** the `test_audit.py` probes run as part
-  of the standard CI pytest pass — every PR enforces the SQL-injection
-  allowlist, seed-endpoint gate, path-traversal rejection, and config
-  drift baseline.
-- **Per Phase / quarterly (full):** repeat this manual review (route
-  inventory, fresh AST patterns, threat model walk-through) before the
-  next major capability phase or six months from now, whichever comes
-  first.
+The security audit cadence is now formalized in `docs/security/audit-cadence.md`. See that document for triggers, scope, deliverables, and review schedule.
 
 ---
 
