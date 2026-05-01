@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v050] - 2026-05-01
+
+Security Maintenance and Quality Improvements. Delivers three backlog items: a datetime deprecation fix eliminating DeprecationWarnings across the API layer, encoder cache test coverage expansion to ≥85%, and a UAT known-failure registry that distinguishes known failures from regressions. 18/18 ACs met, 0 regressions.
+
+### Maintenance
+
+- **Datetime Deprecation Fix** — Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)` across 7 locations in the API layer to eliminate DeprecationWarnings and ensure Python 3.10+ compatibility (BL-322, #355)
+
+### Test Coverage
+
+- **Encoder Cache Coverage Expansion** — Added `tests/unit/render/test_encoder_cache.py` with 18 parameterized tests covering `AsyncSQLiteEncoderCacheRepository` and `InMemoryEncoderCacheRepository`, raising coverage from 71% to ≥85% (BL-324, #356)
+
+### UAT Infrastructure
+
+- **UAT Known-Failure Registry** — Implemented `data/baseline-uat-failures.json` registry and updated `scripts/uat_runner.py` to emit `KNOWN_FAILURE`/`UNEXPECTED_PASS` annotations, enabling distinction between known failures and regressions (BL-325, #357)
+
 ## [v049] - 2026-04-30
 
 Workspace Shell Polish. Delivers two themes: workspace accessibility cleanup (a11y focus order fix with E2E coverage) and workspace panel routing (per-panel URL routing with PRESETS routes field and PANEL_DEFAULTS consolidation). 18/18 ACs met, 0 regressions.
