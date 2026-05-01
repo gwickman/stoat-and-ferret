@@ -6,6 +6,10 @@ services:
     volumes:
       - ./data:/app/data
     healthcheck:
+      # Use /health/live (not /health/ready) for Docker healthchecks: liveness checks
+      # are faster (no subsystem probes) and Docker's restart policy only needs to know
+      # if the process is responsive. /health/ready is for orchestrators (k8s readiness
+      # probes, deploy_smoke.sh) that need to know if all services are operational.
       test: ["CMD", "curl", "-f", "http://localhost:8765/health/live"]
       interval: 30s
       timeout: 3s

@@ -84,16 +84,6 @@ async def readiness(request: Request) -> JSONResponse:
     if db_check["status"] != "ok":
         critical_healthy = False
 
-    # FFmpeg check (critical)
-    try:
-        ffmpeg_check = await asyncio.wait_for(_check_ffmpeg(), timeout=5.0)
-    except asyncio.TimeoutError:
-        ffmpeg_check = {"status": "error", "error": "check timed out"}
-        critical_healthy = False
-    checks["ffmpeg"] = ffmpeg_check
-    if ffmpeg_check["status"] != "ok":
-        critical_healthy = False
-
     # Rust core check (critical)
     try:
         rust_check = await asyncio.wait_for(_check_rust_core(), timeout=5.0)
@@ -113,6 +103,16 @@ async def readiness(request: Request) -> JSONResponse:
     checks["filesystem"] = fs_check
     if fs_check["status"] != "ok":
         critical_healthy = False
+
+    # FFmpeg check (non-critical — degraded only)
+    try:
+        ffmpeg_check = await asyncio.wait_for(_check_ffmpeg(), timeout=5.0)
+    except asyncio.TimeoutError:
+        ffmpeg_check = {"status": "error", "error": "check timed out"}
+        any_degraded = True
+    checks["ffmpeg"] = ffmpeg_check
+    if ffmpeg_check["status"] != "ok":
+        any_degraded = True
 
     # Preview check (non-critical — degraded only)
     try:
@@ -257,7 +257,7 @@ async def _check_ffmpeg() -> dict[str, Any]:
     """
     ffmpeg_path = shutil.which("ffmpeg")
     if not ffmpeg_path:
-        return {"status": "error", "error": "ffmpeg not found in PATH"}
+        return {"status": "unavailable"}
 
     try:
         result = await asyncio.to_thread(

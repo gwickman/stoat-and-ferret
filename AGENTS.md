@@ -454,6 +454,20 @@ This allows docs-only PRs to merge without running the full test matrix.
 - **PyO3 bindings**: `from stoat_ferret_core import StoatFerretCore`
 - **Transparency**: API responses include generated FFmpeg filter strings
 
+## FFmpeg Production Role
+
+FFmpeg is classified as **non-critical** for production readiness. The render and preview services
+handle FFmpeg absence gracefully (render reports `status: "unavailable"`, preview is independent of
+FFmpeg entirely). The `/health/ready` endpoint returns HTTP 200 with `status: "degraded"` when
+FFmpeg is unavailable — not HTTP 503. This allows flexible deployment architectures (CPU-only
+containers, remote FFmpeg, staged rollouts).
+
+The Dockerfile runtime stage intentionally omits FFmpeg. Operators who require FFmpeg for render
+must install it in a custom layer or use a sidecar pattern.
+
+`deploy_smoke.sh` polls `/health/ready` (HTTP 200 is success regardless of degraded status).
+Docker Compose uses `/health/live` for container healthchecks (faster, no subsystem probes).
+
 ## Design Documents
 
 Authoritative design specs in `docs/design/`:

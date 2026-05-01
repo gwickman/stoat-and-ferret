@@ -6,6 +6,8 @@ Validates the complete fixture chain: app creation -> DI -> ASGITransport
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import httpx
 
 
@@ -22,7 +24,7 @@ async def test_uc08_health_ready(smoke_client: httpx.AsyncClient) -> None:
     resp = await smoke_client.get("/health/ready")
     assert resp.status_code == 200
     body = resp.json()
-    # Overall may be "degraded" if proxy dir hasn't been created yet
+    # Overall may be "degraded" if proxy dir hasn't been created yet or FFmpeg absent
     assert body["status"] in ("ok", "degraded")
 
     checks = body["checks"]
@@ -32,7 +34,7 @@ async def test_uc08_health_ready(smoke_client: httpx.AsyncClient) -> None:
     assert isinstance(checks["database"]["latency_ms"], (int, float))
 
     assert "ffmpeg" in checks
-    assert checks["ffmpeg"]["status"] == "ok"
+    assert checks["ffmpeg"]["status"] in ("ok", "unavailable", "degraded", "error")
 
     assert "preview" in checks
     assert "status" in checks["preview"]
@@ -60,3 +62,21 @@ async def test_uc08_health_ready(smoke_client: httpx.AsyncClient) -> None:
     assert isinstance(checks["render"]["disk_usage_percent"], (int, float))
     assert "encoder_available" in checks["render"]
     assert isinstance(checks["render"]["encoder_available"], bool)
+
+
+async def test_health_ready_without_ffmpeg(smoke_client: httpx.AsyncClient) -> None:
+    """FFmpeg absent causes HTTP 200 (not 503); status is ok or degraded."""
+    with patch("stoat_ferret.api.routers.health.shutil.which", return_value=None):
+        resp = await smoke_client.get("/health/ready")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] in ("ok", "degraded")
+    assert body["checks"]["ffmpeg"]["status"] == "unavailable"
+
+
+async def test_health_ready_degraded_status_structure(smoke_client: httpx.AsyncClient) -> None:
+    """Response always contains checks.ffmpeg key regardless of FFmpeg presence."""
+    resp = await smoke_client.get("/health/ready")
+    body = resp.json()
+    assert "ffmpeg" in body["checks"]
+    assert "status" in body["checks"]["ffmpeg"]
