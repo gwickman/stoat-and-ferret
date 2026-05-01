@@ -1,13 +1,13 @@
 #!/bin/bash
 # Post-deployment smoke test for stoat-and-ferret.
 #
-# Polls /health/live until the server responds or the timeout expires,
+# Polls /health/ready until the server responds or the timeout expires,
 # then verifies /api/v1/version returns valid JSON with an app_version field.
 #
-# Note: This script polls /health/live (not /health/ready) because the
-# production Docker image does not include FFmpeg, which causes /health/ready
-# to return 503 indefinitely. /health/live confirms the uvicorn process is
-# responding without checking subsystem health.
+# FFmpeg is non-critical for production readiness.
+# The /health/ready endpoint returns HTTP 200 with status="degraded"
+# when FFmpeg is unavailable. This is expected behavior for containers
+# deployed without FFmpeg.
 #
 # Usage:
 #   ./scripts/deploy_smoke.sh
@@ -19,7 +19,7 @@
 #
 # Exit codes:
 #   0 - Smoke test passed
-#   1 - Smoke test failed (liveness timeout or version check failure)
+#   1 - Smoke test failed (readiness timeout or version check failure)
 
 set -euo pipefail
 
@@ -31,11 +31,11 @@ INTERVAL=2
 BASE_URL="http://${STOAT_HOST}:${STOAT_PORT}"
 echo "Waiting for ${BASE_URL} to be ready (max ${MAX_WAIT}s)..."
 
-# Poll /health/live for liveness (not /health/ready — FFmpeg may be absent in container)
+# Poll /health/ready for readiness (HTTP 200 with status=ok or status=degraded is success)
 ELAPSED=0
 while [ "${ELAPSED}" -lt "${MAX_WAIT}" ]; do
-    if curl -f -s "${BASE_URL}/health/live" > /dev/null 2>&1; then
-        echo "✓ /health/live returned 200"
+    if curl -f -s "${BASE_URL}/health/ready" > /dev/null 2>&1; then
+        echo "✓ /health/ready returned 200"
         break
     fi
     echo "  Waiting... (${ELAPSED}/${MAX_WAIT}s)"
@@ -44,7 +44,7 @@ while [ "${ELAPSED}" -lt "${MAX_WAIT}" ]; do
 done
 
 if [ "${ELAPSED}" -ge "${MAX_WAIT}" ]; then
-    echo "✗ /health/live never returned 200 (timeout after ${MAX_WAIT}s)"
+    echo "✗ /health/ready never returned 200 (timeout after ${MAX_WAIT}s)"
     exit 1
 fi
 
