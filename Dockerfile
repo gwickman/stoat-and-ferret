@@ -34,8 +34,11 @@ RUN pip install --no-cache-dir "maturin>=1.0,<2.0"
 
 # Copy project metadata first for maximum layer caching on Rust builds
 WORKDIR /build
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock ./
 COPY rust/ rust/
+# README.md is excluded from .dockerignore (docs only); create a stub so maturin
+# can satisfy the readme = "README.md" field in pyproject.toml without failing.
+RUN echo "# stoat-and-ferret" > README.md
 
 # Build the Rust extension wheel from the project root.
 # Guardrail: do NOT pass --manifest-path on the CLI; maturin reads it from
