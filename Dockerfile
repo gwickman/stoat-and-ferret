@@ -36,8 +36,11 @@ RUN pip install --no-cache-dir "maturin>=1.0,<2.0"
 WORKDIR /build
 COPY pyproject.toml uv.lock ./
 COPY rust/ rust/
-# README.md is excluded from .dockerignore (docs only); create a stub so maturin
-# can satisfy the readme = "README.md" field in pyproject.toml without failing.
+# maturin requires python-source = "src" to exist; copy only the extension
+# package to preserve layer caching for unrelated src/stoat_ferret changes.
+COPY src/stoat_ferret_core/ src/stoat_ferret_core/
+# README.md is in .dockerignore (docs only); create a stub so maturin
+# can satisfy the readme = "README.md" field in pyproject.toml.
 RUN echo "# stoat-and-ferret" > README.md
 
 # Build the Rust extension wheel from the project root.
@@ -46,8 +49,7 @@ RUN echo "# stoat-and-ferret" > README.md
 # root is required per AGENTS.md to avoid conflicting site-packages entries.
 RUN maturin build --release --out /wheels
 
-# Copy remaining source for Python dependency sync and frontend build
-COPY src/ src/
+# Copy remaining source for frontend build
 COPY gui/ gui/
 
 # Build the frontend (Node.js 22 installed above)
