@@ -157,6 +157,44 @@ uat-evidence/
 - **failed** — At least one step failed an assertion or threw an error. Check the journey's screenshot directory and the report for details.
 - **skipped** — The journey was skipped because a prerequisite journey failed. Journeys have a dependency chain: 201 → 202 → 203 (journey 204 is independent). If 201 fails, 202 and 203 are automatically skipped.
 
+### Known Failure Registry
+
+Some UAT journeys may fail due to environment-specific issues, backend flakiness, or pre-existing bugs tracked separately. Rather than rediscovering these failures in each test run, the project maintains a registry of known failures.
+
+**Registry Location**: `data/baseline-uat-failures.json`
+
+**Registry Schema**:
+
+```json
+{
+  "failures": [
+    {
+      "journey_id": 501,
+      "reason": "Human-readable description of why this failure is known",
+      "tracking_reference": "e.g., v035-BL-350-journey-501 or GitHub issue #123"
+    }
+  ]
+}
+```
+
+**Annotation Behavior**:
+
+- **KNOWN_FAILURE**: Journey ID is in the registry and the journey failed. Expected; not a regression.
+- **UNEXPECTED_PASS**: Journey ID is in the registry but the journey passed. The failure may be resolved; consider removing the entry.
+- **FAIL**: Journey ID is not in the registry and the journey failed. Unexpected failure — investigate whether it is a regression.
+- **PASS**: Journey ID is not in the registry and the journey passed. Normal success.
+
+Annotations are output-only labels. They do not change the exit code: the runner exits with `1` if any journey failed (regardless of annotation), `0` if all passed.
+
+**Maintenance Workflow**:
+
+1. If a journey fails and is not in the registry, investigate whether it is environment-specific or a regression.
+2. If it is a known issue, add it to `data/baseline-uat-failures.json` with a `reason` and `tracking_reference`.
+3. If a registered journey consistently passes (UNEXPECTED_PASS), the underlying issue is likely resolved — remove the entry from the registry.
+4. The `tracking_reference` field should link to a backlog item or issue (e.g., `v035-BL-350-journey-501`) so reviewers can find context.
+
+**Missing or malformed registry**: If the registry file is missing, the runner continues normally with all failures annotated as `FAIL`. If the registry contains malformed JSON, the runner prints a descriptive error and exits before running any journeys.
+
 ### Screenshots and the FAIL_ prefix
 
 Screenshots are numbered by step within each journey directory:

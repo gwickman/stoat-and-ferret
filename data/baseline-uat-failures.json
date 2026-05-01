@@ -1,0 +1,9 @@
+{
+  "failures": [
+    {
+      "journey_id": 501,
+      "reason": "Render export hangs on large timelines (environment-specific timeout)",
+      "tracking_reference": "v035-BL-350-journey-501"
+    }
+  ]
+}

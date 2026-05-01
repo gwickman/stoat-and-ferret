@@ -82,6 +82,75 @@ BENIGN_CONSOLE_PATTERNS: list[str] = [
     "favicon",
 ]
 
+KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "data" / "baseline-uat-failures.json"
+
+
+# ---------------------------------------------------------------------------
+# Known failure registry
+# ---------------------------------------------------------------------------
+
+
+def load_known_failures(registry_path: str | Path = KNOWN_FAILURES_REGISTRY) -> dict[int, dict]:
+    """Load known UAT failure registry.
+
+    Returns dict mapping journey_id -> {reason, tracking_reference}.
+    If file missing, returns empty dict. If malformed, raises descriptive error.
+
+    Args:
+        registry_path: Path to the JSON registry file.
+
+    Returns:
+        Dict mapping journey_id (int) to failure metadata.
+
+    Raises:
+        ValueError: If the file contains malformed JSON or invalid schema.
+    """
+    try:
+        path = Path(registry_path)
+        if not path.exists():
+            return {}
+
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not isinstance(data, dict) or "failures" not in data:
+            raise ValueError("Registry must contain 'failures' key")
+
+        failures_by_id: dict[int, dict] = {}
+        for entry in data.get("failures", []):
+            journey_id = entry.get("journey_id")
+            if not isinstance(journey_id, int):
+                raise ValueError(f"journey_id must be integer, got {type(journey_id).__name__}")
+            if "reason" not in entry or "tracking_reference" not in entry:
+                raise ValueError(f"Journey {journey_id} missing 'reason' or 'tracking_reference'")
+            failures_by_id[journey_id] = {
+                "reason": entry["reason"],
+                "tracking_reference": entry["tracking_reference"],
+            }
+        return failures_by_id
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Malformed registry JSON in {registry_path}: {e}") from e
+
+
+def get_journey_annotation(journey_id: int, status: str, known_failures: dict[int, dict]) -> str:
+    """Return the annotation label for a journey result.
+
+    Args:
+        journey_id: The journey ID.
+        status: Journey status ("passed", "failed", "skipped").
+        known_failures: Dict of known failure entries keyed by journey_id.
+
+    Returns:
+        Annotation string: KNOWN_FAILURE, UNEXPECTED_PASS, PASS, or FAIL.
+    """
+    if journey_id in known_failures:
+        if status == "failed":
+            return "KNOWN_FAILURE"
+        return "UNEXPECTED_PASS"
+    if status == "failed":
+        return "FAIL"
+    return "PASS"
+
 
 # ---------------------------------------------------------------------------
 # Data types
@@ -486,6 +555,11 @@ def run_journey(journey_id: int, output_dir: Path, headed: bool) -> JourneyResul
 def execute_journeys(journeys: list[int], output_dir: Path, headed: bool) -> list[JourneyResult]:
     """Run journeys with fail-fast dependency awareness.
 
+    Loads the known failure registry before journey execution. Failed journeys
+    in the registry are annotated KNOWN_FAILURE; passing journeys in the
+    registry are annotated UNEXPECTED_PASS; unexpected failures are FAIL.
+    Annotations are output-only; exit code behavior is unchanged.
+
     Args:
         journeys: Ordered list of journey IDs to execute.
         output_dir: Output directory for artifacts.
@@ -494,6 +568,13 @@ def execute_journeys(journeys: list[int], output_dir: Path, headed: bool) -> lis
     Returns:
         List of JourneyResult for all journeys.
     """
+    # Phase 1: Load registry before any journey execution
+    try:
+        known_failures = load_known_failures()
+    except ValueError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+
     results: list[JourneyResult] = []
     failed_journeys: set[int] = set()
     skipped_journeys: set[int] = set()
@@ -515,11 +596,12 @@ def execute_journeys(journeys: list[int], output_dir: Path, headed: bool) -> lis
         result = run_journey(journey_id, output_dir, headed)
         results.append(result)
 
+        annotation = get_journey_annotation(journey_id, result.status, known_failures)
         if result.status == "failed":
             failed_journeys.add(journey_id)
-            print(f"  Journey {journey_id}: FAILED - {result.message}")
+            print(f"  Journey {journey_id}: {annotation} - {result.message}")
         else:
-            print(f"  Journey {journey_id}: PASSED")
+            print(f"  Journey {journey_id}: {annotation}")
 
     return results
 
