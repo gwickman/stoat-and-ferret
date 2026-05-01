@@ -81,6 +81,22 @@ git push -u origin HEAD
 
 Always run `git status` before `git push` to verify the current branch is correct.
 
+### Structural Enforcement
+
+The `/dev/null` vs `nul` convention is enforced via tooling at two levels:
+
+1. **Pre-commit hook:** Runs on every commit; blocks commits containing `> nul` patterns in `.sh`, `.bash`, and `.yml` files. The hook uses `grep -I -F` (fixed-string literal mode `-F` for portability across GNU grep on Linux/CI and BSD grep on macOS). The `-I` flag skips binary files, preventing false positives on compiled artifacts.
+
+2. **CI backup step:** Greps `.github/workflows/` and `scripts/` for `> nul` patterns at push time; blocks merge if violations found, catching any commits that bypassed the pre-commit hook.
+
+To enable the hook locally, run:
+
+```bash
+pre-commit install
+```
+
+The hook configuration is defined in `.pre-commit-config.yaml` in the repository root.
+
 ## Type Stubs
 
 Python type stubs for the Rust PyO3 bindings are maintained in `src/stoat_ferret_core/` (the `_core.pyi` file lives alongside the Python package).

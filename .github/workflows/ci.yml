@@ -504,13 +504,29 @@ jobs:
           fi
           echo "Image size OK: ${SIZE_MB}MB <= ${THRESHOLD_MB}MB"
 
+  nul-pattern-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect Windows nul anti-pattern
+        run: |
+          BADPAT=$(printf '%s%s' '> ' 'nul')
+          if grep -r -I -F "$BADPAT" .github/workflows/ scripts/ 2>/dev/null; then
+            echo "Windows nul anti-pattern detected. Use /dev/null instead. See AGENTS.md § Windows."
+            exit 1
+          fi
+
   ci-status:
     runs-on: ubuntu-latest
-    needs: [changes, test, rust-coverage, frontend, e2e, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build]
+    needs: [changes, test, rust-coverage, frontend, e2e, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build, nul-pattern-check]
     if: always()
     steps:
       - name: Check CI status
         run: |
+          if [[ "${{ needs.nul-pattern-check.result }}" == "failure" ]]; then
+            echo "Windows nul anti-pattern check failed"
+            exit 1
+          fi
           if [[ "${{ needs.test.result }}" == "failure" ]]; then
             echo "Tests failed"
             exit 1

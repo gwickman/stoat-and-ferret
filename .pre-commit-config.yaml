@@ -8,3 +8,10 @@ repos:
         files: 'src/stoat_ferret/api'
         stages: [commit]
         pass_filenames: false
+      - id: detect-nul-patterns
+        name: Detect Windows nul anti-pattern
+        entry: bash -c 'if grep -l -I -F "> nul" "$@" 2>/dev/null; then echo "Windows nul anti-pattern detected. Use /dev/null instead. See AGENTS.md § Windows." >&2; exit 1; fi; exit 0' --
+        language: system
+        files: '\.(sh|bash|yml)$'
+        stages: [commit]
+        pass_filenames: true
