@@ -34,7 +34,7 @@ RUN pip install --no-cache-dir "maturin>=1.0,<2.0"
 
 # Copy project metadata first for maximum layer caching on Rust builds
 WORKDIR /build
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 COPY rust/ rust/
 
 # Build the Rust extension wheel from the project root.
