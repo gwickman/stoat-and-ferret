@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { useRenderEvents } from '../hooks/useRenderEvents'
 import {
   useKeyboardShortcuts,
@@ -27,6 +27,13 @@ function wsUrl(): string {
 export default function Shell() {
   const { state: connectionState } = useWebSocket(wsUrl())
   useRenderEvents()
+  const location = useLocation()
+  // Per-panel routing (BL-306) makes WorkspaceLayout the primary content view,
+  // but legacy URL-routed pages (`/library`, `/projects`, `/render`, etc.) are
+  // still consumed by UAT journeys and direct deep links. Render the routed
+  // Outlet for any non-root path so those URLs continue to work; render the
+  // WorkspaceLayout for the root path (with optional `?workspace=` deep link).
+  const onRootPath = location.pathname === '/' || location.pathname === ''
 
   // Apply ?workspace=<name> query param on mount (AC: URL preset deep link).
   // Valid values: 'edit', 'review', 'render'. Invalid values emit console.warn
@@ -101,7 +108,7 @@ export default function Shell() {
         </div>
       </header>
       <main className="flex-1 overflow-hidden">
-        <WorkspaceLayout />
+        {onRootPath ? <WorkspaceLayout /> : <Outlet />}
       </main>
       <StatusBar connectionState={connectionState} />
       <SettingsPanel open={settingsOpen} onClose={closeSettings} />

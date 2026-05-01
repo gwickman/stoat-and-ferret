@@ -121,8 +121,13 @@ test.describe("per-panel page rendering (AC3 regression check)", () => {
   }) => {
     await page.goto("/gui/?workspace=edit");
     await expect(page.getByTestId("preview-page")).toBeVisible();
+    // Scope the heading lookup to the preview panel — TimelinePage also has a
+    // "Preview" heading (the LayoutPreview position preview) which would
+    // otherwise collide with this strict-mode locator.
     await expect(
-      page.getByRole("heading", { name: "Preview" }),
+      page
+        .getByTestId("workspace-panel-preview")
+        .getByRole("heading", { name: "Preview" }),
     ).toBeVisible();
   });
 

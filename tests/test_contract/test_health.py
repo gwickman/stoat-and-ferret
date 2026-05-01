@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -44,7 +44,7 @@ async def ready_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None
     app = create_app()
     # Open the startup gate manually (as lifespan would do in production)
     app.state._startup_ready = True
-    app.state._startup_timestamp = datetime.utcnow().isoformat()
+    app.state._startup_timestamp = datetime.now(timezone.utc).isoformat()
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),

@@ -46,3 +46,24 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/*
+ * react-resizable-panels v4 sets `height: auto` on each Panel's outer div,
+ * which makes percentage heights on nested children indefinite (CSS spec).
+ * Nested Groups (e.g., workspace-main-vertical inside workspace-main) end up
+ * with h:0, breaking flex-grow distribution to their children. Force every
+ * Panel and Group inside the workspace layout to take its full
+ * flex-allocated height so nested h-full chains resolve to a definite value.
+ *
+ * The `min-height: 0` is essential: flex items default to min-height: auto
+ * (their content height), which prevents flex-shrink from working in nested
+ * column flex containers and pins each child to its content size, defeating
+ * the proportional distribution we want from flex-grow.
+ */
+[data-testid="workspace-layout"] [data-panel],
+[data-testid="workspace-layout"] [data-panel] > div,
+[data-testid="workspace-layout"] [data-group] {
+  min-height: 0 !important;
+  min-width: 0 !important;
+}
+

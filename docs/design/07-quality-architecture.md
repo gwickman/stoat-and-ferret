@@ -611,7 +611,7 @@ class InMemoryJobQueue:
             id=job_id,
             project_id=project_id,
             status="pending",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         self.jobs[job_id] = job
         return job
@@ -1400,7 +1400,7 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle with graceful shutdown."""
 
     # Startup
-    app.state.started_at = datetime.utcnow()
+    app.state.started_at = datetime.now(timezone.utc)
     app.state.shutting_down = False
     app.state.rust_core = StoatFerretCore()
 
@@ -1516,7 +1516,7 @@ async def preview_effect(
 async def debug_status(rust_core: StoatFerretCore = Depends(get_rust_core)):
     """Detailed system status for debugging."""
     return {
-        "uptime_seconds": (datetime.utcnow() - app.state.started_at).total_seconds(),
+        "uptime_seconds": (datetime.now(timezone.utc) - app.state.started_at).total_seconds(),
         "rust_core": {
             "version": rust_core.version(),
             "healthy": rust_core.self_test(),
