@@ -122,7 +122,7 @@ export default function RenderJobCard({ job }: RenderJobCardProps) {
           disabled={deleteLoading}
           onClick={handleDelete}
           data-testid="delete-btn"
-          className="rounded bg-gray-700 px-3 py-1 text-xs text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded bg-gray-700 px-3 py-1 text-xs text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Delete
         </button>

@@ -183,7 +183,7 @@ export default function RenderPage() {
             <h3 className="mb-2 text-lg font-medium">Active</h3>
             <div data-testid="job-list">
               {active.length === 0 ? (
-                <p className="text-sm text-gray-500">No active jobs</p>
+                <p className="text-sm text-gray-400">No active jobs</p>
               ) : (
                 <div className="space-y-2">
                   {active.map((job) => (
@@ -199,7 +199,7 @@ export default function RenderPage() {
             <h3 className="mb-2 text-lg font-medium">Pending</h3>
             <div data-testid="job-list">
               {pending.length === 0 ? (
-                <p className="text-sm text-gray-500">No pending jobs</p>
+                <p className="text-sm text-gray-400">No pending jobs</p>
               ) : (
                 <div className="space-y-2">
                   {pending.map((job) => (
@@ -215,7 +215,7 @@ export default function RenderPage() {
             <h3 className="mb-2 text-lg font-medium">Completed</h3>
             <div data-testid="job-list">
               {completed.length === 0 ? (
-                <p className="text-sm text-gray-500">No completed jobs</p>
+                <p className="text-sm text-gray-400">No completed jobs</p>
               ) : (
                 <div className="space-y-2">
                   {completed.map((job) => (

@@ -3,7 +3,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import type { ComponentType } from 'react'
 import { useWorkspace } from '../../hooks/useWorkspace'
 import { PRESETS, useWorkspaceStore } from '../../stores/workspaceStore'
-import type { PanelId } from '../../stores/workspaceStore'
+import type { PanelId, PanelSizes, PanelVisibility } from '../../stores/workspaceStore'
 import DashboardPage from '../../pages/DashboardPage'
 import EffectsPage from '../../pages/EffectsPage'
 import LibraryPage from '../../pages/LibraryPage'
@@ -27,11 +27,65 @@ function PanelContent({ route }: { route: string }) {
   return <Component />
 }
 
+/**
+ * Convert workspaceStore panel sizes (percentages of the whole layout) into
+ * per-group relative sizes that react-resizable-panels expects (each Panel's
+ * size is a percentage of its parent Group, not of the whole layout).
+ *
+ * Layout topology:
+ *   - root horizontal Group: library | workspace-main | workspace-right
+ *   - main vertical Group: workspace-top | preview
+ *   - top horizontal Group: timeline | effects
+ *   - right vertical Group: render-queue | batch
+ */
+interface RelativeSizes {
+  library: number
+  main: number
+  right: number
+  top: number
+  preview: number
+  timeline: number
+  effects: number
+  'render-queue': number
+  batch: number
+}
+
+function computeRelativeSizes(
+  panelSizes: PanelSizes,
+  panelVisibility: PanelVisibility,
+): RelativeSizes {
+  const lib = panelVisibility.library ? panelSizes.library : 0
+  const rq = panelVisibility['render-queue'] ? panelSizes['render-queue'] : 0
+  const bat = panelVisibility.batch ? panelSizes.batch : 0
+  const tim = panelVisibility.timeline ? panelSizes.timeline : 0
+  const eff = panelVisibility.effects ? panelSizes.effects : 0
+  const prev = panelVisibility.preview ? panelSizes.preview : 0
+
+  const rightTotal = rq + bat
+  const mainTotal = Math.max(0, 100 - lib - rightTotal)
+  const topTotal = tim + eff
+  const previewInMain = mainTotal > 0 ? Math.min(100, (prev / mainTotal) * 100) : 0
+  const topInMain = Math.max(0, 100 - previewInMain)
+
+  return {
+    library: lib,
+    main: mainTotal,
+    right: rightTotal,
+    top: topInMain,
+    preview: previewInMain,
+    timeline: topTotal > 0 ? (tim / topTotal) * 100 : 50,
+    effects: topTotal > 0 ? (eff / topTotal) * 100 : 50,
+    'render-queue': rightTotal > 0 ? (rq / rightTotal) * 100 : 50,
+    batch: rightTotal > 0 ? (bat / rightTotal) * 100 : 50,
+  }
+}
+
 interface WorkspacePanelProps {
   panelId: PanelId
   label: string
   minSize?: number
   guardRef: React.MutableRefObject<boolean>
+  defaultSize: number
   children?: React.ReactNode
 }
 
@@ -41,16 +95,22 @@ interface WorkspacePanelProps {
  * and the outer Panel is collapsed to a zero-width slot so the surrounding
  * layout reclaims the space without DOM removal.
  */
-function WorkspacePanel({ panelId, label, minSize = 10, guardRef, children }: WorkspacePanelProps) {
-  const { panelSizes, panelVisibility, resizePanel } = useWorkspace()
+function WorkspacePanel({
+  panelId,
+  label,
+  minSize = 10,
+  guardRef,
+  defaultSize,
+  children,
+}: WorkspacePanelProps) {
+  const { panelVisibility, resizePanel } = useWorkspace()
   const isVisible = panelVisibility[panelId] !== false
-  const size = isVisible ? panelSizes[panelId] : 0
   const min = isVisible ? minSize : 0
 
   return (
     <Panel
       id={panelId}
-      defaultSize={size}
+      defaultSize={defaultSize}
       minSize={min}
       onResize={(value) => {
         if (!isVisible) return
@@ -88,8 +148,16 @@ function WorkspacePanel({ panelId, label, minSize = 10, guardRef, children }: Wo
   )
 }
 
+// Separator sizing keys off `aria-orientation` (set by react-resizable-panels)
+// rather than `data-orientation`. Within a horizontal Group the separator's
+// orientation is "vertical" (a vertical line dividing left/right panels) and
+// must be 1px wide × full height. Within a vertical Group the separator's
+// orientation is "horizontal" (a horizontal line dividing top/bottom panels)
+// and must be full width × 1px tall. The earlier `data-[orientation=...]`
+// selectors silently never matched, leaving every separator at full height
+// — which collapses neighbouring panels in vertical Groups (BL-322).
 const RESIZE_HANDLE_CLASS =
-  'group flex items-center justify-center bg-gray-800 hover:bg-blue-600/70 active:bg-blue-500 transition-colors data-[separator]:h-full data-[separator]:w-1 data-[orientation=vertical]:w-full data-[orientation=vertical]:h-1'
+  'group flex items-center justify-center bg-gray-800 hover:bg-blue-600/70 active:bg-blue-500 transition-colors aria-[orientation=vertical]:h-full aria-[orientation=vertical]:w-1 aria-[orientation=horizontal]:w-full aria-[orientation=horizontal]:h-1'
 
 /**
  * Root workspace layout. Wraps the canonical six panels (library, timeline,
@@ -101,9 +169,20 @@ const RESIZE_HANDLE_CLASS =
  * when either neighbouring panel is hidden, which prevents stacked zero-width
  * separators from claiming pointer events for routed content (a regression
  * observed during BL-291's UAT cycle).
+ *
+ * Layout remount strategy (BL-322): react-resizable-panels' Panel uses
+ * `defaultSize` only on first mount and ignores subsequent prop updates.
+ * Calls to the imperative `setLayout` for nested Panels (e.g., the
+ * workspace-top Panel containing timeline+effects) are also rejected when the
+ * parent's children have changed minSize constraints. The pragmatic fix is to
+ * remount the entire Group tree by changing its key whenever the preset or
+ * visibility set changes — every Panel mounts fresh with the correct
+ * `defaultSize`. Page components inside the panels keep their state via
+ * zustand stores, so remount does not lose user data.
  */
 export default function WorkspaceLayout() {
   const visibility = useWorkspace().panelVisibility
+  const panelSizes = useWorkspace().panelSizes
   const preset = useWorkspaceStore((s) => s.preset)
   const anchorPreset = useWorkspaceStore((s) => s.anchorPreset)
 
@@ -111,48 +190,46 @@ export default function WorkspaceLayout() {
   const effectivePreset = preset === 'custom' ? anchorPreset : preset
   const routes = PRESETS[effectivePreset]?.routes
 
-  // Bidirectional-loop guard (LRN-141 / BL-292 NFR-002). When `preset` or
-  // `panelVisibility` changes via `setPreset` we set the flag synchronously
-  // so the transient `onResize` callbacks fired by react-resizable-panels
-  // do not feed back into the store. Watching `panelVisibility` is necessary
-  // because `setPreset('edit')` when already on 'edit' (default preset with
-  // preview-only visibility) keeps `preset` unchanged but updates
-  // `panelVisibility` — without this the guard never fires and the layout
-  // resize callbacks flip the preset to 'custom'.
+  // Bidirectional-loop guard (LRN-141 / BL-292 NFR-002). Suppresses transient
+  // onResize callbacks fired by react-resizable-panels during layout remounts
+  // so they do not feed back into the store as user drags.
+  //
+  // The guard window must outlast react-resizable-panels' internal layout
+  // settle. Empirically (BL-322 deep-link path), the layout-induced onResize
+  // can fire 25-30ms after a setPreset call. We use a 300ms setTimeout
+  // fallback to cover this window without coupling to browser frame timing.
   const guardRef = useRef(false)
+  const guardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevPresetRef = useRef(useWorkspaceStore.getState().preset)
   const prevVisibilityRef = useRef(useWorkspaceStore.getState().panelVisibility)
 
   useEffect(() => {
-    // Initialise refs with the current store state so the FIRST subscription
-    // call correctly detects a change (the null-initialise-and-return pattern
-    // would silently skip the guard on the very first setPreset call, allowing
-    // react-resizable-panels resize callbacks to flip the preset to 'custom').
     prevPresetRef.current = useWorkspaceStore.getState().preset
     prevVisibilityRef.current = useWorkspaceStore.getState().panelVisibility
 
-    // Subscribe directly to the store so we can flip the guard before React
-    // commits the preset-driven re-render.
-    return useWorkspaceStore.subscribe((state) => {
+    const fireGuard = () => {
+      guardRef.current = true
+      if (guardTimerRef.current) clearTimeout(guardTimerRef.current)
+      guardTimerRef.current = setTimeout(() => {
+        guardRef.current = false
+        guardTimerRef.current = null
+      }, 300)
+    }
+
+    const unsubscribe = useWorkspaceStore.subscribe((state) => {
       const presetChanged = state.preset !== prevPresetRef.current
       const visibilityChanged = state.panelVisibility !== prevVisibilityRef.current
       prevPresetRef.current = state.preset
       prevVisibilityRef.current = state.panelVisibility
       if (presetChanged || visibilityChanged) {
-        guardRef.current = true
-        // Release the guard after layout has settled. Two RAFs gives
-        // react-resizable-panels' internal observers time to flush.
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              guardRef.current = false
-            })
-          })
-        } else {
-          guardRef.current = false
-        }
+        fireGuard()
       }
     })
+
+    return () => {
+      unsubscribe()
+      if (guardTimerRef.current) clearTimeout(guardTimerRef.current)
+    }
   }, [])
 
   // Separator culling: separators adjacent to hidden panels are excluded from
@@ -165,14 +242,38 @@ export default function WorkspaceLayout() {
   const renderBatchSepVisible = visibility['render-queue'] && visibility.batch
   const topPreviewSepVisible = (visibility.timeline || visibility.effects) && visibility.preview
 
+  const sizes = computeRelativeSizes(panelSizes, visibility)
+
+  // Remount the entire Group tree on preset/visibility change. See JSDoc above.
+  const layoutKey = `${effectivePreset}|${[
+    visibility.library,
+    visibility.timeline,
+    visibility.preview,
+    visibility.effects,
+    visibility['render-queue'],
+    visibility.batch,
+  ].join(',')}`
+
   return (
     <div className="h-full w-full" data-testid="workspace-layout">
       <Group
         id="workspace-root"
+        key={layoutKey}
         orientation="horizontal"
         className="h-full w-full bg-gray-950"
+        defaultLayout={{
+          library: sizes.library,
+          'workspace-main': sizes.main,
+          'workspace-right': sizes.right,
+        }}
       >
-        <WorkspacePanel panelId="library" label="Library" minSize={10} guardRef={guardRef}>
+        <WorkspacePanel
+          panelId="library"
+          label="Library"
+          minSize={10}
+          guardRef={guardRef}
+          defaultSize={sizes.library}
+        >
           {routes?.library ? <PanelContent route={routes.library} /> : undefined}
         </WorkspacePanel>
 
@@ -184,15 +285,44 @@ export default function WorkspaceLayout() {
           />
         )}
 
-        <Panel id="workspace-main" minSize={30} className="h-full overflow-hidden">
-          <Group id="workspace-main-vertical" orientation="vertical" className="h-full w-full">
-            <Panel id="workspace-top" minSize={0} className="overflow-hidden">
-              <Group id="workspace-top-horizontal" orientation="horizontal" className="h-full w-full">
+        <Panel
+          id="workspace-main"
+          defaultSize={sizes.main}
+          minSize={30}
+          className="flex h-full min-h-0 flex-col overflow-hidden"
+          style={{ height: '100%' }}
+        >
+          <Group
+            id="workspace-main-vertical"
+            orientation="vertical"
+            className="h-full w-full"
+            defaultLayout={{
+              'workspace-top': sizes.top,
+              preview: sizes.preview,
+            }}
+          >
+            <Panel
+              id="workspace-top"
+              defaultSize={sizes.top}
+              minSize={0}
+              className="flex h-full min-h-0 flex-col overflow-hidden"
+          style={{ height: '100%' }}
+            >
+              <Group
+                id="workspace-top-horizontal"
+                orientation="horizontal"
+                className="h-full w-full"
+                defaultLayout={{
+                  timeline: sizes.timeline,
+                  effects: sizes.effects,
+                }}
+              >
                 <WorkspacePanel
                   panelId="timeline"
                   label="Timeline"
                   minSize={15}
                   guardRef={guardRef}
+                  defaultSize={sizes.timeline}
                 >
                   {routes?.timeline ? <PanelContent route={routes.timeline} /> : undefined}
                 </WorkspacePanel>
@@ -208,6 +338,7 @@ export default function WorkspaceLayout() {
                   label="Effects"
                   minSize={15}
                   guardRef={guardRef}
+                  defaultSize={sizes.effects}
                 >
                   {routes?.effects ? <PanelContent route={routes.effects} /> : undefined}
                 </WorkspacePanel>
@@ -222,7 +353,13 @@ export default function WorkspaceLayout() {
               />
             )}
 
-            <WorkspacePanel panelId="preview" label="Preview" minSize={20} guardRef={guardRef}>
+            <WorkspacePanel
+              panelId="preview"
+              label="Preview"
+              minSize={20}
+              guardRef={guardRef}
+              defaultSize={sizes.preview}
+            >
               {routes?.preview ? <PanelContent route={routes.preview} /> : undefined}
             </WorkspacePanel>
           </Group>
@@ -236,13 +373,28 @@ export default function WorkspaceLayout() {
           />
         )}
 
-        <Panel id="workspace-right" minSize={0} className="h-full overflow-hidden">
-          <Group id="workspace-right-vertical" orientation="vertical" className="h-full w-full">
+        <Panel
+          id="workspace-right"
+          defaultSize={sizes.right}
+          minSize={0}
+          className="flex h-full min-h-0 flex-col overflow-hidden"
+          style={{ height: '100%' }}
+        >
+          <Group
+            id="workspace-right-vertical"
+            orientation="vertical"
+            className="h-full w-full"
+            defaultLayout={{
+              'render-queue': sizes['render-queue'],
+              batch: sizes.batch,
+            }}
+          >
             <WorkspacePanel
               panelId="render-queue"
               label="Render Queue"
               minSize={15}
               guardRef={guardRef}
+              defaultSize={sizes['render-queue']}
             >
               {routes?.['render-queue'] ? <PanelContent route={routes['render-queue']} /> : undefined}
             </WorkspacePanel>
@@ -258,6 +410,7 @@ export default function WorkspaceLayout() {
               label="Batch"
               minSize={15}
               guardRef={guardRef}
+              defaultSize={sizes.batch}
             >
               {routes?.batch ? <PanelContent route={routes.batch} /> : undefined}
             </WorkspacePanel>
