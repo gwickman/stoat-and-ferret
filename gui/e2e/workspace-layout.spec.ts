@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 /**
  * J601: Workspace Layout Persistence (BL-297)
@@ -257,5 +258,72 @@ test.describe("J601: preset switch via keyboard shortcuts", () => {
     await expect(
       page.getByTestId("workspace-preset-selector"),
     ).toHaveValue("review");
+  });
+});
+
+test.describe("J605 accessibility regression: preset switches", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/gui/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+  });
+
+  test("Ctrl+2 (review preset) does not introduce navigation axe violations", async ({
+    page,
+  }) => {
+    await page.locator("body").click();
+    await page.keyboard.press("Control+2");
+    await expect(
+      page.getByTestId("workspace-preset-selector"),
+    ).toHaveValue("review");
+
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Ctrl+3 (render preset) does not introduce navigation axe violations", async ({
+    page,
+  }) => {
+    await page.locator("body").click();
+    await page.keyboard.press("Control+3");
+    await expect(
+      page.getByTestId("workspace-preset-selector"),
+    ).toHaveValue("render");
+
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Ctrl+1 (edit preset) does not introduce navigation axe violations", async ({
+    page,
+  }) => {
+    // Start from review so there is a visible change
+    await page.locator("body").click();
+    await page.keyboard.press("Control+2");
+    await expect(
+      page.getByTestId("workspace-preset-selector"),
+    ).toHaveValue("review");
+
+    await page.locator("body").click();
+    await page.keyboard.press("Control+1");
+    await expect(
+      page.getByTestId("workspace-preset-selector"),
+    ).toHaveValue("edit");
+
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
   });
 });

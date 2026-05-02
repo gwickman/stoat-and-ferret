@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 /**
  * E2E tests for per-panel routing (BL-306).
@@ -211,5 +212,56 @@ test.describe("per-panel page rendering (AC3 regression check)", () => {
     // Library panel should be hidden in default preview-only state.
     const libraryPanel = page.getByTestId("workspace-panel-library");
     await expect(libraryPanel).toHaveAttribute("data-visible", "false");
+  });
+});
+
+test.describe("J605 accessibility regression: route transitions", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/gui/");
+    await page.evaluate(() => localStorage.clear());
+  });
+
+  test("Edit preset navigation landmark has no critical axe violations after routing", async ({
+    page,
+  }) => {
+    await page.goto("/gui/?workspace=edit");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Scope to navigation only — a lightweight check that route activation
+    // does not introduce new landmark-level accessibility violations.
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Render preset navigation landmark has no critical axe violations after routing", async ({
+    page,
+  }) => {
+    await page.goto("/gui/?workspace=render");
+    await expect(page.getByTestId("render-page").first()).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("Review preset navigation landmark has no critical axe violations after routing", async ({
+    page,
+  }) => {
+    await page.goto("/gui/?workspace=review");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
   });
 });

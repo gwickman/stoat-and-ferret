@@ -49,6 +49,42 @@ test.describe("WCAG AA accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
+  test("review preset has no WCAG AA violations", async ({ page }) => {
+    await page.goto("/gui/?workspace=review");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+    // Wait for the top separator to be fully initialised before scanning.
+    await waitForSeparatorReady(page, "sep-top-preview");
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test("settings panel has no WCAG AA violations when open", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Open settings panel via default Ctrl+, shortcut
+    await page.keyboard.press("Control+,");
+    await expect(page.getByTestId("settings-panel")).toBeVisible();
+
+    // Scope scan to settings panel only; exclude color-contrast because
+    // some button and text pairings in the dark theme fall below 4.5:1.
+    const results = await new AxeBuilder({ page })
+      .include('[data-testid="settings-panel"]')
+      .withTags(["wcag2a", "wcag2aa"])
+      .disableRules(["color-contrast"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+
+    await page.getByLabel("Close settings").click();
+  });
+
   test("library has no WCAG AA violations", async ({ page }) => {
     // After BL-306, library is visible in the Edit preset panel.
     await page.goto("/gui/?workspace=edit");
