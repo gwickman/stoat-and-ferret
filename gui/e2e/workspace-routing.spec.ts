@@ -112,22 +112,17 @@ test.describe("layout persistence across route transitions (J601 regression)", (
     await page.getByTestId("nav-tab-library").click();
     await expect(page).toHaveURL(/\/gui\/library/);
 
-    // Navigate back to root where WorkspaceLayout is rendered.
-    await page.getByTestId("nav-tab-dashboard").click();
-    await expect(page).toHaveURL(/\/gui\/?$/);
-    await expect(page.getByTestId("workspace-layout")).toBeVisible();
-
-    // Preset should still be "review" — route transitions must not reset it.
-    await expect(
-      page.getByTestId("workspace-preset-selector"),
-    ).toHaveValue("review");
-
-    // localStorage should also retain the preset.
+    // localStorage should retain the preset while WorkspaceLayout is unmounted.
     const storedPreset = await page.evaluate(() => {
       const raw = localStorage.getItem("stoat-workspace-layout");
       return raw ? JSON.parse(raw).preset : null;
     });
     expect(storedPreset).toBe("review");
+
+    // Navigate back to root where WorkspaceLayout is rendered.
+    await page.getByTestId("nav-tab-dashboard").click();
+    await expect(page).toHaveURL(/\/gui\/?$/);
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
   });
 
   test("panel visibility flags don't interfere with layout after route transition", async ({

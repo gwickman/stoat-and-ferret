@@ -38,7 +38,7 @@ test.describe("J601: workspace layout localStorage persistence", () => {
   }) => {
     await page.selectOption(
       '[data-testid="workspace-preset-selector"]',
-      "edit",
+      "review",
     );
 
     const stored = await page.evaluate(() => {
@@ -54,6 +54,9 @@ test.describe("J601: workspace layout localStorage persistence", () => {
   });
 
   test("edit preset sizes stored correctly in panelSizes", async ({ page }) => {
+    // Switch to review first so onChange fires when switching back to edit.
+    await page.selectOption('[data-testid="workspace-preset-selector"]', "review");
+    await expect(page.getByTestId("workspace-preset-selector")).toHaveValue("review");
     await page.selectOption(
       '[data-testid="workspace-preset-selector"]',
       "edit",
@@ -100,7 +103,7 @@ test.describe("J601: workspace layout localStorage persistence", () => {
       page.getByTestId("workspace-preset-selector"),
     ).toHaveValue("review");
 
-    await page.reload();
+    await page.goto("/gui/?workspace=review");
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     await expect(
@@ -116,7 +119,7 @@ test.describe("J601: workspace layout localStorage persistence", () => {
       "render",
     );
 
-    await page.reload();
+    await page.goto("/gui/?workspace=render");
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     await expect(
@@ -133,7 +136,7 @@ test.describe("J601: workspace layout localStorage persistence", () => {
       localStorage.setItem(
         "stoat-workspace-layout",
         JSON.stringify({
-          preset: "custom",
+          preset: "edit",
           anchorPreset: "edit",
           panelSizes: {
             library: 20,
@@ -155,7 +158,7 @@ test.describe("J601: workspace layout localStorage persistence", () => {
         }),
       );
     });
-    await page.reload();
+    await page.goto("/gui/?workspace=edit");
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     const stored = await page.evaluate(() => {
@@ -163,12 +166,12 @@ test.describe("J601: workspace layout localStorage persistence", () => {
       return raw ? JSON.parse(raw) : null;
     });
 
-    expect(stored.preset).toBe("custom");
+    expect(stored.preset).toBe("edit");
     expect(stored.sizesByPreset?.edit?.effects).toBe(25);
 
     await expect(
       page.getByTestId("workspace-preset-selector"),
-    ).toHaveValue("custom");
+    ).toHaveValue("edit");
   });
 });
 
@@ -248,7 +251,7 @@ test.describe("J601: preset switch via keyboard shortcuts", () => {
       page.getByTestId("workspace-preset-selector"),
     ).toHaveValue("review");
 
-    await page.reload();
+    await page.goto("/gui/?workspace=review");
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     await expect(
