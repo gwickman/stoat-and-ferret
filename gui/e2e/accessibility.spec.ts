@@ -156,6 +156,40 @@ test.describe("skip-link and aria-live infrastructure", () => {
     expect(isFirst).toBe(true);
   });
 
+  test("skip-link receives focus on first Tab press", async ({ page }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Ensure no element has prior focus, then Tab once
+    await page.locator("body").click();
+    await page.keyboard.press("Tab");
+
+    await expect(
+      page.getByRole("link", { name: "Skip to main content" }),
+    ).toBeFocused();
+  });
+
+  test("activating skip-link moves focus to #main-content", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Tab to skip-link and activate it
+    await page.locator("body").click();
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "Skip to main content" }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    // Focus should move to the #main-content element
+    const focusedId = await page.evaluate(
+      () => document.activeElement?.id ?? "",
+    );
+    expect(focusedId).toBe("main-content");
+  });
+
   test("polite aria-live region is present with correct attributes", async ({
     page,
   }) => {
@@ -167,6 +201,16 @@ test.describe("skip-link and aria-live infrastructure", () => {
     await expect(region).toHaveAttribute("role", "status");
     await expect(region).toHaveAttribute("aria-live", "polite");
     await expect(region).toHaveAttribute("aria-atomic", "true");
+  });
+
+  test("polite aria-live region is initially empty", async ({ page }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const region = page.locator("#announcements");
+    await expect(region).toBeAttached();
+    // Region should have no visible text on initial load
+    await expect(region).toBeEmpty();
   });
 
   test("assertive aria-live region is present for error announcements", async ({
