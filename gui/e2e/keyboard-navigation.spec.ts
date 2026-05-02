@@ -234,4 +234,114 @@ test.describe("J604: workspace preset keyboard navigation", () => {
     }
     expect(trapDetected).toBe(false);
   });
+
+  test("Review preset: no focus trap — Tab cycles through interactive elements", async ({
+    page,
+  }) => {
+    await page.goto("/gui/?workspace=review");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Tab through 40 elements; should not get stuck
+    await page.evaluate(() => document.body.focus());
+    const focusedIds: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press("Tab");
+      const id = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el) return "";
+        const named =
+          el.id ||
+          el.getAttribute("data-testid") ||
+          el.getAttribute("aria-label") ||
+          "";
+        if (named) return named;
+        const tag = el.tagName.toLowerCase();
+        const text = el.textContent?.trim().substring(0, 30) ?? "";
+        return text ? `${tag}:${text}` : tag;
+      });
+      focusedIds.push(id);
+    }
+
+    // No three consecutive identical elements
+    let trapDetected = false;
+    for (let i = 2; i < focusedIds.length; i++) {
+      if (
+        focusedIds[i] === focusedIds[i - 1] &&
+        focusedIds[i] === focusedIds[i - 2] &&
+        focusedIds[i] !== "" &&
+        focusedIds[i] !== "body"
+      ) {
+        trapDetected = true;
+        break;
+      }
+    }
+    expect(trapDetected).toBe(false);
+  });
+});
+
+test.describe("FR-003: keyboard shortcut accessibility", () => {
+  test("keyboard shortcuts section is visible in settings panel", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Open settings panel via default Ctrl+, shortcut
+    await page.keyboard.press("Control+,");
+    await expect(page.getByTestId("settings-panel")).toBeVisible();
+
+    // Keyboard Shortcuts section must be present — enables users to discover bindings
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+    await expect(page.getByTestId("shortcut-editor")).toBeVisible();
+
+    await page.getByLabel("Close settings").click();
+    await expect(page.getByTestId("settings-panel")).not.toBeVisible();
+  });
+
+  test("unbound keys do not trigger workspace preset changes", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Capture current preset before pressing keys not bound to any shortcut
+    const presetBefore = await page
+      .getByTestId("workspace-preset-selector")
+      .inputValue();
+
+    // Ctrl+S is not in the default shortcuts map — should not change preset
+    await page.locator("body").click();
+    await page.keyboard.press("Control+s");
+
+    const presetAfter = await page
+      .getByTestId("workspace-preset-selector")
+      .inputValue();
+    expect(presetAfter).toBe(presetBefore);
+  });
+
+  test("shortcut rebinding blocks reserved keys via ShortcutEditor validation", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    await page.keyboard.press("Control+,");
+    await expect(page.getByTestId("settings-panel")).toBeVisible();
+
+    // Attempt to bind Ctrl+T (browser-reserved) to the edit-preset shortcut.
+    // fill() sets the input value without dispatching key events, so this does
+    // not trigger the browser's new-tab action.
+    const editInput = page.getByTestId(
+      "shortcut-input-workspace.preset.edit",
+    );
+    await editInput.fill("Ctrl+T");
+    await page.getByTestId("shortcut-save-workspace.preset.edit").click();
+
+    // Store validation must reject the reserved key — an error message appears
+    await expect(
+      page.getByTestId("shortcut-error-workspace.preset.edit"),
+    ).toBeVisible();
+
+    await page.getByLabel("Close settings").click();
+  });
 });
