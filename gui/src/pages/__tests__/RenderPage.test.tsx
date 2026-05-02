@@ -103,6 +103,12 @@ describe('RenderPage', () => {
     expect(screen.getByText('Render')).toBeDefined()
   })
 
+  it('renders with role="main" and id="main-content"', () => {
+    renderPage()
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'main-content')
+  })
+
   it('shows empty state when no jobs exist', async () => {
     renderPage()
     await waitFor(() => {

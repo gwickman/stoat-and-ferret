@@ -87,7 +87,7 @@ export default function ProjectsPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
-    <div className="p-6" data-testid="projects-page">
+    <div className="p-6" role="main" id="main-content" data-testid="projects-page">
       {selectedProject ? (
         <ProjectDetails
           project={selectedProject}

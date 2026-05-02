@@ -86,6 +86,15 @@ describe('TimelinePage', () => {
     expect(screen.getByTestId('timeline-page')).toBeDefined()
   })
 
+  it('renders with role="main" and id="main-content"', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
+
+    renderTimelinePage()
+
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'main-content')
+  })
+
   it('shows loading state while fetching', () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
