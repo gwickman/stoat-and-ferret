@@ -170,6 +170,62 @@ test.describe("skip-link and aria-live infrastructure", () => {
   });
 });
 
+test.describe("ARIA landmarks", () => {
+  test("navigation landmark is present in Shell header", async ({ page }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const nav = page.locator("nav").first();
+    await expect(nav).toBeAttached();
+  });
+
+  test("skip-link target #main-content exists after page load", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // After BL-296 Feature 002, at least one page component provides #main-content
+    const mainContent = page.locator("#main-content").first();
+    await expect(mainContent).toBeAttached();
+  });
+
+  test("default workspace exposes main landmark on visible page", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // At least one element with role="main" should be present
+    const main = page.getByRole("main").first();
+    await expect(main).toBeAttached();
+    await expect(main).toHaveAttribute("id", "main-content");
+  });
+
+  test("render preset workspace exposes main landmark", async ({ page }) => {
+    await page.goto("/gui/?workspace=render");
+    await expect(page.getByTestId("render-page").first()).toBeVisible();
+
+    const main = page.getByRole("main").first();
+    await expect(main).toBeAttached();
+    await expect(main).toHaveAttribute("id", "main-content");
+  });
+
+  test("Shell navigation has no WCAG AA violations", async ({ page }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .include("nav")
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+});
+
 test.describe("workspace accessibility", () => {
   test("Edit preset: zero scrollable-region-focusable violations", async ({
     page,

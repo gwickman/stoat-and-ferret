@@ -42,4 +42,13 @@ describe('Shell', () => {
     // Initially disconnected until onopen fires
     expect(screen.getByTestId('status-bar')).toBeDefined()
   })
+
+  it('renders navigation landmark via Navigation component', () => {
+    render(
+      <MemoryRouter>
+        <Shell />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('navigation')).toBeDefined()
+  })
 })

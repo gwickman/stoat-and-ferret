@@ -28,6 +28,12 @@ describe('PreviewPage', () => {
     expect(screen.getByText('Preview')).toBeDefined()
   })
 
+  it('renders with role="main" and id="main-content"', () => {
+    renderPage()
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'main-content')
+  })
+
   it('shows no-project message when no project is selected', () => {
     renderPage()
     expect(screen.getByTestId('no-project-message')).toBeDefined()

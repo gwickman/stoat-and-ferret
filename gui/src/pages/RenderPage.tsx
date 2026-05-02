@@ -97,7 +97,7 @@ export default function RenderPage() {
   const { active, pending, completed } = useMemo(() => categorizeJobs(jobs), [jobs])
 
   return (
-    <div className="p-6" data-testid="render-page">
+    <div className="p-6" role="main" id="main-content" data-testid="render-page">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Render</h2>
         {activeTab === 'queue' && (
