@@ -4,6 +4,24 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v053] - 2026-05-02
+
+### Comprehensive E2E Test Suite (Playwright)
+
+Comprehensive Playwright E2E test suite for Phase 6 GUI workflows — workspace layout persistence, settings management, batch panel interaction, keyboard navigation, and accessibility validation.
+
+**Features:**
+- Workspace Layout & Settings Journeys (#366): E2E tests for workspace panel layout persistence, settings panel read/write, preset management across sessions
+- Batch Panel WebSocket & Seed Endpoint (#367): E2E tests for batch job list rendering, seed endpoint integration, WebSocket progress event validation
+- Keyboard Navigation & Accessibility (#368): E2E tests for keyboard-driven navigation, focus management, ARIA landmark traversal, screen reader announcements
+
+**Quality Metrics:**
+- 30/35 acceptance criteria met (5 deferred: browser-stack cross-browser, CI parallelism tuning)
+- 0 regressions detected
+- 58 new Playwright E2E tests added
+- Full TypeScript type safety across all test files
+- 3 features across 1 theme (01-gui-e2e-playwright-suite)
+
 ## [v052] - 2026-05-02
 
 ### GUI Accessibility
