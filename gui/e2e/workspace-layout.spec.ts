@@ -54,13 +54,13 @@ test.describe("J601: workspace layout localStorage persistence", () => {
   });
 
   test("edit preset sizes stored correctly in panelSizes", async ({ page }) => {
-    // Switch to review first so onChange fires when switching back to edit.
-    await page.selectOption('[data-testid="workspace-preset-selector"]', "review");
-    await expect(page.getByTestId("workspace-preset-selector")).toHaveValue("review");
-    await page.selectOption(
-      '[data-testid="workspace-preset-selector"]',
-      "edit",
-    );
+    // Clear localStorage to remove sizesByPreset.edit pollution from the beforeEach
+    // reload (headless CI react-resizable-panels onResize writes overrides into
+    // sizesByPreset.edit before the guard activates). Navigate with ?workspace=edit
+    // so setPreset fires with guard active and clean sizesByPreset.
+    await page.evaluate(() => localStorage.clear());
+    await page.goto("/gui/?workspace=edit");
+    await expect(page.getByTestId("workspace-preset-selector")).toHaveValue("edit");
 
     const panelSizes = await page.evaluate(() => {
       const raw = localStorage.getItem("stoat-workspace-layout");
