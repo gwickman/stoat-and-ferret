@@ -9,7 +9,9 @@ vi.mock('../../hooks/useProjects', () => ({
 }))
 
 beforeEach(() => {
-  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No mock'))
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response('{}', { status: 404 }),
+  )
 })
 
 function renderPage() {
