@@ -137,7 +137,7 @@ test.describe("J606: Seed Endpoint API", () => {
         }
 
         // Navigate to projects page
-        await page.goto("/?workspace=edit");
+        await page.goto("/gui/?workspace=edit");
         await page.getByTestId("nav-tab-projects").click();
         await expect(page).toHaveURL(/\/gui\/projects/);
         await expect(page.getByTestId("projects-page")).toBeVisible();
