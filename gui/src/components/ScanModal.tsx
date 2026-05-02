@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useJobProgress } from '../hooks/useJobProgress'
+import { useAnnounce } from '../hooks/useAnnounce'
 import DirectoryBrowser from './DirectoryBrowser'
 
 interface ScanModalProps {
@@ -24,6 +25,10 @@ export default function ScanModal({
   const [jobId, setJobId] = useState<string | null>(null)
   const completedRef = useRef(false)
 
+  const { announce } = useAnnounce()
+  // Debounce ref for scan progress announcements.
+  const progressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const wsProgress = useJobProgress(jobId)
 
   // React to WebSocket progress updates
@@ -33,23 +38,37 @@ export default function ScanModal({
     setProgress(wsProgress.progress)
 
     if (wsProgress.status === 'running') {
-      // Already in scanning state from handleSubmit
+      const rawProg = wsProgress.progress ?? 0
+      const pct = Math.min(100, Math.max(0, Math.round(rawProg * 100)))
+      if (progressDebounceRef.current) clearTimeout(progressDebounceRef.current)
+      progressDebounceRef.current = setTimeout(() => {
+        announce(`Scan in progress: ${pct}%`)
+      }, 2000)
     } else if (wsProgress.status === 'complete') {
       if (!completedRef.current) {
         completedRef.current = true
+        if (progressDebounceRef.current) {
+          clearTimeout(progressDebounceRef.current)
+          progressDebounceRef.current = null
+        }
         setScanStatus('complete')
         onScanComplete()
+        announce('Scan complete')
       }
     } else if (wsProgress.status === 'cancelled') {
       setScanStatus('cancelled')
     } else if (wsProgress.status === 'failed') {
       setScanStatus('error')
-      setErrorMessage(wsProgress.error ?? 'Scan failed')
+      const msg = wsProgress.error ?? 'Scan failed'
+      setErrorMessage(msg)
+      announce(`Error: ${msg}`, 'assertive')
     } else if (wsProgress.status === 'timeout') {
       setScanStatus('error')
-      setErrorMessage(wsProgress.error ?? 'Scan timed out')
+      const msg = wsProgress.error ?? 'Scan timed out'
+      setErrorMessage(msg)
+      announce(`Error: ${msg}`, 'assertive')
     }
-  }, [wsProgress, jobId, onScanComplete])
+  }, [wsProgress, jobId, onScanComplete, announce])
 
   // Fallback: poll job status every 2s while scanning.
   // Covers cases where rapid WebSocket messages get lost to React batching.
@@ -66,9 +85,12 @@ export default function ScanModal({
           setScanStatus('complete')
           setProgress(1.0)
           onScanComplete()
+          announce('Scan complete')
         } else if (data.status === 'failed') {
           setScanStatus('error')
-          setErrorMessage(data.error ?? 'Scan failed')
+          const msg = data.error ?? 'Scan failed'
+          setErrorMessage(msg)
+          announce(`Error: ${msg}`, 'assertive')
         } else if (data.status === 'cancelled') {
           setScanStatus('cancelled')
         }
@@ -78,7 +100,14 @@ export default function ScanModal({
     }, 2000)
 
     return () => clearInterval(timer)
-  }, [jobId, scanStatus, onScanComplete])
+  }, [jobId, scanStatus, onScanComplete, announce])
+
+  // Clean up progress debounce on unmount.
+  useEffect(() => {
+    return () => {
+      if (progressDebounceRef.current) clearTimeout(progressDebounceRef.current)
+    }
+  }, [])
 
   const resetState = useCallback(() => {
     setScanStatus('idle')
@@ -132,7 +161,9 @@ export default function ScanModal({
       setJobId(job_id)
     } catch (err) {
       setScanStatus('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Scan failed')
+      const msg = err instanceof Error ? err.message : 'Scan failed'
+      setErrorMessage(msg)
+      announce(`Error: ${msg}`, 'assertive')
     }
   }
 

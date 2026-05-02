@@ -34,7 +34,7 @@ describe('AccessibilityWrapper', () => {
     expect(link.className).toContain('sr-only')
   })
 
-  it('aria-live region rendered with correct role and attributes', () => {
+  it('polite aria-live region rendered with correct role and attributes', () => {
     render(
       <AccessibilityWrapper>
         <div>content</div>
@@ -46,7 +46,19 @@ describe('AccessibilityWrapper', () => {
     expect(region.id).toBe('announcements')
   })
 
-  it('aria-live region is initially empty', () => {
+  it('assertive aria-live region rendered with correct role and attributes', () => {
+    render(
+      <AccessibilityWrapper>
+        <div>content</div>
+      </AccessibilityWrapper>,
+    )
+    const region = screen.getByRole('alert')
+    expect(region.getAttribute('aria-live')).toBe('assertive')
+    expect(region.getAttribute('aria-atomic')).toBe('true')
+    expect(region.id).toBe('announcements-assertive')
+  })
+
+  it('polite aria-live region is initially empty', () => {
     render(
       <AccessibilityWrapper>
         <div>content</div>
@@ -56,14 +68,24 @@ describe('AccessibilityWrapper', () => {
     expect(region.textContent).toBe('')
   })
 
-  it('renders children after skip-link and aria-live region', () => {
+  it('assertive aria-live region is initially empty', () => {
+    render(
+      <AccessibilityWrapper>
+        <div>content</div>
+      </AccessibilityWrapper>,
+    )
+    const region = screen.getByRole('alert')
+    expect(region.textContent).toBe('')
+  })
+
+  it('renders children after skip-link and aria-live regions', () => {
     const { container } = render(
       <AccessibilityWrapper>
         <div data-testid="child-content">hello</div>
       </AccessibilityWrapper>,
     )
     expect(screen.getByTestId('child-content')).toBeDefined()
-    // Children appear after the first two elements
-    expect(container.children).toHaveLength(3)
+    // Children appear after the first three elements (skip-link, polite region, assertive region)
+    expect(container.children).toHaveLength(4)
   })
 })
