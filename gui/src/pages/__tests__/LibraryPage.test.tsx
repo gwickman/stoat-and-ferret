@@ -13,7 +13,19 @@ vi.mock('../../hooks/useVideos', () => ({
   }),
 }))
 
+class MockWebSocket {
+  static readonly OPEN = 1
+  onopen: (() => void) | null = null
+  onclose: (() => void) | null = null
+  onerror: (() => void) | null = null
+  onmessage: ((e: MessageEvent) => void) | null = null
+  readyState = MockWebSocket.OPEN
+  close() {}
+  send() {}
+}
+
 beforeEach(() => {
+  vi.stubGlobal('WebSocket', MockWebSocket)
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(
     new Response('{}', { status: 404 }),
   )

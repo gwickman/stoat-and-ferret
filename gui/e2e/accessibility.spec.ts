@@ -190,7 +190,7 @@ test.describe("ARIA landmarks", () => {
     await expect(mainContent).toBeAttached();
   });
 
-  test("default workspace exposes main landmark on visible page", async ({
+  test("default workspace exposes main landmark and skip-link target", async ({
     page,
   }) => {
     await page.goto("/gui/");
@@ -198,19 +198,21 @@ test.describe("ARIA landmarks", () => {
     await page.reload();
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
-    // At least one element with role="main" should be present
-    const main = page.getByRole("main").first();
-    await expect(main).toBeAttached();
-    await expect(main).toHaveAttribute("id", "main-content");
+    // Shell's <main> provides the outermost main landmark (implicit from <main> element)
+    await expect(page.getByRole("main").first()).toBeAttached();
+
+    // A page component provides the skip-link target with id="main-content"
+    await expect(page.locator("#main-content").first()).toBeAttached();
   });
 
-  test("render preset workspace exposes main landmark", async ({ page }) => {
+  test("render preset workspace exposes main landmark and skip-link target", async ({
+    page,
+  }) => {
     await page.goto("/gui/?workspace=render");
     await expect(page.getByTestId("render-page").first()).toBeVisible();
 
-    const main = page.getByRole("main").first();
-    await expect(main).toBeAttached();
-    await expect(main).toHaveAttribute("id", "main-content");
+    await expect(page.getByRole("main").first()).toBeAttached();
+    await expect(page.locator("#main-content").first()).toBeAttached();
   });
 
   test("Shell navigation has no WCAG AA violations", async ({ page }) => {
