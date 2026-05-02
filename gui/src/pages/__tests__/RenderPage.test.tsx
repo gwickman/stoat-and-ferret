@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import RenderPage from '../RenderPage'
 import { useRenderStore } from '../../stores/renderStore'
@@ -9,6 +9,11 @@ import { useBatchStore } from '../../stores/batchStore'
 // Mock useRenderEvents — it opens a real WebSocket; not needed for page tests
 vi.mock('../../hooks/useRenderEvents', () => ({
   useRenderEvents: vi.fn(),
+}))
+
+const mockAnnounce = vi.fn()
+vi.mock('../../hooks/useAnnounce', () => ({
+  useAnnounce: () => ({ announce: mockAnnounce }),
 }))
 
 const mockQueueStatus: QueueStatus = {
@@ -46,10 +51,15 @@ function makeJob(overrides: Partial<RenderJob> & { id: string; status: string })
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  mockAnnounce.mockClear()
   useRenderStore.getState().reset()
   useBatchStore.getState().reset()
   // Suppress fetch calls from useEffect
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No mock'))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 function mockFlags(batchRendering: boolean): void {
@@ -329,5 +339,120 @@ describe('RenderPage', () => {
     renderPage()
     await new Promise((r) => setTimeout(r, 10))
     expect(screen.queryByTestId('render-tab-batch')).toBeNull()
+  })
+
+  // ---- Dynamic status announcement tests (FR-001) ----
+
+  it('announces "Render complete" when job transitions from running to completed', async () => {
+    // Start with a running job
+    useRenderStore.setState({
+      jobs: [makeJob({ id: 'j1', status: 'running', progress: 0.5 })],
+    })
+    renderPage()
+
+    // Transition to completed
+    act(() => {
+      useRenderStore.setState({
+        jobs: [makeJob({ id: 'j1', status: 'completed', progress: 1.0 })],
+      })
+    })
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Render complete')
+    })
+  })
+
+  it('announces job failure with assertive priority when job transitions to failed', async () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ id: 'j1', status: 'running', progress: 0.3 })],
+    })
+    renderPage()
+
+    act(() => {
+      useRenderStore.setState({
+        jobs: [makeJob({ id: 'j1', status: 'failed', progress: 0.3, error_message: 'Encoding error' })],
+      })
+    })
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Error: Encoding error', 'assertive')
+    })
+  })
+
+  it('announces generic error when job fails without error_message', async () => {
+    useRenderStore.setState({
+      jobs: [makeJob({ id: 'j1', status: 'running', progress: 0.3 })],
+    })
+    renderPage()
+
+    act(() => {
+      useRenderStore.setState({
+        jobs: [makeJob({ id: 'j1', status: 'failed', progress: 0.3, error_message: null })],
+      })
+    })
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Error: operation failed', 'assertive')
+    })
+  })
+
+  it('announces render progress with debounce when job progress changes', async () => {
+    vi.useFakeTimers()
+
+    useRenderStore.setState({
+      jobs: [makeJob({ id: 'j1', status: 'running', progress: 0 })],
+    })
+    renderPage()
+
+    // Update progress
+    act(() => {
+      useRenderStore.setState({
+        jobs: [makeJob({ id: 'j1', status: 'running', progress: 0.5 })],
+      })
+    })
+
+    // Before debounce fires
+    expect(mockAnnounce).not.toHaveBeenCalledWith(expect.stringContaining('Rendering'))
+
+    // Advance timers past 2s debounce
+    act(() => {
+      vi.advanceTimersByTime(2001)
+    })
+
+    expect(mockAnnounce).toHaveBeenCalledWith('Rendering: 50% complete')
+  })
+
+  it('clamps progress to 0-100 before announcing', async () => {
+    vi.useFakeTimers()
+
+    useRenderStore.setState({
+      jobs: [makeJob({ id: 'j1', status: 'running', progress: 0 })],
+    })
+    renderPage()
+
+    // Simulate progress > 1.0 (out of expected range)
+    act(() => {
+      useRenderStore.setState({
+        jobs: [makeJob({ id: 'j1', status: 'running', progress: 1.5 })],
+      })
+    })
+
+    act(() => {
+      vi.advanceTimersByTime(2001)
+    })
+
+    expect(mockAnnounce).toHaveBeenCalledWith('Rendering: 100% complete')
+  })
+
+  it('announces store-level error with assertive priority', async () => {
+    renderPage()
+
+    act(() => {
+      useRenderStore.setState({ error: 'Network error' })
+    })
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Error: Network error', 'assertive')
+    })
   })
 })

@@ -11,6 +11,7 @@ export function AccessibilityWrapper({ children }: AccessibilityWrapperProps): R
         Skip to main content
       </a>
       <div role="status" aria-atomic="true" aria-live="polite" id="announcements" />
+      <div role="alert" aria-atomic="true" aria-live="assertive" id="announcements-assertive" />
       {children}
     </>
   )

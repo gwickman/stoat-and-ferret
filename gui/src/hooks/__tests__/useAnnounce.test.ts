@@ -4,16 +4,24 @@ import { useAnnounce } from '../useAnnounce'
 
 describe('useAnnounce', () => {
   let region: HTMLDivElement
+  let assertiveRegion: HTMLDivElement
 
   beforeEach(() => {
     region = document.createElement('div')
     region.id = 'announcements'
     document.body.appendChild(region)
+
+    assertiveRegion = document.createElement('div')
+    assertiveRegion.id = 'announcements-assertive'
+    document.body.appendChild(assertiveRegion)
   })
 
   afterEach(() => {
     if (region.parentNode) {
       region.parentNode.removeChild(region)
+    }
+    if (assertiveRegion.parentNode) {
+      assertiveRegion.parentNode.removeChild(assertiveRegion)
     }
   })
 
@@ -59,5 +67,44 @@ describe('useAnnounce', () => {
     expect(() => result.current.announce('After unmount')).not.toThrow()
     // Region text remains from before unmount since hook ref is cleared
     expect(region.textContent).toBe('Before unmount')
+  })
+
+  it('announce(message, "polite") updates the polite aria-live region', () => {
+    const { result } = renderHook(() => useAnnounce())
+    act(() => {
+      result.current.announce('Polite message', 'polite')
+    })
+    expect(region.textContent).toBe('Polite message')
+    expect(assertiveRegion.textContent).toBe('')
+  })
+
+  it('announce(message, "assertive") updates the assertive aria-live region', () => {
+    const { result } = renderHook(() => useAnnounce())
+    act(() => {
+      result.current.announce('Error: operation failed', 'assertive')
+    })
+    expect(assertiveRegion.textContent).toBe('Error: operation failed')
+    expect(region.textContent).toBe('')
+  })
+
+  it('assertive and polite regions are updated independently', () => {
+    const { result } = renderHook(() => useAnnounce())
+    act(() => {
+      result.current.announce('Progress: 50%', 'polite')
+    })
+    act(() => {
+      result.current.announce('Error: failed', 'assertive')
+    })
+    expect(region.textContent).toBe('Progress: 50%')
+    expect(assertiveRegion.textContent).toBe('Error: failed')
+  })
+
+  it('announce without priority defaults to polite region', () => {
+    const { result } = renderHook(() => useAnnounce())
+    act(() => {
+      result.current.announce('Default priority message')
+    })
+    expect(region.textContent).toBe('Default priority message')
+    expect(assertiveRegion.textContent).toBe('')
   })
 })

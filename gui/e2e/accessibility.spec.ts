@@ -156,7 +156,7 @@ test.describe("skip-link and aria-live infrastructure", () => {
     expect(isFirst).toBe(true);
   });
 
-  test("aria-live region is present with correct attributes", async ({
+  test("polite aria-live region is present with correct attributes", async ({
     page,
   }) => {
     await page.goto("/gui/");
@@ -166,6 +166,19 @@ test.describe("skip-link and aria-live infrastructure", () => {
     await expect(region).toBeAttached();
     await expect(region).toHaveAttribute("role", "status");
     await expect(region).toHaveAttribute("aria-live", "polite");
+    await expect(region).toHaveAttribute("aria-atomic", "true");
+  });
+
+  test("assertive aria-live region is present for error announcements", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const region = page.locator("#announcements-assertive");
+    await expect(region).toBeAttached();
+    await expect(region).toHaveAttribute("role", "alert");
+    await expect(region).toHaveAttribute("aria-live", "assertive");
     await expect(region).toHaveAttribute("aria-atomic", "true");
   });
 });

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRenderStore, type RenderJob } from '../stores/renderStore'
 import { useBatchJobs } from '../hooks/useBatchJobs'
+import { useAnnounce } from '../hooks/useAnnounce'
 import RenderJobCard from '../components/render/RenderJobCard'
 import StartRenderModal from '../components/render/StartRenderModal'
 import BatchPanel from '../components/batch/BatchPanel'
@@ -60,6 +61,13 @@ export default function RenderPage() {
   // false so the tab stays hidden until the API confirms it.
   const [batchEnabled, setBatchEnabled] = useState<boolean>(false)
 
+  const { announce } = useAnnounce()
+
+  // Track previous job states to detect status/progress transitions.
+  const prevJobsRef = useRef(new Map<string, RenderJob>())
+  // Debounce ref for progress announcements (one active timeout across all jobs).
+  const progressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     fetchJobs()
     fetchQueueStatus()
@@ -91,6 +99,58 @@ export default function RenderPage() {
   useEffect(() => {
     if (!batchEnabled && activeTab === 'batch') setActiveTab('queue')
   }, [batchEnabled, activeTab])
+
+  // Announce job status transitions (progress, completion, failure).
+  useEffect(() => {
+    const prevMap = prevJobsRef.current
+    const newMap = new Map(jobs.map((j) => [j.id, j]))
+    prevJobsRef.current = newMap
+
+    for (const [, job] of newMap) {
+      const prev = prevMap.get(job.id)
+      if (!prev) continue
+
+      // Progress changed for a running job — debounce to 2s.
+      if (job.status === 'running' && prev.progress !== job.progress) {
+        const clamped = Math.min(100, Math.max(0, Math.round(job.progress * 100)))
+        if (progressDebounceRef.current) clearTimeout(progressDebounceRef.current)
+        progressDebounceRef.current = setTimeout(() => {
+          announce(`Rendering: ${clamped}% complete`)
+        }, 2000)
+      }
+
+      // Job completed — cancel pending progress debounce and announce immediately.
+      if (prev.status !== 'completed' && job.status === 'completed') {
+        if (progressDebounceRef.current) {
+          clearTimeout(progressDebounceRef.current)
+          progressDebounceRef.current = null
+        }
+        announce('Render complete')
+      }
+
+      // Job failed — announce immediately with assertive priority.
+      if (prev.status !== 'failed' && job.status === 'failed') {
+        const msg = job.error_message ?? 'operation failed'
+        announce(`Error: ${msg}`, 'assertive')
+      }
+    }
+  }, [jobs, announce])
+
+  // Announce store-level fetch errors (e.g. network failures).
+  const prevErrorRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (error && error !== prevErrorRef.current) {
+      announce(`Error: ${error}`, 'assertive')
+    }
+    prevErrorRef.current = error
+  }, [error, announce])
+
+  // Clean up progress debounce timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (progressDebounceRef.current) clearTimeout(progressDebounceRef.current)
+    }
+  }, [])
 
   useBatchJobs(activeTab === 'batch' ? activeBatchId : null)
 
