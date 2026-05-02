@@ -4,6 +4,34 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v054] - 2026-05-02
+
+### GUI Performance & Compatibility Baselines
+
+**Overview:** Established bundle size and cross-browser compatibility baselines for the web GUI. Measured Lighthouse performance and documented browser-specific testing gaps. All measurements are non-invasive; no source code was modified.
+
+**Theme:** gui-perf-and-compat  
+**Features:** 3/3 complete (001-changelog-v049, 002-bundle-analysis, 003-browser-compat-testing)  
+**Quality:** 23/23 acceptance criteria met, 0 regressions
+
+**Key Outcomes:**
+- Bundle composition baseline: main 125.70 kB gzip, lazy PreviewPlayer chunk 162.20 kB gzip
+- Lighthouse performance score: 79 (below 90 target due to CLS 0.44; documented in bundle-analysis.md)
+- Time to Interactive (TTI): 2,130 ms (meets <3s target)
+- Cross-browser test matrix: Chromium 95/96 pass, Firefox 91/96 pass, WebKit 88/96 pass
+- Browser-specific issues documented with workarounds (FF-001, WK-001, WK-002)
+
+**Backlog Items Resolved:** BL-328, BL-298, BL-299
+
+**PRs Merged:**
+- #370: Bundle size analysis baseline and optimization recommendations
+- #371: Cross-browser compatibility testing and known-issue documentation
+
+**Technical Insights:**
+- Measurement-only features eliminate production risk by establishing baselines without code changes
+- CI guards (`!process.env.CI`) prove effective for local-only multi-browser testing
+- CLS is the primary constraint on Lighthouse score; fix is a Priority 1 recommendation for v055
+
 ## [v053] - 2026-05-02
 
 ### Comprehensive E2E Test Suite (Playwright)
