@@ -157,13 +157,22 @@ test.describe("J604: workspace preset keyboard navigation", () => {
     const focusedIds: string[] = [];
     for (let i = 0; i < 50; i++) {
       await page.keyboard.press("Tab");
-      const id = await page.evaluate(
-        () =>
-          document.activeElement?.id ??
-          document.activeElement?.getAttribute("data-testid") ??
-          document.activeElement?.tagName?.toLowerCase() ??
-          "",
-      );
+      // Build a stable unique-per-element key: prefer id or data-testid; for
+      // elements without those (e.g. nav links, buttons), append trimmed text
+      // content so consecutive <a> links with different labels are distinguishable.
+      const id = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el) return "";
+        const named =
+          el.id ||
+          el.getAttribute("data-testid") ||
+          el.getAttribute("aria-label") ||
+          "";
+        if (named) return named;
+        const tag = el.tagName.toLowerCase();
+        const text = el.textContent?.trim().substring(0, 30) ?? "";
+        return text ? `${tag}:${text}` : tag;
+      });
       focusedIds.push(id);
     }
 
@@ -173,6 +182,7 @@ test.describe("J604: workspace preset keyboard navigation", () => {
       if (
         focusedIds[i] === focusedIds[i - 1] &&
         focusedIds[i] === focusedIds[i - 2] &&
+        focusedIds[i] !== "" &&
         focusedIds[i] !== "body"
       ) {
         trapDetected = true;
@@ -193,13 +203,19 @@ test.describe("J604: workspace preset keyboard navigation", () => {
     const focusedIds: string[] = [];
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press("Tab");
-      const id = await page.evaluate(
-        () =>
-          document.activeElement?.id ??
-          document.activeElement?.getAttribute("data-testid") ??
-          document.activeElement?.tagName?.toLowerCase() ??
-          "",
-      );
+      const id = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el) return "";
+        const named =
+          el.id ||
+          el.getAttribute("data-testid") ||
+          el.getAttribute("aria-label") ||
+          "";
+        if (named) return named;
+        const tag = el.tagName.toLowerCase();
+        const text = el.textContent?.trim().substring(0, 30) ?? "";
+        return text ? `${tag}:${text}` : tag;
+      });
       focusedIds.push(id);
     }
 
@@ -209,6 +225,7 @@ test.describe("J604: workspace preset keyboard navigation", () => {
       if (
         focusedIds[i] === focusedIds[i - 1] &&
         focusedIds[i] === focusedIds[i - 2] &&
+        focusedIds[i] !== "" &&
         focusedIds[i] !== "body"
       ) {
         trapDetected = true;
