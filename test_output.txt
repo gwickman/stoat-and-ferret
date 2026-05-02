@@ -1,112 +1,36 @@
 warning: `VIRTUAL_ENV=C:\Users\grant\tools\auto-dev-mcp\.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
-.............s.......................................................... [  3%]
-........................................................................ [  6%]
-........................................................................ [  9%]
-........................................................................ [ 12%]
-........................................................................ [ 15%]
-........................................................................ [ 18%]
-........................................................................ [ 21%]
-........................................................................ [ 24%]
-........................................................................ [ 27%]
-........................................................................ [ 30%]
-........................................................................ [ 33%]
-........................................................................ [ 36%]
-........................................................................ [ 39%]
-........................................................................ [ 42%]
-........................................................................ [ 45%]
-........................................................................ [ 48%]
-........................................................................ [ 51%]
-........................................................................ [ 54%]
-........................................................................ [ 57%]
-........................................................................ [ 60%]
-........................................................................ [ 63%]
-........................................................................ [ 66%]
-........................................................................ [ 69%]
-........................................................................ [ 72%]
-........................................................................ [ 75%]
-........................................................................ [ 78%]
-......................................................................s. [ 81%]
-........................................................................ [ 84%]
-........................................................................ [ 87%]
-........................................................................ [ 90%]
-........................................................................ [ 93%]
-........................................................................ [ 96%]
-........................................................................ [ 99%]
-....................                                                     [100%]
-============================== warnings summary ===============================
-tests/security/test_audit.py: 7 warnings
-tests/test_api/test_app.py: 3 warnings
-tests/test_api/test_audio.py: 27 warnings
-tests/test_api/test_batch.py: 16 warnings
-tests/test_api/test_clips.py: 13 warnings
-tests/test_api/test_compose.py: 32 warnings
-tests/test_api/test_di_wiring.py: 3 warnings
-tests/test_api/test_effects.py: 44 warnings
-tests/test_api/test_factory_api.py: 5 warnings
-tests/test_api/test_filesystem.py: 12 warnings
-tests/test_api/test_gui_static.py: 5 warnings
-tests/test_api/test_health.py: 6 warnings
-tests/test_api/test_health_render.py: 12 warnings
-tests/test_api/test_jobs.py: 10 warnings
-tests/test_api/test_long_poll.py: 8 warnings
-tests/test_api/test_metrics_phase6.py: 3 warnings
-tests/test_api/test_middleware.py: 7 warnings
-tests/test_api/test_preview_cache_endpoints.py: 7 warnings
-tests/test_api/test_preview_endpoints.py: 22 warnings
-tests/test_api/test_projects.py: 12 warnings
-tests/test_api/test_proxy.py: 12 warnings
-tests/test_api/test_render_endpoints.py: 55 warnings
-tests/test_api/test_render_preview.py: 11 warnings
-tests/test_api/test_seed_endpoint.py: 12 warnings
-tests/test_api/test_spa_routing.py: 9 warnings
-tests/test_api/test_state_machine_docs.py: 1 warning
-tests/test_api/test_system_state.py: 8 warnings
-tests/test_api/test_thumbnail_endpoint.py: 5 warnings
-tests/test_api/test_thumbnail_strip_endpoints.py: 13 warnings
-tests/test_api/test_timeline.py: 39 warnings
-tests/test_api/test_versions.py: 14 warnings
-tests/test_api/test_videos.py: 28 warnings
-tests/test_api/test_waveform_endpoints.py: 18 warnings
-tests/test_api/test_websocket_broadcasts.py: 5 warnings
-tests/test_blackbox/test_core_workflow.py: 8 warnings
-tests/test_blackbox/test_edge_cases.py: 11 warnings
-tests/test_blackbox/test_error_handling.py: 12 warnings
-tests/test_contract/test_render_contract.py: 3 warnings
-tests/test_database_startup.py: 1 warning
-tests/test_logging_startup.py: 3 warnings
-tests/test_orphaned_settings.py: 1 warning
-tests/test_render_shutdown.py: 3 warnings
-tests/test_security/test_path_validation.py: 5 warnings
-tests/test_ws_endpoint.py: 10 warnings
-tests/unit/test_health_preview.py: 5 warnings
-  C:\Users\grant\Documents\projects\stoat-and-ferret\src\stoat_ferret\api\app.py:161: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    app.state._startup_timestamp = datetime.utcnow().isoformat()
-
-tests/test_api/test_health.py: 5 warnings
-tests/test_api/test_health_render.py: 12 warnings
-tests/test_contract/test_health.py: 7 warnings
-tests/unit/test_health_preview.py: 5 warnings
-  C:\Users\grant\Documents\projects\stoat-and-ferret\src\stoat_ferret\api\routers\health.py:169: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    uptime = (datetime.utcnow() - datetime.fromisoformat(startup_ts)).total_seconds()
-
-tests/test_api/test_render_endpoints.py: 1 warning
-tests/test_audit_logging.py: 2 warnings
-tests/test_database_startup.py: 1 warning
-tests/test_flags.py: 3 warnings
-tests/test_synthetic_monitoring.py: 2 warnings
-tests/test_version.py: 3 warnings
-  C:\Users\grant\Documents\projects\stoat-and-ferret\src\stoat_ferret\api\app.py:306: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    app.state._startup_timestamp = datetime.utcnow().isoformat()
-
-tests/test_contract/test_health.py::test_health_ready_200_when_ready
-tests/test_contract/test_health.py::test_health_response_includes_app_version
-tests/test_contract/test_health.py::test_health_response_includes_uptime
-tests/test_contract/test_health.py::test_health_response_includes_ws_buffer_utilization
-tests/test_contract/test_health.py::test_database_check_ok_when_no_db
-tests/test_contract/test_health.py::test_rust_core_check_in_response
-tests/test_contract/test_health.py::test_filesystem_check_in_response
-  C:\Users\grant\Documents\projects\stoat-and-ferret\tests\test_contract\test_health.py:47: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    app.state._startup_timestamp = datetime.utcnow().isoformat()
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2394 passed, 2 skipped, 594 warnings in 347.41s (0:05:47)
+.............s.......................................................... [  2%]
+........................................................................ [  5%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+........................................................................ [ 14%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 29%]
+........................................................................ [ 32%]
+........................................................................ [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 59%]
+........................................................................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 68%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 77%]
+........................................................................ [ 80%]
+......s................................................................. [ 83%]
+........................................................................ [ 86%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+..................................s..................................... [ 98%]
+..............................................                           [100%]
+2419 passed, 3 skipped in 353.76s (0:05:53)

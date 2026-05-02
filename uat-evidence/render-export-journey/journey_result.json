@@ -1,0 +1,10 @@
+{
+  "name": "render-export-journey",
+  "journey_id": 501,
+  "steps_total": 13,
+  "steps_passed": 13,
+  "steps_failed": 0,
+  "console_errors": [],
+  "issues": [],
+  "duration_seconds": 2.55
+}

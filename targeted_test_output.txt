@@ -1,0 +1,32 @@
+warning: `VIRTUAL_ENV=C:\Users\grant\tools\auto-dev-mcp\.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+============================= test session starts =============================
+platform win32 -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\grant\Documents\projects\stoat-and-ferret\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+hypothesis profile 'default'
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: C:\Users\grant\Documents\projects\stoat-and-ferret
+configfile: pyproject.toml
+plugins: anyio-4.12.1, hypothesis-6.151.5, locust-2.43.4, asyncio-1.3.0, benchmark-5.2.3, cov-7.0.0, timeout-2.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 18 items
+
+tests/test_api/test_health.py::test_liveness_returns_ok PASSED           [  5%]
+tests/test_api/test_health.py::test_readiness_returns_200_when_healthy PASSED [ 11%]
+tests/test_api/test_health.py::test_readiness_returns_503_when_database_unavailable PASSED [ 16%]
+tests/test_api/test_health.py::test_readiness_without_ffmpeg_returns_200 PASSED [ 22%]
+tests/test_api/test_health.py::test_readiness_without_ffmpeg_status_degraded PASSED [ 27%]
+tests/test_api/test_health.py::test_readiness_without_ffmpeg_ffmpeg_check_in_response PASSED [ 33%]
+tests/test_api/test_health.py::test_readiness_ffmpeg_error_returns_200 PASSED [ 38%]
+tests/test_api/test_health.py::test_readiness_ffmpeg_timeout_returns_200 PASSED [ 44%]
+tests/test_api/test_health.py::test_readiness_with_ffmpeg_returns_200_ok PASSED [ 50%]
+tests/test_api/test_health.py::test_readiness_structure PASSED           [ 55%]
+tests/test_api/test_health.py::test_check_ffmpeg_parses_first_line PASSED [ 61%]
+tests/test_api/test_health.py::test_check_ffmpeg_handles_git_build_version PASSED [ 66%]
+tests/test_api/test_health.py::test_check_ffmpeg_absent_returns_unavailable PASSED [ 72%]
+tests/test_api/test_health.py::test_check_ffmpeg_timeout_returns_error PASSED [ 77%]
+tests/smoke/test_health.py::test_uc08_health_live PASSED                 [ 83%]
+tests/smoke/test_health.py::test_uc08_health_ready PASSED                [ 88%]
+tests/smoke/test_health.py::test_health_ready_without_ffmpeg PASSED      [ 94%]
+tests/smoke/test_health.py::test_health_ready_degraded_status_structure PASSED [100%]
+
+============================= 18 passed in 3.10s ==============================

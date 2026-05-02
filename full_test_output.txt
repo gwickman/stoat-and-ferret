@@ -1,0 +1,2908 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/grant/Documents/projects/stoat-and-ferret/gui[39m
+
+[90mstderr[2m | src/components/__tests__/ProjectDetails.test.tsx[2m > [22m[2mProjectDetails[2m > [22m[2mdisplays project name and metadata
+[22m[39mAn update to ProjectDetails inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ProjectDetails inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/ClipFormModal.test.tsx[2m > [22m[2mClipFormModal[2m > [22m[2mrenders empty form for Add mode
+[22m[39mAn update to ClipFormModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ClipFormModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ClipFormModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/DirectoryBrowser.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+[90mstderr[2m | src/components/__tests__/ClipFormModal.test.tsx[2m > [22m[2mClipFormModal[2m > [22m[2mrenders pre-populated form for Edit mode
+[22m[39mAn update to ClipFormModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ClipFormModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ClipFormModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/ProjectDetails.test.tsx[2m > [22m[2mProjectDetails[2m > [22m[2mrenders Add Clip button
+[22m[39mAn update to ProjectDetails inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ProjectDetails inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/ScanModal.test.tsx[2m > [22m[2mScanModal[2m > [22m[2mtriggers scan API call on submit and completes via WebSocket
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/batch/__tests__/BatchJobList.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 477[2mms[22m[39m
+ [32m✓[39m src/components/settings/__tests__/KeyboardShortcutOverlay.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 434[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ClipFormModal.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 524[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ActivityLog.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 522[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ProjectDetails.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 599[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/EffectCatalog.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 537[2mms[22m[39m
+ [32m✓[39m src/components/settings/__tests__/ThemeSelector.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 681[2mms[22m[39m
+     [33m[2m✓[22m[39m exposes the group label for assistive tech [33m 549[2mms[22m[39m
+[90mstderr[2m | src/components/__tests__/ScanModal.test.tsx[2m > [22m[2mScanModal[2m > [22m[2mshows cancelled state when scan is cancelled via WebSocket
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/batch/__tests__/BatchPanel.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 706[2mms[22m[39m
+ [32m✓[39m src/components/theater/__tests__/BottomHUD.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 664[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mrenders canvas with tracks
+[22m[39m[TimelineCanvas] render { trackCount: [33m2[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mrenders empty state when no tracks
+[22m[39m[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mshows duration
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m15.5[39m, zoom: [33m1[39m }
+
+ [32m✓[39m src/components/settings/__tests__/SettingsPanel.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 877[2mms[22m[39m
+     [33m[2m✓[22m[39m exposes dialog role and labelled title [33m 692[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mincludes zoom controls
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+
+ [32m✓[39m src/components/render/__tests__/RenderJobCard.test.tsx [2m([22m[2m26 tests[22m[2m)[22m[33m 809[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mincludes time ruler
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+
+[90mstderr[2m | src/components/__tests__/ScanModal.test.tsx[2m > [22m[2mScanModal[2m > [22m[2mcompletes scan flow: receives progress then complete via WebSocket
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mzoom in increases zoom percentage
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1.25[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders the page with heading
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstderr[2m | src/components/__tests__/ScanModal.test.tsx[2m > [22m[2mScanModal[2m > [22m[2mshows error with message when scan times out via WebSocket
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mzoom out decreases zoom percentage
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m0.75[39m }
+
+ [32m✓[39m src/components/__tests__/PlayerControls.test.tsx [2m([22m[2m38 tests[22m[2m)[22m[33m 1003[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mzoom reset returns to 100%
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1.25[39m }
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1.5[39m }
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+
+[90mstderr[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders the page with heading
+[22m[39mAn update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/TransitionPanel.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 607[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders the page with heading
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstderr[2m | src/components/__tests__/ScanModal.test.tsx[2m > [22m[2mScanModal[2m > [22m[2mdoes not poll when WebSocket delivers completion promptly
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mrenders tracks sorted by z_index
+[22m[39m[TimelineCanvas] render { trackCount: [33m3[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelineCanvas.test.tsx[2m > [22m[2mTimelineCanvas[2m > [22m[2mhas scrollable area
+[22m[39m[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m10[39m, zoom: [33m1[39m }
+
+ [32m✓[39m src/components/__tests__/TimelineCanvas.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 552[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/DashboardPage.test.tsx[2m > [22m[2mDashboardPage[2m > [22m[2mrenders with role="main" and id="main-content"
+[22m[39mAn update to DashboardPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/DashboardPage.test.tsx[2m > [22m[2mDashboardPage[2m > [22m[2mrenders with role="main" and id="main-content"
+[22m[39mAn update to DashboardPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/DashboardPage.test.tsx[2m > [22m[2mDashboardPage[2m > [22m[2mrenders dashboard heading
+[22m[39mAn update to DashboardPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/DashboardPage.test.tsx[2m > [22m[2mDashboardPage[2m > [22m[2mrenders dashboard heading
+[22m[39mAn update to DashboardPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/pages/__tests__/DashboardPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 785[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 728[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders with role="main" and id="main-content"
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mshows loading state while fetching
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+ [32m✓[39m src/components/render/__tests__/StartRenderModal.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 1561[2mms[22m[39m
+     [33m[2m✓[22m[39m calls POST /render/preview for command preview [33m 378[2mms[22m[39m
+     [33m[2m✓[22m[39m shows previewError when fetch returns 422 with detail.message [33m 386[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mshows empty state when no data
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mshows empty state when no data
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mshows error state on fetch failure
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders presets when loaded
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstderr[2m | src/components/__tests__/Shell.test.tsx[2m > [22m[2mShell[2m > [22m[2mrenders header, main, and footer sections
+[22m[39mAn update to Navigation inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/Shell.test.tsx[2m > [22m[2mShell[2m > [22m[2mrenders header, main, and footer sections
+[22m[39mAn update to HealthIndicator inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders presets when loaded
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders tracks when timeline data is pre-loaded
+[22m[39m[TimelinePage] render {
+  trackCount: [33m1[39m,
+  duration: [33m5[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m5[39m, zoom: [33m1[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mrenders tracks when timeline data is pre-loaded
+[22m[39m[TimelinePage] render {
+  trackCount: [33m1[39m,
+  duration: [33m5[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m1[39m, clipCount: [33m0[39m, duration: [33m5[39m, zoom: [33m1[39m }
+
+ [32m✓[39m src/pages/__tests__/PreviewPage.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 865[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 504[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mis accessible at /timeline route
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mrenders in header adjacent to heading
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstderr[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders the shell layout
+[22m[39mAn update to Navigation inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders the shell layout
+[22m[39mAn update to HealthIndicator inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/Shell.test.tsx[2m > [22m[2mShell[2m > [22m[2mdisplays WebSocket status in status bar
+[22m[39mAn update to Navigation inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/Shell.test.tsx[2m > [22m[2mShell[2m > [22m[2mdisplays WebSocket status in status bar
+[22m[39mAn update to HealthIndicator inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mrenders in header adjacent to heading
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstderr[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders preview page in preview panel in default state (BL-306 per-panel routing)
+[22m[39mAn update to Navigation inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders preview page in preview panel in default state (BL-306 per-panel routing)
+[22m[39mAn update to HealthIndicator inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mopens modal on click
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mopens modal on click
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mopens modal on click
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mis disabled when selectedProjectId is null
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mis disabled when selectedProjectId is null
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mshows tooltip when disabled
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstderr[2m | src/components/__tests__/Shell.test.tsx[2m > [22m[2mShell[2m > [22m[2mrenders navigation landmark via Navigation component
+[22m[39mAn update to Navigation inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/Shell.test.tsx[2m > [22m[2mShell[2m > [22m[2mrenders navigation landmark via Navigation component
+[22m[39mAn update to HealthIndicator inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/Shell.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 932[2mms[22m[39m
+     [33m[2m✓[22m[39m renders header, main, and footer sections [33m 459[2mms[22m[39m
+     [33m[2m✓[22m[39m renders navigation landmark via Navigation component [33m 347[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mshows tooltip when disabled
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mcloses modal via onClose callback
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mcloses modal via onClose callback
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2mcloses modal via onClose callback
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2monSubmitted is a no-op
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2monSubmitted is a no-op
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+[90mstdout[2m | src/components/__tests__/TimelinePage.test.tsx[2m > [22m[2mTimelinePage[2m > [22m[2mStart Render button[2m > [22m[2monSubmitted is a no-op
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m1[39m,
+  isEmpty: [33mfalse[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+[TimelineCanvas] render { trackCount: [33m0[39m, clipCount: [33m0[39m, duration: [33m0[39m, zoom: [33m1[39m }
+[TimelineCanvas] empty state triggered — no tracks { trackCount: [33m0[39m, duration: [33m0[39m }
+
+ [32m✓[39m src/components/workspace/__tests__/WorkspaceLayout.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[33m 1984[2mms[22m[39m
+     [33m[2m✓[22m[39m renders all six canonical panels [33m 470[2mms[22m[39m
+       [33m[2m✓[22m[39m preserves custom sizes across a full edit→review→render→edit cycle (FR-005) [33m 328[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/TimelinePage.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 1481[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 496[2mms[22m[39m
+[90mstdout[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders library page in library panel when edit preset is fully active
+[22m[39m[TimelinePage] render {
+  trackCount: [33m0[39m,
+  duration: [33m0[39m,
+  presetsCount: [33m0[39m,
+  isEmpty: [33mtrue[39m,
+  isLoading: [33mfalse[39m,
+  error: [1mnull[22m
+}
+
+[90mstderr[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders library page in library panel when edit preset is fully active
+[22m[39mAn update to LibraryPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to LibraryPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TimelinePage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to EffectCatalog inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to EffectCatalog inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to EffectsPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to EffectsPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to EffectsPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to EffectsPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Navigation inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mrenders library page in library panel when edit preset is fully active
+[22m[39mAn update to HealthIndicator inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/App.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1089[2mms[22m[39m
+     [33m[2m✓[22m[39m renders the shell layout [33m 415[2mms[22m[39m
+     [33m[2m✓[22m[39m renders library page in library panel when edit preset is fully active [33m 555[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/EffectParameterForm.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+[90mstderr[2m | src/components/__tests__/ScanModal.test.tsx[2m > [22m[2mScanModal[2m > [22m[2mshows progress percentage from WebSocket events
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/ScanModal.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[33m 3284[2mms[22m[39m
+     [33m[2m✓[22m[39m triggers scan API call on submit and completes via WebSocket [33m 305[2mms[22m[39m
+     [33m[2m✓[22m[39m completes via fallback poll when WebSocket misses complete event [33m 2096[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mrenders with data-testid="render-page"
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/hooks/__tests__/useEffects.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 333[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mrenders with role="main" and id="main-content"
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/Navigation.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 266[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useVersion.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 327[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mrenders active jobs section with running jobs
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mrenders pending jobs section with queued jobs
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/AudioWaveform.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 521[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mrenders completed jobs section with completed/failed/cancelled jobs
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mcategorizes jobs into correct sections
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mshows queue status bar with counts
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mshows loading indicator when queue status is null and loading
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/ProjectList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 222[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mshows Start Render button that is visible and enabled
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mhas all required data-testid attributes
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/render/__tests__/StatusBadge.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useTheaterShortcuts.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 201[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useFocusTrap.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/HealthIndicator.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 219[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useMetrics.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+[90mstderr[2m | src/components/__tests__/FilterPreview.test.tsx[2m > [22m[2mFilterPreview[2m > [22m[2mcopies filter string to clipboard on button click
+[22m[39mAn update to FilterPreview inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/workspace/__tests__/PanelVisibilityToggle.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mtreats batch_rendering as false on flag fetch failure
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/LayerStack.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 133[2mms[22m[39m
+[90mstderr[2m | src/components/__tests__/FilterPreview.test.tsx[2m > [22m[2mFilterPreview[2m > [22m[2mshows "Copied!" feedback after copy
+[22m[39mAn update to FilterPreview inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/workspace/__tests__/WorkspacePresetSelector.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mtreats missing batch_rendering field in flags response as false
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to StartRenderModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/FilterPreview.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 332[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/EffectStack.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 344[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useEffectPreview.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 272[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mannounces render progress with debounce when job progress changes
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/VideoGrid.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/RenderPage.test.tsx[2m > [22m[2mRenderPage[2m > [22m[2mclamps progress to 0-100 before announcing
+[22m[39mAn update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RenderPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/TimelineClip.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 304[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/RenderPage.test.tsx [2m([22m[2m24 tests[22m[2m)[22m[33m 1771[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 445[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/SortControls.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/TimeRuler.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 297[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/LayoutSelector.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 382[2mms[22m[39m
+ [32m✓[39m src/__tests__/jest-dom-setup.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 669[2mms[22m[39m
+     [33m[2m✓[22m[39m provides toBeInTheDocument without explicit import [33m 599[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/StatusBar.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/CreateProjectModal.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 158[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useHealth.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 184[2mms[22m[39m
+ [32m✓[39m src/components/theater/__tests__/TopHUD.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/Playhead.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 160[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useBatchJobs.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 290[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/HealthCards.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/QualitySelector.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/previewStore.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+[90mstderr[2m | src/hooks/__tests__/useRenderEvents.test.ts[2m > [22m[2museRenderEvents[2m > [22m[2mprocesses 3 burst render events; all produce state transitions in store
+[22m[39mAn update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/hooks/__tests__/useRenderEvents.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 430[2mms[22m[39m
+[90mstderr[2m | src/hooks/__tests__/useWebSocket.test.ts[2m > [22m[2museWebSocket[2m > [22m[2mdelivers all messages in a burst without loss (FR-001, FR-002)
+[22m[39mAn update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/hooks/__tests__/useWebSocket.test.ts[2m > [22m[2museWebSocket[2m > [22m[2mlastMessage equals messages.at(-1) for backward compatibility (FR-003)
+[22m[39mAn update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/hooks/__tests__/useWebSocket.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/PreviewStatus.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 312[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/SearchBar.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 187[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/DeleteConfirmation.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 334[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ZoomControls.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 262[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ClipSelector.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 362[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useTimelineSync.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 156[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useDebounce.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/LibraryPage.test.tsx[2m > [22m[2mLibraryPage[2m > [22m[2mannounces "Scan complete" when scan finishes via WebSocket
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+[90mstderr[2m | src/components/__tests__/LayoutPreview.test.tsx[2m > [22m[2mLayoutPreview[2m > [22m[2mupdates rectangles when preset changes
+[22m[39mAn update to LayoutPreview inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/__tests__/SeekTooltip.test.tsx [2m([22m[2m18 tests[22m[2m)[22m[33m 395[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/LayoutPreview.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 441[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/Track.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 215[2mms[22m[39m
+[90mstderr[2m | src/pages/__tests__/LibraryPage.test.tsx[2m > [22m[2mLibraryPage[2m > [22m[2mannounces scan error with assertive priority on scan failure via WebSocket
+[22m[39mAn update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to ScanModal inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/components/theater/__tests__/TheaterMode.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[33m 367[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/LibraryPage.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 1178[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 771[2mms[22m[39m
+ [32m✓[39m src/components/settings/__tests__/ShortcutEditor.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 369[2mms[22m[39m
+Not implemented: HTMLMediaElement's load() method
+ [32m✓[39m src/stores/__tests__/clipStore.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+Not implemented: HTMLMediaElement's load() method
+Not implemented: HTMLMediaElement's load() method
+Not implemented: HTMLMediaElement's load() method
+ [32m✓[39m src/components/__tests__/PreviewPlayer.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[33m 359[2mms[22m[39m
+ [32m✓[39m src/components/a11y/__tests__/AccessibilityWrapper.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 877[2mms[22m[39m
+     [33m[2m✓[22m[39m skip-link has href="#main-content" [33m 560[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/ProjectsPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 604[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 561[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/EffectsPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 623[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with role="main" and id="main-content" [33m 548[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/MetricsCards.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m src/components/library/__tests__/ProxyStatusBadge.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/VersionCard.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+[90mstderr[2m | src/hooks/__tests__/useJobProgress.test.ts[2m > [22m[2museJobProgress[2m > [22m[2mprocesses all 3 progress messages in a burst; final progress reflects last message
+[22m[39mAn update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/hooks/__tests__/useJobProgress.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useKeyboardShortcuts.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useFullscreen.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/settingsStore.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useSettings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useAnnounce.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/workspaceStore.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/renderStore.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/hooks/__tests__/useWorkspace.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/timelineStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/composeStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/batchStore.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/transitionStore.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/utils/__tests__/timeline.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/stores/__tests__/theaterStore.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m94 passed[39m[22m[90m (94)[39m
+[2m      Tests [22m [1m[32m832 passed[39m[22m[90m (832)[39m
+[2m   Start at [22m 09:29:04
+[2m   Duration [22m 20.66s[2m (transform 22.62s, setup 39.17s, import 61.02s, tests 37.81s, environment 277.01s)[22m
+

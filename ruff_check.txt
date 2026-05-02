@@ -1,0 +1,2 @@
+warning: `VIRTUAL_ENV=C:\Users\grant\tools\auto-dev-mcp\.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+All checks passed!
