@@ -20,6 +20,8 @@ export default defineConfig({
   webServer: {
     command: "cd .. && uv run uvicorn src.stoat_ferret.api.app:create_app --factory --port 8765",
     url: "http://localhost:8765/health/live",
-    reuseExistingServer: !process.env.CI,
+    // Reuse when not in CI, OR when invoked from within the UAT harness (which
+    // starts its own server and sets UAT_SERVER_URL before calling J604/J605).
+    reuseExistingServer: !process.env.CI || !!process.env.UAT_SERVER_URL,
   },
 });
