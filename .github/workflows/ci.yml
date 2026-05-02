@@ -273,6 +273,8 @@ jobs:
           uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 
       - name: Run E2E tests
+        env:
+          STOAT_TESTING_MODE: "true"
         run: npx playwright test
         working-directory: gui
 
