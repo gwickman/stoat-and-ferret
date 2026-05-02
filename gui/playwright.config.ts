@@ -14,8 +14,20 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], navigationTimeout: 10000 },
     },
+    ...(!process.env.CI
+      ? [
+          {
+            name: "firefox",
+            use: { ...devices["Desktop Firefox"], navigationTimeout: 15000 },
+          },
+          {
+            name: "webkit",
+            use: { ...devices["Desktop Safari"], navigationTimeout: 20000 },
+          },
+        ]
+      : []),
   ],
   webServer: {
     command: "cd .. && uv run uvicorn src.stoat_ferret.api.app:create_app --factory --port 8765",
