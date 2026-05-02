@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import { AccessibilityWrapper } from './components/a11y/AccessibilityWrapper'
 import Shell from './components/Shell'
 import DashboardPage from './pages/DashboardPage'
 import EffectsPage from './pages/EffectsPage'
@@ -10,17 +11,19 @@ import TimelinePage from './pages/TimelinePage'
 
 function App() {
   return (
-    <Routes>
-      <Route element={<Shell />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="library" element={<LibraryPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="effects" element={<EffectsPage />} />
-        <Route path="timeline" element={<TimelinePage />} />
-        <Route path="preview" element={<PreviewPage />} />
-        <Route path="render" element={<RenderPage />} />
-      </Route>
-    </Routes>
+    <AccessibilityWrapper>
+      <Routes>
+        <Route element={<Shell />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="library" element={<LibraryPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="effects" element={<EffectsPage />} />
+          <Route path="timeline" element={<TimelinePage />} />
+          <Route path="preview" element={<PreviewPage />} />
+          <Route path="render" element={<RenderPage />} />
+        </Route>
+      </Routes>
+    </AccessibilityWrapper>
   )
 }
 
