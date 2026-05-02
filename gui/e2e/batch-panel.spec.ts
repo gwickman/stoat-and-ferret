@@ -148,12 +148,11 @@ test.describe("J603: Batch Panel WebSocket Events", () => {
           (await jobRows.first().getAttribute("data-testid")) ?? "";
         const jobId = jobRowTestId.replace("batch-job-row-", "");
 
-        // Status badge, progress bar, and percentage are visible immediately
+        // Status badge and percentage text are visible immediately.
+        // batch-progress-bar is the inner fill div; at 0% progress its width is
+        // 0px and Playwright reports it as hidden — assert the pct text instead.
         await expect(
           page.getByTestId(`batch-status-${jobId}`),
-        ).toBeVisible();
-        await expect(
-          page.getByTestId(`batch-progress-bar-${jobId}`),
         ).toBeVisible();
         await expect(
           page.getByTestId(`batch-progress-pct-${jobId}`),

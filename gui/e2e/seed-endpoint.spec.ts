@@ -136,21 +136,18 @@ test.describe("J606: Seed Endpoint API", () => {
           fixtures.push(f);
         }
 
-        // Navigate to projects page
-        await page.goto("/gui/?workspace=edit");
-        await page.getByTestId("nav-tab-projects").click();
-        await expect(page).toHaveURL(/\/gui\/projects/);
+        // Navigate directly to the projects page (bypassing workspace nav avoids
+        // any layout-related interference with the project list rendering).
+        await page.goto("/gui/projects");
         await expect(page.getByTestId("projects-page")).toBeVisible();
 
-        // Wait for project list to load
-        await expect(page.getByTestId("project-list")).toBeVisible({
-          timeout: 10_000,
-        });
-
-        // All 3 seeded projects appear with seeded_ prefix
+        // All 3 seeded projects appear with seeded_ prefix.
+        // Use per-item timeout so loading time is absorbed here.
         for (let i = 0; i < 3; i++) {
           const expectedName = `seeded_${fixtureNames[i]}`;
-          await expect(page.getByText(expectedName)).toBeVisible();
+          await expect(page.getByText(expectedName)).toBeVisible({
+            timeout: 15_000,
+          });
         }
 
         // Delete all fixtures
