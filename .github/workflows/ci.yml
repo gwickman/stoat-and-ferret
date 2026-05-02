@@ -397,6 +397,10 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: uv run playwright install-deps chromium
 
+      - name: Install Node.js Playwright browsers (J604 uses npx playwright test)
+        run: npx playwright install chromium
+        working-directory: gui
+
       - name: Run UAT suite
         # Budget: ~2m pre-build + ~1m server start + ~5m journeys = ~8m; 10m allows margin
         run: uv run python scripts/uat_runner.py --headless --no-build
