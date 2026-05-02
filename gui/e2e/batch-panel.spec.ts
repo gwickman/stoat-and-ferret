@@ -34,9 +34,9 @@ test.describe("J603: Batch Panel WebSocket Events", () => {
       const project = await createTestProject(request, projectName);
 
       try {
-        // Navigate to render workspace (render preset shows batch panel)
-        await page.goto("/gui/?workspace=render");
-        await expect(page.getByTestId("workspace-layout")).toBeVisible();
+        // Navigate directly to /render — single RenderPage instance, no dual-panel strict-mode violation
+        await page.goto("/gui/render");
+        await expect(page.getByTestId("render-tabs")).toBeVisible();
 
         // Batch tab requires batch_rendering flag (defaults to true)
         const batchTab = page.getByTestId("render-tab-batch");
@@ -100,8 +100,8 @@ test.describe("J603: Batch Panel WebSocket Events", () => {
       const project = await createTestProject(request, projectName);
 
       try {
-        await page.goto("/gui/?workspace=render");
-        await expect(page.getByTestId("workspace-layout")).toBeVisible();
+        await page.goto("/gui/render");
+        await expect(page.getByTestId("render-tabs")).toBeVisible();
 
         const batchTab = page.getByTestId("render-tab-batch");
         await expect(batchTab).toBeVisible({ timeout: 10_000 });
