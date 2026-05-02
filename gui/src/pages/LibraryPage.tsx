@@ -34,7 +34,7 @@ export default function LibraryPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
-    <div className="p-6" role="main" id="main-content" data-testid="library-page">
+    <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="library-page">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Library</h2>
         <button

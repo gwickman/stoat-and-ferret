@@ -39,7 +39,7 @@ export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onS
           onSelect(clip.id)
         }
       }}
-      aria-selected={isSelected}
+      aria-pressed={isSelected}
     >
       {trackType === 'audio' && <AudioWaveform videoId={clip.source_video_id} />}
       <span

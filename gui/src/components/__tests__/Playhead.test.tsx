@@ -34,11 +34,11 @@ describe('Playhead', () => {
     expect(el.style.height).toBe('144px')
   })
 
-  it('has aria-label with position', () => {
+  it('is aria-hidden (decorative indicator)', () => {
     render(<Playhead position={2.5} zoom={1} scrollOffset={0} height={96} />)
 
     const el = screen.getByTestId('playhead')
-    expect(el.getAttribute('aria-label')).toBe('Playhead at 2.5s')
+    expect(el.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('renders at position 0 by default', () => {

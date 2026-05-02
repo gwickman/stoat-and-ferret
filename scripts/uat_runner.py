@@ -57,6 +57,8 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     502: [501],
     503: [501],
     504: [501],
+    604: [],
+    605: [],
 }
 
 # Human-readable journey names for screenshot directories and reports
@@ -74,6 +76,8 @@ JOURNEY_NAMES: dict[int, str] = {
     502: "render-queue-journey",
     503: "render-settings-journey",
     504: "render-failure-journey",
+    604: "keyboard-navigation",
+    605: "screen-reader-audit",
 }
 
 # Known benign console error patterns to exclude from reports

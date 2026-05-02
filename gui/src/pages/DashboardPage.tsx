@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const { messages } = useWebSocket(wsUrl())
 
   return (
-    <div className="space-y-6 p-6" role="main" id="main-content" data-testid="dashboard-page">
+    <div className="space-y-6 p-6" role="main" id="main-content" tabIndex={-1} data-testid="dashboard-page">
       <h2 className="text-2xl font-semibold">Dashboard</h2>
       <HealthCards health={health} />
       <MetricsCards metrics={metrics} />

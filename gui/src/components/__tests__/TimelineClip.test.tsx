@@ -83,7 +83,7 @@ describe('TimelineClip', () => {
 
     const el = screen.getByTestId('clip-clip-1')
     expect(el.className).toContain('border-blue-400')
-    expect(el.getAttribute('aria-selected')).toBe('true')
+    expect(el.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('shows unselected styling when isSelected is false', () => {
@@ -94,7 +94,7 @@ describe('TimelineClip', () => {
 
     const el = screen.getByTestId('clip-clip-1')
     expect(el.className).toContain('border-gray-600')
-    expect(el.getAttribute('aria-selected')).toBe('false')
+    expect(el.getAttribute('aria-pressed')).toBe('false')
   })
 
   it('handles keyboard selection with Enter', () => {

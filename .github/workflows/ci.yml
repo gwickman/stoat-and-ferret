@@ -397,6 +397,10 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: uv run playwright install-deps chromium
 
+      - name: Install Node.js Playwright browsers (J604 uses npx playwright test)
+        run: npx playwright install chromium
+        working-directory: gui
+
       - name: Run UAT suite
         # Budget: ~2m pre-build + ~1m server start + ~5m journeys = ~8m; 10m allows margin
         run: uv run python scripts/uat_runner.py --headless --no-build
@@ -516,9 +520,90 @@ jobs:
             exit 1
           fi
 
+  ci-a11y:
+    name: Accessibility Audit (axe-core + E2E)
+    needs: changes
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.gui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install FFmpeg
+        uses: AnimMouse/setup-ffmpeg@v1
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/stoat_ferret_core
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install backend dependencies
+        run: uv sync
+
+      - name: Build Python module
+        run: uv run maturin develop
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: gui
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: gui
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(npm ls @playwright/test --json | python -c "import sys,json; print(json.load(sys.stdin)['dependencies']['@playwright/test']['version'])")" >> "$GITHUB_OUTPUT"
+        working-directory: gui
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.pw-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+        working-directory: gui
+
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+        working-directory: gui
+
+      - name: Initialize database
+        run: |
+          mkdir -p data
+          uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
+
+      - name: Run accessibility E2E tests
+        run: npx playwright test e2e/accessibility.spec.ts e2e/keyboard-navigation.spec.ts
+        working-directory: gui
+
+      - name: Upload accessibility report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-a11y-report
+          path: gui/playwright-report/
+          retention-days: 7
+
   ci-status:
     runs-on: ubuntu-latest
-    needs: [changes, test, rust-coverage, frontend, e2e, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build, nul-pattern-check]
+    needs: [changes, test, rust-coverage, frontend, e2e, ci-a11y, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build, nul-pattern-check]
     if: always()
     steps:
       - name: Check CI status
@@ -541,6 +626,10 @@ jobs:
           fi
           if [[ "${{ needs.e2e.result }}" == "failure" ]]; then
             echo "E2E tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.ci-a11y.result }}" == "failure" ]]; then
+            echo "Accessibility audit failed"
             exit 1
           fi
           if [[ "${{ needs.smoke-tests.result }}" == "failure" ]]; then
