@@ -136,6 +136,40 @@ test.describe("WCAG AA accessibility", () => {
   });
 });
 
+test.describe("skip-link and aria-live infrastructure", () => {
+  test("skip-link is present in DOM and targets #main-content", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Verify skip-link is in the DOM with the correct target
+    const link = page.getByRole("link", { name: "Skip to main content" });
+    await expect(link).toBeAttached();
+    await expect(link).toHaveAttribute("href", "#main-content");
+
+    // Verify it precedes all page content in the DOM
+    const isFirst = await page.evaluate(() => {
+      const a = document.querySelector('a[href="#main-content"]');
+      return a?.parentElement?.firstElementChild === a;
+    });
+    expect(isFirst).toBe(true);
+  });
+
+  test("aria-live region is present with correct attributes", async ({
+    page,
+  }) => {
+    await page.goto("/gui/");
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    const region = page.locator("#announcements");
+    await expect(region).toBeAttached();
+    await expect(region).toHaveAttribute("role", "status");
+    await expect(region).toHaveAttribute("aria-live", "polite");
+    await expect(region).toHaveAttribute("aria-atomic", "true");
+  });
+});
+
 test.describe("workspace accessibility", () => {
   test("Edit preset: zero scrollable-region-focusable violations", async ({
     page,
