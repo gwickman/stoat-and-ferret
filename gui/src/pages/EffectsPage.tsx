@@ -199,7 +199,7 @@ export default function EffectsPage() {
   )
 
   return (
-    <div className="p-6" role="main" id="main-content" data-testid="effects-page">
+    <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="effects-page">
       <h2 className="mb-4 text-2xl font-semibold">Effects</h2>
 
       {/* Project selector */}

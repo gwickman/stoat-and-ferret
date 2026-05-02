@@ -160,8 +160,9 @@ test.describe("skip-link and aria-live infrastructure", () => {
     await page.goto("/gui/");
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
-    // Ensure no element has prior focus, then Tab once
-    await page.locator("body").click();
+    // Focus body programmatically to reset tab position (body.click() does not
+    // establish keyboard focus in headless Chromium on Linux CI).
+    await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
 
     await expect(
@@ -176,7 +177,7 @@ test.describe("skip-link and aria-live infrastructure", () => {
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     // Tab to skip-link and activate it
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
     await expect(
       page.getByRole("link", { name: "Skip to main content" }),

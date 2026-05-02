@@ -49,7 +49,7 @@ export default function TimelinePage() {
 
   if (isLoading) {
     return (
-      <div className="p-6" role="main" id="main-content" data-testid="timeline-page">
+      <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="timeline-page">
         <h2 className="mb-4 text-2xl font-semibold">Timeline</h2>
         <p className="text-gray-400" data-testid="timeline-loading">Loading...</p>
       </div>
@@ -58,7 +58,7 @@ export default function TimelinePage() {
 
   if (error) {
     return (
-      <div className="p-6" role="main" id="main-content" data-testid="timeline-page">
+      <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="timeline-page">
         <h2 className="mb-4 text-2xl font-semibold">Timeline</h2>
         <p className="text-red-400" data-testid="timeline-error">{error}</p>
       </div>
@@ -77,7 +77,7 @@ export default function TimelinePage() {
   })
 
   return (
-    <div className="p-6" role="main" id="main-content" data-testid="timeline-page">
+    <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="timeline-page">
       <div className="mb-4 flex items-center gap-4">
         <h2 className="text-2xl font-semibold">Timeline</h2>
         <button

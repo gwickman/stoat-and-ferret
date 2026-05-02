@@ -15,8 +15,9 @@ test.describe("J604: skip-link keyboard navigation", () => {
     await page.goto("/gui/");
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
-    // Click body to ensure no element has focus, then Tab once
-    await page.locator("body").click();
+    // Focus body programmatically to reset tab position (body.click() does not
+    // establish keyboard focus in headless Chromium on Linux CI).
+    await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
 
     const skipLink = page.getByRole("link", { name: "Skip to main content" });
@@ -30,7 +31,7 @@ test.describe("J604: skip-link keyboard navigation", () => {
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     // Tab to skip-link, then activate with Enter
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
     await expect(
       page.getByRole("link", { name: "Skip to main content" }),
@@ -58,7 +59,7 @@ test.describe("J604: header controls keyboard reachability", () => {
     await expect(presetSelector).toBeAttached();
 
     // Tab until we reach the workspace preset selector (within 20 Tab presses)
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     let found = false;
     for (let i = 0; i < 20; i++) {
       await page.keyboard.press("Tab");
@@ -103,7 +104,7 @@ test.describe("J604: library page keyboard navigation", () => {
     await expect(scanButton).toBeAttached();
 
     // Tab until we find the scan button (within 30 presses — after nav tabs)
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     let found = false;
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press("Tab");
@@ -125,7 +126,7 @@ test.describe("J604: render page keyboard navigation", () => {
     await expect(page.getByTestId("render-page").first()).toBeVisible();
 
     // Tab through the page 30 times; focus should keep moving (no trap)
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     const focusedElements: string[] = [];
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press("Tab");
@@ -152,7 +153,7 @@ test.describe("J604: workspace preset keyboard navigation", () => {
     await expect(page.getByTestId("workspace-layout")).toBeVisible();
 
     // Tab through 50 elements; should not get stuck (same element repeated more than once consecutively)
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     const focusedIds: string[] = [];
     for (let i = 0; i < 50; i++) {
       await page.keyboard.press("Tab");
@@ -160,7 +161,7 @@ test.describe("J604: workspace preset keyboard navigation", () => {
         () =>
           document.activeElement?.id ??
           document.activeElement?.getAttribute("data-testid") ??
-          document.activeElement?.tagName ??
+          document.activeElement?.tagName?.toLowerCase() ??
           "",
       );
       focusedIds.push(id);
@@ -188,7 +189,7 @@ test.describe("J604: workspace preset keyboard navigation", () => {
     await expect(page.getByTestId("render-page").first()).toBeVisible();
 
     // Tab through 30 elements; should not get stuck
-    await page.locator("body").click();
+    await page.evaluate(() => document.body.focus());
     const focusedIds: string[] = [];
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press("Tab");
@@ -196,7 +197,7 @@ test.describe("J604: workspace preset keyboard navigation", () => {
         () =>
           document.activeElement?.id ??
           document.activeElement?.getAttribute("data-testid") ??
-          document.activeElement?.tagName ??
+          document.activeElement?.tagName?.toLowerCase() ??
           "",
       );
       focusedIds.push(id);

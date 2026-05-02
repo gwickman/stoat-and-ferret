@@ -53,7 +53,7 @@ export default function PreviewPage() {
   }, [selectedProjectId, sessionId])
 
   return (
-    <div className="p-6" role="main" id="main-content" data-testid="preview-page">
+    <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="preview-page">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Preview</h2>
         <div className="flex items-center gap-2">
