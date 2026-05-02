@@ -4,6 +4,40 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v052] - 2026-05-02
+
+### GUI Accessibility
+
+Achieved WCAG 2.1 Level AA conformance across all GUI components and workflows.
+
+**Features:**
+- Accessibility Core Infrastructure (#362): AccessibilityWrapper component, useAnnounce hook, dual aria-live regions
+- ARIA Landmarks and Labels (#363): Semantic HTML markup, skip-to-content link, navigation landmarks
+- Dynamic Status Announcements (#364): Live region integration for render progress, scan results, error states
+- CI/E2E Validation Gates (#365): Automated axe-core audit, keyboard navigation testing, UAT journeys
+
+**Quality Metrics:**
+- 30/30 acceptance criteria met
+- 0 regressions detected
+- 2419 tests passed (3 skipped, 0 failures)
+- 100% quality gate pass rate
+
+## [v051] - 2026-05-01
+
+Deployment Infrastructure & Developer Guardrails. Delivers three backlog items addressing deployment/DevX concerns: FFmpeg production decision with health endpoint semantics, CI Docker image build with size/quality gates, and Windows shell anti-pattern prevention via pre-commit hook. 55/55 ACs met, 0 regressions, 3 PRs (#359, #360, #361).
+
+### Deployment Safety
+
+- **FFmpeg Production Status Decision** — Resolved FFmpeg-in-production decision; classified FFmpeg as non-critical with graceful degradation; `/health/ready` returns HTTP 200 with `status: "degraded"` when FFmpeg unavailable rather than HTTP 503, enabling flexible deployment architectures (CPU-only containers, remote FFmpeg, staged rollouts) (BL-309, #359)
+
+### CI Hardening
+
+- **Docker Build CI Gate** — Added GitHub Actions CI workflow job to build production Docker image with multi-stage Dockerfile, enforcing size/quality gates to prevent bloat and configuration drift; validates production deployment readiness on every PR (BL-310, #360)
+
+### Developer Experience
+
+- **Windows Shell Anti-Pattern Prevention** — Implemented pre-commit hook using `grep -I -F` (fixed-string, binary-safe) to catch Windows `/dev/null` vs `nul` anti-patterns in shell scripts (.sh, .bash, .yml files); CI backup verification step in workflows prevents hook bypass; documented guidance in AGENTS.md (BL-311, #361)
+
 ## [v050] - 2026-05-01
 
 Security Maintenance and Quality Improvements. Delivers three backlog items: a datetime deprecation fix eliminating DeprecationWarnings across the API layer, encoder cache test coverage expansion to ≥85%, and a UAT known-failure registry that distinguishes known failures from regressions. 18/18 ACs met, 0 regressions.
