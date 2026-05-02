@@ -88,6 +88,62 @@ test.describe("workspace preset deep links (?workspace=)", () => {
   });
 });
 
+test.describe("layout persistence across route transitions (J601 regression)", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/gui/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+  });
+
+  test("workspace preset persists when navigating away from root and back", async ({
+    page,
+  }) => {
+    // Set a non-default preset so the persistence is detectable.
+    await page.selectOption(
+      '[data-testid="workspace-preset-selector"]',
+      "review",
+    );
+    await expect(
+      page.getByTestId("workspace-preset-selector"),
+    ).toHaveValue("review");
+
+    // Navigate to a non-root route (SPA navigation, no page reload).
+    await page.getByTestId("nav-tab-library").click();
+    await expect(page).toHaveURL(/\/gui\/library/);
+
+    // localStorage should retain the preset while WorkspaceLayout is unmounted.
+    const storedPreset = await page.evaluate(() => {
+      const raw = localStorage.getItem("stoat-workspace-layout");
+      return raw ? JSON.parse(raw).preset : null;
+    });
+    expect(storedPreset).toBe("review");
+
+    // Navigate back to root where WorkspaceLayout is rendered.
+    await page.getByTestId("nav-tab-dashboard").click();
+    await expect(page).toHaveURL(/\/gui\/?$/);
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+  });
+
+  test("panel visibility flags don't interfere with layout after route transition", async ({
+    page,
+  }) => {
+    // Start with edit preset (all four panels visible).
+    await page.goto("/gui/?workspace=edit");
+    await expect(page.getByTestId("library-page")).toBeVisible();
+
+    // Navigate to library route and back.
+    await page.getByTestId("nav-tab-library").click();
+    await page.getByTestId("nav-tab-dashboard").click();
+    await expect(page.getByTestId("workspace-layout")).toBeVisible();
+
+    // Edit preset panels should still be visible after round-trip.
+    await expect(page.getByTestId("library-page")).toBeVisible();
+    await expect(page.getByTestId("timeline-page")).toBeVisible();
+    await expect(page.getByTestId("preview-page")).toBeVisible();
+  });
+});
+
 test.describe("per-panel page rendering (AC3 regression check)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/gui/");
