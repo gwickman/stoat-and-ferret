@@ -1,11 +1,14 @@
-"""Render worker command builder.
+"""Render worker: command builder and background worker loop.
 
-Constructs FFmpeg argument lists from RenderJob render_plan JSON
-and project media paths resolved via repositories.
+CommandBuildError and build_command_for_job construct FFmpeg argument lists
+from RenderJob render_plan JSON and project media paths resolved via repositories.
+
+RenderWorkerLoop runs an infinite async loop that dequeues jobs and executes them.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -13,7 +16,9 @@ import structlog
 
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
-from stoat_ferret.render.models import RenderJob
+from stoat_ferret.render.models import RenderJob, RenderStatus
+from stoat_ferret.render.queue import RenderQueue
+from stoat_ferret.render.service import RenderService
 
 logger = structlog.get_logger(__name__)
 
@@ -146,3 +151,95 @@ async def build_command_for_job(
     cmd.append(job.output_path)
 
     return cmd
+
+
+class RenderWorkerLoop:
+    """Background worker that continuously dequeues and executes render jobs.
+
+    Runs an infinite async loop: dequeue → build command → run_job → handle errors.
+    Sleeps 100ms when the queue is idle to prevent CPU spin. Propagates
+    CancelledError for clean shutdown; does not treat shutdown as a job failure.
+
+    Args:
+        service: Render service for job execution and failure handling.
+        queue: Render queue to dequeue jobs from.
+        clip_repository: Repository for project clip lookups.
+        video_repository: Repository for video path lookups.
+    """
+
+    def __init__(
+        self,
+        *,
+        service: RenderService,
+        queue: RenderQueue,
+        clip_repository: AsyncClipRepository,
+        video_repository: AsyncVideoRepository,
+    ) -> None:
+        self.service = service
+        self.queue = queue
+        self.clip_repository = clip_repository
+        self.video_repository = video_repository
+        self.logger = structlog.get_logger(__name__)
+
+    async def run(self) -> None:
+        """Run the worker loop until cancelled.
+
+        Continuously dequeues jobs, builds FFmpeg commands, and executes them.
+        Sleeps 100ms when idle. Propagates CancelledError on shutdown.
+        """
+        self.logger.info("render_worker.started")
+        try:
+            while True:
+                job = await self.queue.dequeue()
+                if job is None:
+                    await asyncio.sleep(0.1)
+                    continue
+
+                try:
+                    command = await build_command_for_job(
+                        job, self.clip_repository, self.video_repository
+                    )
+                    await self.service.run_job(job, command)
+                except Exception as exc:
+                    await self._handle_job_error(job, exc)
+        except asyncio.CancelledError:
+            self.logger.info("render_worker.stopped")
+            raise
+
+    async def _handle_job_error(self, job: RenderJob, exc: Exception) -> None:
+        """Handle a job execution exception.
+
+        Logs the failure and delegates to service._handle_failure() for retry logic.
+        Falls back to a direct status update if the failure handler itself fails.
+
+        Args:
+            job: The render job that failed.
+            exc: The exception raised during command building or execution.
+        """
+        self.logger.error(
+            "render_worker.job_failed",
+            job_id=job.id,
+            error_message=str(exc),
+        )
+        try:
+            await self.service._handle_failure(job, str(exc))
+        except Exception as handler_exc:
+            self.logger.error(
+                "render_worker.error",
+                job_id=job.id,
+                error="failure_handler_exception",
+                error_message=str(handler_exc),
+            )
+            try:
+                await self.service._repo.update_status(
+                    job.id,
+                    RenderStatus.FAILED,
+                    error_message=f"failure handler error: {handler_exc}",
+                )
+            except Exception as repo_exc:
+                self.logger.error(
+                    "render_worker.error",
+                    job_id=job.id,
+                    error="repo_update_failed",
+                    error_message=str(repo_exc),
+                )

@@ -1,12 +1,14 @@
-"""Tests for render worker command builder.
+"""Tests for render worker: command builder and worker loop.
 
 Covers command construction from valid render_plan JSON, input path
 resolution via repositories, empty-segments fallback, multi-segment
-truncation warning, error cases, and RenderService integration.
+truncation warning, error cases, RenderService integration, and the
+RenderWorkerLoop async class (loop iteration, error handling, shutdown).
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from datetime import datetime, timezone
@@ -16,7 +18,7 @@ import pytest
 
 from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
-from stoat_ferret.render.worker import CommandBuildError, build_command_for_job
+from stoat_ferret.render.worker import CommandBuildError, RenderWorkerLoop, build_command_for_job
 
 # ---------------------------------------------------------------------------
 # Test data helpers
@@ -590,3 +592,453 @@ async def test_command_builder_performance() -> None:
     elapsed_ms = (time.perf_counter() - start) * 1000
 
     assert elapsed_ms < 10, f"Command builder took {elapsed_ms:.1f}ms, expected <10ms"
+
+
+# ---------------------------------------------------------------------------
+# RenderWorkerLoop helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_worker_loop(
+    *,
+    service: MagicMock | None = None,
+    queue: MagicMock | None = None,
+    clip_repo: AsyncMock | None = None,
+    video_repo: AsyncMock | None = None,
+) -> RenderWorkerLoop:
+    """Return a RenderWorkerLoop with sensible mock defaults."""
+    if service is None:
+        service = MagicMock()
+        service.run_job = AsyncMock(return_value=None)
+        service._handle_failure = AsyncMock(return_value=None)
+        service._repo = MagicMock()
+        service._repo.update_status = AsyncMock(return_value=None)
+
+    if queue is None:
+        queue = MagicMock()
+
+    if clip_repo is None:
+        clip_repo = AsyncMock()
+
+    if video_repo is None:
+        video_repo = AsyncMock()
+
+    return RenderWorkerLoop(
+        service=service,
+        queue=queue,
+        clip_repository=clip_repo,
+        video_repository=video_repo,
+    )
+
+
+# ---------------------------------------------------------------------------
+# TestWorkerLoop — loop iteration, dequeue/execute pattern
+# ---------------------------------------------------------------------------
+
+
+class TestWorkerLoop:
+    """Loop iteration, dequeue/execute pattern, and idle backoff."""
+
+    @pytest.mark.asyncio
+    async def test_dequeue_called_on_each_iteration(self) -> None:
+        """AC-1.1: Loop continuously calls dequeue on the job queue."""
+        queue = MagicMock()
+        # Return None twice, then cancel to terminate
+        queue.dequeue = AsyncMock(side_effect=[None, None, asyncio.CancelledError()])
+        loop = _make_worker_loop(queue=queue)
+
+        with patch("asyncio.sleep", new_callable=AsyncMock), pytest.raises(asyncio.CancelledError):
+            await loop.run()
+
+        assert queue.dequeue.call_count >= 2
+
+    @pytest.mark.asyncio
+    async def test_build_command_called_when_job_dequeued(self) -> None:
+        """AC-1.2: When dequeue returns a job, build_command_for_job is called."""
+        job = _make_job()
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+
+        clip_repo, video_repo = _make_repos()
+        service = MagicMock()
+        service.run_job = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg", "-i", "input.mp4", "output.mp4"],
+        ) as mock_build:
+            loop = _make_worker_loop(
+                service=service, queue=queue, clip_repo=clip_repo, video_repo=video_repo
+            )
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        mock_build.assert_called_once_with(job, clip_repo, video_repo)
+
+    @pytest.mark.asyncio
+    async def test_run_job_called_with_built_command(self) -> None:
+        """AC-1.4: Loop calls RenderService.run_job() with the built command."""
+        job = _make_job()
+        expected_cmd = ["ffmpeg", "-i", "in.mp4", "out.mp4"]
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=expected_cmd,
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        service.run_job.assert_awaited_once_with(job, expected_cmd)
+
+    @pytest.mark.asyncio
+    async def test_idle_backoff_on_none_dequeue(self) -> None:
+        """AC-4.1/AC-4.2: When dequeue returns None, loop sleeps 100ms."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[None, asyncio.CancelledError()])
+        loop = _make_worker_loop(queue=queue)
+
+        with patch("stoat_ferret.render.worker.asyncio") as mock_asyncio:
+            mock_asyncio.sleep = AsyncMock(return_value=None)
+            mock_asyncio.CancelledError = asyncio.CancelledError
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        mock_asyncio.sleep.assert_called_once_with(0.1)
+
+    @pytest.mark.asyncio
+    async def test_continues_after_idle(self) -> None:
+        """AC-4.3: Loop continues after idle backoff to process next job."""
+        job = _make_job()
+        queue = MagicMock()
+        # idle, then job, then cancel
+        queue.dequeue = AsyncMock(side_effect=[None, job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(return_value=None)
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            patch(
+                "stoat_ferret.render.worker.build_command_for_job",
+                new_callable=AsyncMock,
+                return_value=["ffmpeg", "out.mp4"],
+            ),
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        service.run_job.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_started_logged(self) -> None:
+        """NFR-002: render_worker.started logged at startup."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=asyncio.CancelledError())
+        loop = _make_worker_loop(queue=queue)
+
+        with patch.object(loop, "logger") as mock_logger, pytest.raises(asyncio.CancelledError):
+            await loop.run()
+
+        mock_logger.info.assert_any_call("render_worker.started")
+
+    @pytest.mark.asyncio
+    async def test_worker_injectable(self) -> None:
+        """AC-5.1: Worker instance is injectable via DI (constructor params)."""
+        service = MagicMock()
+        service.run_job = AsyncMock()
+        service._handle_failure = AsyncMock()
+        service._repo = MagicMock()
+        service._repo.update_status = AsyncMock()
+
+        queue = MagicMock()
+        clip_repo = AsyncMock()
+        video_repo = AsyncMock()
+
+        loop = RenderWorkerLoop(
+            service=service,
+            queue=queue,
+            clip_repository=clip_repo,
+            video_repository=video_repo,
+        )
+
+        assert loop.service is service
+        assert loop.queue is queue
+        assert loop.clip_repository is clip_repo
+        assert loop.video_repository is video_repo
+
+    @pytest.mark.asyncio
+    async def test_task_storable_on_app_state(self) -> None:
+        """AC-5.2/AC-5.3: Worker task can be stored and cancelled."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(return_value=None)
+        loop = _make_worker_loop(queue=queue)
+
+        # Simulate: asyncio.create_task(loop.run()) → task reference
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            task = asyncio.create_task(loop.run())
+            await asyncio.sleep(0)  # Let loop run one iteration
+
+            # Simulate app.state.render_worker_task = task; task.cancel()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+
+# ---------------------------------------------------------------------------
+# TestWorkerLoopErrors — exception handling, failure path, continue after error
+# ---------------------------------------------------------------------------
+
+
+class TestWorkerLoopErrors:
+    """Exception handling: run_job failures, handler failures, loop resilience."""
+
+    @pytest.mark.asyncio
+    async def test_run_job_exception_caught(self) -> None:
+        """AC-2.1: Exception from run_job is caught; loop does not crash."""
+        job = _make_job()
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(side_effect=RuntimeError("ffmpeg failed"))
+        service._handle_failure = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()  # Should not raise RuntimeError
+
+    @pytest.mark.asyncio
+    async def test_handle_failure_called_on_exception(self) -> None:
+        """AC-2.2: service._handle_failure called with job and str(exception)."""
+        job = _make_job()
+        error_msg = "ffmpeg process failed"
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(side_effect=RuntimeError(error_msg))
+        service._handle_failure = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        service._handle_failure.assert_awaited_once_with(job, error_msg)
+
+    @pytest.mark.asyncio
+    async def test_handler_exception_caught(self) -> None:
+        """AC-2.3: If _handle_failure raises, exception is caught; loop continues."""
+        job = _make_job()
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(side_effect=RuntimeError("execution failed"))
+        service._handle_failure = AsyncMock(side_effect=RuntimeError("handler failed"))
+        service._repo = MagicMock()
+        service._repo.update_status = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()  # Should not raise RuntimeError from handler
+
+    @pytest.mark.asyncio
+    async def test_direct_status_update_when_handler_fails(self) -> None:
+        """AC-2.3: If _handle_failure raises, repo.update_status called directly with FAILED."""
+        job = _make_job()
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(side_effect=RuntimeError("execution failed"))
+        service._handle_failure = AsyncMock(side_effect=RuntimeError("handler failed"))
+        service._repo = MagicMock()
+        service._repo.update_status = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        service._repo.update_status.assert_awaited_once()
+        call_args = service._repo.update_status.call_args
+        assert call_args[0][0] == job.id
+        assert call_args[0][1] == RenderStatus.FAILED
+
+    @pytest.mark.asyncio
+    async def test_error_logged_on_job_failure(self) -> None:
+        """AC-2.4: render_worker.job_failed logged at ERROR level on exception."""
+        job = _make_job()
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service.run_job = AsyncMock(side_effect=RuntimeError("exec error"))
+        service._handle_failure = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with (
+                patch.object(loop, "logger") as mock_logger,
+                pytest.raises(asyncio.CancelledError),
+            ):
+                await loop.run()
+
+        mock_logger.error.assert_any_call(
+            "render_worker.job_failed",
+            job_id=job.id,
+            error_message="exec error",
+        )
+
+    @pytest.mark.asyncio
+    async def test_loop_continues_after_exception(self) -> None:
+        """AC-2.5: Loop continues processing after a job exception (no crash)."""
+        job1 = _make_job()
+        job2 = _make_job()
+        job2.id = "job-002"
+
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job1, job2, asyncio.CancelledError()])
+        service = MagicMock()
+        # job1 fails, job2 succeeds
+        service.run_job = AsyncMock(side_effect=[RuntimeError("job1 failed"), None])
+        service._handle_failure = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        assert service.run_job.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_command_build_error_handled(self) -> None:
+        """CommandBuildError from build_command_for_job is treated as a job failure."""
+        job = _make_job()
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=[job, asyncio.CancelledError()])
+        service = MagicMock()
+        service._handle_failure = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            side_effect=CommandBuildError("no clips"),
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        service._handle_failure.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# TestWorkerLoopShutdown — CancelledError propagation, clean shutdown
+# ---------------------------------------------------------------------------
+
+
+class TestWorkerLoopShutdown:
+    """Shutdown: CancelledError propagated; no failure handler called on cancel."""
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_propagated(self) -> None:
+        """AC-3.1: CancelledError is re-raised by run() (not suppressed)."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=asyncio.CancelledError())
+        loop = _make_worker_loop(queue=queue)
+
+        with pytest.raises(asyncio.CancelledError):
+            await loop.run()
+
+    @pytest.mark.asyncio
+    async def test_no_handle_failure_on_cancelled_error(self) -> None:
+        """AC-3.2: _handle_failure NOT called when CancelledError signals shutdown."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=asyncio.CancelledError())
+        service = MagicMock()
+        service._handle_failure = AsyncMock(return_value=None)
+
+        loop = _make_worker_loop(service=service, queue=queue)
+        with pytest.raises(asyncio.CancelledError):
+            await loop.run()
+
+        service._handle_failure.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stopped_logged_on_cancel(self) -> None:
+        """NFR-002: render_worker.stopped logged when CancelledError received."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(side_effect=asyncio.CancelledError())
+        loop = _make_worker_loop(queue=queue)
+
+        with patch.object(loop, "logger") as mock_logger, pytest.raises(asyncio.CancelledError):
+            await loop.run()
+
+        mock_logger.info.assert_any_call("render_worker.stopped")
+
+    @pytest.mark.asyncio
+    async def test_cancel_via_task(self) -> None:
+        """AC-5.3: Task can be cancelled via task.cancel() and terminates cleanly."""
+        queue = MagicMock()
+        queue.dequeue = AsyncMock(return_value=None)
+        loop = _make_worker_loop(queue=queue)
+
+        with (
+            patch("stoat_ferret.render.worker.asyncio.sleep", new_callable=AsyncMock),
+            pytest.raises(asyncio.CancelledError),
+        ):
+            task = asyncio.create_task(loop.run())
+            await asyncio.sleep(0)  # Yield to let the task start
+            task.cancel()
+            await task
+
+    @pytest.mark.asyncio
+    async def test_no_failure_handler_when_run_job_raises_cancelled(self) -> None:
+        """AC-3.2: CancelledError from run_job propagates without calling _handle_failure."""
+        job = _make_job()
+        queue = MagicMock()
+        # job returned, then run_job raises CancelledError (simulates task cancel mid-job)
+        queue.dequeue = AsyncMock(return_value=job)
+        service = MagicMock()
+        service.run_job = AsyncMock(side_effect=asyncio.CancelledError())
+        service._handle_failure = AsyncMock(return_value=None)
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg"],
+        ):
+            loop = _make_worker_loop(service=service, queue=queue)
+            with pytest.raises(asyncio.CancelledError):
+                await loop.run()
+
+        service._handle_failure.assert_not_called()

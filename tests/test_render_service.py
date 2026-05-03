@@ -1,11 +1,13 @@
 """Tests for RenderService lifecycle orchestration.
 
 Covers pre-flight checks, full job lifecycle, retry logic,
-cancel lifecycle, WebSocket event emission, and DI wiring.
+cancel lifecycle, WebSocket event emission, DI wiring, and
+RenderWorkerLoop integration.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,6 +21,7 @@ from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, R
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import PreflightError, RenderService
+from stoat_ferret.render.worker import RenderWorkerLoop
 
 # Disable Rust bindings by default — tests exercise Python orchestration
 # logic. Specific preflight tests override this to test Rust integration.
@@ -981,3 +984,154 @@ class TestETAAndSpeedRatio:
             progress_events = [e for e in events if e["type"] == EventType.RENDER_PROGRESS.value]
             for pe in progress_events:
                 assert pe["payload"]["speed_ratio"] is None
+
+
+# ---------------------------------------------------------------------------
+# RenderWorkerLoop integration
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_integration() -> None:
+    """Integration: RenderWorkerLoop dequeues and executes job via RenderService.
+
+    Verifies QUEUED → RUNNING → COMPLETED state progression using real
+    InMemoryRenderRepository and RenderQueue with a mocked executor.
+    """
+    repo = InMemoryRenderRepository()
+    queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+
+    ws = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock(return_value=None)
+
+    mock_checkpoint = MagicMock()
+    mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+    mock_checkpoint.recover = AsyncMock(return_value=[])
+
+    mock_executor = MagicMock(spec=RenderExecutor)
+    mock_executor.execute = AsyncMock(return_value=True)
+    mock_executor._cleanup_temp_files = MagicMock()
+    mock_executor._progress_callback = None
+
+    with _PATCH_NO_RUST:
+        service = RenderService(
+            repository=repo,
+            queue=queue,
+            executor=mock_executor,
+            checkpoint_manager=mock_checkpoint,
+            connection_manager=ws,
+            settings=Settings(render_retry_count=0),
+        )
+
+    plan_json = _make_plan_json()
+    raw_job = RenderJob.create(
+        project_id="proj-integration",
+        output_path="/tmp/test_out.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=plan_json,
+    )
+    queued_job = await repo.create(raw_job)
+
+    clip_repo = AsyncMock()
+    video_repo = AsyncMock()
+
+    worker = RenderWorkerLoop(
+        service=service,
+        queue=queue,
+        clip_repository=clip_repo,
+        video_repository=video_repo,
+    )
+
+    with patch(
+        "stoat_ferret.render.worker.build_command_for_job",
+        new_callable=AsyncMock,
+        return_value=["ffmpeg", "-i", "input.mp4", "/tmp/test_out.mp4"],
+    ):
+        task = asyncio.create_task(worker.run())
+        for _ in range(20):
+            await asyncio.sleep(0.01)
+            final = await repo.get(queued_job.id)
+            if final and final.status in (RenderStatus.COMPLETED, RenderStatus.FAILED):
+                break
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    final = await repo.get(queued_job.id)
+    assert final is not None
+    assert final.status == RenderStatus.COMPLETED, f"Expected COMPLETED, got {final.status}"
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_job_failed_on_executor_failure() -> None:
+    """Integration: Worker loop marks job FAILED when executor returns False.
+
+    With retry_count=0 and executor returning False, _handle_failure marks
+    the job as FAILED (terminal state).
+    """
+    repo = InMemoryRenderRepository()
+    queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+
+    ws = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock(return_value=None)
+
+    mock_checkpoint = MagicMock()
+    mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+    mock_checkpoint.recover = AsyncMock(return_value=[])
+
+    mock_executor = MagicMock(spec=RenderExecutor)
+    mock_executor.execute = AsyncMock(return_value=False)
+    mock_executor._cleanup_temp_files = MagicMock()
+    mock_executor._progress_callback = None
+
+    with _PATCH_NO_RUST:
+        service = RenderService(
+            repository=repo,
+            queue=queue,
+            executor=mock_executor,
+            checkpoint_manager=mock_checkpoint,
+            connection_manager=ws,
+            settings=Settings(render_retry_count=0),
+        )
+
+    plan_json = _make_plan_json()
+    raw_job = RenderJob.create(
+        project_id="proj-fail",
+        output_path="/tmp/fail_out.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=plan_json,
+    )
+    await repo.create(raw_job)
+
+    clip_repo = AsyncMock()
+    video_repo = AsyncMock()
+
+    worker = RenderWorkerLoop(
+        service=service,
+        queue=queue,
+        clip_repository=clip_repo,
+        video_repository=video_repo,
+    )
+
+    with patch(
+        "stoat_ferret.render.worker.build_command_for_job",
+        new_callable=AsyncMock,
+        return_value=["ffmpeg", "-i", "input.mp4", "/tmp/fail_out.mp4"],
+    ):
+        task = asyncio.create_task(worker.run())
+        for _ in range(20):
+            await asyncio.sleep(0.01)
+            final = await repo.get(raw_job.id)
+            if final and final.status in (RenderStatus.COMPLETED, RenderStatus.FAILED):
+                break
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    final = await repo.get(raw_job.id)
+    assert final is not None
+    assert final.status == RenderStatus.FAILED, f"Expected FAILED, got {final.status}"
