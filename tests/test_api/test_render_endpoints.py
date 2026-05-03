@@ -481,6 +481,7 @@ class TestRenderModuleExports:
             "RenderQueue",
             "RenderService",
             "RenderStatus",
+            "RenderWorkerLoop",
             "build_command_for_job",
         }
         assert set(render_mod.__all__) == expected
