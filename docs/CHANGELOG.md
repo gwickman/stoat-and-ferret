@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v055] - 2026-05-03
+
+### Render Worker Loop
+
+Implemented a background render worker loop that dequeues render jobs and executes them via the existing `RenderService.run_job()` pipeline. The worker runs as a background task during app lifespan and is designed to be non-blocking and resilient.
+
+**Theme:** render-worker-loop  
+**Features:** 3/3 complete (001-command-builder, 002-worker-loop-core, 003-lifecycle-and-tests)  
+**Quality:** 53 new tests added, 0 regressions
+
+**Key Outcomes:**
+- Command builder (`RenderCommandBuilder`) constructs validated FFmpeg command sequences from `RenderJob` (PR #373)
+- Worker loop core (`RenderWorkerLoop`) dequeues jobs and dispatches to `RenderService.run_job()` with structured error handling (PR #374)
+- Lifecycle integration wires `RenderWorkerLoop` into app lifespan at Phase 10 (after job queue worker), with graceful shutdown and full test coverage (PR #375)
+
+**Recovery Context:**
+v055 experienced a server restart mid-execution. Recovery involved manual PR merge (#375) and MCP state patching. Feature 003 completion report was not generated during recovery and is documented as a documentation lag.
+
+**PRs Merged:**
+- #373: Command builder for render jobs (`RenderCommandBuilder` with FFmpeg argument construction)
+- #374: Render worker loop core (background dequeue loop with retry and error handling)
+- #375: Lifecycle integration and tests (lifespan wiring, shutdown, 91-test coverage)
+
 ## [v054] - 2026-05-02
 
 ### GUI Performance & Compatibility Baselines
