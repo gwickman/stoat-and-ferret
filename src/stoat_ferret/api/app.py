@@ -259,14 +259,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await render_service.recover()
 
     # Phase 9.5: Register render worker (after services, before job queue worker)
-    render_worker = RenderWorkerLoop(
-        service=render_service,
-        queue=render_queue,
-        clip_repository=clip_repository,
-        video_repository=repo,
-    )
-    render_worker_task = asyncio.create_task(render_worker.run())
-    app.state.render_worker_task = render_worker_task
+    if settings.render_worker_enabled:
+        render_worker = RenderWorkerLoop(
+            service=render_service,
+            queue=render_queue,
+            clip_repository=clip_repository,
+            video_repository=repo,
+        )
+        render_worker_task = asyncio.create_task(render_worker.run())
+        app.state.render_worker_task = render_worker_task
 
     # Create preview manager
     from stoat_ferret.db.preview_repository import SQLitePreviewRepository

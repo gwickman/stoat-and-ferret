@@ -337,6 +337,7 @@ def start_server(
         open(output_dir / "server-stdout.log", "w", encoding="utf-8") as stdout_fh,
         open(output_dir / "server-stderr.log", "w", encoding="utf-8") as stderr_fh,
     ):
+        server_env = {**os.environ, "STOAT_RENDER_WORKER_ENABLED": "false"}
         proc = subprocess.Popen(
             [
                 sys.executable,
@@ -353,6 +354,7 @@ def start_server(
             stdout=stdout_fh,
             stderr=stderr_fh,
             text=True,
+            env=server_env,
         )
     return proc, []
 
