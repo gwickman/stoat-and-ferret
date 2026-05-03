@@ -991,6 +991,384 @@ class TestETAAndSpeedRatio:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# RenderWorkerLoop class-based integration tests (FR-004, FR-005, FR-006)
+# ---------------------------------------------------------------------------
+
+
+class TestRenderWorkerIntegration:
+    """Integration tests: job state progression QUEUED → RUNNING → COMPLETED."""
+
+    async def test_queued_to_completed_state_progression(self) -> None:
+        """AC-4.1-4.5: Worker dequeues and completes a QUEUED job."""
+        repo = InMemoryRenderRepository()
+        queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+        ws = MagicMock(spec=ConnectionManager)
+        ws.broadcast = AsyncMock(return_value=None)
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+        mock_checkpoint.recover = AsyncMock(return_value=[])
+        mock_executor = MagicMock(spec=RenderExecutor)
+        mock_executor.execute = AsyncMock(return_value=True)
+        mock_executor._cleanup_temp_files = MagicMock()
+        mock_executor._progress_callback = None
+
+        with _PATCH_NO_RUST:
+            service = RenderService(
+                repository=repo,
+                queue=queue,
+                executor=mock_executor,
+                checkpoint_manager=mock_checkpoint,
+                connection_manager=ws,
+                settings=Settings(render_retry_count=0),
+            )
+
+        plan_json = _make_plan_json()
+        raw_job = RenderJob.create(
+            project_id="proj-integration",
+            output_path="/tmp/test_out.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan=plan_json,
+        )
+        queued_job = await repo.create(raw_job)
+        assert queued_job.status == RenderStatus.QUEUED  # AC-4.2
+
+        worker = RenderWorkerLoop(
+            service=service,
+            queue=queue,
+            clip_repository=AsyncMock(),
+            video_repository=AsyncMock(),
+        )
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg", "-i", "input.mp4", "/tmp/test_out.mp4"],
+        ):
+            task = asyncio.create_task(worker.run())
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                final = await repo.get(queued_job.id)
+                if final and final.status in (RenderStatus.COMPLETED, RenderStatus.FAILED):
+                    break
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        final = await repo.get(queued_job.id)
+        assert final is not None
+        assert final.status == RenderStatus.COMPLETED  # AC-4.5
+
+
+class TestRenderWorkerErrors:
+    """Integration tests: error handling and retry logic (FR-005)."""
+
+    async def test_exception_triggers_failure_handler(self) -> None:
+        """AC-5.1-5.2/5.4: Executor exception calls _handle_failure; no retries → FAILED."""
+        repo = InMemoryRenderRepository()
+        queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+        ws = MagicMock(spec=ConnectionManager)
+        ws.broadcast = AsyncMock(return_value=None)
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+        mock_checkpoint.recover = AsyncMock(return_value=[])
+        mock_executor = MagicMock(spec=RenderExecutor)
+        mock_executor.execute = AsyncMock(side_effect=RuntimeError("Simulated failure"))
+        mock_executor._cleanup_temp_files = MagicMock()
+        mock_executor._progress_callback = None
+
+        with _PATCH_NO_RUST:
+            service = RenderService(
+                repository=repo,
+                queue=queue,
+                executor=mock_executor,
+                checkpoint_manager=mock_checkpoint,
+                connection_manager=ws,
+                settings=Settings(render_retry_count=0),
+            )
+
+        raw_job = RenderJob.create(
+            project_id="proj-error",
+            output_path="/tmp/error_out.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan=_make_plan_json(),
+        )
+        await repo.create(raw_job)
+
+        worker = RenderWorkerLoop(
+            service=service,
+            queue=queue,
+            clip_repository=AsyncMock(),
+            video_repository=AsyncMock(),
+        )
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg", "-i", "input.mp4", "/tmp/error_out.mp4"],
+        ):
+            task = asyncio.create_task(worker.run())
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                final = await repo.get(raw_job.id)
+                if final and final.status == RenderStatus.FAILED:
+                    break
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        final = await repo.get(raw_job.id)
+        assert final is not None
+        assert final.status == RenderStatus.FAILED
+
+    async def test_retry_on_exception_requeues_job(self) -> None:
+        """AC-5.3: Exception with retries remaining re-queues job; retried job completes."""
+        repo = InMemoryRenderRepository()
+        queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+        ws = MagicMock(spec=ConnectionManager)
+        ws.broadcast = AsyncMock(return_value=None)
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+        mock_checkpoint.recover = AsyncMock(return_value=[])
+
+        call_count = 0
+        mock_executor = MagicMock(spec=RenderExecutor)
+        mock_executor._cleanup_temp_files = MagicMock()
+        mock_executor._progress_callback = None
+
+        async def execute_fail_once(job, cmd, *, total_duration_us: int = 0) -> bool:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise RuntimeError("Simulated transient failure")
+            return True
+
+        mock_executor.execute = execute_fail_once
+
+        with _PATCH_NO_RUST:
+            service = RenderService(
+                repository=repo,
+                queue=queue,
+                executor=mock_executor,
+                checkpoint_manager=mock_checkpoint,
+                connection_manager=ws,
+                settings=Settings(render_retry_count=2),
+            )
+
+        raw_job = RenderJob.create(
+            project_id="proj-retry",
+            output_path="/tmp/retry_out.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan=_make_plan_json(),
+        )
+        await repo.create(raw_job)
+
+        worker = RenderWorkerLoop(
+            service=service,
+            queue=queue,
+            clip_repository=AsyncMock(),
+            video_repository=AsyncMock(),
+        )
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg", "-i", "input.mp4", "/tmp/retry_out.mp4"],
+        ):
+            task = asyncio.create_task(worker.run())
+            for _ in range(150):
+                await asyncio.sleep(0.01)
+                final = await repo.get(raw_job.id)
+                if final and final.status == RenderStatus.COMPLETED:
+                    break
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        final = await repo.get(raw_job.id)
+        assert final is not None
+        assert final.status == RenderStatus.COMPLETED
+        assert call_count == 2  # Failed once, then succeeded on retry
+
+    async def test_error_message_captured_on_failure(self) -> None:
+        """AC-5.5: error_message is stored on the job when it reaches FAILED."""
+        repo = InMemoryRenderRepository()
+        queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+        ws = MagicMock(spec=ConnectionManager)
+        ws.broadcast = AsyncMock(return_value=None)
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+        mock_checkpoint.recover = AsyncMock(return_value=[])
+        mock_executor = MagicMock(spec=RenderExecutor)
+        mock_executor.execute = AsyncMock(side_effect=RuntimeError("Disk full"))
+        mock_executor._cleanup_temp_files = MagicMock()
+        mock_executor._progress_callback = None
+
+        with _PATCH_NO_RUST:
+            service = RenderService(
+                repository=repo,
+                queue=queue,
+                executor=mock_executor,
+                checkpoint_manager=mock_checkpoint,
+                connection_manager=ws,
+                settings=Settings(render_retry_count=0),
+            )
+
+        raw_job = RenderJob.create(
+            project_id="proj-err-msg",
+            output_path="/tmp/errmsg_out.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan=_make_plan_json(),
+        )
+        await repo.create(raw_job)
+
+        worker = RenderWorkerLoop(
+            service=service,
+            queue=queue,
+            clip_repository=AsyncMock(),
+            video_repository=AsyncMock(),
+        )
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            new_callable=AsyncMock,
+            return_value=["ffmpeg", "-i", "input.mp4", "/tmp/errmsg_out.mp4"],
+        ):
+            task = asyncio.create_task(worker.run())
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                final = await repo.get(raw_job.id)
+                if final and final.status == RenderStatus.FAILED:
+                    break
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        final = await repo.get(raw_job.id)
+        assert final is not None
+        assert final.status == RenderStatus.FAILED
+        assert final.error_message is not None
+        assert len(final.error_message) > 0
+
+
+class TestRenderWorkerNoop:
+    """Integration tests: noop mode bypass (FR-006)."""
+
+    async def test_noop_jobs_complete_inline(self) -> None:
+        """AC-6.1: noop mode drives job to COMPLETED without worker involvement."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service(
+                settings=Settings(render_mode="noop"),
+            )
+            executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
+
+            job = await service.submit_job(
+                project_id="proj-noop",
+                output_path="/tmp/noop_out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+
+        assert job.status == RenderStatus.COMPLETED
+        executor.execute.assert_not_called()
+
+    async def test_noop_jobs_leave_empty_queue(self) -> None:
+        """AC-6.2: After noop submission, no QUEUED jobs remain for the worker."""
+        with _PATCH_NO_RUST:
+            repo = InMemoryRenderRepository()
+            queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+            ws = MagicMock(spec=ConnectionManager)
+            ws.broadcast = AsyncMock(return_value=None)
+            mock_checkpoint = MagicMock()
+            mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+            mock_checkpoint.recover = AsyncMock(return_value=[])
+            mock_executor = MagicMock(spec=RenderExecutor)
+            mock_executor.execute = AsyncMock(return_value=False)
+            mock_executor._cleanup_temp_files = MagicMock()
+            mock_executor._progress_callback = None
+
+            service = RenderService(
+                repository=repo,
+                queue=queue,
+                executor=mock_executor,
+                checkpoint_manager=mock_checkpoint,
+                connection_manager=ws,
+                settings=Settings(render_mode="noop"),
+            )
+
+            await service.submit_job(
+                project_id="proj-noop-queue",
+                output_path="/tmp/noop_queue_out.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+
+        queue_depth = await queue.get_queue_depth()
+        assert queue_depth == 0, "No QUEUED jobs should remain after noop submission"
+
+    async def test_noop_and_worker_dont_interfere(self) -> None:
+        """AC-6.3: Running a worker alongside noop submissions causes no interference."""
+        with _PATCH_NO_RUST:
+            repo = InMemoryRenderRepository()
+            queue = RenderQueue(repo, max_concurrent=4, max_depth=50)
+            ws = MagicMock(spec=ConnectionManager)
+            ws.broadcast = AsyncMock(return_value=None)
+            mock_checkpoint = MagicMock()
+            mock_checkpoint.cleanup_stale = AsyncMock(return_value=0)
+            mock_checkpoint.recover = AsyncMock(return_value=[])
+            mock_executor = MagicMock(spec=RenderExecutor)
+            mock_executor.execute = AsyncMock(return_value=False)
+            mock_executor._cleanup_temp_files = MagicMock()
+            mock_executor._progress_callback = None
+
+            service = RenderService(
+                repository=repo,
+                queue=queue,
+                executor=mock_executor,
+                checkpoint_manager=mock_checkpoint,
+                connection_manager=ws,
+                settings=Settings(render_mode="noop"),
+            )
+
+            worker = RenderWorkerLoop(
+                service=service,
+                queue=queue,
+                clip_repository=AsyncMock(),
+                video_repository=AsyncMock(),
+            )
+
+            # Start worker alongside noop submissions
+            task = asyncio.create_task(worker.run())
+            try:
+                job = await service.submit_job(
+                    project_id="proj-noop-worker",
+                    output_path="/tmp/noop_worker_out.mp4",
+                    output_format=OutputFormat.MP4,
+                    quality_preset=QualityPreset.STANDARD,
+                    render_plan_json=_make_plan_json(),
+                )
+                # Noop job completes inline regardless of worker state
+                assert job.status == RenderStatus.COMPLETED
+                # Worker finds empty queue; executor never called
+                await asyncio.sleep(0.05)
+                mock_executor.execute.assert_not_called()
+            finally:
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+
+
+# ---------------------------------------------------------------------------
+# Legacy standalone integration tests (kept for backwards compatibility)
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
 async def test_worker_loop_integration() -> None:
     """Integration: RenderWorkerLoop dequeues and executes job via RenderService.
