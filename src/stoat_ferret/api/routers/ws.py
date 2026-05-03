@@ -9,6 +9,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.identity import is_valid_client_id
 from stoat_ferret.api.websocket.manager import ConnectionManager
 
 logger = structlog.get_logger(__name__)
@@ -57,16 +58,26 @@ async def _replay_missed_events(websocket: WebSocket, manager: ConnectionManager
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Handle WebSocket connections at /ws.
 
-    Accepts the connection via ConnectionManager, replays any buffered
-    events the client missed (using the ``Last-Event-ID`` header),
-    starts a heartbeat task, and listens for incoming messages until
-    disconnect.
+    Extracts ``subscribe_token`` from query params. If present and invalid
+    (not a 32-char hex string), closes the connection with code 4400 before
+    adding it to the manager. Valid tokens are passed through to
+    ``ConnectionManager.connect()`` for identity tracking.
+
+    Replays any buffered events the client missed (using the
+    ``Last-Event-ID`` header), starts a heartbeat task, and listens for
+    incoming messages until disconnect.
 
     Args:
         websocket: The WebSocket connection.
     """
     manager: ConnectionManager = websocket.app.state.ws_manager
-    await manager.connect(websocket)
+
+    subscribe_token: str | None = websocket.query_params.get("subscribe_token")
+    if subscribe_token is not None and not is_valid_client_id(subscribe_token):
+        await websocket.close(code=4400, reason="Invalid subscribe_token format")
+        return
+
+    await manager.connect(websocket, client_id=subscribe_token)
     await _replay_missed_events(websocket, manager)
 
     heartbeat_interval = get_settings().ws_heartbeat_interval
@@ -79,4 +90,4 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         pass
     finally:
         heartbeat_task.cancel()
-        manager.disconnect(websocket)
+        manager.disconnect(websocket, client_id=subscribe_token)
