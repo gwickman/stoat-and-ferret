@@ -262,6 +262,10 @@ class Settings(BaseSettings):
         default=True,
         description="Enable batch rendering support (STOAT_BATCH_RENDERING).",
     )
+    render_worker_enabled: bool = Field(
+        default=True,
+        description="Enable the background render worker loop (STOAT_RENDER_WORKER_ENABLED).",
+    )
 
     # WebSocket replay buffer (BL-313)
     ws_replay_buffer_size: int = Field(
