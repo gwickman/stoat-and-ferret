@@ -15,6 +15,7 @@ from stoat_ferret.api.middleware.metrics import (
     stoat_ws_connected_clients,
 )
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.api.websocket.identity import ClientIdentityStore
 
 logger = structlog.get_logger(__name__)
 
@@ -27,6 +28,9 @@ class ConnectionManager:
     replay buffer of recent broadcasts so reconnecting clients can use
     the ``Last-Event-ID`` handshake header to catch up on missed events
     (BL-274, FR-001..FR-005).
+
+    When a ``ClientIdentityStore`` is provided, the manager stores and clears
+    identity entries keyed by ``client_id`` on connect/disconnect respectively.
     """
 
     def __init__(
@@ -34,6 +38,7 @@ class ConnectionManager:
         *,
         buffer_size: int | None = None,
         ttl_seconds: int | None = None,
+        client_identity_store: ClientIdentityStore | None = None,
     ) -> None:
         """Initialize the manager with a bounded replay buffer.
 
@@ -43,6 +48,10 @@ class ConnectionManager:
                 A size of 0 disables buffering (no replay).
             ttl_seconds: Maximum age, in seconds, of replayable events at
                 reconnect time. Defaults to ``settings.ws_replay_ttl_seconds``.
+            client_identity_store: Optional identity store for tracking
+                connected clients by token. When provided, ``connect()`` calls
+                ``store()`` and ``disconnect()`` calls ``clear()`` for any
+                ``client_id`` that is not ``None``.
         """
         settings = get_settings()
         resolved_size = buffer_size if buffer_size is not None else settings.ws_replay_buffer_size
@@ -52,6 +61,7 @@ class ConnectionManager:
         self._replay_buffer: deque[dict[str, Any]] = deque(maxlen=resolved_size)
         self._buffer_size = resolved_size
         self._ttl_seconds = resolved_ttl
+        self._identity_store = client_identity_store
 
     @property
     def active_connections(self) -> int:
@@ -73,25 +83,40 @@ class ConnectionManager:
         """Return the current number of buffered events (for tests/metrics)."""
         return len(self._replay_buffer)
 
-    async def connect(self, websocket: WebSocket) -> None:
+    async def connect(self, websocket: WebSocket, *, client_id: str | None = None) -> None:
         """Accept and register a WebSocket connection.
+
+        When ``client_id`` is provided and an identity store is configured,
+        the identity entry is stored via ``store(client_id, {})``.
 
         Args:
             websocket: The WebSocket connection to accept and track.
+            client_id: Optional 32-char hex token identifying the client.
+                When ``None``, the connection proceeds without identity storage
+                (Last-Event-ID path unchanged).
         """
         await websocket.accept()
         self._connections.add(websocket)
         stoat_ws_connected_clients.set(len(self._connections))
+        if client_id is not None and self._identity_store is not None:
+            self._identity_store.store(client_id, {})
         logger.info("websocket_connected", active=len(self._connections))
 
-    def disconnect(self, websocket: WebSocket) -> None:
+    def disconnect(self, websocket: WebSocket, *, client_id: str | None = None) -> None:
         """Remove a WebSocket connection from tracking.
+
+        When ``client_id`` is provided and an identity store is configured,
+        the identity entry is removed via ``clear(client_id)``.
 
         Args:
             websocket: The WebSocket connection to remove.
+            client_id: Optional 32-char hex token identifying the client.
+                When ``None``, disconnect proceeds without identity cleanup.
         """
         self._connections.discard(websocket)
         stoat_ws_connected_clients.set(len(self._connections))
+        if client_id is not None and self._identity_store is not None:
+            self._identity_store.clear(client_id)
         logger.info("websocket_disconnected", active=len(self._connections))
 
     async def broadcast(self, message: dict[str, Any]) -> None:

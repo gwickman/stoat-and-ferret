@@ -59,6 +59,7 @@ from stoat_ferret.api.services.synthetic_monitoring import SyntheticMonitoringTa
 from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.api.services.waveform import WaveformService
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.api.websocket.identity import ClientIdentityStore, InMemoryClientIdentityStore
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
@@ -149,7 +150,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Create ConnectionManager if not injected
     if not getattr(app.state, "ws_manager", None):
-        app.state.ws_manager = ConnectionManager()
+        app.state.ws_manager = ConnectionManager(
+            client_identity_store=getattr(app.state, "client_identity_store", None)
+        )
 
     # Initialize startup gate (False until all subsystems ready)
     app.state._startup_ready = False
@@ -446,6 +449,7 @@ def create_app(
     thumbnail_service: ThumbnailService | None = None,
     waveform_service: WaveformService | None = None,
     gui_static_path: str | Path | None = None,
+    client_identity_store: ClientIdentityStore | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -474,6 +478,9 @@ def create_app(
         thumbnail_service: Optional thumbnail service for dependency injection.
         waveform_service: Optional waveform service for dependency injection.
         gui_static_path: Optional path to built frontend assets directory.
+        client_identity_store: Optional identity store for WebSocket client tracking.
+            Defaults to a new ``InMemoryClientIdentityStore`` if not provided.
+            Stored on ``app.state.client_identity_store`` for access by future features.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -495,6 +502,10 @@ def create_app(
     # Initialize startup gate so it is always present on app.state
     app.state._startup_ready = False
     app.state._startup_timestamp = None
+
+    # Initialize client identity store (default to in-memory if not provided)
+    resolved_identity_store = client_identity_store or InMemoryClientIdentityStore()
+    app.state.client_identity_store = resolved_identity_store
 
     # Store injected dependencies on app.state
     has_injected = any(
