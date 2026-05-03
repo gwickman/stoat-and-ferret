@@ -4,6 +4,26 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v056] - 2026-05-03
+
+### WebSocket Client Identity
+
+Implemented client identity management for WebSocket connections, enabling persistent token-based client tracking across reconnections.
+
+**Theme:** websocket-client-identity  
+**Features:** 3/3 complete (001-framework-documentation, 002-token-mechanism, 003-connection-integration)  
+**Quality:** 49/49 acceptance criteria met, 58 new tests added, 0 regressions
+
+**Key Outcomes:**
+- Token mechanism: 32-char hex via `secrets.token_hex(16)`, validated via `is_valid_client_id()` (PR #376)
+- Storage: `ClientIdentityStore` Protocol with `InMemoryClientIdentityStore` implementation, in-memory dict keyed by client token (PR #376)
+- Integration: `ConnectionManager` wired with identity store; client token passed via WebSocket query parameter on connect, cleared on disconnect (PR #377)
+- Backwards compatibility: Last-Event-ID replay path unchanged when no client token provided
+
+**PRs Merged:**
+- #376: Token mechanism and ClientIdentityStore implementation
+- #377: ConnectionManager integration with WebSocket endpoint
+
 ## [v055] - 2026-05-03
 
 ### Render Worker Loop
