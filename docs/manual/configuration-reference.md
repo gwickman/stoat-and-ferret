@@ -24,6 +24,18 @@ Batch rendering exposes the `/api/v1/batch/*` routes that accept multi-job rende
 - `STOAT_BATCH_MAX_JOBS` is a denial-of-service guard: the limit caps the work a single client can queue in one request. Raising it on an internet-exposed deployment increases the cost of a hostile or malformed batch submission. Keep at the default unless you have an inbound rate-limit or authentication layer that bounds caller concurrency.
 - Disabling `STOAT_BATCH_RENDERING` is a coarse mitigation — operators responding to a batch-route incident can set it to `false` to take all batch endpoints offline without redeploying code.
 
+## Render Worker
+
+The render worker loop dequeues jobs from the render queue and drives them through the render pipeline as a background asyncio task.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_RENDER_WORKER_ENABLED` | `bool` | `true` | Enable the background render worker loop. When `false`, jobs accumulate in the queue but are never dequeued; useful for UAT environments that assert on queue state without a running worker. |
+
+**Security implications**
+
+- Disabling `STOAT_RENDER_WORKER_ENABLED` is intended for test and UAT environments only. In production, leaving it `false` causes submitted render jobs to queue indefinitely without being processed.
+
 ## Preview Cache
 
 Preview generation produces HLS segment files cached on local disk and indexed in memory. The four preview variables collectively bound disk consumption, session lifetime, and concurrent session count. They directly limit the resources a client can consume by repeatedly opening preview sessions.

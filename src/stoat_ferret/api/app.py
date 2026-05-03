@@ -66,7 +66,7 @@ from stoat_ferret.db.async_repository import (
 )
 from stoat_ferret.db.audit import AuditLogger
 from stoat_ferret.db.batch_repository import AsyncBatchRepository, AsyncSQLiteBatchRepository
-from stoat_ferret.db.clip_repository import AsyncClipRepository
+from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.models import ProxyQuality, ProxyStatus
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.proxy_repository import AsyncProxyRepository, SQLiteProxyRepository
@@ -91,6 +91,7 @@ from stoat_ferret.render.render_repository import (
     AsyncSQLiteRenderRepository,
 )
 from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.worker import RenderWorkerLoop
 
 logger = structlog.get_logger(__name__)
 
@@ -196,6 +197,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
     repo = AsyncSQLiteVideoRepository(app.state.db, audit_logger=audit_logger)
+    app.state.video_repository = repo
+    clip_repository = AsyncSQLiteClipRepository(app.state.db)
+    app.state.clip_repository = clip_repository
     app.state.ffmpeg_executor = ObservableFFmpegExecutor(RealFFmpegExecutor())
     async_executor = RealAsyncFFmpegExecutor()
     thumbnail_service = ThumbnailService(
@@ -253,6 +257,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     app.state.render_service = render_service
     await render_service.recover()
+
+    # Phase 9.5: Register render worker (after services, before job queue worker)
+    if settings.render_worker_enabled:
+        render_worker = RenderWorkerLoop(
+            service=render_service,
+            queue=render_queue,
+            clip_repository=clip_repository,
+            video_repository=repo,
+        )
+        render_worker_task = asyncio.create_task(render_worker.run())
+        app.state.render_worker_task = render_worker_task
 
     # Create preview manager
     from stoat_ferret.db.preview_repository import SQLitePreviewRepository
@@ -391,6 +406,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     preview_cache: PreviewCache | None = getattr(app.state, "preview_cache", None)
     if preview_cache is not None:
         await preview_cache.stop_cleanup_task()
+
+    # Shutdown: cancel render worker before general job worker (prevent orphaned jobs)
+    rw_task: asyncio.Task[None] | None = getattr(app.state, "render_worker_task", None)
+    if rw_task is not None:
+        rw_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await rw_task
 
     # Shutdown: cancel worker and close database
     worker_task.cancel()
