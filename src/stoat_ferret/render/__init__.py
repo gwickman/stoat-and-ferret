@@ -6,9 +6,11 @@ from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, R
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import AsyncRenderRepository
 from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.worker import CommandBuildError, build_command_for_job
 
 __all__ = [
     "AsyncRenderRepository",
+    "CommandBuildError",
     "OutputFormat",
     "QualityPreset",
     "RenderCheckpointManager",
@@ -17,4 +19,5 @@ __all__ = [
     "RenderQueue",
     "RenderService",
     "RenderStatus",
+    "build_command_for_job",
 ]
