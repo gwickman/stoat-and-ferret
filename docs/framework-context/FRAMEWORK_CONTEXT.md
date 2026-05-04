@@ -162,6 +162,32 @@ Cross-reference: `useBatchJobs` hook is documented in the GUI hooks C4 reference
 
 ---
 
+### Structured Logging — render_worker.* Events
+
+This section declares the `render_worker.*` event namespace introduced in v055 (PRs #373–#375, 2026-05-03) and documents all events emitted by the background render worker loop (`src/stoat_ferret/render/worker.py`). The namespace was used in production before formal declaration was completed; v057 completes the governance process.
+
+Cross-reference: See AGENTS.md — Structured Event Naming for the full approved namespace taxonomy and the declaration-before-use process.
+
+#### Namespace Declaration
+
+| Namespace | Category | Purpose |
+|-----------|----------|---------|
+| `render_worker.*` | Domain | Render worker lifecycle events and execution errors |
+
+#### Event Reference
+
+| Event | Severity | When Fired |
+|-------|----------|------------|
+| `render_worker.started` | `info` | Worker loop enters main `run()` coroutine |
+| `render_worker.stopped` | `info` | `asyncio.CancelledError` caught; graceful shutdown |
+| `render_worker.multi_segment_truncated` | `warning` | `render_plan` contains >1 segment; only the first segment is executed |
+| `render_worker.job_failed` | `error` | Job execution raised an exception (command build or `run_job` failure) |
+| `render_worker.error` | `error` | Failure handler raised an exception, or repository `update_status` failed (2 call sites in `_handle_job_error`) |
+
+All 5 events are emitted by `RenderWorkerLoop` in `src/stoat_ferret/render/worker.py`. `render_worker.error` fires at two distinct call sites within `_handle_job_error()`: once when `_handle_failure()` raises (line 228), and once when `_repo.update_status()` raises (line 241).
+
+---
+
 ## 4. Banned or Discouraged Patterns
 
 | Pattern | Why | Instead Use |
@@ -195,7 +221,7 @@ Next Quarterly Review: 2026-07-30
 
 ## 7. Document Map
 
-No split files. Main FRAMEWORK_CONTEXT.md contains all required content within size constraints (~210 lines).
+No split files. Main FRAMEWORK_CONTEXT.md contains all required content within size constraints (~240 lines).
 
 ---
 
@@ -205,6 +231,6 @@ No split files. Main FRAMEWORK_CONTEXT.md contains all required content within s
 |-------|-------|
 | Last Updated | 2026-05-04 |
 | Next Quarterly Review | 2026-07-30 |
-| Updated By | v057-feature-004 |
-| Source Version/Design Reference | docs/auto-dev/versions/v057/02-framework-context-additions/002-batch-transport-docs |
+| Updated By | v057-feature-005 |
+| Source Version/Design Reference | docs/auto-dev/versions/v057/02-framework-context-additions/003-render-worker-namespace |
 
