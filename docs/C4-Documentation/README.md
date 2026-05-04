@@ -1,7 +1,7 @@
 # C4 Architecture Documentation — stoat-and-ferret
 
-- **Last Updated**: 2026-04-07
-- **Generated for Version**: v031
+- **Last Updated**: 2026-05-04
+- **Generated for Version**: v057
 - **Generation Mode**: full
 - **Last Source Commit**: 1b13f1e
 - **Generator**: auto-dev-mcp C4 documentation prompt
@@ -44,7 +44,7 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | [Python Bindings Layer](./c4-component-python-bindings.md) | Python re-export package and manually maintained type stubs bridging Rust core to Python |
 | [Rust Core Engine](./c4-component-rust-core-engine.md) | Frame-accurate timeline math, clip validation, FFmpeg command building, filter graphs, layout, composition, preview, render, sanitization |
 | [Test Infrastructure](./c4-component-test-infrastructure.md) | Python test suites: unit, API, smoke, black-box, contract, security, job queue, test doubles, property-based |
-| [Web GUI](./c4-component-web-gui.md) | React SPA: 7 pages, 13 Zustand stores, 12 hooks, timeline editor, HLS preview, render management, effect workshop |
+| [Web GUI](./c4-component-web-gui.md) | React SPA: 7 pages, 17 Zustand stores, 20 hooks, timeline editor, HLS preview, render management, effect workshop, workspace layout |
 
 ### Code-Level Documents (69)
 
@@ -91,6 +91,7 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | [c4-code-stoat-ferret-api-schemas.md](./c4-code-stoat-ferret-api-schemas.md) | Pydantic request/response schemas |
 | [c4-code-python-schemas.md](./c4-code-python-schemas.md) | Schema module overview |
 | [c4-code-stoat-ferret-api-websocket.md](./c4-code-stoat-ferret-api-websocket.md) | WebSocket connection manager and events |
+| [c4-code-websocket-identity.md](./c4-code-websocket-identity.md) | WebSocket client identity: token generation, validation, ClientIdentityStore protocol, InMemoryClientIdentityStore |
 
 #### Application Services (7 files)
 
@@ -112,7 +113,7 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | [c4-code-python-db.md](./c4-code-python-db.md) | Database module overview |
 | [c4-code-stoat-ferret-db-new.md](./c4-code-stoat-ferret-db-new.md) | New database types/schemas |
 | [c4-code-alembic.md](./c4-code-alembic.md) | Alembic migration config |
-| [c4-code-alembic-versions.md](./c4-code-alembic-versions.md) | 7 migration versions |
+| [c4-code-alembic-versions.md](./c4-code-alembic-versions.md) | 9 migration versions |
 | [c4-code-stoat-ferret.md](./c4-code-stoat-ferret.md) | Package root, domain models, logging config |
 
 #### Web GUI (21 files)
@@ -126,9 +127,10 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | [c4-code-gui-components-library.md](./c4-code-gui-components-library.md) | ProxyStatusBadge component |
 | [c4-code-gui-components-render.md](./c4-code-gui-components-render.md) | StatusBadge, RenderJobCard, StartRenderModal |
 | [c4-code-gui-components-theater.md](./c4-code-gui-components-theater.md) | TheaterMode with HUD auto-hide, AIActionIndicator |
-| [c4-code-gui-hooks.md](./c4-code-gui-hooks.md) | 12 hooks: useHealth, useWebSocket, useMetrics, useDebounce, etc. |
+| [c4-code-gui-components-workspace.md](./c4-code-gui-components-workspace.md) | WorkspaceLayout, PanelVisibilityToggle, WorkspacePresetSelector |
+| [c4-code-gui-hooks.md](./c4-code-gui-hooks.md) | 20 hooks: useHealth, useWebSocket, useMetrics, useDebounce, useWorkspace, useSettings, etc. |
 | [c4-code-gui-pages.md](./c4-code-gui-pages.md) | 7 pages: Dashboard, Library, Projects, Effects, Timeline, Preview, Render |
-| [c4-code-gui-stores.md](./c4-code-gui-stores.md) | 13 Zustand stores: render, preview, theater, timeline, transition, etc. |
+| [c4-code-gui-stores.md](./c4-code-gui-stores.md) | 17 Zustand stores: render, preview, theater, timeline, transition, workspace, settings, batch, etc. |
 | [c4-code-gui-utils.md](./c4-code-gui-utils.md) | Timeline utilities: timeToPixel, pixelToTime, formatRulerTime |
 | [c4-code-gui-src-tests.md](./c4-code-gui-src-tests.md) | MockWebSocket utility for tests |
 | [c4-code-gui-components-tests.md](./c4-code-gui-components-tests.md) | 318 component tests across 38 test files |
