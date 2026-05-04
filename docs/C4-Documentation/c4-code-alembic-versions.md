@@ -5,7 +5,7 @@
 - **Description**: Ordered Alembic migration scripts that define the SQLite schema evolution from initial creation through current state.
 - **Location**: `alembic/versions/`
 - **Language**: Python (Alembic migration scripts)
-- **Purpose**: Provides reversible database schema migrations for the SQLite database, covering tables for videos, audit logs, projects, clips, transitions/effects, preview sessions, and thumbnail strips.
+- **Purpose**: Provides reversible database schema migrations for the SQLite database, covering tables for videos, audit logs, projects, clips, transitions/effects, preview sessions, thumbnail strips, migration history, and feature flag log.
 - **Parent Component**: [Data Access Layer](./c4-component-data-access.md)
 
 ## Code Elements
@@ -33,6 +33,8 @@ Reverses the migration (dropping tables, recreating tables without added columns
 | 5 | `1e895699ad50` | `1e895699ad50_add_transitions_and_effects_json_columns.py` | Adds `transitions_json` column to projects, `effects_json` to clips |
 | 6 | `a1b2c3d4e5f6` | `a1b2c3d4e5f6_add_preview_sessions.py` | Creates `preview_sessions` table for HLS session tracking |
 | 7 | `b2c3d4e5f6a7` | `b2c3d4e5f6a7_add_thumbnail_strips.py` | Creates `thumbnail_strips` table for sprite sheet metadata |
+| 8 | `d7a1b2c3e4f5` | `d7a1b2c3e4f5_add_migration_history.py` | Creates `migration_history` table for MigrationService audit log (BL-266) |
+| 9 | `e5b2c4f1a9d8` | `e5b2c4f1a9d8_add_feature_flag_log.py` | Creates `feature_flag_log` table for feature flag startup audit (BL-268) |
 
 #### Schema Details
 
@@ -57,6 +59,16 @@ Reverses the migration (dropping tables, recreating tables without added columns
 **`thumbnail_strips` table:**
 - `id TEXT PRIMARY KEY`, `video_id TEXT` (FK -> videos), `status TEXT`, `file_path TEXT`, `frame_count/frame_width/frame_height INTEGER`, `interval_seconds REAL`, `columns/rows INTEGER`, `created_at TEXT`
 
+**`migration_history` table** (`alembic/versions/d7a1b2c3e4f5_add_migration_history.py:28–43`):
+- `id INTEGER PRIMARY KEY AUTOINCREMENT`, `from_revision TEXT`, `to_revision TEXT NOT NULL`, `applied_at TEXT NOT NULL`, `backup_path TEXT`, `rollback_revision TEXT`, `status TEXT NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'rolled_back'))`
+- Index: `idx_migration_history_applied_at(applied_at)`
+- Downgrade: no-op (audit log must survive the operation it records; MigrationService self-heals via `CREATE TABLE IF NOT EXISTS`)
+
+**`feature_flag_log` table** (`alembic/versions/e5b2c4f1a9d8_add_feature_flag_log.py:26–37`):
+- `id INTEGER PRIMARY KEY AUTOINCREMENT`, `flag_name TEXT NOT NULL`, `flag_value INTEGER NOT NULL`, `logged_at TEXT NOT NULL`
+- Index: `idx_feature_flag_log_logged_at(logged_at)`
+- Downgrade: no-op (append-only audit record of deployment-time flag state)
+
 ## Dependencies
 
 ### Internal Dependencies
@@ -80,9 +92,11 @@ graph LR
         M5["1e895699ad50<br/>transitions/effects<br/>JSON columns"]
         M6["a1b2c3d4e5f6<br/>preview_sessions"]
         M7["b2c3d4e5f6a7<br/>thumbnail_strips"]
+        M8["d7a1b2c3e4f5<br/>migration_history"]
+        M9["e5b2c4f1a9d8<br/>feature_flag_log"]
     end
 
-    M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7
+    M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7 --> M8 --> M9
 
     subgraph "Database Tables"
         VIDEOS["videos"]
@@ -92,6 +106,8 @@ graph LR
         CLIPS["clips"]
         PREVIEW["preview_sessions"]
         THUMBS["thumbnail_strips"]
+        MHIST["migration_history"]
+        FFLOG["feature_flag_log"]
     end
 
     M1 -->|"creates"| VIDEOS
@@ -101,6 +117,8 @@ graph LR
     M4 -->|"creates"| CLIPS
     M6 -->|"creates"| PREVIEW
     M7 -->|"creates"| THUMBS
+    M8 -->|"creates"| MHIST
+    M9 -->|"creates"| FFLOG
 
     CLIPS -->|"FK"| PROJECTS
     CLIPS -->|"FK"| VIDEOS

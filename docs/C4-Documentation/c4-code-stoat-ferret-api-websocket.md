@@ -54,36 +54,56 @@ String enumeration defining all WebSocket event types broadcast by the system.
 
 **Usage**: Used as event_type parameter in build_event() to specify message category.
 
-#### ConnectionManager (manager.py:14)
+#### ConnectionManager (manager.py:23)
 
-Manages active WebSocket connections and broadcasts messages to all connected clients. Uses set for O(1) add/remove operations. Automatically removes dead connections during broadcast.
+Manages active WebSocket connections and broadcasts messages to all connected clients. Uses set for O(1) add/remove operations. Automatically removes dead connections during broadcast. Maintains a bounded replay buffer of recent broadcasts for reconnecting clients (Last-Event-ID handshake). When a `ClientIdentityStore` is provided, stores and clears identity entries on connect/disconnect.
+
+**Constructor:**
+
+- `__init__(*, buffer_size: int | None = None, ttl_seconds: int | None = None, client_identity_store: ClientIdentityStore | None = None) -> None`
+  - Initialize the manager with a bounded replay buffer.
+  - `buffer_size`: Maximum events in replay buffer (defaults to `settings.ws_replay_buffer_size`; 0 disables replay).
+  - `ttl_seconds`: Maximum age of replayable events at reconnect time (defaults to `settings.ws_replay_ttl_seconds`).
+  - `client_identity_store`: Optional identity store for tracking connected clients by token. When provided, `connect()` calls `store()` and `disconnect()` calls `clear()` for any `client_id` that is not None.
+  - Location: `src/stoat_ferret/api/websocket/manager.py:36`
 
 **Attributes:**
-- `_connections: set[WebSocket]` - Active WebSocket connections
-- `_lock: asyncio.Lock` - Prevents concurrent modification during broadcast
+- `_connections: set[WebSocket]` — Active WebSocket connections
+- `_lock: asyncio.Lock` — Prevents concurrent modification during broadcast
+- `_replay_buffer: deque[dict[str, Any]]` — Bounded buffer of recent broadcasts for Last-Event-ID replay
+- `_buffer_size: int` — Configured maximum replay buffer capacity
+- `_ttl_seconds: int` — Configured replay event TTL in seconds
+- `_identity_store: ClientIdentityStore | None` — Optional identity store for per-connection tracking
+
+**Properties:**
+- `@property active_connections() -> int` — Return count of currently connected clients (manager.py:67)
+- `@property replay_buffer_size() -> int` — Return configured maximum replay buffer size (manager.py:72)
+- `@property replay_ttl_seconds() -> int` — Return configured replay event TTL in seconds (manager.py:77)
+- `@property buffered_event_count() -> int` — Return current number of buffered events; used by tests and metrics (manager.py:82)
 
 **Methods:**
-- `__init__() -> None` - Initialize empty connection set and create async lock (manager.py:21)
-- `@property active_connections() -> int` - Return count of currently connected clients (manager.py:25)
-- `async connect(websocket: WebSocket) -> None` - Accept connection and add to registry (manager.py:30)
-- `disconnect(websocket: WebSocket) -> None` - Remove connection from registry (manager.py:40)
-- `async broadcast(message: dict[str, Any]) -> None` - Send JSON message to all connected clients, removing dead connections automatically (manager.py:49)
+- `async connect(websocket: WebSocket, *, client_id: str | None = None) -> None` — Accept connection and add to registry. When `client_id` is provided and an identity store is configured, calls `store(client_id, {})`. Location: manager.py:86
+- `disconnect(websocket: WebSocket, *, client_id: str | None = None) -> None` — Remove connection from registry. When `client_id` is provided and an identity store is configured, calls `clear(client_id)`. Location: manager.py:105
+- `async broadcast(message: dict[str, Any]) -> None` — Send JSON message to all connected clients, removing dead connections automatically, then append to replay buffer. Location: manager.py:122
+- `replay_since(last_event_id: str | None) -> list[dict[str, Any]]` — Return buffered events for a reconnecting client, filtered by TTL and Last-Event-ID position. Location: manager.py:157
 
 **Dependencies:**
-- Internal: None
-- External: starlette.websockets (WebSocket, WebSocketState), asyncio.Lock, structlog
+- Internal: `stoat_ferret.api.websocket.identity.ClientIdentityStore` (identity store protocol)
+- External: starlette.websockets (WebSocket, WebSocketState), asyncio.Lock, collections.deque, structlog
 
 ## Dependencies
 
 ### Internal Dependencies
 
 - `stoat_ferret.api.middleware.correlation`: get_correlation_id (reads context var for event tracking)
+- `stoat_ferret.api.websocket.identity`: ClientIdentityStore (protocol for per-connection identity tracking)
 
 ### External Dependencies
 
 - **starlette.websockets**: WebSocket (connection protocol), WebSocketState (connection state enum)
-- **asyncio**: Lock (thread-safe broadcast access), Event (cancellation signals)
-- **datetime**: datetime, timezone (ISO timestamp generation)
+- **asyncio**: Lock (thread-safe broadcast access)
+- **collections**: deque (bounded replay buffer)
+- **datetime**: datetime, timedelta, timezone (ISO timestamp generation, TTL calculation)
 - **enum**: Enum (EventType base class)
 - **structlog**: Structured logging for connection and broadcast events
 
@@ -116,10 +136,18 @@ classDiagram
         class ConnectionManager {
             -_connections set~WebSocket~
             -_lock asyncio.Lock
+            -_replay_buffer deque
+            -_buffer_size int
+            -_ttl_seconds int
+            -_identity_store ClientIdentityStore
             +active_connections int
-            +connect(ws) void
-            +disconnect(ws) void
+            +replay_buffer_size int
+            +replay_ttl_seconds int
+            +buffered_event_count int
+            +connect(ws, client_id) void
+            +disconnect(ws, client_id) void
             +broadcast(message) void
+            +replay_since(last_event_id) list
         }
     }
     
@@ -150,16 +178,26 @@ classDiagram
             +get_correlation_id() str
         }
     }
-    
+
+    namespace Identity {
+        class ClientIdentityStore {
+            <<Protocol>>
+            +store(client_id, metadata) void
+            +retrieve(client_id) dict
+            +clear(client_id) void
+        }
+    }
+
     events_module --> EventType : uses
     events_module --> correlation_module : reads correlation ID
     events_module --> datetime : timestamps
-    
+
     ConnectionManager --> asyncio_Lock : uses for thread safety
     ConnectionManager --> WebSocket : manages set of
     ConnectionManager --> WebSocketState : checks state
     ConnectionManager --> EventType : broadcasts events
-    
+    ConnectionManager --> ClientIdentityStore : optional identity tracking
+
     WebSocket ..> EventType : receives via broadcast
 ```
 
@@ -172,3 +210,5 @@ classDiagram
 - **Non-blocking**: disconnect() is synchronous (simple set removal); connect() and broadcast() are async for I/O safety
 - **Event types**: 24 distinct event types covering scanning, rendering, proxies, timeline edits, and health monitoring
 - **Scalability**: Using set for O(1) connection add/remove enables efficient management of many concurrent connections
+- **Replay buffer**: Bounded deque retains recent broadcasts; reconnecting clients send Last-Event-ID header to catch up on missed events (BL-274, FR-001..FR-005). Buffer size and TTL are configurable via settings (`ws_replay_buffer_size`, `ws_replay_ttl_seconds`).
+- **Client identity**: When `client_identity_store` is provided to the constructor (set by create_app()), connect() stores an identity entry and disconnect() clears it. The `client_id` parameter to connect/disconnect is optional — connections without a client_id proceed normally without identity tracking. See [c4-code-websocket-identity.md](./c4-code-websocket-identity.md) for the identity primitive details.
