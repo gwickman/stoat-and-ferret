@@ -68,6 +68,7 @@ This is the single source of truth for framework decisions across all design and
 - **Routing**: React Router DOM for client-side routing
 - **Styling**: Tailwind CSS utilities; no custom CSS unless utility approach insufficient
 - **Testing**: Vitest for unit tests; @playwright/test for E2E tests; axe-core for accessibility (see Accessibility Testing subsection below)
+- **Progress Transport**: Batch uses HTTP polling via `useBatchJobs`; render/preview/proxy use WebSocket push (see Batch Progress Transport subsection below)
 
 ### Accessibility Testing — Baseline Scanning Strategy
 
@@ -122,6 +123,45 @@ For each feature that creates or modifies UI components:
 
 ---
 
+### Batch Progress Transport
+
+This section identifies which progress channels use WebSocket push versus HTTP polling. The distinction matters for test authors and feature implementers: incorrect transport assumptions produce unverifiable test requirements (see v053 NFR-001 for a concrete example).
+
+#### Transport Channel Summary
+
+| Channel | Transport | Namespace / Hook | Notes |
+|---------|-----------|-----------------|-------|
+| Render progress | WebSocket push | `render.*` | Server-pushed; client subscribes via WebSocket connection |
+| Preview progress | WebSocket push | `preview.*` | Server-pushed; client subscribes via WebSocket connection |
+| Proxy progress | WebSocket push | `proxy.*` | Server-pushed; client subscribes via WebSocket connection |
+| Batch progress | HTTP polling | `useBatchJobs` hook | Client-initiated; **no WebSocket events emitted** |
+
+#### Batch Progress via HTTP Polling
+
+Batch job progress uses HTTP polling, not WebSocket push. The `useBatchJobs` hook (`gui/src/hooks/useBatchJobs.ts`) implements:
+
+- **Normal polling cadence**: 1 second (`NORMAL_INTERVAL_MS = 1000`, line 10)
+- **Exponential backoff on error**: 1 s → 2 s → 4 s, capped at 10 seconds (`MAX_BACKOFF_MS = 10_000`, line 14)
+- **Polling endpoint**: `GET /api/v1/render/batch/{batchId}` (line 135)
+- **Automatic termination**: Polling stops when all jobs reach a terminal status (`completed`, `failed`, `cancelled`)
+- **No WebSocket events**: Batch progress does not emit WebSocket events and does not participate in the ConnectionManager WebSocket replay buffer (`replay_buffer_size`, `replay_ttl_seconds`)
+
+#### WebSocket Replay Buffer Exclusion
+
+The ConnectionManager replay buffer (`replay_buffer_size`, `replay_ttl_seconds`) stores and re-delivers `render.*` and `preview.*` events for clients that reconnect mid-stream. Batch progress does not use WebSocket transport and is excluded from the replay buffer. "Rejoin mid-stream" test scenarios apply to render/preview channels only, not batch.
+
+#### Test Authoring Guidance
+
+**Batch progress tests must assert on HTTP polling behavior, not WebSocket events.**
+
+- Mock or intercept `GET /api/v1/render/batch/{batchId}` to control test state
+- Do not assert on WebSocket event streams for batch progress (no such events exist)
+- Polling timing can be tested by controlling `NORMAL_INTERVAL_MS` and advancing fake timers
+
+Cross-reference: `useBatchJobs` hook is documented in the GUI hooks C4 reference (`docs/design/c4/c4-code-gui-hooks.md`).
+
+---
+
 ## 4. Banned or Discouraged Patterns
 
 | Pattern | Why | Instead Use |
@@ -155,7 +195,7 @@ Next Quarterly Review: 2026-07-30
 
 ## 7. Document Map
 
-No split files. Main FRAMEWORK_CONTEXT.md contains all required content within size constraints (~170 lines).
+No split files. Main FRAMEWORK_CONTEXT.md contains all required content within size constraints (~210 lines).
 
 ---
 
@@ -165,6 +205,6 @@ No split files. Main FRAMEWORK_CONTEXT.md contains all required content within s
 |-------|-------|
 | Last Updated | 2026-05-04 |
 | Next Quarterly Review | 2026-07-30 |
-| Updated By | v057-feature-003 |
-| Source Version/Design Reference | docs/auto-dev/versions/v057/02-framework-context-additions/001-axe-core-scanning-strategy |
+| Updated By | v057-feature-004 |
+| Source Version/Design Reference | docs/auto-dev/versions/v057/02-framework-context-additions/002-batch-transport-docs |
 
