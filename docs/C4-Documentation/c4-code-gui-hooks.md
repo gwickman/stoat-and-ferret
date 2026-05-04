@@ -37,6 +37,20 @@
 - **Exports**: `Metrics` interface (`{ requestCount: number, avgDurationMs: number | null }`)
 - **Dependencies**: `react.useState`, `react.useEffect`, fetch API
 
+#### `useAnnounce(): { announce: (message: string, priority?: 'polite' | 'assertive') => void }`
+- **Location**: `gui/src/hooks/useAnnounce.ts:3`
+- **Description**: Accessibility announcement hook for ARIA live regions. Locates `#announcements` (polite) and `#announcements-assertive` DOM elements on mount and exposes an `announce()` callback that writes messages to the appropriate live region. Both DOM elements must exist in the page's static HTML (e.g., in `Shell.tsx`). No-op when the element is absent.
+- **Signature**: `useAnnounce(): { announce: (message: string, priority?: 'polite' | 'assertive') => void }`
+- **Dependencies**: `react.useCallback`, `react.useRef`, `react.useEffect`, DOM getElementById
+
+#### `useBatchJobs(batchId: string | null): UseBatchJobsResult`
+- **Location**: `gui/src/hooks/useBatchJobs.ts:70`
+- **Description**: Polls batch progress for a given `batch_id` and feeds updates into `batchStore`. Pass `null` to disable polling. Implements 1s normal cadence, exponential backoff on error (1s → 2s → 4s capped at 10s), and auto-stops when all jobs reach terminal status. Uses ref-queue pattern (LRN-188 / NFR-001) to prevent React state batching from collapsing concurrent updates.
+- **Signature**: `useBatchJobs(batchId: string | null): UseBatchJobsResult`
+- **Constants**: `NORMAL_INTERVAL_MS = 1000`, `INITIAL_BACKOFF_MS = 1000`, `MAX_BACKOFF_MS = 10_000`, `RECONNECTING_THRESHOLD = 2`
+- **Exports**: `UseBatchJobsResult` interface (`{ hasError: boolean, isReconnecting: boolean, refresh: () => void }`)
+- **Dependencies**: `react.useCallback`, `react.useEffect`, `react.useRef`, `react.useState`, `useBatchStore`, fetch API
+
 #### `useDebounce<T>(value: T, delayMs?: number): T`
 - **Location**: `gui/src/hooks/useDebounce.ts:3`
 - **Description**: Generic debounce hook returning the debounced value after delay (default 300ms). Resets timer on rapid changes; returns initial value immediately.
@@ -78,6 +92,13 @@
 - **Internal Function**: `hasRequiredFields(schema, params): boolean`
 - **Dependencies**: `useDebounce`, `useEffectCatalogStore`, `useEffectFormStore`, `useEffectPreviewStore`, fetch API
 
+#### `useFocusTrap(containerRef: RefObject<HTMLElement | null>): void`
+- **Location**: `gui/src/hooks/useFocusTrap.ts:30`
+- **Description**: Traps keyboard focus inside the container referenced by `containerRef` while mounted. Tab/Shift+Tab cycle through focusable descendants (wraps at boundaries). Focuses the first focusable descendant on mount. Handles containers with zero focusable elements gracefully (no-op on Tab). Caller is responsible for restoring prior focus on unmount.
+- **Signature**: `useFocusTrap(containerRef: RefObject<HTMLElement | null>): void`
+- **Internal Function**: `focusableWithin(container: HTMLElement): HTMLElement[]` — queries focusable selector and filters out tabindex="-1"
+- **Dependencies**: `react.useEffect`, DOM querySelectorAll, window keydown event
+
 #### `useFullscreen(containerRef: React.RefObject<HTMLElement | null>): {enter, exit}`
 - **Location**: `gui/src/hooks/useFullscreen.ts:8`
 - **Description**: Wraps Fullscreen API with fullscreenchange event listener. Derives fullscreen state from browser events (not click state). Synchronizes with theater store.
@@ -98,6 +119,13 @@
 - **Constants**: `SYNC_DEBOUNCE_MS=100`, `SYNC_THRESHOLD_S=0.5`
 - **Dependencies**: `react.useEffect`, `react.useRef`, `react.useCallback`, `usePreviewStore`, `useTimelineStore`
 
+#### `useKeyboardShortcuts(bindings: ShortcutBinding[]): void`
+- **Location**: `gui/src/hooks/useKeyboardShortcuts.ts:115`
+- **Description**: Registers keyboard shortcut bindings into a module-level registry while the calling component is mounted; removes them on unmount. First-registered-wins: duplicate combo registrations emit `console.warn` and are ignored. Form input guard: combos do not fire when an INPUT, TEXTAREA, or SELECT element is the event target. Callers must pass a stable bindings array (module-level constant or `useMemo`) to avoid unintended re-registrations.
+- **Signature**: `useKeyboardShortcuts(bindings: ShortcutBinding[]): void`
+- **Exports**: `ShortcutBinding` interface (`{ combo, action, handler, description?, section? }`), `getRegisteredShortcuts(): ShortcutBinding[]` (read-only snapshot of registry for overlay rendering)
+- **Dependencies**: `react.useEffect`, module-level `registry: Map<string, RegistryEntry>`, window keydown event
+
 #### `useJobProgress(jobId: string | null): JobProgressState`
 - **Location**: `gui/src/hooks/useJobProgress.ts:38`
 - **Description**: Subscribes to real-time job progress via WebSocket. Iterates `messages[]` from `useWebSocket` each effect cycle with `for (const msg of messages)`. Filters for JOB_PROGRESS events matching jobId. Effect dependency is `[messages, jobId]`; guard skips when `messages.length === 0` or jobId is null. Resets state on jobId change.
@@ -110,6 +138,27 @@
 - **Signature**: `useRenderEvents(): void`
 - **Event Types**: 8 render-prefixed event types (internal set constant)
 - **Dependencies**: `useWebSocket`, `react.useEffect`, `react.useRef`, `useRenderStore`, JSON parsing
+
+#### `useSettings(): { theme, shortcuts, setTheme, updateShortcut, resetDefaults }`
+- **Location**: `gui/src/hooks/useSettings.ts:11`
+- **Description**: Component-level access hook for `settingsStore`. Subscribes to individual store slices (theme, shortcuts, and action methods) to avoid unnecessary re-renders. Intended for use inside React components; non-React modules should import `useSettingsStore` directly.
+- **Signature**: `useSettings(): { theme: Theme, shortcuts: ShortcutMap, setTheme: (theme: Theme) => void, updateShortcut: (action: string, combo: string) => void, resetDefaults: () => void }`
+- **Exports**: re-exports `Theme` and `ShortcutMap` types from `settingsStore`
+- **Dependencies**: `useSettingsStore` (from `../stores/settingsStore`)
+
+#### `useVersion(): VersionState`
+- **Location**: `gui/src/hooks/useVersion.ts:17`
+- **Description**: Fetches application version information from `/api/v1/version` on mount. Returns a discriminated union state: `loading` (initial), `ready` (data available), or `error` (fetch failed). Uses an `active` flag to prevent state updates after unmount.
+- **Signature**: `useVersion(): VersionState`
+- **Exports**: `VersionInfo` interface (`{ app_version, core_version, build_timestamp, git_sha, python_version, database_version }`), `VersionState` discriminated union
+- **Dependencies**: `react.useEffect`, `react.useState`, fetch API (`/api/v1/version`)
+
+#### `useWorkspace(): { preset, panelSizes, panelVisibility, setPreset, togglePanel, resizePanel, resetLayout }`
+- **Location**: `gui/src/hooks/useWorkspace.ts:11`
+- **Description**: Component-level access hook for `workspaceStore`. Subscribes to individual store slices to provide granular re-render control. Intended for use inside React components; non-React modules should import `useWorkspaceStore` directly.
+- **Signature**: `useWorkspace(): { preset: WorkspacePreset, panelSizes: PanelSizes, panelVisibility: PanelVisibility, setPreset: (preset: WorkspacePreset) => void, togglePanel: (panelId: PanelId) => void, resizePanel: (panelId: PanelId, size: number) => void, resetLayout: () => void }`
+- **Exports**: re-exports `PanelId` and `WorkspacePreset` types from `workspaceStore`
+- **Dependencies**: `useWorkspaceStore` (from `../stores/workspaceStore`)
 
 ### Consumer Notes
 
@@ -125,6 +174,9 @@
 - `gui/src/stores/effectFormStore` -- effect parameters and schema (useEffectPreview)
 - `gui/src/stores/effectPreviewStore` -- filter string, thumbnail URL (useEffectPreview)
 - `gui/src/stores/theaterStore` -- fullscreen/theater mode state (useFullscreen)
+- `gui/src/stores/batchStore` -- batch job tracking (useBatchJobs)
+- `gui/src/stores/settingsStore` -- theme and shortcut state (useSettings)
+- `gui/src/stores/workspaceStore` -- panel layout state (useWorkspace)
 - `gui/src/generated/types` -- Effect, Project, Clip, Video, SortField, SortOrder
 
 ### External Dependencies
@@ -154,6 +206,8 @@
 | useEffectPreview | `/api/v1/effects/preview/thumbnail` | POST | Debounced (500ms) |
 | useRenderEvents | `/api/v1/render` | GET | On reconnection |
 | useRenderEvents | `/api/v1/render/queue` | GET | On reconnection |
+| useBatchJobs | `/api/v1/render/batch/{batchId}` | GET | 1s polling (backoff on error) |
+| useVersion | `/api/v1/version` | GET | On mount |
 
 ## Relationships
 
@@ -165,6 +219,7 @@ flowchart TB
     subgraph Polling["Polling/Monitoring"]
         Health["useHealth<br/>/health/ready"]
         Metrics["useMetrics<br/>/metrics"]
+        BatchJobs["useBatchJobs<br/>/api/v1/render/batch/{id}"]
     end
 
     subgraph WebSocket["WebSocket Real-Time"]
@@ -177,22 +232,31 @@ flowchart TB
         Effects["useEffects<br/>/api/v1/effects"]
         Projects["useProjects<br/>/api/v1/projects"]
         Videos["useVideos<br/>/api/v1/videos"]
+        Version["useVersion<br/>/api/v1/version"]
     end
 
     subgraph UISync["UI State Sync"]
+        Announce["useAnnounce<br/>ARIA live regions"]
         Debounce["useDebounce<br/>Generic debounce"]
         EffectPreview["useEffectPreview<br/>Preview orchestration"]
+        FocusTrap["useFocusTrap<br/>Tab focus cycling"]
         Fullscreen["useFullscreen<br/>Fullscreen API"]
+        KbShortcuts["useKeyboardShortcuts<br/>Module registry"]
+        Settings["useSettings<br/>Theme + shortcuts"]
         Theater["useTheaterShortcuts<br/>Keyboard handlers"]
         Timeline["useTimelineSync<br/>Bidirectional sync"]
+        Workspace["useWorkspace<br/>Layout + panels"]
     end
 
     subgraph Stores["Zustand Stores"]
         PreviewStore["previewStore<br/>position, muted"]
         TimelineStore["timelineStore<br/>playhead"]
         RenderStore["renderStore<br/>jobs, queue"]
+        BatchStore["batchStore<br/>batch jobs"]
         EffectStores["effectCatalogStore<br/>effectFormStore<br/>effectPreviewStore"]
         TheaterStore["theaterStore<br/>isFullscreen"]
+        SettingsStore["settingsStore<br/>theme, shortcuts"]
+        WorkspaceStore["workspaceStore<br/>preset, panels"]
     end
 
     WS --> JobProg
@@ -201,17 +265,22 @@ flowchart TB
     RenderEv --> RenderStore
     RenderEv -.->|Re-fetch on<br/>reconnect| Projects
     RenderEv -.->|Re-fetch on<br/>reconnect| RenderStore
-    
+
+    BatchJobs --> BatchStore
+
     EffectPreview --> Debounce
     EffectPreview --> EffectStores
     EffectPreview --> Effects
-    
+
     Fullscreen --> TheaterStore
     Theater --> PreviewStore
     Theater --> TheaterStore
     Timeline --> PreviewStore
     Timeline --> TimelineStore
-    
+
+    Settings --> SettingsStore
+    Workspace --> WorkspaceStore
+
     Videos -.->|sortVideos| Videos
     Projects -.->|CRUD helpers| Projects
 

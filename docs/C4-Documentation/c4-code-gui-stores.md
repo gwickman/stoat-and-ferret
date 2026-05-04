@@ -6,7 +6,7 @@
 - **Description**: Zustand-based state management modules providing centralized state for timeline, clips, effects, preview, rendering, and UI features.
 - **Location**: `gui/src/stores`
 - **Language**: TypeScript
-- **Purpose**: Manages application state for video editing features including project metadata, clip data, effect stacks, compose layouts, timeline, preview sessions, render jobs, transitions, and UI modes.
+- **Purpose**: Manages application state for video editing features including project metadata, clip data, effect stacks, compose layouts, timeline, preview sessions, render jobs, batch jobs, transitions, workspace layout, settings, and UI modes.
 - **Parent Component**: [Web GUI](./c4-component-web-gui.md)
 
 ## Code Elements
@@ -20,6 +20,20 @@
   - Exports: `ActivityEntry` interface, `useActivityStore` hook
   - Key state: `entries: ActivityEntry[]`
   - Key actions: `addEntry(entry: Omit<ActivityEntry, 'id'>): void`
+
+#### Batch Store
+- `useBatchStore(): BatchStoreState`
+  - Description: Session-only store for batch render job tracking. Does not persist to localStorage — jobs live in memory for the current page session only (BL-295 NFR-002).
+  - Location: `batchStore.ts:59-107`
+  - Exports: `BatchJob` interface, `BatchJobStatus` type, `BatchJobUpdate` type, `TERMINAL_BATCH_STATUSES` constant
+  - Key state: `jobs: BatchJob[]`, `submitting: boolean`, `submitError: string | null`
+  - Key actions:
+    - `addJob(job: BatchJob): void` — idempotent insert; merges into existing record if job_id already present
+    - `updateJob(update: BatchJobUpdate): void` — partial update; enforces INV-003 (progress must not decrease unless status is 'queued')
+    - `removeJob(jobId: string): void` — removes job by job_id
+    - `setSubmitting(submitting: boolean): void`
+    - `setSubmitError(error: string | null): void`
+    - `reset(): void`
 
 #### Clip Store
 - `useClipStore(): ClipStoreState`
@@ -158,6 +172,17 @@
     - `setProgress(jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null): void`
     - `reset(): void`
 
+#### Settings Store
+- `useSettingsStore(): SettingsStore`
+  - Description: Persists user preferences (UI theme and keyboard shortcut bindings) to localStorage. Theme is applied immediately to `<html data-theme>` on change. Shortcut updates are validated against a canonical action registry and reject browser-reserved combos.
+  - Location: `settingsStore.ts:156-193`
+  - Exports: `SettingsState` interface, `SettingsStore` interface, `Theme` type, `ShortcutMap` type, `DEFAULT_SHORTCUTS` constant, `applyThemeToDocument(theme)` function, `SETTINGS_THEME_STORAGE_KEY`, `SETTINGS_SHORTCUTS_STORAGE_KEY`
+  - Key state: `theme: Theme` (`'light' | 'dark' | 'system'`), `shortcuts: ShortcutMap` (action key → key combo string)
+  - Key actions:
+    - `setTheme(theme: Theme): void` — validates theme, applies to document, persists to localStorage
+    - `updateShortcut(action: string, combo: string): void` — validates action is registered, combo is non-empty and not browser-reserved; throws RangeError/Error on violation
+    - `resetDefaults(): void` — resets to system theme and DEFAULT_SHORTCUTS; clears localStorage
+
 #### Theater Store
 - `useTheaterStore(): TheaterState`
   - Description: Fullscreen theater mode and HUD visibility state with mouse timestamp
@@ -192,6 +217,18 @@
     - `isReady(): boolean` - computed, returns true when both selected
     - `reset(): void`
 
+#### Workspace Store
+- `useWorkspaceStore(): WorkspaceStore`
+  - Description: Manages workspace layout preset selection, panel visibility, and panel sizes with localStorage persistence. Supports four presets (edit, review, render, custom). Manual resizing accumulates user overrides under the anchor preset and flips preset to 'custom'. State is hydrated from localStorage on first mount and persisted on every mutation (STORAGE_KEY = `'stoat-workspace-layout'`).
+  - Location: `workspaceStore.ts:312-380`
+  - Exports: `WorkspaceState` interface, `WorkspaceStore` interface, `WorkspacePreset` type, `NamedPreset` type, `PanelId` type, `PanelSizes` type, `PanelVisibility` type, `SizesByPreset` type, `PANEL_IDS` constant, `PANEL_DEFAULTS` constant, `PRESETS` constant (canonical preset definitions), `DEFAULT_PANEL_SIZES`, `DEFAULT_PANEL_VISIBILITY`, `loadWorkspaceState()` function, `WORKSPACE_STORAGE_KEY`
+  - Key state: `preset: WorkspacePreset`, `anchorPreset: NamedPreset`, `panelSizes: PanelSizes` (percentage per panel), `panelVisibility: PanelVisibility` (boolean per panel), `sizesByPreset: SizesByPreset` (user overrides per named preset)
+  - Key actions:
+    - `setPreset(preset: WorkspacePreset): void` — applies canonical sizes and visibility for named presets; 'custom' only updates the label
+    - `togglePanel(panelId: PanelId): void` — flips panel visibility; persists
+    - `resizePanel(panelId: PanelId, size: number): void` — records size override under anchorPreset; flips to 'custom'
+    - `resetLayout(): void` — returns to initialState; clears localStorage
+
 ## Dependencies
 
 ### Internal Dependencies
@@ -215,6 +252,14 @@ classDiagram
             <<module>>
             +addEntry(entry) void
             entries: ActivityEntry[]
+        }
+        class BatchStore {
+            <<module>>
+            +addJob(job) void
+            +updateJob(update) void
+            +removeJob(jobId) void
+            jobs: BatchJob[]
+            submitting: boolean
         }
         class ClipStore {
             <<module>>
@@ -283,6 +328,14 @@ classDiagram
             +setProgress(jobId, progress, eta, speed) void
             jobs: RenderJob[]
         }
+        class SettingsStore {
+            <<module>>
+            +setTheme(theme) void
+            +updateShortcut(action, combo) void
+            +resetDefaults() void
+            theme: Theme
+            shortcuts: ShortcutMap
+        }
         class TransitionStore {
             <<module>>
             +selectSource(clipId) void
@@ -310,6 +363,16 @@ classDiagram
             +setPage(page) void
             page: number
         }
+        class WorkspaceStore {
+            <<module>>
+            +setPreset(preset) void
+            +togglePanel(panelId) void
+            +resizePanel(panelId, size) void
+            +resetLayout() void
+            preset: WorkspacePreset
+            panelSizes: PanelSizes
+            panelVisibility: PanelVisibility
+        }
     }
 
     TimelineStore --> ClipStore : references clips
@@ -317,6 +380,7 @@ classDiagram
     TransitionStore --> ClipStore : references clips
     PreviewStore --> ProjectStore : preview per project
     RenderStore --> ProjectStore : render jobs per project
+    BatchStore --> RenderStore : batch jobs drive render queue
     EffectFormStore --> EffectCatalogStore : form for selected effect
     EffectPreviewStore --> EffectFormStore : preview of effect params
 ```
@@ -330,4 +394,6 @@ classDiagram
 - Input validation with clamping in PreviewStore (volume, progress, position) and ComposeStore (z_index, coordinates)
 - TransitionStore's `isReady()` is a computed getter for workflow validation
 - All stores export a `reset()` method that returns to initial state
-- Test coverage for all stores in `__tests__/` directory (7 test files, 100+ test cases total)
+- Test coverage for all stores in `__tests__/` directory
+- BatchStore is the only store without localStorage persistence (session-only per BL-295 NFR-002)
+- SettingsStore and WorkspaceStore persist to localStorage with graceful degradation when storage is unavailable
