@@ -40,6 +40,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
+    # See docs/decisions/ci-timeout-fix.md for rationale on timeout values.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -106,7 +108,8 @@ jobs:
         run: uv run mypy src/
 
       - name: Python tests
-        run: uv run pytest tests/ -v --cov=src --cov-fail-under=80
+        # --timeout=120 matches smoke-tests precedent; see docs/decisions/ci-timeout-fix.md.
+        run: uv run pytest tests/ -v --cov=src --cov-fail-under=80 --timeout=120
 
   rust-coverage:
     needs: changes
