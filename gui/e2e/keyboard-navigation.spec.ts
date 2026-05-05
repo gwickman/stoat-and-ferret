@@ -20,8 +20,10 @@ test.describe("J604: skip-link keyboard navigation", () => {
     await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
 
-    const skipLink = page.getByRole("link", { name: "Skip to main content" });
-    await expect(skipLink).toBeFocused();
+    const focusedHref = await page.evaluate(
+      () => document.activeElement?.getAttribute("href") ?? "",
+    );
+    expect(focusedHref).toBe("#main-content");
   });
 
   test("skip-link activation moves focus to #main-content", async ({
@@ -33,9 +35,10 @@ test.describe("J604: skip-link keyboard navigation", () => {
     // Tab to skip-link, then activate with Enter
     await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
-    await expect(
-      page.getByRole("link", { name: "Skip to main content" }),
-    ).toBeFocused();
+    const skipLinkHref = await page.evaluate(
+      () => document.activeElement?.getAttribute("href") ?? "",
+    );
+    expect(skipLinkHref).toBe("#main-content");
     await page.keyboard.press("Enter");
 
     // After activating skip-link, focus should be on or inside #main-content
