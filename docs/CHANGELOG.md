@@ -4,6 +4,50 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v058] - 2026-05-05
+
+### CI and Test Quality
+
+Repaired malformed render_plan fixture data and removed the STOAT_RENDER_WORKER_ENABLED=false CI workaround, restoring render worker coverage in E2E and accessibility CI jobs. Fixed Python 3.10 asyncio task-cancellation stall in synthetic monitoring test.
+
+**Themes:** 1 (ci-and-test-quality)  
+**Features:** 2/2 complete (001-ci-timeout-hardening, 002-render-fixture-repair)  
+**Quality:** 10/10 acceptance criteria met, 0 regressions
+
+**Key Outcomes:**
+- Added 30-minute CI job timeout and per-test 120s pytest-timeout to bound any CI hang (PR #384)
+- Deleted 29 malformed render_jobs rows from data/stoat.db fixture (Windows-local paths inaccessible in CI); render worker starts clean in all CI jobs (PR #385)
+- Removed STOAT_RENDER_WORKER_ENABLED=false workaround from e2e and a11y CI jobs (PR #385)
+- Fixed Python 3.10 asyncio cancel stall in test_monitoring_task_continuous_execution using asyncio.wait with timeout (PR #385)
+
+**PRs Merged:**
+- #384: CI timeout hardening (job timeout, per-test timeout, asyncio.wait_for fix)
+- #385: Render fixture repair (delete malformed rows, remove CI workaround, Python 3.10 stall fix)
+
+## [v057] - 2026-05-04
+
+### Documentation Quality Catchup
+
+Updated C4 code-level documentation to reflect GUI store/hook/component and backend alembic/identity/WebSocket changes from v038–v057. Added FRAMEWORK_CONTEXT.md sections for accessibility testing strategy, batch progress transport, and render_worker.* event namespace.
+
+**Themes:** 2 (c4-documentation-refresh, framework-context-additions)  
+**Features:** 5/5 complete (001-gui-c4-refresh, 002-backend-c4-refresh, 001-axe-core-scanning-strategy, 002-batch-transport-docs, 003-render-worker-namespace)  
+**Quality:** 52/52 acceptance criteria met, 0 regressions (2540 tests passed, 3 skipped, 0 failed)
+
+**Key Outcomes:**
+- GUI C4 code documentation updated: stores (14 → 17), hooks (13 → 20), workspace components added (PR #379)
+- Backend C4 code documentation updated: alembic (7 → 9 migrations), identity module (ClientIdentityStore, InMemoryClientIdentityStore), WebSocket interface changes with client_identity_store param and client_id kwargs (PR #380)
+- Accessibility testing strategy documented in FRAMEWORK_CONTEXT.md: axe-core scanning approach, decision tree for when to apply (PR #381)
+- Batch progress HTTP polling transport documented in FRAMEWORK_CONTEXT.md: rationale for polling over SSE, transport selection guidance (PR #382)
+- render_worker.* structured logging namespace added to FRAMEWORK_CONTEXT.md namespace taxonomy (PR #383)
+
+**PRs Merged:**
+- #379: GUI C4 code documentation refresh (stores, hooks, workspace components)
+- #380: Backend C4 code documentation refresh (alembic, identity, WebSocket)
+- #381: Accessibility testing strategy (axe-core scanning, decision tree)
+- #382: Batch progress transport documentation
+- #383: render_worker.* event namespace documentation
+
 ## [v056] - 2026-05-03
 
 ### WebSocket Client Identity
