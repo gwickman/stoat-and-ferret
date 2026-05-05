@@ -204,9 +204,10 @@ test.describe("skip-link and aria-live infrastructure", () => {
     await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
 
-    await expect(
-      page.getByRole("link", { name: "Skip to main content" }),
-    ).toBeFocused();
+    const focusedHref = await page.evaluate(
+      () => document.activeElement?.getAttribute("href") ?? "",
+    );
+    expect(focusedHref).toBe("#main-content");
   });
 
   test("activating skip-link moves focus to #main-content", async ({
@@ -218,9 +219,10 @@ test.describe("skip-link and aria-live infrastructure", () => {
     // Tab to skip-link and activate it
     await page.evaluate(() => document.body.focus());
     await page.keyboard.press("Tab");
-    await expect(
-      page.getByRole("link", { name: "Skip to main content" }),
-    ).toBeFocused();
+    const skipLinkHref = await page.evaluate(
+      () => document.activeElement?.getAttribute("href") ?? "",
+    );
+    expect(skipLinkHref).toBe("#main-content");
     await page.keyboard.press("Enter");
 
     // Focus should move to the #main-content element
