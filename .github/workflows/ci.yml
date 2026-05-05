@@ -278,12 +278,6 @@ jobs:
       - name: Run E2E tests
         env:
           STOAT_TESTING_MODE: "true"
-          # Disable render worker so it doesn't process pre-existing fixture
-          # render_jobs in data/stoat.db. With the worker active, queued jobs
-          # whose render_plan is {} fail and pile into the Completed section,
-          # producing long runs of identically-labelled "Delete" buttons that
-          # trip keyboard-navigation.spec.ts's focus-trap detector (v055/F003).
-          STOAT_RENDER_WORKER_ENABLED: "false"
         run: npx playwright test
         working-directory: gui
 
@@ -601,9 +595,6 @@ jobs:
           uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 
       - name: Run accessibility E2E tests
-        env:
-          # See e2e job above — same rationale (v055/F003).
-          STOAT_RENDER_WORKER_ENABLED: "false"
         run: npx playwright test e2e/accessibility.spec.ts e2e/keyboard-navigation.spec.ts
         working-directory: gui
 
