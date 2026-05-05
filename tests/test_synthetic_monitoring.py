@@ -301,7 +301,10 @@ async def test_monitoring_task_continuous_execution() -> None:
         return httpx.Response(200, json={})
 
     async with _mock_client(handler) as client:
-        task = SyntheticMonitoringTask(client=client, interval_seconds=0.05)
+        # timeout_seconds=0.1 keeps each probe fast; on Python 3.10 macOS,
+        # asyncio.wait_for cancellation can stall up to timeout_seconds per
+        # probe if the outer task cancel doesn't propagate immediately.
+        task = SyntheticMonitoringTask(client=client, interval_seconds=0.05, timeout_seconds=0.1)
         handle = asyncio.create_task(task.run())
         # Allow a handful of cycles to run then shut down.
         await asyncio.sleep(0.25)
