@@ -8,21 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### CI and Test Quality
 
-Repaired malformed render_plan fixture data and removed the STOAT_RENDER_WORKER_ENABLED=false CI workaround, restoring render worker coverage in E2E and accessibility CI jobs. Fixed Python 3.10 asyncio task-cancellation stall in synthetic monitoring test.
+Repaired malformed render_plan fixture data and removed the STOAT_RENDER_WORKER_ENABLED=false CI workaround, restoring render worker coverage in E2E and accessibility CI jobs. Fixed Python 3.10 asyncio task-cancellation stall in synthetic monitoring test. Migrated E2E focus assertions to document.activeElement pattern for cross-browser compatibility.
 
 **Themes:** 1 (ci-and-test-quality)  
-**Features:** 2/2 complete (001-ci-timeout-hardening, 002-render-fixture-repair)  
-**Quality:** 10/10 acceptance criteria met, 0 regressions
+**Features:** 3/3 complete (001-ci-timeout-hardening, 002-render-fixture-repair, 003-e2e-focus-pattern-retrofit)  
+**Quality:** 13/13 acceptance criteria met, 0 regressions
 
 **Key Outcomes:**
 - Added 30-minute CI job timeout and per-test 120s pytest-timeout to bound any CI hang (PR #384)
 - Deleted 29 malformed render_jobs rows from data/stoat.db fixture (Windows-local paths inaccessible in CI); render worker starts clean in all CI jobs (PR #385)
 - Removed STOAT_RENDER_WORKER_ENABLED=false workaround from e2e and a11y CI jobs (PR #385)
 - Fixed Python 3.10 asyncio cancel stall in test_monitoring_task_continuous_execution using asyncio.wait with timeout (PR #385)
+- Migrated 4 toBeFocused() assertions to document.activeElement pattern in accessibility.spec.ts and keyboard-navigation.spec.ts for cross-browser E2E robustness (PR #387)
 
 **PRs Merged:**
 - #384: CI timeout hardening (job timeout, per-test timeout, asyncio.wait_for fix)
 - #385: Render fixture repair (delete malformed rows, remove CI workaround, Python 3.10 stall fix)
+- #387: E2E focus pattern retrofit (migrate toBeFocused assertions to document.activeElement pattern)
 
 ## [v057] - 2026-05-04
 
