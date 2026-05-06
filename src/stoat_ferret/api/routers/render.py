@@ -10,6 +10,7 @@ and JSON:API-style error responses.
 from __future__ import annotations
 
 import asyncio
+import json
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -58,6 +59,14 @@ _state_transition_lock = asyncio.Lock()
 
 # Lock for concurrent encoder refresh prevention (NFR-002)
 _encoder_refresh_lock = asyncio.Lock()
+
+# Maps public quality_preset vocabulary to FFmpeg preset names used by Rust encoder.
+# Public API accepts {draft, standard, high}; Rust validation requires {veryfast, medium, slow}.
+QUALITY_PRESET_MAP: dict[str, str] = {
+    "draft": "veryfast",
+    "standard": "medium",
+    "high": "slow",
+}
 
 
 # ---------- Dependency injection ----------
@@ -340,10 +349,25 @@ async def create_render_job(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "code": "INVALID_PRESET",
-                "message": f"Invalid quality preset: {body.quality_preset}. "
-                f"Valid: {[p.value for p in QualityPreset]}",
+                "message": "Use public vocabulary: draft | standard | high",
             },
         ) from err
+
+    # Translate public quality_preset vocabulary to FFmpeg preset and inject into render_plan.
+    # Rust validation layer expects FFmpeg preset names (veryfast/medium/slow), not public names.
+    quality_preset_ffmpeg = QUALITY_PRESET_MAP[quality_preset.value]
+    logger.info(
+        "render.preset_translation", input=quality_preset.value, output=quality_preset_ffmpeg
+    )
+    try:
+        plan_data = json.loads(body.render_plan)
+    except json.JSONDecodeError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_RENDER_PLAN", "message": "render_plan must be valid JSON"},
+        ) from err
+    plan_data.setdefault("settings", {})["quality_preset"] = quality_preset_ffmpeg
+    render_plan_json = json.dumps(plan_data)
 
     # Validate format-encoder compatibility when encoder is explicitly provided
     if body.encoder is not None:
@@ -377,7 +401,7 @@ async def create_render_job(
             output_path=output_path,
             output_format=output_format,
             quality_preset=quality_preset,
-            render_plan_json=body.render_plan,
+            render_plan_json=render_plan_json,
         )
     except RenderUnavailableError as exc:
         raise HTTPException(
