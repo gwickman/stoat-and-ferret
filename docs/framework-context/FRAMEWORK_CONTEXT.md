@@ -162,6 +162,18 @@ Cross-reference: `useBatchJobs` hook is documented in the GUI hooks C4 reference
 
 ---
 
+### render_jobs API Ordering Constraint
+
+The `render_jobs` API must be queried in creation order for reproducible queue semantics. The endpoint returns jobs in `id ASC` (creation) order, which reflects the intended execution sequence.
+
+**Constraint**: Any batch processing loop that reads render jobs must preserve the creation-order sequence returned by the API. Reordering or sorting by a different field (e.g., priority, status) breaks reproducibility — the same input set produces different execution sequences across runs, making debugging and retry workflows unpredictable.
+
+**Discovery**: This constraint was identified in the v058 retrospective after observing non-deterministic batch execution behavior when job lists were consumed out of creation order.
+
+**Cross-reference**: Render job batch endpoints are documented in `docs/design/05-api-specification.md`. The underlying repository query uses `ORDER BY id ASC` to enforce this constraint at the database layer.
+
+---
+
 ### Structured Logging — render_worker.* Events
 
 This section declares the `render_worker.*` event namespace introduced in v055 (PRs #373–#375, 2026-05-03) and documents all events emitted by the background render worker loop (`src/stoat_ferret/render/worker.py`). The namespace was used in production before formal declaration was completed; v057 completes the governance process.
