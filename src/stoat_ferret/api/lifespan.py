@@ -15,10 +15,8 @@ append-only audit log.
 
 from __future__ import annotations
 
-import shutil
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
@@ -63,13 +61,6 @@ async def run_startup_migrations(
         The :class:`MigrationResult` produced by ``apply_pending()``, or
         ``None`` if an unexpected exception was caught.
     """
-    db_path = Path(settings.database_path)
-    if not db_path.exists():
-        fixture_path = Path("tests/fixtures/stoat.seed.db")
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(fixture_path, db_path)
-        logger.info("deployment.bootstrap", action="fixture_copy")
-
     service = MigrationService(
         backup_dir=settings.migration_backup_dir,
         db_path=settings.database_path,
