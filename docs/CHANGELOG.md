@@ -4,6 +4,43 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v060] - 2026-05-06
+
+### Render API Contract Repair, Asyncio Safety, Repository Hygiene, Architecture Refresh
+
+v060 delivers critical render API vocabulary fixes enabling agent automation, Python 3.10 stability improvements, repository hygiene enforcement, and comprehensive documentation refresh across framework context, C4 architecture, and naming consistency audits.
+
+**Themes:** 4 (render-api-contract-repair, asyncio-safety, repository-hygiene, documentation-refresh)
+**Features:** 11/11 complete
+**Quality:** 38/39 ACs met, 0 regressions, 2543 tests passing
+
+**Key Outcomes:**
+
+- **Render API vocabulary translation**: Added public vocabulary (draft | standard | high) mapping to FFmpeg presets (veryfast | medium | slow), resolving agent request validation failures that blocked automated render workflows. Extended `/render/formats` with encoder field enabling codec→encoder discovery.
+
+- **Python 3.10+ asyncio stability**: Replaced 65 deprecated `asyncio.get_event_loop().run_until_complete()` calls with `asyncio.run()`, eliminating DeprecationWarning on Python 3.10+ and RuntimeError on 3.13+. Fixed 3 bare `await task` patterns in shutdown handlers with bounded `asyncio.wait()`, eliminating Python 3.10 indefinite stall risk (LRN-406).
+
+- **Database lifecycle and git hygiene**: Established clean seed fixture at Alembic head with copy-on-absent bootstrap logic for fresh checkouts. Removed 299 thumbnail files and runtime database files from git tracking. Fixed cross-platform Windows UAT npx resolution via `shutil.which()`.
+
+- **Framework context documentation**: Documented implicit render_jobs API ordering constraint for reproducible queue semantics. Refreshed C4 architecture diagrams to reflect v038–v057 feature additions (13→17 stores, 7→9 migrations). Conducted comprehensive effect_name vs effect_type naming audit, recommending standardization.
+
+**PRs Merged:**
+- #394: quality-preset-translation — Public vocabulary translation layer for render API
+- #395: codec-encoder-bridge — Encoder discovery in /render/formats endpoint
+- #396: seed-render-plan-fix — Synchronize seed script with new render API contract
+- #397: asyncio-deprecation-fix — Replace deprecated event loop patterns
+- #398: cancel-await-audit — Fix Python 3.10 cancel-await indefinite stall risk
+- #399: database-fixture-lifecycle — Establish clean seed fixture and bootstrap logic
+- #400: thumbnails-git-cleanup — Remove 299 thumbnail files from git tracking
+- #401: uat-windows-npx-fix — Cross-platform npx resolution via shutil.which()
+- #402: framework-context-ordering — Document render_jobs ordering constraint
+- #403: c4-documentation-refresh — Update C4 diagrams reflecting v038–v057 changes
+- #404: effect-name-audit — Audit effect_name vs effect_type, recommend standardization (BL-349 filed for v061+)
+
+**Notes:**
+- Feature 001 (quality-preset-translation) accepted one AC deviation (FR-001d) for backward compatibility. Field has `default="standard"`, allowing omission while maintaining default behavior.
+- Follow-on backlog item BL-349 filed for v061+: standardize `effect_name` → `effect_type` in API schemas (low risk, high consistency payoff).
+
 ## [v059] - 2026-05-06
 
 ### Operator-Guide Audit and Repair
