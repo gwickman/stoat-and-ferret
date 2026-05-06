@@ -131,6 +131,32 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
     sys.exit(1)
 
 
+def poll_render_job(client: httpx.Client, job_id: str) -> None:
+    """Poll render job until completion, FAILED, or 60-second timeout."""
+    for _ in range(120):  # 60 seconds max (120 * 0.5s)
+        poll_resp = client.get(f"/api/v1/render/{job_id}")
+        poll_resp.raise_for_status()
+        status = poll_resp.json()["status"]
+        if status == "completed":
+            print(f"Render job {job_id} completed successfully.")
+            return
+        elif status in ("failed", "cancelled"):
+            print(
+                f"ERROR: Render job {job_id} reached terminal status: {status}. "
+                "Check render logs for details.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        # queued, running, or unknown: continue polling
+        time.sleep(0.5)
+
+    print(
+        f"ERROR: Render job {job_id} did not reach terminal state within 60 seconds timeout.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
 def videos_already_scanned(client: httpx.Client, filenames: list[str]) -> bool:
     """Check whether all expected video filenames are already in the library."""
     resp = client.get("/api/v1/videos", params={"limit": 100})
@@ -249,7 +275,7 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
     # Total duration: max(timeline_end) across all clips = max(tl_pos + duration) / fps
     total_duration = max(tl_pos + (out_pt - in_pt) for _, in_pt, out_pt, tl_pos in CLIP_DEFS) / fps
     render_plan: dict[str, object] = {
-        "settings": {"quality_preset": "medium"},  # FFmpeg vocabulary: veryfast | medium | slow
+        "settings": {"quality_preset": "standard"},  # draft | standard | high (public API)
         "total_duration": total_duration,
     }
     for field in _REQUIRED_PLAN_FIELDS:
@@ -265,6 +291,8 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
         sys.exit(1)
     render_job = resp.json()
     job_id = render_job["id"]
+
+    poll_render_job(client, job_id)
 
     return SeedResult(
         project_id=project_id,
@@ -306,7 +334,7 @@ def print_summary(result: SeedResult) -> None:
     print(f"  Clips added:   {len(result.clip_ids)}")
     print(f"  Effects:       {result.effects_applied}")
     print(f"  Transitions:   {result.transitions_applied}")
-    print(f"  Render job ID: {result.job_id} (status: queued)")
+    print(f"  Render job ID: {result.job_id} (status: completed)")
     print("  Output:        1280x720 @ 30fps")
     print("  Duration:      ~46.0s (1380 frames)")
     print(f"{'=' * 50}\n")
