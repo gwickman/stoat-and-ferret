@@ -549,15 +549,33 @@ _QUALITY_PRESETS: dict[str, list[QualityPresetInfo]] = {
     ],
 }
 
+# Canonical codec-to-encoder mapping (from Rust encoder.rs).
+# Used both in _FORMAT_DATA population and in codec-family reverse lookup.
+_CODEC_ENCODER_MAP: dict[str, str] = {
+    "h264": "libx264",
+    "h265": "libx265",
+    "vp8": "libvpx",
+    "vp9": "libvpx-vp9",
+    "prores": "prores_ks",
+    "av1": "libaom-av1",
+}
+
+
+def _codec_info(name: str) -> CodecInfo:
+    """Build a CodecInfo entry using the canonical codec-encoder mapping."""
+    return CodecInfo(
+        name=name,
+        encoder=_CODEC_ENCODER_MAP[name],
+        quality_presets=_QUALITY_PRESETS[name],
+    )
+
+
 _FORMAT_DATA: list[FormatInfo] = [
     FormatInfo(
         format="mp4",
         extension=".mp4",
         mime_type="video/mp4",
-        codecs=[
-            CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
-            CodecInfo(name="h265", quality_presets=_QUALITY_PRESETS["h265"]),
-        ],
+        codecs=[_codec_info("h264"), _codec_info("h265")],
         supports_hw_accel=True,
         supports_two_pass=True,
         supports_alpha=False,
@@ -566,10 +584,7 @@ _FORMAT_DATA: list[FormatInfo] = [
         format="webm",
         extension=".webm",
         mime_type="video/webm",
-        codecs=[
-            CodecInfo(name="vp8", quality_presets=_QUALITY_PRESETS["vp8"]),
-            CodecInfo(name="vp9", quality_presets=_QUALITY_PRESETS["vp9"]),
-        ],
+        codecs=[_codec_info("vp8"), _codec_info("vp9")],
         supports_hw_accel=False,
         supports_two_pass=True,
         supports_alpha=True,
@@ -578,10 +593,7 @@ _FORMAT_DATA: list[FormatInfo] = [
         format="mov",
         extension=".mov",
         mime_type="video/quicktime",
-        codecs=[
-            CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
-            CodecInfo(name="prores", quality_presets=_QUALITY_PRESETS["prores"]),
-        ],
+        codecs=[_codec_info("h264"), _codec_info("prores")],
         supports_hw_accel=True,
         supports_two_pass=True,
         supports_alpha=True,
@@ -590,12 +602,7 @@ _FORMAT_DATA: list[FormatInfo] = [
         format="mkv",
         extension=".mkv",
         mime_type="video/x-matroska",
-        codecs=[
-            CodecInfo(name="h264", quality_presets=_QUALITY_PRESETS["h264"]),
-            CodecInfo(name="h265", quality_presets=_QUALITY_PRESETS["h265"]),
-            CodecInfo(name="vp9", quality_presets=_QUALITY_PRESETS["vp9"]),
-            CodecInfo(name="av1", quality_presets=_QUALITY_PRESETS["av1"]),
-        ],
+        codecs=[_codec_info("h264"), _codec_info("h265"), _codec_info("vp9"), _codec_info("av1")],
         supports_hw_accel=True,
         supports_two_pass=True,
         supports_alpha=True,
@@ -690,6 +697,20 @@ def render_preview(body: RenderPreviewRequest) -> RenderPreviewResponse:
                 "message": (
                     f"Invalid quality_preset '{body.quality_preset}'. "
                     f"Valid: {list(_QUALITY_PRESET_NAMES)}"
+                ),
+            },
+        )
+
+    # Detect codec family name used as encoder (e.g. "h264" instead of "libx264").
+    # This is the most common agent mistake: submitting the codec name rather than the encoder.
+    if body.encoder in _CODEC_ENCODER_MAP:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "INVALID_ENCODER_NAME",
+                "message": (
+                    "encoder must be an FFmpeg encoder name; "
+                    "use GET /render/formats to discover valid values"
                 ),
             },
         )

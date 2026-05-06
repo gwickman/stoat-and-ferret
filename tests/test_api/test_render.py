@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
-from stoat_ferret.api.routers.render import QUALITY_PRESET_MAP
+from stoat_ferret.api.routers.render import _CODEC_ENCODER_MAP, QUALITY_PRESET_MAP
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
@@ -264,3 +264,61 @@ def test_existing_render_plan_settings_preserved(
     assert plan["settings"]["codec"] == "libx264"
     assert plan["settings"]["fps"] == 30.0
     assert plan["settings"]["quality_preset"] == "medium"
+
+
+# ---------- Encoder field in /render/formats (BL-345) ----------
+
+
+def test_formats_encoder_field_present(render_client: TestClient) -> None:
+    """GET /render/formats returns encoder field for all codec entries."""
+    resp = render_client.get("/api/v1/render/formats")
+    assert resp.status_code == 200
+    for fmt in resp.json()["formats"]:
+        for codec in fmt["codecs"]:
+            msg = f"encoder missing from codec {codec['name']} in {fmt['format']}"
+            assert "encoder" in codec, msg
+            assert isinstance(codec["encoder"], str)
+            assert len(codec["encoder"]) > 0
+
+
+def test_formats_encoder_values_correct(render_client: TestClient) -> None:
+    """GET /render/formats returns correct FFmpeg encoder names for each codec."""
+    resp = render_client.get("/api/v1/render/formats")
+    assert resp.status_code == 200
+    seen: dict[str, str] = {}
+    for fmt in resp.json()["formats"]:
+        for codec in fmt["codecs"]:
+            name = codec["name"]
+            encoder = codec["encoder"]
+            if name in seen:
+                assert seen[name] == encoder, f"Inconsistent encoder for {name}"
+            else:
+                seen[name] = encoder
+    # Verify each seen codec maps to the expected FFmpeg encoder
+    for codec_name, encoder_name in seen.items():
+        assert encoder_name == _CODEC_ENCODER_MAP[codec_name], (
+            f"Codec {codec_name}: expected {_CODEC_ENCODER_MAP[codec_name]}, got {encoder_name}"
+        )
+
+
+def test_formats_all_six_codecs_have_encoder(render_client: TestClient) -> None:
+    """GET /render/formats covers all six codec families, each with an encoder field."""
+    resp = render_client.get("/api/v1/render/formats")
+    assert resp.status_code == 200
+    found_codecs: dict[str, str] = {}
+    for fmt in resp.json()["formats"]:
+        for codec in fmt["codecs"]:
+            found_codecs[codec["name"]] = codec["encoder"]
+    expected = {
+        "h264": "libx264",
+        "h265": "libx265",
+        "vp8": "libvpx",
+        "vp9": "libvpx-vp9",
+        "prores": "prores_ks",
+        "av1": "libaom-av1",
+    }
+    for codec_name, expected_encoder in expected.items():
+        assert codec_name in found_codecs, f"Codec {codec_name} not found in any format"
+        assert found_codecs[codec_name] == expected_encoder, (
+            f"Codec {codec_name}: expected {expected_encoder}, got {found_codecs[codec_name]}"
+        )

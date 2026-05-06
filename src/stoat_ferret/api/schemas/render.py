@@ -95,6 +95,9 @@ class CodecInfo(BaseModel):
     """Codec available within an output format, with quality presets."""
 
     name: str = Field(..., description="Codec identifier (e.g. h264, vp9)")
+    encoder: str = Field(
+        ..., description="FFmpeg encoder name for this codec (e.g. libx264, libvpx-vp9)"
+    )
     quality_presets: list[QualityPresetInfo] = Field(
         ..., description="Bitrate mappings for each quality level"
     )

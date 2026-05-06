@@ -457,3 +457,77 @@ async def test_render_ffmpeg_preset_rejected_at_public_api(smoke_client: httpx.A
     body = resp.json()
     assert body["detail"]["code"] == "INVALID_PRESET"
     assert "draft | standard | high" in body["detail"]["message"]
+
+
+# ---------- Codec-encoder bridge round-trip tests (BL-345) ----------
+
+
+async def test_formats_encoder_field_present(smoke_client: httpx.AsyncClient) -> None:
+    """GET /render/formats returns encoder field for every codec entry."""
+    resp = await smoke_client.get("/api/v1/render/formats")
+    assert resp.status_code == 200
+    for fmt in resp.json()["formats"]:
+        for codec in fmt["codecs"]:
+            assert "encoder" in codec, f"encoder missing from {codec['name']} in {fmt['format']}"
+            assert isinstance(codec["encoder"], str)
+            assert len(codec["encoder"]) > 0
+
+
+async def test_formats_encoder_roundtrip_all_codecs(smoke_client: httpx.AsyncClient) -> None:
+    """GET /render/formats → use each codec's encoder in POST /render/preview → HTTP 200."""
+    resp = await smoke_client.get("/api/v1/render/formats")
+    assert resp.status_code == 200
+
+    seen_codecs: dict[str, str] = {}
+    for fmt in resp.json()["formats"]:
+        for codec in fmt["codecs"]:
+            seen_codecs[codec["name"]] = codec["encoder"]
+
+    # All six codec families must be present
+    expected_codecs = {"h264", "h265", "vp8", "vp9", "prores", "av1"}
+    assert expected_codecs.issubset(seen_codecs.keys()), (
+        f"Missing codecs: {expected_codecs - seen_codecs.keys()}"
+    )
+
+    # For each codec family, find a compatible format and verify the round-trip
+    codec_format_map = {
+        "h264": "mp4",
+        "h265": "mp4",
+        "vp8": "webm",
+        "vp9": "webm",
+        "prores": "mov",
+        "av1": "mkv",
+    }
+    for codec_name, encoder in seen_codecs.items():
+        output_format = codec_format_map[codec_name]
+        preview_resp = await smoke_client.post(
+            "/api/v1/render/preview",
+            json={
+                "output_format": output_format,
+                "quality_preset": "standard",
+                "encoder": encoder,
+            },
+        )
+        assert preview_resp.status_code == 200, (
+            f"Round-trip failed for codec={codec_name} encoder={encoder} format={output_format}: "
+            f"{preview_resp.status_code} {preview_resp.text}"
+        )
+        assert "command" in preview_resp.json()
+
+
+async def test_render_preview_codec_name_rejected_with_discovery_message(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """POST /render/preview with codec name returns 422 with /render/formats reference."""
+    resp = await smoke_client.post(
+        "/api/v1/render/preview",
+        json={
+            "output_format": "mp4",
+            "quality_preset": "standard",
+            "encoder": "h264",
+        },
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert "/render/formats" in body["detail"]["message"]
+    assert "encoder" in body["detail"]["message"]
