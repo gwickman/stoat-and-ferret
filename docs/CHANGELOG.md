@@ -4,6 +4,30 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v059] - 2026-05-06
+
+### Operator-Guide Audit and Repair
+
+Operator-Guide Audit and Repair — documentation-only version fixing schema and endpoint drift in canonical agent workflow documentation (zero risk tier). Corrected field names, retracted undocumented dry-run shortcut, repaired render observability docs, and fixed timeline-clip workflow documentation to match the actual API.
+
+**Themes:** 2 (operator-guide-doc-repair, smoke-test-verification)  
+**Features:** 6/6 complete (effect-field-rename, dry-run-retraction, render-observability-fix, timeline-clip-workflow-fix, smoke-payload-audit, smoke-harness-guide-update)  
+**Quality:** 35/36 acceptance criteria met (1 N/A by design), 0 regressions, 2543 tests passing
+
+**Key Outcomes:**
+- Fixed effect-apply field name from `name` to `effect_type` in operator-guide.md and api-reference.md (PR #389, BL-344)
+- Retracted undocumented `render_plan` `dry_run` shortcut; documented `STOAT_RENDER_MODE=noop` alternative (PR #390, BL-342)
+- Replaced render `/api/v1/jobs/{id}/wait` with correct `/api/v1/render` polling pattern in operator-guide (PR #391, BL-341)
+- Overhauled timeline-clip workflow documentation to match actual API structure (PR #392, BL-343)
+- Verified smoke-test payloads and harness guide accuracy (smoke-test-verification theme)
+
+**PRs Merged:**
+- #388: v058 closure
+- #389: Effect field rename fix (BL-344)
+- #390: Dry-run retraction and STOAT_RENDER_MODE=noop documentation (BL-342)
+- #391: Render observability fix — polling pattern (BL-341)
+- #392: Timeline-clip workflow documentation overhaul (BL-343)
+
 ## [v058] - 2026-05-05
 
 ### CI and Test Quality
