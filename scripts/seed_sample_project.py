@@ -133,7 +133,7 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
 
 def poll_render_job(client: httpx.Client, job_id: str) -> None:
     """Poll render job until completion, FAILED, or 60-second timeout."""
-    for _ in range(120):  # 60 seconds max (120 * 0.5s)
+    for _ in range(240):  # 120 seconds max (240 * 0.5s)
         poll_resp = client.get(f"/api/v1/render/{job_id}")
         poll_resp.raise_for_status()
         status = poll_resp.json()["status"]
@@ -151,7 +151,7 @@ def poll_render_job(client: httpx.Client, job_id: str) -> None:
         time.sleep(0.5)
 
     print(
-        f"ERROR: Render job {job_id} did not reach terminal state within 60 seconds timeout.",
+        f"ERROR: Render job {job_id} did not reach terminal state within 120 seconds timeout.",
         file=sys.stderr,
     )
     sys.exit(2)
