@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -46,10 +47,23 @@ def run() -> int:
     journey_dir = output_dir / JOURNEY_NAME
     journey_dir.mkdir(parents=True, exist_ok=True)
 
+    npx_path = shutil.which("npx")
+    if not npx_path:
+        result_data = {
+            "name": JOURNEY_NAME,
+            "journey_id": JOURNEY_ID,
+            "status": "error",
+            "error": "npx not found in PATH",
+        }
+        result_path = journey_dir / "journey_result.json"
+        result_path.write_text(json.dumps(result_data, indent=2) + "\n", encoding="utf-8")
+        print(f"\n  Journey {JOURNEY_ID} ({JOURNEY_NAME}): ERROR — npx not found in PATH")
+        sys.exit(1)
+
     start_time = time.monotonic()
 
     playwright_args = [
-        "npx",
+        npx_path,
         "playwright",
         "test",
         str(SPEC_PATH.relative_to(PROJECT_ROOT / "gui")),
