@@ -35,7 +35,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 | 4 | `POST /api/v1/projects` | 201 | Create project shell |
 | 5 | `POST /api/v1/projects/{project_id}/clips` | 201 | Attach the clip (in/out points are integer frame counts) |
 | 6 | `POST /api/v1/render` | 201 | Start render job |
-| 7 | `GET /api/v1/jobs/{job_id}/wait?timeout=300` | 200 | Block until render terminal |
+| 7 | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 | Poll until `status ∈ {completed, failed, cancelled}` |
 
 ### Sample Request Bodies
 
@@ -67,7 +67,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 { "videos": [{ "id": "vid_…", "filename": "intro.mp4", "duration_frames": 300, … }],
   "total": 1, "limit": 1, "offset": 0 }
 
-// Step 6 → RenderJobResponse (id is the job_id for /jobs/{id}/wait)
+// Step 6 → RenderJobResponse (id is the job_id for polling GET /api/v1/render/{id})
 { "id": "job_xyz789", "project_id": "<project_id>", "status": "queued",
   "output_path": "/abs/render/dir/<project_id>.mp4", "output_format": "mp4",
   "quality_preset": "standard", "progress": 0.0, "retry_count": 0, … }
@@ -177,11 +177,11 @@ Use the testing-mode seed endpoints to skip the full scan→project→clip path 
 
 ## 4. Long-Poll for Async Job Completion
 
-Use `/api/v1/jobs/{job_id}/wait` instead of a `time.sleep` polling loop. Both scan and render jobs surface through the same endpoint (the render job's `id` field doubles as the `job_id`).
+Use `/api/v1/jobs/{job_id}/wait` instead of a `time.sleep` polling loop for **scan and other background jobs**. Render jobs use a different namespace — poll `GET /api/v1/render/{job_id}` instead (see [Recipe 1: Scan → Render Cycle](#1-scan--render-cycle)).
 
 ### Prompt Preamble
 
-> You have a `job_id` from a prior scan, render, or other async submission. Block until the job reaches a terminal state (`complete`, `failed`, `timeout`, `cancelled`) using `GET /api/v1/jobs/{job_id}/wait?timeout=N`. If the call returns `408 JOB_WAIT_TIMEOUT`, the job is still running on the server — re-issue the call with the same `job_id`. Treat any other non-200 as a terminal failure for the workflow.
+> You have a `job_id` from a prior scan or other background job submission. Block until the job reaches a terminal state (`complete`, `failed`, `timeout`, `cancelled`) using `GET /api/v1/jobs/{job_id}/wait?timeout=N`. If the call returns `408 JOB_WAIT_TIMEOUT`, the job is still running on the server — re-issue the call with the same `job_id`. Treat any other non-200 as a terminal failure for the workflow. **Render jobs use `/api/v1/render/{job_id}` polling** (different namespace — see Recipe 1).
 
 ### API Sequence
 

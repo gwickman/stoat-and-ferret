@@ -10,6 +10,7 @@ Compact reference for AI agents operating stoat-and-ferret over HTTP/WebSocket. 
 - **Spec**: `GET /openapi.json` returns the live OpenAPI schema.
 - **Liveness / readiness**: `GET /health/live`, `GET /health/ready` (no `/api/v1` prefix).
 - **Core surface**: `/api/v1/videos`, `/api/v1/projects`, `/api/v1/render`, `/api/v1/jobs/{job_id}`, `/ws`.
+  - **Namespace distinction**: `/api/v1/jobs/{id}` and `/api/v1/render/{id}` are **separate, incompatible namespaces**. Render job IDs (returned by `POST /api/v1/render`) are **not** valid for `/api/v1/jobs/{id}` operations — use `GET /api/v1/render/{job_id}` to poll render status.
 
 ## Canonical Sequences
 
@@ -26,7 +27,7 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 | Add timeline clip | `POST /api/v1/projects/{project_id}/timeline/clips` `{"video_id", "start_time", "duration"}` | 201 clip | `id` |
 | Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"effect_type": "fade", "parameters": {...}}` | 201 effect | applied |
 | Start render | `POST /api/v1/render` `{"project_id", "output_format": "mp4", "quality_preset": "standard"}` | 201 `{id, status}` | render job id |
-| Wait for render | `GET /api/v1/jobs/{job_id}/wait?timeout=300` | 200 terminal status | `status == complete` → `output_path` |
+| Poll render status | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 `{id, status, progress, ...}` | `status ∈ {completed, failed, cancelled}` → read `output_path` |
 
 ### 2. WebSocket + Reconnect
 
@@ -52,7 +53,29 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 
 ### Render Lifecycle Events
 
-`render_queued → render_started → render_progress (*) → render_completed | render_failed | render_cancelled`. Poll `GET /api/v1/jobs/{job_id}` or `GET /api/v1/render/{job_id}` for authoritative status; WebSocket events are best-effort.
+`render_queued → render_started → render_progress (*) → render_completed | render_failed | render_cancelled`. Poll `GET /api/v1/render/{job_id}` for authoritative status (repeat every 1–2 s until `status ∈ {completed, failed, cancelled}`); WebSocket events are best-effort.
+
+## RenderJobResponse Schema
+
+Response from `POST /api/v1/render` and `GET /api/v1/render/{job_id}`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `str` | Render job UUID (use this for `/api/v1/render/{job_id}` polling) |
+| `project_id` | `str` | Source project UUID |
+| `status` | `str` | One of: `queued`, `running`, `completed`, `failed`, `cancelled` (lowercase) |
+| `output_path` | `str` | Absolute path to the output file |
+| `output_format` | `str` | Container format (`mp4`, `webm`, `mov`, `mkv`) |
+| `quality_preset` | `str` | One of: `draft`, `standard`, `high` |
+| `progress` | `float` | `0.0` – `1.0`; advances monotonically during render |
+| `retry_count` | `int` | Number of automatic retry attempts so far |
+| `created_at` | `datetime` | ISO 8601 UTC |
+| `updated_at` | `datetime` | ISO 8601 UTC |
+| `error_message` | `str \| null` | Set when `status == failed`; `null` otherwise |
+| `completed_at` | `datetime \| null` | Set when `status ∈ {completed, failed, cancelled}`; `null` while running |
+
+**Terminal states** (polling stops): `completed`, `failed`, `cancelled`.
+**Non-terminal states** (keep polling): `queued`, `running`.
 
 ## Testing Mode
 
