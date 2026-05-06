@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -102,13 +102,8 @@ class TestHeartbeatInterval:
         monkeypatch.setenv("STOAT_WS_HEARTBEAT_INTERVAL", "42")
         get_settings.cache_clear()
 
-        with patch("stoat_ferret.api.routers.ws._heartbeat_loop") as mock_loop:
-            # Make the mock return a coroutine so create_task works
-            import asyncio
-
-            mock_loop.return_value = asyncio.Future()
-            mock_loop.return_value.set_result(None)
-
+        target = "stoat_ferret.api.routers.ws._heartbeat_loop"
+        with patch(target, new_callable=AsyncMock) as mock_loop:
             ws_manager = ConnectionManager()
             app = create_app(
                 video_repository=AsyncInMemoryVideoRepository(),

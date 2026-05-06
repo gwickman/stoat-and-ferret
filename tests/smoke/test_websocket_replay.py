@@ -65,7 +65,7 @@ def ws_client(ws_app: FastAPI) -> Generator[TestClient, None, None]:
 
 def _broadcast(manager: ConnectionManager, event: dict[str, object]) -> None:
     """Invoke an async broadcast on a synchronous test thread."""
-    asyncio.get_event_loop().run_until_complete(manager.broadcast(event))
+    asyncio.run(manager.broadcast(event))
 
 
 def test_reconnect_replays_events_missed_while_offline(
@@ -160,7 +160,7 @@ def test_replay_buffer_memory_bounds() -> None:
                 build_event(EventType.JOB_PROGRESS, job_id="job-mem"),
             )
 
-    asyncio.get_event_loop().run_until_complete(flood())
+    asyncio.run(flood())
 
     # Deque bound is honoured — oldest events are evicted.
     assert manager.buffered_event_count == buffer_size

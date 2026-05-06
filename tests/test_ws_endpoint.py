@@ -98,7 +98,7 @@ class TestWebSocketBroadcast:
 
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
             data = ws.receive_json()
             assert data["type"] == "health_status"
@@ -118,7 +118,7 @@ class TestWebSocketBroadcast:
 
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
             data = ws.receive_json()
             assert data["type"] == "scan_completed"
@@ -141,7 +141,7 @@ class TestWebSocketMessageSchema:
 
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
             data = ws.receive_json()
             assert "type" in data
@@ -156,7 +156,7 @@ class TestWebSocketMessageSchema:
 
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
             data = ws.receive_json()
             assert isinstance(data["type"], str)
@@ -168,7 +168,7 @@ class TestWebSocketMessageSchema:
 
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
             data = ws.receive_json()
             assert isinstance(data["payload"], dict)
@@ -182,7 +182,7 @@ class TestWebSocketMessageSchema:
 
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
             data = ws.receive_json()
             from datetime import datetime
