@@ -7,10 +7,16 @@ and that a render job can be queued for the sample project.
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
 from typing import Any
 
 import httpx
+import pytest
 
+from stoat_ferret.api.app import create_app, lifespan
+from stoat_ferret.api.settings import get_settings
 from tests.smoke.conftest import SAMPLE_EFFECT_DEFS
 
 
@@ -118,3 +124,77 @@ async def test_sample_project_structure(
     render_data = render_resp.json()
     assert render_data["status"] == "queued"
     assert render_data["id"]  # non-empty string
+
+
+@pytest.fixture()
+async def smoke_client_noop(tmp_path: Path) -> httpx.AsyncClient:
+    """ASGI client with STOAT_RENDER_MODE=noop for noop-mode render tests."""
+    db_path = tmp_path / "noop_test.db"
+
+    orig_db = os.environ.get("STOAT_DATABASE_PATH")
+    orig_thumb = os.environ.get("STOAT_THUMBNAIL_DIR")
+    orig_render_mode = os.environ.get("STOAT_RENDER_MODE")
+
+    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    os.environ["STOAT_RENDER_MODE"] = "noop"
+    get_settings.cache_clear()
+
+    app = create_app()
+
+    async with (
+        lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
+        yield client
+
+    for key, orig in [
+        ("STOAT_DATABASE_PATH", orig_db),
+        ("STOAT_THUMBNAIL_DIR", orig_thumb),
+        ("STOAT_RENDER_MODE", orig_render_mode),
+    ]:
+        if orig is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = orig
+
+    get_settings.cache_clear()
+
+
+async def test_seed_render_plan_noop_completion(
+    smoke_client_noop: httpx.AsyncClient,
+) -> None:
+    """Render job with FFmpeg-vocab render_plan reaches COMPLETED in noop mode (FR-002, BL-340).
+
+    Mirrors the render submission the seed script performs: quality_preset uses
+    FFmpeg vocabulary (medium) and render_plan includes total_duration.
+    In noop mode the render service short-circuits synchronously, so the job
+    status in the API response must be 'completed'.
+    """
+    client = smoke_client_noop
+
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Seed Noop Test Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    render_plan = {
+        "settings": {"quality_preset": "medium"},  # FFmpeg vocabulary
+        "total_duration": 46.0,
+    }
+
+    resp = await client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": json.dumps(render_plan)},
+    )
+    assert resp.status_code == 201
+    render_data = resp.json()
+    assert render_data["status"] == "completed", (
+        f"Expected 'completed' in noop mode, got {render_data['status']!r}"
+    )
+    assert render_data["id"]
