@@ -4087,6 +4087,11 @@
           },
           "quality_preset": {
             "type": "string",
+            "enum": [
+              "draft",
+              "standard",
+              "high"
+            ],
             "title": "Quality Preset",
             "description": "Quality preset",
             "default": "standard"

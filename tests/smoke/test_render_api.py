@@ -389,3 +389,71 @@ async def test_render_encoder_refresh(smoke_client: httpx.AsyncClient) -> None:
         assert "encoder_type" in encoder
         assert "description" in encoder
         assert "detected_at" in encoder
+
+
+# ---------- Quality preset translation E2E tests (BL-339) ----------
+
+
+async def _create_project(smoke_client: httpx.AsyncClient, name: str) -> str:
+    """Create a project and return its ID."""
+    resp = await smoke_client.post("/api/v1/projects", json={"name": name})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+async def test_render_standard_preset_reaches_running(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with quality_preset='standard' reaches RUNNING or COMPLETED status."""
+    project_id = await _create_project(smoke_client, "Preset Standard E2E")
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "quality_preset": "standard"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    job_id = body["id"]
+    assert body["status"] in ("queued", "running", "completed")
+
+    get_resp = await smoke_client.get(f"/api/v1/render/{job_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["status"] in ("queued", "running", "completed")
+
+
+async def test_render_draft_preset_reaches_running(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with quality_preset='draft' results in a job reaching RUNNING or COMPLETED."""
+    project_id = await _create_project(smoke_client, "Preset Draft E2E")
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "quality_preset": "draft"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] in ("queued", "running", "completed")
+
+
+async def test_render_high_preset_reaches_running(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with quality_preset='high' results in a job reaching RUNNING or COMPLETED."""
+    project_id = await _create_project(smoke_client, "Preset High E2E")
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "quality_preset": "high"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] in ("queued", "running", "completed")
+
+
+async def test_render_ffmpeg_preset_rejected_at_public_api(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with FFmpeg preset name 'medium' returns HTTP 400."""
+    project_id = await _create_project(smoke_client, "Preset Invalid E2E")
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "quality_preset": "medium"},
+    )
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"]["code"] == "INVALID_PRESET"
+    assert "draft | standard | high" in body["detail"]["message"]
