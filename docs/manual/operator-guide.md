@@ -24,7 +24,7 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 | List videos | `GET /api/v1/videos` | 200 `{videos: [...]}` | pick `video_id` |
 | Create project | `POST /api/v1/projects` `{"name": "demo", "output_width": 1920, "output_height": 1080, "output_fps": 30}` | 201 project | `id` |
 | Add timeline clip | `POST /api/v1/projects/{project_id}/timeline/clips` `{"video_id", "start_time", "duration"}` | 201 clip | `id` |
-| Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"name", "parameters": {...}}` | 201 effect | applied |
+| Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"effect_type": "fade", "parameters": {...}}` | 201 effect | applied |
 | Start render | `POST /api/v1/render` `{"project_id", "output_format": "mp4", "quality_preset": "standard"}` | 201 `{id, status}` | render job id |
 | Wait for render | `GET /api/v1/jobs/{job_id}/wait?timeout=300` | 200 terminal status | `status == complete` → `output_path` |
 
