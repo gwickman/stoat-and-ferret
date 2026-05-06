@@ -24,10 +24,27 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 | Wait for scan | `GET /api/v1/jobs/{job_id}/wait?timeout=30` | 200 `{status, result}` | `result.scanned/new/updated` |
 | List videos | `GET /api/v1/videos` | 200 `{videos: [...]}` | pick `video_id` |
 | Create project | `POST /api/v1/projects` `{"name": "demo", "output_width": 1920, "output_height": 1080, "output_fps": 30}` | 201 project | `id` |
-| Add timeline clip | `POST /api/v1/projects/{project_id}/timeline/clips` `{"video_id", "start_time", "duration"}` | 201 clip | `id` |
+| Create clip | `POST /api/v1/projects/{project_id}/clips` `{"source_video_id": "<video_id>", "in_point": 0, "out_point": 100, "timeline_position": 0}` | 201 clip | `id` → clip_id |
+| Create track | `PUT /api/v1/projects/{project_id}/timeline` `[{"track_type": "video", "label": "V1"}]` | 200 timeline | `tracks[0].id` → track_id |
+| Assign clip to timeline | `POST /api/v1/projects/{project_id}/timeline/clips` `{"clip_id": "<clip_id>", "track_id": "<track_id>", "timeline_start": 0.0, "timeline_end": 5.0}` | 201 clip | timeline positioned |
 | Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"effect_type": "fade", "parameters": {...}}` | 201 effect | applied |
 | Start render | `POST /api/v1/render` `{"project_id", "output_format": "mp4", "quality_preset": "standard"}` | 201 `{id, status}` | render job id |
 | Poll render status | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 `{id, status, progress, ...}` | `status ∈ {completed, failed, cancelled}` → read `output_path` |
+
+#### Timeline Clip Workflow
+
+Assigning a clip to the timeline is a 3-step sequence — each step produces an ID required by the next:
+
+**Step 1 — Create a clip** (`POST /api/v1/projects/{project_id}/clips`):
+Required fields: `source_video_id` (str), `in_point` (int, frame), `out_point` (int, frame), `timeline_position` (int, frame). Response `id` is the `clip_id` used in Step 3.
+
+**Step 2 — Create a track** (`PUT /api/v1/projects/{project_id}/timeline`):
+Body is a JSON array of `TrackCreate` objects. Required per track: `track_type` (`"video"` | `"audio"` | `"text"`), `label` (non-empty string). Optional: `z_index` (int; auto-assigned by array position when omitted), `muted` (bool; default `false`), `locked` (bool; default `false`). Response `tracks[0].id` is the `track_id` used in Step 3.
+
+> **Warning — PUT replaces all tracks.** This endpoint deletes every existing track and creates the tracks in the request array. Include all tracks you want to keep; omitting one deletes it.
+
+**Step 3 — Assign clip to timeline** (`POST /api/v1/projects/{project_id}/timeline/clips`):
+Required fields: `clip_id` (from Step 1), `track_id` (from Step 2), `timeline_start` (float), `timeline_end` (float). Both coordinates are **absolute seconds from the start of the timeline** — not offsets relative to the clip's `in_point`. Example: `timeline_start=0.0, timeline_end=5.0` occupies the first 5 seconds of the timeline. Constraints: `timeline_start >= 0`, `timeline_end > 0`, `timeline_end > timeline_start` (returns 422 if violated).
 
 ### 2. WebSocket + Reconnect
 
