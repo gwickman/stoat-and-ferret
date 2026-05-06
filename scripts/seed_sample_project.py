@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from dataclasses import dataclass
@@ -53,6 +54,9 @@ EFFECT_DEFS = [
 TRANSITION_DEFS = [
     (1, 2, "xfade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
 ]
+
+# Required top-level fields in render_plan JSON (mirrors worker.py contract)
+_REQUIRED_PLAN_FIELDS = ("settings", "total_duration")
 
 
 @dataclass
@@ -241,10 +245,20 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
         resp.raise_for_status()
         transitions_applied += 1
 
-    # 5. Queue render job
+    # 5. Queue render job with FFmpeg vocabulary render_plan
+    # Total duration: max(timeline_end) across all clips = max(tl_pos + duration) / fps
+    total_duration = max(tl_pos + (out_pt - in_pt) for _, in_pt, out_pt, tl_pos in CLIP_DEFS) / fps
+    render_plan: dict[str, object] = {
+        "settings": {"quality_preset": "medium"},  # FFmpeg vocabulary: veryfast | medium | slow
+        "total_duration": total_duration,
+    }
+    for field in _REQUIRED_PLAN_FIELDS:
+        if field not in render_plan:
+            print(f"ERROR: render_plan missing required field: {field}", file=sys.stderr)
+            sys.exit(1)
     resp = client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={"project_id": project_id, "render_plan": json.dumps(render_plan)},
     )
     if resp.status_code != 201:
         print(f"ERROR: Render failed with status {resp.status_code}: {resp.text}", file=sys.stderr)
