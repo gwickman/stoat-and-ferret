@@ -27,6 +27,7 @@ The effects router provides full CRUD operations for effects on clips (apply, up
 - **Schema Validation**: Pydantic models for all request/response payloads
 - **Static File Serving**: GUI static files mounted at `/gui`
 - **Configuration**: Environment-based settings with `STOAT_` prefix including `debug`, `ws_heartbeat_interval`, and `allowed_scan_roots`
+- **Client Identity Tracking**: Cryptographically random client IDs for WebSocket connections via ClientIdentityStore Protocol (BL-315)
 
 ## Code Elements
 
@@ -38,6 +39,7 @@ This component contains:
 - [c4-code-stoat-ferret-api-schemas.md](./c4-code-stoat-ferret-api-schemas.md) -- Pydantic request/response models including effect and transition schemas
 - [c4-code-python-schemas.md](./c4-code-python-schemas.md) -- Schema definitions overview
 - [c4-code-stoat-ferret-api-websocket.md](./c4-code-stoat-ferret-api-websocket.md) -- ConnectionManager, EventType, event builder
+- [c4-code-websocket-identity.md](./c4-code-websocket-identity.md) -- WebSocket client identity primitives: ClientIdentityStore Protocol, InMemoryClientIdentityStore, token generation and validation
 
 ## Interfaces
 

@@ -114,7 +114,7 @@ A software engineer who builds, tests, and extends stoat-and-ferret across three
 |--------|----------|----------|---------|
 | FFmpeg | Yes | Subprocess CLI | Video transcoding, rendering, thumbnail/waveform/proxy generation, HLS streaming |
 | ffprobe | Yes | Subprocess CLI | Video metadata extraction (duration, resolution, codec, FPS) |
-| SQLite 3 | Yes | In-process (aiosqlite) | Persistent storage: videos, projects, clips, render jobs, previews, proxies, audit log, FTS5 search. Schema managed by Alembic (7 migrations). |
+| SQLite 3 | Yes | In-process (aiosqlite) | Persistent storage: videos, projects, clips, render jobs, previews, proxies, audit log, FTS5 search. Schema managed by Alembic (9 migrations). |
 | Local filesystem | Yes | File I/O | Source videos, thumbnails, waveforms, proxies, render output, HLS segments. Paths validated against `STOAT_ALLOWED_SCAN_ROOTS`. |
 | Prometheus | No | HTTP scrape `/metrics` | Request counts, durations, effect usage counters, FFmpeg execution metrics |
 

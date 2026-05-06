@@ -133,7 +133,7 @@ C4Container
 
 #### Components Deployed
 
-- [Web GUI](./c4-component-web-gui.md) -- 7 pages, 13 Zustand stores, 12 hooks, generated OpenAPI types, 500+ unit tests, 15 E2E tests
+- [Web GUI](./c4-component-web-gui.md) -- 7 pages, 17 Zustand stores, 12 hooks, generated OpenAPI types, 500+ unit tests, 15 E2E tests
 
 #### Interfaces
 
@@ -218,7 +218,7 @@ C4Container
 | Container | Components |
 |-----------|-----------|
 | API Server | API Gateway, Effects Engine, Application Services, Data Access Layer, Python Bindings Layer |
-| Web GUI | Web GUI (7 pages, 13 stores, 12 hooks) |
+| Web GUI | Web GUI (7 pages, 17 stores, 12 hooks) |
 | Rust Core Library | Rust Core Engine + Python Bindings Layer (wrapping) |
 | SQLite Database | Data Access Layer (schema portion) |
 | File Storage | (infrastructure -- no application components) |

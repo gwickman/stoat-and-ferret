@@ -10,7 +10,7 @@
 | API Gateway | FastAPI REST/WebSocket endpoints, middleware, schemas, effects CRUD, transitions, render and preview routing | 7 files | [c4-component-api-gateway.md](./c4-component-api-gateway.md) |
 | Application Services | Video scanning, media generation (thumbnails/waveforms/proxies), FFmpeg execution, job queue, render pipeline, HLS preview system, dev scripts | 7 files | [c4-component-application-services.md](./c4-component-application-services.md) |
 | Data Access Layer | SQLite repository pattern for Video/Project/Clip/Preview/Proxy; domain models; Alembic migrations; structured logging configuration | 6 files | [c4-component-data-access.md](./c4-component-data-access.md) |
-| Web GUI | React SPA with timeline editor, HLS preview player, render UI, effect workshop, dashboard, video library, project management, 13 Zustand stores, 12 hooks | 21 files | [c4-component-web-gui.md](./c4-component-web-gui.md) |
+| Web GUI | React SPA with timeline editor, HLS preview player, render UI, effect workshop, dashboard, video library, project management, 17 Zustand stores, 12 hooks | 21 files | [c4-component-web-gui.md](./c4-component-web-gui.md) |
 | Test Infrastructure | Python test suites: unit, API integration, smoke, black-box, contract, security, job queue, test doubles, property-based, and import fallback testing | 11 files | [c4-component-test-infrastructure.md](./c4-component-test-infrastructure.md) |
 
 ## Component Relationships
@@ -20,7 +20,7 @@ C4Component
     title System Component Overview — stoat-and-ferret
 
     Container_Boundary(system, "stoat-and-ferret Video Editor") {
-        Component(gui, "Web GUI", "React/TypeScript", "Timeline, preview, render, effects, library, dashboard — 7 routes, 13 stores, 12 hooks")
+        Component(gui, "Web GUI", "React/TypeScript", "Timeline, preview, render, effects, library, dashboard — 7 routes, 17 stores, 12 hooks")
         Component(api, "API Gateway", "Python/FastAPI", "REST/WebSocket endpoints, middleware, schemas, effects CRUD, render and preview routing")
         Component(effects, "Effects Engine", "Python", "9 built-in effects, JSON Schema validation, AI hints, filter preview/build")
         Component(services, "Application Services", "Python", "Scan, media gen, FFmpeg, job queue, render pipeline, HLS preview")
@@ -74,6 +74,7 @@ C4Component
 | `c4-code-stoat-ferret-api-schemas` | API Gateway |
 | `c4-code-python-schemas` | API Gateway |
 | `c4-code-stoat-ferret-api-websocket` | API Gateway |
+| `c4-code-websocket-identity` | API Gateway |
 | `c4-code-stoat-ferret-api-services` | Application Services |
 | `c4-code-stoat-ferret-ffmpeg` | Application Services |
 | `c4-code-stoat-ferret-jobs` | Application Services |
