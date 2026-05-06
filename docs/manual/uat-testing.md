@@ -259,6 +259,8 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 502 | `uat_journey_502.py` | **Render Queue Journey** — Submits multiple render jobs to fill the queue, verifies queue ordering and concurrency limits, and checks that pending jobs are visible in the queue. Depends on journey 501. |
 | 503 | `uat_journey_503.py` | **Render Settings Journey** — Opens the Start Render modal and validates format, quality, and encoder selector options, verifies the FFmpeg command preview updates when settings change, and checks all available format/quality combinations. Depends on journey 501. |
 | 504 | `uat_journey_504.py` | **Render Failure Journey** — Creates a project with a clip pointing to a nonexistent source file, starts a render, and verifies the job transitions to failed status with an error message visible in the job card. Tests the retry button interaction. Depends on journey 501. |
+| 604 | `uat_journey_604.py` | **Keyboard Navigation via npx** — Validates keyboard-only navigation through the application by wrapping `gui/e2e/keyboard-navigation.spec.ts` via Playwright CLI. Resolves `npx` using `shutil.which()` for cross-platform compatibility (Windows `.cmd` shim support). Checks that all interactive elements are Tab-reachable, focus order is correct, and no focus traps exist. Independent. |
+| 605 | `uat_journey_605.py` | **Screen Reader Audit** — Validates WCAG AA compliance across all workspace routes (`/gui/`, `/gui/library`, `/gui/render`, `/gui/dashboard`, `/gui/preview`, `/gui/projects`, `/gui/timeline`) using axe-core. Injects axe-core and reports critical/serious violations per route. Journey passes when 0 critical and 0 serious violations are found across all routes. Independent. |
 
 ### Dependency graph
 
@@ -278,6 +280,9 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
  ├─▶ 502 (render-queue-journey)
  ├─▶ 503 (render-settings-journey)
  └─▶ 504 (render-failure-journey)
+
+604 (keyboard-navigation)   ← independent
+605 (screen-reader-audit)   ← independent
 ```
 
-If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically.
+If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically. Journeys 604 and 605 always run regardless of other journey results.
