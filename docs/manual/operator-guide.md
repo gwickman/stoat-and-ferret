@@ -60,7 +60,7 @@ Enable fixtures by starting the server with `STOAT_TESTING_MODE=true`. Endpoints
 
 - Seed: `POST /api/v1/testing/seed` `{"fixture_type": "project", "name": "demo", "data": {...}}` → `{fixture_id, fixture_type, name}`. All seeded names are prefixed `seeded_` for enumeration.
 - Teardown: `DELETE /api/v1/testing/seed/{fixture_id}?fixture_type=project`.
-- Canonical agent test loop: seed project → add timeline clip → POST `/api/v1/render` with `render_plan: "dry_run"` → assert `status == complete` without writing output → delete fixture.
+- Canonical agent test loop: set `STOAT_RENDER_MODE=noop` in the test process → seed project → add timeline clip → POST `/api/v1/render` with a normal well-formed render payload → assert `status == complete` without writing output → delete fixture. See *Synthetic render mode* below for environment variable details.
 - Fixtures live in the same SQLite database as production data; use a dedicated `STOAT_DATA_DIR` for isolation.
 
 ### Synthetic render mode (`STOAT_RENDER_MODE`)
