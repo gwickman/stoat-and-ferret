@@ -209,6 +209,11 @@ __marimo__/
 # Application logs
 logs/
 
+# Runtime database files (seed fixture lives in tests/fixtures/stoat.seed.db)
+/data/stoat.db
+/data/stoat.db-wal
+/data/stoat.db-shm
+
 # Generated waveform data
 data/waveforms/
 
