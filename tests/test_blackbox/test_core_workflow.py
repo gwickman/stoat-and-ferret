@@ -123,9 +123,8 @@ class TestProjectClipWorkflow:
         video_a = make_test_video(filename="scene_a.mp4")
         video_b = make_test_video(filename="scene_b.mp4")
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(video_repository.add(video_a))
-        loop.run_until_complete(video_repository.add(video_b))
+        asyncio.run(video_repository.add(video_a))
+        asyncio.run(video_repository.add(video_b))
 
         project = create_project_via_api(client, name="Multi-Clip Project")
 

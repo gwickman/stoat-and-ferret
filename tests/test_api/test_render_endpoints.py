@@ -232,9 +232,7 @@ class TestListRenderJobs:
         # Manually transition one job to running
         import asyncio
 
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(created["id"], RenderStatus.RUNNING)
-        )
+        asyncio.run(render_repo.update_status(created["id"], RenderStatus.RUNNING))
 
         resp = render_client.get("/api/v1/render?status=queued")
         data = resp.json()
@@ -312,12 +310,8 @@ class TestCancelRenderJob:
 
         import asyncio
 
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.COMPLETED)
-        )
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.COMPLETED))
 
         resp = render_client.post(f"/api/v1/render/{job_id}/cancel")
         assert resp.status_code == 409
@@ -341,10 +335,8 @@ class TestRetryRenderJob:
 
         import asyncio
 
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(
             render_repo.update_status(job_id, RenderStatus.FAILED, error_message="Transient error")
         )
 
@@ -380,21 +372,15 @@ class TestRetryRenderJob:
         # Exhaust retries: fail -> retry -> fail -> retry -> fail
         # Default max retries = 2, so after retry_count=2, it's permanent
         for _ in range(2):
-            asyncio.get_event_loop().run_until_complete(
-                render_repo.update_status(job_id, RenderStatus.RUNNING)
-            )
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+            asyncio.run(
                 render_repo.update_status(job_id, RenderStatus.FAILED, error_message="Error")
             )
-            asyncio.get_event_loop().run_until_complete(
-                render_repo.update_status(job_id, RenderStatus.QUEUED)
-            )
+            asyncio.run(render_repo.update_status(job_id, RenderStatus.QUEUED))
 
         # Final failure
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(
             render_repo.update_status(job_id, RenderStatus.FAILED, error_message="Permanent")
         )
 
@@ -507,12 +493,8 @@ class TestStartRetryParity:
         job_id = start_data["id"]
         import asyncio
 
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.FAILED, error_message="test")
-        )
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.FAILED, error_message="test"))
         retry_resp = render_client.post(f"/api/v1/render/{job_id}/retry")
         assert retry_resp.status_code == 200
         assert retry_resp.json()["status"] == "queued"
@@ -529,12 +511,8 @@ class TestStartRetryParity:
         job_id = start_data["id"]
         import asyncio
 
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.FAILED, error_message="test")
-        )
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.FAILED, error_message="test"))
         retry_resp = render_client.post(f"/api/v1/render/{job_id}/retry")
         retry_keys = set(retry_resp.json().keys())
 
@@ -558,14 +536,10 @@ class TestStartRetryParity:
         # Now retry
         import asyncio
 
-        jobs, _ = asyncio.get_event_loop().run_until_complete(render_repo.list_jobs())
+        jobs, _ = asyncio.run(render_repo.list_jobs())
         job = jobs[0]
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job.id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job.id, RenderStatus.FAILED, error_message="test")
-        )
+        asyncio.run(render_repo.update_status(job.id, RenderStatus.RUNNING))
+        asyncio.run(render_repo.update_status(job.id, RenderStatus.FAILED, error_message="test"))
 
         with patch("stoat_ferret.api.routers.render.logger") as mock_logger:
             render_client.post(f"/api/v1/render/{job.id}/retry")
@@ -595,16 +569,12 @@ class TestRenderLifecycle:
         import asyncio
 
         # Simulate running
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
         resp = render_client.get(f"/api/v1/render/{job_id}")
         assert resp.json()["status"] == "running"
 
         # Simulate completion
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.COMPLETED)
-        )
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.COMPLETED))
         resp = render_client.get(f"/api/v1/render/{job_id}")
         assert resp.json()["status"] == "completed"
         assert resp.json()["progress"] == 1.0
@@ -626,10 +596,8 @@ class TestRenderLifecycle:
 
         import asyncio
 
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(
             render_repo.update_status(job_id, RenderStatus.FAILED, error_message="Transient error")
         )
 
@@ -639,12 +607,8 @@ class TestRenderLifecycle:
         assert resp.json()["status"] == "queued"
 
         # Complete after retry
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
-            render_repo.update_status(job_id, RenderStatus.COMPLETED)
-        )
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.RUNNING))
+        asyncio.run(render_repo.update_status(job_id, RenderStatus.COMPLETED))
         resp = render_client.get(f"/api/v1/render/{job_id}")
         assert resp.json()["status"] == "completed"
 
@@ -778,7 +742,7 @@ class TestGetEncoders:
     ) -> None:
         """GET /render/encoders returns cached encoders when cache is populated."""
         entries = _make_sample_entries()
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        asyncio.run(encoder_repo.create_many(entries))
 
         resp = encoder_client.get("/api/v1/render/encoders")
         assert resp.status_code == 200
@@ -827,7 +791,7 @@ class TestGetEncoders:
     ) -> None:
         """GET /render/encoders returns correct schema fields."""
         entries = _make_sample_entries(1)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        asyncio.run(encoder_repo.create_many(entries))
 
         resp = encoder_client.get("/api/v1/render/encoders")
         data = resp.json()
@@ -844,7 +808,7 @@ class TestGetEncoders:
         """GET during active refresh returns stale cached data (NFR-003)."""
         # Pre-populate cache
         entries = _make_sample_entries(1)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        asyncio.run(encoder_repo.create_many(entries))
 
         with TestClient(encoder_app) as client:
             # Cache is populated, GET should return cached data regardless of lock
@@ -868,7 +832,7 @@ class TestRefreshEncoders:
         """POST /render/encoders/refresh re-runs detection and updates cache."""
         # Pre-populate with old data
         old_entries = _make_sample_entries(1)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(old_entries))
+        asyncio.run(encoder_repo.create_many(old_entries))
 
         raw = _make_raw_encoders()
         with patch(
@@ -883,7 +847,7 @@ class TestRefreshEncoders:
         assert len(data["encoders"]) == 2
 
         # Verify cache was updated
-        cached = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        cached = asyncio.run(encoder_repo.get_all())
         assert len(cached) == 2
 
     def test_refresh_clears_old_cache(
@@ -893,7 +857,7 @@ class TestRefreshEncoders:
     ) -> None:
         """POST /render/encoders/refresh truncates old cache before re-inserting."""
         old_entries = _make_sample_entries(3)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(old_entries))
+        asyncio.run(encoder_repo.create_many(old_entries))
 
         # Return only 1 encoder this time
         raw = _make_raw_encoders()[:1]
@@ -904,7 +868,7 @@ class TestRefreshEncoders:
             resp = encoder_client.post("/api/v1/render/encoders/refresh")
 
         assert resp.status_code == 200
-        cached = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        cached = asyncio.run(encoder_repo.get_all())
         assert len(cached) == 1
 
     def test_refresh_ffmpeg_unavailable(
@@ -950,11 +914,11 @@ class TestEncoderCacheParity:
     ) -> None:
         """Both implementations return same entries after create_many."""
         entries = _make_sample_entries()
-        created = asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        created = asyncio.run(encoder_repo.create_many(entries))
         assert len(created) == 3
         assert all(e.id is not None for e in created)
 
-        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        fetched = asyncio.run(encoder_repo.get_all())
         assert len(fetched) == 3
         names = {e.name for e in fetched}
         assert names == {"libx264", "h264_nvenc", "libx265"}
@@ -965,10 +929,10 @@ class TestEncoderCacheParity:
     ) -> None:
         """Clear removes all entries from cache."""
         entries = _make_sample_entries()
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        asyncio.run(encoder_repo.create_many(entries))
 
-        asyncio.get_event_loop().run_until_complete(encoder_repo.clear())
-        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        asyncio.run(encoder_repo.clear())
+        fetched = asyncio.run(encoder_repo.get_all())
         assert len(fetched) == 0
 
     def test_refresh_cycle_truncate_reinsert(
@@ -977,15 +941,15 @@ class TestEncoderCacheParity:
     ) -> None:
         """Refresh cycle: clear + create_many replaces all entries."""
         old = _make_sample_entries(3)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(old))
-        assert len(asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())) == 3
+        asyncio.run(encoder_repo.create_many(old))
+        assert len(asyncio.run(encoder_repo.get_all())) == 3
 
         # Simulate refresh: clear + re-insert with fewer entries
-        asyncio.get_event_loop().run_until_complete(encoder_repo.clear())
+        asyncio.run(encoder_repo.clear())
         new = _make_sample_entries(1)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(new))
+        asyncio.run(encoder_repo.create_many(new))
 
-        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        fetched = asyncio.run(encoder_repo.get_all())
         assert len(fetched) == 1
         assert fetched[0].name == "libx264"
 
@@ -1011,11 +975,11 @@ class TestEncoderContract:
             description="NVIDIA NVENC HEVC encoder",
             detected_at=now,
         )
-        created = asyncio.get_event_loop().run_until_complete(encoder_repo.create_many([entry]))
+        created = asyncio.run(encoder_repo.create_many([entry]))
         assert len(created) == 1
         assert created[0].id is not None
 
-        fetched = asyncio.get_event_loop().run_until_complete(encoder_repo.get_all())
+        fetched = asyncio.run(encoder_repo.get_all())
         assert len(fetched) == 1
         e = fetched[0]
         assert e.name == "hevc_nvenc"
@@ -1032,7 +996,7 @@ class TestEncoderContract:
     ) -> None:
         """Encoder response schema matches EncoderCacheEntry fields."""
         entries = _make_sample_entries(1)
-        asyncio.get_event_loop().run_until_complete(encoder_repo.create_many(entries))
+        asyncio.run(encoder_repo.create_many(entries))
 
         resp = encoder_client.get("/api/v1/render/encoders")
         enc = resp.json()["encoders"][0]
@@ -1245,13 +1209,9 @@ class TestGetQueueStatus:
             quality_preset=QualityPreset.STANDARD,
             render_plan="{}",
         )
-        asyncio.get_event_loop().run_until_complete(queue_repo.create(job))
-        asyncio.get_event_loop().run_until_complete(
-            queue_repo.update_status(job.id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
-            queue_repo.update_status(job.id, RenderStatus.COMPLETED)
-        )
+        asyncio.run(queue_repo.create(job))
+        asyncio.run(queue_repo.update_status(job.id, RenderStatus.RUNNING))
+        asyncio.run(queue_repo.update_status(job.id, RenderStatus.COMPLETED))
 
         # Create and fail another job
         job2 = RenderJob.create(
@@ -1261,11 +1221,9 @@ class TestGetQueueStatus:
             quality_preset=QualityPreset.STANDARD,
             render_plan="{}",
         )
-        asyncio.get_event_loop().run_until_complete(queue_repo.create(job2))
-        asyncio.get_event_loop().run_until_complete(
-            queue_repo.update_status(job2.id, RenderStatus.RUNNING)
-        )
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(queue_repo.create(job2))
+        asyncio.run(queue_repo.update_status(job2.id, RenderStatus.RUNNING))
+        asyncio.run(
             queue_repo.update_status(job2.id, RenderStatus.FAILED, error_message="test error")
         )
 
@@ -1294,16 +1252,14 @@ class TestGetQueueStatus:
             quality_preset=QualityPreset.STANDARD,
             render_plan="{}",
         )
-        asyncio.get_event_loop().run_until_complete(queue_repo.create(job))
+        asyncio.run(queue_repo.create(job))
 
         # Immediately check — count should be updated
         resp = queue_client.get("/api/v1/render/queue")
         assert resp.json()["pending_count"] == 1
 
         # Transition to running
-        asyncio.get_event_loop().run_until_complete(
-            queue_repo.update_status(job.id, RenderStatus.RUNNING)
-        )
+        asyncio.run(queue_repo.update_status(job.id, RenderStatus.RUNNING))
         resp = queue_client.get("/api/v1/render/queue")
         assert resp.json()["active_count"] == 1
         assert resp.json()["pending_count"] == 0

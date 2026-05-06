@@ -191,7 +191,7 @@ class TestBackwardsCompatibility:
         # Broadcast 3 events while no client is connected
         events = [build_event(EventType.JOB_PROGRESS, job_id="job-compat") for _ in range(3)]
         for event in events:
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
         # Reconnect without token, using Last-Event-ID of first event
         first_id = events[0]["event_id"]
@@ -213,7 +213,7 @@ class TestBackwardsCompatibility:
         token = generate_client_id()
         events = [build_event(EventType.JOB_PROGRESS, job_id="job-token-compat") for _ in range(3)]
         for event in events:
-            asyncio.get_event_loop().run_until_complete(ws_manager.broadcast(event))
+            asyncio.run(ws_manager.broadcast(event))
 
         first_id = events[0]["event_id"]
         with ws_client.websocket_connect(

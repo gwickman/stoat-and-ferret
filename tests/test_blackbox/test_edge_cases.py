@@ -181,10 +181,9 @@ class TestPagination:
         video_b = make_test_video(filename="outro_scene.mp4", path="/v/outro_scene.mp4")
         video_c = make_test_video(filename="interview.mp4", path="/v/interview.mp4")
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(video_repository.add(video_a))
-        loop.run_until_complete(video_repository.add(video_b))
-        loop.run_until_complete(video_repository.add(video_c))
+        asyncio.run(video_repository.add(video_a))
+        asyncio.run(video_repository.add(video_b))
+        asyncio.run(video_repository.add(video_c))
 
         # Search for "scene" should match intro and outro
         resp = client.get("/api/v1/videos/search", params={"q": "scene"})
