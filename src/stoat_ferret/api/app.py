@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import inspect
 import logging
 import os
@@ -360,8 +359,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # subsequent probes cannot race with the rest of teardown.
     if synthetic_task_handle is not None:
         synthetic_task_handle.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await synthetic_task_handle
+        # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
+        await asyncio.wait({synthetic_task_handle}, timeout=15.0)
     if synthetic_client is not None:
         await synthetic_client.aclose()
 
@@ -414,13 +413,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     rw_task: asyncio.Task[None] | None = getattr(app.state, "render_worker_task", None)
     if rw_task is not None:
         rw_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await rw_task
+        # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
+        await asyncio.wait({rw_task}, timeout=15.0)
 
     # Shutdown: cancel worker and close database
     worker_task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await worker_task
+    # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
+    await asyncio.wait({worker_task}, timeout=15.0)
     logger.info("job_worker_stopped")
 
     sync_conn.close()
