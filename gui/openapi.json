@@ -4055,6 +4055,11 @@
             "title": "Name",
             "description": "Codec identifier (e.g. h264, vp9)"
           },
+          "encoder": {
+            "type": "string",
+            "title": "Encoder",
+            "description": "FFmpeg encoder name for this codec (e.g. libx264, libvpx-vp9)"
+          },
           "quality_presets": {
             "items": {
               "$ref": "#/components/schemas/QualityPresetInfo"
@@ -4067,6 +4072,7 @@
         "type": "object",
         "required": [
           "name",
+          "encoder",
           "quality_presets"
         ],
         "title": "CodecInfo",

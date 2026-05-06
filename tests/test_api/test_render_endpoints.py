@@ -1148,7 +1148,7 @@ class TestFormatContract:
             "supports_two_pass",
             "supports_alpha",
         }
-        required_codec_fields = {"name", "quality_presets"}
+        required_codec_fields = {"name", "encoder", "quality_presets"}
         required_preset_fields = {"preset", "video_bitrate_kbps"}
 
         for fmt in data["formats"]:
