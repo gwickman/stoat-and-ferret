@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Repair malformed render_plan rows in data/stoat.db fixture.
+"""Repair malformed render_plan rows in the runtime database (data/stoat.db).
+
+Operates on the runtime DB at data/stoat.db, not the seed fixture
+(tests/fixtures/stoat.seed.db). The seed fixture is immutable and tracked
+in git; this script repairs live runtime data only.
 
 Idempotent: safe to re-run. Only updates rows where status='queued'
 AND render_plan='{}'. Already-repaired rows are untouched.
