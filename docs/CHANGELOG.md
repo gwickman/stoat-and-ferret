@@ -4,6 +4,18 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v061] - 2026-05-07
+
+### Fixed
+- Fix npx path resolution on Windows for UAT runner (Theme 1, Feature 001)
+- Fix render payload validation to match API contract (Theme 1, Feature 002)
+
+### Verified
+- Smoke test fixture integrity confirmed against current codebase (Theme 2, Feature 003)
+- Sample project documentation aligned with public render_plan vocabulary (Theme 2, Feature 004)
+
+**Summary:** Tooling Hygiene — Fix script-layer issues blocking Windows UAT and canonical seed workflows. 2 themes, 4 features, 18/18 acceptance criteria met.
+
 ## [v060] - 2026-05-06
 
 ### Render API Contract Repair, Asyncio Safety, Repository Hygiene, Architecture Refresh
