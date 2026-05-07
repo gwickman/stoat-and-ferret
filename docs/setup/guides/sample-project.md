@@ -154,15 +154,43 @@ See the [API Reference](../../manual/03_api-reference.md) for full endpoint docu
 
 ## Export / Render
 
-Once the project is composed, you can queue a render job via the render API:
+Once the project is composed, you can queue a render job via the render API.
+
+### Render request with `render_plan`
+
+The recommended way to specify quality and duration is via the `render_plan` field — a JSON-encoded string with two required keys:
 
 ```bash
 curl -X POST http://localhost:8765/api/v1/render \
   -H "Content-Type: application/json" \
-  -d '{"project_id": "{project_id}"}' | python -m json.tool
+  -d '{
+    "project_id": "{project_id}",
+    "render_plan": "{\"settings\": {\"quality_preset\": \"standard\"}, \"total_duration\": 46.0}"
+  }' | python -m json.tool
 ```
 
-Expected response (`HTTP 201`):
+`render_plan` structure:
+
+```json
+{
+  "settings": {
+    "quality_preset": "standard"
+  },
+  "total_duration": 46.0
+}
+```
+
+**Valid `quality_preset` values:**
+
+| Value | CRF | Description |
+|-------|-----|-------------|
+| `draft` | 28 | Fast preview quality |
+| `standard` | 23 | Balanced quality/size (default) |
+| `high` | 18 | High fidelity, larger file |
+
+CRF values apply to x264/x265 encoding. Do not use FFmpeg speed preset names (`veryfast`, `medium`, `slow`) — those are internal worker values, not part of the public API vocabulary.
+
+### Expected response (`HTTP 201`)
 
 ```json
 {
@@ -177,7 +205,9 @@ Expected response (`HTTP 201`):
 
 The render job is accepted and assigned `status: "queued"`. In quickstart mode the render background worker (`RenderQueue.dequeue`) is not connected to the FastAPI lifespan, so the job remains queued and no output file is produced. This is by design for local development — the render infrastructure is fully functional but the executor is not started automatically.
 
-To customise the output format or quality, include `output_format` and `quality_preset` in the request body:
+### Simple form (quality_preset only)
+
+If you only need to set quality and don't need to specify total duration, you can pass `quality_preset` directly in the request body:
 
 ```json
 {

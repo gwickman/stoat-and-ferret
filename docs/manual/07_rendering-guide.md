@@ -104,7 +104,7 @@ List all render jobs with optional filtering.
 | Preset | Codec | CRF | Bitrate | Description |
 |--------|-------|-----|---------|-------------|
 | `draft` | libx264 | 28 | -- | Fast preview quality |
-| `medium` | libx264 | 23 | -- | Balanced quality/speed |
+| `standard` | libx264 | 23 | -- | Balanced quality/speed |
 | `high` | libx264 | 18 | -- | High quality, larger file |
 | `lossless` | libx264 | 0 | -- | Lossless encoding |
 
