@@ -20,9 +20,9 @@ Environment variables:
 Note on FAILED state mechanism:
     The render backend has no persistent background worker; submitted jobs
     stay in QUEUED state indefinitely. This journey forces a FAILED state by
-    writing directly to the SQLite database (data/stoat.db), which is the
-    same mechanism used in the smoke test suite. The SQLite connection uses
-    WAL mode, making concurrent access from this script and the running server
+    writing directly to the runtime database (data/stoat.db), not the seed
+    fixture (tests/fixtures/stoat.seed.db). The SQLite connection uses WAL
+    mode, making concurrent access from this script and the running server
     safe. This simulates what would happen when FFmpeg cannot find the source
     file — the intended production trigger for failure recovery testing.
 """

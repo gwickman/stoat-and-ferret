@@ -249,7 +249,32 @@ by `STOAT_DATABASE_PATH` (default `data/stoat.db`). See
 [`docs/setup/04_configuration.md#database`](../setup/04_configuration.md#database)
 for the full list of database-related env vars.
 
+### Fixture vs runtime database
+
+There are two distinct database states:
+
+- **Seed fixture** (`tests/fixtures/stoat.seed.db`) — immutable, tracked in git,
+  contains the baseline schema with seed data. Never modified at runtime.
+- **Runtime database** (`data/stoat.db`) — ephemeral, gitignored, created fresh
+  on first server start if absent.
+
+**Bootstrap behaviour:** On startup, if `data/stoat.db` does not exist, the server
+automatically copies `tests/fixtures/stoat.seed.db` to `data/stoat.db` and runs
+Alembic migrations to bring the schema to the current head. Subsequent starts
+reuse the existing runtime database and apply only pending migrations (a no-op
+when the schema is already current).
+
+Because `data/stoat.db` is gitignored, `git pull` never touches the runtime
+database. See the developer setup guide
+([`docs/setup/02_development-setup.md`](../setup/02_development-setup.md#initialize-the-database))
+for the developer-facing explanation of this model.
+
 ### Routine backup
+
+Backups are taken from the **runtime database** (`data/stoat.db`). The seed
+fixture (`tests/fixtures/stoat.seed.db`) is tracked in git and does not need
+to be backed up by operators — restore it by running `git checkout` if it is
+accidentally modified.
 
 SQLite backups must be taken with a tool that understands the
 write-ahead log (`stoat.db-wal` / `stoat.db-shm`). A plain file copy of
@@ -258,6 +283,7 @@ or capture an inconsistent page state.
 
 ```bash
 # Preferred: use sqlite3 .backup which is safe against a live writer.
+# This targets the runtime database, not the seed fixture.
 sqlite3 data/stoat.db ".backup 'data/backups/stoat_$(date -u +%Y%m%dT%H%M%SZ).db'"
 ```
 
@@ -282,6 +308,8 @@ migration backups once a release is known-good — the directory is
 otherwise append-only.
 
 ### Restore
+
+To restore the **runtime database** from a routine backup:
 
 ```bash
 # Stop the service first — restoring into a live aiosqlite connection
@@ -333,6 +361,46 @@ target the runtime database explicitly:
 ```bash
 uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 ```
+
+### Fixture Reset
+
+Use this procedure to discard the current runtime database and restart from
+the seed fixture baseline. This is a destructive operation for the runtime
+database — all user data in `data/stoat.db` will be lost.
+
+**When to use:** Development environment database is corrupt, schema is
+inconsistent, or you want a clean slate matching the seed data.
+
+**Steps:**
+
+1. Stop the service:
+   ```bash
+   pkill -TERM -f "stoat_ferret.api"
+   ```
+
+2. Delete the runtime database and WAL/SHM sidecars:
+   ```bash
+   rm -f data/stoat.db data/stoat.db-wal data/stoat.db-shm
+   ```
+
+3. Start the service. On startup, the server detects that `data/stoat.db`
+   is absent and automatically copies `tests/fixtures/stoat.seed.db` to
+   `data/stoat.db`, then runs Alembic migrations to reach the current
+   schema head:
+   ```bash
+   uv run python -m stoat_ferret.api
+   ```
+
+4. Verify the reset:
+   ```bash
+   curl -s http://localhost:8765/health/ready | python -c "import json,sys;d=json.load(sys.stdin);print(d['checks']['database'])"
+   # {'status': 'ok', 'latency_ms': 0.47, 'version': '3.50.4'}
+   ```
+
+**Fixture path:** The immutable seed fixture is `tests/fixtures/stoat.seed.db`
+— it is tracked in git and never modified at runtime. See
+[`docs/setup/02_development-setup.md`](../setup/02_development-setup.md#initialize-the-database)
+for the fixture-vs-runtime model explanation.
 
 ---
 

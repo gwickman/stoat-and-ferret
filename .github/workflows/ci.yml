@@ -273,6 +273,10 @@ jobs:
       - name: Initialize database
         run: |
           mkdir -p data
+          # Implicitly bootstraps data/stoat.db from tests/fixtures/stoat.seed.db
+          # if the runtime DB is absent, then applies any pending migrations to
+          # reach the current schema head. See Phase 5 startup sequence in
+          # docs/design/FRAMEWORK_CONTEXT.md for the authoritative description.
           uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 
       - name: Run E2E tests
@@ -592,6 +596,10 @@ jobs:
       - name: Initialize database
         run: |
           mkdir -p data
+          # Implicitly bootstraps data/stoat.db from tests/fixtures/stoat.seed.db
+          # if the runtime DB is absent, then applies any pending migrations to
+          # reach the current schema head. See Phase 5 startup sequence in
+          # docs/design/FRAMEWORK_CONTEXT.md for the authoritative description.
           uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 
       - name: Run accessibility E2E tests
