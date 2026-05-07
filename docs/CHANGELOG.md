@@ -4,6 +4,16 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v062] - 2026-05-07
+
+### Documentation
+- Update development setup guide with fixture bootstrap model (Theme 1, Feature 001, PR #409)
+- Update runbook with fixture model, clarify scripts, verify BL-347 (Theme 1, Feature 002, PR #410)
+- Update FRAMEWORK_CONTEXT.md and C4 diagrams with fixture lifecycle (Theme 2, Feature 003, PR #411)
+- Add fixture lifecycle section to smoke test harness guide (Theme 2, Feature 004, PR #412)
+
+**Summary:** Repository Hygiene — Documentation of fixture lifecycle and verification of artifact untracking. 2 themes (developer-facing-documentation, architecture-reference-documentation), 4 features, 60/60 acceptance criteria met.
+
 ## [v061] - 2026-05-07
 
 ### Fixed
