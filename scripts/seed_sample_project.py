@@ -132,7 +132,7 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
 
 
 def poll_render_job(client: httpx.Client, job_id: str) -> None:
-    """Poll render job until completion, FAILED, or 60-second timeout."""
+    """Poll render job until completion, FAILED, or 120-second timeout."""
     for _ in range(240):  # 120 seconds max (240 * 0.5s)
         poll_resp = client.get(f"/api/v1/render/{job_id}")
         poll_resp.raise_for_status()
@@ -150,11 +150,13 @@ def poll_render_job(client: httpx.Client, job_id: str) -> None:
         # queued, running, or unknown: continue polling
         time.sleep(0.5)
 
+    # Render did not complete within 120s — warn but do not block seeding.
+    # FFmpeg encoding of the full sample project can exceed 2 minutes on CI runners.
     print(
-        f"ERROR: Render job {job_id} did not reach terminal state within 120 seconds timeout.",
+        f"WARNING: Render job {job_id} did not reach terminal state within 120s. "
+        "The job continues in the background.",
         file=sys.stderr,
     )
-    sys.exit(2)
 
 
 def videos_already_scanned(client: httpx.Client, filenames: list[str]) -> bool:

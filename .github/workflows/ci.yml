@@ -408,10 +408,6 @@ jobs:
 
       - name: Run UAT suite
         # Budget: ~2m pre-build + ~1m server start + ~5m journeys = ~8m; 10m allows margin
-        # STOAT_RENDER_MODE=noop: synthetic render completion so seed-script polling finishes
-        # immediately instead of waiting for real FFmpeg encoding (~2+ min on CI runners).
-        env:
-          STOAT_RENDER_MODE: noop
         run: uv run python scripts/uat_runner.py --headless --no-build
 
       - name: Upload UAT evidence
