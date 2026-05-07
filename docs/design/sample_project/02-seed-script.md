@@ -68,18 +68,22 @@ CLIP_DEFS = [
 ]
 
 # Effects: (clip_index, effect_type, parameters)
+# Uses registered API effect names, not FFmpeg filter names
 EFFECT_DEFS = [
-    (0, "fade", {"type": "in", "start_time": 0.0, "duration": 1.0}),
-    (0, "drawtext", {"text": "Running Montage", "fontsize": 64, "fontcolor": "white"}),
-    (1, "speed", {"factor": 0.75}),
-    (3, "drawtext", {"text": "The End", "fontsize": 48, "fontcolor": "white"}),
-    (3, "fade", {"type": "out", "start_time": 8.0, "duration": 2.0}),
+    (0, "video_fade", {"fade_type": "in", "start_time": 0.0, "duration": 1.0}),
+    (0, "text_overlay", {"text": "Running Montage", "fontsize": 64, "fontcolor": "white"}),
+    (1, "speed_control", {"factor": 0.75}),
+    (3, "text_overlay", {"text": "The End", "fontsize": 48, "fontcolor": "white"}),
+    (3, "video_fade", {"fade_type": "out", "start_time": 8.0, "duration": 2.0}),
 ]
 
 # Transitions: (source_clip_index, target_clip_index, transition_type, parameters)
 TRANSITION_DEFS = [
-    (1, 2, "fade", {"duration": 1.0}),
+    (1, 2, "xfade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
 ]
+
+# Required top-level fields in render_plan JSON (mirrors worker.py contract)
+_REQUIRED_PLAN_FIELDS = ("settings", "total_duration")
 ```
 
 ## `SeedResult` Dataclass
@@ -94,7 +98,52 @@ class SeedResult:
     clip_ids: list[str]
     effects_applied: int
     transitions_applied: int
+    job_id: str
 ```
+
+## render_plan Structure
+
+The seed script queues a render job as the final step of project creation. The `render_plan` field is a
+JSON-encoded string passed to `POST /api/v1/render`. It must contain two top-level keys:
+
+```json
+{
+  "settings": {
+    "quality_preset": "standard"
+  },
+  "total_duration": 46.0
+}
+```
+
+**Valid `quality_preset` values** (public application vocabulary):
+
+| Value | CRF | Description |
+|-------|-----|-------------|
+| `draft` | 28 | Fast preview quality — smaller file, lower fidelity |
+| `standard` | 23 | Balanced quality/size — default for most workflows |
+| `high` | 18 | High fidelity — larger file, best quality |
+
+CRF values apply to x264/x265 encoding. The worker maps each preset to its CRF value internally.
+
+**Passing `render_plan` to the API:**
+
+The field is serialized as a JSON string, not a nested object:
+
+```python
+import json
+
+render_plan = {
+    "settings": {"quality_preset": "standard"},
+    "total_duration": total_duration,
+}
+resp = client.post(
+    "/api/v1/render",
+    json={"project_id": project_id, "render_plan": json.dumps(render_plan)},
+)
+```
+
+**Do not use FFmpeg speed preset names** (`veryfast`, `medium`, `slow`) in `quality_preset`. These are
+internal FFmpeg presets mapped by the worker — they are not part of the public API vocabulary.
 
 ## Function Signatures and Designs
 
@@ -104,11 +153,11 @@ Searches the project list for a project with the name "Running Montage". Returns
 
 ```python
 def find_existing_project(client: httpx.Client) -> str | None:
-    resp = client.get("/api/v1/projects?limit=100")
+    resp = client.get("/api/v1/projects", params={"limit": 100})
     resp.raise_for_status()
     for proj in resp.json()["projects"]:
         if proj["name"] == PROJECT_NAME:
-            return proj["id"]
+            return str(proj["id"])
     return None
 ```
 
@@ -136,7 +185,7 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
     job_id = resp.json()["job_id"]
 
     import time
-    for _ in range(60):  # 30 seconds max (60 * 0.5s)
+    for _ in range(120):  # 60 seconds max (120 * 0.5s)
         status_resp = client.get(f"/api/v1/jobs/{job_id}")
         status_resp.raise_for_status()
         status = status_resp.json()["status"].lower()
@@ -147,8 +196,20 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
             return
         time.sleep(0.5)
 
-    print("ERROR: Scan timed out", file=sys.stderr)
+    print("ERROR: Scan timed out after 60 seconds", file=sys.stderr)
     sys.exit(1)
+```
+
+### `videos_already_scanned(client, filenames) → bool`
+
+Checks whether all expected video filenames are already present in the library. Used in `main()` to skip the scan step when videos were previously scanned (e.g. on re-seed without `--force`).
+
+```python
+def videos_already_scanned(client: httpx.Client, filenames: list[str]) -> bool:
+    resp = client.get("/api/v1/videos", params={"limit": 100})
+    resp.raise_for_status()
+    existing = {v["filename"] for v in resp.json()["videos"]}
+    return all(fn in existing for fn in filenames)
 ```
 
 ### `resolve_video_ids(client, filenames) → list[str]`
@@ -157,23 +218,56 @@ Maps the 4 sample video filenames to their database IDs. Exits with a clear erro
 
 ```python
 def resolve_video_ids(client: httpx.Client, filenames: list[str]) -> list[str]:
-    resp = client.get("/api/v1/videos?limit=100")
+    resp = client.get("/api/v1/videos", params={"limit": 100})
     resp.raise_for_status()
     videos = resp.json()["videos"]
-    name_to_id = {v["filename"]: v["id"] for v in videos}
+    name_to_id: dict[str, str] = {v["filename"]: v["id"] for v in videos}
 
-    ids = []
+    ids: list[str] = []
     for fn in filenames:
         if fn not in name_to_id:
-            print(f"ERROR: Video '{fn}' not found in library. Run scan first.", file=sys.stderr)
+            print(
+                f"ERROR: Video '{fn}' not found in library. "
+                "Ensure videos are in the specified directory.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         ids.append(name_to_id[fn])
     return ids
 ```
 
+### `poll_render_job(client, job_id)`
+
+Polls the render job until it reaches `completed`, `failed`, or `cancelled`, or until the 120-second timeout expires. The seed script exits non-zero on failure or timeout.
+
+```python
+def poll_render_job(client: httpx.Client, job_id: str) -> None:
+    for _ in range(240):  # 120 seconds max (240 * 0.5s)
+        poll_resp = client.get(f"/api/v1/render/{job_id}")
+        poll_resp.raise_for_status()
+        status = poll_resp.json()["status"]
+        if status == "completed":
+            print(f"Render job {job_id} completed successfully.")
+            return
+        elif status in ("failed", "cancelled"):
+            print(
+                f"ERROR: Render job {job_id} reached terminal status: {status}. "
+                "Check render logs for details.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        time.sleep(0.5)
+
+    print(
+        f"ERROR: Render job {job_id} did not reach terminal state within 120 seconds timeout.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+```
+
 ### `seed_project(client, video_ids) → SeedResult`
 
-Creates the full project: project record, 4 clips, 5 effects, 1 transition. Returns a `SeedResult` with all created IDs.
+Creates the full project: project record, 4 clips, 5 effects, 1 transition, and queues a render job. Returns a `SeedResult` with all created IDs.
 
 ```python
 def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
@@ -188,7 +282,7 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
     project_id = resp.json()["id"]
 
     # 2. Add clips (in_point/out_point/timeline_position are integer frames)
-    clip_ids = []
+    clip_ids: list[str] = []
     for video_idx, in_pt, out_pt, tl_pos in CLIP_DEFS:
         resp = client.post(
             f"/api/v1/projects/{project_id}/clips",
@@ -201,6 +295,26 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
         )
         resp.raise_for_status()
         clip_ids.append(resp.json()["id"])
+
+    # 2b. Create a default video track and assign clips to it
+    fps = 30
+    resp = client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "Video Track 1", "z_index": 0,
+               "muted": False, "locked": False}],
+    )
+    resp.raise_for_status()
+    track_id = resp.json()["tracks"][0]["id"]
+
+    for i, (_, in_pt, out_pt, tl_pos) in enumerate(CLIP_DEFS):
+        tl_start = tl_pos / fps
+        tl_end = tl_start + (out_pt - in_pt) / fps
+        resp = client.post(
+            f"/api/v1/projects/{project_id}/timeline/clips",
+            json={"clip_id": clip_ids[i], "track_id": track_id,
+                  "timeline_start": tl_start, "timeline_end": tl_end},
+        )
+        resp.raise_for_status()
 
     # 3. Apply effects
     effects_applied = 0
@@ -227,12 +341,30 @@ def seed_project(client: httpx.Client, video_ids: list[str]) -> SeedResult:
         resp.raise_for_status()
         transitions_applied += 1
 
+    # 5. Queue render job with public vocabulary render_plan
+    # total_duration: max(timeline_end) across all clips, in seconds
+    total_duration = max(tl_pos + (out_pt - in_pt) for _, in_pt, out_pt, tl_pos in CLIP_DEFS) / fps
+    render_plan: dict[str, object] = {
+        "settings": {"quality_preset": "standard"},  # draft | standard | high
+        "total_duration": total_duration,
+    }
+    resp = client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": json.dumps(render_plan)},
+    )
+    if resp.status_code != 201:
+        print(f"ERROR: Render failed with status {resp.status_code}: {resp.text}", file=sys.stderr)
+        sys.exit(1)
+    job_id = resp.json()["id"]
+    poll_render_job(client, job_id)
+
     return SeedResult(
         project_id=project_id,
         video_ids=video_ids,
         clip_ids=clip_ids,
         effects_applied=effects_applied,
         transitions_applied=transitions_applied,
+        job_id=job_id,
     )
 ```
 
@@ -274,8 +406,9 @@ def print_summary(result: SeedResult) -> None:
     print(f"  Clips added:   {len(result.clip_ids)}")
     print(f"  Effects:       {result.effects_applied}")
     print(f"  Transitions:   {result.transitions_applied}")
-    print(f"  Output:        1280x720 @ 30fps")
-    print(f"  Duration:      ~46.0s (1380 frames)")
+    print(f"  Render job ID: {result.job_id} (status: completed)")
+    print("  Output:        1280x720 @ 30fps")
+    print("  Duration:      ~46.0s (1380 frames)")
     print(f"{'='*50}\n")
 ```
 
@@ -287,11 +420,15 @@ def main() -> None:
     base_url = args.base_url.rstrip("/")
     videos_dir = str(Path(args.videos_dir).resolve())
 
-    with httpx.Client(base_url=base_url, timeout=60.0) as client:
+    with httpx.Client(base_url=base_url, timeout=120.0) as client:
         # 1. Health check — verify server is reachable
-        resp = client.get("/health/live")
-        if resp.status_code != 200:
-            print(f"ERROR: Server not reachable at {base_url}", file=sys.stderr)
+        try:
+            resp = client.get("/health/live")
+            if resp.status_code != 200:
+                print(f"ERROR: Server not reachable at {base_url}", file=sys.stderr)
+                sys.exit(1)
+        except httpx.ConnectError:
+            print(f"ERROR: Cannot connect to server at {base_url}", file=sys.stderr)
             sys.exit(1)
 
         # 2. Check for existing project
@@ -305,14 +442,17 @@ def main() -> None:
                       f"Use --force to recreate.")
                 sys.exit(0)
 
-        # 3. Scan videos
-        print(f"Scanning videos from {videos_dir}...")
-        scan_and_wait(client, videos_dir)
+        # 3. Scan videos (skip if already scanned)
+        if videos_already_scanned(client, SAMPLE_VIDEOS):
+            print("Videos already scanned — skipping scan_and_wait().")
+        else:
+            print(f"Scanning videos from {videos_dir}...")
+            scan_and_wait(client, videos_dir)
 
         # 4. Resolve video IDs from filenames
         video_ids = resolve_video_ids(client, SAMPLE_VIDEOS)
 
-        # 5. Seed the project (create project, clips, effects, transitions)
+        # 5. Seed the project (create project, clips, effects, transitions, render job)
         print("Creating sample project...")
         result = seed_project(client, video_ids)
 
@@ -337,6 +477,8 @@ if __name__ == "__main__":
 | Missing videos | Scan didn't find expected files | `resolve_video_ids()` exits with "Video 'X' not found" error. |
 | Project already exists | Name collision | `find_existing_project()` checks by name. Without `--force`, exits cleanly. With `--force`, deletes and recreates. |
 | Scan failure | Job completes with non-"complete" status | `scan_and_wait()` exits with status message. |
-| Scan timeout | Job doesn't complete in 30 seconds | `scan_and_wait()` exits with timeout message. |
+| Scan timeout | Job doesn't complete in 60 seconds | `scan_and_wait()` exits with timeout message. |
+| Render failure | Render job reaches `failed` or `cancelled` | `poll_render_job()` exits with status message. |
+| Render timeout | Render job doesn't complete in 120 seconds | `poll_render_job()` exits with timeout message (exit code 2). |
 
-The script uses `sys.exit(1)` for all error paths and `sys.exit(0)` for the "already exists, no --force" case. No exceptions propagate to the user except `httpx.HTTPStatusError` from unexpected API failures, which provides full diagnostic information in the traceback.
+The script uses `sys.exit(1)` for all error paths (exit code `2` for render timeout) and `sys.exit(0)` for the "already exists, no --force" case. No exceptions propagate to the user except `httpx.HTTPStatusError` from unexpected API failures, which provides full diagnostic information in the traceback.
