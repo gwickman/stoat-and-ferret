@@ -74,26 +74,39 @@ cd ..
 
 ## 6. Initialize the Database
 
-The project uses SQLite with Alembic for schema migrations. Initialize the database:
+The server manages the database automatically. No manual initialization step is required.
 
-```bash
-uv run alembic upgrade head
-```
+### Fixture vs Runtime Database
 
-This creates the database file at the default location (`data/stoat.db` when using the application settings, or `stoat_ferret.db` per `alembic.ini`). The `data/` directory may need to be created first:
+The project uses two distinct database states:
 
-```bash
-mkdir -p data
-uv run alembic upgrade head
-```
+- **Fixture** (`tests/fixtures/stoat.seed.db`): immutable, tracked in git, contains the baseline schema with seed data. This file is never modified at runtime.
+- **Runtime DB** (`data/stoat.db`): ephemeral, gitignored, created fresh from the fixture on first server start. This is the database your running server reads and writes.
 
-To verify migrations are reversible (as CI does):
+On server startup, if `data/stoat.db` is absent, the server automatically copies the fixture to the runtime path and runs Alembic migrations to reach the current schema head. You do not need to run `alembic upgrade head` manually.
 
-```bash
-uv run alembic -x sqlalchemy.url=sqlite:///:memory: upgrade head
-uv run alembic -x sqlalchemy.url=sqlite:///:memory: downgrade base
-uv run alembic -x sqlalchemy.url=sqlite:///:memory: upgrade head
-```
+The `data/` directory is already in `.gitignore`, so your local runtime database is never committed to or affected by git operations.
+
+### Reset Database
+
+To reset your local database to a clean state:
+
+1. Stop the server.
+2. Delete the runtime database file:
+   ```bash
+   rm data/stoat.db
+   ```
+   The WAL and SHM sidecar files (`data/stoat.db-wal`, `data/stoat.db-shm`) are also ephemeral and gitignored; delete them as well if present:
+   ```bash
+   rm -f data/stoat.db-wal data/stoat.db-shm
+   ```
+3. Restart the server. It will automatically recreate `data/stoat.db` from `tests/fixtures/stoat.seed.db` and apply any pending migrations.
+
+### Developer FAQ
+
+**Why doesn't `git pull` overwrite my local database?**
+
+The runtime database (`data/stoat.db`) is gitignored, so git never tracks or modifies it. Running `git pull` only touches tracked files; your local runtime database is completely unaffected. If you want a fresh database after a pull, follow the Reset Database procedure above.
 
 ## 7. Start the Development Server
 
