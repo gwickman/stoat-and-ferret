@@ -414,6 +414,54 @@ The smoke test fixtures override two settings via environment variables:
 
 Both are set to paths within `tmp_path` for isolation and cleaned up after each test. The `Settings` class (pydantic-settings with `STOAT_` prefix, case-insensitive) reads these automatically.
 
+## Fixture Lifecycle
+
+Smoke tests interact with a **fresh ephemeral database per test** — not the git-tracked seed fixture. Understanding the two database artifacts clarifies what happens when you run `uv run pytest`.
+
+| Artifact | Path | Mutability |
+|----------|------|-----------|
+| Seed fixture | `tests/fixtures/stoat.seed.db` | Immutable — never modified by tests |
+| Runtime DB | `data/stoat.db` (default) | Ephemeral — bootstrapped from fixture if absent |
+| Test DB | `tmp_path / "smoke_test.db"` | Per-test — auto-created and auto-deleted |
+
+### What Happens When You Run `uv run pytest`
+
+1. pytest creates a unique `tmp_path` directory for each test
+2. `STOAT_DATABASE_PATH` is overridden to `tmp_path / "smoke_test.db"`
+3. The application lifespan copies `tests/fixtures/stoat.seed.db` to that path (copy-on-absent bootstrap), then runs Alembic migrations
+4. The test runs against this isolated copy
+5. pytest deletes the `tmp_path` directory when the test ends
+
+**The seed fixture at `tests/fixtures/stoat.seed.db` is never modified by any test.** Tests only touch their ephemeral `tmp_path` copies. This makes test runs fully isolated: no test can affect another, and no test can corrupt the fixture.
+
+### Smoke Tests vs. UAT Database Usage
+
+| Tier | Database | Lifecycle |
+|------|---------|---------|
+| **Smoke tests** (`uv run pytest`) | Ephemeral `tmp_path` copy per test | Auto-created at test start; auto-deleted on completion |
+| **UAT** (`python scripts/uat_runner.py`) | Real `data/stoat.db` bootstrapped from fixture | Persists for the full UAT run; not cleaned up automatically |
+
+Smoke test runs never touch `data/stoat.db`. UAT drives a live server against a real database, which is bootstrapped from the fixture on first run if absent.
+
+### Invariant Verification: `tests/test_db_fixture_lifecycle.py`
+
+`tests/test_db_fixture_lifecycle.py` contains 5 tests that verify the fixture lifecycle invariants:
+
+| Test | What It Verifies |
+|------|-----------------|
+| `TestSeedFixture::test_fixture_exists` | `tests/fixtures/stoat.seed.db` is present on disk |
+| `TestSeedFixture::test_fixture_is_valid_sqlite` | Fixture passes SQLite `PRAGMA integrity_check` |
+| `TestSeedFixture::test_fixture_has_alembic_managed_tables` | Fixture contains all Alembic-managed tables (`videos`, `projects`, `clips`, `audit_log`, `feature_flag_log`) |
+| `TestBootstrapLifecycle::test_lifespan_bootstrap_creates_db_from_fixture` | When no DB exists at startup, lifespan copies the fixture to the configured path and runs migrations |
+| `TestBootstrapLifecycle::test_lifespan_skips_copy_when_db_already_exists` | When a DB already exists at startup, lifespan leaves it untouched |
+
+These tests enforce two invariants:
+
+- **Invariant 1:** The fixture at `tests/fixtures/stoat.seed.db` is never modified by any test run.
+- **Invariant 2:** The fixture must match the current Alembic head — all migration-managed tables must be present.
+
+For the fixture update procedure (run when a schema migration requires a new fixture), see the Fixture Lifecycle Invariants and Fixture Update Procedure sections in `docs/design/FRAMEWORK_CONTEXT.md`.
+
 ---
 
 ## UAT Infrastructure
