@@ -88,3 +88,5 @@ graph TD
     SA_ENGINE --> SQLITE
     ENV -->|"offline mode"| SQL_SCRIPT["SQL Script Output"]
 ```
+
+> **Fixture Origin:** The baseline SQLite schema is stored as an immutable fixture at `tests/fixtures/stoat.seed.db` and tracked in git. On application startup, if the runtime database is absent, the fixture is copied to `data/stoat.db` and Alembic migrations are applied to reach the current schema head.

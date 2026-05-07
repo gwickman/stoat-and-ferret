@@ -177,7 +177,7 @@ C4Container
 - **Description**: Embedded file-based database. Not a separate process -- accessed in-process via aiosqlite.
 - **Type**: Database (embedded)
 - **Technology**: SQLite 3, aiosqlite, Alembic
-- **Deployment**: File at `data/stoat.db`. Schema managed by 9 Alembic migrations.
+- **Deployment**: File at `data/stoat.db` (gitignored, ephemeral). On first startup when absent, the fixture at `tests/fixtures/stoat.seed.db` (git-tracked, immutable) is copied here and Alembic migrations are applied to reach head (copy-on-absent bootstrap). Schema managed by 9 Alembic migrations.
 
 #### Components Deployed
 
