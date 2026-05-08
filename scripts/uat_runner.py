@@ -86,7 +86,7 @@ BENIGN_CONSOLE_PATTERNS: list[str] = [
     "favicon",
 ]
 
-KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "data" / "baseline-uat-failures.json"
+KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "tests" / "fixtures" / "baseline-uat-failures.json"
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,19 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v062-hotfix] - 2026-05-08
+
+### Repository Hygiene Follow-up (BL-351)
+
+Closes the residual gap flagged by the v062 retrospective (BL-346 AC#1) and removes the lone fixture that was blocking a wildcard `/data/*` ignore rule.
+
+### Changed
+- Move `data/baseline-uat-failures.json` to `tests/fixtures/baseline-uat-failures.json` so `data/` contains only runtime artifacts. Update `KNOWN_FAILURES_REGISTRY` constant in `scripts/uat_runner.py` and the two references in `docs/manual/uat-testing.md`.
+- Replace the per-path `data/waveforms/`, `data/previews/`, `/data/thumbnails/` entries in `.gitignore` with a single wildcard `/data/*` rule, plus belt-and-braces explicit entries for `stoat.db`, `stoat.db-wal`, `stoat.db-shm`.
+
+### Removed
+- Untrack stale `data/migration_backups/migration_2026-04-22T12_16_40.db` (`git rm --cached`); migration backups are now covered by the wildcard rule.
+
 ## [v062] - 2026-05-07
 
 ### Documentation

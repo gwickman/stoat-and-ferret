@@ -209,14 +209,15 @@ __marimo__/
 # Application logs
 logs/
 
-# Generated waveform data
-data/waveforms/
-
-# Generated preview data
-data/previews/
-
-# Generated thumbnails
-/data/thumbnails/
+# Runtime data — everything under /data/ is runtime state (SQLite DB and WAL/SHM,
+# render outputs, thumbnails, waveforms, previews, migration backups). Test
+# fixtures live in tests/fixtures/, not here. The wildcard is the load-bearing
+# rule; the explicit entries below it act as belt-and-braces documentation of
+# the canonical runtime filenames.
+/data/*
+/data/stoat.db
+/data/stoat.db-wal
+/data/stoat.db-shm
 
 # Generated stubs (for verification, not committed)
 .generated-stubs/
