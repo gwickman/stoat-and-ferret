@@ -161,7 +161,7 @@ uat-evidence/
 
 Some UAT journeys may fail due to environment-specific issues, backend flakiness, or pre-existing bugs tracked separately. Rather than rediscovering these failures in each test run, the project maintains a registry of known failures.
 
-**Registry Location**: `data/baseline-uat-failures.json`
+**Registry Location**: `tests/fixtures/baseline-uat-failures.json`
 
 **Registry Schema**:
 
@@ -189,7 +189,7 @@ Annotations are output-only labels. They do not change the exit code: the runner
 **Maintenance Workflow**:
 
 1. If a journey fails and is not in the registry, investigate whether it is environment-specific or a regression.
-2. If it is a known issue, add it to `data/baseline-uat-failures.json` with a `reason` and `tracking_reference`.
+2. If it is a known issue, add it to `tests/fixtures/baseline-uat-failures.json` with a `reason` and `tracking_reference`.
 3. If a registered journey consistently passes (UNEXPECTED_PASS), the underlying issue is likely resolved — remove the entry from the registry.
 4. The `tracking_reference` field should link to a backlog item or issue (e.g., `v035-BL-350-journey-501`) so reviewers can find context.
 
