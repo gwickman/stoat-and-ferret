@@ -1,0 +1,10 @@
+{
+  "name": "scan-library",
+  "journey_id": 201,
+  "steps_total": 5,
+  "steps_passed": 5,
+  "steps_failed": 0,
+  "console_errors": [],
+  "issues": [],
+  "duration_seconds": 5.34
+}

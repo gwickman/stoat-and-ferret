@@ -1,0 +1,10 @@
+{
+  "name": "render-failure-journey",
+  "journey_id": 504,
+  "steps_total": 8,
+  "steps_passed": 8,
+  "steps_failed": 0,
+  "console_errors": [],
+  "issues": [],
+  "duration_seconds": 6.54
+}

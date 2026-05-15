@@ -2,4 +2,4 @@
 
 [Alpha] AI-driven video editor with hybrid Python/Rust architecture - not production ready.
 
-**v061 (Tooling Hygiene):** Fixes Windows UAT script path resolution and stabilizes sample project seed script render workflow. See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
+**v062 (Repository Hygiene):** Completes fixture lifecycle documentation and verifies artifact untracking (data/thumbnails/, data/stoat.db runtime files). See [CHANGELOG.md](docs/CHANGELOG.md) for release details.

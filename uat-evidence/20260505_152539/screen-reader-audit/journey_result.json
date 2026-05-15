@@ -1,0 +1,75 @@
+{
+  "name": "screen-reader-audit",
+  "journey_id": 605,
+  "steps_total": 9,
+  "steps_passed": 9,
+  "steps_failed": 0,
+  "console_errors": [],
+  "issues": [],
+  "duration_seconds": 16.96,
+  "audit_results": [
+    {
+      "url": "http://localhost:8765/gui/",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/library",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/render",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/dashboard",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/preview",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/projects",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/timeline",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/?workspace=edit",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    },
+    {
+      "url": "http://localhost:8765/gui/?workspace=render",
+      "critical_count": 0,
+      "serious_count": 0,
+      "error": null,
+      "violation_ids": []
+    }
+  ]
+}
