@@ -376,12 +376,12 @@ class InMemoryRenderRepository:
     async def get_by_project(self, project_id: str) -> list[RenderJob]:
         """Get all render jobs for a project."""
         jobs = [copy.deepcopy(j) for j in self._jobs.values() if j.project_id == project_id]
-        return sorted(jobs, key=lambda j: (j.created_at, j.id))
+        return sorted(jobs, key=lambda j: j.created_at)
 
     async def list_by_status(self, status: RenderStatus) -> list[RenderJob]:
         """List all render jobs with a given status."""
         jobs = [copy.deepcopy(j) for j in self._jobs.values() if j.status == status]
-        return sorted(jobs, key=lambda j: (j.created_at, j.id))
+        return sorted(jobs, key=lambda j: j.created_at)
 
     async def list_jobs(
         self,

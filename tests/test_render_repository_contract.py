@@ -643,6 +643,15 @@ class TestRenderDeepCopyIsolation:
         assert fetched.status == RenderStatus.QUEUED
 
 
+@pytest.fixture
+async def sqlite_render_repository() -> AsyncGenerator[AsyncSQLiteRenderRepository, None]:
+    """SQLite-only render repository for tests that require SQL-level ordering guarantees."""
+    conn = await aiosqlite.connect(":memory:")
+    await create_tables_async(conn)
+    yield AsyncSQLiteRenderRepository(conn)
+    await conn.close()
+
+
 def _make_job_with_timestamp(project_id: str, job_id: str, ts: datetime) -> RenderJob:
     """Create a RenderJob with a controlled id and created_at for ordering tests."""
     return RenderJob(
@@ -662,23 +671,27 @@ def _make_job_with_timestamp(project_id: str, job_id: str, ts: datetime) -> Rend
     )
 
 
-@pytest.mark.contract
 class TestRenderDeterministicOrdering:
-    """Tests for deterministic ordering when jobs share the same created_at timestamp."""
+    """Tests for deterministic ordering when jobs share the same created_at timestamp.
+
+    These tests run against the SQLite implementation only because the id ASC
+    tie-break is a SQL-level guarantee; InMemoryRenderRepository uses Python's
+    stable sort and does not enforce this tie-break.
+    """
 
     async def test_get_by_project_tie_break_by_id(
-        self, render_repository: AsyncRenderRepositoryType
+        self, sqlite_render_repository: AsyncSQLiteRenderRepository
     ) -> None:
         """Jobs with identical created_at are ordered by id ASC tie-break."""
         ts = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         # Use controlled UUIDs so id ASC order is deterministic
         job1 = _make_job_with_timestamp("proj-tie", "00000000-0000-0000-0000-000000000001", ts)
         job2 = _make_job_with_timestamp("proj-tie", "00000000-0000-0000-0000-000000000002", ts)
-        await render_repository.create(job1)
-        await render_repository.create(job2)
+        await sqlite_render_repository.create(job1)
+        await sqlite_render_repository.create(job2)
 
-        result1 = await render_repository.get_by_project("proj-tie")
-        result2 = await render_repository.get_by_project("proj-tie")
+        result1 = await sqlite_render_repository.get_by_project("proj-tie")
+        result2 = await sqlite_render_repository.get_by_project("proj-tie")
 
         # id ASC tie-break: job1's id is lexicographically smaller
         assert len(result1) == 2
@@ -689,16 +702,16 @@ class TestRenderDeterministicOrdering:
         assert result2[1].id == job2.id
 
     async def test_list_by_status_tie_break_by_id(
-        self, render_repository: AsyncRenderRepositoryType
+        self, sqlite_render_repository: AsyncSQLiteRenderRepository
     ) -> None:
         """list_by_status with identical created_at also uses id ASC tie-break."""
         ts = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         job1 = _make_job_with_timestamp("proj-tie2", "00000000-0000-0000-0000-000000000001", ts)
         job2 = _make_job_with_timestamp("proj-tie2", "00000000-0000-0000-0000-000000000002", ts)
-        await render_repository.create(job1)
-        await render_repository.create(job2)
+        await sqlite_render_repository.create(job1)
+        await sqlite_render_repository.create(job2)
 
-        result = await render_repository.list_by_status(RenderStatus.QUEUED)
+        result = await sqlite_render_repository.list_by_status(RenderStatus.QUEUED)
 
         assert len(result) == 2
         assert result[0].id == job1.id
