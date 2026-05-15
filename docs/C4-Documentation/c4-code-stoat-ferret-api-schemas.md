@@ -26,7 +26,8 @@
 
 #### Request Models
 - `CreateRenderRequest(BaseModel)`
-  - **Fields**: project_id, output_format, quality_preset, render_plan
+  - **Fields**: project_id, output_format, quality_preset, encoder, render_plan
+  - **encoder**: `str | None` — Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.
 
 - `RenderPreviewRequest(BaseModel)`
   - **Fields**: output_format, quality_preset, encoder
