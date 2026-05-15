@@ -56,7 +56,7 @@ When complete, the result shows how many files were processed:
 ```json
 {
   "job_id": "...",
-  "status": "complete",
+  "status": "completed",
   "result": {"scanned": 25, "new": 20, "updated": 5, "skipped": 0, "errors": []}
 }
 ```

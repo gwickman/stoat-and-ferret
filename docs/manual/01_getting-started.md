@@ -112,7 +112,7 @@ Response when complete:
 ```json
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "complete",
+  "status": "completed",
   "result": {"scanned": 15, "new": 15, "updated": 0, "skipped": 0, "errors": []}
 }
 ```

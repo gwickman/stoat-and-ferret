@@ -105,7 +105,7 @@ curl -s "http://localhost:8765/api/v1/jobs/981c5389-01ba-4f35-a078-72c9a999a756/
 ```json
 {
   "job_id": "981c5389-01ba-4f35-a078-72c9a999a756",
-  "status": "complete",
+  "status": "completed",
   "progress": 1.0,
   "result": {"scanned": 6, "new": 6, "updated": 0, "skipped": 0, "errors": []},
   "error": null
@@ -633,7 +633,7 @@ curl -s http://localhost:8765/api/v1/system/state
     {
       "job_id": "981c5389-01ba-4f35-a078-72c9a999a756",
       "job_type": "scan",
-      "status": "complete",
+      "status": "completed",
       "progress": 1.0,
       "submitted_at": "2026-04-24T07:23:48.200424Z"
     }
