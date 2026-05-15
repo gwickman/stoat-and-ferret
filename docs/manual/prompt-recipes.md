@@ -60,7 +60,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 { "job_id": "job_abc123" }
 
 // Step 2 → JobStatusResponse (200, terminal)
-{ "job_id": "job_abc123", "status": "complete", "progress": 1.0,
+{ "job_id": "job_abc123", "status": "completed", "progress": 1.0,
   "result": { "scanned": 5, "new": 5, "updated": 0, "errors": [] }, "error": null }
 
 // Step 3 → VideoListResponse
@@ -72,8 +72,8 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
   "output_path": "/abs/render/dir/<project_id>.mp4", "output_format": "mp4",
   "quality_preset": "standard", "progress": 0.0, "retry_count": 0, … }
 
-// Step 7 → JobStatusResponse (200, terminal)
-{ "job_id": "job_xyz789", "status": "complete", "progress": 1.0,
+// Step 7 → RenderJobResponse (200, terminal)
+{ "job_id": "job_xyz789", "status": "completed", "progress": 1.0,
   "result": { "output_path": "/abs/render/dir/<project_id>.mp4", … }, "error": null }
 ```
 
@@ -200,7 +200,7 @@ Use `/api/v1/jobs/{job_id}/wait` instead of a `time.sleep` polling loop for **sc
 
 ```jsonc
 // Terminal success
-{ "job_id": "job_xyz", "status": "complete", "progress": 1.0,
+{ "job_id": "job_xyz", "status": "completed", "progress": 1.0,
   "result": { "output_path": "...", "scanned": 5 }, "error": null }
 
 // Terminal failure
@@ -299,7 +299,7 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 
 // 2. BatchJobStatusResponse[] from GET /api/v1/render/batch/{batch_id}
 [
-  { "job_id": "job_a1", "project_id": "<proj_a>", "status": "complete", "progress": 1.0, "error": null },
+  { "job_id": "job_a1", "project_id": "<proj_a>", "status": "completed", "progress": 1.0, "error": null },
   { "job_id": "job_b1", "project_id": "<proj_b>", "status": "running", "progress": 0.42, "error": null }
 ]
 ```

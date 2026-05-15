@@ -573,7 +573,7 @@ Get the status of an asynchronous job (e.g., a video scan).
 ```json
 {
   "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "complete",
+  "status": "completed",
   "progress": 1.0,
   "result": {
     "scanned": 15,
