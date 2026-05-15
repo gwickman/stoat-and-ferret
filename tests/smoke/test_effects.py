@@ -263,7 +263,7 @@ async def test_effect_preview_thumbnail(
     resp = await client.post(
         "/api/v1/effects/preview/thumbnail",
         json={
-            "effect_name": "text_overlay",
+            "effect_type": "text_overlay",
             "video_path": video_path,
             "parameters": {"text": "Smoke Test Thumbnail"},
         },
@@ -282,7 +282,7 @@ async def test_effect_preview_thumbnail_invalid_effect(
     resp = await smoke_client.post(
         "/api/v1/effects/preview/thumbnail",
         json={
-            "effect_name": "nonexistent_effect",
+            "effect_type": "nonexistent_effect",
             "video_path": "/tmp/fake.mp4",
             "parameters": {},
         },

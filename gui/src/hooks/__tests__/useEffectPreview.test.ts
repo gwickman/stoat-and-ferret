@@ -210,7 +210,7 @@ describe('useEffectPreview thumbnail', () => {
 
     const lastCall = thumbnailCalls[thumbnailCalls.length - 1]
     const body = JSON.parse(lastCall![1]!.body as string)
-    expect(body.effect_name).toBe('volume')
+    expect(body.effect_type).toBe('volume')
     expect(body.video_path).toBe('/videos/test.mp4')
     expect(body.parameters).toEqual({ volume: 1.0 })
 

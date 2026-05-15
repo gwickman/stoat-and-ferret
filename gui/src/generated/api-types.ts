@@ -1326,6 +1326,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/render/batch/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel Batch Job
+         * @description Cancel a single batch job by job_id.
+         *
+         *     Returns the updated job status after cancellation. Queued jobs are
+         *     transitioned directly to ``cancelled``; running jobs are cancelled
+         *     via task cancellation, with the running task's CancelledError
+         *     handler performing the status transition.
+         *
+         *     Args:
+         *         job_id: The unique job identifier to cancel.
+         *         request: The FastAPI request object for accessing app state.
+         *
+         *     Returns:
+         *         BatchJobStatusResponse reflecting the post-cancel job state.
+         *
+         *     Raises:
+         *         HTTPException: 404 if no job with the given ID exists; 409 if
+         *             the job is already in a terminal state.
+         */
+        delete: operations["cancel_batch_job_api_v1_render_batch__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preview/cache": {
         parameters: {
             query?: never;
@@ -2624,6 +2660,11 @@ export interface components {
              */
             name: string;
             /**
+             * Encoder
+             * @description FFmpeg encoder name for this codec (e.g. libx264, libvpx-vp9)
+             */
+            encoder: string;
+            /**
              * Quality Presets
              * @description Bitrate mappings for each quality level
              */
@@ -2649,8 +2690,9 @@ export interface components {
              * Quality Preset
              * @description Quality preset
              * @default standard
+             * @enum {string}
              */
-            quality_preset: string;
+            quality_preset: "draft" | "standard" | "high";
             /**
              * Encoder
              * @description Video encoder name (e.g. libx264, libvpx-vp9). When omitted the format default is used.
@@ -2801,8 +2843,8 @@ export interface components {
          * @description Request schema for generating an effect preview thumbnail.
          */
         EffectThumbnailRequest: {
-            /** Effect Name */
-            effect_name: string;
+            /** Effect Type */
+            effect_type: string;
             /** Video Path */
             video_path: string;
             /** Parameters */
@@ -5585,6 +5627,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BatchProgressResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_batch_job_api_v1_render_batch__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchJobStatusResponse"];
                 };
             };
             /** @description Validation Error */
