@@ -164,13 +164,13 @@ Cross-reference: `useBatchJobs` hook is documented in the GUI hooks C4 reference
 
 ### render_jobs API Ordering Constraint
 
-The `render_jobs` API must be queried in creation order for reproducible queue semantics. The endpoint returns jobs in `id ASC` (creation) order, which reflects the intended execution sequence.
+The `render_jobs` API must be queried in creation order for reproducible queue semantics. The endpoint returns jobs in `created_at, id ASC` order, which reflects the intended execution sequence.
 
 **Constraint**: Any batch processing loop that reads render jobs must preserve the creation-order sequence returned by the API. Reordering or sorting by a different field (e.g., priority, status) breaks reproducibility — the same input set produces different execution sequences across runs, making debugging and retry workflows unpredictable.
 
 **Discovery**: This constraint was identified in the v058 retrospective after observing non-deterministic batch execution behavior when job lists were consumed out of creation order.
 
-**Cross-reference**: Render job batch endpoints are documented in `docs/design/05-api-specification.md`. The underlying repository query uses `ORDER BY id ASC` to enforce this constraint at the database layer.
+**Cross-reference**: Render job batch endpoints are documented in `docs/design/05-api-specification.md`. The underlying repository query uses `ORDER BY created_at, id ASC` to enforce this constraint at the database layer. `created_at` is the primary ordering dimension; `id ASC` serves as a deterministic tie-break for same-millisecond inserts (SQLite millisecond resolution means concurrent writes can share a timestamp).
 
 ---
 
