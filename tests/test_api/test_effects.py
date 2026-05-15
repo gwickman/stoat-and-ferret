@@ -1638,7 +1638,7 @@ def test_thumbnail_unknown_effect_returns_400(client: TestClient) -> None:
     response = client.post(
         "/api/v1/effects/preview/thumbnail",
         json={
-            "effect_name": "nonexistent_effect",
+            "effect_type": "nonexistent_effect",
             "video_path": "/tmp/fake_video.mp4",
             "parameters": {},
         },
@@ -1654,7 +1654,7 @@ def test_thumbnail_missing_video_returns_400(client: TestClient) -> None:
     response = client.post(
         "/api/v1/effects/preview/thumbnail",
         json={
-            "effect_name": "text_overlay",
+            "effect_type": "text_overlay",
             "video_path": "/tmp/does_not_exist_12345.mp4",
             "parameters": {"text": "Hello"},
         },
@@ -1673,7 +1673,7 @@ def test_thumbnail_invalid_params_returns_400(
     response = client.post(
         "/api/v1/effects/preview/thumbnail",
         json={
-            "effect_name": "speed_control",
+            "effect_type": "speed_control",
             "video_path": str(sample_video_path),
             "parameters": {"factor": "not_a_number"},
         },
@@ -1718,7 +1718,7 @@ def test_thumbnail_ffmpeg_failure_returns_500(
         response = c.post(
             "/api/v1/effects/preview/thumbnail",
             json={
-                "effect_name": "text_overlay",
+                "effect_type": "text_overlay",
                 "video_path": str(sample_video_path),
                 "parameters": {"text": "Hello"},
             },
@@ -1767,7 +1767,7 @@ def test_thumbnail_success_returns_jpeg(
         response = c.post(
             "/api/v1/effects/preview/thumbnail",
             json={
-                "effect_name": "text_overlay",
+                "effect_type": "text_overlay",
                 "video_path": str(sample_video_path),
                 "parameters": {"text": "Hello"},
             },
@@ -1818,7 +1818,7 @@ def test_thumbnail_ffmpeg_command_has_correct_vf_filter(
         c.post(
             "/api/v1/effects/preview/thumbnail",
             json={
-                "effect_name": "text_overlay",
+                "effect_type": "text_overlay",
                 "video_path": str(sample_video_path),
                 "parameters": {"text": "Preview"},
             },

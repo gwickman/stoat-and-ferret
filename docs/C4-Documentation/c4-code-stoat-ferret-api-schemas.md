@@ -136,7 +136,7 @@
   - **Fields**: parameters: dict[str, Any]
 
 - `EffectThumbnailRequest(BaseModel)`
-  - **Fields**: effect_name, video_path, parameters
+  - **Fields**: effect_type, video_path, parameters
 
 - `TransitionRequest(BaseModel)`
   - **Fields**: source_clip_id, target_clip_id, transition_type, parameters

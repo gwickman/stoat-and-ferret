@@ -4372,9 +4372,9 @@
       },
       "EffectThumbnailRequest": {
         "properties": {
-          "effect_name": {
+          "effect_type": {
             "type": "string",
-            "title": "Effect Name"
+            "title": "Effect Type"
           },
           "video_path": {
             "type": "string",
@@ -4388,7 +4388,7 @@
         },
         "type": "object",
         "required": [
-          "effect_name",
+          "effect_type",
           "video_path",
           "parameters"
         ],

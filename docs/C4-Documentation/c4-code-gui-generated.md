@@ -121,7 +121,7 @@ Convenience type aliases re-exporting schema types from the OpenAPI definition:
 - `total: number` - Total effect count
 
 #### EffectThumbnailRequest
-- `effect_name: string` - Effect to preview
+- `effect_type: string` - Effect to preview
 - `video_path: string` - Video file path
 - `parameters: object` - Effect parameters
 

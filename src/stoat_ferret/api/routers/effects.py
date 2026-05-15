@@ -242,13 +242,13 @@ async def preview_effect_thumbnail(
             500 if FFmpeg thumbnail generation fails.
     """
     # Validate effect type
-    definition = registry.get(request.effect_name)
+    definition = registry.get(request.effect_type)
     if definition is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "code": "EFFECT_NOT_FOUND",
-                "message": f"Unknown effect type: {request.effect_name}",
+                "message": f"Unknown effect type: {request.effect_type}",
             },
         )
 
@@ -264,7 +264,7 @@ async def preview_effect_thumbnail(
         )
 
     # Validate parameters
-    validation_errors = registry.validate(request.effect_name, request.parameters)
+    validation_errors = registry.validate(request.effect_type, request.parameters)
     if validation_errors:
         messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
         raise HTTPException(

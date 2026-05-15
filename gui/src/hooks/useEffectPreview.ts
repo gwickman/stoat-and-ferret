@@ -107,7 +107,7 @@ export function useEffectPreview(): void {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            effect_name: selectedEffect,
+            effect_type: selectedEffect,
             video_path: videoPath,
             parameters: thumbnailDebouncedParams,
           }),
