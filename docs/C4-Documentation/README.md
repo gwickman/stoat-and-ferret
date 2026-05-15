@@ -166,6 +166,7 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | v031 | full | 2026-04-07 | 1b13f1e | 82 (1 context + 1 container + 9 component + 69 code + 1 API spec + 1 README) |
 | v034 | delta | 2026-04-11 | HEAD | encoder_cache.py gap; post-v031 GUI drift (BL-241) |
 | v037–v046 | delta | 2026-04-30 | HEAD | Infrastructure update: WebSocket render events (render_progress, render_frame_available), /api/v1/version and /api/v1/flags endpoints, frame_preview.jpg endpoint, Dockerfile/Dockerfile.ci distinction, docker-compose local dev purpose, health subsystem checks (database/Rust core/filesystem/startup gate), migration_history and feature_flag_log tables, migration count 7→9, MigrationService and SyntheticMonitoringTask services, synthetic monitoring Prometheus metrics (BL-300) |
+| v060 | delta | 2026-05-15 | HEAD | encoder field added to CreateRenderRequest (v060 Feature 002); C4 schema docs updated manually (v063 Feature 004, BL-350) |
 
 ## Regeneration Instructions
 
