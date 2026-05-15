@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v063] — 2026-05-15
+
+### Documentation
+
+- Fix response type labels (`JobStatusResponse` → `RenderJobResponse`) and status tokens (`"complete"` → `"completed"`) in prompt-recipes.md and five additional docs/manual files; add regression test in tests/test_hygiene.py (Theme 1, Feature 001, BL-353, PR #415)
+- Align render_jobs ordering in FRAMEWORK_CONTEXT.md with code implementation (Theme 1, Feature 002, BL-352, PR #416)
+- Correct stale v058 retrospective narrative about STOAT_RENDER_WORKER_ENABLED flag removal (Theme 1, Feature 003, BL-354)
+- Update C4 API schemas to include encoder field introduced by v060 (Theme 1, Feature 004, BL-350, PR #417)
+
+### Changed
+
+- Rename `effect_name` → `effect_type` in thumbnail request schema, smoke test payloads, and harness guide (Theme 2, Features 005–007, BL-349, PR #418)
+
+**Summary:** Documentation audit fixes (response type labels, status tokens, C4 encoder field, render_jobs ordering) + API field rename (effect_name → effect_type). 2 themes, 7 features, PRs #415 #416 #417 #418.
+
 ## [v062-hotfix] - 2026-05-08
 
 ### Repository Hygiene Follow-up (BL-351)
