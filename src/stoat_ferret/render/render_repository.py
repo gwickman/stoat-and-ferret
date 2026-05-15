@@ -191,7 +191,7 @@ class AsyncSQLiteRenderRepository:
     async def get_by_project(self, project_id: str) -> list[RenderJob]:
         """Get all render jobs for a project."""
         cursor = await self._conn.execute(
-            "SELECT * FROM render_jobs WHERE project_id = ? ORDER BY created_at",
+            "SELECT * FROM render_jobs WHERE project_id = ? ORDER BY created_at, id ASC",
             (project_id,),
         )
         rows = await cursor.fetchall()
@@ -200,7 +200,7 @@ class AsyncSQLiteRenderRepository:
     async def list_by_status(self, status: RenderStatus) -> list[RenderJob]:
         """List all render jobs with a given status."""
         cursor = await self._conn.execute(
-            "SELECT * FROM render_jobs WHERE status = ? ORDER BY created_at",
+            "SELECT * FROM render_jobs WHERE status = ? ORDER BY created_at, id ASC",
             (status.value,),
         )
         rows = await cursor.fetchall()
@@ -376,12 +376,12 @@ class InMemoryRenderRepository:
     async def get_by_project(self, project_id: str) -> list[RenderJob]:
         """Get all render jobs for a project."""
         jobs = [copy.deepcopy(j) for j in self._jobs.values() if j.project_id == project_id]
-        return sorted(jobs, key=lambda j: j.created_at)
+        return sorted(jobs, key=lambda j: (j.created_at, j.id))
 
     async def list_by_status(self, status: RenderStatus) -> list[RenderJob]:
         """List all render jobs with a given status."""
         jobs = [copy.deepcopy(j) for j in self._jobs.values() if j.status == status]
-        return sorted(jobs, key=lambda j: j.created_at)
+        return sorted(jobs, key=lambda j: (j.created_at, j.id))
 
     async def list_jobs(
         self,

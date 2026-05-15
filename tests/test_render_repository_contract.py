@@ -7,6 +7,7 @@ InMemoryRenderRepository to verify they have identical behavior.
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 
 import aiosqlite
 import pytest
@@ -640,6 +641,68 @@ class TestRenderDeepCopyIsolation:
         fetched = await repo.get(created.id)
         assert fetched is not None
         assert fetched.status == RenderStatus.QUEUED
+
+
+def _make_job_with_timestamp(project_id: str, job_id: str, ts: datetime) -> RenderJob:
+    """Create a RenderJob with a controlled id and created_at for ordering tests."""
+    return RenderJob(
+        id=job_id,
+        project_id=project_id,
+        status=RenderStatus.QUEUED,
+        output_path="/out/video.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan='{"segments": []}',
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=ts,
+        updated_at=ts,
+        completed_at=None,
+    )
+
+
+@pytest.mark.contract
+class TestRenderDeterministicOrdering:
+    """Tests for deterministic ordering when jobs share the same created_at timestamp."""
+
+    async def test_get_by_project_tie_break_by_id(
+        self, render_repository: AsyncRenderRepositoryType
+    ) -> None:
+        """Jobs with identical created_at are ordered by id ASC tie-break."""
+        ts = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        # Use controlled UUIDs so id ASC order is deterministic
+        job1 = _make_job_with_timestamp("proj-tie", "00000000-0000-0000-0000-000000000001", ts)
+        job2 = _make_job_with_timestamp("proj-tie", "00000000-0000-0000-0000-000000000002", ts)
+        await render_repository.create(job1)
+        await render_repository.create(job2)
+
+        result1 = await render_repository.get_by_project("proj-tie")
+        result2 = await render_repository.get_by_project("proj-tie")
+
+        # id ASC tie-break: job1's id is lexicographically smaller
+        assert len(result1) == 2
+        assert result1[0].id == job1.id
+        assert result1[1].id == job2.id
+        # Consistent across multiple calls
+        assert result2[0].id == job1.id
+        assert result2[1].id == job2.id
+
+    async def test_list_by_status_tie_break_by_id(
+        self, render_repository: AsyncRenderRepositoryType
+    ) -> None:
+        """list_by_status with identical created_at also uses id ASC tie-break."""
+        ts = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        job1 = _make_job_with_timestamp("proj-tie2", "00000000-0000-0000-0000-000000000001", ts)
+        job2 = _make_job_with_timestamp("proj-tie2", "00000000-0000-0000-0000-000000000002", ts)
+        await render_repository.create(job1)
+        await render_repository.create(job2)
+
+        result = await render_repository.list_by_status(RenderStatus.QUEUED)
+
+        assert len(result) == 2
+        assert result[0].id == job1.id
+        assert result[1].id == job2.id
 
 
 @pytest.mark.contract
