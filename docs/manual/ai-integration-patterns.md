@@ -296,7 +296,7 @@ plus a per-job breakdown — each job carries its own `job_id`, `status`,
 ## Pattern 5: Reconnection
 
 **Goal**: Reconnect to the event stream after a network interruption and
-resync agent state with the server.
+resync agent state with minimal REST polling.
 
 **Prerequisites**: Patterns 1–3 working; agent has a WebSocket client.
 
@@ -311,11 +311,18 @@ resync agent state with the server.
    `scan_completed`, `project_created`, `timeline_updated`, and others
    (see [08_ai-integration.md](08_ai-integration.md) for the full
    vocabulary).
-3. The WebSocket does **not** replay missed events on reconnect. After a
-   drop, agents must resync by polling REST endpoints
-   (`GET /api/v1/render/{job_id}`, `GET /api/v1/render/queue`) for
-   authoritative state before resuming real-time consumption.
-4. Heartbeat frames arrive on a fixed interval (see
+3. Persist each frame's `event_id` field as you process it. On
+   reconnect, send `Last-Event-ID: <last-seen-event-id>` as an HTTP
+   header during the WebSocket upgrade handshake — the server replays
+   buffered events strictly newer than that id. Replay fires **once** at
+   accept time; subsequent frames after reconnect are live broadcasts.
+   Heartbeat frames are excluded from replay.
+4. The replay buffer has a TTL of `ws_replay_ttl_seconds` (default:
+   **300 seconds / 5 minutes**). Events older than the TTL are dropped
+   before the `Last-Event-ID` lookup. If the TTL has expired or the
+   server restarted, fall back to `GET /api/v1/system/state` to
+   reconcile jobs that terminated while disconnected.
+5. Heartbeat frames arrive on a fixed interval (see
    `ws_heartbeat_interval` setting). An agent that stops receiving
    heartbeats for significantly longer than that interval should treat
    the connection as dead and reconnect.
@@ -323,8 +330,11 @@ resync agent state with the server.
 **Curl / `wscat` Example** (install `wscat` via `npm install -g wscat`):
 
 ```bash
-# Connect and print the first few events
+# Initial connect — no replay
 wscat -c ws://localhost:8765/ws
+
+# Reconnect with Last-Event-ID to replay missed events
+wscat -c ws://localhost:8765/ws -H "Last-Event-ID: event-00042"
 ```
 
 Observed frames while a render is running:
@@ -341,9 +351,11 @@ Observed frames while a render is running:
 - If the WebSocket closes unexpectedly, reconnect immediately with
   exponential backoff (1s, 2s, 4s, max 30s). Do not tear down agent
   state on the first drop.
-- Missed events are **not** replayed. After reconnecting, call
+- When reconnecting, include `Last-Event-ID: <last-event-id>` to
+  receive buffered events missed during the outage (within the 300-second
+  TTL window). If the TTL has expired or the server restarted, poll
   `GET /api/v1/render/queue` and `GET /api/v1/render/{job_id}` for
-  every job the agent had in flight to catch up.
+  every job the agent had in flight to reconcile state.
 - If no heartbeat arrives for `3 * ws_heartbeat_interval`, close the
   socket and reconnect — the underlying TCP connection is likely
   stale.
