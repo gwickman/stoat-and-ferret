@@ -214,6 +214,10 @@ Use `/api/v1/jobs/{job_id}/wait` instead of a `time.sleep` polling loop for **sc
 
 The runnable companion is `scripts/examples/wait-for-render.py`.
 
+> **Note:** `wait-for-render.py` polls **generic queue jobs only** (scan, proxy,
+> waveform, thumbnail).  Render jobs are not in the generic queue — poll render
+> status via `GET /api/v1/render/{job_id}` instead.
+
 ---
 
 ## 5. WebSocket Event Monitoring with Reconnect
@@ -317,5 +321,5 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 - [`operator-guide.md`](operator-guide.md) — compact canonical sequence reference
 - [`api-usage-examples.md`](api-usage-examples.md) — full error code catalogue and validated request/response flows
 - [`ws-event-vocabulary.md`](ws-event-vocabulary.md) — event type catalogue with payload schemas
-- [`scripts/examples/wait-for-render.py`](../../scripts/examples/wait-for-render.py) — runnable long-poll wrapper (stdlib-only)
+- [`scripts/examples/wait-for-render.py`](../../scripts/examples/wait-for-render.py) — runnable long-poll wrapper for generic queue jobs only (scan/proxy/waveform/thumbnail; stdlib-only)
 - [`scripts/examples/dump-ws-events.py`](../../scripts/examples/dump-ws-events.py) — runnable WebSocket dumper (`websockets>=12.0`)
