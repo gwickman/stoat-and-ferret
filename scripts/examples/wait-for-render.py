@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Wait for an async stoat-and-ferret job to reach a terminal state.
+"""Poll a generic queue job (scan/proxy/waveform/thumbnail) until completion.
 
-Long-poll wrapper around ``GET /api/v1/jobs/{job_id}/wait``. Works for any job
-type that flows through the shared job queue (scan, render, etc.) — the render
-endpoint's ``id`` field doubles as the ``job_id`` for this call.
+Long-poll wrapper around ``GET /api/v1/jobs/{job_id}/wait``.
+
+**Scope:** This script covers only the GENERIC job queue — jobs created by
+scan, proxy, waveform, and thumbnail operations.  Render jobs are NOT in the
+generic queue (they live in ``RenderQueue``/``AsyncRenderRepository``).  Passing
+a render job ID returns HTTP 404 from this endpoint.
+
+To poll render status, use the render endpoint directly::
+
+    GET /api/v1/render/{job_id}
 
 Dependencies: stdlib only (``urllib.request``, ``argparse``, ``json``, ``sys``).
 No third-party HTTP libraries are imported — this is enforced by the v042
@@ -18,7 +25,9 @@ Exit codes:
     0 — terminal status received (``complete``, ``failed``, ``timeout``,
         ``cancelled``) OR HTTP 408 (``JOB_WAIT_TIMEOUT``) returned by the
         server (the job itself is still running; the timeout is client-side).
-    2 — job_id unknown (HTTP 404) or other HTTP/network error.
+    1 — render job ID supplied (HTTP 404 from generic queue); user is directed
+        to ``GET /api/v1/render/{job_id}``.
+    2 — other HTTP/network error.
 
 The terminal/timeout JSON payload is printed to stdout. Pipe to ``jq`` to
 extract specific fields (e.g. ``jq -r '.status'`` or ``jq -r '.result.output_path'``).
@@ -54,7 +63,7 @@ def wait_for_job(host: str, port: int, job_id: str, timeout: float) -> int:
     """Issue a single long-poll wait request and print the response.
 
     Returns the process exit code: 0 on terminal status or HTTP 408 timeout,
-    2 on 404 or transport errors.
+    1 on HTTP 404 (render job detected), 2 on other transport errors.
     """
     url = f"http://{host}:{port}/api/v1/jobs/{job_id}/wait?timeout={timeout}"
     # Buffer slightly beyond the server-side timeout so the socket does not
@@ -73,6 +82,14 @@ def wait_for_job(host: str, port: int, job_id: str, timeout: float) -> int:
             # JOB_WAIT_TIMEOUT — job is still running; client decides next move.
             print(body)
             return 0
+        if err.code == 404:
+            print(
+                f"Job '{job_id}' not found in the generic queue. "
+                f"If this is a render job, poll render status via: "
+                f"GET /api/v1/render/{job_id}",
+                file=sys.stderr,
+            )
+            return 1
         print(
             json.dumps({"error": "http_error", "status": err.code, "body": body}),
             file=sys.stderr,
