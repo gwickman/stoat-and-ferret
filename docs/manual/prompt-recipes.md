@@ -91,7 +91,7 @@ Find an existing project, locate one of its clips, and append an effect by type.
 
 ### Prompt Preamble
 
-> The user wants to apply a `<effect_type>` (e.g. `brightness`) effect with parameters `<parameters>` to the clip at `timeline_position` `<position>` inside project `<project_id>`. Look up the project's clips, match the position, then attach the effect via the clips/effects endpoint and confirm the returned `filter_string`.
+> The user wants to apply a `<effect_type>` (e.g. `volume`) effect with parameters `<parameters>` to the clip at `timeline_position` `<position>` inside project `<project_id>`. Look up the project's clips, match the position, then attach the effect via the clips/effects endpoint and confirm the returned `filter_string`.
 
 ### API Sequence
 
@@ -106,8 +106,8 @@ Find an existing project, locate one of its clips, and append an effect by type.
 ```jsonc
 // 3. Effect apply
 {
-  "effect_type": "brightness",
-  "parameters": { "value": 0.2 }
+  "effect_type": "volume",
+  "parameters": { "volume": 0.5 }
 }
 ```
 
@@ -116,9 +116,9 @@ Find an existing project, locate one of its clips, and append an effect by type.
 ```jsonc
 // 3. EffectApplyResponse
 {
-  "effect_type": "brightness",
-  "parameters": { "value": 0.2 },
-  "filter_string": "eq=brightness=0.2"
+  "effect_type": "volume",
+  "parameters": { "volume": 0.5 },
+  "filter_string": "volume=volume=0.5"
 }
 ```
 
