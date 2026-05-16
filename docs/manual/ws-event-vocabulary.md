@@ -229,7 +229,7 @@ Captured (scan):
 
 ```jsonc
 { "type": "job_progress",
-  "payload": { "job_id": "37a582b0-…", "progress": 1.0, "status": "completed" },
+  "payload": { "job_id": "37a582b0-…", "progress": 1.0, "status": "complete" },
   "correlation_id": null,
   "timestamp": "2026-04-26T17:24:37.712318+00:00",
   "event_id": "event-00005" }
