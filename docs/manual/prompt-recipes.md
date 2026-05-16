@@ -23,7 +23,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 
 ### Prompt Preamble
 
-> You are operating the stoat-and-ferret HTTP API at `http://localhost:8765`. The user wants to render the first video found under `<scan_path>` to `<output_format>` (default `mp4`) at `quality_preset` (one of `draft`, `standard`, `high`). Submit the scan, wait for it to terminate, pick the first returned `video_id`, create a project, attach the clip starting at frame 0 for its full source duration, kick off the render, and report `output_path` once the render job reaches `complete`.
+> You are operating the stoat-and-ferret HTTP API at `http://localhost:8765`. The user wants to render the first video found under `<scan_path>` to `<output_format>` (default `mp4`) at `quality_preset` (one of `draft`, `standard`, `high`). Submit the scan, wait for it to terminate, pick the first returned `video_id`, create a project, attach the clip starting at frame 0 for its full source duration, kick off the render, and report `output_path` once the render job reaches `"completed"`.
 
 ### API Sequence
 
@@ -60,7 +60,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 { "job_id": "job_abc123" }
 
 // Step 2 → JobStatusResponse (200, terminal)
-{ "job_id": "job_abc123", "status": "completed", "progress": 1.0,
+{ "job_id": "job_abc123", "status": "complete", "progress": 1.0,
   "result": { "scanned": 5, "new": 5, "updated": 0, "errors": [] }, "error": null }
 
 // Step 3 → VideoListResponse
@@ -200,7 +200,7 @@ Use `/api/v1/jobs/{job_id}/wait` instead of a `time.sleep` polling loop for **sc
 
 ```jsonc
 // Terminal success
-{ "job_id": "job_xyz", "status": "completed", "progress": 1.0,
+{ "job_id": "job_xyz", "status": "complete", "progress": 1.0,
   "result": { "output_path": "...", "scanned": 5 }, "error": null }
 
 // Terminal failure
@@ -295,7 +295,7 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 
 ```jsonc
 // 1. BatchResponse (201)
-{ "batch_id": "batch_01HXZ…", "jobs_queued": 2, "status": "queued" }
+{ "batch_id": "batch_01HXZ…", "jobs_queued": 2, "status": "accepted" }
 
 // 2. BatchJobStatusResponse[] from GET /api/v1/render/batch/{batch_id}
 [

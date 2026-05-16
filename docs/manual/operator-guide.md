@@ -27,7 +27,7 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 | Create clip | `POST /api/v1/projects/{project_id}/clips` `{"source_video_id": "<video_id>", "in_point": 0, "out_point": 100, "timeline_position": 0}` | 201 clip | `id` → clip_id |
 | Create track | `PUT /api/v1/projects/{project_id}/timeline` `[{"track_type": "video", "label": "V1"}]` | 200 timeline | `tracks[0].id` → track_id |
 | Assign clip to timeline | `POST /api/v1/projects/{project_id}/timeline/clips` `{"clip_id": "<clip_id>", "track_id": "<track_id>", "timeline_start": 0.0, "timeline_end": 5.0}` | 201 clip | timeline positioned |
-| Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"effect_type": "fade", "parameters": {...}}` | 201 effect | applied |
+| Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"effect_type": "video_fade", "parameters": {...}}` | 201 effect | applied |
 | Start render | `POST /api/v1/render` `{"project_id", "output_format": "mp4", "quality_preset": "standard"}` | 201 `{id, status}` | render job id |
 | Poll render status | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 `{id, status, progress, ...}` | `status ∈ {completed, failed, cancelled}` → read `output_path` |
 
@@ -81,7 +81,7 @@ Response from `POST /api/v1/render` and `GET /api/v1/render/{job_id}`.
 | `id` | `str` | Render job UUID (use this for `/api/v1/render/{job_id}` polling) |
 | `project_id` | `str` | Source project UUID |
 | `status` | `str` | One of: `queued`, `running`, `completed`, `failed`, `cancelled` (lowercase) |
-| `output_path` | `str` | Absolute path to the output file |
+| `output_path` | `str` | Relative path to the output file |
 | `output_format` | `str` | Container format (`mp4`, `webm`, `mov`, `mkv`) |
 | `quality_preset` | `str` | One of: `draft`, `standard`, `high` |
 | `progress` | `float` | `0.0` – `1.0`; advances monotonically during render |
@@ -100,7 +100,7 @@ Enable fixtures by starting the server with `STOAT_TESTING_MODE=true`. Endpoints
 
 - Seed: `POST /api/v1/testing/seed` `{"fixture_type": "project", "name": "demo", "data": {...}}` → `{fixture_id, fixture_type, name}`. All seeded names are prefixed `seeded_` for enumeration.
 - Teardown: `DELETE /api/v1/testing/seed/{fixture_id}?fixture_type=project`.
-- Canonical agent test loop: set `STOAT_RENDER_MODE=noop` in the test process → seed project → add timeline clip → POST `/api/v1/render` with a normal well-formed render payload → assert `status == complete` without writing output → delete fixture. See *Synthetic render mode* below for environment variable details.
+- Canonical agent test loop: set `STOAT_RENDER_MODE=noop` in the test process → seed project → add timeline clip → POST `/api/v1/render` with a normal well-formed render payload → assert `status == "completed"` without writing output → delete fixture. See *Synthetic render mode* below for environment variable details.
 - Fixtures live in the same SQLite database as production data; use a dedicated `STOAT_DATA_DIR` for isolation.
 
 ### Synthetic render mode (`STOAT_RENDER_MODE`)
