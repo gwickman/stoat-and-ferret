@@ -4,6 +4,18 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v064] - 2026-05-16
+
+### Fixed
+- Corrected render status namespace in operator-guide.md and prompt-recipes.md (`status == complete` → `"completed"`; scan/async jobs correctly use `"complete"`)
+- Replaced non-existent `brightness` effect type with `volume` in prompt-recipes.md (4 occurrences)
+- Replaced non-existent `fade` effect type with `video_fade` in operator-guide.md
+- Rewrote Pattern 5 in ai-integration-patterns.md to document Last-Event-ID replay (removed false denial statements)
+- Rewrote test_hygiene.py to enforce endpoint-family-aware namespace rules (DOC_FAMILY classification)
+- Scoped wait-for-render.py docstring to generic queue jobs only; added 404 guard with redirect to render endpoint
+- Clarified /render/preview as stateless and project-blind in example-workflow.md
+- Verified and closed BL-351 (v062 hotfix data cleanup)
+
 ## [v063] — 2026-05-15
 
 ### Documentation
