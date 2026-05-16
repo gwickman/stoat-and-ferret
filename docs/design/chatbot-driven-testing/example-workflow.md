@@ -124,10 +124,16 @@ The chatbot submits a render with known-good settings and monitors progress.
 
 Likely flow:
 
-- `POST /api/v1/render/preview` to inspect generated command
+- `POST /api/v1/render/preview` to inspect the generated command before submitting a render
 - `POST /api/v1/render`
 - WebSocket monitoring of queue and progress
 - `GET /api/v1/render/{job_id}` or render list endpoints
+
+> **Note:** `POST /api/v1/render/preview` is stateless and project-blind. It returns a
+> placeholder FFmpeg command using hardcoded 1920×1080@30fps segments — not derived from the
+> project's actual timeline or resolution. Its required fields (`output_format`,
+> `quality_preset`, `encoder`) differ from those of `POST /render` (`project_id`); these two
+> endpoints do not share a request body. A project-aware preview is not currently supported.
 
 Expected result:
 
