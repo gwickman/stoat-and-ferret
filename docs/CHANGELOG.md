@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v065] - 2026-05-17
+
+### Fixed
+- Fix EncoderType `repr` serialization so `encoder_type` field in `/api/v1/version` returns `"h264"` / `"h265"` instead of `"EncoderType.H264"` (BL-360, PR #430)
+- Add Alembic migration to clear poisoned `encoder_cache` rows written with the broken repr values (BL-360, PR #430)
+- Bypass queue enqueue for noop render jobs to prevent worker race on job-not-found lookup (BL-355, PR #429)
+
+### Added
+- Render submit semantic preflight: validates `project_id` existence and returns `422` before enqueuing, eliminating silent downstream failures (BL-355, PR #427)
+- `app_sha` field in `/api/v1/version` resolved at runtime from git HEAD SHA, enabling deterministic smoke-test identity assertions (BL-362, PR #431)
+- Smoke test assertions for render validation, noop contract, `encoder_type` serialization, and `app_sha` identity (BL-355/360/362, PR #432)
+- Smoke-test harness guide updated with v065 render validation and noop contract sections (PR #433)
+
+**Summary:** Deterministic-Mode Correctness & Render Observability — 3 themes (render-correctness, encoder-version-observability, smoke-and-harness-coverage), 6 features (BL-355 render preflight + noop ownership, BL-360 encoder_type serialization fix + Alembic cache clear migration, BL-362 app_sha runtime identity + version endpoint, smoke test coverage + harness guide), PRs #427–#433, 2578 passing tests.
+
 ## [v064] - 2026-05-16
 
 ### Fixed
