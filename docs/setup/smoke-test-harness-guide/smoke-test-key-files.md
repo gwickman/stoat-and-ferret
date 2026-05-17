@@ -40,7 +40,7 @@ The test harness has three tiers:
 | `tests/smoke/test_negative_paths.py` | Negative paths: invalid inputs across timeline, audio, batch, compose (v019) |
 | `tests/smoke/test_proxy.py` | Proxy management: generate, status, delete, batch (v024) |
 | `tests/smoke/test_preview.py` | Preview session: create session via POST with timeline, verify 202 and session_id (v026) |
-| `tests/smoke/test_render_api.py` | Render API: job CRUD (create, get, list, delete), encoder discovery and refresh, format listing, queue status, cancel, retry (v029–v033) |
+| `tests/smoke/test_render_api.py` | Render API: job CRUD (create, get, list, delete), encoder discovery and refresh, format listing, queue status, cancel, retry (v029–v033). Covers HTTP 404 (`PROJECT_NOT_FOUND`) for non-existent project and HTTP 422 (`EMPTY_TIMELINE` and non-UUID `project_id`) validation error paths for POST /api/v1/render (v065). Verifies `encoder_type` returns bare token values (e.g. `Software`, not `EncoderType.Software`). In noop mode (`STOAT_RENDER_MODE=noop`), the render job's terminal status is authoritative — returns COMPLETED and the background worker does not race noop jobs (v065). |
 
 ### Phase 3 — Sample Project Smoke Tests (v034)
 
