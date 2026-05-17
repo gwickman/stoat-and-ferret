@@ -156,9 +156,12 @@ cargo test
 
 ```bash
 uv run python -m scripts.export_openapi
+cd gui && npm run generate:types   # updates gui/src/generated/api-types.ts
 ```
 
-Run this command any time you add, remove, or modify an API endpoint, Pydantic request/response model, or route decorator. Forgetting to regenerate is the most common cause of CI failures across versions.
+Both commands must be run together — `export_openapi` updates `gui/openapi.json` while `generate:types` regenerates `gui/src/generated/api-types.ts` from it. If only `gui/openapi.json` appears in `git diff`, the second step was missed.
+
+Run these commands any time you add, remove, or modify an API endpoint, Pydantic request/response model, or route decorator. Forgetting to regenerate is the most common cause of CI failures across versions.
 
 ### Coverage Thresholds
 

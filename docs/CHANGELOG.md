@@ -4,6 +4,23 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v066] — WebSocket Reconnect & Replay Contract (2026-05-17)
+
+### Fixed
+- Replace per-scope `event_id` counters with a global monotonic counter; buffer heartbeats in replay buffer so reconnecting clients receive all missed events (BL-356, PR #434)
+- Include render jobs in `system/state` `active_jobs` response; add terminal pruning to `list_jobs()` so the endpoint never returns stale completed jobs (BL-357, PR #437)
+
+### Added
+- WebSocket replay smoke tests for global-counter semantics, cross-scope isolation, and heartbeat anchor assertions (BL-356, PR #436)
+- System/state smoke tests for terminal pruning, render job visibility, and AC-5 recovery (BL-357, PR #439)
+
+### Documentation
+- Correct `ws-event-vocabulary.md` and `prompt-recipes.md` for global-counter replay contract (BL-356, PR #435)
+- Fix `operator-guide.md` and `prompt-recipes.md` reconnect-recovery guidance for render jobs (BL-357, PR #438)
+- Update smoke-test-harness-guide for v066 WebSocket replay and system/state test sections (BL-356, BL-357, PR #440)
+
+**Summary:** WebSocket Reconnect & Replay Contract — 2 themes (event-id-replay-contract, system-state-recovery-surface), 7 features (BL-356 global counter + replay buffer + WS smoke tests + docs, BL-357 render visibility + terminal pruning + system/state smoke tests + docs), PRs #434–#440, 2581 passing tests.
+
 ## [v065] - 2026-05-17
 
 ### Fixed
