@@ -3003,7 +3003,7 @@
           "system"
         ],
         "summary": "Get System State",
-        "description": "Return aggregate in-memory system state.\n\nPerforms a single-pass scan over the job queue and WebSocket\nconnection manager (INV-SNAP-1). No database I/O. Missing or\ntransiently-broken subsystems are reported as empty collections\nrather than raising (NFR-003): the snapshot is best-effort.\n\nArgs:\n    request: FastAPI request, used to reach ``app.state``.\n\nReturns:\n    ``SystemState`` describing active jobs, open WebSocket\n    connections, and process uptime.",
+        "description": "Return aggregate in-memory system state.\n\nPerforms a single-pass scan over the job queue, WebSocket\nconnection manager, and render repository (INV-SNAP-1 updated:\nincludes async SQLite reads for RUNNING/QUEUED render jobs).\nMissing or transiently-broken subsystems are reported as empty\ncollections rather than raising (NFR-003): the snapshot is\nbest-effort.\n\nArgs:\n    request: FastAPI request, used to reach ``app.state``.\n\nReturns:\n    ``SystemState`` describing active jobs, open WebSocket\n    connections, and process uptime.",
         "operationId": "get_system_state_api_v1_system_state_get",
         "responses": {
           "200": {
@@ -5808,7 +5808,7 @@
             },
             "type": "array",
             "title": "Active Jobs",
-            "description": "Jobs currently tracked by the in-memory job queue, in submission order."
+            "description": "Active jobs in submission order: includes generic-queue jobs in any state submitted within the last 300 s (stale terminal jobs excluded), plus render jobs currently in RUNNING or QUEUED status."
           },
           "active_connections": {
             "type": "integer",

@@ -1,9 +1,10 @@
 """System state snapshot endpoint (BL-275).
 
 Exposes ``GET /api/v1/system/state`` — a single-pass aggregate of the
-in-memory job queue and WebSocket connection manager. The endpoint is
-read-only, issues no database queries (INV-SNAP-1), and preserves the
-path expected by the synthetic monitoring probe (INV-SNAP-2).
+in-memory job queue, render repository, and WebSocket connection manager.
+The endpoint is read-only, issues async SQLite reads from render_repository
+for RUNNING/QUEUED render jobs only (INV-SNAP-1 updated), and preserves
+the path expected by the synthetic monitoring probe (INV-SNAP-2).
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Request
 
 from stoat_ferret.api.middleware.metrics import stoat_system_state_duration_seconds
 from stoat_ferret.api.schemas.system_state import JobSummary, SystemState
+from stoat_ferret.render.models import RenderStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -46,10 +48,12 @@ def _compute_uptime_seconds(app_state: object) -> float:
 async def get_system_state(request: Request) -> SystemState:
     """Return aggregate in-memory system state.
 
-    Performs a single-pass scan over the job queue and WebSocket
-    connection manager (INV-SNAP-1). No database I/O. Missing or
-    transiently-broken subsystems are reported as empty collections
-    rather than raising (NFR-003): the snapshot is best-effort.
+    Performs a single-pass scan over the job queue, WebSocket
+    connection manager, and render repository (INV-SNAP-1 updated:
+    includes async SQLite reads for RUNNING/QUEUED render jobs).
+    Missing or transiently-broken subsystems are reported as empty
+    collections rather than raising (NFR-003): the snapshot is
+    best-effort.
 
     Args:
         request: FastAPI request, used to reach ``app.state``.
@@ -85,6 +89,24 @@ async def _build_system_state(request: Request) -> SystemState:
             # jobs list rather than surfacing a 500 when the queue is
             # momentarily unavailable.
             logger.warning("system_state.job_queue_unavailable", error=str(exc))
+
+    render_repo = getattr(app_state, "render_repository", None)
+    if render_repo is not None:
+        try:
+            running_render = await render_repo.list_by_status(RenderStatus.RUNNING)
+            queued_render = await render_repo.list_by_status(RenderStatus.QUEUED)
+            for render_job in running_render + queued_render:
+                active_jobs.append(
+                    JobSummary(
+                        job_id=render_job.id,
+                        job_type="render",
+                        status=render_job.status.value,
+                        progress=render_job.progress,
+                        submitted_at=render_job.created_at,
+                    )
+                )
+        except Exception as exc:
+            logger.warning("system_state.render_repository_unavailable", error=str(exc))
 
     active_connections = 0
     ws_manager = getattr(app_state, "ws_manager", None)

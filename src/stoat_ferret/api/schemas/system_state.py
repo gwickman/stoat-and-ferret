@@ -70,7 +70,11 @@ class SystemState(BaseModel):
         description="UTC timestamp (timezone-aware) at which the snapshot was captured.",
     )
     active_jobs: list[JobSummary] = Field(
-        description="Jobs currently tracked by the in-memory job queue, in submission order.",
+        description=(
+            "Active jobs in submission order: includes generic-queue jobs in any state "
+            "submitted within the last 300 s (stale terminal jobs excluded), plus render "
+            "jobs currently in RUNNING or QUEUED status."
+        ),
     )
     active_connections: int = Field(
         description="Number of currently open WebSocket connections.",

@@ -2029,10 +2029,12 @@ export interface paths {
          * Get System State
          * @description Return aggregate in-memory system state.
          *
-         *     Performs a single-pass scan over the job queue and WebSocket
-         *     connection manager (INV-SNAP-1). No database I/O. Missing or
-         *     transiently-broken subsystems are reported as empty collections
-         *     rather than raising (NFR-003): the snapshot is best-effort.
+         *     Performs a single-pass scan over the job queue, WebSocket
+         *     connection manager, and render repository (INV-SNAP-1 updated:
+         *     includes async SQLite reads for RUNNING/QUEUED render jobs).
+         *     Missing or transiently-broken subsystems are reported as empty
+         *     collections rather than raising (NFR-003): the snapshot is
+         *     best-effort.
          *
          *     Args:
          *         request: FastAPI request, used to reach ``app.state``.
@@ -3746,7 +3748,7 @@ export interface components {
             timestamp: string;
             /**
              * Active Jobs
-             * @description Jobs currently tracked by the in-memory job queue, in submission order.
+             * @description Active jobs in submission order: includes generic-queue jobs in any state submitted within the last 300 s (stale terminal jobs excluded), plus render jobs currently in RUNNING or QUEUED status.
              */
             active_jobs: components["schemas"]["JobSummary"][];
             /**

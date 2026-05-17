@@ -17,6 +17,9 @@ from stoat_ferret.api.services.job_completion import notify_job_terminal
 
 logger = structlog.get_logger(__name__)
 
+JOB_RETENTION_SECONDS: int = 300
+"""Terminal generic-queue jobs older than this many seconds are excluded from list_jobs()."""
+
 
 def _utcnow() -> datetime:
     """Return the current UTC time as a timezone-aware ``datetime``."""
@@ -32,6 +35,16 @@ class JobStatus(enum.Enum):
     FAILED = "failed"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+
+
+_TERMINAL_STATUSES: frozenset[JobStatus] = frozenset(
+    {
+        JobStatus.COMPLETE,
+        JobStatus.FAILED,
+        JobStatus.TIMEOUT,
+        JobStatus.CANCELLED,
+    }
+)
 
 
 class JobOutcome(enum.Enum):
@@ -338,12 +351,15 @@ class InMemoryJobQueue:
         return self._jobs[job_id].result
 
     def list_jobs(self) -> list[JobSnapshot]:
-        """Return a snapshot of every tracked job in submission order.
+        """Return a snapshot of tracked jobs in submission order.
+
+        Terminal jobs (COMPLETE, FAILED, TIMEOUT, CANCELLED) older than
+        ``JOB_RETENTION_SECONDS`` are excluded so active_jobs stays current.
 
         Returns:
-            List of ``JobSnapshot`` records for all jobs submitted to
-            this queue instance (insertion order is preserved).
+            List of ``JobSnapshot`` records, excluding stale terminal jobs.
         """
+        cutoff = datetime.now(timezone.utc)
         return [
             JobSnapshot(
                 job_id=entry.job_id,
@@ -353,6 +369,8 @@ class InMemoryJobQueue:
                 submitted_at=entry.submitted_at,
             )
             for entry in self._jobs.values()
+            if entry.result.status not in _TERMINAL_STATUSES
+            or (cutoff - entry.submitted_at).total_seconds() <= JOB_RETENTION_SECONDS
         ]
 
 
@@ -501,13 +519,15 @@ class AsyncioJobQueue:
         )
 
     def list_jobs(self) -> list[JobSnapshot]:
-        """Return a snapshot of every tracked job in submission order.
+        """Return a snapshot of tracked jobs in submission order.
+
+        Terminal jobs (COMPLETE, FAILED, TIMEOUT, CANCELLED) older than
+        ``JOB_RETENTION_SECONDS`` are excluded so active_jobs stays current.
 
         Returns:
-            List of ``JobSnapshot`` records for every job known to the
-            queue (pending, running, or terminal). Insertion order of
-            ``self._jobs`` preserves submission order.
+            List of ``JobSnapshot`` records, excluding stale terminal jobs.
         """
+        cutoff = datetime.now(timezone.utc)
         return [
             JobSnapshot(
                 job_id=entry.job_id,
@@ -517,6 +537,8 @@ class AsyncioJobQueue:
                 submitted_at=entry.submitted_at,
             )
             for entry in self._jobs.values()
+            if entry.status not in _TERMINAL_STATUSES
+            or (cutoff - entry.submitted_at).total_seconds() <= JOB_RETENTION_SECONDS
         ]
 
     async def process_jobs(self) -> None:
