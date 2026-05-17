@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -10,7 +11,7 @@ from pydantic import BaseModel, Field
 class CreateRenderRequest(BaseModel):
     """Request to start a new render job."""
 
-    project_id: str = Field(..., description="Project UUID to render")
+    project_id: uuid.UUID = Field(..., description="Project UUID to render")
     output_format: str = Field(default="mp4", description="Output container format")
     quality_preset: str = Field(
         default="standard",

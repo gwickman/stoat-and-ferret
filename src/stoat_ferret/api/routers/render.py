@@ -22,6 +22,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 
+from stoat_ferret.api.routers.projects import ClipRepoDep, ProjectRepoDep
 from stoat_ferret.api.schemas.render import (
     CodecInfo,
     CreateRenderRequest,
@@ -313,6 +314,8 @@ async def _run_detection_and_cache(
 async def create_render_job(
     body: CreateRenderRequest,
     render_service: RenderServiceDep,
+    project_repo: ProjectRepoDep,
+    clip_repo: ClipRepoDep,
 ) -> RenderJobResponse:
     """Start a new render job with pre-flight validation.
 
@@ -393,11 +396,29 @@ async def create_render_job(
                     },
                 )
 
-    output_path = str(Path(settings.render_output_dir) / f"{body.project_id}.{output_format.value}")
+    project_id_str = str(body.project_id)
+
+    # Project existence check (FR-001)
+    project = await project_repo.get(project_id_str)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"},
+        )
+
+    # Empty timeline check (FR-002)
+    clips = await clip_repo.list_by_project(project_id_str)
+    if not clips:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"code": "EMPTY_TIMELINE", "message": "Project has no timeline clips"},
+        )
+
+    output_path = str(Path(settings.render_output_dir) / f"{project_id_str}.{output_format.value}")
 
     try:
         job = await render_service.submit_job(
-            project_id=body.project_id,
+            project_id=project_id_str,
             output_path=output_path,
             output_format=output_format,
             quality_preset=quality_preset,
@@ -417,7 +438,7 @@ async def create_render_job(
     logger.info(
         "render_endpoint.job_created",
         job_id=job.id,
-        project_id=body.project_id,
+        project_id=project_id_str,
         action="start",
     )
     return _job_to_response(job)

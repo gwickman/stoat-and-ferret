@@ -7,6 +7,7 @@ and validation that public API rejects FFmpeg preset names and invalid values.
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
@@ -15,9 +16,13 @@ from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
 from stoat_ferret.api.routers.render import _CODEC_ENCODER_MAP, QUALITY_PRESET_MAP
+from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+from stoat_ferret.db.models import Clip, Project
+from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
+from tests.conftest import TEST_PROJECT_UUID
 
 # ---------- Fixtures ----------
 
@@ -62,9 +67,41 @@ def render_app(
     mock_render_service: AsyncMock,
 ) -> FastAPI:
     """Test app with render dependencies injected."""
+    now = datetime.now(timezone.utc)
+    project_repo = AsyncInMemoryProjectRepository()
+    project_repo.seed(
+        [
+            Project(
+                id=TEST_PROJECT_UUID,
+                name="Test Project",
+                output_width=1920,
+                output_height=1080,
+                output_fps=30,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    clip_repo = AsyncInMemoryClipRepository()
+    clip_repo.seed(
+        [
+            Clip(
+                id="22222222-2222-2222-2222-222222222222",
+                project_id=TEST_PROJECT_UUID,
+                source_video_id="vid-test",
+                in_point=0,
+                out_point=100,
+                timeline_position=0,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
     return create_app(
         render_repository=render_repo,
         render_service=mock_render_service,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
     )
 
 
@@ -106,7 +143,7 @@ def test_valid_preset_draft_accepted(render_client: TestClient) -> None:
     """POST /render with quality_preset='draft' returns 201."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "draft"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "draft"},
     )
     assert resp.status_code == 201
     assert resp.json()["quality_preset"] == "draft"
@@ -116,7 +153,7 @@ def test_valid_preset_standard_accepted(render_client: TestClient) -> None:
     """POST /render with quality_preset='standard' returns 201."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "standard"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "standard"},
     )
     assert resp.status_code == 201
     assert resp.json()["quality_preset"] == "standard"
@@ -126,7 +163,7 @@ def test_valid_preset_high_accepted(render_client: TestClient) -> None:
     """POST /render with quality_preset='high' returns 201."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "high"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "high"},
     )
     assert resp.status_code == 201
     assert resp.json()["quality_preset"] == "high"
@@ -139,7 +176,7 @@ def test_ffmpeg_preset_veryfast_rejected(render_client: TestClient) -> None:
     """POST /render with FFmpeg preset 'veryfast' returns HTTP 400."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "veryfast"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "veryfast"},
     )
     assert resp.status_code == 400
     body = resp.json()
@@ -151,7 +188,7 @@ def test_ffmpeg_preset_medium_rejected(render_client: TestClient) -> None:
     """POST /render with FFmpeg preset 'medium' returns HTTP 400."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "medium"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "medium"},
     )
     assert resp.status_code == 400
     body = resp.json()
@@ -163,7 +200,7 @@ def test_ffmpeg_preset_slow_rejected(render_client: TestClient) -> None:
     """POST /render with FFmpeg preset 'slow' returns HTTP 400."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "slow"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "slow"},
     )
     assert resp.status_code == 400
     body = resp.json()
@@ -177,7 +214,7 @@ def test_invalid_preset_rejected(render_client: TestClient) -> None:
     """POST /render with an arbitrary invalid preset returns HTTP 400."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "ultra"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "ultra"},
     )
     assert resp.status_code == 400
     body = resp.json()
@@ -189,7 +226,7 @@ def test_empty_preset_rejected(render_client: TestClient) -> None:
     """POST /render with empty string quality_preset returns HTTP 400."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": ""},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": ""},
     )
     assert resp.status_code == 400
     body = resp.json()
@@ -208,7 +245,7 @@ def test_draft_translated_in_render_plan(
 
     render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "draft"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "draft"},
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])
@@ -224,7 +261,7 @@ def test_standard_translated_in_render_plan(
 
     render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "standard"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "standard"},
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])
@@ -240,7 +277,7 @@ def test_high_translated_in_render_plan(
 
     render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "high"},
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "high"},
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])
@@ -257,7 +294,11 @@ def test_existing_render_plan_settings_preserved(
     plan_input = json.dumps({"settings": {"codec": "libx264", "fps": 30.0}})
     render_client.post(
         "/api/v1/render",
-        json={"project_id": "proj-001", "quality_preset": "standard", "render_plan": plan_input},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "standard",
+            "render_plan": plan_input,
+        },
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])

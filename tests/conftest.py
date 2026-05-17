@@ -10,6 +10,8 @@ import pytest
 
 from tests.factories import ProjectFactory
 
+TEST_PROJECT_UUID = "11111111-1111-1111-1111-111111111111"
+
 
 def _ffmpeg_available() -> bool:
     """Check if ffmpeg is available in PATH."""
