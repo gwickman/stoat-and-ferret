@@ -150,7 +150,7 @@
 - **Location**: `gui/src/hooks/useVersion.ts:17`
 - **Description**: Fetches application version information from `/api/v1/version` on mount. Returns a discriminated union state: `loading` (initial), `ready` (data available), or `error` (fetch failed). Uses an `active` flag to prevent state updates after unmount.
 - **Signature**: `useVersion(): VersionState`
-- **Exports**: `VersionInfo` interface (`{ app_version, core_version, build_timestamp, git_sha, python_version, database_version }`), `VersionState` discriminated union
+- **Exports**: `VersionInfo` interface (`{ app_version, core_version, build_timestamp, git_sha, app_sha, python_version, database_version }`), `VersionState` discriminated union. `git_sha` is the Rust compile-time SHA; `app_sha` is the runtime-resolved SHA that reflects the actual running Python code at startup.
 - **Dependencies**: `react.useEffect`, `react.useState`, fetch API (`/api/v1/version`)
 
 #### `useWorkspace(): { preset, panelSizes, panelVisibility, setPreset, togglePanel, resizePanel, resetLayout }`

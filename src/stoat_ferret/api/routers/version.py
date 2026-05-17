@@ -90,11 +90,13 @@ async def get_version(request: Request) -> AppVersionResponse:
     settings = _settings_from_request(request)
     info = VersionInfo.current()
     database_version = await asyncio.to_thread(_read_alembic_revision, settings.database_path)
+    app_sha = getattr(request.app.state, "app_git_sha", "unknown")
     response = AppVersionResponse(
         app_version=str(request.app.version),
         core_version=info.core_version,
         build_timestamp=info.build_timestamp,
         git_sha=info.git_sha,
+        app_sha=app_sha,
         python_version=_python_version_string(),
         database_version=database_version,
     )

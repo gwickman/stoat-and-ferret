@@ -5,6 +5,7 @@ export interface VersionInfo {
   core_version: string
   build_timestamp: string
   git_sha: string
+  app_sha: string
   python_version: string
   database_version: string
 }

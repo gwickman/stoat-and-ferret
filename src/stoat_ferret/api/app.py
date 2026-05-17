@@ -321,11 +321,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Mark startup complete and emit structured log event
     app.state._startup_ready = True
     app.state._startup_timestamp = datetime.now(timezone.utc).isoformat()
+    app_sha = _get_git_sha()
+    app.state.app_git_sha = app_sha
     logger.info(
         "deployment.startup",
         app_version=app.version,
         core_version=core_version_str,
-        git_sha=_get_git_sha(),
+        git_sha=app_sha,
         sqlite_version=db_version_str,
     )
 

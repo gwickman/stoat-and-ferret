@@ -27,12 +27,13 @@ from stoat_ferret_core import VersionInfo
 
 
 def test_version_response_has_required_fields() -> None:
-    """AppVersionResponse validates when all six required fields are supplied."""
+    """AppVersionResponse validates when all seven required fields are supplied."""
     payload = {
         "app_version": "0.1.0",
         "core_version": "0.1.0",
         "build_timestamp": "2026-04-22T12:00:00Z",
         "git_sha": "abc1234",
+        "app_sha": "def5678",
         "python_version": "3.12.0",
         "database_version": "1e895699ad50",
     }
@@ -41,12 +42,13 @@ def test_version_response_has_required_fields() -> None:
     assert parsed.core_version == "0.1.0"
     assert parsed.build_timestamp == "2026-04-22T12:00:00Z"
     assert parsed.git_sha == "abc1234"
+    assert parsed.app_sha == "def5678"
     assert parsed.python_version == "3.12.0"
     assert parsed.database_version == "1e895699ad50"
 
 
 def test_version_response_rejects_missing_fields() -> None:
-    """Omitting any of the six required fields is a validation error."""
+    """Omitting any of the seven required fields is a validation error."""
     with pytest.raises(ValueError):
         AppVersionResponse.model_validate(
             {
@@ -54,6 +56,7 @@ def test_version_response_rejects_missing_fields() -> None:
                 "core_version": "0.1.0",
                 "build_timestamp": "2026-04-22T12:00:00Z",
                 "git_sha": "abc1234",
+                "app_sha": "def5678",
                 "python_version": "3.12.0",
                 # database_version missing
             }
@@ -126,8 +129,32 @@ async def test_version_endpoint_schema(
     assert parsed.core_version
     assert parsed.build_timestamp
     assert parsed.git_sha  # non-empty (may be literal "unknown")
+    assert parsed.app_sha  # non-empty (may be literal "unknown")
     assert parsed.python_version
     assert parsed.database_version  # non-empty (may be literal "none")
+
+
+# ---------------------------------------------------------------------------
+# FR-004: app_sha is present in the response and reflects runtime-resolved SHA
+# ---------------------------------------------------------------------------
+
+
+async def test_version_endpoint_app_sha_is_present_and_non_empty(
+    version_client: httpx.AsyncClient,
+) -> None:
+    """app_sha is present in the response and is a non-empty string.
+
+    With the full lifespan running, _get_git_sha() resolves to either the
+    actual git SHA or the literal "unknown". Either way the field must be
+    a non-empty string alongside the existing git_sha (Rust compile-time).
+    """
+    resp = await version_client.get("/api/v1/version")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "app_sha" in body, "app_sha field missing from response"
+    assert isinstance(body["app_sha"], str), "app_sha must be a string"
+    assert len(body["app_sha"]) > 0, "app_sha must be non-empty"
+    assert "git_sha" in body, "git_sha (Rust compile-time) must remain in response"
 
 
 # ---------------------------------------------------------------------------
