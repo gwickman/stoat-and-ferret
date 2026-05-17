@@ -8,9 +8,10 @@ parity tests, and system tests for full lifecycle scenarios.
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Generator
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -65,6 +66,33 @@ def _make_seeded_repos() -> tuple[AsyncInMemoryProjectRepository, AsyncInMemoryC
         ]
     )
     return project_repo, clip_repo
+
+
+def _build_noop_render_service(render_repo: InMemoryRenderRepository) -> RenderService:
+    """Create a real RenderService in noop mode with mocked peripherals."""
+    from stoat_ferret.api.settings import Settings
+    from stoat_ferret.api.websocket.manager import ConnectionManager
+    from stoat_ferret.render.checkpoints import RenderCheckpointManager
+    from stoat_ferret.render.executor import RenderExecutor
+    from stoat_ferret.render.queue import RenderQueue
+
+    ws = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock()
+
+    checkpoint_mgr = MagicMock(spec=RenderCheckpointManager)
+    checkpoint_mgr.cleanup_stale = AsyncMock(return_value=0)
+
+    return RenderService(
+        repository=render_repo,
+        queue=RenderQueue(render_repo),
+        executor=MagicMock(spec=RenderExecutor),
+        checkpoint_manager=checkpoint_mgr,
+        connection_manager=ws,
+        settings=Settings(render_mode="noop"),
+    )
+
+
+_NOOP_RENDER_PLAN = json.dumps({"total_duration": 10.0})
 
 
 # ---------- Fixtures ----------
@@ -123,6 +151,31 @@ def render_app(
 def render_client(render_app: FastAPI) -> Generator[TestClient, None, None]:
     """Create test client for render endpoints."""
     with TestClient(render_app) as c:
+        yield c
+
+
+@pytest.fixture
+def noop_render_repo() -> InMemoryRenderRepository:
+    """Isolated render repository for noop queue ownership tests."""
+    return InMemoryRenderRepository()
+
+
+@pytest.fixture
+def noop_render_app(noop_render_repo: InMemoryRenderRepository) -> FastAPI:
+    """Test app wired with a real RenderService in noop mode."""
+    project_repo, clip_repo = _make_seeded_repos()
+    return create_app(
+        render_repository=noop_render_repo,
+        render_service=_build_noop_render_service(noop_render_repo),
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+    )
+
+
+@pytest.fixture
+def noop_render_client(noop_render_app: FastAPI) -> Generator[TestClient, None, None]:
+    """Test client for noop mode render tests."""
+    with TestClient(noop_render_app) as c:
         yield c
 
 
@@ -567,6 +620,57 @@ class TestRenderSemanticPreflight:
         data = _create_job_via_api(render_client)
         assert data["status"] == "queued"
         assert "id" in data
+
+
+# ---------- Noop queue ownership (BL-355 AC-4, AC-5) ----------
+
+
+class TestNoopQueueOwnership:
+    """Noop render mode bypasses the worker queue (BL-355 AC-4, AC-5)."""
+
+    async def test_noop_submit_bypasses_queue_enqueue(
+        self,
+        noop_render_repo: InMemoryRenderRepository,
+    ) -> None:
+        """submit_job in noop mode never calls queue.enqueue; job is stored directly."""
+        service = _build_noop_render_service(noop_render_repo)
+        service._queue.enqueue = AsyncMock(
+            side_effect=AssertionError("enqueue must not be called in noop mode")
+        )
+
+        job = await service.submit_job(
+            project_id=TEST_PROJECT_UUID,
+            output_path="/tmp/noop.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan_json=_NOOP_RENDER_PLAN,
+        )
+
+        assert job.status == RenderStatus.COMPLETED
+
+    def test_noop_submit_sets_completed_status(
+        self,
+        noop_render_client: TestClient,
+    ) -> None:
+        """POST /render in noop mode returns status='completed' synchronously (AC-4)."""
+        resp = noop_render_client.post(
+            "/api/v1/render",
+            json={"project_id": TEST_PROJECT_UUID, "render_plan": _NOOP_RENDER_PLAN},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["status"] == "completed"
+
+    def test_noop_submit_missing_total_duration_returns_422(
+        self,
+        noop_render_client: TestClient,
+    ) -> None:
+        """POST /render in noop mode returns 422 when render_plan lacks total_duration (AC-5)."""
+        resp = noop_render_client.post(
+            "/api/v1/render",
+            json={"project_id": TEST_PROJECT_UUID, "render_plan": "{}"},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["detail"]["code"] == "PREFLIGHT_FAILED"
 
 
 # ---------- Re-export verification ----------
