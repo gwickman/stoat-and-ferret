@@ -226,14 +226,14 @@ Stream events via the global WebSocket `/ws` and reconnect using `Last-Event-ID`
 
 ### Prompt Preamble
 
-> Connect a long-lived WebSocket to `ws://localhost:8765/ws`. Each frame is JSON with `{event_id, type, payload, correlation_id, timestamp}`. Persist the latest `event_id` you successfully processed — including heartbeat frames, whose `event_id` values are valid replay anchors (heartbeats are buffered since BL-356). On reconnect, send the WebSocket handshake with header `Last-Event-ID: <event_id>` so the server replays buffered frames strictly newer than that id. If the id is missing from the buffer (TTL expired or restart), expect every still-buffered frame instead. After a long disconnection, also reconcile against `GET /api/v1/system/state`.
+> Connect a long-lived WebSocket to `ws://localhost:8765/ws`. Each frame is JSON with `{event_id, type, payload, correlation_id, timestamp}`. Persist the latest `event_id` you successfully processed — including heartbeat frames, whose `event_id` values are valid replay anchors (heartbeats are buffered since BL-356). On reconnect, send the WebSocket handshake with header `Last-Event-ID: <event_id>` so the server replays buffered frames strictly newer than that id. If the id is missing from the buffer (TTL expired or restart), expect every still-buffered frame instead. After a long disconnection, also reconcile against `GET /api/v1/system/state` — `active_jobs` now includes render jobs in RUNNING/QUEUED state (BL-357); for authoritative render terminal state, query `GET /api/v1/render/{job_id}` directly.
 
 ### API Sequence
 
 1. Open WebSocket: `ws://localhost:8765/ws`
 2. Read frames in a loop; persist `event_id` from each frame (heartbeats are valid anchors)
 3. On disconnect, reopen the socket with HTTP header `Last-Event-ID: <last_seen>`
-4. After a long outage, also poll `GET /api/v1/system/state` to enumerate `active_jobs` that may have terminated outside the replay window
+4. After a long outage, also poll `GET /api/v1/system/state` — `active_jobs` includes render jobs in RUNNING/QUEUED state and excludes terminal generic jobs older than 300 s (BL-357); for authoritative render terminal state, query `GET /api/v1/render/{job_id}`
 
 ### Sample Frames
 

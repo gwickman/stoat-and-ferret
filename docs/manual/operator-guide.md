@@ -56,7 +56,7 @@ Required fields: `clip_id` (from Step 1), `track_id` (from Step 2), `timeline_st
 
 ### 3. State Snapshot
 
-- `GET /api/v1/system/state` → `{timestamp, active_jobs: [...], active_connections, uptime_seconds}`. Poll on reconnect to reconcile jobs that terminated outside the replay window.
+- `GET /api/v1/system/state` → `{timestamp, active_jobs: [...], active_connections, uptime_seconds}`. `active_jobs` includes render jobs in RUNNING/QUEUED status and excludes terminal generic jobs older than 300 seconds (BL-357). Poll on reconnect to enumerate active render and scan jobs; for authoritative render terminal state, query `GET /api/v1/render/{job_id}` directly.
 
 ## State Machines
 
@@ -66,7 +66,7 @@ Required fields: `clip_id` (from Step 1), `track_id` (from Step 2), `timeline_st
 
 ### WebSocket Connection
 
-`connect → (replay Last-Event-ID → ) live → disconnect`. Replay runs exactly once at accept time; subsequent frames are live broadcasts. On disconnect, buffered events survive for TTL; server restart loses the buffer — use `GET /api/v1/system/state` as the durable fallback.
+`connect → (replay Last-Event-ID → ) live → disconnect`. Replay runs exactly once at accept time; subsequent frames are live broadcasts. On disconnect, buffered events survive for TTL; server restart loses the buffer — use `GET /api/v1/system/state` as the durable fallback (returns render jobs in RUNNING/QUEUED state since BL-357; for authoritative render terminal state also query `GET /api/v1/render/{job_id}`).
 
 ### Render Lifecycle Events
 

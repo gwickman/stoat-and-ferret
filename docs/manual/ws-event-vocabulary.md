@@ -431,6 +431,7 @@ The replay buffer is implemented in `src/stoat_ferret/api/websocket/manager.py`.
 - **No header → no replay.** A reconnect without `Last-Event-ID` receives only live frames — buffered history is not pushed.
 - **Heartbeats are buffered (since BL-356).** They are sent via `manager.broadcast()`, enter the global replay buffer, and their `event_id` values are valid `Last-Event-ID` anchors. After a long disconnect, reconnecting with a heartbeat's `event_id` returns only events strictly after that heartbeat.
 - **Server restart loses the buffer.** It is in-memory only.
+- **`active_jobs` includes render jobs (since BL-357).** `GET /api/v1/system/state` now surfaces render jobs in RUNNING/QUEUED state in `active_jobs` and excludes terminal generic jobs older than 300 seconds. This corrects the reconnect-recovery path documented in `operator-guide.md` §3 — the system/state endpoint is now a valid recovery surface for render state. For authoritative render terminal state after a long disconnect, also query `GET /api/v1/render/{job_id}`.
 
 All `event_id` values are globally unique (single global counter since BL-356), so any buffered `event_id` — from any event type, including render lifecycle events and heartbeats — is an unambiguous replay anchor. The server returns every event strictly after the matching frame in deque order.
 
