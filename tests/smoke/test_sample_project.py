@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,28 @@ import pytest
 
 from stoat_ferret.api.app import create_app, lifespan
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
+from stoat_ferret.db.models import Clip
 from tests.smoke.conftest import SAMPLE_EFFECT_DEFS
+
+
+async def _seed_clip_for_project(client: httpx.AsyncClient, project_id: str) -> None:
+    """Insert a stub clip row so the EMPTY_TIMELINE preflight passes."""
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    repo = AsyncSQLiteClipRepository(db)
+    now = datetime.now(timezone.utc)
+    clip = Clip(
+        id=Clip.new_id(),
+        project_id=project_id,
+        source_video_id="00000000-0000-0000-0000-000000000001",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await repo.add(clip)
 
 
 async def test_sample_project_structure(
@@ -182,6 +204,7 @@ async def test_seed_render_plan_noop_completion(
     )
     assert resp.status_code == 201
     project_id = resp.json()["id"]
+    await _seed_clip_for_project(client, project_id)
 
     render_plan = {
         "settings": {"quality_preset": "medium"},  # FFmpeg vocabulary

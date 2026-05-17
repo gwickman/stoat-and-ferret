@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -21,10 +22,31 @@ from PIL import Image
 
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
+from stoat_ferret.db.models import Clip
 from stoat_ferret.render.executor import RenderExecutor
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
+
+
+async def _seed_clip_for_project(client: httpx.AsyncClient, project_id: str) -> None:
+    """Insert a stub clip row so the EMPTY_TIMELINE preflight passes."""
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    repo = AsyncSQLiteClipRepository(db)
+    now = datetime.now(timezone.utc)
+    clip = Clip(
+        id=Clip.new_id(),
+        project_id=project_id,
+        source_video_id="00000000-0000-0000-0000-000000000001",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await repo.add(clip)
 
 
 def _make_render_plan(codec: str = "libx264") -> str:
@@ -194,6 +216,7 @@ async def test_render_progress_enriched_from_job_render_plan(
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     # Create a render job (no real FFmpeg execution — just verifies job creation)
     resp = await smoke_client.post(
