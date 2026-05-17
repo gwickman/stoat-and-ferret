@@ -356,11 +356,12 @@ async def test_theater_mode_frame_endpoint_returns_jpeg_when_buffer_populated() 
 
 
 async def test_render_events_include_monotonic_event_id() -> None:
-    """Render WebSocket events include a monotonic per-job ``event_id`` (BL-273).
+    """Render WebSocket events include a monotonic ``event_id`` (BL-273, BL-356).
 
     FR-001: every ``build_event`` output carries ``event_id`` in ``event-NNNNN`` form.
     INV-002: values within a single job are strictly monotonically increasing.
-    INV-007 (theme): counter is cleared when throttle state is cleared (terminal state).
+    INV-007 (global): global counter continues past terminal cleanup;
+    ``clear_event_counter`` is a no-op under global-counter mode (BL-356, RISK-003).
     """
     import re
 
@@ -413,6 +414,6 @@ async def test_render_events_include_monotonic_event_id() -> None:
         e for e in captured[len(events_for_job) :] if e.get("payload", {}).get("job_id") == job_id
     ]
     assert new_events, "Expected a broadcast after resume"
-    assert new_events[0]["event_id"] == "event-00000", (
-        "Counter must reset to event-00000 after terminal cleanup (FR-002)"
+    assert int(new_events[0]["event_id"].split("-")[1]) > numeric_ids[-1], (
+        "Counter must strictly increase past previous events under global-counter mode"
     )

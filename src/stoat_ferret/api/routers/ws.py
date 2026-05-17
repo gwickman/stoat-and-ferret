@@ -15,16 +15,21 @@ from stoat_ferret.api.websocket.manager import ConnectionManager
 logger = structlog.get_logger(__name__)
 
 
-async def _heartbeat_loop(ws: WebSocket, interval: float) -> None:
-    """Send periodic heartbeat messages to keep the connection alive.
+async def _heartbeat_loop(ws: WebSocket, manager: ConnectionManager, interval: float) -> None:
+    """Send periodic heartbeat messages via the shared broadcast buffer.
+
+    Sending through ``manager.broadcast()`` ensures heartbeat ``event_id``
+    values enter the global replay buffer, so a heartbeat-derived
+    ``Last-Event-ID`` anchor resolves correctly on reconnect (BL-356).
 
     Args:
-        ws: The WebSocket connection.
+        ws: The WebSocket connection (unused; kept for cancellation coupling).
+        manager: Shared ConnectionManager whose broadcast buffer receives events.
         interval: Seconds between heartbeat messages.
     """
     while True:
         await asyncio.sleep(interval)
-        await ws.send_json(build_event(EventType.HEARTBEAT))
+        await manager.broadcast(build_event(EventType.HEARTBEAT))
 
 
 async def _replay_missed_events(websocket: WebSocket, manager: ConnectionManager) -> None:
@@ -81,7 +86,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     await _replay_missed_events(websocket, manager)
 
     heartbeat_interval = get_settings().ws_heartbeat_interval
-    heartbeat_task = asyncio.create_task(_heartbeat_loop(websocket, heartbeat_interval))
+    heartbeat_task = asyncio.create_task(_heartbeat_loop(websocket, manager, heartbeat_interval))
 
     try:
         while True:

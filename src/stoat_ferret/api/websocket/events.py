@@ -10,12 +10,14 @@ from stoat_ferret.api.middleware.correlation import get_correlation_id
 
 _GLOBAL_EVENT_SCOPE = "__global__"
 
-# Job-scoped event ID counters. Initialized to 0 on first event per job;
-# removed when a job reaches a terminal state via ``clear_event_counter``.
-# Events without a job scope share the ``_GLOBAL_EVENT_SCOPE`` counter.
-# Mutation is serialized by the asyncio event loop (all ``build_event`` call
-# sites execute on the main loop; no ``run_in_executor`` usage).
+# Vestigial per-scope dict retained for API compatibility with
+# ``clear_event_counter()``; always empty under global-counter mode.
 _event_counters: dict[str, int] = {}
+
+# Single monotonic counter shared across all scopes. Asyncio's single-
+# threaded event loop serializes all ``build_event`` calls — no locking
+# required (FRAMEWORK_CONTEXT.md §3 asyncio safety).
+_BROADCAST_COUNTER: int = 0
 
 
 class EventType(str, Enum):
@@ -48,19 +50,20 @@ class EventType(str, Enum):
 
 
 def _next_event_id(scope: str) -> str:
-    """Return the next ``event-NNNNN`` identifier for a scope and increment the counter.
+    """Return the next ``event-NNNNN`` identifier and increment the global counter.
 
     Args:
-        scope: Counter scope key (job_id or the global fallback).
+        scope: Ignored under global-counter mode; retained for call-site
+            compatibility.
 
     Returns:
         Zero-padded monotonic identifier (``event-NNNNN``). Counter rolls over
         past 99999 to ``event-NNNNNN`` without truncation (acceptable per
         INV-003; a single job emitting 100k broadcast events is unlikely).
     """
-    current = _event_counters.get(scope, 0)
-    event_id = f"event-{current:05d}"
-    _event_counters[scope] = current + 1
+    global _BROADCAST_COUNTER
+    event_id = f"event-{_BROADCAST_COUNTER:05d}"
+    _BROADCAST_COUNTER += 1
     return event_id
 
 
@@ -96,16 +99,20 @@ def build_event(
 
 
 def clear_event_counter(job_id: str) -> None:
-    """Remove the per-job event ID counter after a terminal state.
+    """Vestigial no-op under global-counter mode.
 
-    Safe to call for unknown job IDs; a missing key is a no-op.
+    Retained so callers (e.g. ``render/service.py``) need no update.
+    The global counter is unaffected; per-scope restart semantics are
+    intentionally removed as the bug root cause (BL-356, RISK-003).
 
     Args:
-        job_id: The job identifier whose counter should be discarded.
+        job_id: Ignored under global-counter mode.
     """
     _event_counters.pop(job_id, None)
 
 
 def reset_event_counters() -> None:
-    """Clear all event ID counters. Intended for test isolation."""
+    """Reset all event ID counters to zero. Intended for test isolation."""
+    global _BROADCAST_COUNTER
     _event_counters.clear()
+    _BROADCAST_COUNTER = 0
