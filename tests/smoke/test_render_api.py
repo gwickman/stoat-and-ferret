@@ -430,6 +430,17 @@ async def test_render_encoder_refresh(smoke_client: httpx.AsyncClient) -> None:
         assert "detected_at" in encoder
 
 
+async def test_encoder_type_no_repr_prefix(smoke_client: httpx.AsyncClient) -> None:
+    """Verify encoder_type returns bare tokens, not Python enum repr (BL-360)."""
+    response = await smoke_client.get("/api/v1/render/encoders")
+    assert response.status_code == 200
+    data = response.json()
+    for entry in data["encoders"]:
+        assert not entry["encoder_type"].startswith("EncoderType."), (
+            f"encoder_type should be bare token, got: {entry['encoder_type']}"
+        )
+
+
 # ---------- Quality preset translation E2E tests (BL-339) ----------
 
 

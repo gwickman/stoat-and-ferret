@@ -69,6 +69,20 @@ QUALITY_PRESET_MAP: dict[str, str] = {
     "high": "slow",
 }
 
+# Maps EncoderType repr strings to bare token strings for API serialization.
+# PyO3 0.26 str() on an enum produces "EncoderType.Software" (repr form) not "Software".
+# Using a dict keyed on the repr string is more defensive than .name — survives
+# PyO3 repr format changes without KeyError. Fallback split(".")[-1] handles future
+# EncoderType variants not yet in the map.
+_ENCODER_TYPE_NAMES: dict[str, str] = {
+    "EncoderType.Software": "Software",
+    "EncoderType.Nvenc": "Nvenc",
+    "EncoderType.Qsv": "Qsv",
+    "EncoderType.Vaapi": "Vaapi",
+    "EncoderType.Amf": "Amf",
+    "EncoderType.Mf": "Mf",
+}
+
 
 # ---------- Dependency injection ----------
 
@@ -224,7 +238,9 @@ def _detect_encoders_sync() -> list[_RawEncoder]:
             name=enc.name,
             codec=enc.codec,
             is_hardware=enc.is_hardware,
-            encoder_type=str(enc.encoder_type),
+            encoder_type=_ENCODER_TYPE_NAMES.get(
+                str(enc.encoder_type), str(enc.encoder_type).split(".")[-1]
+            ),
             description=enc.description,
         )
         for enc in encoders
