@@ -591,6 +591,37 @@ Each render test creates its own project for isolation — no shared fixtures be
 
 ---
 
+## WebSocket Replay Smoke Tests (`test_websocket_replay.py`, BL-274 / BL-356)
+
+Verifies the end-to-end WebSocket reconnect-with-replay contract. **Event IDs are globally monotonic** since BL-356 — a single global counter mints unique IDs across all scopes, eliminating cross-scope replay bleed.
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_reconnect_replays_events_missed_while_offline` | Reconnecting with `Last-Event-ID` delivers exactly the missed events in order |
+| `test_reconnect_without_header_skips_replay` | Fresh client with no `Last-Event-ID` receives only live events, not buffered history |
+| `test_reconnect_with_unknown_event_id_returns_all_fresh` | Unknown or evicted `Last-Event-ID` returns all currently-buffered events |
+| `test_cross_scope_replay_isolation` | Global counter prevents cross-scope replay bleed: job-b frames emitted before the job-a anchor do not appear in the replay (BL-356-AC-1, v066) |
+| `test_heartbeat_anchor_no_full_buffer_replay` | Heartbeat enters the buffer via `manager.broadcast()`; reconnecting on a heartbeat anchor returns only events strictly after it — no full-buffer replay (BL-356-AC-3, v066) |
+| `test_replay_buffer_memory_bounds` | NFR-001: replay buffer memory scales with deque bound, not client count |
+
+**Note:** The old per-scope `event_id` scheme (per-job counters restarting at `event-00000`) was replaced by BL-356. Agents must persist globally unique event IDs as replay anchors — see `docs/manual/ws-event-vocabulary.md` and `docs/manual/prompt-recipes.md` §5 for the updated reconnect-recovery contract.
+
+---
+
+## System/State Smoke Tests (`test_system_state_smoke.py`, BL-357, v066)
+
+Verifies the `GET /api/v1/system/state` reconnect-recovery surface: render job visibility and stale terminal job pruning. Tests seed state directly via `ASGITransport` app state access.
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_stale_terminal_job_excluded_from_active_jobs` | COMPLETE generic-queue job older than 300 s is excluded from `active_jobs`; fresh RUNNING job remains visible (BL-357-AC-2) |
+| `test_running_render_job_included_in_active_jobs` | RUNNING/QUEUED render job appears in `active_jobs` with `job_type="render"`; terminal render job is excluded after cancellation (BL-357-AC-1) |
+| `test_agent_can_determine_render_terminal_state_after_disconnect` | After simulated disconnect, agent determines render terminal state using only `GET /api/v1/system/state` and `GET /api/v1/render/{job_id}` — no WebSocket replay buffer accessed (BL-357-AC-5) |
+
+**Dependencies:** All three tests require Feature 004 (`system-state-fix-core`) — render repository wired into `_build_system_state()` and `JOB_RETENTION_SECONDS = 300` pruning in `list_jobs()`.
+
+---
+
 ## Endpoint Coverage Map
 
 Shows which endpoints are tested by which test file. Endpoints without smoke test coverage are listed at the bottom.
@@ -651,6 +682,7 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 | `GET /api/v1/render/queue` | test_render_api.py |
 | `POST /api/v1/render/{id}/cancel` | test_render_api.py |
 | `POST /api/v1/render/{id}/retry` | test_render_api.py |
+| `GET /api/v1/system/state` | test_system_state_smoke.py |
 
 ### Residual Coverage Gaps
 
