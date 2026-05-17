@@ -284,6 +284,8 @@ Real response:
 }
 ```
 
+> **Note (BL-357):** `active_jobs` now includes render jobs in RUNNING or QUEUED status and excludes terminal generic jobs older than 300 seconds. The response above was captured before this fix; on current servers, an active render job would appear in `active_jobs`. For authoritative render terminal state, query `GET /api/v1/render/{job_id}`.
+
 Check the replay buffer utilization (exposed via `/health/ready`):
 
 ```bash
@@ -449,6 +451,8 @@ Observed on a clean local run:
 total=0.214810s http=200
 ```
 
+> **Note (BL-357):** `active_jobs` now includes render jobs in RUNNING/QUEUED state and excludes terminal generic jobs older than 300 seconds. The endpoint queries both the generic job queue and the render repository; latency may increase slightly when render jobs are active.
+
 Compare the histogram distribution in Prometheus:
 
 ```bash
@@ -459,9 +463,8 @@ curl -sL http://localhost:8765/metrics | grep 'http_request_duration_seconds_buc
 
 **Branch 5a — Latency scales with `active_jobs` length.**
 
-The snapshot iterates the in-memory job queue. A large `active_jobs`
-list means the job worker is falling behind or jobs are not being
-drained.
+The snapshot queries the in-memory job queue and the render repository (since BL-357). A large `active_jobs`
+list means the job worker is falling behind, render jobs are accumulating in RUNNING/QUEUED state, or jobs are not being drained.
 
 ```bash
 curl -s http://localhost:8765/api/v1/system/state | python -c "import json,sys;d=json.load(sys.stdin); print('active_jobs:', len(d['active_jobs']), 'active_connections:', d['active_connections'])"
