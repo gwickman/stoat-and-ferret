@@ -7,6 +7,7 @@ queue status, cancel, retry, and encoder refresh via the full fixture chain
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from datetime import datetime, timezone
@@ -650,4 +651,11 @@ async def test_noop_mode_status_authoritative(
     assert body["status"] == "completed", (
         f"Expected 'completed' in noop mode, got {body['status']!r}"
     )
-    assert body["id"]
+    job_id = body["id"]
+
+    await asyncio.sleep(0.2)
+    get_resp = await client.get(f"/api/v1/render/{job_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["status"] == "completed", (
+        f"Expected 'completed' after 200ms delay, got {get_resp.json()['status']!r}"
+    )
