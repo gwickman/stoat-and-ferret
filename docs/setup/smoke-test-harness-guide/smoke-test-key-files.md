@@ -48,6 +48,13 @@ The test harness has three tiers:
 |------|-------------------|
 | `tests/smoke/test_sample_project.py` | BL-128/BL-239: full sample project structure (metadata, clips, effects) and render job queueing — asserts `status=="queued"` only (render background worker not wired to lifespan) |
 
+### Phase 4 — WebSocket Replay and System/State Smoke Tests (BL-274 / v056, BL-356 / BL-357 / v066)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_websocket_replay.py` | WebSocket reconnect-with-replay: event ordering, no-header skip, unknown anchor, cross-scope isolation (BL-356-AC-1), heartbeat anchor no-full-buffer-replay (BL-356-AC-3), buffer memory bounds — uses global-counter event IDs since BL-356 |
+| `tests/smoke/test_system_state_smoke.py` | System/state reconnect surface: stale terminal job pruning (BL-357-AC-2), RUNNING/QUEUED render job visibility with `job_type="render"` (BL-357-AC-1), AC-5 agent recovery scenario using `GET /api/v1/system/state` and `GET /api/v1/render/{job_id}` (BL-357-AC-5) — depends on Feature 004 (system-state-fix-core) |
+
 ### Conftest Additions (v018–v019)
 
 | Item | Purpose |
