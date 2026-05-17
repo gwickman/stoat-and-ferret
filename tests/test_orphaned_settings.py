@@ -115,5 +115,6 @@ class TestHeartbeatInterval:
 
             with TestClient(app) as client, client.websocket_connect("/ws"):
                 # The heartbeat loop should have been called with interval=42
+                # Signature: _heartbeat_loop(ws, manager, interval) — interval is arg [2].
                 mock_loop.assert_called_once()
-                assert mock_loop.call_args[0][1] == 42
+                assert mock_loop.call_args[0][2] == 42

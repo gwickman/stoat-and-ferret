@@ -40,30 +40,30 @@ def test_counter_increment() -> None:
     assert third["event_id"] == "event-00002"
 
 
-def test_counter_job_scoped() -> None:
-    """Two jobs have independent counters."""
+def test_counter_global_across_scopes() -> None:
+    """Events from different job scopes share a single global counter (BL-356)."""
     job_a_1 = build_event(EventType.RENDER_PROGRESS, job_id="job-a")
     job_b_1 = build_event(EventType.RENDER_PROGRESS, job_id="job-b")
     job_a_2 = build_event(EventType.RENDER_PROGRESS, job_id="job-a")
     job_b_2 = build_event(EventType.RENDER_PROGRESS, job_id="job-b")
 
     assert job_a_1["event_id"] == "event-00000"
-    assert job_a_2["event_id"] == "event-00001"
-    assert job_b_1["event_id"] == "event-00000"
-    assert job_b_2["event_id"] == "event-00001"
+    assert job_b_1["event_id"] == "event-00001"
+    assert job_a_2["event_id"] == "event-00002"
+    assert job_b_2["event_id"] == "event-00003"
 
 
-def test_counter_cleanup_restarts_at_zero() -> None:
-    """Counter removed after terminal state; next event starts at zero again."""
+def test_clear_event_counter_is_noop_under_global_counter() -> None:
+    """clear_event_counter() is a no-op; global counter continues uninterrupted (BL-356)."""
     build_event(EventType.RENDER_STARTED, job_id="job-3")
     build_event(EventType.RENDER_PROGRESS, job_id="job-3")
     build_event(EventType.RENDER_COMPLETED, job_id="job-3")
 
     clear_event_counter("job-3")
 
-    # A later event for the same job id begins a fresh sequence.
+    # Global counter is unaffected by clear; next event continues the sequence.
     resumed = build_event(EventType.RENDER_STARTED, job_id="job-3")
-    assert resumed["event_id"] == "event-00000"
+    assert resumed["event_id"] == "event-00003"
 
 
 def test_clear_event_counter_unknown_is_noop() -> None:
@@ -73,10 +73,10 @@ def test_clear_event_counter_unknown_is_noop() -> None:
 
 def test_counter_rollover_past_five_digits() -> None:
     """Counter beyond 99999 continues incrementing; format widens (acceptable)."""
-    # Seed the counter near the five-digit limit without executing 100k calls.
+    # Seed the global counter near the five-digit limit without executing 100k calls.
     from stoat_ferret.api.websocket import events
 
-    events._event_counters["job-overflow"] = 99_999
+    events._BROADCAST_COUNTER = 99_999
 
     at_limit = build_event(EventType.RENDER_PROGRESS, job_id="job-overflow")
     past_limit = build_event(EventType.RENDER_PROGRESS, job_id="job-overflow")
