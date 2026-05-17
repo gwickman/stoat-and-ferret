@@ -18,7 +18,7 @@ Every frame emitted on `/ws` (including replays) is a flat JSON object with the 
   "payload":        { /* event-specific fields */ },
   "correlation_id": "9bab51d4-…" /* or */ null,     // request-scoped trace id
   "timestamp":      "2026-04-26T17:24:55.055181+00:00", // ISO 8601, UTC
-  "event_id":       "event-00000"                   // monotonic, scope-dependent
+  "event_id":       "event-00000"                   // monotonic, globally unique (since BL-356)
 }
 ```
 
@@ -30,15 +30,15 @@ Every frame emitted on `/ws` (including replays) is a flat JSON object with the 
 | `timestamp` | string | ISO 8601 with timezone (always UTC). Use for ordering within a scope and for replay TTL filtering. |
 | `event_id` | string | `event-NNNNN` (zero-padded). Persist this to drive `Last-Event-ID` reconnect. |
 
-### `event_id` Scoping (Important)
+### `event_id` Global Counter (BL-356)
 
-The server keeps a separate monotonic counter per **scope**. Scope is chosen by the emitter, not the wire format:
+All events — including render lifecycle events and heartbeats — share a **single global monotonic counter**. `event_id` values are globally unique across all job scopes and event types:
 
-- Render lifecycle events (`render_queued`, `render_started`, `render_progress`, `render_completed`, `render_failed`, `render_cancelled`, `render_frame_available`) use the **per-`job_id`** counter — each render's first frame is `event-00000`.
-- All other events (including `job_progress` from scan/proxy/waveform/thumbnail, `render_queue_status`, `project_created`, `timeline_updated`, `heartbeat`, …) share the **global** counter (`__global__`).
-- The per-job counter is dropped when the job reaches a terminal state (`render_completed` / `render_failed` / `render_cancelled`) via `clear_event_counter` — see `src/stoat_ferret/api/websocket/events.py:50-64,98-106`.
+- Every call to `build_event()` increments the same module-level `_BROADCAST_COUNTER`, regardless of scope argument.
+- Render lifecycle events (`render_queued`, `render_started`, `render_progress`, `render_completed`, `render_failed`, `render_cancelled`, `render_frame_available`) no longer restart at `event-00000` for each job — they receive the next globally unique id.
+- Heartbeats are broadcast via `manager.broadcast()` (since BL-356) and enter the replay buffer with globally unique `event_id` values.
 
-**Consequence for agents:** do not assume `event_id` values are globally monotonic across distinct scopes. Two concurrent renders emit overlapping `event-00000…` sequences. Persist `(scope_hint, event_id)` if you need cross-scope ordering — but for `Last-Event-ID` reconnect it is sufficient to persist the most recent `event_id` you saw on **any** scope: the server's replay buffer is global, scans the deque for that exact id, and returns whatever is strictly after it (see `src/stoat_ferret/api/websocket/manager.py:125-157`).
+**Consequence for agents:** `event_id` values are globally monotonic and unambiguous as replay anchors. Persist the last received `event_id` from **any** event (including heartbeats) as the `Last-Event-ID` header on reconnect — the server returns every buffered event strictly after that id, with no cross-scope collision risk (see `src/stoat_ferret/api/websocket/manager.py:125-157`).
 
 ---
 
@@ -49,7 +49,7 @@ The server keeps a separate monotonic counter per **scope**. Scope is chosen by 
 | # | `type` | Domain | Terminal | Scope | Status | Emitted from |
 |---|--------|--------|----------|-------|--------|--------------|
 | 1 | `health_status` | Meta | n/a | global | Reserved (no emitter) | `events.py:24` |
-| 2 | `heartbeat` | Meta | No (excluded from replay) | global | Captured | `api/routers/ws.py:26` |
+| 2 | `heartbeat` | Meta | No | global | Captured | `api/routers/ws.py:26` |
 | 3 | `scan_started` | Library | No | global | Captured | `api/services/scan.py:113` |
 | 4 | `scan_completed` | Library | **Yes** | global | Captured | `api/services/scan.py:142-147` |
 | 5 | `project_created` | Project | No | global | Captured | `api/routers/projects.py:150-155` |
@@ -63,13 +63,13 @@ The server keeps a separate monotonic counter per **scope**. Scope is chosen by 
 | 13 | `preview.seeking` | Preview (HLS) | No | global | Inferred | `preview/manager.py:504` |
 | 14 | `preview.error` | Preview (HLS) | **Yes** | global | Inferred | `preview/manager.py:423, 585` |
 | 15 | `ai_action` | AI / agents | n/a | global | Reserved (no emitter) | `events.py:38` |
-| 16 | `render_queued` | Render | No | per-`job_id` | Captured | `render/service.py:236` |
-| 17 | `render_started` | Render | No | per-`job_id` | Captured | `render/service.py:238` |
-| 18 | `render_progress` | Render | No | per-`job_id` | Inferred | `render/service.py:541-556` |
-| 19 | `render_frame_available` | Render | No | per-`job_id` | Inferred | `render/service.py:575-586` |
-| 20 | `render_completed` | Render | **Yes** | per-`job_id` | Inferred | `render/service.py:402` |
-| 21 | `render_failed` | Render | **Yes** | per-`job_id` | Inferred | `render/service.py:442` |
-| 22 | `render_cancelled` | Render | **Yes** | per-`job_id` | Inferred | `render/service.py:363` |
+| 16 | `render_queued` | Render | No | global | Captured | `render/service.py:236` |
+| 17 | `render_started` | Render | No | global | Captured | `render/service.py:238` |
+| 18 | `render_progress` | Render | No | global | Inferred | `render/service.py:541-556` |
+| 19 | `render_frame_available` | Render | No | global | Inferred | `render/service.py:575-586` |
+| 20 | `render_completed` | Render | **Yes** | global | Inferred | `render/service.py:402` |
+| 21 | `render_failed` | Render | **Yes** | global | Inferred | `render/service.py:442` |
+| 22 | `render_cancelled` | Render | **Yes** | global | Inferred | `render/service.py:363` |
 | 23 | `render_queue_status` | Render | No | global | Captured | `render/service.py:664-674` |
 | 24 | `proxy.ready` | Proxy | **Yes** (per-video) | global | Inferred | `api/services/proxy_service.py:319-327` |
 
@@ -85,11 +85,11 @@ All payload keys are JSON; `string`/`number`/`boolean`/`null`/`object` follow JS
 
 ### `heartbeat`
 
-Connection liveness ping sent **only to a single connection** via `WebSocket.send_json`, not via `ConnectionManager.broadcast`. As a result:
+Connection liveness ping broadcast via `ConnectionManager.broadcast` (since BL-356). As a result:
 
-- Heartbeats are **never written to the replay buffer** (the buffer only sees `broadcast()` traffic).
-- Reconnects with `Last-Event-ID` will not replay heartbeats — agents cannot reconstruct heartbeat history.
-- The global `event_id` counter is still incremented when the frame is built, so heartbeat `event_id` values appear in the global sequence as gaps from the perspective of a reconnecting client.
+- Heartbeats **are written to the replay buffer** (same path as all other broadcast events).
+- Reconnects with `Last-Event-ID` will replay buffered heartbeats just like any other event.
+- Heartbeat `event_id` values are globally unique and valid as `Last-Event-ID` replay anchors.
 
 ```jsonc
 { "type": "heartbeat", "payload": {}, "correlation_id": null,
@@ -282,7 +282,7 @@ Schema inferred from `preview/manager.py:423, 585`.
 
 ### `render_queued`
 
-Emitted when `RenderService.submit_job` enqueues a job. First per-job event (`event-00000` for the job_id scope).
+Emitted when `RenderService.submit_job` enqueues a job. First render lifecycle event; carries the next globally-unique `event_id` (not `event-00000` — the global counter advances monotonically).
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -384,7 +384,7 @@ Schema inferred from `render/service.py:343-366, 457-474`.
 
 ### `render_queue_status`
 
-Emitted after every render lifecycle transition (`render_queued`, `render_completed`, `render_failed`, `render_cancelled`) so dashboards can refresh queue depth without polling. Uses the **global** event-id counter — not the per-`job_id` scope.
+Emitted after every render lifecycle transition (`render_queued`, `render_completed`, `render_failed`, `render_cancelled`) so dashboards can refresh queue depth without polling. Uses the global event-id counter (all events share the same counter since BL-356).
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -427,27 +427,28 @@ The replay buffer is implemented in `src/stoat_ferret/api/websocket/manager.py`.
 
 - **Single global deque.** All `broadcast()` traffic is appended to one `deque(maxlen=ws_replay_buffer_size)` (default `1000` — `STOAT_WS_REPLAY_BUFFER_SIZE`). There is no per-client filtering. Memory is `O(buffer_size)`, not `O(buffer_size × clients)`.
 - **TTL.** On reconnect, events older than `ws_replay_ttl_seconds` (default `300`) are dropped before the `Last-Event-ID` lookup. An event with a missing or unparseable `timestamp` is treated as fresh (deliberate: a malformed timestamp must not silently drop the event).
-- **`Last-Event-ID` lookup.** The fresh deque is scanned for an entry whose `event_id` matches the header value. If found, every event **strictly after** it is replayed. If not found (TTL eviction, scope mismatch, or never seen), every fresh event is replayed.
+- **`Last-Event-ID` lookup.** The fresh deque is scanned for an entry whose `event_id` matches the header value. If found, every event **strictly after** it is replayed. If not found (TTL eviction or never seen), every fresh event is replayed.
 - **No header → no replay.** A reconnect without `Last-Event-ID` receives only live frames — buffered history is not pushed.
-- **Heartbeats are excluded.** They reach a single client via `send_json`, never `broadcast()`, so they never enter the buffer. After a long disconnect, agents see no historical heartbeats — they MUST reconcile state against [`GET /api/v1/system/state`](operator-guide.md#3-state-snapshot).
+- **Heartbeats are buffered (since BL-356).** They are sent via `manager.broadcast()`, enter the global replay buffer, and their `event_id` values are valid `Last-Event-ID` anchors. After a long disconnect, reconnecting with a heartbeat's `event_id` returns only events strictly after that heartbeat.
 - **Server restart loses the buffer.** It is in-memory only.
 
-Cross-scope reconnect: because the buffer is global but `event_id` is per-scope, a client may legitimately send a `Last-Event-ID` from one scope (e.g. `event-00001` from a render job) and the server resolves it against the global deque order. This is by design — the server returns events strictly after the matching frame regardless of which scope emitted them.
+All `event_id` values are globally unique (single global counter since BL-356), so any buffered `event_id` — from any event type, including render lifecycle events and heartbeats — is an unambiguous replay anchor. The server returns every event strictly after the matching frame in deque order.
 
-Captured replay (validated v042):
+Captured replay (since BL-356, global counter):
 
 ```text
 GET /ws  (Last-Event-ID: event-00006)
-→ event-00001  (render_started, per-job scope)   # the next frame in the deque after event-00006
+→ event-00007  (next frame in the global deque after event-00006)
+→ event-00008  …
 ```
 
-Note that the replayed `event_id` is numerically lower than the requested id — that is correct because they are in different scopes. Use frame **order** in the deque, not numeric `event_id` comparison, to determine "after".
+`event_id` values are globally monotonic — the replayed ids are always numerically greater than the anchor. Use the anchor's deque position, not numeric comparison, as the authoritative "strictly after" boundary (the server scans by identity match then returns the tail).
 
 ---
 
 ## Live Capture Evidence
 
-The following frames were captured against a freshly-started v042 server using `scripts/examples/dump-ws-events.py` on 2026-04-26:
+The following frames were captured against a freshly-started v042 server using `scripts/examples/dump-ws-events.py` on 2026-04-26. **Note:** this capture predates the BL-356 global-counter fix. Render events in the capture show per-scope ids (`event-00000`, `event-00001`) that would overlap with global events in the same session. On current servers (v066+), render events carry globally-unique ids (continuing the global sequence rather than restarting at `event-00000`).
 
 ```jsonl
 {"type":"project_created","payload":{"project_id":"35e76266-…","name":"v042-vocab-test"},"correlation_id":"a2f042be-…","timestamp":"2026-04-26T17:24:06.868483+00:00","event_id":"event-00000"}
