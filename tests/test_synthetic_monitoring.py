@@ -312,7 +312,12 @@ async def test_monitoring_task_continuous_execution() -> None:
         # asyncio.wait (not wait_for) returns after the timeout without cancelling
         # the future itself, preventing a >120s hang if Python 3.10 asyncio
         # cancellation stalls.  If the task finishes in time we verify the error.
-        done, _ = await asyncio.wait({handle}, timeout=5.0)
+        done, pending = await asyncio.wait({handle}, timeout=5.0)
+        # Explicitly cancel and drain pending tasks so no dangling tasks remain
+        # when the event loop closes — prevents IOCP teardown hangs on Windows.
+        for t in pending:
+            t.cancel()
+            await asyncio.gather(t, return_exceptions=True)
         if handle in done:
             with pytest.raises(asyncio.CancelledError):
                 await handle
