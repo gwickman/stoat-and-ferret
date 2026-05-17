@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import tempfile
 from collections.abc import Generator
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,11 +23,15 @@ from fastapi.testclient import TestClient
 from stoat_ferret.api.app import create_app
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+from stoat_ferret.db.models import Clip, Project
+from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.render.executor import RenderExecutor
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService, RenderUnavailableError
+from tests.conftest import TEST_PROJECT_UUID
 
 # Disable Rust bindings — tests exercise Python orchestration logic.
 _PATCH_NO_RUST = patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", False)
@@ -113,6 +118,41 @@ def _make_job(project_id: str = "proj-1") -> RenderJob:
         quality_preset=QualityPreset.STANDARD,
         render_plan=_make_plan_json(),
     )
+
+
+def _make_seeded_repos() -> tuple[AsyncInMemoryProjectRepository, AsyncInMemoryClipRepository]:
+    """Build project and clip repos seeded with one project and one clip."""
+    now = datetime.now(timezone.utc)
+    project_repo = AsyncInMemoryProjectRepository()
+    project_repo.seed(
+        [
+            Project(
+                id=TEST_PROJECT_UUID,
+                name="Test Project",
+                output_width=1920,
+                output_height=1080,
+                output_fps=30,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    clip_repo = AsyncInMemoryClipRepository()
+    clip_repo.seed(
+        [
+            Clip(
+                id="22222222-2222-2222-2222-222222222222",
+                project_id=TEST_PROJECT_UUID,
+                source_video_id="vid-test",
+                in_point=0,
+                out_point=100,
+                timeline_position=0,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    return project_repo, clip_repo
 
 
 # ---------------------------------------------------------------------------
@@ -340,9 +380,12 @@ def shutdown_client(
     shutting_down_service: RenderService,
 ) -> Generator[TestClient, None, None]:
     """Create test client with a service in shutdown mode."""
+    project_repo, clip_repo = _make_seeded_repos()
     app = create_app(
         render_repository=render_repo,
         render_service=shutting_down_service,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
     )
     with TestClient(app) as c:
         yield c
@@ -376,9 +419,12 @@ def ffmpeg_missing_client(
     ffmpeg_missing_service: RenderService,
 ) -> Generator[TestClient, None, None]:
     """Create test client with FFmpeg unavailable."""
+    project_repo, clip_repo = _make_seeded_repos()
     app = create_app(
         render_repository=render_repo,
         render_service=ffmpeg_missing_service,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
     )
     with TestClient(app) as c:
         yield c
@@ -392,7 +438,7 @@ class TestEndpointShutdownRejection:
         resp = shutdown_client.post(
             "/api/v1/render",
             json={
-                "project_id": "proj-1",
+                "project_id": TEST_PROJECT_UUID,
                 "output_format": "mp4",
                 "quality_preset": "standard",
                 "render_plan": _make_plan_json(),
@@ -412,7 +458,7 @@ class TestEndpointFFmpegMissing:
         resp = ffmpeg_missing_client.post(
             "/api/v1/render",
             json={
-                "project_id": "proj-1",
+                "project_id": TEST_PROJECT_UUID,
                 "output_format": "mp4",
                 "quality_preset": "standard",
                 "render_plan": _make_plan_json(),

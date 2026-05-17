@@ -4082,6 +4082,7 @@
         "properties": {
           "project_id": {
             "type": "string",
+            "format": "uuid",
             "title": "Project Id",
             "description": "Project UUID to render"
           },

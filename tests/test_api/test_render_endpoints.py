@@ -17,6 +17,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
+from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+from stoat_ferret.db.models import Clip, Project
+from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.render.encoder_cache import (
     EncoderCacheEntry,
     InMemoryEncoderCacheRepository,
@@ -24,6 +27,45 @@ from stoat_ferret.render.encoder_cache import (
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
+from tests.conftest import TEST_PROJECT_UUID
+
+# ---------- Helpers ----------
+
+
+def _make_seeded_repos() -> tuple[AsyncInMemoryProjectRepository, AsyncInMemoryClipRepository]:
+    """Create project and clip repos seeded with TEST_PROJECT_UUID data."""
+    now = datetime.now(timezone.utc)
+    project_repo = AsyncInMemoryProjectRepository()
+    project_repo.seed(
+        [
+            Project(
+                id=TEST_PROJECT_UUID,
+                name="Test Project",
+                output_width=1920,
+                output_height=1080,
+                output_fps=30,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    clip_repo = AsyncInMemoryClipRepository()
+    clip_repo.seed(
+        [
+            Clip(
+                id="22222222-2222-2222-2222-222222222222",
+                project_id=TEST_PROJECT_UUID,
+                source_video_id="vid-test",
+                in_point=0,
+                out_point=100,
+                timeline_position=0,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    return project_repo, clip_repo
+
 
 # ---------- Fixtures ----------
 
@@ -68,9 +110,12 @@ def render_app(
     mock_render_service: AsyncMock,
 ) -> FastAPI:
     """Create test app with render dependencies injected."""
+    project_repo, clip_repo = _make_seeded_repos()
     return create_app(
         render_repository=render_repo,
         render_service=mock_render_service,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
     )
 
 
@@ -84,7 +129,7 @@ def render_client(render_app: FastAPI) -> Generator[TestClient, None, None]:
 def _create_job_via_api(client: TestClient, **overrides: str) -> dict:
     """Helper to create a render job via POST /render."""
     body = {
-        "project_id": "proj-001",
+        "project_id": TEST_PROJECT_UUID,
         "output_format": "mp4",
         "quality_preset": "standard",
         "render_plan": "{}",
@@ -106,7 +151,7 @@ class TestCreateRenderJob:
         data = _create_job_via_api(render_client)
         assert "id" in data
         assert data["status"] == "queued"
-        assert data["project_id"] == "proj-001"
+        assert data["project_id"] == TEST_PROJECT_UUID
         assert data["output_format"] == "mp4"
         assert data["quality_preset"] == "standard"
         assert data["progress"] == 0.0
@@ -125,7 +170,7 @@ class TestCreateRenderJob:
         """POST /render with invalid format returns 400."""
         resp = render_client.post(
             "/api/v1/render",
-            json={"project_id": "p1", "output_format": "avi"},
+            json={"project_id": TEST_PROJECT_UUID, "output_format": "avi"},
         )
         assert resp.status_code == 400
         assert resp.json()["detail"]["code"] == "INVALID_FORMAT"
@@ -134,7 +179,7 @@ class TestCreateRenderJob:
         """POST /render with invalid preset returns 400."""
         resp = render_client.post(
             "/api/v1/render",
-            json={"project_id": "p1", "quality_preset": "ultra"},
+            json={"project_id": TEST_PROJECT_UUID, "quality_preset": "ultra"},
         )
         assert resp.status_code == 400
         assert resp.json()["detail"]["code"] == "INVALID_PRESET"
@@ -150,7 +195,7 @@ class TestCreateRenderJob:
         mock_render_service.submit_job = AsyncMock(side_effect=PreflightError("Disk full"))
         resp = render_client.post(
             "/api/v1/render",
-            json={"project_id": "p1"},
+            json={"project_id": TEST_PROJECT_UUID},
         )
         assert resp.status_code == 422
         assert resp.json()["detail"]["code"] == "PREFLIGHT_FAILED"
@@ -173,7 +218,7 @@ class TestGetRenderJob:
         assert data["id"] == job_id
         assert data["status"] == "queued"
         assert data["progress"] == 0.0
-        assert data["project_id"] == "proj-001"
+        assert data["project_id"] == TEST_PROJECT_UUID
 
     def test_get_job_not_found(self, render_client: TestClient) -> None:
         """GET /render/{job_id} returns 404 for unknown job."""
@@ -200,8 +245,8 @@ class TestListRenderJobs:
 
     def test_list_returns_jobs(self, render_client: TestClient) -> None:
         """GET /render returns all created jobs."""
-        _create_job_via_api(render_client, project_id="p1")
-        _create_job_via_api(render_client, project_id="p2")
+        _create_job_via_api(render_client)
+        _create_job_via_api(render_client)
 
         resp = render_client.get("/api/v1/render")
         data = resp.json()
@@ -210,8 +255,8 @@ class TestListRenderJobs:
 
     def test_list_pagination(self, render_client: TestClient) -> None:
         """GET /render respects limit and offset."""
-        for i in range(5):
-            _create_job_via_api(render_client, project_id=f"p{i}")
+        for _ in range(5):
+            _create_job_via_api(render_client)
 
         resp = render_client.get("/api/v1/render?limit=2&offset=1")
         data = resp.json()
@@ -227,7 +272,7 @@ class TestListRenderJobs:
     ) -> None:
         """GET /render?status=queued filters by status."""
         created = _create_job_via_api(render_client)
-        _create_job_via_api(render_client, project_id="p2")
+        _create_job_via_api(render_client)
 
         # Manually transition one job to running
         import asyncio
@@ -423,13 +468,105 @@ class TestDependencyInjection:
 
     def test_render_service_unavailable(self) -> None:
         """Endpoints return 503 when render_service is not on app.state."""
-        app = create_app(render_repository=InMemoryRenderRepository())
+        project_repo, clip_repo = _make_seeded_repos()
+        app = create_app(
+            render_repository=InMemoryRenderRepository(),
+            project_repository=project_repo,
+            clip_repository=clip_repo,
+        )
         with TestClient(app) as client:
             resp = client.post(
                 "/api/v1/render",
-                json={"project_id": "p1"},
+                json={"project_id": TEST_PROJECT_UUID},
             )
             assert resp.status_code == 503
+
+
+# ---------- Semantic preflight tests (FR-001, FR-002, FR-003) ----------
+
+
+class TestRenderSemanticPreflight:
+    """Integration tests for project/timeline preflight checks added in BL-355."""
+
+    def test_render_submit_nonexistent_project_returns_404(
+        self,
+        render_repo: InMemoryRenderRepository,
+        mock_render_service: AsyncMock,
+    ) -> None:
+        """POST /render with valid UUID project_id that does not exist returns 404."""
+        project_repo = AsyncInMemoryProjectRepository()  # empty — no projects
+        clip_repo = AsyncInMemoryClipRepository()
+        app = create_app(
+            render_repository=render_repo,
+            render_service=mock_render_service,
+            project_repository=project_repo,
+            clip_repository=clip_repo,
+        )
+        with TestClient(app) as client:
+            resp = client.post(
+                "/api/v1/render",
+                json={"project_id": "00000000-0000-0000-0000-000000000000"},
+            )
+        assert resp.status_code == 404
+        assert resp.json()["detail"]["code"] == "PROJECT_NOT_FOUND"
+
+    def test_render_submit_empty_timeline_returns_422(
+        self,
+        render_repo: InMemoryRenderRepository,
+        mock_render_service: AsyncMock,
+    ) -> None:
+        """POST /render with project that has no clips returns 422 EMPTY_TIMELINE."""
+        now = datetime.now(timezone.utc)
+        project_repo = AsyncInMemoryProjectRepository()
+        project_repo.seed(
+            [
+                Project(
+                    id=TEST_PROJECT_UUID,
+                    name="Empty Project",
+                    output_width=1920,
+                    output_height=1080,
+                    output_fps=30,
+                    created_at=now,
+                    updated_at=now,
+                )
+            ]
+        )
+        clip_repo = AsyncInMemoryClipRepository()  # no clips
+        app = create_app(
+            render_repository=render_repo,
+            render_service=mock_render_service,
+            project_repository=project_repo,
+            clip_repository=clip_repo,
+        )
+        with TestClient(app) as client:
+            resp = client.post(
+                "/api/v1/render",
+                json={"project_id": TEST_PROJECT_UUID},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["detail"]["code"] == "EMPTY_TIMELINE"
+
+    def test_render_submit_non_uuid_project_id_returns_422(
+        self,
+        render_client: TestClient,
+    ) -> None:
+        """POST /render with non-UUID project_id string returns 422 from Pydantic."""
+        resp = render_client.post(
+            "/api/v1/render",
+            json={"project_id": "not-a-uuid"},
+        )
+        assert resp.status_code == 422
+
+    def test_render_submit_noop_terminal_status_is_authoritative(
+        self,
+        render_client: TestClient,
+    ) -> None:
+        """POST /render with valid project+clips succeeds; noop authority in Feature 002."""
+        # Feature 001: verify submission succeeds end-to-end with valid project+clips.
+        # Full noop queue ownership (non-racing terminal status) is implemented in Feature 002.
+        data = _create_job_via_api(render_client)
+        assert data["status"] == "queued"
+        assert "id" in data
 
 
 # ---------- Re-export verification ----------
