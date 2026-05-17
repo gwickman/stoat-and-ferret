@@ -7,9 +7,36 @@ queue status, cancel, retry, and encoder refresh via the full fixture chain
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import httpx
 
+from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
+from stoat_ferret.db.models import Clip
 from stoat_ferret.render.models import RenderStatus
+
+
+async def _seed_clip_for_project(client: httpx.AsyncClient, project_id: str) -> None:
+    """Insert a stub clip row directly so the EMPTY_TIMELINE preflight passes.
+
+    Bypasses the video-existence check in the clips API (the preflight only
+    checks that ≥1 clip row exists, not that source_video_id is valid).
+    """
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    repo = AsyncSQLiteClipRepository(db)
+    now = datetime.now(timezone.utc)
+    clip = Clip(
+        id=Clip.new_id(),
+        project_id=project_id,
+        source_video_id="00000000-0000-0000-0000-000000000001",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await repo.add(clip)
 
 
 async def test_render_create(smoke_client: httpx.AsyncClient) -> None:
@@ -21,6 +48,7 @@ async def test_render_create(smoke_client: httpx.AsyncClient) -> None:
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     resp = await smoke_client.post(
         "/api/v1/render",
@@ -44,6 +72,7 @@ async def test_render_get(smoke_client: httpx.AsyncClient) -> None:
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
@@ -73,6 +102,7 @@ async def test_render_list(smoke_client: httpx.AsyncClient) -> None:
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     await smoke_client.post(
         "/api/v1/render",
@@ -229,6 +259,7 @@ async def test_render_delete(smoke_client: httpx.AsyncClient) -> None:
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
@@ -254,6 +285,7 @@ async def test_render_cancel(smoke_client: httpx.AsyncClient) -> None:
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
@@ -287,6 +319,7 @@ async def test_render_retry(smoke_client: httpx.AsyncClient) -> None:
     )
     assert proj_resp.status_code == 201
     project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
@@ -395,10 +428,12 @@ async def test_render_encoder_refresh(smoke_client: httpx.AsyncClient) -> None:
 
 
 async def _create_project(smoke_client: httpx.AsyncClient, name: str) -> str:
-    """Create a project and return its ID."""
+    """Create a project with a stub clip and return its project ID."""
     resp = await smoke_client.post("/api/v1/projects", json={"name": name})
     assert resp.status_code == 201
-    return resp.json()["id"]
+    project_id = resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
+    return project_id
 
 
 async def test_render_standard_preset_reaches_running(smoke_client: httpx.AsyncClient) -> None:

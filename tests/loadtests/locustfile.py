@@ -255,6 +255,10 @@ class BatchRenderUser(HttpUser):
     def submit_and_poll_batch(self) -> None:
         """Submit a batch of five render jobs and wait for terminal status."""
         suffix = uuid.uuid4().hex[:8]
+        # TODO(BL-deferred): project_id must be a real UUID from a seeded project once the
+        # single-render endpoint enforces UUID+existence (BL-355). The batch endpoint is
+        # currently separate, but if it gains the same preflight, this will start failing.
+        # Track: "Update BatchRenderUser to create a project via seed endpoint before submissions."
         project_id = f"loadtest_project_{suffix}"
         jobs = [
             {
