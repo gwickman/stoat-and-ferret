@@ -222,16 +222,16 @@ The runnable companion is `scripts/examples/wait-for-render.py`.
 
 ## 5. WebSocket Event Monitoring with Reconnect
 
-Stream events via the global WebSocket `/ws` and reconnect using `Last-Event-ID` to skip already-seen frames. The server maintains a single global replay buffer (`ws_replay_buffer_size`) with `ws_replay_ttl_seconds` TTL; heartbeats are excluded from replay.
+Stream events via the global WebSocket `/ws` and reconnect using `Last-Event-ID` to skip already-seen frames. The server maintains a single global replay buffer (`ws_replay_buffer_size`) with `ws_replay_ttl_seconds` TTL. Since BL-356, heartbeats are broadcast via `manager.broadcast()` and enter the replay buffer — their `event_id` values are valid replay anchors.
 
 ### Prompt Preamble
 
-> Connect a long-lived WebSocket to `ws://localhost:8765/ws`. Each frame is JSON with `{event_id, type, payload, correlation_id, timestamp}`. Persist the latest `event_id` you successfully processed. On reconnect, send the WebSocket handshake with header `Last-Event-ID: <event_id>` so the server replays buffered frames strictly newer than that id. If the id is missing from the buffer (TTL expired or restart), expect every still-buffered frame instead. Ignore `type: "heartbeat"`; also reconcile against `GET /api/v1/system/state` after a long disconnection.
+> Connect a long-lived WebSocket to `ws://localhost:8765/ws`. Each frame is JSON with `{event_id, type, payload, correlation_id, timestamp}`. Persist the latest `event_id` you successfully processed — including heartbeat frames, whose `event_id` values are valid replay anchors (heartbeats are buffered since BL-356). On reconnect, send the WebSocket handshake with header `Last-Event-ID: <event_id>` so the server replays buffered frames strictly newer than that id. If the id is missing from the buffer (TTL expired or restart), expect every still-buffered frame instead. After a long disconnection, also reconcile against `GET /api/v1/system/state`.
 
 ### API Sequence
 
 1. Open WebSocket: `ws://localhost:8765/ws`
-2. Read frames in a loop; persist `event_id` from each non-heartbeat frame
+2. Read frames in a loop; persist `event_id` from each frame (heartbeats are valid anchors)
 3. On disconnect, reopen the socket with HTTP header `Last-Event-ID: <last_seen>`
 4. After a long outage, also poll `GET /api/v1/system/state` to enumerate `active_jobs` that may have terminated outside the replay window
 
@@ -253,7 +253,7 @@ Stream events via the global WebSocket `/ws` and reconnect using `Last-Event-ID`
   "payload": { "job_id": "job_xyz", "output_path": "..." },
   "correlation_id": "corr_…", "timestamp": "2026-04-25T12:00:09.789Z" }
 
-// ignore
+// heartbeat — buffered, event_id is a valid Last-Event-ID anchor
 { "event_id": "event-00010", "type": "heartbeat", "payload": {},
   "correlation_id": null, "timestamp": "2026-04-25T12:00:15.000Z" }
 ```
@@ -263,7 +263,7 @@ The runnable companion is `scripts/examples/dump-ws-events.py`.
 ### Error Notes
 
 - WebSocket close frames may surface as `1001`/`1011`; treat as transient and retry with `Last-Event-ID`.
-- `event_id` counter is **per `job_id` scope**, plus a global fallback for events without a job — do not assume a strict global ordering across scopes.
+- `event_id` counter is **globally monotonic** — all events (including heartbeats and render lifecycle events) share a single counter; `event_id` values are globally unique across all scopes (since BL-356).
 
 ---
 
