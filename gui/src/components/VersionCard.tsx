@@ -44,7 +44,8 @@ export default function VersionCard({ version }: VersionCardProps) {
           <Row label="Core" value={version.data.core_version} />
           <Row label="Python" value={version.data.python_version} />
           <Row label="Built" value={version.data.build_timestamp} />
-          <Row label="Git SHA" value={version.data.git_sha} />
+          <Row label="App SHA" value={version.data.app_sha} />
+          <Row label="Core SHA" value={version.data.git_sha} />
           <Row label="DB revision" value={version.data.database_version} />
         </div>
       )}

@@ -13,6 +13,7 @@ describe('useVersion', () => {
       core_version: '0.1.0',
       build_timestamp: '2026-04-22T12:00:00Z',
       git_sha: 'abc1234',
+      app_sha: 'def5678',
       python_version: '3.12.0',
       database_version: '1e895699ad50',
     }

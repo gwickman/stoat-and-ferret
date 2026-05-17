@@ -82,8 +82,9 @@ emits a structured log line so a failure is discoverable in
 4. **Job worker and effect registry initialization.** Logged as
    `job_worker_started` and `worker_started`.
 5. **Startup gate opens.** A single `deployment.startup` log event
-   records the final `app_version`, `core_version`, `git_sha`, and
-   `sqlite_version` that were loaded.
+   records the final `app_version`, `core_version`, `git_sha` (runtime-resolved),
+   and `sqlite_version` that were loaded. The `git_sha` in this event reflects
+   the running code identity (same value as `app_sha` in `/api/v1/version`).
 
 Expected log tail on a clean start (newest entries last):
 
@@ -424,7 +425,7 @@ current file. See
 
 | Event | Meaning |
 |-------|---------|
-| `deployment.startup` | Final startup log line — includes `app_version`, `core_version`, `git_sha`, `sqlite_version`. Its absence after boot indicates startup never completed. |
+| `deployment.startup` | Final startup log line — includes `app_version`, `core_version`, `git_sha` (runtime-resolved, same as `app_sha` in `/api/v1/version`), `sqlite_version`. Its absence after boot indicates startup never completed. |
 | `deployment.migration.*` | Migration result: `already_current`, `success`, `failed`, `unexpected_error`. |
 | `deployment.feature_flag` | One line per `STOAT_*` flag at startup — your audit record for what toggles were active. |
 | `render_shutdown.*` | Shutdown-path render teardown. `killed_remaining` (warning) means FFmpeg did not exit during the grace window. |
@@ -558,10 +559,12 @@ curl -sL http://localhost:8765/metrics | head -5
 ```
 
 `/api/v1/version` reports `app_version`, `core_version`,
-`git_sha`, `python_version`, and `database_version` (the alembic
-revision currently applied). A mismatch between `git_sha` and the
-image tag is a red flag — the image was built from a different commit
-than advertised.
+`git_sha` (Rust compile-time SHA), `app_sha` (runtime-resolved SHA),
+`python_version`, and `database_version` (the alembic revision currently
+applied). Use `app_sha` to verify you are testing the current Python HEAD
+after a Python-only release — `git_sha` reflects the Rust compile time and
+may lag behind by multiple Python-only releases. A mismatch between `app_sha`
+and the expected commit is a reliable signal that the wrong build is deployed.
 
 ---
 
