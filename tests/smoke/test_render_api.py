@@ -442,6 +442,47 @@ async def test_encoder_type_no_repr_prefix(smoke_client: httpx.AsyncClient) -> N
         )
 
 
+# ---------- Render validation smoke tests (BL-355 AC-1, AC-2, AC-3) ----------
+
+
+async def test_render_validation_project_not_found(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with valid UUID for non-existent project returns 404 PROJECT_NOT_FOUND."""
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": "00000000-0000-0000-0000-000000000000"},
+    )
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["detail"]["code"] == "PROJECT_NOT_FOUND"
+
+
+async def test_render_validation_empty_timeline(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with a project that has no clips returns 422 EMPTY_TIMELINE."""
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Empty Timeline Render Test"},
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id},
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["detail"]["code"] == "EMPTY_TIMELINE"
+
+
+async def test_render_validation_non_uuid_project_id(smoke_client: httpx.AsyncClient) -> None:
+    """POST /render with non-UUID project_id returns 422 via Pydantic validation."""
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": "not-a-uuid"},
+    )
+    assert resp.status_code == 422
+
+
 # ---------- Quality preset translation E2E tests (BL-339) ----------
 
 
