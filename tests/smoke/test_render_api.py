@@ -7,10 +7,16 @@ queue status, cancel, retry, and encoder refresh via the full fixture chain
 
 from __future__ import annotations
 
+import json
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
+import pytest
 
+from stoat_ferret.api.app import create_app, lifespan
+from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip
 from stoat_ferret.render.models import RenderStatus
@@ -566,3 +572,71 @@ async def test_render_preview_codec_name_rejected_with_discovery_message(
     body = resp.json()
     assert "/render/formats" in body["detail"]["message"]
     assert "encoder" in body["detail"]["message"]
+
+
+# ---------- Noop mode smoke tests (BL-355 AC-4, AC-5) ----------
+
+
+@pytest.fixture()
+async def smoke_client_noop(tmp_path: Path) -> httpx.AsyncClient:
+    """Async httpx client with STOAT_RENDER_MODE=noop for noop-mode render tests."""
+    db_path = tmp_path / "noop_smoke_test.db"
+
+    orig_db = os.environ.get("STOAT_DATABASE_PATH")
+    orig_thumb = os.environ.get("STOAT_THUMBNAIL_DIR")
+    orig_render_mode = os.environ.get("STOAT_RENDER_MODE")
+
+    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    os.environ["STOAT_RENDER_MODE"] = "noop"
+    get_settings.cache_clear()
+
+    app = create_app()
+
+    async with (
+        lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
+        yield client
+
+    for key, orig in [
+        ("STOAT_DATABASE_PATH", orig_db),
+        ("STOAT_THUMBNAIL_DIR", orig_thumb),
+        ("STOAT_RENDER_MODE", orig_render_mode),
+    ]:
+        if orig is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = orig
+
+    get_settings.cache_clear()
+
+
+async def test_noop_mode_status_authoritative(
+    smoke_client_noop: httpx.AsyncClient,
+) -> None:
+    """POST /render in noop mode returns status='completed'; background worker cannot race."""
+    client = smoke_client_noop
+
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Noop Smoke Test"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+    await _seed_clip_for_project(client, project_id)
+
+    render_plan = json.dumps({"total_duration": 5.0})
+    resp = await client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": render_plan},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "completed", (
+        f"Expected 'completed' in noop mode, got {body['status']!r}"
+    )
+    assert body["id"]
