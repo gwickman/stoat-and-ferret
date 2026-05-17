@@ -142,6 +142,99 @@ def test_reconnect_with_unknown_event_id_returns_all_fresh(
     ]
 
 
+def test_cross_scope_replay_isolation(
+    ws_client: TestClient,
+    ws_manager: ConnectionManager,
+) -> None:
+    """Global counter prevents cross-scope replay bleed.
+
+    Under the old per-scope scheme both jobs would emit event-00000,
+    event-00001, event-00002 (per-scope counters starting at 0).
+    Anchoring on job-a's event-00002 would match job-b's event-00002 in
+    the buffer, causing job-b frames to bleed into the replay.  With the
+    global counter every event_id is unique so only job-a's subsequent
+    frames appear after the anchor.
+    """
+    # job-b emits 3 frames first — under the old scheme these would also
+    # be event-00000..event-00002, overlapping with job-a's future ids.
+    b_events = []
+    for _ in range(3):
+        ev = build_event(EventType.RENDER_PROGRESS, job_id="job-scope-b")
+        _broadcast(ws_manager, ev)
+        b_events.append(ev)
+
+    # job-a emits 3 frames — globally unique ids follow job-b's.
+    a_events = []
+    for _ in range(3):
+        ev = build_event(EventType.RENDER_PROGRESS, job_id="job-scope-a")
+        _broadcast(ws_manager, ev)
+        a_events.append(ev)
+
+    # Anchor on job-a's first event (simulates the last event_id job-a's
+    # client had before a disconnect).
+    anchor = a_events[0]["event_id"]
+
+    with ws_client.websocket_connect(
+        "/ws",
+        headers={"last-event-id": anchor},
+    ) as ws:
+        replayed = [ws.receive_json() for _ in range(2)]
+
+    replayed_ids = [e["event_id"] for e in replayed]
+
+    # Only job-a's subsequent frames (a1, a2) appear.
+    assert replayed_ids == [ev["event_id"] for ev in a_events[1:]]
+    # job-b's frames (broadcast before the anchor) do not bleed into the replay.
+    for bev in b_events:
+        assert bev["event_id"] not in replayed_ids
+
+
+def test_heartbeat_anchor_no_full_buffer_replay(
+    ws_client: TestClient,
+    ws_manager: ConnectionManager,
+) -> None:
+    """Heartbeat via manager.broadcast() enters the buffer.
+
+    Reconnecting with the heartbeat's event_id as Last-Event-ID returns
+    only events strictly after it — no full-buffer replay occurs.
+    """
+    # Emit three regular events before the heartbeat.
+    before_events = []
+    for _ in range(3):
+        ev = build_event(EventType.JOB_PROGRESS, job_id="job-hb-test")
+        _broadcast(ws_manager, ev)
+        before_events.append(ev)
+
+    # Send heartbeat through manager.broadcast() (post-BL-356 path).
+    heartbeat = build_event(EventType.HEARTBEAT)
+    _broadcast(ws_manager, heartbeat)
+    heartbeat_id = heartbeat["event_id"]
+
+    # Emit three more events after the heartbeat.
+    after_events = []
+    for _ in range(3):
+        ev = build_event(EventType.JOB_PROGRESS, job_id="job-hb-test")
+        _broadcast(ws_manager, ev)
+        after_events.append(ev)
+
+    # Reconnect anchored on the heartbeat.
+    with ws_client.websocket_connect(
+        "/ws",
+        headers={"last-event-id": heartbeat_id},
+    ) as ws:
+        replayed = [ws.receive_json() for _ in range(3)]
+
+    replayed_ids = [e["event_id"] for e in replayed]
+
+    # Only the three events after the heartbeat are returned.
+    assert replayed_ids == [ev["event_id"] for ev in after_events]
+    # No pre-heartbeat events appear.
+    for bev in before_events:
+        assert bev["event_id"] not in replayed_ids
+    # The heartbeat frame itself is not replayed.
+    assert heartbeat_id not in replayed_ids
+
+
 def test_replay_buffer_memory_bounds() -> None:
     """NFR-001: total replay buffer memory scales with deque bound, not clients.
 
