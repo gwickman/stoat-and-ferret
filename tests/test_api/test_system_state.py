@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import copy
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 
 from stoat_ferret.jobs.queue import InMemoryJobQueue, JobResult, JobStatus, _JobEntry
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
+from stoat_ferret.render.render_repository import InMemoryRenderRepository
 
 
 def _parse_iso(value: str) -> datetime:
@@ -41,9 +44,12 @@ def test_system_state_lists_submitted_jobs(
     client: TestClient,
     job_queue: InMemoryJobQueue,
 ) -> None:
-    """Jobs tracked by the queue appear in active_jobs with matching fields."""
-    # Seed three jobs in different states directly on the queue so the
-    # test does not depend on scan-handler behaviour.
+    """Jobs tracked by the queue appear in active_jobs with matching fields.
+
+    Fresh terminal jobs (age ≤ 300 s) remain visible; stale terminal jobs
+    (age > 300 s) are pruned from active_jobs.
+    """
+    # Seed three fresh jobs in different states.
     for job_id, status in (
         ("job-pending", JobStatus.PENDING),
         ("job-running", JobStatus.RUNNING),
@@ -53,12 +59,20 @@ def test_system_state_lists_submitted_jobs(
         entry.result = JobResult(job_id=job_id, status=status, progress=0.5)
         job_queue._jobs[job_id] = entry
 
+    # Seed a stale terminal job (submitted > 300 s ago) — must be absent.
+    stale_entry = _JobEntry(job_id="job-stale", job_type="scan", payload={})
+    stale_entry.submitted_at = datetime.now(timezone.utc) - timedelta(seconds=301)
+    stale_entry.result = JobResult(job_id="job-stale", status=JobStatus.COMPLETE, progress=1.0)
+    job_queue._jobs["job-stale"] = stale_entry
+
     response = client.get("/api/v1/system/state")
     assert response.status_code == 200
 
     data = response.json()
     by_id = {job["job_id"]: job for job in data["active_jobs"]}
+    # Fresh terminal job appears; stale terminal job is pruned.
     assert set(by_id) == {"job-pending", "job-running", "job-complete"}
+    assert "job-stale" not in by_id
     assert by_id["job-pending"]["status"] == "pending"
     assert by_id["job-running"]["status"] == "running"
     assert by_id["job-complete"]["status"] == "complete"
@@ -155,3 +169,69 @@ def test_system_state_returns_under_500ms_with_many_jobs(
     assert response.status_code == 200
     assert len(response.json()["active_jobs"]) >= 100
     assert elapsed_ms < 500, f"snapshot latency {elapsed_ms:.1f}ms exceeded 500ms"
+
+
+@pytest.mark.api
+def test_system_state_includes_running_render_jobs(
+    client: TestClient,
+    render_repository: InMemoryRenderRepository,
+) -> None:
+    """RUNNING render jobs from render_repository appear in active_jobs."""
+    render_job = RenderJob.create(
+        project_id="proj-render-1",
+        output_path="/tmp/out.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan="{}",
+    )
+    render_job.status = RenderStatus.RUNNING
+    render_repository._jobs[render_job.id] = copy.deepcopy(render_job)
+
+    response = client.get("/api/v1/system/state")
+    assert response.status_code == 200
+
+    data = response.json()
+    render_summaries = [j for j in data["active_jobs"] if j["job_type"] == "render"]
+    assert len(render_summaries) == 1
+    assert render_summaries[0]["job_id"] == render_job.id
+    assert render_summaries[0]["status"] == "running"
+    assert render_summaries[0]["progress"] == 0.0
+    _parse_iso(render_summaries[0]["submitted_at"])
+
+
+@pytest.mark.api
+def test_system_state_excludes_terminal_render_jobs(
+    client: TestClient,
+    render_repository: InMemoryRenderRepository,
+) -> None:
+    """Terminal render jobs (COMPLETED/FAILED/CANCELLED) do not appear in active_jobs."""
+    completed_job = RenderJob.create(
+        project_id="proj-render-2",
+        output_path="/tmp/done.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan="{}",
+    )
+    completed_job.status = RenderStatus.COMPLETED
+    render_repository._jobs[completed_job.id] = copy.deepcopy(completed_job)
+
+    response = client.get("/api/v1/system/state")
+    assert response.status_code == 200
+
+    render_summaries = [j for j in response.json()["active_jobs"] if j["job_type"] == "render"]
+    assert render_summaries == []
+
+
+@pytest.mark.api
+def test_system_state_render_repository_absent_valid(
+    client: TestClient,
+) -> None:
+    """When render_repository is absent, response is valid with no render jobs."""
+    client.app.state.render_repository = None  # type: ignore[union-attr]
+
+    response = client.get("/api/v1/system/state")
+    assert response.status_code == 200
+
+    data = response.json()
+    render_summaries = [j for j in data["active_jobs"] if j["job_type"] == "render"]
+    assert render_summaries == []
