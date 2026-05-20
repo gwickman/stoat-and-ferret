@@ -62,8 +62,8 @@ Derive `render_plan.total_duration` from the `.duration` value returned by the t
 1. Connect: `WS ws://localhost:8765/ws`. Server pushes one-way JSON.
 2. Each event has shape `{event_id, type, payload, correlation_id?, timestamp}` (ids are monotonic per `job_id` scope, e.g. `event-00042`).
 3. Persist the latest `event_id` you processed.
-4. On reconnect, send HTTP header `Last-Event-ID: <last_event_id>` during the WebSocket handshake — the server replays buffered events strictly newer than that id (TTL `ws_replay_ttl_seconds`, drops `heartbeat`). If the id is missing from the buffer, you receive all still-buffered events.
-5. Heartbeats arrive as `type: "heartbeat"` and are excluded from replay; ignore for state reconstruction.
+4. On reconnect, send HTTP header `Last-Event-ID: <last_event_id>` during the WebSocket handshake — the server replays buffered events strictly newer than that id (TTL `ws_replay_ttl_seconds`; heartbeats are buffered and valid Last-Event-ID anchors). If the id is missing from the buffer, you receive all still-buffered events.
+5. Heartbeats arrive as `type: "heartbeat"` and are buffered in the replay buffer; their `event_id` values are valid Last-Event-ID anchors (BL-356). Include them when persisting the last-seen `event_id`.
 
 ### 3. State Snapshot
 
