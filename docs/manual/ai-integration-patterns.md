@@ -316,7 +316,8 @@ resync agent state with minimal REST polling.
    header during the WebSocket upgrade handshake — the server replays
    buffered events strictly newer than that id. Replay fires **once** at
    accept time; subsequent frames after reconnect are live broadcasts.
-   Heartbeat frames are excluded from replay.
+   Heartbeat frames are buffered in the replay buffer and their `event_id`
+   values are valid Last-Event-ID anchors (BL-356).
 4. The replay buffer has a TTL of `ws_replay_ttl_seconds` (default:
    **300 seconds / 5 minutes**). Events older than the TTL are dropped
    before the `Last-Event-ID` lookup. If the TTL has expired or the
