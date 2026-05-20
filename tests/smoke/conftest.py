@@ -174,6 +174,54 @@ async def smoke_client(tmp_path: Path) -> httpx.AsyncClient:
     get_settings.cache_clear()
 
 
+@pytest.fixture()
+async def smoke_client_noop(tmp_path: Path) -> httpx.AsyncClient:
+    """Async httpx client with STOAT_RENDER_MODE=noop for noop-mode render tests.
+
+    Identical to smoke_client but sets STOAT_RENDER_MODE=noop so that render
+    submit calls return 201 immediately without requiring FFmpeg.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory unique to this test.
+
+    Yields:
+        An httpx.AsyncClient connected to the app via ASGITransport with noop render mode.
+    """
+    db_path = tmp_path / "noop_smoke_test.db"
+
+    orig_db = os.environ.get("STOAT_DATABASE_PATH")
+    orig_thumb = os.environ.get("STOAT_THUMBNAIL_DIR")
+    orig_render_mode = os.environ.get("STOAT_RENDER_MODE")
+
+    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    os.environ["STOAT_RENDER_MODE"] = "noop"
+    get_settings.cache_clear()
+
+    app = create_app()
+
+    async with (
+        lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
+        yield client
+
+    for key, orig in [
+        ("STOAT_DATABASE_PATH", orig_db),
+        ("STOAT_THUMBNAIL_DIR", orig_thumb),
+        ("STOAT_RENDER_MODE", orig_render_mode),
+    ]:
+        if orig is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = orig
+
+    get_settings.cache_clear()
+
+
 def create_version_repo(
     client: httpx.AsyncClient,
 ) -> AsyncSQLiteVersionRepository:
