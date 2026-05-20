@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRenderStore, type OutputFormat, type Encoder } from '../../stores/renderStore'
 import { useProjectStore } from '../../stores/projectStore'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useRenderModal } from '../../hooks/useRenderModal'
 
 interface StartRenderModalProps {
   open: boolean
@@ -69,6 +70,9 @@ export default function StartRenderModal({
   const queueStatus = useRenderStore((s) => s.queueStatus)
   const projectId = useProjectStore((s) => s.selectedProjectId)
 
+  const { timelineLoading, timelineError, fetchTimeline, resetTimeline, renderPlanJson } =
+    useRenderModal()
+
   const [outputFormat, setOutputFormat] = useState('')
   const [qualityPreset, setQualityPreset] = useState('')
   const [encoder, setEncoder] = useState('')
@@ -97,6 +101,13 @@ export default function StartRenderModal({
     const compatible = safe.filter((e) => allowedCodecs.has(e.codec))
     return compatible.length > 0 ? compatible : safe
   })()
+
+  // Fetch timeline when modal opens or projectId changes
+  useEffect(() => {
+    if (open && projectId) {
+      fetchTimeline(projectId)
+    }
+  }, [open, projectId, fetchTimeline])
 
   // Auto-select defaults when formats/encoders load
   useEffect(() => {
@@ -206,7 +217,8 @@ export default function StartRenderModal({
     setSubmitError(null)
     setPreviewCommand(null)
     setPreviewError(null)
-  }, [formats, encoders])
+    resetTimeline()
+  }, [formats, encoders, resetTimeline])
 
   const handleClose = useCallback(() => {
     resetForm()
@@ -250,6 +262,7 @@ export default function StartRenderModal({
           project_id: projectId,
           output_format: outputFormat,
           quality_preset: qualityPreset,
+          render_plan: renderPlanJson ?? '{}',
         }),
       })
       if (!res.ok) {
@@ -396,6 +409,18 @@ export default function StartRenderModal({
             <p className="text-sm text-red-400" data-testid="preview-error">{previewError}</p>
           )}
 
+          {/* Timeline fetch status */}
+          {timelineLoading && (
+            <p className="text-sm text-gray-400" data-testid="timeline-loading">
+              Loading timeline…
+            </p>
+          )}
+          {timelineError && !timelineLoading && (
+            <p className="text-sm text-red-400" data-testid="timeline-error">
+              {timelineError}
+            </p>
+          )}
+
           {submitError && (
             <p className="text-sm text-red-400" data-testid="submit-error">
               {submitError}
@@ -413,7 +438,7 @@ export default function StartRenderModal({
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || timelineLoading || timelineError !== null || !renderPlanJson}
               className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               data-testid="btn-start-render"
             >
