@@ -88,10 +88,10 @@ async def test_running_render_job_included_in_active_jobs(
     project_id = proj_resp.json()["id"]
     await _seed_clip_for_project(smoke_client, project_id)
 
-    # Submit a render job
+    # Submit a render job with render_plan (total_duration required by worker; BL-371)
     render_resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={"project_id": project_id, "render_plan": '{"total_duration": 10.0}'},
     )
     assert render_resp.status_code == 201
     job_id = render_resp.json()["id"]
@@ -145,7 +145,7 @@ async def test_agent_can_determine_render_terminal_state_after_disconnect(
 
     render_resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={"project_id": project_id, "render_plan": '{"total_duration": 10.0}'},
     )
     assert render_resp.status_code == 201
     job_id = render_resp.json()["id"]
