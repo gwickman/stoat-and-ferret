@@ -66,7 +66,7 @@ def run() -> int:
         npx_path,
         "playwright",
         "test",
-        str(SPEC_PATH.relative_to(PROJECT_ROOT / "gui")),
+        SPEC_PATH.relative_to(PROJECT_ROOT / "gui").as_posix(),
     ]
     if headed:
         playwright_args.append("--headed")
