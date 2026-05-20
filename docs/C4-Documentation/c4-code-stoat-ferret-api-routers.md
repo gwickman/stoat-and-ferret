@@ -61,14 +61,38 @@
 - `async get_manifest(session_id: str, request: Request) -> Response`
 - `async get_segment(session_id: str, index: int, request: Request) -> Response`
 
+### System Router (system.py)
+
+Exposes `GET /api/v1/system/state` — a best-effort aggregate snapshot of in-memory job queue, render repository, and WebSocket connection manager state (BL-275).
+
+#### Functions
+
+- `async get_system_state(request: Request) -> SystemState`
+  - Description: Return aggregate in-memory system state. Performs a single-pass scan over the job queue (`job_queue.list_jobs()`), `render_repository` (async SQLite reads for RUNNING/QUEUED render jobs, INV-SNAP-1), and WebSocket connection manager. Missing or transiently-broken subsystems are reported as empty collections (NFR-003); snapshot is best-effort. Wraps `_build_system_state()` in a Prometheus histogram timer.
+  - Location: system.py:47
+  - Route: `GET /api/v1/system/state`
+  - Response: `SystemState` schema (active_jobs, active_connections, uptime_seconds, timestamp)
+
+- `async _build_system_state(request: Request) -> SystemState`
+  - Description: Inner implementation of `get_system_state()`. Reads `app.state.job_queue.list_jobs()`, `app.state.render_repository.list_by_status(RenderStatus.RUNNING)` and `list_by_status(RenderStatus.QUEUED)`, and `app.state.ws_manager.active_connections`. Each subsystem is accessed via `getattr` with `None` default; exceptions are caught and logged as warnings rather than raised (NFR-003 graceful partial state).
+  - Location: system.py:69
+
+- `_compute_uptime_seconds(app_state: object) -> float`
+  - Description: Return seconds elapsed since `app.state._startup_timestamp` (ISO8601 string set by lifespan after all subsystems are ready). Returns `0.0` before the startup gate opens.
+  - Location: system.py:26
+
+#### render_repository Integration
+
+`get_system_state()` reads `app.state.render_repository` (an `AsyncRenderRepository`) to include active render jobs in the system state snapshot. Only RUNNING and QUEUED render jobs are fetched (not historical completed/failed jobs). Each render job is surfaced as a `JobSummary` with `job_type="render"`. The render repository is accessed via `getattr(app_state, "render_repository", None)` so the endpoint degrades gracefully when the render subsystem is unavailable (NFR-003).
+
 ## Dependencies
 
 ### Internal Dependencies
-- stoat_ferret.api.schemas (job, render, preview)
+- stoat_ferret.api.schemas (job, render, preview, system_state)
 - stoat_ferret.api.settings
 - stoat_ferret.db modules (models, repositories)
-- stoat_ferret.jobs.queue
-- stoat_ferret.render (encoder_cache, models, queue, service)
+- stoat_ferret.jobs.queue (AsyncJobQueue, JobSnapshot)
+- stoat_ferret.render (encoder_cache, models, queue, service, repository)
 - stoat_ferret.preview (manager, cache)
 - stoat_ferret_core (Rust FFI)
 
@@ -109,10 +133,17 @@ flowchart TB
         HLS["HLS serving"]
     end
 
+    subgraph SE["System Endpoints"]
+        SST["get_system_state"]
+    end
+
     CRUD -.->|dependency| RenderService["RenderService"]
     ENC -.->|dependency| EncoderCache["EncoderCache"]
     SESS -.->|dependency| PreviewMgr["PreviewManager"]
     HLS -.->|reads from| FileSystem["File System"]
+    SST -.->|reads| JobQueue["JobQueue.list_jobs()"]
+    SST -.->|reads| RenderRepo["RenderRepository"]
+    SST -.->|reads| WSManager["WSManager.active_connections"]
 ```
 
 ## Notes
@@ -121,3 +152,5 @@ flowchart TB
 - FFmpeg detection runs in thread pool to avoid event loop blocking
 - Health checks return 503 for critical failures, 200 for degraded states
 - Follows JSON:API error response patterns
+- `get_system_state()` (system.py) integrates `render_repository` to include RUNNING/QUEUED render jobs in the system snapshot alongside generic job-queue jobs; both are surfaced as `JobSummary` entries with distinct `job_type` values (`"render"` vs the registered job type string)
+- System state endpoint uses best-effort reads (NFR-003): each subsystem (job_queue, render_repository, ws_manager) is accessed via `getattr` with a `None` fallback; exceptions are caught and logged as warnings, never propagated as HTTP 500

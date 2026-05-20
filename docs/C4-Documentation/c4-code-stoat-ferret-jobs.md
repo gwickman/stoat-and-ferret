@@ -11,6 +11,12 @@
 
 ## Code Elements
 
+### Module-Level Constants
+
+- `JOB_RETENTION_SECONDS: int = 300`
+  - Description: Retention window in seconds for terminal jobs in `list_jobs()`. Terminal jobs (COMPLETE, FAILED, TIMEOUT, CANCELLED) older than this value are excluded from snapshot results so that `active_jobs` reflects the current workload rather than all historical jobs. Used by both `InMemoryJobQueue.list_jobs()` and `AsyncioJobQueue.list_jobs()`.
+  - Location: queue.py:20
+
 ### Enumerations
 
 - `JobStatus` (enum)
@@ -27,30 +33,36 @@
 
 - `JobResult`
   - Description: Encapsulates the result of a completed job including status, return value, error, and progress
-  - Location: queue.py:37-52
+  - Location: queue.py:58-74
   - Attributes: job_id (str), status (JobStatus), result (Any), error (str | None), progress (float | None)
+
+- `JobSnapshot` (frozen)
+  - Description: Immutable summary of a job's current state for snapshot endpoints. Used by `/api/v1/system/state` (system.py `get_system_state()`) to report job status without leaking internal queue entry types. `submitted_at` is timezone-aware UTC.
+  - Location: queue.py:77-90
+  - Attributes: job_id (str), job_type (str), status (JobStatus), progress (float | None), submitted_at (datetime)
 
 - `_JobEntry` (internal)
   - Description: Internal storage for a submitted job in InMemoryJobQueue
-  - Location: queue.py:121-131
-  - Attributes: job_id (str), job_type (str), payload (dict), result (JobResult)
+  - Location: queue.py:166-178
+  - Attributes: job_id (str), job_type (str), payload (dict), submitted_at (datetime, default=_utcnow()), result (JobResult, post-init)
 
 - `_AsyncJobEntry` (internal)
   - Description: Internal storage for a job in AsyncioJobQueue with cancellation support
-  - Location: queue.py:308-318
-  - Attributes: job_id (str), job_type (str), payload (dict), status (JobStatus), result (Any), error (str | None), progress (float | None), cancel_event (asyncio.Event)
+  - Location: queue.py:381-393
+  - Attributes: job_id (str), job_type (str), payload (dict), status (JobStatus), result (Any), error (str | None), progress (float | None), submitted_at (datetime, default=_utcnow()), cancel_event (asyncio.Event)
 
 ### Protocols/Interfaces
 
 - `AsyncJobQueue` (Protocol)
   - Description: Protocol defining the async job queue interface for implementations
-  - Location: queue.py:55-117
+  - Location: queue.py:92-164
   - Methods:
     - `async submit(job_type: str, payload: dict[str, Any]) -> str`
     - `async get_status(job_id: str) -> JobStatus`
     - `async get_result(job_id: str) -> JobResult`
     - `set_progress(job_id: str, value: float) -> None`
     - `cancel(job_id: str) -> None`
+    - `list_jobs() -> list[JobSnapshot]` — Return snapshot of all tracked jobs; used by system state endpoint
 
 ### Type Aliases
 
@@ -74,6 +86,7 @@
     - `async submit(job_type: str, payload: dict[str, Any]) -> str` - Submit and execute synchronously
     - `async get_status(job_id: str) -> JobStatus` - Get job status by ID
     - `async get_result(job_id: str) -> JobResult` - Get completed job result
+    - `list_jobs() -> list[JobSnapshot]` - Return snapshot of all tracked jobs in submission order; terminal jobs older than `JOB_RETENTION_SECONDS` are excluded
   - Dependencies: uuid, structlog
 
 - `AsyncioJobQueue`
@@ -88,6 +101,7 @@
     - `async submit(job_type: str, payload: dict[str, Any]) -> str` - Submit job to queue
     - `async get_status(job_id: str) -> JobStatus` - Get job status
     - `async get_result(job_id: str) -> JobResult` - Get job result with progress
+    - `list_jobs() -> list[JobSnapshot]` - Return snapshot of all tracked jobs in submission order; terminal jobs older than `JOB_RETENTION_SECONDS` are excluded
     - `async process_jobs() -> None` - Worker coroutine that processes queue indefinitely
   - Dependencies: asyncio, uuid, structlog
   - Notes: Handles asyncio.TimeoutError from asyncio.wait_for() with Python 3.10 compatibility
