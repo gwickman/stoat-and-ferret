@@ -4,6 +4,28 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v067] — Render-Submit Contract Completion & Doc/Tooling Integrity (2026-05-20)
+
+### Added
+- GUI `StartRenderModal` fetches timeline on project selection and constructs `render_plan.total_duration` in POST body, eliminating 422 failures in noop mode (BL-371, PR #443)
+- `ErrorBoundary` wraps `RenderPage` with structured error detail extraction, preventing React white-screen crashes on 4xx responses (BL-372, PR #444)
+- Smoke tests verify noop render returns 201, job queue visibility, and status polling to discharge deferred render-contract ACs (BL-375, PR #445)
+- `BatchRenderUser` in `locustfile.py` generates RFC 4122 UUIDs for `project_id`, enabling valid load test execution (BL-365, PR #447)
+
+### Fixed
+- Corrected heartbeat-replay contradiction in `ai-integration-patterns.md` and `operator-guide.md`; heartbeats now documented as valid `Last-Event-ID` anchors (BL-376, PR #448)
+- UAT `uat_journey_604` Playwright test path normalized via `.as_posix()`, enabling keyboard-navigation tests on Windows CI (BL-373, PR #452)
+- Removed stale `journey-501` entry from `baseline-uat-failures.json` after BL-371/372 fixes resolved the underlying defect; CI confirmed PASS (BL-374, PR #453)
+
+### Documentation
+- Updated operator guide with canonical render test loop including `render_plan` derivation rule (BL-371, PR #446)
+- Updated C4 architecture documentation for v066 WebSocket replay and job-retention infrastructure (`_BROADCAST_COUNTER`, `_replay_buffer`, `JOB_RETENTION_SECONDS`, `submitted_at`, `render_repository`) (BL-370, PR #449)
+- Added PyO3 0.26 enum non-hashability guardrail to `AGENTS.md` with `str()` workaround (BL-367, PR #450)
+- Documented `encoder_cache` as Phase-7-managed table with `sqlite_master` existence guard pattern in `FRAMEWORK_CONTEXT.md` (BL-368, PR #451)
+- Added path-validation warning to design-phase source-intent-ledger templates; executor templates now read prior `source_correction` fields (BL-369, PR #830)
+
+**Summary:** Render-Submit Contract Completion & Doc/Tooling Integrity — 3 themes (render-submit-contract-completion, agent-and-architecture-doc-accuracy, uat-and-design-tooling-integrity), 12 features, PRs #443–#453 + #830, 2581 passing tests. Closes BL-365, BL-367–BL-376.
+
 ## [v066] — WebSocket Reconnect & Replay Contract (2026-05-17)
 
 ### Fixed
