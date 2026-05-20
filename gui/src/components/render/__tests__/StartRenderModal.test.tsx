@@ -88,20 +88,56 @@ function setupStore(overrides?: {
   useProjectStore.setState({ selectedProjectId: 'proj-1' })
 }
 
+const TIMELINE_RESPONSE = {
+  project_id: 'proj-1',
+  tracks: [],
+  duration: 90.0,
+  version: 1,
+}
+
 const defaultProps = {
   open: true,
   onClose: vi.fn(),
   onSubmitted: vi.fn(),
 }
 
+function mockFetch({
+  timelineStatus = 200,
+  timelineDuration = 90.0,
+  previewCommand = 'ffmpeg -i input.mp4 output.mp4',
+}: {
+  timelineStatus?: number
+  timelineDuration?: number
+  previewCommand?: string
+} = {}) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+    const u = typeof url === 'string' ? url : String(url)
+    if (u.includes('/timeline')) {
+      if (timelineStatus !== 200) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: `Timeline error ${timelineStatus}` }), {
+            status: timelineStatus,
+          }),
+        )
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ ...TIMELINE_RESPONSE, duration: timelineDuration }),
+          { status: 200 },
+        ),
+      )
+    }
+    // render/preview
+    return Promise.resolve(
+      new Response(JSON.stringify({ command: previewCommand }), { status: 200 }),
+    )
+  })
+}
+
 beforeEach(() => {
   vi.restoreAllMocks()
   setupStore()
-  vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
-    Promise.resolve(
-      new Response(JSON.stringify({ command: 'ffmpeg -i input.mp4 output.mp4' }), { status: 200 }),
-    ),
-  )
+  mockFetch()
 })
 
 describe('StartRenderModal', () => {
@@ -199,9 +235,13 @@ describe('StartRenderModal', () => {
 
   // --- Validation ---
 
-  it('shows inline validation error for missing required fields', () => {
+  it('shows inline validation error for missing required fields', async () => {
     setupStore({ formats: [] })
     render(<StartRenderModal {...defaultProps} />)
+    // Wait for timeline fetch to complete so submit button is no longer disabled by loading state
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
     fireEvent.click(screen.getByTestId('btn-start-render'))
     expect(screen.getByTestId('error-output_format').textContent).toBe('Format is required')
   })
@@ -212,6 +252,10 @@ describe('StartRenderModal', () => {
     setupStore({ formats: [] })
     render(<StartRenderModal {...defaultProps} />)
 
+    // Wait for timeline fetch to complete so submit button is no longer disabled by loading state
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
     // Trigger validation
     fireEvent.click(screen.getByTestId('btn-start-render'))
     expect(screen.getByTestId('error-output_format')).toBeDefined()
@@ -234,12 +278,29 @@ describe('StartRenderModal', () => {
 
   // --- Submit ---
 
-  it('submit calls POST /render with correct payload', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({ id: 'job-1' }), { status: 201 })),
-    )
+  it('submit calls POST /render with correct payload including render_plan', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(
+          new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }),
+        )
+      }
+      if (u === '/api/v1/render') {
+        return Promise.resolve(new Response(JSON.stringify({ id: 'job-1' }), { status: 201 }))
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg -i input.mp4 output.mp4' }), { status: 200 }),
+      )
+    })
 
     render(<StartRenderModal {...defaultProps} />)
+
+    // Wait for timeline to load before clicking submit
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
+
     fireEvent.click(screen.getByTestId('btn-start-render'))
 
     await waitFor(() => {
@@ -252,6 +313,7 @@ describe('StartRenderModal', () => {
         project_id: 'proj-1',
         output_format: 'mp4',
         quality_preset: 'draft',
+        render_plan: JSON.stringify({ total_duration: 90.0 }),
       })
     })
   })
@@ -261,11 +323,19 @@ describe('StartRenderModal', () => {
   it('closes modal on successful submission', async () => {
     const onClose = vi.fn()
     const onSubmitted = vi.fn()
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({ id: 'job-1' }), { status: 201 })),
-    )
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      return Promise.resolve(new Response(JSON.stringify({ id: 'job-1' }), { status: 201 }))
+    })
 
     render(<StartRenderModal open={true} onClose={onClose} onSubmitted={onSubmitted} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
     fireEvent.click(screen.getByTestId('btn-start-render'))
 
     await waitFor(() => {
@@ -277,13 +347,21 @@ describe('StartRenderModal', () => {
   // --- Server error ---
 
   it('shows server error on 422/500 response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
-      Promise.resolve(
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      return Promise.resolve(
         new Response(JSON.stringify({ detail: 'Invalid settings' }), { status: 422 }),
-      ),
-    )
+      )
+    })
 
     render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
     fireEvent.click(screen.getByTestId('btn-start-render'))
 
     await waitFor(() => {
@@ -338,5 +416,129 @@ describe('StartRenderModal', () => {
   it('returns null when open is false', () => {
     const { container } = render(<StartRenderModal open={false} onClose={vi.fn()} onSubmitted={vi.fn()} />)
     expect(container.innerHTML).toBe('')
+  })
+
+  // --- Timeline fetch integration ---
+
+  it('submit button is disabled while timelineLoading', () => {
+    // Never resolve the timeline fetch so it stays in loading state
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return new Promise(() => {}) // never resolves
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg' }), { status: 200 }),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    expect(screen.getByTestId('btn-start-render')).toBeDisabled()
+    expect(screen.getByTestId('timeline-loading')).toBeDefined()
+  })
+
+  it('submit button is disabled if timelineError is not null', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: 'Not found' }), { status: 404 }),
+        )
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg' }), { status: 200 }),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('timeline-error')).toBeDefined()
+    })
+    expect(screen.getByTestId('btn-start-render')).toBeDisabled()
+  })
+
+  it('submit button is enabled when timeline.duration is valid', async () => {
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
+  })
+
+  it('error message displays in modal on fetch failure', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: 'Timeline fetch failed' }), { status: 500 }),
+        )
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg' }), { status: 200 }),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('timeline-error').textContent).toBe('Timeline fetch failed')
+    })
+  })
+
+  it('submit button is disabled when timeline.duration is zero', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ ...TIMELINE_RESPONSE, duration: 0 }),
+            { status: 200 },
+          ),
+        )
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg' }), { status: 200 }),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('timeline-error').textContent).toBe('Timeline is empty')
+    })
+    expect(screen.getByTestId('btn-start-render')).toBeDisabled()
+  })
+
+  it('POST body includes render_plan with total_duration', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      if (u === '/api/v1/render') {
+        return Promise.resolve(new Response(JSON.stringify({ id: 'job-1' }), { status: 201 }))
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ command: 'ffmpeg' }), { status: 200 }),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-start-render')).not.toBeDisabled()
+    })
+    fireEvent.click(screen.getByTestId('btn-start-render'))
+
+    await waitFor(() => {
+      const renderCalls = fetchSpy.mock.calls.filter(
+        (call) => call[0] === '/api/v1/render' && (call[1] as RequestInit)?.method === 'POST',
+      )
+      expect(renderCalls.length).toBe(1)
+      const body = JSON.parse((renderCalls[0][1] as RequestInit).body as string)
+      expect(body.render_plan).toBe(JSON.stringify({ total_duration: 90.0 }))
+    })
   })
 })
