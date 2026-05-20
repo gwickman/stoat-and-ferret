@@ -267,8 +267,16 @@ export default function StartRenderModal({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => null)
-        const detail = body?.detail ?? `Server error (${res.status})`
-        setSubmitError(detail)
+        const rawDetail = body?.detail ?? `Server error (${res.status})`
+        let errorMessage: string
+        if (typeof rawDetail === 'string') {
+          errorMessage = rawDetail
+        } else if (rawDetail !== null && typeof rawDetail === 'object' && typeof rawDetail.message === 'string') {
+          errorMessage = rawDetail.message
+        } else {
+          errorMessage = String(rawDetail)
+        }
+        setSubmitError(errorMessage)
         return
       }
       resetForm()

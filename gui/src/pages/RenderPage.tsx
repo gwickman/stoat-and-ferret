@@ -6,6 +6,7 @@ import RenderJobCard from '../components/render/RenderJobCard'
 import StartRenderModal from '../components/render/StartRenderModal'
 import BatchPanel from '../components/batch/BatchPanel'
 import BatchJobList from '../components/batch/BatchJobList'
+import ErrorBoundary from '../components/ErrorBoundary'
 
 /** Categorize jobs into active, pending, and completed buckets. */
 function categorizeJobs(jobs: RenderJob[]) {
@@ -157,6 +158,7 @@ export default function RenderPage() {
   const { active, pending, completed } = useMemo(() => categorizeJobs(jobs), [jobs])
 
   return (
+    <ErrorBoundary>
     <div className="p-6" role="main" id="main-content" tabIndex={-1} data-testid="render-page">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Render</h2>
@@ -308,5 +310,6 @@ export default function RenderPage() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   )
 }
