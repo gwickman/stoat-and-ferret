@@ -511,6 +511,114 @@ describe('StartRenderModal', () => {
     expect(screen.getByTestId('btn-start-render')).toBeDisabled()
   })
 
+  // --- Structured error detail parsing (BL-372) ---
+
+  it('POST /api/v1/render 4xx with detail.message displays message in error UI', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ detail: { code: 'INVALID_RENDER_PLAN', message: 'render_plan.total_duration required' } }),
+          { status: 422 },
+        ),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => expect(screen.getByTestId('btn-start-render')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('btn-start-render'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('submit-error').textContent).toBe('render_plan.total_duration required')
+    })
+  })
+
+  it('POST /api/v1/render 4xx with object detail missing message falls back to String()', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ detail: { code: 'SOME_ERROR' } }),
+          { status: 400 },
+        ),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => expect(screen.getByTestId('btn-start-render')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('btn-start-render'))
+
+    await waitFor(() => {
+      const errEl = screen.getByTestId('submit-error')
+      expect(errEl.textContent).toBe('[object Object]')
+    })
+  })
+
+  it('modal stays open after error; user can see error and retry', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ detail: 'Render queue full' }), { status: 503 }),
+      )
+    })
+
+    const onClose = vi.fn()
+    render(<StartRenderModal open={true} onClose={onClose} onSubmitted={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByTestId('btn-start-render')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('btn-start-render'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('submit-error').textContent).toBe('Render queue full')
+    })
+    // Modal must stay open: start-render-modal still present and onClose not called
+    expect(screen.getByTestId('start-render-modal')).toBeDefined()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('submit-error is a string and does not cause React invariant violation on structured detail', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const u = typeof url === 'string' ? url : String(url)
+      if (u.includes('/timeline')) {
+        return Promise.resolve(new Response(JSON.stringify(TIMELINE_RESPONSE), { status: 200 }))
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ detail: { code: 'INVALID_RENDER_PLAN', message: 'total_duration required' } }),
+          { status: 422 },
+        ),
+      )
+    })
+
+    render(<StartRenderModal {...defaultProps} />)
+
+    await waitFor(() => expect(screen.getByTestId('btn-start-render')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('btn-start-render'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('submit-error').textContent).toBe('total_duration required')
+    })
+
+    const objectsInvalidCalls = consoleErrorSpy.mock.calls.filter((args) =>
+      String(args[0]).includes('Objects are not valid as a React child'),
+    )
+    expect(objectsInvalidCalls).toHaveLength(0)
+    consoleErrorSpy.mockRestore()
+  })
+
   it('POST body includes render_plan with total_duration', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
       const u = typeof url === 'string' ? url : String(url)
