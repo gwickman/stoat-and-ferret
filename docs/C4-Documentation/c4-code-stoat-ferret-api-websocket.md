@@ -15,10 +15,24 @@
 
 #### events.py
 
-- `build_event(event_type: EventType, payload: dict[str, Any] | None = None, correlation_id: str | None = None) -> dict[str, Any]`
-  - Description: Build standardized WebSocket event message with type, payload, correlation ID, and ISO timestamp.
-  - Location: events.py:41
-  - Dependencies: get_correlation_id, datetime, EventType
+**Module-Level Variables:**
+
+- `_BROADCAST_COUNTER: int` — Module-level monotonic integer counter for globally unique `event_id` generation across all WebSocket broadcasts. Incremented by `_next_event_id()` on every `build_event()` call. Serialized by asyncio's single-threaded event loop (no locking required, per FRAMEWORK_CONTEXT.md §3 asyncio safety). Reset to 0 by `reset_event_counters()` for test isolation. Location: events.py:20
+
+**Functions:**
+
+- `build_event(event_type: EventType, payload: dict[str, Any] | None = None, correlation_id: str | None = None, job_id: str | None = None) -> dict[str, Any]`
+  - Description: Build standardized WebSocket event message with type, payload, correlation ID, ISO timestamp, and globally unique `event_id` (via `_BROADCAST_COUNTER`).
+  - Location: events.py:70
+  - Dependencies: get_correlation_id, datetime, EventType, _next_event_id
+
+- `clear_event_counter(job_id: str) -> None`
+  - Description: Vestigial no-op retained for call-site compatibility; global counter is unaffected. Callers in render/service.py need no update.
+  - Location: events.py:101
+
+- `reset_event_counters() -> None`
+  - Description: Reset `_BROADCAST_COUNTER` to 0 and clear `_event_counters`. Intended for test isolation only.
+  - Location: events.py:114
 
 ### Classes/Modules
 
