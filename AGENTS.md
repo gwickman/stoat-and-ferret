@@ -314,6 +314,22 @@ This allows:
 
 The `py_` prefix distinguishes PyO3 binding methods from pure Rust methods, making it clear which methods are part of the Python API.
 
+### Enum Non-Hashability Guardrail
+
+**PyO3 0.26 enum values are not hashable** and cannot be used directly as dict keys or set members. Use `str(enum_field)` instead:
+
+```python
+# Wrong — raises TypeError: unhashable type
+key = my_enum.field        # PyO3 enum is not hashable
+cache[key] = value
+
+# Correct — convert to string first
+key = str(my_enum.field)   # use str() for dict/set keying
+cache[key] = value
+```
+
+This applies to all PyO3-bound enum types.
+
 ### Example: Complete Type with Bindings
 
 ```rust
