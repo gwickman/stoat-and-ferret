@@ -238,6 +238,8 @@ All future migrations for audit or operational (append-only) tables must:
 
 See `docs/design/FRAMEWORK_CONTEXT.md` §3, Database Migrations for the pattern, rationale, and production exemplars.
 
+**Phase-7-managed table exception:** `encoder_cache` is created by `create_tables_async()` at Phase 7, not by Alembic. Any migration referencing `encoder_cache` must include a `sqlite_master` existence check before operating on the table. See `docs/design/FRAMEWORK_CONTEXT.md` §3, Phase-7-Managed Tables for the required guard pattern and canonical example.
+
 ---
 
 ## Structured Event Naming
