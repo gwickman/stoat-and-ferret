@@ -23,7 +23,7 @@ Contents:
 - stoat-and-ferret server running locally (link to `docs/setup/02_development-setup.md`)
 - Python 3.10+ (for the seed script)
 - `httpx` installed (available via `uv sync` — no separate install needed)
-- Video files present in the `/videos/` directory (included in the repository)
+- Video files present in the `videos/demo/` directory (included in the repository)
 
 ### 3. Quick Start
 
@@ -43,7 +43,7 @@ Include sample terminal output showing the summary message (project ID, counts, 
 #### Videos Imported
 
 - Table of the 4 videos used: filename, duration, resolution
-- Note that 2 additional videos are available in `/videos/` but not used in the sample project
+- Note that 2 additional videos are available in `videos/demo/` but not used in the sample project
 - All 6 videos are scanned into the library; only 4 are used in clips
 
 #### Project Structure

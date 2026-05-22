@@ -10,7 +10,7 @@ When a change matches one of the triggers below, the corresponding smoke test up
 | Endpoint request/response schema changes in `src/stoat_ferret/api/schemas/` | Update assertions in the affected test(s) to match new field names, types, or constraints |
 | New effect type registered in `EffectRegistry` via `src/stoat_ferret/effects/definitions.py` | Add preview + apply assertions in `test_effects.py` |
 | New job type added to the job queue system | Add polling test similar to scan workflow in `test_scan_workflow.py` |
-| Video files in `/videos/` added, removed, or replaced | Update `EXPECTED_VIDEOS` dict in `tests/smoke/conftest.py` |
+| Video files in `videos/demo/` added, removed, or replaced | Update `EXPECTED_VIDEOS` dict in `tests/smoke/conftest.py` |
 | Video files change metadata (re-encoded with different codec/resolution) | Update `EXPECTED_VIDEOS` dict values for affected files |
 | Clip schema fields change (new required field, renamed field) | Update clip creation/assertion code in `test_clip_workflow.py` and helpers |
 | Health check adds new check (e.g., Redis check) | Update `test_health.py` assertions to verify the new check key |
@@ -35,9 +35,9 @@ The `EXPECTED_VIDEOS` dictionary in `tests/smoke/conftest.py` is the single sour
 - `video_codec`, `audio_codec` — codec identifiers
 - `frames` — total frame count
 
-### When `/videos/` Changes
+### When `videos/demo/` Changes
 
-If video files in the `/videos/` directory are added, removed, or replaced:
+If video files in the `videos/demo/` directory are added, removed, or replaced:
 
 1. Run `ffprobe` on each changed video to get updated metadata:
    ```bash
@@ -51,7 +51,7 @@ If video files in the `/videos/` directory are added, removed, or replaced:
 
 ### Detection
 
-The "Test Video Fixture Assumptions" impact assessment check (see below) flags changes to the `/videos/` directory during design review.
+The "Test Video Fixture Assumptions" impact assessment check (see below) flags changes to the `videos/demo/` directory during design review.
 
 ## What Happens When a New API Endpoint Is Added
 

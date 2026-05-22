@@ -6,7 +6,7 @@ using the canonical project definition from docs/design/sample_project/.
 
 Usage:
     python scripts/seed_sample_project.py http://localhost:8765
-    python scripts/seed_sample_project.py http://localhost:8765 --videos-dir ./videos
+    python scripts/seed_sample_project.py http://localhost:8765 --videos-dir ./videos/demo
     python scripts/seed_sample_project.py http://localhost:8765 --force
 """
 
@@ -23,7 +23,7 @@ import httpx
 
 PROJECT_NAME = "Running Montage"
 
-# Ordered list of the 4 videos used (subset of 6 in /videos/)
+# Ordered list of the 4 videos used (subset of 6 in videos/demo/)
 SAMPLE_VIDEOS = [
     "78888-568004778_medium.mp4",
     "running1.mp4",
@@ -80,8 +80,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--videos-dir",
-        default="videos",
-        help="Path to directory containing the video files (default: ./videos)",
+        default="videos/demo",
+        help="Path to directory containing the video files (default: ./videos/demo)",
     )
     parser.add_argument(
         "--force",
@@ -111,7 +111,7 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
     """Submit a video scan job and poll until completion."""
     resp = client.post(
         "/api/v1/videos/scan",
-        json={"path": videos_dir, "recursive": True},
+        json={"path": videos_dir, "recursive": False},
     )
     resp.raise_for_status()
     job_id = resp.json()["job_id"]

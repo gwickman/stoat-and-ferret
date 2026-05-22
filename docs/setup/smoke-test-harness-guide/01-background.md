@@ -78,7 +78,7 @@ Pages not yet implemented: Timeline (Phase 3), Preview Player (Phase 4), AI Thea
 
 ## Video Metadata Reference
 
-The `/videos/` directory contains 6 test videos used by the smoke tests. All are H.264 High profile with AAC-LC stereo audio at 48 kHz.
+The `videos/demo/` directory contains 6 test videos used by the smoke tests. All are H.264 High profile with AAC-LC stereo audio at 48 kHz.
 
 | Filename | Duration (s) | Resolution | FPS | Frame Rate (rational) | Frames | File Size | Color Space |
 |----------|-------------|------------|-----|----------------------|--------|-----------|-------------|

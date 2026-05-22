@@ -31,7 +31,7 @@ Naming convention: Phase 1 files use `test_uc<NN>_<short_description>` functions
 
 ### EXPECTED_VIDEOS Dictionary
 
-The canonical source of truth for video file metadata used in assertions. Values are from `ffprobe` inspection of the actual files in `/videos/`.
+The canonical source of truth for video file metadata used in assertions. Values are from `ffprobe` inspection of the actual files in `videos/demo/`.
 
 ```python
 # tests/smoke/conftest.py
@@ -44,7 +44,7 @@ import pytest
 
 from stoat_ferret.api.app import create_app
 
-VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos"
+VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos" / "demo"
 
 EXPECTED_VIDEOS = {
     "120449-720880553_medium.mp4": {
@@ -115,7 +115,7 @@ EXPECTED_VIDEOS = {
 ```python
 @pytest.fixture(scope="session")
 def videos_dir() -> Path:
-    """Path to the real /videos/ directory in the repo root."""
+    """Path to the real videos/demo/ directory in the repo root."""
     assert VIDEOS_DIR.exists(), f"Videos directory not found: {VIDEOS_DIR}"
     assert len(list(VIDEOS_DIR.glob("*.mp4"))) >= 6, "Expected at least 6 MP4 files"
     return VIDEOS_DIR

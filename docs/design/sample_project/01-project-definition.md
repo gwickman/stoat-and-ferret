@@ -4,7 +4,7 @@
 
 **Name:** "Running Montage"
 
-A pre-defined editing project that demonstrates the core features of stoat-and-ferret — clips with precise in/out points, video effects (fade, text overlay, speed control), and crossfade transitions — using the real video files in `/videos/`.
+A pre-defined editing project that demonstrates the core features of stoat-and-ferret — clips with precise in/out points, video effects (fade, text overlay, speed control), and crossfade transitions — using the real video files in `videos/demo/`.
 
 ## Video Selection
 
@@ -24,7 +24,7 @@ Four of the six available videos are used, chosen for a coherent "outdoor/runnin
 | `120449-720880553_medium.mp4` | 35.84 | Does not fit the running/outdoor narrative; kept as additional test data |
 | `15748-266043652_medium.mp4` | 28.93 | Does not fit the running/outdoor narrative; kept as additional test data |
 
-The two excluded videos remain in `/videos/` and are scanned into the library. They are available for other projects and for smoke test assertions (UC-1 verifies all 6 videos are scanned).
+The two excluded videos remain in `videos/demo/` and are scanned into the library. They are available for other projects and for smoke test assertions (UC-1 verifies all 6 videos are scanned).
 
 ## Clip Definitions
 
