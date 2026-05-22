@@ -226,4 +226,10 @@ logs/
 gui/node_modules/
 gui/dist/
 
+# Test evidence artifacts — locally-generated per-run output from UAT and
+# chatbot-driven testing. Each top-level subdir is a single run (typically
+# timestamped YYYYMMDD_HHMMSS). Never tracked.
+uat-evidence/
+chatbot-testing-evidence/
+
 nul
