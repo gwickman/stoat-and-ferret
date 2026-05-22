@@ -9,7 +9,7 @@ Use it as a development reference, testing anchor, or onboarding aid.
 - stoat-and-ferret server running locally (see [Development Setup](../02_development-setup.md))
 - Python 3.10+
 - `httpx` installed (available via `uv sync` — no separate install needed)
-- Video files present in the `videos/` directory (included in the repository)
+- Video files present in the `videos/demo/` directory (included in the repository)
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ python scripts/seed_sample_project.py http://localhost:8765
 
 Options:
 
-- `--videos-dir <path>` — Path to the video files directory (default: `./videos`)
+- `--videos-dir <path>` — Path to the video files directory (default: `./videos/demo`)
 - `--force` — Delete an existing "Running Montage" project and recreate it
 
 Open the GUI to see the result:
@@ -54,7 +54,7 @@ Sample Project 'Running Montage' created successfully!
 
 ### Videos Imported
 
-All 6 videos in `videos/` are scanned into the library. The sample project uses 4 of them:
+All 6 videos in `videos/demo/` are scanned into the library. The sample project uses 4 of them:
 
 | # | Filename | Duration | Resolution | FPS |
 |---|----------|----------|------------|-----|

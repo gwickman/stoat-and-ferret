@@ -19,7 +19,7 @@ from stoat_ferret.api.app import create_app, lifespan
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.version_repository import AsyncSQLiteVersionRepository
 
-VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos"
+VIDEOS_DIR = Path(__file__).parent.parent.parent / "videos" / "demo"
 
 # Effects: (clip_index, effect_type, parameters)
 # Uses registered API effect names, not FFmpeg filter names
@@ -298,7 +298,7 @@ async def scan_videos_and_wait(
     """
     resp = await client.post(
         "/api/v1/videos/scan",
-        json={"path": str(videos_path), "recursive": True},
+        json={"path": str(videos_path), "recursive": False},
     )
     assert resp.status_code == 202
     job_id = resp.json()["job_id"]

@@ -4,7 +4,7 @@
 
 ## Overview
 
-The "Running Montage" is a canonical sample editing project that uses the real video files in `/videos/` to demonstrate stoat-and-ferret's core features: clips with in/out points, video effects (fade, text overlay, speed control), and crossfade transitions. It is a pre-defined, reproducible project that can be created programmatically via a seed script.
+The "Running Montage" is a canonical sample editing project that uses the real video files in `videos/demo/` to demonstrate stoat-and-ferret's core features: clips with in/out points, video effects (fade, text overlay, speed control), and crossfade transitions. It is a pre-defined, reproducible project that can be created programmatically via a seed script.
 
 ## Why It Exists
 

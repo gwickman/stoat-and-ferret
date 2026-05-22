@@ -17,7 +17,7 @@
 
 - `smoke_client(tmp_path: Path) -> httpx.AsyncClient` — Per-test async HTTP client with isolated database and temporary paths. Manually invokes lifespan for app initialization. Location: `conftest.py:123-174`
 
-- `videos_dir() -> Path` — Session-scoped fixture verifying presence of 6+ MP4 files in the `videos/` root directory. Raises AssertionError if missing. Location: `conftest.py:103-120`
+- `videos_dir() -> Path` — Session-scoped fixture verifying presence of 6+ MP4 files in the `videos/demo/` directory. Raises AssertionError if missing. Location: `conftest.py:103-120`
 
 - `sample_project(smoke_client, videos_dir) -> dict` — Creates the canonical "Running Montage" project with 4 clips, 5 effects, and 1 transition. Returns metadata dict with project_id, video_ids, clip_ids, effects_applied, transitions_applied. Location: `conftest.py:408-509`
 
@@ -246,5 +246,5 @@ flowchart TB
 - Manually invokes `lifespan(app)` context manager (httpx.ASGITransport skips ASGI lifespan)
 - Each test gets a fresh SQLite database in `tmp_path` for full isolation
 - Uses real PyO3/Rust `stoat_ferret_core` module (not mocked)
-- Tests expect 6 MP4 files in `videos/` root with hardcoded metadata
+- Tests expect 6 MP4 files in `videos/demo/` with hardcoded metadata
 - All tests are async; `asyncio_mode = "auto"` configured in pytest

@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright  # type: ignore[import-not-found
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JOURNEY_NAME = "scan-library"
 JOURNEY_ID = 201
-VIDEOS_DIR = str((PROJECT_ROOT / "videos").resolve())
+VIDEOS_DIR = str((PROJECT_ROOT / "videos" / "demo").resolve())
 
 # Benign console error patterns to ignore
 BENIGN_PATTERNS = ["favicon"]

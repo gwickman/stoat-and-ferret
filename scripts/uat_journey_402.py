@@ -117,7 +117,7 @@ def run() -> int:
                     # Trigger a scan
                     page.click('[data-testid="scan-button"]')
                     page.wait_for_selector('[data-testid="scan-modal-overlay"]', timeout=5000)
-                    videos_dir = str((PROJECT_ROOT / "videos").resolve())
+                    videos_dir = str((PROJECT_ROOT / "videos" / "demo").resolve())
                     scan_input = page.locator('[data-testid="scan-directory-input"]')
                     scan_input.fill(videos_dir)
                     page.click('[data-testid="scan-submit"]')

@@ -50,7 +50,7 @@ These constants define the exact project structure and must match the project de
 ```python
 PROJECT_NAME = "Running Montage"
 
-# Ordered list of the 4 videos used (subset of 6 in /videos/)
+# Ordered list of the 4 videos used (subset of 6 in videos/demo/)
 SAMPLE_VIDEOS = [
     "78888-568004778_medium.mp4",
     "running1.mp4",
