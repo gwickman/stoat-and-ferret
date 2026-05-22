@@ -151,17 +151,28 @@
 - **Test IDs**: `preview-page`, `no-project-message`, `no-session`, `start-preview-btn`, `status-initializing`, `status-generating`, `progress-bar`, `player-suspense-fallback`, `error-message`, `retry-preview-btn`, `status-expired`, `restart-preview-btn`, `theater-mode-button`
 
 #### `RenderPage(): JSX.Element`
-- **Location**: `gui/src/pages/RenderPage.tsx:34`
-- **Description**: Render queue manager with job sections (active, pending, completed), queue status bar, and start render modal. Categorizes jobs by status and displays each with RenderJobCard. Uses useRenderEvents hook for WebSocket updates.
+- **Location**: `gui/src/pages/RenderPage.tsx:47`
+- **Description**: Render queue manager with job sections (active, pending, completed), queue status bar, start render modal, and optional batch panel (feature-flagged). Wraps all content in `<ErrorBoundary>` to prevent white-screen unmounts. Categorizes jobs by status and displays each with RenderJobCard. Uses useRenderEvents hook for WebSocket updates and accessibility announcements via useAnnounce.
 - **Props**: None
 - **State Management**:
   - `useRenderStore()` -- jobs, queueStatus, isLoading, error, fetchJobs, fetchQueueStatus, fetchEncoders, fetchFormats
-- **Local State**: `startModalOpen` (boolean)
+- **Local State**:
+  - `startModalOpen: boolean` — controls StartRenderModal visibility
+  - `activeTab: RenderTab ('queue' | 'batch')` — current tab selection
+  - `activeBatchId: string | null` — most recently submitted batch for polling
+  - `batchEnabled: boolean` — set by GET /api/v1/flags batch_rendering field; defaults false
+- **Error Boundary**: Page content is wrapped in `<ErrorBoundary>` (v068 Feature 004, BL-372). On any unhandled render-phase throw in the subtree, ErrorBoundary shows a fallback with dismiss button; children re-render after dismiss.
+- **Hook Dependencies**:
+  - `useRenderStore()` — job/queue state and fetch methods
+  - `useAnnounce()` — ARIA live region announcements on status transitions and errors
+  - `useBatchJobs(activeBatchId)` — polls batch progress when batch tab is active
+  - Child `StartRenderModal` uses `useRenderModal` — fetches project timeline and constructs render_plan
 - **Helper Function**: `categorizeJobs(jobs)` -- returns { active (running), pending (queued), completed (completed|failed|cancelled) }
-- **Child Components**: RenderJobCard (map over each job), StartRenderModal
+- **Child Components**: RenderJobCard (map over each job), StartRenderModal, BatchPanel, BatchJobList, ErrorBoundary
 - **Lifecycle**:
-  - On mount: fetchJobs, fetchQueueStatus, fetchEncoders, fetchFormats
+  - On mount: fetchJobs, fetchQueueStatus, fetchEncoders, fetchFormats; GET /api/v1/flags for batchEnabled
   - WebSocket connection via useRenderEvents for real-time job updates
+  - Accessibility: announces progress at 2s debounce; announces completion and failure immediately
 - **Queue Status Display**: Active count, Pending count, Max Concurrent capacity; shows "Loading queue status..." if null and isLoading
 - **Job Sections**:
   - Active: Running jobs with progress
@@ -174,7 +185,8 @@
   - GET `/api/v1/render/queue` -- fetch queue status
   - GET `/api/v1/render/encoders` -- fetch available encoders
   - GET `/api/v1/render/formats` -- fetch output formats
-- **Test IDs**: `render-page`, `queue-status-bar`, `active-jobs-section`, `pending-jobs-section`, `completed-jobs-section`, `start-render-btn`, `empty-state`, `job-list`
+  - GET `/api/v1/flags` -- check batch_rendering feature flag on mount
+- **Test IDs**: `render-page`, `render-tabs`, `render-tab-queue`, `render-tab-batch`, `queue-status-bar`, `active-jobs-section`, `pending-jobs-section`, `completed-jobs-section`, `start-render-btn`, `empty-state`, `job-list`
 
 ## Dependencies
 
@@ -255,10 +267,13 @@ classDiagram
         class RenderPage {
             +RenderPage() JSX
             useRenderStore()
-            useRenderEvents()
+            useAnnounce()
+            useBatchJobs()
             -categorizeJobs()
+            -ErrorBoundary wrapper
             -three job sections
             -queue status bar
+            -batch tab (feature-flagged)
         }
     }
 

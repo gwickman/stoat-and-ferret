@@ -139,6 +139,23 @@
 - **Event Types**: 8 render-prefixed event types (internal set constant)
 - **Dependencies**: `useWebSocket`, `react.useEffect`, `react.useRef`, `useRenderStore`, JSON parsing
 
+#### `useRenderModal(): UseRenderModalResult`
+- **Location**: `gui/src/hooks/useRenderModal.ts:13`
+- **Description**: Manages timeline fetching and render plan construction for the StartRenderModal. On `fetchTimeline(projectId)` call, sends GET `/api/v1/projects/{projectId}/timeline`, validates that the returned duration is positive, and derives `renderPlanJson` as a JSON string `{"total_duration": timeline.duration}`. Aborts any in-flight request on subsequent calls or on `resetTimeline()`. Designed to be called with the project ID obtained from `useProjectStore` by the consuming component.
+- **Signature**: `useRenderModal(): UseRenderModalResult`
+- **State Managed**:
+  - `timelineLoading: boolean` — true while fetching timeline
+  - `timeline: TimelineResponse | null` — fetched timeline data
+  - `timelineError: string | null` — error message when fetch fails or timeline duration is absent/zero
+- **Derived**:
+  - `renderPlanJson: string | null` — `JSON.stringify({ total_duration: timeline.duration })` when duration > 0; null otherwise
+- **Methods**:
+  - `fetchTimeline(projectId: string): void` — initiates fetch; aborts prior request via `AbortController`
+  - `resetTimeline(): void` — aborts in-flight request and resets all state to initial values
+- **Return Type**: `UseRenderModalResult { timelineLoading, timeline, timelineError, fetchTimeline, resetTimeline, renderPlanJson }`
+- **Dependencies**: `react.useState`, `react.useCallback`, `react.useRef`, fetch API; consuming component provides projectId from `useProjectStore`
+- **API Endpoints**: `GET /api/v1/projects/{projectId}/timeline`
+
 #### `useSettings(): { theme, shortcuts, setTheme, updateShortcut, resetDefaults }`
 - **Location**: `gui/src/hooks/useSettings.ts:11`
 - **Description**: Component-level access hook for `settingsStore`. Subscribes to individual store slices (theme, shortcuts, and action methods) to avoid unnecessary re-renders. Intended for use inside React components; non-React modules should import `useSettingsStore` directly.
@@ -177,6 +194,7 @@
 - `gui/src/stores/batchStore` -- batch job tracking (useBatchJobs)
 - `gui/src/stores/settingsStore` -- theme and shortcut state (useSettings)
 - `gui/src/stores/workspaceStore` -- panel layout state (useWorkspace)
+- `gui/src/stores/projectStore` -- provides selectedProjectId to consuming components that call useRenderModal.fetchTimeline()
 - `gui/src/generated/types` -- Effect, Project, Clip, Video, SortField, SortOrder
 
 ### External Dependencies
@@ -208,6 +226,7 @@
 | useRenderEvents | `/api/v1/render/queue` | GET | On reconnection |
 | useBatchJobs | `/api/v1/render/batch/{batchId}` | GET | 1s polling (backoff on error) |
 | useVersion | `/api/v1/version` | GET | On mount |
+| useRenderModal | `/api/v1/projects/{projectId}/timeline` | GET | On fetchTimeline(projectId) call |
 
 ## Relationships
 
@@ -233,6 +252,7 @@ flowchart TB
         Projects["useProjects<br/>/api/v1/projects"]
         Videos["useVideos<br/>/api/v1/videos"]
         Version["useVersion<br/>/api/v1/version"]
+        RenderModal["useRenderModal<br/>/api/v1/projects/{id}/timeline"]
     end
 
     subgraph UISync["UI State Sync"]
