@@ -167,6 +167,8 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | v034 | delta | 2026-04-11 | HEAD | encoder_cache.py gap; post-v031 GUI drift (BL-241) |
 | v037–v046 | delta | 2026-04-30 | HEAD | Infrastructure update: WebSocket render events (render_progress, render_frame_available), /api/v1/version and /api/v1/flags endpoints, frame_preview.jpg endpoint, Dockerfile/Dockerfile.ci distinction, docker-compose local dev purpose, health subsystem checks (database/Rust core/filesystem/startup gate), migration_history and feature_flag_log tables, migration count 7→9, MigrationService and SyntheticMonitoringTask services, synthetic monitoring Prometheus metrics (BL-300) |
 | v060 | delta | 2026-05-15 | HEAD | encoder field added to CreateRenderRequest (v060 Feature 002); C4 schema docs updated manually (v063 Feature 004, BL-350) |
+| v067 | manual | 2026-05-20 | HEAD | Manual updates to api-websocket, api-routers, jobs C4 files (BL-370); WebSocket client identity token docs; render_plan payload in API schemas |
+| v068 | manual | 2026-05-22 | HEAD | useRenderModal hook (c4-code-gui-hooks.md); ErrorBoundary component + StartRenderModal render_plan/error-extraction updates (c4-code-gui-components-render.md); RenderPage ErrorBoundary wrapping (c4-code-gui-pages.md); test_render_contract.py 7 test cases (c4-code-tests-smoke.md) — BL-377 |
 
 ## Regeneration Instructions
 

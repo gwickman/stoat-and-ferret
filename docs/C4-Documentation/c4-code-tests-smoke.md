@@ -53,6 +53,7 @@
 | Audio | test_audio.py | 2 | `/audio/mix` configure and preview |
 | Composition | test_compose.py | 3 | `/compose/presets`, layout application |
 | Render | test_render_api.py | 10 | `/render` CRUD, encoders, formats, queue, preview |
+| Render Contract | test_render_contract.py | 7 | `/render` noop mode contract, render_plan validation, error detail shape (BL-371, BL-372) |
 | Batch | test_batch.py | 2 | `/render/batch` submit, poll, persistence across restart |
 | Proxy | test_proxy.py | 4 | `/videos/{id}/proxy` generate, status, delete, batch |
 | Preview | test_preview_endpoints.py, test_preview.py | 6 | Preview start, cache status, thumbnail strip, waveform |
@@ -63,8 +64,8 @@
 
 ## Test Inventory
 
-- **Total Tests**: 77 (verified by `pytest --co -q`)
-- **Test Files**: 20
+- **Total Tests**: 84 (77 pre-v068 + 7 from test_render_contract.py; verify with `pytest --co -q`)
+- **Test Files**: 21
 - **Fixture Files**: 1 (conftest.py)
 
 | File | Test Count | Description |
@@ -80,6 +81,7 @@
 | test_audio.py | 2 | Audio mix configure/preview with filter strings |
 | test_compose.py | 3 | Preset discovery, layout application, invalid preset |
 | test_render_api.py | 10 | CRUD, encoders, formats, queue, preview (single + all formats), delete |
+| test_render_contract.py | 7 | Render plan contract (noop mode): plan construction from timeline, multi-project isolation, 422 without total_duration, structured detail shape (BL-371, BL-372) |
 | test_batch.py | 2 | Batch submit/poll, persistence across restart |
 | test_proxy.py | 4 | Generate, status, delete, batch operations |
 | test_preview_endpoints.py | 5 | Preview start, proxy, cache, thumbnail strip, waveform |
@@ -89,6 +91,32 @@
 | test_negative_paths.py | 6 | Invalid track type, nonexistent resources, empty tracks, insufficient inputs |
 | test_sample_project.py | 1 | Running Montage regression: clip frames, source videos, effect mappings, render job queueing (BL-239) |
 | conftest.py | 0 | Fixtures and helpers (no direct tests) |
+
+### Render Contract Test Module
+
+**File**: `tests/smoke/test_render_contract.py`
+**Added**: v067/v068 (BL-371, BL-372)
+**Behavioral scope**: Verifies that `render_plan.total_duration` is required and correctly derived from timeline duration in noop mode (`STOAT_RENDER_MODE=noop`). Also verifies the structured error `detail` shape expected by the frontend.
+
+**Helper Functions**:
+- `_seed_stub_clip(client, project_id)` — inserts a stub clip row directly via `AsyncSQLiteClipRepository` to bypass video-scan prerequisites, enabling render tests without real video files
+- `_create_project_with_timeline(client, project_name, timeline_end)` — creates a project + clip + timeline track + one clip spanning `[0, timeline_end]` seconds; returns `(project_id, timeline_end)`
+
+**Fixture**: `smoke_client_noop` — smoke client with `STOAT_RENDER_MODE=noop` environment override; adds a non-local `conftest.py` fixture (co-located in `tests/smoke/`)
+
+**Test Cases** (7 total):
+
+| Test | Behavioral Scope |
+|------|-----------------|
+| `test_render_plan_construction_from_timeline` | GETs timeline for a 100s project, submits render with `render_plan.total_duration == duration`, asserts 201. Verifies plan is correctly derived from timeline (BL-371-AC-2). |
+| `test_render_plan_multiple_projects` | Creates two projects (100s, 200s), submits separate renders with respective durations, asserts both return 201. Verifies distinct projects produce distinct render_plan values. |
+| `test_render_422_without_render_plan` | Submits render with `render_plan: {}` (missing total_duration) in noop mode, asserts 422 with `detail.code == "PREFLIGHT_FAILED"` and `"total_duration"` in `detail.message`. Negative test confirming the guard is active (BL-371-AC-1 boundary). |
+| `test_error_response_detail_message` | Triggers 422 via missing total_duration, asserts `detail` is a `dict` (not a string or object) with `code` and `message` string fields. Verifies backend emits structured detail so frontend can extract `detail.message` safely (BL-372-AC-1 backend assertion). |
+| `test_error_response_missing_detail` | Submits render for a non-existent project (all-zeros UUID) with valid render_plan, asserts 404 with structured `detail` dict containing `code` and `message`. Verifies the fallback error path also returns structured detail. |
+| `test_noop_render_success` | Creates a 50s project, submits render, asserts 201 and job appears in GET /api/v1/render list. Verifies job is visible in render queue after submission (BL-371-AC-1, BL-371-AC-3). |
+| `test_job_polling_noop_completed` | Submits a noop render, polls GET /api/v1/render/{job_id} until status == "completed" (timeout 10s). Verifies job reports completed status on re-fetch (BL-371-AC-3). |
+
+**Render Plan Requirement**: In `STOAT_RENDER_MODE=noop`, `RenderService.submit_job()` checks `plan_data.get("total_duration") is None` and raises `PreflightError` (→ 422 PREFLIGHT_FAILED). The test suite acts as a contract boundary ensuring the GUI's `useRenderModal` hook derives total_duration from the project timeline before submitting.
 
 ## Dependencies
 
