@@ -69,12 +69,12 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 
 // Step 6 → RenderJobResponse (id is the job_id for polling GET /api/v1/render/{id})
 { "id": "job_xyz789", "project_id": "<project_id>", "status": "queued",
-  "output_path": "/abs/render/dir/<project_id>.mp4", "output_format": "mp4",
+  "output_path": "renders/<project_id>.mp4", "output_format": "mp4",
   "quality_preset": "standard", "progress": 0.0, "retry_count": 0, … }
 
 // Step 7 → RenderJobResponse (200, terminal)
 { "job_id": "job_xyz789", "status": "completed", "progress": 1.0,
-  "result": { "output_path": "/abs/render/dir/<project_id>.mp4", … }, "error": null }
+  "result": { "output_path": "renders/<project_id>.mp4", … }, "error": null }
 ```
 
 ### Error Notes
@@ -289,8 +289,8 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 // 1. Batch submit
 {
   "jobs": [
-    { "project_id": "<proj_a>", "output_path": "/abs/out/a.mp4", "quality": "standard" },
-    { "project_id": "<proj_b>", "output_path": "/abs/out/b.mp4", "quality": "draft" }
+    { "project_id": "<proj_a>", "output_path": "data/renders/agent1.mp4", "quality": "standard" },
+    { "project_id": "<proj_b>", "output_path": "data/renders/agent2.mp4", "quality": "draft" }
   ]
 }
 ```
