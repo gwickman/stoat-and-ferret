@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v068] — Agent Doc Accuracy, GUI Render, Repo Hygiene, Framework Guardrails (2026-05-22)
+
+### Fixed
+- Corrected status tokens, effect types, and documentation consistency across docs/manual files (BL-358, PR #455)
+- Added render_plan derivation to payload examples; corrected replay heartbeat documentation for Last-Event-ID anchors (BL-375, BL-376, PR #456)
+
+### Added
+- PyO3 0.26 enum non-hashability guardrail (`str()` workaround) and encoder_cache Phase-7-managed table guard pattern added to AGENTS.md and FRAMEWORK_CONTEXT.md (BL-367, BL-368, PR #459)
+
+### Documentation
+- Updated C4 code-level documentation for v067/v068 render changes: useRenderModal hook, ErrorBoundary component, render_plan field (BL-377, PR #457)
+- Restructured videos/ directory from flat layout to categorized subdirectories; updated scan callers to non-recursive (BL-378, PR #458)
+- Auto-dev process documentation updates including path-validation warning and source-correction ledger improvements (auto-dev-mcp PR #838)
+
+**Summary:** Agent documentation accuracy hardening, GUI render contract fixes, repository directory hygiene, and framework process guardrails. 4 themes (agent-doc-accuracy, gui-render-path, repo-hygiene, framework-guardrails), 9 features, PRs #455–#459 + auto-dev-mcp #838, 2584 passing tests. Addresses BL-358, BL-367, BL-368, BL-375–BL-378.
+
 ## [v067] — Render-Submit Contract Completion & Doc/Tooling Integrity (2026-05-20)
 
 ### Added
