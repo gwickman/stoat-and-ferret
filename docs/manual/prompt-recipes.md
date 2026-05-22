@@ -34,8 +34,9 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 | 3 | `GET /api/v1/videos?limit=1` | 200 | Pick the first `video_id` |
 | 4 | `POST /api/v1/projects` | 201 | Create project shell |
 | 5 | `POST /api/v1/projects/{project_id}/clips` | 201 | Attach the clip (in/out points are integer frame counts) |
-| 6 | `POST /api/v1/render` | 201 | Start render job |
-| 7 | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 | Poll until `status ∈ {completed, failed, cancelled}` |
+| 6 | `GET /api/v1/projects/{project_id}/timeline` | 200 | Fetch `.duration` for `render_plan.total_duration` |
+| 7 | `POST /api/v1/render` | 201 | Start render job (requires `render_plan.total_duration`) |
+| 8 | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 | Poll until `status ∈ {completed, failed, cancelled}` |
 
 ### Sample Request Bodies
 
@@ -49,8 +50,13 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 // 5. Clip create — in_point/out_point/timeline_position are frame counts (integers)
 { "source_video_id": "<video_id>", "in_point": 0, "out_point": 300, "timeline_position": 0 }
 
-// 6. Render create — quality_preset must be one of draft|standard|high
-{ "project_id": "<project_id>", "output_format": "mp4", "quality_preset": "standard" }
+// 6. Timeline fetch (GET — no body); response: { "duration": <seconds>, "tracks": [...] }
+// Use .duration as render_plan.total_duration in step 7.
+
+// 7. Render create — quality_preset must be one of draft|standard|high;
+//    render_plan.total_duration is required (omitting it returns 422 PREFLIGHT_FAILED)
+{ "project_id": "<project_id>", "output_format": "mp4", "quality_preset": "standard",
+  "render_plan": { "total_duration": <duration_from_step_6> } }
 ```
 
 ### Sample Response Shapes
@@ -67,12 +73,12 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 { "videos": [{ "id": "vid_…", "filename": "intro.mp4", "duration_frames": 300, … }],
   "total": 1, "limit": 1, "offset": 0 }
 
-// Step 6 → RenderJobResponse (id is the job_id for polling GET /api/v1/render/{id})
+// Step 7 → RenderJobResponse (id is the job_id for polling GET /api/v1/render/{id})
 { "id": "job_xyz789", "project_id": "<project_id>", "status": "queued",
   "output_path": "renders/<project_id>.mp4", "output_format": "mp4",
   "quality_preset": "standard", "progress": 0.0, "retry_count": 0, … }
 
-// Step 7 → RenderJobResponse (200, terminal)
+// Step 8 → RenderJobResponse (200, terminal)
 { "job_id": "job_xyz789", "status": "completed", "progress": 1.0,
   "result": { "output_path": "renders/<project_id>.mp4", … }, "error": null }
 ```
@@ -80,7 +86,8 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 ### Error Notes
 
 - The 202 from step 1 only confirms enqueue; check `result.errors` on the terminal status — a missing path produces a `complete` job with non-empty `errors`.
-- Step 6 returns `400 INVALID_PRESET` if `quality_preset` is not `draft|standard|high`.
+- Step 7 returns `422 PREFLIGHT_FAILED` if `render_plan` is absent or `total_duration` is missing; always fetch `.duration` from step 6 first.
+- Step 7 returns `400 INVALID_PRESET` if `quality_preset` is not `draft|standard|high`.
 - If the wait endpoint returns `408 JOB_WAIT_TIMEOUT`, the job is still running; re-call with the same `job_id`.
 
 ---
