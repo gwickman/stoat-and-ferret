@@ -1,300 +1,182 @@
-# Advanced Chatbot-Driven Testing Scenario (2–3 Hour Round)
+# Advanced Chatbot-Driven Testing Scenario (Adaptive Round, ~2–3 h)
 
-> Status: PLAN — not yet executed.
-> Companion: `advanced-testing-scenario-massive.md` — the full multi-day variant of this plan. Most rules (safety, evidence schema, context/budget management) are defined there and **only referenced** here.
-> Audience: Claude Code CLI operating locally against a running stoat-and-ferret instance, with a human supervisor.
-
----
-
-## 0. Inherited rules
-
-These are defined in `advanced-testing-scenario-massive.md` and apply unchanged:
-
-- **§0 Safety constraints** — no deliberate damage to the developer environment. The allow/deny table is the authoritative reference.
-- **§6 Evidence collection protocol** — per-scenario evidence packet shape (`actions.jsonl`, `ws-events.jsonl`, pre/post snapshots, `findings.md`, `inconsistencies.jsonl`, `reproducer.md`).
-- **§7.5 Chatbot context and usage-budget management** — stream evidence to disk, do not retain bodies in context, `check_usage` between scenarios, hard stop at 25%/round.
-
-Skip back to those sections rather than rereading them in summary form. This document only describes what is *different* about a 2–3 hour scoped round.
+> Status: Living spec. Re-interpret it freshly each round; do not treat it as a script.
+> Companion: `advanced-testing-scenario-massive.md` — the multi-day exhaustive variant. Shared rules (safety, evidence schema, budget management, mode discipline) live there and are referenced from this document. Read the actual sections, not paraphrases.
+> Audience: a Claude Code CLI session operating locally against a running stoat-and-ferret instance. Run is fully autonomous; the human supervisor points the chatbot at this document and walks away.
 
 ---
 
-## 1. Objective
+## Why this document is a goal-shaped spec, not a script
 
-The massive round is a bug *hunter* — a multi-day exhaustive sweep that finds new defects across all subsystems. This round is a **regression *detector*** — a 2–3 hour focused pass that re-verifies the highest-risk surfaces and the most recently-fixed defects to confirm the system has not regressed since the last bug-finding round.
+**Target reader:** a current flagship reasoning model (Claude Opus/Sonnet, GPT-5-class, Gemini Ultra, or peer) with access to this project's tool ecosystem. The doc assumes the reader can compose a plan from goals plus grounding, and explicitly leaves test design to the chatbot rather than handing it a recipe.
 
-Specifically this round answers, in order:
+A prior iteration hard-coded eight scenarios with verbatim steps. Steps drift the moment a doc heading is rewritten, an endpoint is renamed, or a backlog item is closed; the document then either lies or needs constant editing. Goals don't drift.
 
-1. Are the canonical agent-facing docs (operator-guide, prompt-recipes, ws-event-vocabulary) still aligned with the live API?
-2. Does the end-to-end seed → timeline → preview → render happy path still work?
-3. Do the recent reliability fixes (v066 WS replay contract, v067 GUI error boundary, v067 GUI render_plan construction) still hold?
-4. Is the cancellation race still race-free?
-5. Are render-submit error messages still agent-actionable?
-
-If all five pass cleanly, the system is regression-clean and the next version can proceed. If any fail, that becomes the focus of a follow-up bug-fix cycle — no need to run the massive round to find it.
-
-Time budget: **2–3 hours wall clock**. Hard stop at 3 hours regardless of progress; whatever has run gets summarised, whatever hasn't is recorded as `SKIPPED_TIME`.
+Autonomy expectations: the chatbot grounds itself, writes a plan, executes it, reports. It does not pause to ask permission. Safety constraints from the massive doc §0 are the only hard limits; everything else (real-mode renders, Playwright for GUI scenarios, the exploratory focus, the time-budget split) is the chatbot's call. If the chatbot genuinely cannot proceed within safety constraints, it records the blocker in the round summary and stops — it does not idle waiting for a human.
 
 ---
 
-## 2. When to run this vs the massive round
+## Inherited rules
 
-| Situation                                                                  | Run this 2–3 h round | Run the massive round |
-|----------------------------------------------------------------------------|----------------------|------------------------|
-| You just merged a doc-only or small-surface change and want a regression check | ✓                    |                        |
-| It's been a week since the last chatbot round and you want a smoke pass    | ✓                    |                        |
-| Before kicking off a new version cycle, to confirm the baseline is clean   | ✓                    |                        |
-| After a quiet period where multiple versions have shipped, exploring for new defects | | ✓                |
-| To establish a fresh performance baseline                                  |                      | ✓                      |
-| To produce a backlog-ready list of new findings                            |                      | ✓                      |
-| You have a few hours and a known anxiety about a specific subsystem        | ✓ (with targeted scenario)             |                        |
+These live in `advanced-testing-scenario-massive.md`:
 
-This round can be invoked routinely (weekly cadence is reasonable). The massive round runs ~once per quarter or after major refactors.
+- **§0 Safety constraints** — non-negotiable. Allow/deny table is authoritative.
+- **§4.1 Mode discipline** — `noop` vs `real`.
+- **§4.2 Seed strategy** — clean DB from `tests/fixtures/stoat.seed.db`, fresh data dirs, pin `/api/v1/version` into every evidence packet.
+- **§4.3–4.4 Background captures** — global WS dump + 10 s metrics scrape sidecars.
+- **§6 Evidence collection protocol** — per-scenario packet shape.
+- **§7.5 Context and usage-budget management** — stream evidence to disk, no large bodies in chatbot context, `check_usage` between goal areas, hard stop at 25 % / round.
 
----
-
-## 3. Test environment
-
-Same as the massive round, simplified:
-
-- One server instance, fresh DB from `tests/fixtures/stoat.seed.db` via `scripts/init_local_db.py`.
-- Default mode is `STOAT_RENDER_MODE=noop`. One scenario (I4) flips to `real` for a single render.
-- No new test corpus required. The existing `videos/` folder (the 6 demo MP4s) is the only media surface this round touches — keeps setup time near zero. The massive round's `videos/test-corpus/` is **not** needed.
-- Background metrics scrape and global WS capture per §4.3/§4.4 of the massive doc.
-
-Output location: `chatbot-testing-evidence/{YYYYMMDD_HHMMSS}_quick/` at repo root. Same evidence packet shape as massive (§6 of massive doc), but typically smaller (~MB per scenario, not tens of MB).
+Re-read those sections, don't restate them here.
 
 ---
 
-## 4. Scenarios
+## Output location
 
-Eight scenarios. Numbered I1–I8 ("I" = the indispensable subset, also distinct from the massive doc's A–H tiers so they don't get confused).
+`testing-evidence/chatbot-testing-evidence/{YYYYMMDD_HHMMSS}_adaptive/` at the repo root. Per-scenario packets and `_summary/` follow §6 of the massive doc.
 
-Each scenario specifies its time budget. The chatbot enforces it: if a scenario hasn't completed within its budget × 1.5, it is recorded as `TIMEOUT` and the round moves on. **The whole-round 3-hour hard stop overrides everything.**
-
-### I1 — Operator-guide canonical loop verbatim (~25 min, noop+real)
-
-**Hypothesis**: The canonical render loop documented in `docs/manual/operator-guide.md` is still copy-paste correct.
-
-**Steps**:
-1. Open `docs/manual/operator-guide.md`. Identify the canonical agent sequence (the "run a render" walkthrough).
-2. For each step in the document, copy the payload verbatim and execute it against the running server.
-3. Log every API call to `actions.jsonl`.
-4. Where the doc says "expect status X", verify the live response matches X.
-5. Run the full loop in `noop` mode first; if green, repeat the *final render submit only* in `real` mode and let the render complete.
-
-**Pass criteria**:
-- Every documented payload accepted (no 422s on documented examples).
-- Every documented status token matches what the server emits (`completed` vs `complete`, etc.).
-- The render reaches its documented terminal state in both modes.
-
-**Why it matters**: This is the regression check for the v064/v065/v067 doc remediation rounds. If this fails again, the doc has drifted again.
-
-### I2 — Prompt recipes verbatim (~20 min, noop)
-
-**Hypothesis**: The recipes in `docs/manual/prompt-recipes.md` still resolve to working API sequences.
-
-**Steps**:
-1. Enumerate each recipe in `prompt-recipes.md`.
-2. Execute the underlying API calls for each recipe verbatim (no improvisation).
-3. Note which recipes reference helper scripts (`wait-for-render.py`, etc.) and confirm those scripts still execute without error.
-
-**Pass criteria**:
-- Every recipe completes its documented outcome.
-- No recipe requires a step not in the document.
-- Helper script references are accurate.
-
-### I3 — WebSocket event vocabulary round-trip (~20 min, real)
-
-**Hypothesis**: Every event documented in `docs/manual/ws-event-vocabulary.md` is emitted by the live server, with the documented shape, and no undocumented events arrive unannounced.
-
-**Steps**:
-1. Connect a WS client and start the global event log.
-2. Trigger each documented event by performing the action that should cause it (scan, project create, clip add, preview start, render submit, etc.).
-3. For every received event, validate its shape against the documented schema.
-4. After the action sweep, diff observed-events against documented-events: missing on either side is a finding.
-
-**Pass criteria**:
-- All documented events observed.
-- No undocumented event categories observed.
-- Shape matches doc for each event.
-
-**Why it matters**: This is the regression check for v066 (WS replay contract) and v067 BL-376 (heartbeat replay doc). Catches event drift before it becomes a v063-style cleanup project.
-
-### I4 — End-to-end happy path on the seed sample project (~25 min, noop + real)
-
-**Hypothesis**: The complete happy path — seed → project → timeline → effects → preview → render — still works end to end on the canonical sample project.
-
-**Steps**:
-1. Run `scripts/seed_sample_project.py http://localhost:8765` to build "Running Montage".
-2. Confirm the project exists, has 4 clips, 5 effects, 1 transition.
-3. Start a preview session, monitor to ready state, terminate.
-4. Submit a render in `noop` mode, confirm terminal state.
-5. Submit the same render in `real` mode, let it complete, ffprobe the output.
-6. Record per-encoder fps for the real render as a one-point perf baseline (a single data point, not the full Tier F sweep).
-
-**Pass criteria**:
-- Seed completes without error.
-- Preview reaches ready in <30s.
-- Both noop and real renders complete; the real render output is a valid video file per ffprobe.
-- The recorded fps is within 50% of historical (if a baseline exists from a prior round); otherwise note as a new baseline.
-
-### I5 — WS reconnect & replay contract (~15 min, real)
-
-**Hypothesis**: v066's `Last-Event-ID` replay contract still works under realistic disconnect.
-
-**Steps**:
-1. Submit a 60-second `real`-mode render.
-2. Connect a WS client; record the highest `event_id` received before disconnect.
-3. At ~30% progress, close the socket.
-4. Reconnect with `Last-Event-ID` = the recorded value.
-5. Verify the replay starts strictly *after* the recorded event_id (no duplicates, no skips).
-6. Verify the render completes and the post-disconnect events arrive in order.
-
-**Pass criteria**:
-- No duplicate events.
-- No skipped events.
-- Replay does not include events from other scopes (per-job scoping).
-- Render reaches terminal state.
-
-**Why it matters**: This is the regression check for v066 (BL-356/357). The fix landed a wire-format change; this confirms it still holds.
-
-### I6 — Cancellation race smoke (~15 min, noop)
-
-**Hypothesis**: Cancelling a render right at the worker's terminal-state transition does not produce orphan jobs or a wedged queue.
-
-**Steps**:
-1. In a tight loop (10 iterations):
-   - Submit a fast noop render.
-   - Immediately fire `POST /render/{job_id}/cancel`.
-   - Record the observed terminal state.
-2. After the loop, confirm the queue is empty and no job is stuck in an inconsistent state.
-
-**Pass criteria**:
-- Every iteration reaches *some* terminal state (`completed` or `cancelled`); no `running` zombies.
-- Queue is empty post-loop.
-- Repeated runs are stable (no flaky behaviour across the 10).
-
-### I7 — Render-submit error surface check (~15 min, noop)
-
-**Hypothesis**: A failed render submit shows a useful inline error in the GUI (v067 BL-372 regression check) and the API returns an actionable error body.
-
-**Steps** (Playwright + API):
-1. Open `/gui/render`.
-2. Submit 5 deliberately-malformed render requests via the GUI form (missing project, missing render_plan, invalid encoder, invalid format, malformed total_duration).
-3. For each, screenshot the page state after submit. Verify: the page did **not** unmount (no white-screen), an inline error message appears, the error mentions the offending field.
-4. Submit the same 5 malformed requests directly via API. Capture the response bodies and confirm each is a structured error with a usable `detail`.
-
-**Pass criteria**:
-- 0 white-screens.
-- 0 missing inline errors.
-- API error bodies all have structured `detail` and identify the failing field.
-
-**Why it matters**: Regression check for v067 BL-371 + BL-372. The fix landed an error boundary + GUI render_plan; this verifies they survived subsequent changes.
-
-### I8 — Agent ergonomics spot-check (~15 min, noop)
-
-**Hypothesis**: An unfamiliar agent can build valid requests for the core mutating endpoints using only `GET /api/v1/schema` introspection, and gets actionable error messages when wrong.
-
-**Steps**:
-1. Pick 3 endpoints: `POST /projects`, `POST /projects/{id}/clips`, `POST /render`.
-2. For each, fetch only the schema introspection output (no docs).
-3. Build a request body from the schema alone and submit.
-4. If accepted: noted as pass. If rejected: read the 422 detail and attempt one self-correction. Note whether the correction succeeded.
-5. Separately, submit 5 deliberately-wrong requests across the API and rate each error message on whether an agent could correct itself from it.
-
-**Pass criteria**:
-- Schema-built requests succeed within 2 attempts for all 3 endpoints.
-- ≥4 of 5 deliberately-wrong errors are self-correctable from the error body alone.
-
-**Why it matters**: This is the regression check for `schema-introspection` (v039) and the recurring P3 error-message quality theme.
+Hard stop: 3 h wall clock. The chatbot writes the summary even on timeout.
 
 ---
 
-## 5. Execution model
+## Goals (priority order)
 
-### 5.1 Order
+The round must answer these questions. Scenario selection serves them, not the reverse.
 
-I1 → I2 → I3 → I4 → I5 → I6 → I7 → I8.
+1. Have recently shipped fixes regressed?
+2. Has any older bug returned in a class that has historically recurred?
+3. Does the canonical end-to-end path still work on the seed sample?
+4. Do the agent-facing canonical docs still match the live API?
+5. Where are the cracks in areas prior rounds did not probe — pick one focus and find out.
+6. Are mutating-endpoint error messages still agent-actionable?
 
-Rationale:
-- Doc parity first (I1, I2, I3) — fast, highest hit rate for cheap regressions.
-- Happy path (I4) — confirms baseline before pushing on edge cases.
-- Edge cases (I5, I6, I7) — known recent fixes; this is what the round is for.
-- Ergonomics (I8) — last because if it fails, it does not block the others' findings.
-
-### 5.2 Checkpointing
-
-The chatbot writes a one-line status to `chatbot-testing-evidence/{TS}_quick/_progress.md` after each scenario:
-
-```
-I1 PASS  24m  0 findings
-I2 PASS  18m  1 finding (P3, recipe X step 4 references endpoint Y but body should be Z)
-I3 FAIL  19m  2 findings (P2 — undocumented event "render.heartbeat_extended" observed)
-...
-```
-
-No tier-level checkpoints; the round is short enough that one continuous progress file suffices.
-
-### 5.3 Parallelism
-
-None. Single CLI session, serial execution. The round is too short to justify sub-explore overhead.
-
-### 5.4 Hard stop
-
-At 3 hours wall-clock, the chatbot stops mid-scenario if necessary, writes a `TIMEOUT` row for the in-flight scenario, writes the summary, and exits. The summary lists every scenario as PASS / FAIL / TIMEOUT / SKIPPED.
+Goals 1–4 are the regression-detector floor. Goal 5 is the chatbot's own contribution beyond canned coverage. Goal 6 is the recurring ergonomics watch.
 
 ---
 
-## 6. Reporting
+## Grounding
 
-### 6.1 Round summary
+Read the current state before planning. The chatbot knows how to read these surfaces — the bullets below say what is on each surface, not how to parse it.
 
-`chatbot-testing-evidence/{TS}_quick/_summary/README.md`:
+- Load the `using-auto-dev-mcp` skill first. It carries the project conventions for the auto-dev-mcp tools used throughout the round (`get_project_info`, `list_backlog_items`, `search_learnings`, `read_document`, etc.), the path-resolution discipline, and the requirement to `tool_help` an unfamiliar tool before first call. Everything below assumes that skill is loaded.
+- `{artifacts_root}/docs/auto-dev/plan.md` — recently shipped versions, their headline focus, BL/PR ids closed.
+- `docs/CHANGELOG.md` — narrative of what shipped per version, including ad-hoc fixes between versions.
+- `git log` for the last two weeks against the project repo — fixes that landed without a numbered version.
+- `list_backlog_items(status="open")` — known issues. Read titles + tags first; pull bodies on demand.
+- `search_learnings(...)` and `list_learnings(...)` — accumulated knowledge about which bug classes have recurred and what the historical reproducer shape is.
+- Most recent run under `testing-evidence/uat-evidence/{TS}/uat-report.md` (or wherever UAT writes once BL-383 lands — currently `uat-evidence/{TS}/`) — fresh evidence about what is already known-green.
+- Most recent run under `testing-evidence/chatbot-testing-evidence/{TS}_*/_summary/` — prior adaptive or massive rounds, what they verified, what they found.
+- The four canonical agent docs: `docs/manual/operator-guide.md`, `docs/manual/prompt-recipes.md`, `docs/manual/ws-event-vocabulary.md`, `docs/manual/ai-integration-patterns.md`. `git log` per file tells the chatbot whether full-parity or spot-check is warranted.
 
-- Round metadata: start time, end time, runtime version pinned (`/api/v1/version`).
-- Per-scenario PASS/FAIL/TIMEOUT with one-line summary.
-- Total findings by severity.
-- "Regression detected?" — yes/no, with the implicated commit/version if identifiable.
-
-### 6.2 Inconsistency ledger
-
-`chatbot-testing-evidence/{TS}_quick/_summary/inconsistency-ledger.md`:
-
-Same schema as §6.1 of the massive doc, but expected to be small (often empty). If non-empty, the human supervisor inspects each entry before deciding whether to file a backlog item or whether the next action is a bigger run.
-
-### 6.3 Output for the supervisor
-
-A 5-line text summary printed at the end:
-
-```
-Quick round complete (2h 47m).
-8 scenarios: 7 PASS, 1 FAIL.
-Failure: I3 (WS event vocabulary) — 2 findings, P2.
-Regression: yes — likely introduced between v066 and HEAD.
-Suggested next step: investigate I3 findings, run massive Tier E if widespread.
-```
-
-This is the actionable deliverable. Everything else is for replay.
+If grounding takes 20–30 minutes, that is fine. A good plan compresses the round.
 
 ---
 
-## 7. Exit criteria
+## Plan, then execute
 
-The round is "done" when one of:
+After grounding, write `testing-evidence/chatbot-testing-evidence/{TS}_adaptive/_plan/round-plan.md`. This is for traceability — the chatbot pins what it decided and why, so a future round can see the choices. The plan is also the chatbot's own working notes; it is not a permission gate.
 
-1. All 8 scenarios have a final state (PASS / FAIL / TIMEOUT / SKIPPED) and the summary + ledger are written.
-2. The 3-hour hard stop fires and the partial summary is written.
+The plan should make these choices explicit: which fixes are being re-verified, which older recurring classes are being re-proven, the happy-path target, the per-doc parity choice, the exploratory focus and its justification, the error-ergonomics sample, the known-issue avoidance list, and the time budget split. Shape and detail are up to the chatbot.
 
-The chatbot does not extend the round past 3 hours without explicit human approval. If a finding is so interesting that more time would help, that is a separate decision recorded as `EXTENSION_REQUEST` in the summary.
+Once the plan is on disk, start executing. No pause.
 
 ---
 
-## 8. What I need from you before this round launches
+## Goal area treatments
 
-Far less than the massive round. These are the only open questions:
+Each subsection is a short brief. Scripts are deliberately absent.
 
-1. **Run identifier suffix** — assumed `_quick`. Override if you want a more descriptive tag (e.g. `_pre-v068`, `_post-merge-454`).
-2. **Confirm the real-mode render in I4** is OK (it does a real FFmpeg encode of the Running Montage sample — a few minutes of CPU). If FFmpeg is missing or you'd rather skip, I4 collapses to noop-only and the perf baseline data point is not recorded.
-3. **Should I7 launch Playwright** for the GUI parts, or is API-only acceptable? Playwright adds ~3-5 min for browser launch but catches the actual white-screen condition. API-only catches the structured-error condition but misses the GUI side of BL-372.
+### Recent-fix regression
 
-Everything else inherits from the massive doc and does not need re-approval.
+Re-verify fixes shipped in the last two versions **or** the last two weeks, whichever spans more change. Scope it generously; better to overlap with a recent UAT than to miss a fix.
+
+For each fix, design the smallest reproducer that would have caught the original bug. If a recent UAT or chatbot round already exercised the affected surface, defer to that evidence and note the deferral — **but only if `git log` shows no changes to the relevant code, docs, or endpoints in the interval**. If the surface has moved since the prior run, the deferral is evidence laundering; re-run.
+
+### Older-fix recurrence (history watch)
+
+Identify bug classes that have re-emerged before — across multiple versions, across multiple BLs with similar tags, or across learnings flagged as recurring. The grounding sources (`list_backlog_items` historical, `search_learnings`, retrospective notes in the artefacts repo, `git log` against high-churn paths) carry this signal. There is no canonical category list; classes evolve. Decide which 2–3 categories are worth a re-prove this round based on what the data says, and rotate the picks over time so coverage drifts across categories.
+
+A recurrence is a stronger finding than a fresh discovery. Severity should reflect that.
+
+### Canonical happy path
+
+Seed → project → timeline → preview → render on the sample project. Run `noop` first and, if green, repeat the final render in `real` to confirm the output is a valid file.
+
+### Doc parity
+
+For each of the four canonical agent docs in grounding, pick full-verbatim, spot-check, or skip based on what `git log` and recent rounds show. Justify the choice once in the plan; don't agonise.
+
+### Exploratory probe
+
+The round's most chatbot-shaped section. Pick one focus that prior rounds and canned suites have not exercised, and run scenarios there. The focus is chosen from current state — recently changed surfaces, untested subsystem boundaries, unusual sequences the docs do not anticipate, agent perspectives the operator-guide does not address. State the focus, the use cases, and why in the plan. "Nothing found" is a legitimate outcome and worth recording.
+
+Constraints: respect §0 safety, capture a reproducer, attach evidence per the standard packet.
+
+### Error ergonomics
+
+Hit a handful of mutating endpoints with deliberately malformed payloads and rate each error body for self-correctability. Endpoint choice, malformation choice, and rubric shape are up to the chatbot; pick what surfaces signal.
+
+---
+
+## Working with open backlog items
+
+The known-issues list from grounding is an input to scenario design, not background reading.
+
+- **Avoidance.** Don't spend effort re-confirming an open bug — *unless* the surface has changed since the bug was filed, or the round is explicitly validating a claimed fix. A known bug sitting in a high-churn area still warrants a quick probe; dodging it there manufactures false confidence.
+- **Dedup before filing.** Before writing an inconsistency, check for tag/substring overlap with open BL and PR items. If a finding matches an existing item, point at it rather than create a duplicate.
+- **Close-candidate.** If an open BL describes a symptom the round's evidence shows is gone, file a `close-candidate` meta-finding citing the disproving evidence.
+- **Plan/backlog divergence.** If `plan.md` says a BL closed in version N but `list_backlog_items` still shows it open, record one `plan-backlog-divergence` finding listing the BL ids. Don't try to reconcile — the supervisor does.
+
+---
+
+## Execution
+
+Goal areas in priority order, single CLI session, serial. Sub-explores are allowed if the exploratory probe earns it, but default to serial; the round is short.
+
+After each goal area, append one line to `_progress.md` with area, status, elapsed, finding count. That's it.
+
+At the 3 h boundary, stop mid-scenario if necessary, mark the in-flight area `TIMEOUT`, write the summary, and exit. Summary is always written.
+
+---
+
+## Reporting
+
+Under `_summary/`:
+
+- `README.md` — round metadata, per-goal-area outcome, total findings by severity, regression yes/no, and a five-line plain-text wrap-up for the supervisor.
+- `inconsistency-ledger.md` — §6.1-schema entries, deduped against open backlog per the working-with rule above.
+- `round-plan.md` — the plan, pinned for traceability.
+- `exploratory-probe.md` — focus, use cases, findings, ideas for next round.
+
+The five-line wrap is the actionable deliverable. Everything else is for replay.
+
+---
+
+## When this round is appropriate vs the massive variant
+
+| Situation                                                                  | Adaptive | Massive |
+|----------------------------------------------------------------------------|---------|---------|
+| Recent small-surface or doc-only change, want a regression check            | ✓       |         |
+| ~1 week since the last chatbot round, weekly cadence                       | ✓       |         |
+| Before kicking off a new version cycle, to confirm baseline                | ✓       |         |
+| Specific subsystem suspicion — steer the exploratory focus there           | ✓       |         |
+| Quiet period spanning many versions, want exhaustive sweep                 |         | ✓       |
+| Need fresh full performance baseline (encoder matrix etc.)                 |         | ✓       |
+| Need a large backlog-ready findings list for planning                      |         | ✓       |
+
+This round is intentionally re-runnable on a weekly cadence. The massive round is quarterly or post-major-refactor.
+
+---
+
+## Test corpus on disk
+
+`videos/test-corpus/` (gitignored) holds a small set of CC-licensed real-world clips fetched from the Blender Foundation open-movie archive. Available files at the time of writing:
+
+- `BigBuckBunny_320x180.mp4` — animated short, 10 min, h.264 in MP4, 320×180. Smallest clip in the corpus.
+- `big_buck_bunny_480p_h264.mov` — same content, 480p, h.264 in MOV. Different container for the same source.
+- `Sintel.2010.720p.mkv` — fantasy short, ~15 min, 720p in MKV.
+- `tears_of_steel_720p.mov` — real-world VFX short, ~12 min, 720p in MOV.
+
+The existing `videos/` folder also holds the 6-clip demo set used by `scripts/seed_sample_project.py` and the smoke fixtures. Mind that `seed_sample_project.py` currently recursive-scans `videos/` (see BL-378); avoid relying on the seed contract while the corpus is present unless the corpus location is moved or the scan is fixed.
+
+The corpus exists to broaden what scenarios can pick from — codec, container, resolution, length, real-world content vs. animation. Use whichever clips suit the scenario; nothing in this document tells you which clip goes where.

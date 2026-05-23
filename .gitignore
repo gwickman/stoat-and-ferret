@@ -229,7 +229,14 @@ gui/dist/
 # Test evidence artifacts — locally-generated per-run output from UAT and
 # chatbot-driven testing. Each top-level subdir is a single run (typically
 # timestamped YYYYMMDD_HHMMSS). Never tracked.
+testing-evidence/
+testing-evidence/**
 uat-evidence/
 chatbot-testing-evidence/
+
+# Optional test video corpus — locally fetched real-world clips for
+# exploratory testing. Never tracked.
+videos/test-corpus/
+videos/test-corpus/**
 
 nul
