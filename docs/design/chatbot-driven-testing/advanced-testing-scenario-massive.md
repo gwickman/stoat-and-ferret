@@ -108,6 +108,25 @@ For the **entire** round, a background process runs `scripts/examples/dump-ws-ev
 
 Every 10 seconds, a sidecar scrapes `GET /metrics` and appends to `chatbot-testing-evidence/{TS}_round-3/_global/metrics.jsonl` with a timestamp. Per-scenario the chatbot snapshots immediately before and after each scenario and diffs them.
 
+### 4.5 End-of-round teardown
+
+After the summary is written (per §9) and before the round is declared done, restore the local environment to a known-clean state. Default is full teardown; intentional residue is opt-in and must be itemised.
+
+1. **Stop every server process the round started.** Enumerate listeners on the API port and any sidecar ports the round opened; `Stop-Process` (or platform equivalent) each one. Re-probe `GET :{api_port}/health/live` and confirm connection-refused.
+2. **Reseed `data/stoat.db` from `tests/fixtures/stoat.seed.db`.** Every project, clip, render, version, etc. the round created is discarded. Likewise reseed any side databases the round wrote to.
+3. **Clear runtime artifact directories.** `data/{thumbnails,proxies,waveforms,previews,renders}`. The round's render outputs are already represented by their ffprobe metadata in the evidence packets — the binaries are redundant.
+4. **Delete temp files written outside the evidence tree.** Probes the chatbot wrote to `/tmp`, `$TMPDIR`, `%TEMP%`, etc. The evidence tree (`testing-evidence/chatbot-testing-evidence/{TS}_*/`) is the *only* surface that survives the round.
+5. **Verify and record the clean exit.** In `_summary/README.md` under a "Teardown verification" heading:
+   - Listening port set matches baseline (no API server alive).
+   - `sha256` of `data/stoat.db` matches `tests/fixtures/stoat.seed.db` (or document the intentional delta).
+   - Total evidence-tree size and free-disk-after, for the next round's setup.
+
+**Intentional residue is opt-in.** If the round needs to leave state behind — a stuck job for supervisor repro, an in-flight investigation, a render whose visual quality the supervisor will inspect — list it in `_summary/README.md` under a "Stuck state left behind" heading, name the teardown step that would have removed it, and state explicitly that the step was skipped. Silent residue is a teardown defect.
+
+**Teardown failure is a P1 round finding.** If a process refuses to stop, the DB will not reseed, or any verification check fails, file a `bug-operational` entry in the inconsistency ledger and surface every residual process / file / DB-row in the summary. Do not retry-loop indefinitely; capture the state and stop.
+
+**On timeout.** If the round hits a wall-clock hard stop mid-scenario, write whatever summary content the chatbot has, then still run teardown. The supervisor receives a truncated round + a clean machine, not a half-finished round + a half-cleaned machine.
+
 ---
 
 ## 5. Test asset acquisition
@@ -505,6 +524,80 @@ Default: serial.
 `chatbot-testing-evidence/{TS}_round-3/_summary/perf-baseline.json`:
 - A machine-readable record of every Tier F measurement, for diff against future rounds.
 
+### 9.5 Independent review post-pass
+
+After §9.1–9.4 are on disk and **before** §4.5 teardown runs, launch a cynical second-opinion review explore. The original chatbot does not edit its own findings; a separate Claude Code instance re-derives the verdicts from source and the original chatbot then propagates the changes mechanically.
+
+The review runs *before* teardown by design: the round's residue (running server, populated DB, evidence tree) is available for the reviewer to inspect if useful. The reviewer's own §0 + §4.5 obligations apply to any state it boots itself.
+
+**Launch (use `start_exploration`):**
+
+- `project`: same project under test.
+- `model`: `opus` (heaviest reasoning available).
+- `results_folder`: 2–4 kebab-case words, e.g. `review-adaptive-cynical` or `review-massive-q3`.
+- `prompt`: the template at the end of this section.
+
+The review writes to two locations:
+- Framework outbox: `{artifacts}/comms/outbox/exploration/{results_folder}/README.md` (validator-required short pointer file).
+- Primary deliverables: `{repo}/testing-evidence/chatbot-testing-evidence/{TS}_*/independent-review/`.
+
+**Monitor pattern (do NOT poll `get_exploration_status` in a loop).** Watch for the framework outbox README to appear, using the `Monitor` tool with a PowerShell `Test-Path` loop:
+
+```powershell
+while (-not (Test-Path '<outbox_path>\<results_folder>\README.md')) { Start-Sleep 5 }; Write-Output 'README.md appeared'
+```
+
+First attempt: `timeout_ms = 120000` (2 min). If it times out, call `get_exploration_status` once to confirm the explore is still alive, then re-monitor with `timeout_ms = 900000` (15 min). A typical review takes 10–20 min.
+
+**After completion, amend the findings (additive, not destructive).** The original record stays; the amendment is dated and additive. Update three places:
+
+1. Each affected `<scenario>/findings.md` (or `<tier-id>-<scenario>/findings.md` in the massive variant) gets a "## Post-review amendment ({date})" section listing the verdict, any severity changes, any mechanism corrections, and fix-recommendation updates, with a pointer to the review deep-dive.
+2. `_summary/inconsistency-ledger.md` gets an "## Amendments from independent review ({date})" section inserted near the top with: a verdict table (one row per finding), a new-findings sub-table (INC-REV-NNN entries), and a re-totalled severity matrix.
+3. `_summary/README.md` adds a "## Post-review amendment ({date})" section reflecting the re-totalled severities, an amended top-findings list, and an amended five-line wrap-up. The original five-line wrap stays; the amended version is appended.
+
+The amendment phase is bounded to ~15 min of chatbot time. The review explore produced the substantive analysis; the chatbot's job is mechanical: read the review's verdicts table and propagate the changes.
+
+**Prompt template for the review explore (copy and edit the `{round-id}`, `{repo}`, `{results_folder}` placeholders):**
+
+> Goal: cynical, independent second-opinion review of the chatbot testing round at `{repo}/testing-evidence/chatbot-testing-evidence/{round-id}/`.
+>
+> You are a reviewer, not a collaborator. Default to disbelief. Confirm only what you can verify yourself. Do not trust the first chatbot's reasoning, phrasing, or severity judgements — re-derive them.
+>
+> Load the using-auto-dev-mcp skill first. Resolve paths via `get_project_info`.
+>
+> Grounding (read in order):
+>
+> - The round's `_summary/README.md` and `_summary/inconsistency-ledger.md`
+> - The spec the round followed (this document and its adaptive companion)
+> - Source of truth at the round's pinned `app_sha`: live OpenAPI schema (boot or grep), `docs/manual/*`, and the specific `src/` and `tests/` paths cited in the findings
+> - Backlog + learnings via `list_backlog_items`, `search_learnings`, `list_learnings` (call `tool_help` before first use)
+>
+> Mandate:
+>
+> 1. For each finding in the inconsistency-ledger, render a verdict: UPHELD / REFUTED / RECLASSIFIED / NEEDS-MORE-EVIDENCE. Cite evidence (file:line, commands run, server log lines).
+> 2. Pay extra attention to every P1 and P2. Try to reproduce or refute. For intermittent races, prefer source-derivation over re-running; cite stack traces from the round's log captures.
+> 3. For each close-candidate BL, try to BREAK the close case before agreeing.
+> 4. Find what the round missed. File new findings in the §6.1 schema, using the `INC-REV-NNN` id namespace to distinguish from the round's `INC-{tier}-NNN` ids.
+>
+> Output:
+>
+> - Substantive review under `{repo}/testing-evidence/chatbot-testing-evidence/{round-id}/independent-review/`:
+>   - `README.md` with verdicts table, new-findings summary, top-3 takeaways, and a five-line plain-text wrap-up.
+>   - Per-finding deep-dives where the work warrants it.
+>   - Reproducer scripts you ran, saved alongside their output.
+> - Framework outbox: a short `README.md` at `{artifacts}/comms/outbox/exploration/{results_folder}/README.md` with exploration metadata, a one-line verdict, and a pointer to the primary deliverables path.
+>
+> Constraints:
+>
+> - §0 safety + §4.5 teardown apply. If you boot a server, tear it down before exit.
+> - Time budget: ~2 hours. Stop at 25% session usage; call `check_usage` between sections.
+> - Write only under the `independent-review/` subtree and the framework outbox. Do not edit any file in the round output, the docs, or the source code.
+> - Be specific: "operator-guide.md:32 reads X, the API actually returns Y as shown in this curl output" is the bar.
+>
+> Tone: cynical, not adversarial. Successful review = tried to refute every finding. UPHELD findings should be stronger than original (more evidence); REFUTED findings should have a one-line correction the supervisor can act on.
+
+A worked example of this protocol lives at `testing-evidence/chatbot-testing-evidence/20260523_135937_adaptive/independent-review/` (the prompt above is derived from it).
+
 ---
 
 ## 10. Exit criteria
@@ -513,7 +606,9 @@ The round is "done" when:
 
 1. Every scenario in §7 has either an evidence packet under `chatbot-testing-evidence/{TS}_round-3/` or is documented as `SKIPPED` with a reason in the tier checkpoint.
 2. `_summary/README.md`, `inconsistency-ledger.md`, `findings-as-backlog.md`, `perf-baseline.json` all exist and pass a basic schema check (the chatbot runs a `jq`/grep validation pass).
-3. The chatbot has summarised the round in plain text to the human supervisor and received explicit approval to close out.
+3. **The independent review post-pass (§9.5) has completed and the chatbot has propagated the verdicts** — each affected per-scenario `findings.md` has a "Post-review amendment" block, the inconsistency-ledger has an amendments table at the top, and `_summary/README.md` has an amended severity total + five-line wrap. A review-explore failure (timeout, exception, no output) is recorded as a P1 `bug-operational` finding and the round closes with the original (un-amended) state explicitly noted.
+4. **End-of-round teardown (§4.5) has completed.** The summary contains a "Teardown verification" block confirming no API server is listening, the DB matches the seed (or the delta is explicit), and any intentional residue is itemised. A teardown failure is recorded as a P1 `bug-operational` finding rather than swallowed.
+5. The chatbot has summarised the round in plain text to the human supervisor and received explicit approval to close out.
 
 ---
 

@@ -24,6 +24,7 @@ These live in `advanced-testing-scenario-massive.md`:
 - **§4.1 Mode discipline** — `noop` vs `real`.
 - **§4.2 Seed strategy** — clean DB from `tests/fixtures/stoat.seed.db`, fresh data dirs, pin `/api/v1/version` into every evidence packet.
 - **§4.3–4.4 Background captures** — global WS dump + 10 s metrics scrape sidecars.
+- **§4.5 End-of-round teardown** — stop server processes, reseed DB, clear runtime artifact dirs, delete temp files, verify clean exit. Intentional residue is opt-in and must be itemised.
 - **§6 Evidence collection protocol** — per-scenario packet shape.
 - **§7.5 Context and usage-budget management** — stream evidence to disk, no large bodies in chatbot context, `check_usage` between goal areas, hard stop at 25 % / round.
 
@@ -135,7 +136,7 @@ Goal areas in priority order, single CLI session, serial. Sub-explores are allow
 
 After each goal area, append one line to `_progress.md` with area, status, elapsed, finding count. That's it.
 
-At the 3 h boundary, stop mid-scenario if necessary, mark the in-flight area `TIMEOUT`, write the summary, and exit. Summary is always written.
+At the 3 h boundary, stop mid-scenario if necessary, mark the in-flight area `TIMEOUT`, write the summary, **launch the independent review per the massive doc §9.5, amend the findings when it returns, then run teardown per §4.5**, then exit. Summary, review, amendments, and teardown all always run, even on timeout. A truncated round with a reviewed summary on a clean machine beats a complete round with no review on a dirty one. If the wall clock leaves no room for the review, file a P1 `bug-operational` finding noting the skipped review and proceed straight to teardown.
 
 ---
 
@@ -143,12 +144,43 @@ At the 3 h boundary, stop mid-scenario if necessary, mark the in-flight area `TI
 
 Under `_summary/`:
 
-- `README.md` — round metadata, per-goal-area outcome, total findings by severity, regression yes/no, and a five-line plain-text wrap-up for the supervisor.
+- `README.md` — round metadata, per-goal-area outcome, total findings by severity, regression yes/no, **a "Teardown verification" block (§4.5)**, and a five-line plain-text wrap-up for the supervisor.
 - `inconsistency-ledger.md` — §6.1-schema entries, deduped against open backlog per the working-with rule above.
 - `round-plan.md` — the plan, pinned for traceability.
 - `exploratory-probe.md` — focus, use cases, findings, ideas for next round.
 
 The five-line wrap is the actionable deliverable. Everything else is for replay.
+
+Once the reports are on disk, the round continues into the **Independent review** phase (next section) and only then into teardown. The teardown discussion below is unchanged; what's new is the review step that goes between reports and teardown.
+
+---
+
+## Independent review
+
+After the round summary is written and **before** §4.5 teardown runs, launch a cynical second-opinion review explore per the massive doc §9.5. The review is an independent Opus explore that re-derives every verdict from source; the chatbot then propagates the verdicts back into the round artefacts. The round's residue (running server, populated DB) is deliberately left alive for the reviewer to inspect.
+
+Steps:
+
+1. **Launch via `start_exploration`** (model `opus`). Use the prompt template from massive doc §9.5; populate the `{round-id}` (this round's timestamped folder), `{repo}`, and `{results_folder}` (kebab-case, 2–4 words, e.g. `review-adaptive-cynical`). The review writes its substantive output to `independent-review/` under this round's evidence tree, and a short pointer README to the framework outbox `{artifacts}/comms/outbox/exploration/{results_folder}/`.
+
+2. **Monitor with the Test-Path loop, not by polling `get_exploration_status`:**
+
+   ```powershell
+   while (-not (Test-Path '<outbox_path>\<results_folder>\README.md')) { Start-Sleep 5 }; Write-Output 'README.md appeared'
+   ```
+
+   First attempt: `timeout_ms=120000` (2 min). If it times out, call `get_exploration_status` **once** to confirm the explore is still alive (status `running`, `process_alive: true`), then re-monitor with `timeout_ms=900000` (15 min). A typical adaptive-round review takes 10–20 min.
+
+3. **When complete, read `independent-review/README.md` and amend additively:**
+   - Each affected `<goal-area>/findings.md` gets a "## Post-review amendment ({date})" section: verdict (UPHELD / REFUTED / RECLASSIFIED / NEEDS-MORE-EVIDENCE), any severity changes, mechanism corrections, fix-recommendation updates, and a pointer to the relevant `independent-review/` file.
+   - `_summary/inconsistency-ledger.md` gets an "## Amendments from independent review ({date})" section near the top: a verdict table (one row per finding), a sub-table for new `INC-REV-NNN` findings, and a re-totalled severity matrix.
+   - `_summary/README.md` gets a "## Post-review amendment ({date})" section: the re-totalled severity table, an amended top-findings list, and an amended five-line wrap. The original five-line wrap stays for replay; the amended version is appended.
+
+   The amendment phase is bounded to ~15 min. The review did the substantive work; the chatbot's job is propagation.
+
+4. **If the review fails (timeout > 30 min total, exception, no output)** — file a P1 `bug-operational` finding in the ledger, note in `_summary/README.md` that the round closes without amendments, and proceed to teardown.
+
+Teardown (§4.5) runs **after** amendments, not before. The review explore is itself bound by §0 + §4.5 if it boots anything; the chatbot's teardown is a final sweep across both the round and any residue the reviewer didn't clear.
 
 ---
 
