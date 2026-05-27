@@ -596,7 +596,9 @@ The amendment phase is bounded to ~15 min of chatbot time. The review explore pr
 >
 > Tone: cynical, not adversarial. Successful review = tried to refute every finding. UPHELD findings should be stronger than original (more evidence); REFUTED findings should have a one-line correction the supervisor can act on.
 
-A worked example of this protocol lives at `testing-evidence/chatbot-testing-evidence/20260523_135937_adaptive/independent-review/` (the prompt above is derived from it).
+A worked example of this protocol lives at `testing-evidence/chatbot-testing-evidence/20260523_135937_adaptive/independent-review/` (the prompt above is derived from it). The second worked example at `testing-evidence/chatbot-testing-evidence/20260527_171350_investigation/independent-review/` demonstrates the protocol catching a root-cause linkage error that the round itself missed.
+
+**Pre-closure evidence trail (mandatory).** When a round closes a BL via `complete_backlog_item` as part of its goal-area work (e.g. ground-truthing plan-divergent BLs in an investigation round), a per-BL verification note MUST be on disk in the relevant goal-area folder BEFORE the close call fires. Minimum content: the BL id, the claim being verified, the file:line citation(s) that prove it, and a one-line verdict. A round that calls `complete_backlog_item` without this trail leaves an unauditable closure — the review pass will flag it as a `process-gap` finding (as it did at `20260527_171350_investigation/independent-review/INC-REV-CYN-002`).
 
 ---
 
