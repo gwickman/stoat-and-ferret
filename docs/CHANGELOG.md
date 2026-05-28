@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v069] — Render & Preview Reliability + Agent Doc Accuracy (2026-05-28)
+
+### Fixed
+- Eliminated concurrent `StreamReader` race in `async_executor.py` using exclusive stderr ownership and bounded `asyncio.wait`; added `InvalidTransitionError → HTTP 409` handler in preview router (BL-393, BL-395, PR #461, PR #462)
+- Added `asyncio.Lock` in `RenderService.submit_job` for noop serialization; added `-progress pipe:1` flag to FFmpeg command builder; wired project `output_width`/`output_height` through render pipeline with 1920/1080 defaults (BL-388, BL-390, BL-394, PR #463, PR #464, PR #465)
+
+### Documentation
+- Documented `render_plan` JSON schema with field descriptions and JSON string format correction in `prompt-recipes.md` (BL-375, PR #466)
+- Added recursive parameter explanation with true/false variants to Recipe 1 in `prompt-recipes.md` (BL-384, PR #467)
+- Added Pattern 6 (Preview Lifecycle) to `ai-integration-patterns.md` documenting full preview session lifecycle and API surface (BL-396, PR #468)
+
+### Deferred
+- 4 behavioral ACs pending real-FFmpeg smoke test discharge: FFmpeg progress reporting (BL-394 AC-1), output dimensions in FFmpeg command (BL-390 AC-2), async executor behavior under real FFmpeg load (BL-393 AC-1 and AC-3)
+
+**Summary:** Render & Preview Reliability + Agent Doc Accuracy — 3 themes (preview-subsystem-repair, render-reliability, agent-documentation-accuracy), 8 features, PRs #461–#468, 2615 passing tests. Closes BL-375, BL-384, BL-388, BL-390, BL-393, BL-394, BL-395, BL-396.
+
 ## [v068] — Agent Doc Accuracy, GUI Render, Repo Hygiene, Framework Guardrails (2026-05-22)
 
 ### Fixed
