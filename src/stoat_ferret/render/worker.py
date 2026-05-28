@@ -147,6 +147,9 @@ async def build_command_for_job(
     # Frame rate
     cmd.extend(["-r", str(fps)])
 
+    # Progress reporting (pipe:1 = stdout; progress parser reads from FFmpeg stdout)
+    cmd.extend(["-progress", "pipe:1"])
+
     # Output path (must be last)
     cmd.append(job.output_path)
 

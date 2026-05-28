@@ -238,6 +238,30 @@ class TestCommandBuilder:
         assert cmd[r_idx + 1] == "24.0"
 
     @pytest.mark.asyncio
+    async def test_progress_flag_present(self) -> None:
+        """BL-394-AC-1: -progress pipe:1 flag is present in the built command."""
+        job = _make_job()
+        clip_repo, video_repo = _make_repos()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+        assert "-progress" in cmd
+        prog_idx = cmd.index("-progress")
+        assert cmd[prog_idx + 1] == "pipe:1"
+
+    @pytest.mark.asyncio
+    async def test_progress_flag_before_output_path(self) -> None:
+        """BL-394-AC-1: -progress pipe:1 appears before the output path (not after)."""
+        job = _make_job()
+        clip_repo, video_repo = _make_repos()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+        prog_idx = cmd.index("-progress")
+        out_idx = cmd.index(_OUTPUT_PATH)
+        assert prog_idx < out_idx
+
+    @pytest.mark.asyncio
     async def test_clip_repository_queried(self) -> None:
         """AC-2.1: Clip repository list_by_project called with job's project_id."""
         job = _make_job()
