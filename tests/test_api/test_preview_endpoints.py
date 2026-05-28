@@ -26,6 +26,7 @@ from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 from stoat_ferret.jobs.queue import InMemoryJobQueue
 from stoat_ferret.preview.manager import (
+    InvalidTransitionError,
     PreviewManager,
     SessionExpiredError,
     SessionNotFoundError,
@@ -361,6 +362,25 @@ class TestSeekPreview:
             json={"position": 5.0},
         )
         assert response.status_code == 404
+
+    async def test_error_state_seek_returns_409(
+        self,
+        client: TestClient,
+        mock_preview_manager: MagicMock,
+    ) -> None:
+        """POST seek on error-state session returns 409 with structured error body."""
+        mock_preview_manager.seek.side_effect = InvalidTransitionError(
+            "invalid transition from error to seeking"
+        )
+
+        response = client.post(
+            "/api/v1/preview/error-session-id/seek",
+            json={"position": 5.0},
+        )
+        assert response.status_code == 409
+        detail = response.json()["detail"]
+        assert detail["code"] == "INVALID_STATE_TRANSITION"
+        assert "message" in detail
 
 
 # ---------- DELETE /preview/{session_id} ----------
