@@ -363,6 +363,179 @@ Observed frames while a render is running:
 
 ---
 
+## Pattern 6: Preview Lifecycle
+
+**Goal**: Start an HLS preview session for a project, poll or subscribe to WebSocket lifecycle events, seek to a new position, and stop the session when done.
+
+**Prerequisites**: A project with at least one clip on the timeline. FFmpeg must be available (`GET /health/ready` shows `status: "degraded"` when FFmpeg is absent — preview requires FFmpeg). API running at `http://localhost:8765`.
+
+### Preview Session Lifecycle
+
+A preview session passes through these states:
+
+```
+INITIALIZING ──► GENERATING ──► READY ◄──────┐
+                     │            │           │
+                     │            └──► SEEKING┘
+                     │
+                     └──► ERROR
+                               │
+                   (any state) └──► EXPIRED  (TTL; no broadcast)
+```
+
+State transitions:
+
+| From | To (allowed) |
+|------|-------------|
+| `initializing` | `generating`, `error`, `expired` |
+| `generating` | `ready`, `error`, `expired` |
+| `ready` | `seeking`, `error`, `expired` |
+| `seeking` | `ready`, `error`, `expired` |
+| `error` | `expired` |
+| `expired` | — (terminal) |
+
+WebSocket events emitted on transition:
+
+| State entered | Event broadcast |
+|---------------|----------------|
+| `generating` | `preview.generating` |
+| `ready` | `preview.ready` |
+| `seeking` | `preview.seeking` |
+| `error` | `preview.error` |
+| `expired` | *(none — state only; sessions expire automatically after TTL)* |
+
+> **Note:** `expired` is a session state, not a broadcast WebSocket event. There is no `preview.expired` event on the wire. Sessions expire automatically after `STOAT_PREVIEW_SESSION_TTL_SECONDS`. Detect expiry via `GET /api/v1/preview/{session_id}` returning `404 SESSION_EXPIRED` or from `status: "expired"` in the REST response.
+
+> **Note:** `pause` and `resume` endpoints are **not implemented**. There are no `/pause` or `/resume` endpoints in the preview API.
+
+### Interaction
+
+1. Start a preview: `POST /api/v1/projects/{project_id}/preview/start`
+2. Poll status or subscribe to WebSocket; wait for `status == "ready"` (or `preview.ready` event)
+3. Fetch HLS manifest: `GET /api/v1/preview/{session_id}/manifest.m3u8`
+4. Seek to a new position: `POST /api/v1/preview/{session_id}/seek` with `{"position": <seconds>}`
+5. Stop: `DELETE /api/v1/preview/{session_id}`
+
+### Endpoint Reference
+
+**Start preview session** (`POST /api/v1/projects/{project_id}/preview/start`):
+
+```bash
+curl -s -X POST "http://localhost:8765/api/v1/projects/$PROJECT_ID/preview/start" \
+  -H "Content-Type: application/json" \
+  -d '{"quality": "medium"}'
+```
+
+Request body (optional):
+
+| Field | Type | Default | Values |
+|-------|------|---------|--------|
+| `quality` | string | `"medium"` | `"low"`, `"medium"`, `"high"` |
+
+Response (202 Accepted):
+
+```json
+{"session_id": "psv-01HXZ2T9CK3Q4R5S6T7U8V9W0X"}
+```
+
+Error responses: `404 NOT_FOUND` (project not found), `422 EMPTY_TIMELINE` (no clips), `429 SESSION_LIMIT` (concurrency cap), `503 FFMPEG_UNAVAILABLE`.
+
+---
+
+**Get session status** (`GET /api/v1/preview/{session_id}`):
+
+```bash
+curl -s "http://localhost:8765/api/v1/preview/$SESSION_ID"
+```
+
+Response:
+
+```json
+{
+  "session_id": "psv-01HXZ2T9CK3Q4R5S6T7U8V9W0X",
+  "status": "ready",
+  "manifest_url": "/api/v1/preview/psv-01HXZ2T9CK3Q4R5S6T7U8V9W0X/manifest.m3u8",
+  "error_message": null
+}
+```
+
+`manifest_url` is only populated when `status == "ready"`. `error_message` is set when `status == "error"`.
+
+---
+
+**Seek to position** (`POST /api/v1/preview/{session_id}/seek`):
+
+```bash
+curl -s -X POST "http://localhost:8765/api/v1/preview/$SESSION_ID/seek" \
+  -H "Content-Type: application/json" \
+  -d '{"position": 12.5}'
+```
+
+Request body:
+
+| Field | Type | Constraint | Notes |
+|-------|------|-----------|-------|
+| `position` | float | `>= 0.0` | Seek position in **seconds** |
+
+> **Field name:** use `"position"` (not `"timestamp"`). The seek field is named `position` and is measured in seconds from the start of the timeline.
+
+Response:
+
+```json
+{"session_id": "psv-01HXZ…", "status": "seeking"}
+```
+
+Error responses: `404 NOT_FOUND` / `SESSION_EXPIRED`, `409 INVALID_STATE_TRANSITION` (session in `error` state), `503 FFMPEG_UNAVAILABLE`.
+
+---
+
+**Stop session** (`DELETE /api/v1/preview/{session_id}`):
+
+```bash
+curl -s -X DELETE "http://localhost:8765/api/v1/preview/$SESSION_ID"
+```
+
+Response:
+
+```json
+{"session_id": "psv-01HXZ…", "stopped": true}
+```
+
+### Complete Curl Example
+
+```bash
+# 1. Start preview (202 Accepted)
+SESSION_ID=$(curl -s -X POST "http://localhost:8765/api/v1/projects/$PROJECT_ID/preview/start" \
+  -H "Content-Type: application/json" \
+  -d '{"quality": "medium"}' | jq -r '.session_id')
+
+# 2. Poll until ready
+until [ "$(curl -s "http://localhost:8765/api/v1/preview/$SESSION_ID" | jq -r '.status')" = "ready" ]; do
+  sleep 1
+done
+
+# 3. Retrieve manifest URL
+MANIFEST_URL=$(curl -s "http://localhost:8765/api/v1/preview/$SESSION_ID" | jq -r '.manifest_url')
+echo "HLS manifest: http://localhost:8765$MANIFEST_URL"
+
+# 4. Seek to 5.0 seconds into the timeline
+curl -s -X POST "http://localhost:8765/api/v1/preview/$SESSION_ID/seek" \
+  -H "Content-Type: application/json" \
+  -d '{"position": 5.0}' | jq
+
+# 5. Stop the session when done
+curl -s -X DELETE "http://localhost:8765/api/v1/preview/$SESSION_ID" | jq
+```
+
+### Error Handling
+
+- `status: "error"` — HLS generation failed. `error_message` contains the truncated FFmpeg error. Stop the session and create a new one; sessions in `error` state cannot be retried.
+- `409 INVALID_STATE_TRANSITION` from `seek` — the session is in `error` or `expired` state. Stop it and start a new preview.
+- `404 SESSION_EXPIRED` — the session exceeded its TTL. Start a new preview.
+- `503 FFMPEG_UNAVAILABLE` — FFmpeg is not installed on the server. Preview is unavailable in this deployment.
+
+---
+
 ## Cross-Cutting Guidance
 
 ### Retries
