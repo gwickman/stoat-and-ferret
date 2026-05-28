@@ -156,7 +156,10 @@ class RealAsyncFFmpegExecutor:
                 line = line_bytes.decode("utf-8", errors="replace")
                 parse_progress_line(line, info)
                 if progress_callback is not None:
-                    await progress_callback(info)
+                    try:
+                        await progress_callback(info)
+                    except Exception:
+                        logger.warning("async_ffmpeg_progress_callback_failed")
 
         async def _monitor_cancel() -> None:
             if cancel_event is None:
@@ -166,17 +169,27 @@ class RealAsyncFFmpegExecutor:
                 logger.info("async_ffmpeg_cancelling", pid=process.pid)
                 process.terminate()
 
-        # Run stderr reading and cancel monitoring concurrently
+        # Run stderr reading and cancel monitoring concurrently.
+        # _read_stderr() is the exclusive reader of process.stderr.
+        # We read stdout directly and use process.wait() to avoid concurrent
+        # reads on process.stderr that Python 3.13 asyncio.StreamReader disallows.
         reader_task = asyncio.create_task(_read_stderr())
         cancel_task = asyncio.create_task(_monitor_cancel())
 
         try:
-            stdout, _ = await process.communicate()
+            assert process.stdout is not None
+            stdout = await process.stdout.read()
+            await process.wait()
         finally:
             cancel_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await cancel_task
-            await reader_task
+            # Bounded wait per LRN-406: bare await can stall indefinitely on Python 3.10
+            done, pending = await asyncio.wait({reader_task}, timeout=15.0)
+            for task in pending:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
         duration = time.monotonic() - start
         stderr = b"".join(stderr_chunks)
