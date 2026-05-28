@@ -120,8 +120,8 @@ async def build_command_for_job(
     # --- Extract encoder settings ---
     codec: str = settings.get("codec", "libx264")
     fps: float = settings.get("fps", 30.0)
-    width: int | None = settings.get("width")
-    height: int | None = settings.get("height")
+    width: int = settings.get("width", 1920)
+    height: int = settings.get("height", 1080)
     quality_preset: str = settings.get("quality_preset", "standard")
     filter_graph: str | None = settings.get("filter_graph")
 
