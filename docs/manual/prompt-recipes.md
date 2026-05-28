@@ -54,9 +54,10 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 // Use .duration as render_plan.total_duration in step 7.
 
 // 7. Render create — quality_preset must be one of draft|standard|high;
-//    render_plan.total_duration is required (omitting it returns 422 PREFLIGHT_FAILED)
+//    render_plan is a serialized JSON string (not a nested object);
+//    total_duration is required (omitting it returns 422 PREFLIGHT_FAILED)
 { "project_id": "<project_id>", "output_format": "mp4", "quality_preset": "standard",
-  "render_plan": { "total_duration": <duration_from_step_6> } }
+  "render_plan": "{\"total_duration\": <duration_from_step_6>, \"settings\": {}}" }
 ```
 
 ### Sample Response Shapes
@@ -89,6 +90,70 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 - Step 7 returns `422 PREFLIGHT_FAILED` if `render_plan` is absent or `total_duration` is missing; always fetch `.duration` from step 6 first.
 - Step 7 returns `400 INVALID_PRESET` if `quality_preset` is not `draft|standard|high`.
 - If the wait endpoint returns `408 JOB_WAIT_TIMEOUT`, the job is still running; re-call with the same `job_id`.
+
+### Render Plan Schema
+
+`render_plan` is passed as a **serialized JSON string** (not a nested object). The server parses it, injects server-side fields, and stores the result.
+
+#### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_duration` | number | Total timeline duration in seconds (from step 6 `.duration`) |
+| `settings` | object | Encoder settings (see sub-fields below) |
+
+#### Settings Sub-Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `codec` | string | `"libx264"` | FFmpeg encoder name (e.g. `libx264`, `libx265`, `libvpx-vp9`) |
+| `fps` | number | `30.0` | Output frame rate |
+| `width` | integer | — | Output width in pixels — **server-injected from project `output_width`** |
+| `height` | integer | — | Output height in pixels — **server-injected from project `output_height`** |
+| `quality_preset` | string | — | FFmpeg preset — **server-injected** from the request `quality_preset` field |
+| `filter_graph` | string | none | Custom FFmpeg `-vf` filter string; overrides `width`/`height` scale filter |
+
+> **Server-side injection:** The server automatically populates `settings.width` from the project's `output_width` (e.g. `1920`) and `settings.height` from `output_height` (e.g. `1080`). Do not set these in the client-side render_plan — they are always overwritten. Similarly, `quality_preset` is translated from the public vocabulary (`draft|standard|high`) and injected by the server.
+
+#### Optional: Segments
+
+If omitted, a single segment spanning `[0, total_duration]` is used. To render a sub-range, include one segment entry:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `segments[].index` | integer | Segment index (0-based) |
+| `segments[].timeline_start` | number | Start time in seconds |
+| `segments[].timeline_end` | number | End time in seconds |
+
+#### Complete Example
+
+The `render_plan` value below is a JSON **string** — the outer quotes and backslash-escapes are part of the HTTP request body. The project was created with `output_width: 1920, output_height: 1080`; the server injects `settings.width` and `settings.height` from those values.
+
+```json
+{
+  "project_id": "proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X",
+  "output_format": "mp4",
+  "quality_preset": "standard",
+  "render_plan": "{\"total_duration\": 10.0, \"settings\": {\"codec\": \"libx264\", \"fps\": 30.0, \"width\": 1920, \"height\": 1080}}"
+}
+```
+
+Expanded view of the render_plan object (what the server sees after parsing):
+
+```json
+{
+  "total_duration": 10.0,
+  "settings": {
+    "codec": "libx264",
+    "fps": 30.0,
+    "width": 1920,
+    "height": 1080,
+    "quality_preset": "medium"
+  }
+}
+```
+
+`quality_preset` is `"medium"` (FFmpeg name for `"standard"`) after server translation. The `width`/`height` values (`1920`/`1080`) originate from the project's `output_width`/`output_height` fields set in step 4.
 
 ---
 
