@@ -129,6 +129,8 @@ class RenderService:
         self._max_retries = settings.render_retry_count
         self._render_mode = settings.render_mode
         self._shutting_down = False
+        # Serializes concurrent noop-mode submissions to prevent state race (BL-388)
+        self._submit_lock = asyncio.Lock()
         # In noop mode FFmpeg is irrelevant — always treat as available so
         # synthetic load tests can submit jobs on hosts without FFmpeg.
         self._ffmpeg_available = self._render_mode == "noop" or shutil.which("ffmpeg") is not None
@@ -231,18 +233,20 @@ class RenderService:
         # Noop short-circuit: bypass queue enqueue so the background worker cannot
         # race this job to FAILED. Checks total_duration before creation so
         # incomplete plans are rejected at submit time (BL-355 AC-4, AC-5).
+        # Lock serializes concurrent noop submissions to prevent state race (BL-388).
         if self._render_mode == "noop":
             plan_data = json.loads(render_plan_json)
             if plan_data.get("total_duration") is None:
                 raise PreflightError("render plan missing required field: total_duration")
-            await self._repo.create(job)
-            log.info("render_job.noop_short_circuit", job_id=job.id)
-            render_jobs_total.labels(status="submitted").inc()
-            await self._broadcast_event(EventType.RENDER_QUEUED, job)
-            await self._broadcast_queue_status()
-            await self._broadcast_event(EventType.RENDER_STARTED, job)
-            await self._repo.update_status(job.id, RenderStatus.RUNNING)
-            await self._complete_job(job)
+            async with self._submit_lock:
+                await self._repo.create(job)
+                log.info("render_job.noop_short_circuit", job_id=job.id)
+                render_jobs_total.labels(status="submitted").inc()
+                await self._broadcast_event(EventType.RENDER_QUEUED, job)
+                await self._broadcast_queue_status()
+                await self._broadcast_event(EventType.RENDER_STARTED, job)
+                await self._repo.update_status(job.id, RenderStatus.RUNNING)
+                await self._complete_job(job)
             return await self._repo.get(job.id) or job
 
         try:
