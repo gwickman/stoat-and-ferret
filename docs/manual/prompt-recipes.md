@@ -91,6 +91,33 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 - Step 7 returns `400 INVALID_PRESET` if `quality_preset` is not `draft|standard|high`.
 - If the wait endpoint returns `408 JOB_WAIT_TIMEOUT`, the job is still running; re-call with the same `job_id`.
 
+### Scan: `recursive` Parameter
+
+The `recursive` field in the step 1 scan request controls how the server traverses the target directory:
+
+| Value | Behavior | When to use |
+|-------|----------|-------------|
+| `true` (default) | Walks the directory and **all subdirectories** | Large libraries with nested folder structures (e.g., organized by date, project, or category) |
+| `false` | Scans the **top-level directory only**; files in any subdirectory are skipped | Flat directories, or when you want to limit scope to exactly one folder |
+
+Both variants are shown below with their expected results:
+
+```jsonc
+// recursive: true — finds videos at any depth below the scan root
+{ "path": "/media/projects/film-2024", "recursive": true }
+// discovers: /media/projects/film-2024/promo.mp4          ← top-level
+//            /media/projects/film-2024/raw/shot01.mp4      ← subdirectory
+//            /media/projects/film-2024/b-roll/scene2.mp4   ← subdirectory
+
+// recursive: false — top-level files only; subdirectories are not walked
+{ "path": "/media/projects/film-2024", "recursive": false }
+// discovers: /media/projects/film-2024/promo.mp4           ← top-level
+// skips:     /media/projects/film-2024/raw/shot01.mp4      ← in subdirectory
+//            /media/projects/film-2024/b-roll/scene2.mp4   ← in subdirectory
+```
+
+`recursive` defaults to `true` when omitted.
+
 ### Render Plan Schema
 
 `render_plan` is passed as a **serialized JSON string** (not a nested object). The server parses it, injects server-side fields, and stores the result.
