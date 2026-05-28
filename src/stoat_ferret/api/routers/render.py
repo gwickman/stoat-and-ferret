@@ -422,6 +422,11 @@ async def create_render_job(
             detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"},
         )
 
+    # Inject project output dimensions into render_plan settings (BL-390)
+    plan_data["settings"]["width"] = project.output_width or 1920
+    plan_data["settings"]["height"] = project.output_height or 1080
+    render_plan_json = json.dumps(plan_data)
+
     # Empty timeline check (FR-002)
     clips = await clip_repo.list_by_project(project_id_str)
     if not clips:

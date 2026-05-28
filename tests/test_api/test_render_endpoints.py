@@ -1582,3 +1582,113 @@ class TestConcurrentNoopSubmissions:
         # All jobs must persist in the repository (no lost submissions)
         _, total = await noop_render_repo.list_jobs()
         assert total == n
+
+
+# ---------- BL-390: Dimension injection ----------
+
+
+class TestDimensionInjection:
+    """BL-390: Project output dimensions are injected into render_plan settings at submission."""
+
+    def test_project_dimensions_injected_into_plan_settings(
+        self,
+        render_client: TestClient,
+        mock_render_service: AsyncMock,
+    ) -> None:
+        """BL-390-AC-2: submit_job receives render_plan_json with project width/height."""
+        # Seeded project has output_width=1920, output_height=1080
+        resp = render_client.post(
+            "/api/v1/render",
+            json={
+                "project_id": TEST_PROJECT_UUID,
+                "output_format": "mp4",
+                "quality_preset": "standard",
+                "render_plan": json.dumps({"total_duration": 10.0}),
+            },
+        )
+        assert resp.status_code == 201
+
+        call_args = mock_render_service.submit_job.call_args
+        plan = json.loads(call_args.kwargs["render_plan_json"])
+        assert plan["settings"]["width"] == 1920
+        assert plan["settings"]["height"] == 1080
+
+    def test_custom_project_dimensions_injected(self) -> None:
+        """BL-390-AC-2: Non-default project dimensions (1280×720) are injected into render_plan."""
+        from datetime import timezone
+
+        from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+        from stoat_ferret.db.models import Clip, Project
+        from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+
+        now = datetime.now(timezone.utc)
+        custom_project_id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
+        project_repo = AsyncInMemoryProjectRepository()
+        project_repo.seed(
+            [
+                Project(
+                    id=custom_project_id,
+                    name="HD Project",
+                    output_width=1280,
+                    output_height=720,
+                    output_fps=30,
+                    created_at=now,
+                    updated_at=now,
+                )
+            ]
+        )
+        clip_repo = AsyncInMemoryClipRepository()
+        clip_repo.seed(
+            [
+                Clip(
+                    id="clip-custom-dim",
+                    project_id=custom_project_id,
+                    source_video_id="vid-custom-dim",
+                    in_point=0,
+                    out_point=100,
+                    timeline_position=0,
+                    created_at=now,
+                    updated_at=now,
+                )
+            ]
+        )
+
+        render_repo = InMemoryRenderRepository()
+        captured: list[dict] = []
+
+        async def capture_submit(**kwargs: str) -> RenderJob:
+            captured.append(json.loads(kwargs["render_plan_json"]))
+            job = RenderJob.create(
+                project_id=kwargs["project_id"],
+                output_path=kwargs["output_path"],
+                output_format=kwargs["output_format"],
+                quality_preset=kwargs["quality_preset"],
+                render_plan=kwargs["render_plan_json"],
+            )
+            return await render_repo.create(job)
+
+        mock_svc = MagicMock(spec=RenderService)
+        mock_svc.submit_job = AsyncMock(side_effect=capture_submit)
+
+        app = create_app(
+            render_repository=render_repo,
+            render_service=mock_svc,
+            project_repository=project_repo,
+            clip_repository=clip_repo,
+        )
+
+        with TestClient(app) as client:
+            resp = client.post(
+                "/api/v1/render",
+                json={
+                    "project_id": custom_project_id,
+                    "output_format": "mp4",
+                    "quality_preset": "standard",
+                    "render_plan": json.dumps({"total_duration": 10.0}),
+                },
+            )
+
+        assert resp.status_code == 201
+        assert captured[0]["settings"]["width"] == 1280
+        assert captured[0]["settings"]["height"] == 720

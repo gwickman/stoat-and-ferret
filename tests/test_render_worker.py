@@ -226,6 +226,31 @@ class TestCommandBuilder:
         assert cmd[vf_idx + 1] == "scale=1280:720"
 
     @pytest.mark.asyncio
+    async def test_4k_dimensions_produce_scale_filter(self) -> None:
+        """BL-390-AC-3: build_command_for_job with 4K dimensions produces -vf scale=3840:2160."""
+        job = _make_job(render_plan=_make_render_plan(width=3840, height=2160))
+        clip_repo, video_repo = _make_repos()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+        assert "-vf" in cmd
+        vf_idx = cmd.index("-vf")
+        assert cmd[vf_idx + 1] == "scale=3840:2160"
+
+    @pytest.mark.asyncio
+    async def test_default_dimensions_applied_when_missing(self) -> None:
+        """BL-390 FR-004-AC-2: plan without width/height defaults to scale=1920:1080."""
+        plan = json.dumps({"total_duration": 60.0, "settings": {"codec": "libx264", "fps": 30.0}})
+        job = _make_job(render_plan=plan)
+        clip_repo, video_repo = _make_repos()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+        assert "-vf" in cmd
+        vf_idx = cmd.index("-vf")
+        assert cmd[vf_idx + 1] == "scale=1920:1080"
+
+    @pytest.mark.asyncio
     async def test_fps_included(self) -> None:
         """AC-1.3: Frame rate from settings included in command."""
         job = _make_job(render_plan=_make_render_plan(fps=24.0))
