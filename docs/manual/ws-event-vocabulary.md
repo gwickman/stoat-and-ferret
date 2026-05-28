@@ -280,6 +280,8 @@ Emitted when the HLS pipeline fails (FFmpeg error or seek failure).
 
 Schema inferred from `preview/manager.py:423, 585`.
 
+> **`expired` is a session state, not a broadcast event.** There is no `preview.expired` event on the wire. Sessions expire automatically after `STOAT_PREVIEW_SESSION_TTL_SECONDS`; expiry is detected via the REST status endpoint (`GET /api/v1/preview/{session_id}` returns `404 SESSION_EXPIRED`) rather than a WebSocket event. See [`ai-integration-patterns.md`](ai-integration-patterns.md) Pattern 6 for the full lifecycle state machine.
+
 ### `render_queued`
 
 Emitted when `RenderService.submit_job` enqueues a job. First render lifecycle event; carries the next globally-unique `event_id` (not `event-00000` — the global counter advances monotonically).
