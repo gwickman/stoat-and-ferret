@@ -32,6 +32,7 @@ from stoat_ferret.db.project_repository import (
 )
 from stoat_ferret.preview.cache import PreviewCache
 from stoat_ferret.preview.manager import (
+    InvalidTransitionError,
     PreviewManager,
     SessionExpiredError,
     SessionLimitError,
@@ -371,6 +372,14 @@ async def seek_preview(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "SESSION_EXPIRED", "message": f"Session {session_id} has expired"},
+        ) from None
+    except InvalidTransitionError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "INVALID_STATE_TRANSITION",
+                "message": f"Session {session_id} cannot be seeked in its current state",
+            },
         ) from None
 
     logger.info("preview_session_seek", session_id=session_id, position=body.position)
