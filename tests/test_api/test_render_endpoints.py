@@ -1530,3 +1530,55 @@ class TestGetQueueStatus:
         with TestClient(app) as client:
             resp = client.get("/api/v1/render/queue")
             assert resp.status_code == 503
+
+
+# ---------- Concurrent noop submission serialization (BL-388) ----------
+
+
+class TestConcurrentNoopSubmissions:
+    """Tests for concurrent noop-mode render submission serialization (BL-388)."""
+
+    async def test_concurrent_noop_submissions_no_race(
+        self,
+        noop_render_app: FastAPI,
+        noop_render_repo: InMemoryRenderRepository,
+    ) -> None:
+        """10 concurrent noop submissions all complete without race errors or missing jobs."""
+        import httpx
+
+        n = 10
+        render_plan = json.dumps({"total_duration": 5.0})
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=noop_render_app),
+            base_url="http://test",
+        ) as client:
+            tasks = [
+                client.post(
+                    "/api/v1/render",
+                    json={
+                        "project_id": TEST_PROJECT_UUID,
+                        "output_format": "mp4",
+                        "quality_preset": "standard",
+                        "render_plan": render_plan,
+                    },
+                )
+                for _ in range(n)
+            ]
+            responses = await asyncio.gather(*tasks)
+
+        # All requests must succeed
+        statuses_http = [r.status_code for r in responses]
+        assert all(s == 201 for s in statuses_http), statuses_http
+
+        # All jobs must reach 'completed' status (no stuck-running race artifacts)
+        job_statuses = [r.json()["status"] for r in responses]
+        assert all(s == "completed" for s in job_statuses), job_statuses
+
+        # All job IDs must be unique (no duplicate submissions processed)
+        job_ids = [r.json()["id"] for r in responses]
+        assert len(set(job_ids)) == n, f"Expected {n} unique job IDs, got {len(set(job_ids))}"
+
+        # All jobs must persist in the repository (no lost submissions)
+        _, total = await noop_render_repo.list_jobs()
+        assert total == n
