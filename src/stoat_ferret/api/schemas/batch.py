@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -13,7 +15,9 @@ class BatchJobConfig(BaseModel):
 
     project_id: str = Field(..., description="Project ID to render")
     output_path: str = Field(..., description="Output file path for rendered video")
-    quality: str = Field(default="medium", description="Render quality preset")
+    quality: Literal["draft", "standard", "high"] = Field(
+        default="standard", description="Render quality preset"
+    )
 
 
 class BatchRequest(BaseModel):

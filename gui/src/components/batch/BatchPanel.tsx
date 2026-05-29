@@ -7,7 +7,7 @@ interface BatchEntry {
   quality: string
 }
 
-const QUALITIES = ['low', 'medium', 'high'] as const
+const QUALITIES = ['draft', 'standard', 'high'] as const
 
 interface BatchSubmitResponse {
   batch_id: string
@@ -21,7 +21,7 @@ interface BatchPanelProps {
 }
 
 function emptyEntry(): BatchEntry {
-  return { project_id: '', output_path: '', quality: 'medium' }
+  return { project_id: '', output_path: '', quality: 'standard' }
 }
 
 function uuid(): string {
