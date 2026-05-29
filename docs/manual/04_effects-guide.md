@@ -246,6 +246,8 @@ Crossfade between two video inputs with a selectable transition effect. Uses FFm
 
 **Common transition names:** `fade`, `wipeleft`, `wiperight`, `wipeup`, `wipedown`, `dissolve`, `pixelize`, `circleopen`, `circleclose`, `slideright`, `slideleft`, `smoothleft`, `smoothright`, `diagtl`, `diagtr`, `diagbl`, `diagbr`, `hlslice`, `hrslice`, `vuslice`, `vdslice`, `radial`, `zoomin`, `squeezeh`, `squeezev`, and many more.
 
+**Note:** The transition parameter value `fade` refers to the xfade FFmpeg filter and is distinct from the effect type `video_fade`, which uses the fade filter. Do not confuse these two surfaces when specifying transitions vs effects.
+
 **Example (applied as a transition between clips):**
 
 ```bash
