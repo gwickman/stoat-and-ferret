@@ -304,13 +304,14 @@ resync agent state with minimal REST polling.
 1. Agent connects to `ws://localhost:8765/ws`. The server immediately
    accepts and starts streaming events and periodic `heartbeat`
    messages.
-2. Every frame is a JSON object with `type`, `payload`,
-   `correlation_id`, and `timestamp` fields. `type` values include
+2. Every frame is a JSON object with five fields: `type`, `payload`,
+   `correlation_id`, `timestamp`, and `event_id`. `type` values include
    `heartbeat`, `render_queued`, `render_started`, `render_progress`,
    `render_completed`, `render_failed`, `render_cancelled`,
    `scan_completed`, `project_created`, `timeline_updated`, and others
    (see [08_ai-integration.md](08_ai-integration.md) for the full
-   vocabulary).
+   vocabulary). See [ws-event-vocabulary.md](ws-event-vocabulary.md) for
+   the authoritative frame envelope definition.
 3. Persist each frame's `event_id` field as you process it. On
    reconnect, send `Last-Event-ID: <last-seen-event-id>` as an HTTP
    header during the WebSocket upgrade handshake — the server replays
@@ -341,11 +342,11 @@ wscat -c ws://localhost:8765/ws -H "Last-Event-ID: event-00042"
 Observed frames while a render is running:
 
 ```json
-{"type":"render_queued","payload":{"job_id":"...","project_id":"..."},"correlation_id":null,"timestamp":"2026-04-23T00:57:17.631983Z"}
-{"type":"render_started","payload":{"job_id":"..."},"correlation_id":null,"timestamp":"..."}
-{"type":"render_progress","payload":{"job_id":"...","progress":0.42},"correlation_id":null,"timestamp":"..."}
-{"type":"render_completed","payload":{"job_id":"...","output_path":"..."},"correlation_id":null,"timestamp":"..."}
-{"type":"heartbeat","payload":{},"correlation_id":null,"timestamp":"..."}
+{"type":"render_queued","payload":{"job_id":"...","project_id":"..."},"correlation_id":null,"timestamp":"2026-04-23T00:57:17.631983Z","event_id":"event-00042"}
+{"type":"render_started","payload":{"job_id":"..."},"correlation_id":null,"timestamp":"...","event_id":"event-00043"}
+{"type":"render_progress","payload":{"job_id":"...","progress":0.42},"correlation_id":null,"timestamp":"...","event_id":"event-00044"}
+{"type":"render_completed","payload":{"job_id":"...","output_path":"..."},"correlation_id":null,"timestamp":"...","event_id":"event-00045"}
+{"type":"heartbeat","payload":{},"correlation_id":null,"timestamp":"...","event_id":"event-00046"}
 ```
 
 **Error Handling**:
