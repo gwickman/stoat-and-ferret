@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v070] — API Contract Hygiene, Documentation Accuracy & Render Recovery (2026-05-29)
+
+### Added
+- Enforced quality enum validation on batch render requests (`BatchJobConfig.quality` now `Literal["draft","standard","high"]`); default changed from `"medium"` to `"standard"`; GUI batch panel updated to match (BL-397, PR #470)
+- Added recursion guard to scan endpoint: `recursive=true` on paths with subdirectories returns HTTP 400 `RECURSIVE_SCAN_FORBIDDEN`, preventing BL-378 directory commingling regression (BL-391, PR #472)
+- Added `StaleRenderSweeper` background task: detects render jobs stuck in `status='running'` beyond a configurable threshold and transitions them to `status='failed'`, reducing MTTR from hours to seconds; adds `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` setting (BL-389, PR #476)
+
+### Documentation
+- Documented empty-PUT timeline clearing behavior in `operator-guide.md` with data-loss warning; added smoke test verifying `PUT /timeline []` deletes all tracks (BL-387, PR #471)
+- Synced Pattern 5 event envelope with five-field reality: added `event_id` to description and all five JSON examples; added cross-reference to `ws-event-vocabulary.md` (BL-385, PR #473)
+- Documented error response envelope shapes in `03_api-reference.md`: app-level dict vs Pydantic list shapes with Python parsing guide; added cross-references from `operator-guide.md` and `prompt-recipes.md` (BL-386, PR #474)
+- Disambiguated `fade` transition (xfade) from `video_fade` effect in effects documentation with explicit "distinct from" language (BL-392, PR #475)
+
+**Summary:** API Contract Hygiene, Documentation Accuracy & Render Recovery — 3 themes (api-contract-hygiene, documentation-accuracy, render-recovery), 7 features, PRs #470–#476, 2616 passing tests. Closes BL-385, BL-386, BL-387, BL-389, BL-391, BL-392, BL-397.
+
 ## [v069] — Render & Preview Reliability + Agent Doc Accuracy (2026-05-28)
 
 ### Fixed
