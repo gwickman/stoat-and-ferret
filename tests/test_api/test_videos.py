@@ -319,12 +319,26 @@ def test_scan_finds_video_files(client: TestClient, tmp_path: Path) -> None:
 
 
 @pytest.mark.api
-def test_scan_recursive(client: TestClient, tmp_path: Path) -> None:
-    """Scan recursively finds videos in subdirectories."""
+def test_scan_recursive_forbidden_on_subdirs(client: TestClient, tmp_path: Path) -> None:
+    """recursive=true returns 400 RECURSIVE_SCAN_FORBIDDEN when path has subdirectories."""
     subdir = tmp_path / "subdir"
     subdir.mkdir()
     (tmp_path / "video1.mp4").touch()
-    (subdir / "video2.mp4").touch()
+
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": str(tmp_path), "recursive": True},
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "RECURSIVE_SCAN_FORBIDDEN"
+    assert "subdir" in data["detail"]["message"]
+
+
+@pytest.mark.api
+def test_scan_recursive_allowed_on_flat_dir(client: TestClient, tmp_path: Path) -> None:
+    """recursive=true is accepted (202) when path has no subdirectories."""
+    (tmp_path / "video1.mp4").touch()
 
     mock_metadata = _make_mock_metadata()
 
@@ -337,9 +351,7 @@ def test_scan_recursive(client: TestClient, tmp_path: Path) -> None:
 
     job = _get_job_result(client, job_id)
     assert job["status"] == "complete"
-    result = job["result"]
-    assert result["scanned"] == 2
-    assert result["new"] == 2
+    assert job["result"]["scanned"] == 1
 
 
 @pytest.mark.api
