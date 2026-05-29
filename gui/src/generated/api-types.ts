@@ -2531,9 +2531,10 @@ export interface components {
             /**
              * Quality
              * @description Render quality preset
-             * @default medium
+             * @default standard
+             * @enum {string}
              */
-            quality: string;
+            quality: "draft" | "standard" | "high";
         };
         /**
          * BatchJobStatusResponse

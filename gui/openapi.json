@@ -3752,9 +3752,14 @@
           },
           "quality": {
             "type": "string",
+            "enum": [
+              "draft",
+              "standard",
+              "high"
+            ],
             "title": "Quality",
             "description": "Render quality preset",
-            "default": "medium"
+            "default": "standard"
           }
         },
         "type": "object",

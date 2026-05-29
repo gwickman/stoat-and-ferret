@@ -60,7 +60,7 @@ def test_submit_batch_returns_correct_jobs_queued(client: TestClient) -> None:
 
 @pytest.mark.api
 def test_submit_batch_default_quality(client: TestClient) -> None:
-    """Jobs default to medium quality when not specified."""
+    """Jobs default to standard quality when not specified."""
     response = client.post(
         "/api/v1/render/batch",
         json={"jobs": [{"project_id": "proj-1", "output_path": "/out/1.mp4"}]},

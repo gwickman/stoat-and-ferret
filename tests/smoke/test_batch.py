@@ -61,7 +61,7 @@ async def test_batch_submit_and_poll(batch_client: httpx.AsyncClient) -> None:
                 {
                     "project_id": project_id,
                     "output_path": "/tmp/smoke_render.mp4",
-                    "quality": "medium",
+                    "quality": "standard",
                 },
             ],
         },
