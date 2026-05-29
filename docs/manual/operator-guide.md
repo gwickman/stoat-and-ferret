@@ -147,6 +147,7 @@ Single-call endpoints (health checks, state snapshot, one-shot seeds) do not jus
 ## Further Reading
 
 - Full endpoint catalogue: `docs/manual/03_api-reference.md`
+- Error response shapes (app-level dict vs Pydantic list, when each fires, parsing guide): `docs/manual/03_api-reference.md` §Error Response Shapes
 - Runnable recipes: `docs/manual/prompt-recipes.md`, `scripts/examples/`
 - Event payloads: `docs/manual/ws-event-vocabulary.md`
 - Error handling, retries, auth in production: `docs/manual/api-usage-examples.md`

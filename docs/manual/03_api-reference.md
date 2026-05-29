@@ -1324,6 +1324,71 @@ ReDoc -- clean, readable API documentation.
 
 ---
 
+## Error Response Shapes
+
+The API returns two distinct error envelope shapes depending on whether a request fails application-level validation or Pydantic schema validation. Agent-side error parsers must branch on the type of `detail` to handle both correctly.
+
+### App-Level Errors (dict shape)
+
+Business rule failures, preflight checks, and named error conditions return `detail` as a JSON **object** with `code` and `message` fields:
+
+```json
+{
+  "detail": {
+    "code": "NOT_FOUND",
+    "message": "Video vid-abc123 does not exist"
+  }
+}
+```
+
+This shape appears for:
+- Business rule violations (e.g., `NOT_FOUND`, `NOT_ADJACENT`, `CANCEL_FAILED`, `INVALID_FORMAT`)
+- Preflight failures (e.g., `PREFLIGHT_FAILED` on render submission)
+- Named status codes (e.g., `JOB_WAIT_TIMEOUT`, `REFRESH_IN_PROGRESS`, `TESTING_MODE_DISABLED`)
+
+`code` is a stable machine-readable string; `message` is human-readable prose. Endpoint references throughout this document use the form `400 CODE` or `404 NOT_FOUND` to name these codes.
+
+### Pydantic Validation Errors (list shape)
+
+Schema validation failures — when a request body or query parameter does not match the expected type, is missing a required field, or violates a constraint — return `detail` as a JSON **array** of error objects:
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "project_id"],
+      "msg": "Field required",
+      "input": {}
+    }
+  ]
+}
+```
+
+This shape appears for:
+- Missing required request body fields
+- Wrong field types (e.g., string where integer expected)
+- Constraint violations caught by Pydantic before the handler runs (distinct from app-level `422 PREFLIGHT_FAILED`)
+
+Each array entry has `type` (Pydantic error kind), `loc` (field path from the request root), `msg` (human-readable description), and `input` (the value that failed validation).
+
+### Parsing Both Shapes
+
+Branch on the runtime type of `detail` to handle both envelopes without crashing:
+
+```python
+detail = response_body.get("detail")
+if isinstance(detail, dict):
+    # App-level error: stable code + message
+    code = detail["code"]
+    message = detail["message"]
+elif isinstance(detail, list):
+    # Pydantic validation error: one or more field-level failures
+    errors = [(e["loc"], e["msg"]) for e in detail]
+```
+
+---
+
 ## Response Schemas Reference
 
 ### VideoResponse
