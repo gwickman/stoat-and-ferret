@@ -126,6 +126,17 @@ class AsyncRenderRepository(Protocol):
         """
         ...
 
+    async def list_stale_running(self, older_than: datetime) -> list[RenderJob]:
+        """Return running jobs with updated_at older than the given threshold.
+
+        Args:
+            older_than: Cutoff datetime; jobs updated before this are considered stale.
+
+        Returns:
+            List of running render jobs whose updated_at is before older_than.
+        """
+        ...
+
     async def delete(self, job_id: str) -> bool:
         """Delete a render job by ID.
 
@@ -316,6 +327,15 @@ class AsyncSQLiteRenderRepository:
         )
         await self._conn.commit()
 
+    async def list_stale_running(self, older_than: datetime) -> list[RenderJob]:
+        """Return running jobs with updated_at older than the given threshold."""
+        cursor = await self._conn.execute(
+            "SELECT * FROM render_jobs WHERE status = ? AND updated_at < ?",
+            (RenderStatus.RUNNING.value, older_than.isoformat()),
+        )
+        rows = await cursor.fetchall()
+        return [self._row_to_job(row) for row in rows]
+
     async def delete(self, job_id: str) -> bool:
         """Delete a render job by ID."""
         cursor = await self._conn.execute(
@@ -446,6 +466,14 @@ class InMemoryRenderRepository:
 
         job.progress = progress
         job.updated_at = datetime.now(timezone.utc)
+
+    async def list_stale_running(self, older_than: datetime) -> list[RenderJob]:
+        """Return running jobs with updated_at older than the given threshold."""
+        return [
+            copy.deepcopy(j)
+            for j in self._jobs.values()
+            if j.status == RenderStatus.RUNNING and j.updated_at < older_than
+        ]
 
     async def delete(self, job_id: str) -> bool:
         """Delete a render job by ID."""
