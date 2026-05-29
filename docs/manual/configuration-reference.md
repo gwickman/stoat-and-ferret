@@ -24,6 +24,20 @@ Batch rendering exposes the `/api/v1/batch/*` routes that accept multi-job rende
 - `STOAT_BATCH_MAX_JOBS` is a denial-of-service guard: the limit caps the work a single client can queue in one request. Raising it on an internet-exposed deployment increases the cost of a hostile or malformed batch submission. Keep at the default unless you have an inbound rate-limit or authentication layer that bounds caller concurrency.
 - Disabling `STOAT_BATCH_RENDERING` is a coarse mitigation — operators responding to a batch-route incident can set it to `false` to take all batch endpoints offline without redeploying code.
 
+## Stale-Job Sweeper
+
+The stale-job sweeper runs as a background asyncio task and recovers render jobs stuck in `status='running'` with no progress. It polls periodically and transitions each stale job to `status='failed'`, reducing MTTR from hours (executor timeout) to seconds (sweep interval + threshold).
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` | `int` | `300` | Age in seconds beyond which a running render job is considered stale and transitioned to `failed` (valid range: 60-3600). The default 300s is appropriate for noop mode. Production deployments using real render mode should increase to 1800s (30 min) to avoid premature failure of slow-but-progressing encodes. |
+
+**Security implications**
+
+- Setting this too low terminates legitimate renders prematurely, causing spurious `failed` events on the WebSocket bus and filling `error_message` with sweeper-termination text. For real-mode deployments with long-running encodes (high-resolution, multi-segment), keep at 1800s or higher.
+- Setting this too high (near 3600s) reduces the MTTR benefit; stuck jobs hold worker slots blocked for longer. For noop-mode environments the default 300s is safe because noop renders complete in milliseconds.
+- The sweeper emits `EventType.RENDER_FAILED` WebSocket events and `render.job_stale` structured log entries for each transition. Monitoring these events helps distinguish sweeper-triggered failures from genuine encode errors.
+
 ## Render Worker
 
 The render worker loop dequeues jobs from the render queue and drives them through the render pipeline as a background asyncio task.

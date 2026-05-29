@@ -91,6 +91,7 @@ from stoat_ferret.render.render_repository import (
     AsyncSQLiteRenderRepository,
 )
 from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.sweeper import StaleRenderSweeper
 from stoat_ferret.render.worker import RenderWorkerLoop
 
 logger = structlog.get_logger(__name__)
@@ -261,7 +262,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await render_service.recover()
 
     # Phase 9.5: Register render worker (after services, before job queue worker)
-    if settings.render_worker_enabled:
+    # Noop mode handles all jobs inline in service.submit(); the render worker
+    # polls list_by_status(QUEUED) and would race the noop path to RUNNING.
+    if settings.render_worker_enabled and settings.render_mode != "noop":
         render_worker = RenderWorkerLoop(
             service=render_service,
             queue=render_queue,
@@ -306,6 +309,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.job_queue = job_queue
     worker_task = asyncio.create_task(job_queue.process_jobs())
     logger.info("job_worker_started")
+
+    # Phase 12→13: start stale-job sweeper after job worker, before gate clears
+    render_sweeper = StaleRenderSweeper(
+        repo=app.state.render_repository,
+        ws_manager=app.state.ws_manager,
+        threshold_seconds=settings.render_stuck_threshold_seconds,
+    )
+    sweeper_task = asyncio.create_task(render_sweeper.run())
+    app.state.render_sweeper_task = sweeper_task
 
     # Collect version info for startup event
     from stoat_ferret_core import health_check
@@ -417,6 +429,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         rw_task.cancel()
         # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
         await asyncio.wait({rw_task}, timeout=15.0)
+
+    # Shutdown: cancel stale-job sweeper
+    sw_task: asyncio.Task[None] | None = getattr(app.state, "render_sweeper_task", None)
+    if sw_task is not None:
+        sw_task.cancel()
+        # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
+        await asyncio.wait({sw_task}, timeout=15.0)
 
     # Shutdown: cancel worker and close database
     worker_task.cancel()

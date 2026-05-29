@@ -149,6 +149,16 @@ class Settings(BaseSettings):
         le=1.0,
         description="Disk usage ratio that triggers render health degradation (0.0-1.0)",
     )
+    render_stuck_threshold_seconds: int = Field(
+        default=300,
+        ge=60,
+        le=3600,
+        description=(
+            "Seconds before a stale-running render job is transitioned to failed "
+            "(STOAT_RENDER_STUCK_THRESHOLD_SECONDS). Default 300s (noop); "
+            "production real-mode deployments should increase to 1800s."
+        ),
+    )
 
     # Version retention
     version_retention_count: int | None = Field(

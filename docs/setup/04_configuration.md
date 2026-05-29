@@ -83,6 +83,7 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 | `STOAT_RENDER_RETRY_COUNT` | `int` | `2` | Maximum retry attempts for transient render failures (valid range: 0-5). |
 | `STOAT_RENDER_MODE` | `str` | `real` | Render execution mode. One of: `real` (default; invokes FFmpeg) or `noop` (short-circuits the render service for synthetic load testing without spawning FFmpeg processes). |
 | `STOAT_RENDER_DISK_DEGRADED_THRESHOLD` | `float` | `0.9` | Disk usage ratio (0.0-1.0) at which the render service reports a degraded health status. Use to alert operators before the disk fills and render jobs begin failing. |
+| `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` | `int` | `300` | Age in seconds beyond which a running render job is considered stale and transitioned to `failed` by the background sweeper (valid range: 60-3600). The default of 300s is appropriate for noop mode. Production deployments using real render mode should increase to 1800s (30 min) to avoid premature failure of slow-but-progressing encodes. |
 
 ### Security
 
