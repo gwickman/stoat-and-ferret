@@ -47,6 +47,16 @@ Body is a JSON array of `TrackCreate` objects. Required per track: `track_type` 
 **Step 3 — Assign clip to timeline** (`POST /api/v1/projects/{project_id}/timeline/clips`):
 Required fields: `clip_id` (from Step 1), `track_id` (from Step 2), `timeline_start` (float), `timeline_end` (float). Both coordinates are **absolute seconds from the start of the timeline** — not offsets relative to the clip's `in_point`. Example: `timeline_start=0.0, timeline_end=5.0` occupies the first 5 seconds of the timeline. Constraints: `timeline_start >= 0`, `timeline_end > 0`, `timeline_end > timeline_start` (returns 422 if violated).
 
+#### Clearing the Timeline
+
+`PUT /api/v1/projects/{project_id}/timeline` with an empty array `[]` **deletes all existing tracks** and returns HTTP 200. This is intentional REST PUT semantics — PUT replaces the entire resource with the supplied representation, so an empty array means "the timeline now contains zero tracks."
+
+**Data loss risk:** All track metadata is permanently removed. Any clips previously assigned to those tracks lose their timeline positions (the clips themselves are not deleted, but their track associations are cleared). There is no undo.
+
+Before clearing, review the current timeline state with `GET /api/v1/projects/{project_id}/timeline` to confirm you intend to remove all tracks.
+
+If you want to remove only specific tracks, use a PUT body that includes the tracks you want to keep and omits the ones you want to remove — the endpoint replaces, not merges.
+
 #### Render Plan
 
 `POST /api/v1/render` requires `render_plan.total_duration` (float, seconds). Obtain it from the project's current timeline:
