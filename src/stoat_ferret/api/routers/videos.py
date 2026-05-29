@@ -203,6 +203,26 @@ async def scan_videos(
             detail={"code": "PATH_NOT_ALLOWED", "message": error},
         )
 
+    if scan_request.recursive:
+        try:
+            subdirs = sorted(
+                entry for entry in os.listdir(path) if os.path.isdir(os.path.join(path, entry))
+            )
+        except OSError:
+            subdirs = []
+        if subdirs:
+            preview = ", ".join(subdirs[:5])
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "RECURSIVE_SCAN_FORBIDDEN",
+                    "message": (
+                        f"Path '{path}' contains subdirectories ({preview}). "
+                        "Use recursive=false or scan each subdirectory individually."
+                    ),
+                },
+            )
+
     job_queue = request.app.state.job_queue
     job_id = await job_queue.submit(
         SCAN_JOB_TYPE,
