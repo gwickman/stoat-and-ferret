@@ -262,7 +262,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await render_service.recover()
 
     # Phase 9.5: Register render worker (after services, before job queue worker)
-    if settings.render_worker_enabled:
+    # Noop mode handles all jobs inline in service.submit(); the render worker
+    # polls list_by_status(QUEUED) and would race the noop path to RUNNING.
+    if settings.render_worker_enabled and settings.render_mode != "noop":
         render_worker = RenderWorkerLoop(
             service=render_service,
             queue=render_queue,
