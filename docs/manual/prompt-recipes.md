@@ -419,6 +419,7 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 
 - [`operator-guide.md`](operator-guide.md) — compact canonical sequence reference
 - [`api-usage-examples.md`](api-usage-examples.md) — full error code catalogue and validated request/response flows
+- [`03_api-reference.md` §Error Response Shapes](03_api-reference.md) — two distinct error envelope shapes (app-level dict vs Pydantic list), when each fires, and how to parse both
 - [`ws-event-vocabulary.md`](ws-event-vocabulary.md) — event type catalogue with payload schemas
 - [`scripts/examples/wait-for-render.py`](../../scripts/examples/wait-for-render.py) — runnable long-poll wrapper for generic queue jobs only (scan/proxy/waveform/thumbnail; stdlib-only)
 - [`scripts/examples/dump-ws-events.py`](../../scripts/examples/dump-ws-events.py) — runnable WebSocket dumper (`websockets>=12.0`)
