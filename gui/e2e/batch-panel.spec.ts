@@ -48,7 +48,7 @@ test.describe("J603: Batch Panel WebSocket Events", () => {
         ).toBeVisible();
         await expect(page.getByTestId("batch-panel")).toBeVisible();
 
-        // Fill form: project ID, output path (quality defaults to "medium")
+        // Fill form: project ID, output path (quality defaults to "standard")
         await page.getByTestId("batch-project-0").fill(project.id);
         await page
           .getByTestId("batch-output-0")
