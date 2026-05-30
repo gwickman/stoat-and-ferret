@@ -237,6 +237,14 @@ testing-evidence/**
 uat-evidence/
 chatbot-testing-evidence/
 
+# Local test-run stdout dumps — pytest output redirected to files at repo
+# root (e.g. `pytest > test_output.txt`). Ephemeral per-run artifacts that
+# repeatedly dirtied the tree; never tracked.
+/full_test_output.txt
+/test_output.txt
+/test_output_*.txt
+/test_*_results.txt
+
 # Optional test video corpus — locally fetched real-world clips for
 # exploratory testing. Never tracked.
 videos/test-corpus/
