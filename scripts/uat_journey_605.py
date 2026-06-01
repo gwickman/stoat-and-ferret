@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,7 @@ from playwright.sync_api import sync_playwright  # type: ignore[import-not-found
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JOURNEY_NAME = "screen-reader-audit"
 JOURNEY_ID = 605
+JOURNEY_TIMEOUT: int = 600  # seconds
 
 # Routes to audit (relative to GUI base path)
 AUDIT_ROUTES = [
@@ -157,6 +159,10 @@ def run() -> int:
     for route, label in WORKSPACE_ROUTES:
         all_routes.append((f"{server_url}{route}", label))
 
+    timeout_event = threading.Event()
+    timer = threading.Timer(JOURNEY_TIMEOUT, timeout_event.set)
+    timer.start()
+
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=not headed)
         context = browser.new_context(viewport={"width": 1280, "height": 720})
@@ -164,6 +170,9 @@ def run() -> int:
 
         try:
             for full_url, label in all_routes:
+                if timeout_event.is_set():
+                    issues.append(f"Journey timeout ({JOURNEY_TIMEOUT}s) reached")
+                    break
                 steps_total += 1
                 result = run_axe_on_page(page, full_url)
                 audit_results.append(result)
@@ -201,14 +210,18 @@ def run() -> int:
         finally:
             context.close()
             browser.close()
+            timer.cancel()
 
     duration = time.monotonic() - start_time
     passed = steps_failed == 0
+    if timeout_event.is_set():
+        passed = False
 
     # Write structured result JSON (includes per-route violation details)
     result_data = {
         "name": JOURNEY_NAME,
         "journey_id": JOURNEY_ID,
+        "status": "passed" if passed else "failed",
         "steps_total": steps_total,
         "steps_passed": steps_passed,
         "steps_failed": steps_failed,

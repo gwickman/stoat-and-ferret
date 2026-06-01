@@ -62,30 +62,39 @@ def run() -> int:
 
     start_time = time.monotonic()
 
+    issues: list[str] = []
     playwright_args = [
         npx_path,
         "playwright",
         "test",
         SPEC_PATH.relative_to(PROJECT_ROOT / "gui").as_posix(),
+        "--project=chromium",
     ]
     if headed:
         playwright_args.append("--headed")
 
-    result = subprocess.run(
-        playwright_args,
-        cwd=str(PROJECT_ROOT / "gui"),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    log_path = journey_dir / "playwright_output.txt"
+    with open(log_path, "w", encoding="utf-8", errors="replace") as log_fh:
+        try:
+            result = subprocess.run(
+                playwright_args,
+                cwd=str(PROJECT_ROOT / "gui"),
+                stdout=log_fh,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=600,
+            )
+        except subprocess.TimeoutExpired:
+            issues.append("Journey timeout: 600s subprocess ceiling reached")
+            result = None
 
     duration = time.monotonic() - start_time
-    passed = result.returncode == 0
+    passed = False if result is None else result.returncode == 0
 
     # Parse test count from Playwright output (e.g. "9 passed (12s)")
-    stdout = result.stdout or ""
-    stderr = result.stderr or ""
+    stdout = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
 
     steps_total = 0
     steps_passed = 0
@@ -118,16 +127,14 @@ def run() -> int:
         else:
             steps_failed = 1
 
-    issues: list[str] = []
-    if not passed:
+    if not passed and result is not None:
         issues.append(f"Playwright exit code {result.returncode}")
-        if stderr:
-            issues.append(stderr[-500:])
 
     # Write structured result JSON
     result_data = {
         "name": JOURNEY_NAME,
         "journey_id": JOURNEY_ID,
+        "status": "passed" if passed else "failed",
         "steps_total": steps_total,
         "steps_passed": steps_passed,
         "steps_failed": steps_failed,
@@ -137,10 +144,6 @@ def run() -> int:
     }
     result_path = journey_dir / "journey_result.json"
     result_path.write_text(json.dumps(result_data, indent=2) + "\n", encoding="utf-8")
-
-    # Write Playwright output to log file
-    log_path = journey_dir / "playwright_output.txt"
-    log_path.write_text(stdout + "\n" + stderr, encoding="utf-8", errors="replace")
 
     status = "PASSED" if passed else "FAILED"
     print(f"\n  Journey {JOURNEY_ID} ({JOURNEY_NAME}): {status}")
