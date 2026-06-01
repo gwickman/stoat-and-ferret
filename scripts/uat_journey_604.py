@@ -41,7 +41,7 @@ def run() -> int:
     Returns:
         Exit code: 0 if all tests pass, 1 otherwise.
     """
-    output_dir = Path(os.environ.get("UAT_OUTPUT_DIR", "uat-evidence"))
+    output_dir = Path(os.environ.get("UAT_OUTPUT_DIR", "testing-evidence/uat-evidence"))
     headed = os.environ.get("UAT_HEADED", "0") == "1"
 
     journey_dir = output_dir / JOURNEY_NAME
