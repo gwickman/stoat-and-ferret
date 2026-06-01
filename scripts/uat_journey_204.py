@@ -81,7 +81,7 @@ def seed_sample_project(server_url: str) -> None:
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
-        timeout=60,
+        timeout=300,
     )
     if result.returncode != 0:
         # Non-zero exit may mean project already exists (exit 0 with message),
