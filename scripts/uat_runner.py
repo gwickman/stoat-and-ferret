@@ -74,7 +74,7 @@ JOURNEY_NAMES: dict[int, str] = {
     404: "timeline-sync",
     501: "render-export-journey",
     502: "render-queue-journey",
-    503: "render-settings-journey",
+    503: "render-settings",
     504: "render-failure-journey",
     604: "keyboard-navigation",
     605: "screen-reader-audit",

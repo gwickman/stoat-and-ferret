@@ -82,7 +82,7 @@ def get_select_options(page: Any, testid: str) -> list[str]:
 
 
 def run() -> int:
-    """Execute the render-settings-journey.
+    """Execute the render-settings journey.
 
     Returns:
         Exit code: 0 if all steps pass, 1 otherwise.
