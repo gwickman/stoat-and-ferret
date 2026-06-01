@@ -35,7 +35,7 @@ import httpx
 # ---------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "uat-evidence"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "testing-evidence/uat-evidence"
 SERVER_PORT = 8765
 SERVER_URL = f"http://localhost:{SERVER_PORT}"
 HEALTH_POLL_INTERVAL = 1.0  # seconds

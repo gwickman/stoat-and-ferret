@@ -168,19 +168,19 @@ UAT journeys run in headless mode in CI. The runner handles the full lifecycle (
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: uat-evidence
-          path: uat-evidence/
+          name: testing-evidence-uat-evidence
+          path: testing-evidence/uat-evidence/
           retention-days: 7
 ```
 
 ### Evidence Artifact Collection
 
-The UAT runner produces a timestamped evidence directory under `uat-evidence/` containing:
+The UAT runner produces a timestamped evidence directory under `testing-evidence/uat-evidence/` containing:
 - `uat-report.json` and `uat-report.md` — structured and human-readable reports
 - Per-journey screenshot directories with numbered step images
 - `server-stdout.log` and `server-stderr.log` — server output during the run
 
-The CI job uploads the entire `uat-evidence/` directory as an artifact on every run (pass or fail), ensuring evidence is always available for review.
+The CI job uploads the entire `testing-evidence/uat-evidence/` directory as an artifact on every run (pass or fail), ensuring evidence is always available for review.
 
 ### Key Differences from Smoke Test CI
 

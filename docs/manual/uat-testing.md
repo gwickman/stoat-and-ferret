@@ -95,7 +95,7 @@ uv run python scripts/uat_runner.py --headless --skip-build
 
 ### Custom output directory
 
-By default, results are written to `uat-evidence/` in the project root. Override with:
+By default, results are written to `testing-evidence/uat-evidence/` in the project root. Override with:
 
 ```bash
 uv run python scripts/uat_runner.py --headless --output-dir ./my-results
@@ -108,7 +108,7 @@ uv run python scripts/uat_runner.py --headless --output-dir ./my-results
 Each run creates a timestamped subdirectory under the output base:
 
 ```
-uat-evidence/
+testing-evidence/uat-evidence/
 └── 20260318_143022/          # Timestamped run directory
     ├── uat-report.json       # Machine-readable structured report
     ├── uat-report.md         # Human-readable markdown report
@@ -231,7 +231,7 @@ A UAT failure means the application did not behave as a user would expect. Commo
 When a UAT failure reveals a bug:
 
 1. Create a backlog item or bug report describing the failure.
-2. Reference the UAT evidence path (e.g. `uat-evidence/20260318_143022/scan-library/03_FAIL_search_results.png`) so reviewers can see exactly what happened.
+2. Reference the UAT evidence path (e.g. `testing-evidence/uat-evidence/20260318_143022/scan-library/03_FAIL_search_results.png`) so reviewers can see exactly what happened.
 3. Include the relevant section from `uat-report.md` in the issue description.
 
 ### 5. Re-run after fixing

@@ -28,7 +28,7 @@ python scripts/uat_runner.py --output-dir /path/to/dir   # Custom output directo
 | `--skip-build` | boolean | false | Skip build/boot steps — assumes server is already running |
 | `--output-dir` | path | see below | Directory for screenshots and reports |
 
-**Default `--output-dir`:** `C:\Users\grant\Documents\projects\auto-dev-projects\stoat-and-ferret\uat-evidence\{timestamp}\`
+**Default `--output-dir`:** `C:\Users\grant\Documents\projects\auto-dev-projects\stoat-and-ferret\testing-evidence\uat-evidence\{timestamp}\`
 
 Where `{timestamp}` is ISO 8601 format with hyphens replacing colons, e.g. `2026-03-16T14-30-00`.
 

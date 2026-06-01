@@ -483,10 +483,10 @@ For full details on running and interpreting UAT tests, see [`docs/manual/uat-te
 
 ### Evidence Directory Structure
 
-Each run creates a timestamped directory under `uat-evidence/`:
+Each run creates a timestamped directory under `testing-evidence/uat-evidence/`:
 
 ```
-uat-evidence/
+testing-evidence/uat-evidence/
 └── YYYYMMDD_HHMMSS/
     ├── uat-report.json        # Machine-readable report
     ├── uat-report.md          # Human-readable report

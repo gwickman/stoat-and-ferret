@@ -234,7 +234,7 @@ gui/dist/
 # timestamped YYYYMMDD_HHMMSS). Never tracked.
 testing-evidence/
 testing-evidence/**
-uat-evidence/
+testing-evidence/uat-evidence/
 chatbot-testing-evidence/
 
 # Local test-run stdout dumps — pytest output redirected to files at repo

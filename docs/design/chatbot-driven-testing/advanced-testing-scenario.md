@@ -65,7 +65,7 @@ Read the current state before planning. The chatbot knows how to read these surf
 - `git log` for the last two weeks against the project repo — fixes that landed without a numbered version.
 - `list_backlog_items(status="open")` — known issues. Read titles + tags first; pull bodies on demand.
 - `search_learnings(...)` and `list_learnings(...)` — accumulated knowledge about which bug classes have recurred and what the historical reproducer shape is.
-- Most recent run under `testing-evidence/uat-evidence/{TS}/uat-report.md` (or wherever UAT writes once BL-383 lands — currently `uat-evidence/{TS}/`) — fresh evidence about what is already known-green.
+- Most recent run under `testing-evidence/uat-evidence/{TS}/uat-report.md` — fresh evidence about what is already known-green.
 - Most recent run under `testing-evidence/chatbot-testing-evidence/{TS}_*/_summary/` — prior adaptive or massive rounds, what they verified, what they found.
 - The four canonical agent docs: `docs/manual/operator-guide.md`, `docs/manual/prompt-recipes.md`, `docs/manual/ws-event-vocabulary.md`, `docs/manual/ai-integration-patterns.md`. `git log` per file tells the chatbot whether full-parity or spot-check is warranted.
 

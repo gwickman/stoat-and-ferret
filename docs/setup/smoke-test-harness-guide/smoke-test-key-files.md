@@ -111,11 +111,11 @@ Use this pattern as precedent when adding FFmpeg-integration tests for new encod
 
 | Path | What it contains |
 |------|-----------------|
-| `uat-evidence/` | Base directory for UAT output (gitignored) |
-| `uat-evidence/{YYYYMMDD_HHMMSS}/` | Timestamped per-run directory |
-| `uat-evidence/{run}/uat-report.json` | Machine-readable structured report |
-| `uat-evidence/{run}/uat-report.md` | Human-readable markdown report |
-| `uat-evidence/{run}/{journey}/` | Per-journey screenshot directory |
+| `testing-evidence/uat-evidence/` | Base directory for UAT output (gitignored) |
+| `testing-evidence/uat-evidence/{YYYYMMDD_HHMMSS}/` | Timestamped per-run directory |
+| `testing-evidence/uat-evidence/{run}/uat-report.json` | Machine-readable structured report |
+| `testing-evidence/uat-evidence/{run}/uat-report.md` | Human-readable markdown report |
+| `testing-evidence/uat-evidence/{run}/{journey}/` | Per-journey screenshot directory |
 
 ### Reference Documents
 

@@ -53,12 +53,12 @@ Time budget: **open-ended.** The chatbot runs to completion of the scenario list
 | Failure-mode coverage           | None | None | **Chaos tier: 7 non-destructive scenarios (kill+restart, WS disconnect, corrupt media, brief DB lock, cancellation race, malformed WS frames, replay buffer overflow). See §0 — environment-damaging scenarios are explicitly excluded.** |
 | Concurrency coverage            | None | None | **4 scenarios (50 WS clients, 10 parallel renders, 100-clip timeline, 1000-effect catalog)** |
 | Persistence / restart coverage  | None | None | **3 scenarios spanning server restarts** |
-| Evidence capture                | Ad-hoc prose in transcript | Ad-hoc + uat-evidence dump | **Structured per-scenario packets: actions.jsonl, ws-events.jsonl, pre/post snapshots, ffprobe metadata, screenshots, findings.md** |
+| Evidence capture                | Ad-hoc prose in transcript | Ad-hoc + testing-evidence/uat-evidence dump | **Structured per-scenario packets: actions.jsonl, ws-events.jsonl, pre/post snapshots, ffprobe metadata, screenshots, findings.md** |
 | Documentation parity audit      | Operator-guide line scan | Operator-guide + ai-integration-patterns | **Field-by-field audit of every doc against live API: operator-guide, prompt-recipes, ws-event-vocabulary, ai-integration-patterns, 03_api-reference, 04_effects-guide, 07_rendering-guide, 08_ai-integration** |
 | Cross-day persistence test      | No | No | Yes (scenario B1) |
 | GUI parity audit                | No | No | Yes (Tier G, all GUI pages) |
 | Performance baseline            | No | Load test baseline (v047) | **Encoder-matrix throughput + memory profile, with diffable snapshot format** |
-| Output is reusable next round?  | Transcript only | uat-evidence dump (partial) | **Artifact tree designed to be diff'd against future rounds** |
+| Output is reusable next round?  | Transcript only | testing-evidence/uat-evidence dump (partial) | **Artifact tree designed to be diff'd against future rounds** |
 
 The qualitative shift: previous rounds were "read the script, follow the script, log what broke." This round is **exploratory + adversarial + scientific** — every scenario captures a pre-state, an action stream, a post-state, and an inconsistency record. The chatbot is expected to *reason about anomalies*, not just transcribe them.
 
@@ -659,7 +659,7 @@ These are decisions only the supervisor can make. The chatbot will not start the
 2. **Tier C scope confirmation** — Tier C now contains only the non-destructive subset (server kill+restart, WS disconnect, brief DB lock, etc., see §0). Confirm the surviving list is OK; the excluded scenarios are listed with their proposed CI / unit-test homes.
 3. **Order tweaks** — default order is §8.1 (E → A → B → F → G → H → D → C). Override if you'd prefer.
 4. **Personal asset** (optional) — any real video file you've found frustrating in the past goes into the corpus as a dedicated scenario.
-5. **Round identifier** — assumed `round-3` and timestamped folder `chatbot-testing-evidence/YYYYMMDD_HHMMSS_round-3/` at repo root, mirroring `uat-evidence/`. Override if you want a different name.
+5. **Round identifier** — assumed `round-3` and timestamped folder `chatbot-testing-evidence/YYYYMMDD_HHMMSS_round-3/` at repo root, mirroring `testing-evidence/uat-evidence/`. Override if you want a different name.
 6. **Model mix** — §7.5.4 proposes Sonnet for reasoning tiers, Haiku for bulk doc-line and event-shape checks. Override if you want everything on Sonnet or everything on Haiku.
 
 Once these are answered the chatbot can execute autonomously across tiers with checkpoint pauses.
