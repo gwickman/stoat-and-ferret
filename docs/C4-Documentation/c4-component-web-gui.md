@@ -19,7 +19,7 @@ The E2E test suite expanded significantly in v008 to cover the effect workshop l
 - **Video Library**: Searchable video grid with debounced search, sort controls, pagination, and directory scan modal; ProxyStatusBadge for proxy generation status
 - **Project Management**: Project CRUD, clip timeline with timecode display, create/delete modals
 - **Effect Workshop**: Effect catalog browsing with search/category filter, schema-driven parameter forms, real-time filter preview with syntax highlighting, effect apply/edit/remove lifecycle, and effect stack visualization
-- **Render UI**: StatusBadge for job states, RenderJobCard with ETA/speed/progress, StartRenderModal with encoder/format/quality selection and debounced preview
+- **Render UI**: StatusBadge for job states, RenderJobCard with ETA/speed/progress, StartRenderModal with encoder/format/quality selection and debounced preview, render_plan construction via useRenderModal, ErrorBoundary wrapping of RenderPage
 - **Preview & Theater**: HLS.js video player, PlayerControls, TheaterMode with HUD auto-hide, AIActionIndicator
 - **Timeline Editing**: TimelineCanvas with Track, TimelineClip, TimeRuler, Playhead; AudioWaveform visualization; LayoutSelector for composition presets
 - **WebSocket Integration**: Real-time event streaming with exponential backoff reconnection (1s→30s)
@@ -38,18 +38,18 @@ This component contains:
 - [c4-code-gui-generated.md](./c4-code-gui-generated.md) -- api-types.ts from openapi-typescript; types.ts re-exports (Effect, Project, Clip, Video, Track, LayoutPosition, etc.)
 - [c4-code-gui-components.md](./c4-code-gui-components.md) -- Main React components: Shell, Navigation, TimelineCanvas, Track, TimelineClip, TimeRuler, Playhead, AudioWaveform, PreviewPlayer, PlayerControls, ProgressBar, VolumeSlider, ProjectList, EffectCatalog, EffectStack, LayoutSelector, VideoGrid, etc.
 - [c4-code-gui-components-library.md](./c4-code-gui-components-library.md) -- ProxyStatusBadge component for proxy generation status
-- [c4-code-gui-components-render.md](./c4-code-gui-components-render.md) -- StatusBadge, RenderJobCard (progress/ETA/speed), StartRenderModal (encoder/format/quality + debounced preview)
+- [c4-code-gui-components-render.md](./c4-code-gui-components-render.md) -- StatusBadge, RenderJobCard (progress/ETA/speed), StartRenderModal (encoder/format/quality + debounced preview), ErrorBoundary (gui/src/components/ErrorBoundary.tsx)
 - [c4-code-gui-components-theater.md](./c4-code-gui-components-theater.md) -- TheaterMode with HUD auto-hide (3s), TopHUD (project title + AI action), BottomHUD (render progress + controls), AIActionIndicator
-- [c4-code-gui-hooks.md](./c4-code-gui-hooks.md) -- 12 hooks: useHealth, useWebSocket (exponential backoff 1s→30s), useMetrics, useDebounce, useVideos, useProjects, useEffects, useEffectPreview, useFullscreen, useTheaterShortcuts, useTimelineSync, useJobProgress, useRenderEvents
+- [c4-code-gui-hooks.md](./c4-code-gui-hooks.md) -- 21 hooks: useHealth, useWebSocket (exponential backoff 1s→30s), useMetrics, useDebounce, useVideos, useProjects, useEffects, useEffectPreview, useFullscreen, useTheaterShortcuts, useTimelineSync, useJobProgress, useRenderEvents, useRenderModal
 - [c4-code-gui-pages.md](./c4-code-gui-pages.md) -- 7 pages: DashboardPage, LibraryPage, ProjectsPage, EffectsPage, TimelinePage, PreviewPage, RenderPage
 - [c4-code-gui-stores.md](./c4-code-gui-stores.md) -- 17 Zustand stores: activityStore, batchStore, clipStore, composeStore, effectCatalogStore, effectFormStore, effectPreviewStore, effectStackStore, libraryStore, previewStore, projectStore, renderStore, settingsStore, theaterStore, timelineStore, transitionStore, workspaceStore
 - [c4-code-gui-utils.md](./c4-code-gui-utils.md) -- timeToPixel(), pixelToTime(), getMarkerInterval(), formatRulerTime(), BASE_PIXELS_PER_SECOND=100
 - [c4-code-gui-src-tests.md](./c4-code-gui-src-tests.md) -- MockWebSocket utility class for hook/component tests
 - [c4-code-gui-components-tests.md](./c4-code-gui-components-tests.md) -- 318 component tests across 38 test files covering all main components
 - [c4-code-gui-components-library-tests.md](./c4-code-gui-components-library-tests.md) -- 7 tests for ProxyStatusBadge
-- [c4-code-gui-components-render-tests.md](./c4-code-gui-components-render-tests.md) -- 48 tests for StatusBadge, RenderJobCard, StartRenderModal
+- [c4-code-gui-components-render-tests.md](./c4-code-gui-components-render-tests.md) -- 56 tests for StatusBadge, RenderJobCard, StartRenderModal
 - [c4-code-gui-components-theater-tests.md](./c4-code-gui-components-theater-tests.md) -- 26 tests for TheaterMode, TopHUD, BottomHUD
-- [c4-code-gui-hooks-tests.md](./c4-code-gui-hooks-tests.md) -- 82 tests for 14 hooks
+- [c4-code-gui-hooks-tests.md](./c4-code-gui-hooks-tests.md) -- 155 tests for 19 hooks
 - [c4-code-gui-pages-tests.md](./c4-code-gui-pages-tests.md) -- 23 tests for PreviewPage and RenderPage
 - [c4-code-gui-utils-tests.md](./c4-code-gui-utils-tests.md) -- 24 tests for timeline coordinate utilities
 - [c4-code-gui-stores-tests.md](./c4-code-gui-stores-tests.md) -- Zustand store tests: clipStore CRUD operations, API error handling
