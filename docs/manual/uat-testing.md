@@ -278,7 +278,7 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 404 (timeline-sync)      ← independent
 501 (render-export-journey) ← independent
  ├─▶ 502 (render-queue-journey)
- ├─▶ 503 (render-settings-journey)
+ ├─▶ 503 (render-settings)
  └─▶ 504 (render-failure-journey)
 
 604 (keyboard-navigation)   ← independent
