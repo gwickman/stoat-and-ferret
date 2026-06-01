@@ -137,7 +137,7 @@ def run() -> int:
     Returns:
         Exit code: 0 if all routes pass, 1 otherwise.
     """
-    output_dir = Path(os.environ.get("UAT_OUTPUT_DIR", "uat-evidence"))
+    output_dir = Path(os.environ.get("UAT_OUTPUT_DIR", "testing-evidence/uat-evidence"))
     headed = os.environ.get("UAT_HEADED", "0") == "1"
     server_url = os.environ.get("UAT_SERVER_URL", "http://localhost:8765")
 

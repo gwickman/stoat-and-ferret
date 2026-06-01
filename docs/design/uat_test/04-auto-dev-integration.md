@@ -17,7 +17,7 @@ The UAT script integrates with auto-dev version closure using a two-tier approac
 6. Generates `uat-report.json` and `uat-report.md`
 7. Shuts down the server
 
-**Output location:** `C:\Users\grant\Documents\projects\auto-dev-projects\stoat-and-ferret\uat-evidence\{timestamp}\`
+**Output location:** `C:\Users\grant\Documents\projects\auto-dev-projects\stoat-and-ferret\testing-evidence\uat-evidence\{timestamp}\`
 
 **On success:** Version closure proceeds. Evidence directory archived with version artifacts.
 
@@ -46,7 +46,7 @@ The following should be added to `docs/auto-dev/VERSION_CLOSURE.md`:
 - [ ] Run exploration: `uat-headless-regression`
   - Builds project, boots server, seeds sample data
   - Runs Playwright headless against all 7 journeys
-  - Captures screenshots to `uat-evidence/{timestamp}/`
+  - Captures screenshots to `testing-evidence/uat-evidence/{timestamp}/`
   - Generates `uat-report.json` with pass/fail per step
   - If any failures: flag for human Tier 2 review
 

@@ -1747,7 +1747,7 @@ live server instance.
 - **Runner:** `scripts/uat_runner.py` — manages build, server boot, journey
   execution, and teardown.
 - **Evidence:** Screenshots and a JSON report are written to
-  `uat-evidence/{timestamp}/`.
+  `testing-evidence/uat-evidence/{timestamp}/`.
 - **When to run:** During version closure and manual exploration. Not part of
   CI (see `docs/auto-dev/VERSION_CLOSURE.md`).
 
