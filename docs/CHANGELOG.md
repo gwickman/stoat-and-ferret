@@ -4,6 +4,24 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v071] — UAT Stability, Evidence Relocation & Architecture Documentation (2026-06-02)
+
+### Fixed
+- Fixed `uat_runner.py` aggregator silently zeroing J503 step counts: renamed journey key from `uat_journey_503` to `aggregator_journey` to match the class name in `tests/uat/uat_journey_503.py`, ensuring aggregator results are correctly captured in `uat-report.json` (BL-382, PR #478)
+- Fixed `uat_journey_604` and `uat_journey_605` hanging indefinitely in headed mode: replaced unbounded `Popen` subprocess execution with bounded timeout handling; added `test_uat_subprocess_timeout.py` smoke test to prevent regression (BL-381, PR #480)
+
+### Changed
+- Relocated UAT evidence output from `uat-evidence/` to `testing-evidence/uat-evidence/` for consistent test artifact organization under the `testing-evidence/` tree; updated `scripts/uat_runner.py`, `tests/uat/conftest.py`, and all documentation references (BL-383, PR #479)
+
+### Documentation
+- Refreshed `docs/C4-Documentation/c4-component-web-gui.md` for v067/v068 GUI render additions: documented `useRenderModal` hook, `ErrorBoundary` component, and updated render-related component relationships reflecting changes from PRs #443–#444 (BL-380, PR #481)
+- Verified design-phase path validation: confirmed `persist_drafts.py` correctly validates all design output paths against expected directory structure; no code changes required (BL-379, artifact only)
+
+### Deferred
+- 5 behavioral ACs across BL-381, BL-382, BL-383 pending live Windows headed UAT run: J605 completes within 600s (BL-381 AC-2), J604/J605 `steps_total > 0` (BL-381 AC-6), J503 `steps_total > 0` in uat-report (BL-382 AC-2/AC-3), evidence at `testing-evidence/uat-evidence/{TS}/` (BL-383 AC-5)
+
+**Summary:** UAT Stability, Evidence Relocation & Architecture Documentation — 2 themes (uat-stability, architecture-documentation), 5 features, PRs #478–#481, 2616 passing tests. Closes BL-379, BL-380, BL-381, BL-382, BL-383.
+
 ## [v070] — API Contract Hygiene, Documentation Accuracy & Render Recovery (2026-05-29)
 
 ### Added
