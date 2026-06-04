@@ -19,7 +19,7 @@ from stoat_ferret.api.routers.render import _CODEC_ENCODER_MAP, QUALITY_PRESET_M
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
-from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import CancelPreemptedError, RenderService
 from tests.conftest import TEST_PROJECT_UUID
@@ -427,3 +427,79 @@ async def test_cancel_non_cancellable_job_returns_409(
     assert resp.status_code == 409
     body = resp.json()
     assert body["detail"]["code"] == "NOT_CANCELLABLE"
+
+
+# ---------- partial_file_detected field in REST response (BL-415) ----------
+
+
+async def test_partial_file_detected_false_by_default(
+    render_app: FastAPI,
+    render_repo: InMemoryRenderRepository,
+) -> None:
+    """GET /render/{job_id} for a new job returns partial_file_detected=False."""
+    from httpx import ASGITransport, AsyncClient
+
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    job = RenderJob(
+        id="job-partial-default",
+        project_id=TEST_PROJECT_UUID,
+        status=RenderStatus.QUEUED,
+        output_path="/tmp/out.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan="{}",
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
+    )
+    await render_repo.create(job)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=render_app), base_url="http://test"
+    ) as client:
+        resp = await client.get(f"/api/v1/render/{job.id}")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "partial_file_detected" in body
+    assert body["partial_file_detected"] is False
+
+
+async def test_partial_file_detected_true_for_cancelled_job(
+    render_app: FastAPI,
+    render_repo: InMemoryRenderRepository,
+) -> None:
+    """GET /render/{job_id} for a cancelled job with partial file returns partial_file_detected=True."""  # noqa: E501
+    from httpx import ASGITransport, AsyncClient
+
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    job = RenderJob(
+        id="job-partial-cancelled",
+        project_id=TEST_PROJECT_UUID,
+        status=RenderStatus.CANCELLED,
+        output_path="/tmp/partial.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan="{}",
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=now,
+        partial_file_detected=True,
+    )
+    await render_repo.create(job)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=render_app), base_url="http://test"
+    ) as client:
+        resp = await client.get(f"/api/v1/render/{job.id}")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "partial_file_detected" in body
+    assert body["partial_file_detected"] is True

@@ -411,6 +411,12 @@ class RenderService:
         # Reached only after a successful status transition to CANCELLED.
         render_jobs_total.labels(status="cancelled").inc()
         log.info("render_job.cancelled")
+
+        # Step 4: partial file fingerprint — set before broadcast (INV-001)
+        partial = Path(job.output_path).exists() if job.output_path else False
+        await self._repo.update_partial_signal(job_id, partial)
+
+        # Step 5: broadcast with post-transition status
         await self._broadcast_event(
             EventType.RENDER_CANCELLED, job, target_status=RenderStatus.CANCELLED
         )

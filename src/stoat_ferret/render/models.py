@@ -90,6 +90,7 @@ class RenderJob:
         created_at: When this job was created.
         updated_at: When this job was last modified.
         completed_at: When this job reached a terminal state.
+        partial_file_detected: True if cancel left a non-empty file at output_path.
     """
 
     id: str
@@ -105,6 +106,7 @@ class RenderJob:
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None
+    partial_file_detected: bool = False
 
     @staticmethod
     def create(

@@ -58,10 +58,18 @@ pytestmark = pytest.mark.timeout(30)
 # entry is ``(relative_path, line_number)``.
 SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
     {
-        ("src/stoat_ferret/db/schema.py", 343),
-        ("src/stoat_ferret/db/schema.py", 359),
-        ("src/stoat_ferret/db/schema.py", 425),
-        ("src/stoat_ferret/db/schema.py", 441),
+        # _alter_render_jobs_add_partial_columns (sync) — BL-415
+        ("src/stoat_ferret/db/schema.py", 350),
+        # _alter_projects_add_audio_mix_column (sync)
+        ("src/stoat_ferret/db/schema.py", 364),
+        # _alter_clips_add_timeline_columns (sync)
+        ("src/stoat_ferret/db/schema.py", 380),
+        # _alter_projects_add_audio_mix_column_async
+        ("src/stoat_ferret/db/schema.py", 447),
+        # _alter_clips_add_timeline_columns_async
+        ("src/stoat_ferret/db/schema.py", 463),
+        # _alter_render_jobs_add_partial_columns_async (async) — BL-415
+        ("src/stoat_ferret/db/schema.py", 479),
         ("src/stoat_ferret/api/services/migrations.py", 434),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound

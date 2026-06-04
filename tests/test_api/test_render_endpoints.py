@@ -363,6 +363,7 @@ class TestListRenderJobs:
             "created_at",
             "updated_at",
             "completed_at",
+            "partial_file_detected",
         }
         assert set(item.keys()) == expected_fields
 

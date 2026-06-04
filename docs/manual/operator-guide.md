@@ -111,9 +111,40 @@ Response from `POST /api/v1/render` and `GET /api/v1/render/{job_id}`.
 | `updated_at` | `datetime` | ISO 8601 UTC |
 | `error_message` | `str \| null` | Set when `status == failed`; `null` otherwise |
 | `completed_at` | `datetime \| null` | Set when `status ∈ {completed, failed, cancelled}`; `null` while running |
+| `partial_file_detected` | `bool` | `true` if cancel left a non-empty file at `output_path`; `false` otherwise (see below) |
 
 **Terminal states** (polling stops): `completed`, `failed`, `cancelled`.
 **Non-terminal states** (keep polling): `queued`, `running`.
+
+## Cancel and Partial File Divergence
+
+When a render job is cancelled mid-encode, FFmpeg has up to `STOAT_RENDER_CANCEL_GRACE_SECONDS` (default: 10) to finalize a valid MP4 before the process is forcibly terminated. A graceful exit (FFmpeg rc=0) can write a partial but structurally valid MP4 to `output_path` even though the DB row reports `status=cancelled` and `progress=0.0`.
+
+The `partial_file_detected` field on `RenderJobResponse` resolves this ambiguity:
+
+- `partial_file_detected: true` — a non-empty file was present at `output_path` at the moment cancellation completed. The file may contain a partial render (seconds of valid content) and requires cleanup if not needed.
+- `partial_file_detected: false` — no file was written, or the output path was empty at cancellation time.
+
+**Key invariants:**
+
+1. `partial_file_detected` is always set *after* `status=cancelled` is committed and *before* the `render_cancelled` WS event is broadcast. The REST and WS surfaces are consistent once the event fires.
+2. This flag is set only for graceful cancels. Jobs that are queued when cancelled (never started encoding) always have `partial_file_detected: false`.
+3. The flag reflects on-disk state at the time of cancellation, not a later state. If a cleanup agent deletes the file after cancel, the flag remains `true`.
+
+**Agent consumption pattern for `render_cancelled` events:**
+
+```python
+event = receive_ws_event()  # render_cancelled
+job = GET(f"/api/v1/render/{event.payload.job_id}")
+if job.partial_file_detected:
+    # A partial MP4 exists at job.output_path — schedule cleanup or retain
+    schedule_cleanup(job.output_path)
+else:
+    # No file written; no cleanup needed
+    pass
+```
+
+This avoids a filesystem round-trip to determine whether a partial file was produced.
 
 ## Testing Mode
 
