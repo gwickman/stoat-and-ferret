@@ -156,15 +156,26 @@ async def test_agent_can_determine_render_terminal_state_after_disconnect(
         cancel_resp = await smoke_client.post(f"/api/v1/render/{job_id}/cancel")
         assert cancel_resp.status_code == 200
 
-    # Allow any async state transitions to settle
-    await asyncio.sleep(0.05)
+    # Recovery step A: poll until the job is no longer in active_jobs (up to 5 s).
+    # A fixed sleep is insufficient: in real-mode the render worker may race the cancel
+    # on the shared SQLite connection, causing transient retry cycles before the job
+    # reaches a durable terminal state (cancelled/failed after max retries).
+    terminal_statuses = {"completed", "failed", "cancelled"}
+    deadline = 5.0
+    interval = 0.1
+    elapsed = 0.0
+    active_render_ids: set[str] = {job_id}  # assume active until proven otherwise
+    while elapsed < deadline:
+        state_resp = await smoke_client.get("/api/v1/system/state")
+        assert state_resp.status_code == 200
+        active_render_ids = {
+            j["job_id"] for j in state_resp.json()["active_jobs"] if j["job_type"] == "render"
+        }
+        if job_id not in active_render_ids:
+            break
+        await asyncio.sleep(interval)
+        elapsed += interval
 
-    # Recovery step A: terminal render job must not appear in system/state active_jobs
-    state_resp = await smoke_client.get("/api/v1/system/state")
-    assert state_resp.status_code == 200
-    active_render_ids = {
-        j["job_id"] for j in state_resp.json()["active_jobs"] if j["job_type"] == "render"
-    }
     assert job_id not in active_render_ids, (
         f"Terminal render job {job_id} must not appear in system/state active_jobs "
         "after simulated disconnect"
@@ -174,7 +185,6 @@ async def test_agent_can_determine_render_terminal_state_after_disconnect(
     get_resp = await smoke_client.get(f"/api/v1/render/{job_id}")
     assert get_resp.status_code == 200
     job_data = get_resp.json()
-    terminal_statuses = {"completed", "failed", "cancelled"}
     assert job_data["status"] in terminal_statuses, (
         f"Render job status must be terminal; got {job_data['status']!r}. "
         "Agent cannot determine terminal state via GET /api/v1/render/{job_id}."
