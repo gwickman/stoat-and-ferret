@@ -20,6 +20,7 @@ from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, R
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.sweeper import StaleRenderSweeper
 
 # Disable Rust bindings — tests exercise Python orchestration logic.
 _PATCH_NO_RUST = patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", False)
@@ -609,12 +610,18 @@ class TestFullEventSequence:
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
-            event_types = _get_event_types(ws)
+            events = _get_broadcast_events(ws)
+            event_types = [e["type"] for e in events]
             # Should include queued, queue_status, started, completed, queue_status
             assert EventType.RENDER_QUEUED.value in event_types
             assert EventType.RENDER_STARTED.value in event_types
             assert EventType.RENDER_COMPLETED.value in event_types
             assert event_types.count(EventType.RENDER_QUEUE_STATUS.value) >= 2
+
+            # BL-401: render_completed payload.status must be 'completed', not 'running'
+            completed_events = [e for e in events if e["type"] == EventType.RENDER_COMPLETED.value]
+            assert len(completed_events) == 1
+            assert completed_events[0]["payload"]["status"] == "completed"
 
     async def test_submit_to_cancel_sequence(self) -> None:
         """Cancel event sequence: queued -> started -> cancelled -> queue_status."""
@@ -631,11 +638,17 @@ class TestFullEventSequence:
 
             await service.cancel_job(job.id)
 
-            event_types = _get_event_types(ws)
+            events = _get_broadcast_events(ws)
+            event_types = [e["type"] for e in events]
             assert EventType.RENDER_QUEUED.value in event_types
             assert EventType.RENDER_STARTED.value in event_types
             assert EventType.RENDER_CANCELLED.value in event_types
             assert EventType.RENDER_QUEUE_STATUS.value in event_types
+
+            # BL-401: render_cancelled payload.status must be 'cancelled', not 'running'
+            cancelled_events = [e for e in events if e["type"] == EventType.RENDER_CANCELLED.value]
+            assert len(cancelled_events) == 1
+            assert cancelled_events[0]["payload"]["status"] == "cancelled"
 
     async def test_submit_to_permanent_failure_sequence(self) -> None:
         """Failure sequence includes RENDER_FAILED and RENDER_QUEUE_STATUS."""
@@ -656,9 +669,15 @@ class TestFullEventSequence:
             executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
-            event_types = _get_event_types(ws)
+            events = _get_broadcast_events(ws)
+            event_types = [e["type"] for e in events]
             assert EventType.RENDER_FAILED.value in event_types
             assert EventType.RENDER_QUEUE_STATUS.value in event_types
+
+            # BL-401: worker-emitted render_failed payload.status must be 'failed', not 'running'
+            failed_events = [e for e in events if e["type"] == EventType.RENDER_FAILED.value]
+            assert len(failed_events) == 1
+            assert failed_events[0]["payload"]["status"] == "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -804,3 +823,204 @@ class TestCancelCompleteRaceInvariant:
             events = _get_broadcast_events(ws)
             cancelled_events = [e for e in events if e["type"] == "render_cancelled"]
             assert len(cancelled_events) == 0
+
+
+# ---------------------------------------------------------------------------
+# WS terminal event payload.status correctness (BL-401)
+# ---------------------------------------------------------------------------
+
+
+class TestTerminalEventPayloadStatus:
+    """BL-401: Terminal WS events carry the post-transition status, not 'running'.
+
+    The sweeper-emitted render_failed already used the correct pattern before
+    this fix; the worker-path callers (_complete_job, cancel_job, _handle_failure)
+    were the defective sites. These tests verify the fix and protect against
+    regression on all three paths, plus the sweeper path.
+    """
+
+    async def test_render_completed_payload_status_is_completed(self) -> None:
+        """render_completed.payload.status == 'completed', not 'running'."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            job = await service.submit_job(
+                project_id="proj-status",
+                output_path="/tmp/status.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg"])
+
+            events = _get_broadcast_events(ws)
+            completed = [e for e in events if e["type"] == "render_completed"]
+            assert len(completed) == 1
+            assert completed[0]["payload"]["status"] == "completed"
+
+    async def test_render_cancelled_payload_status_is_cancelled(self) -> None:
+        """render_cancelled.payload.status == 'cancelled', not 'running'."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            job = await service.submit_job(
+                project_id="proj-status-cancel",
+                output_path="/tmp/status-cancel.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            executor.cancel = AsyncMock()  # type: ignore[method-assign]
+            await service.cancel_job(job.id)
+
+            events = _get_broadcast_events(ws)
+            cancelled = [e for e in events if e["type"] == "render_cancelled"]
+            assert len(cancelled) == 1
+            assert cancelled[0]["payload"]["status"] == "cancelled"
+
+    async def test_worker_render_failed_payload_status_is_failed(self) -> None:
+        """Worker-path render_failed.payload.status == 'failed', not 'running'."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service(
+                settings=_make_settings(retry_count=0),
+            )
+            job = await service.submit_job(
+                project_id="proj-status-fail",
+                output_path="/tmp/status-fail.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg"])
+
+            events = _get_broadcast_events(ws)
+            failed = [e for e in events if e["type"] == "render_failed"]
+            assert len(failed) == 1
+            assert failed[0]["payload"]["status"] == "failed"
+
+    async def test_sweeper_render_failed_payload_status_is_failed(self) -> None:
+        """Sweeper-emitted render_failed.payload.status == 'failed' (no regression)."""
+        repo = InMemoryRenderRepository()
+        ws = ConnectionManager()
+        ws.broadcast = AsyncMock()  # type: ignore[method-assign]
+        sweeper = StaleRenderSweeper(
+            repo=repo,
+            ws_manager=ws,
+            threshold_seconds=60,
+        )
+
+        # Create and persist a job, then transition it to RUNNING so the sweeper
+        # can transition it to FAILED.
+        job = RenderJob.create(
+            project_id="proj-sweeper",
+            output_path="/tmp/sweeper.mp4",
+            output_format=OutputFormat.MP4,
+            quality_preset=QualityPreset.STANDARD,
+            render_plan="{}",
+        )
+        await repo.create(job)
+        await repo.update_status(job.id, RenderStatus.RUNNING)
+
+        # Drive the sweeper's stale-job handler directly.
+        updated = await repo.get(job.id)
+        assert updated is not None
+        await sweeper._handle_stale_job(job.id, job.project_id, updated.updated_at)
+
+        events = _get_broadcast_events(ws)
+        failed = [e for e in events if e["type"] == "render_failed"]
+        assert len(failed) == 1
+        assert failed[0]["payload"]["status"] == "failed"
+
+
+# ---------------------------------------------------------------------------
+# REST/WS status agreement (BL-401-AC-5 / BL-412-AC-4 discharge)
+# ---------------------------------------------------------------------------
+
+
+class TestRestWsStatusAgreement:
+    """REST status matches WS event type immediately after terminal event.
+
+    The implementation guarantee: update_status is always called before
+    _broadcast_event, so the DB (and thus any REST GET) reflects the
+    post-transition state by the time the WS event fires.
+
+    These tests verify that guarantee at the service layer using
+    InMemoryRenderRepository as the REST-equivalent source-of-truth.
+    """
+
+    async def test_rest_status_matches_ws_completed_event(self) -> None:
+        """After render_completed WS event, repo reflects status='completed'."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            job = await service.submit_job(
+                project_id="proj-agreement",
+                output_path="/tmp/agreement.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg"])
+
+            # Simulate REST GET immediately after WS event.
+            rest_job = await repo.get(job.id)
+            assert rest_job is not None
+
+            events = _get_broadcast_events(ws)
+            completed = [e for e in events if e["type"] == "render_completed"]
+            assert len(completed) == 1
+            ws_status = completed[0]["payload"]["status"]
+            assert ws_status == rest_job.status.value == "completed"
+
+    async def test_rest_status_matches_ws_cancelled_event(self) -> None:
+        """After render_cancelled WS event, repo reflects status='cancelled'."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+            job = await service.submit_job(
+                project_id="proj-agreement-cancel",
+                output_path="/tmp/agreement-cancel.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            executor.cancel = AsyncMock()  # type: ignore[method-assign]
+            await service.cancel_job(job.id)
+
+            rest_job = await repo.get(job.id)
+            assert rest_job is not None
+
+            events = _get_broadcast_events(ws)
+            cancelled = [e for e in events if e["type"] == "render_cancelled"]
+            assert len(cancelled) == 1
+            ws_status = cancelled[0]["payload"]["status"]
+            assert ws_status == rest_job.status.value == "cancelled"
+
+    async def test_rest_status_matches_ws_failed_event(self) -> None:
+        """After render_failed WS event, repo reflects status='failed'."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service(
+                settings=_make_settings(retry_count=0),
+            )
+            job = await service.submit_job(
+                project_id="proj-agreement-fail",
+                output_path="/tmp/agreement-fail.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]
+            await service.run_job(job, ["ffmpeg"])
+
+            rest_job = await repo.get(job.id)
+            assert rest_job is not None
+
+            events = _get_broadcast_events(ws)
+            failed = [e for e in events if e["type"] == "render_failed"]
+            assert len(failed) == 1
+            ws_status = failed[0]["payload"]["status"]
+            assert ws_status == rest_job.status.value == "failed"

@@ -411,7 +411,9 @@ class RenderService:
         # Reached only after a successful status transition to CANCELLED.
         render_jobs_total.labels(status="cancelled").inc()
         log.info("render_job.cancelled")
-        await self._broadcast_event(EventType.RENDER_CANCELLED, job)
+        await self._broadcast_event(
+            EventType.RENDER_CANCELLED, job, target_status=RenderStatus.CANCELLED
+        )
         await self._broadcast_queue_status()
         self._clear_throttle_state(job_id)
         return True
@@ -450,7 +452,9 @@ class RenderService:
             job_id=job.id,
             elapsed_seconds=round(elapsed_seconds, 2),
         )
-        await self._broadcast_event(EventType.RENDER_COMPLETED, job)
+        await self._broadcast_event(
+            EventType.RENDER_COMPLETED, job, target_status=RenderStatus.COMPLETED
+        )
         await self._broadcast_queue_status()
         self._clear_throttle_state(job.id)
         await self._cleanup(job.id)
@@ -490,7 +494,9 @@ class RenderService:
                 retry_count=current.retry_count,
                 error=error_message,
             )
-            await self._broadcast_event(EventType.RENDER_FAILED, job)
+            await self._broadcast_event(
+                EventType.RENDER_FAILED, job, target_status=RenderStatus.FAILED
+            )
             await self._broadcast_queue_status()
             self._clear_throttle_state(job.id)
             await self._cleanup(job.id)
@@ -505,20 +511,29 @@ class RenderService:
         await self._checkpoint_manager.cleanup_stale([job_id])
         logger.debug("render_service.cleanup_complete", job_id=job_id)
 
-    async def _broadcast_event(self, event_type: EventType, job: RenderJob) -> None:
+    async def _broadcast_event(
+        self,
+        event_type: EventType,
+        job: RenderJob,
+        *,
+        target_status: RenderStatus | None = None,
+    ) -> None:
         """Broadcast a render lifecycle event via WebSocket.
 
         Args:
             event_type: The event type to broadcast.
             job: The render job associated with the event.
+            target_status: Post-transition status to use in payload. When None,
+                falls back to job.status (correct for non-terminal events).
         """
+        status_value = target_status.value if target_status is not None else job.status.value
         await self._ws.broadcast(
             build_event(
                 event_type,
                 {
                     "job_id": job.id,
                     "project_id": job.project_id,
-                    "status": job.status.value,
+                    "status": status_value,
                 },
                 job_id=job.id,
             )
