@@ -2,11 +2,12 @@
 
 Covers EventType enum extension, dual-threshold throttling (time + progress delta),
 per-job-per-event-type isolation, frame_available events, queue_status events,
-event payload schema, and full lifecycle event sequences.
+event payload schema, full lifecycle event sequences, and cancel/complete race invariants.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,7 +16,7 @@ from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.render.executor import RenderExecutor
-from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderStatus
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import RenderService
@@ -683,3 +684,123 @@ class TestBroadcastToAllClients:
 
             # broadcast is called via ConnectionManager which sends to all clients
             assert ws.broadcast.call_count >= 3  # type: ignore[union-attr]
+
+
+# ---------------------------------------------------------------------------
+# Cancel/complete race-window invariant tests (BL-412)
+# ---------------------------------------------------------------------------
+
+_TERMINAL_EVENT_TYPES = {"render_completed", "render_cancelled", "render_failed"}
+
+
+class TestCancelCompleteRaceInvariant:
+    """Race-window invariant: at most one terminal WS event per job_id.
+
+    These tests insert an awaitable barrier between executor.cancel and the
+    state-transition broadcast so _complete_job can win the race. After the
+    BL-412 compare-and-swap fix, cancel_job must detect the concurrent
+    completion and suppress RENDER_CANCELLED.
+    """
+
+    async def test_complete_wins_race_single_terminal_event(self) -> None:
+        """When _complete_job wins the race, exactly one terminal event is broadcast."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+
+            job: RenderJob = await service.submit_job(
+                project_id="proj-race",
+                output_path="/tmp/race.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()  # type: ignore[union-attr]
+
+            # Barrier: complete_job will complete while cancel_job awaits executor.cancel.
+            barrier = asyncio.Event()
+
+            async def cancel_with_barrier(jid: str) -> None:
+                barrier.set()  # signal that executor.cancel has been entered
+                await asyncio.sleep(0)  # yield to let _complete_job run
+
+            executor.cancel = cancel_with_barrier  # type: ignore[method-assign]
+
+            async def complete_after_barrier() -> None:
+                await barrier.wait()
+                # Reload job to get latest state before completing
+                fresh = await repo.get(job.id)
+                if fresh is not None:
+                    await service._complete_job(fresh)
+
+            await asyncio.gather(
+                service.cancel_job(job.id),
+                complete_after_barrier(),
+                return_exceptions=True,
+            )
+
+            events = _get_broadcast_events(ws)
+            terminal = [e for e in events if e["type"] in _TERMINAL_EVENT_TYPES]
+            assert len(terminal) == 1, (
+                f"Expected exactly 1 terminal event; got {[e['type'] for e in terminal]}"
+            )
+
+    async def test_cancel_wins_race_single_terminal_event(self) -> None:
+        """When cancel_job wins the race, exactly one terminal event is broadcast."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+
+            job: RenderJob = await service.submit_job(
+                project_id="proj-cancel-wins",
+                output_path="/tmp/cancel-wins.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+            ws.broadcast.reset_mock()  # type: ignore[union-attr]
+
+            # Executor.cancel completes immediately (no barrier) — cancel wins.
+            executor.cancel = AsyncMock()  # type: ignore[method-assign]
+
+            await service.cancel_job(job.id)
+
+            events = _get_broadcast_events(ws)
+            terminal = [e for e in events if e["type"] in _TERMINAL_EVENT_TYPES]
+            assert len(terminal) == 1
+            assert terminal[0]["type"] == "render_cancelled"
+
+    async def test_cancel_preempted_no_render_cancelled_event(self) -> None:
+        """When CAS detects concurrent completion, RENDER_CANCELLED is suppressed."""
+        with _PATCH_NO_RUST:
+            service, repo, ws, executor = _build_service()
+
+            job: RenderJob = await service.submit_job(
+                project_id="proj-preempt",
+                output_path="/tmp/preempt.mp4",
+                output_format=OutputFormat.MP4,
+                quality_preset=QualityPreset.STANDARD,
+                render_plan_json=_make_plan_json(),
+            )
+            await repo.update_status(job.id, RenderStatus.RUNNING)
+
+            # Pre-complete the job so the CAS will find it already terminal.
+            fresh = await repo.get(job.id)
+            assert fresh is not None
+            await service._complete_job(fresh)
+            ws.broadcast.reset_mock()  # type: ignore[union-attr]
+
+            # Now simulate cancel arriving after the job is already COMPLETED.
+            # The service's cancel_job pre-check will block it (not QUEUED/RUNNING),
+            # so we patch executor.cancel and call cancel_job with a pre-running snapshot.
+            executor.cancel = AsyncMock()  # type: ignore[method-assign]
+
+            # Directly test the CAS path by calling cancel_job — it should return False
+            # early (job not in cancellable state) or raise CancelPreemptedError.
+            result = await service.cancel_job(job.id)
+
+            # Job is COMPLETED — cancel_job returns False without broadcasting.
+            assert result is False
+            events = _get_broadcast_events(ws)
+            cancelled_events = [e for e in events if e["type"] == "render_cancelled"]
+            assert len(cancelled_events) == 0

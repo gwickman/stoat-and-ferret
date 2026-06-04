@@ -21,7 +21,7 @@ from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
-from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.service import CancelPreemptedError, RenderService
 from tests.conftest import TEST_PROJECT_UUID
 
 # ---------- Fixtures ----------
@@ -363,3 +363,67 @@ def test_formats_all_six_codecs_have_encoder(render_client: TestClient) -> None:
         assert found_codecs[codec_name] == expected_encoder, (
             f"Codec {codec_name}: expected {expected_encoder}, got {found_codecs[codec_name]}"
         )
+
+
+# ---------- Cancel 409 on already-terminal job (BL-412) ----------
+
+
+def test_cancel_preempted_error_returns_409_not_cancellable(
+    render_client: TestClient,
+    mock_render_service: AsyncMock,
+) -> None:
+    """When cancel_job raises CancelPreemptedError, router returns 409 NOT_CANCELLABLE."""
+    # Create a job via the API so the render_repo has it in QUEUED status.
+    create_resp = render_client.post(
+        "/api/v1/render",
+        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "standard"},
+    )
+    assert create_resp.status_code == 201
+    job_id = create_resp.json()["id"]
+
+    # Configure the service to raise CancelPreemptedError (simulates the CAS path).
+    mock_render_service.cancel_job = AsyncMock(side_effect=CancelPreemptedError("completed"))
+
+    resp = render_client.post(f"/api/v1/render/{job_id}/cancel")
+    assert resp.status_code == 409
+    body = resp.json()
+    assert body["detail"]["code"] == "NOT_CANCELLABLE"
+    assert body["detail"]["status"] == "completed"
+
+
+async def test_cancel_non_cancellable_job_returns_409(
+    render_app: FastAPI,
+    render_repo: InMemoryRenderRepository,
+    mock_render_service: AsyncMock,
+) -> None:
+    """POST cancel on a job whose pre-check status is terminal returns 409 NOT_CANCELLABLE."""
+    from httpx import ASGITransport, AsyncClient
+
+    from stoat_ferret.render.models import RenderJob, RenderStatus
+
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    completed_job = RenderJob(
+        id="job-completed-precheck",
+        project_id=TEST_PROJECT_UUID,
+        status=RenderStatus.COMPLETED,
+        output_path="/tmp/done.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan="{}",
+        progress=1.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=now,
+    )
+    await render_repo.create(completed_job)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=render_app), base_url="http://test"
+    ) as client:
+        resp = await client.post(f"/api/v1/render/{completed_job.id}/cancel")
+
+    assert resp.status_code == 409
+    body = resp.json()
+    assert body["detail"]["code"] == "NOT_CANCELLABLE"

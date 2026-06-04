@@ -49,7 +49,12 @@ from stoat_ferret.render.render_repository import (
     AsyncRenderRepository,
     AsyncSQLiteRenderRepository,
 )
-from stoat_ferret.render.service import PreflightError, RenderService, RenderUnavailableError
+from stoat_ferret.render.service import (
+    CancelPreemptedError,
+    PreflightError,
+    RenderService,
+    RenderUnavailableError,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -1040,7 +1045,20 @@ async def cancel_render_job(
                 },
             )
 
-        cancelled = await render_service.cancel_job(job_id)
+        try:
+            cancelled = await render_service.cancel_job(job_id)
+        except CancelPreemptedError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "NOT_CANCELLABLE",
+                    "message": (
+                        f"Job {job_id} reached terminal state {exc.current_status!r} "
+                        "before cancel could complete"
+                    ),
+                    "status": exc.current_status,
+                },
+            ) from exc
         if not cancelled:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
