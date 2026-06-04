@@ -9,7 +9,7 @@ export interface RenderJob {
   id: string
   project_id: string
   status: string
-  output_path: string
+  output_path: string | null
   output_format: string
   quality_preset: string
   progress: number

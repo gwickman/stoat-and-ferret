@@ -459,7 +459,10 @@ class RenderService:
             elapsed_seconds=round(elapsed_seconds, 2),
         )
         await self._broadcast_event(
-            EventType.RENDER_COMPLETED, job, target_status=RenderStatus.COMPLETED
+            EventType.RENDER_COMPLETED,
+            job,
+            target_status=RenderStatus.COMPLETED,
+            output_path=job.output_path,
         )
         await self._broadcast_queue_status()
         self._clear_throttle_state(job.id)
@@ -523,6 +526,7 @@ class RenderService:
         job: RenderJob,
         *,
         target_status: RenderStatus | None = None,
+        output_path: str | None = None,
     ) -> None:
         """Broadcast a render lifecycle event via WebSocket.
 
@@ -531,16 +535,21 @@ class RenderService:
             job: The render job associated with the event.
             target_status: Post-transition status to use in payload. When None,
                 falls back to job.status (correct for non-terminal events).
+            output_path: File path of the completed render output. Included in
+                payload for RENDER_COMPLETED events only.
         """
         status_value = target_status.value if target_status is not None else job.status.value
+        payload: dict[str, str | None] = {
+            "job_id": job.id,
+            "project_id": job.project_id,
+            "status": status_value,
+        }
+        if event_type == EventType.RENDER_COMPLETED:
+            payload["output_path"] = output_path
         await self._ws.broadcast(
             build_event(
                 event_type,
-                {
-                    "job_id": job.id,
-                    "project_id": job.project_id,
-                    "status": status_value,
-                },
+                payload,
                 job_id=job.id,
             )
         )
