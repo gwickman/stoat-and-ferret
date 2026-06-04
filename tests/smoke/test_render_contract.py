@@ -20,6 +20,8 @@ import pytest
 
 from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip
+from stoat_ferret.render.models import RenderStatus
+from stoat_ferret.render.render_repository import AsyncSQLiteRenderRepository
 
 
 async def _seed_stub_clip(client: httpx.AsyncClient, project_id: str) -> str:
@@ -291,4 +293,56 @@ async def test_job_polling_noop_completed(
 
     assert final_status == "completed", (
         f"Expected 'completed' status after polling, got {final_status!r}"
+    )
+
+
+async def test_concurrent_renders_distinct_output_paths(
+    smoke_client_noop: httpx.AsyncClient,
+) -> None:
+    """Two renders of the same project produce distinct output_path values (BL-403).
+
+    Submits two renders for the same project and asserts:
+    - Both complete successfully (status == 'completed')
+    - The two output_path values are distinct strings (no last-write-wins collision)
+    - Audit query confirms one-to-one job_id→output_path mapping for the project
+    """
+    project_id, duration = await _create_project_with_timeline(
+        smoke_client_noop, "Concurrent Renders BL-403 Test", 50.0
+    )
+    render_plan = json.dumps({"total_duration": duration})
+
+    resp_a, resp_b = await asyncio.gather(
+        smoke_client_noop.post(
+            "/api/v1/render",
+            json={"project_id": project_id, "render_plan": render_plan},
+        ),
+        smoke_client_noop.post(
+            "/api/v1/render",
+            json={"project_id": project_id, "render_plan": render_plan},
+        ),
+    )
+
+    assert resp_a.status_code == 201, f"First render failed: {resp_a.json()}"
+    assert resp_b.status_code == 201, f"Second render failed: {resp_b.json()}"
+
+    body_a = resp_a.json()
+    body_b = resp_b.json()
+    assert body_a["status"] == "completed"
+    assert body_b["status"] == "completed"
+
+    output_path_a = body_a["output_path"]
+    output_path_b = body_b["output_path"]
+    assert output_path_a != output_path_b, (
+        f"Expected distinct output paths but got duplicates: {output_path_a!r}"
+    )
+
+    # Audit query: verify one-to-one job_id→output_path mapping (BL-403-AC-4)
+    transport: httpx.ASGITransport = smoke_client_noop._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    repo = AsyncSQLiteRenderRepository(db)
+    completed = await repo.list_by_status(RenderStatus.COMPLETED)
+    project_paths = [j.output_path for j in completed if j.project_id == project_id]
+    assert len(project_paths) == 2
+    assert len(set(project_paths)) == len(project_paths), (
+        f"Duplicate output_path found among completed jobs: {project_paths}"
     )

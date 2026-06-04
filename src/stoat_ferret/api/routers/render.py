@@ -13,6 +13,7 @@ import asyncio
 import json
 import shutil
 import subprocess
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -440,7 +441,11 @@ async def create_render_job(
             detail={"code": "EMPTY_TIMELINE", "message": "Project has no timeline clips"},
         )
 
-    output_path = str(Path(settings.render_output_dir) / f"{project_id_str}.{output_format.value}")
+    Path(settings.render_output_dir).mkdir(parents=True, exist_ok=True)
+    job_token = str(uuid.uuid4()).replace("-", "")[:12]
+    output_path = str(
+        Path(settings.render_output_dir) / f"{project_id_str}_{job_token}.{output_format.value}"
+    )
 
     try:
         job = await render_service.submit_job(
