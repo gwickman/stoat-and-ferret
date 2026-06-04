@@ -281,6 +281,19 @@ class RenderExecutor:
             True if FFmpeg exited with return code 0.
         """
         stdout_chunks: list[bytes] = []
+        stderr_lines: list[bytes] = []
+
+        async def _drain_stderr() -> None:
+            """Drain stderr concurrently to prevent pipe deadlock."""
+            assert process.stderr is not None
+            while True:
+                line = await process.stderr.readline()
+                if not line:
+                    break
+                stderr_lines.append(line)
+
+        # Start concurrent stderr drain task before stdout loop
+        stderr_task = asyncio.create_task(_drain_stderr())
 
         if process.stdout is not None:
             while True:
@@ -302,27 +315,28 @@ class RenderExecutor:
         # Wait for process to exit after stdout is exhausted
         await process.wait()
 
+        # Join stderr drain task with bounded timeout per LRN-406.
+        # 5s is sufficient after process.wait() — any remaining stderr data is
+        # in the OS buffer and drains in ms on normal exits. Reduced from the
+        # reference impl's 15s so that the test budget (15s) is not consumed by
+        # a stuck pipe on Windows/Python 3.10.
+        done, pending = await asyncio.wait({stderr_task}, timeout=5.0)
+        if pending:
+            for task in pending:
+                task.cancel()
+            logger.warning("render_worker.stderr_drain_timeout", job_id=job_id)
+
         success = process.returncode == 0
 
-        # Capture and log stderr on failure for post-mortem analysis.
-        # Use a timeout to avoid blocking on Python 3.10 where pipe
-        # reads can hang after process cancellation/kill.
-        if not success and process.stderr is not None:
-            try:
-                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=2.0)
-                stderr_text = stderr_data.decode("utf-8", errors="replace").strip()
-                if stderr_text:
-                    logger.error(
-                        "render_executor.ffmpeg_stderr",
-                        job_id=job_id,
-                        stderr=stderr_text,
-                        returncode=process.returncode,
-                    )
-            except (asyncio.TimeoutError, Exception):
-                logger.debug(
-                    "render_executor.stderr_read_failed",
+        # Log stderr on failure for post-mortem analysis
+        if not success and stderr_lines:
+            stderr_text = b"".join(stderr_lines).decode("utf-8", errors="replace").strip()
+            if stderr_text:
+                logger.error(
+                    "render_executor.ffmpeg_stderr",
                     job_id=job_id,
-                    exc_info=True,
+                    stderr=stderr_text,
+                    returncode=process.returncode,
                 )
 
         return success
