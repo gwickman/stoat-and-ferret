@@ -58,17 +58,25 @@ describe('useRenderEvents', () => {
     expect(useRenderStore.getState().jobs[0].status).toBe('running')
   })
 
-  it('dispatches render_completed to updateJob', () => {
+  it('dispatches render_completed to updateJob', async () => {
     renderHook(() => useRenderEvents())
     act(() => { mockInstances[0].simulateOpen() })
 
-    act(() => {
+    await act(async () => {
       mockInstances[0].simulateMessage(
-        makeEvent('render_completed', { job_id: 'j1', project_id: 'p1', status: 'completed' }),
+        makeEvent('render_completed', {
+          job_id: 'j1',
+          project_id: 'p1',
+          status: 'completed',
+          output_path: '/tmp/j1.mp4',
+        }),
       )
     })
 
-    expect(useRenderStore.getState().jobs[0].status).toBe('completed')
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.status).toBe('completed')
+    // BL-411: render_completed must propagate output_path to store
+    expect(job.output_path).toBe('/tmp/j1.mp4')
   })
 
   it('dispatches render_failed to updateJob', () => {

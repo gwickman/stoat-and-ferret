@@ -50,13 +50,21 @@ export function useRenderEvents(): void {
       switch (parsed.type) {
         case 'render_queued':
         case 'render_started':
-        case 'render_completed':
         case 'render_failed':
         case 'render_cancelled':
           store.updateJob({
             id: payload.job_id as string,
             project_id: payload.project_id as string,
             status: payload.status as string,
+          })
+          break
+
+        case 'render_completed':
+          store.updateJob({
+            id: payload.job_id as string,
+            project_id: payload.project_id as string,
+            status: payload.status as string,
+            output_path: (payload.output_path as string | null) ?? null,
           })
           break
 

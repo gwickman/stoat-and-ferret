@@ -357,6 +357,7 @@ Job finished successfully. Followed by a `render_queue_status` broadcast on the 
 | `job_id` | string | Render job UUID. |
 | `project_id` | string | Owning project. |
 | `status` | string | `"completed"` (`RenderStatus.COMPLETED.value`). |
+| `output_path` | string \| null | File path of the completed render output. |
 
 Schema inferred from `render/service.py:392-402, 457-474`.
 

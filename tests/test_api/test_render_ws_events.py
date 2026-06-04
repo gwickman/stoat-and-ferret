@@ -858,6 +858,9 @@ class TestTerminalEventPayloadStatus:
             completed = [e for e in events if e["type"] == "render_completed"]
             assert len(completed) == 1
             assert completed[0]["payload"]["status"] == "completed"
+            # BL-411: render_completed payload must include output_path
+            assert "output_path" in completed[0]["payload"]
+            assert completed[0]["payload"]["output_path"] == job.output_path
 
     async def test_render_cancelled_payload_status_is_cancelled(self) -> None:
         """render_cancelled.payload.status == 'cancelled', not 'running'."""
