@@ -393,8 +393,6 @@ async def test_render_progress_increments(
 
         await asyncio.sleep(1.0)
 
-    unique_progress_count = len(set(progress_values))
-
     # In noop mode, progress jumps immediately to 1.0 (completed).
     # In real-mode with FFmpeg, progress increments over time.
     # Verify that we captured progress values and reached completion.
@@ -403,6 +401,6 @@ async def test_render_progress_increments(
         f"Expected progress to reach 1.0 (completion), got {sorted(set(progress_values))!r}"
     )
 
-    # Real-mode behavioral assertion (will fail in noop mode, deferred per AC-2/AC-3):
-    # unique_progress_count > 2 indicates progress incremented during render.
-    # Noop mode shows unique_progress_count=1 ([1.0] only).
+    # Real-mode behavioral assertion (deferred per BL-394-AC-2/AC-3):
+    # len(set(progress_values)) > 2 indicates progress incremented during render.
+    # Noop mode shows len(set(progress_values))=1 ([1.0] only) which is expected.
