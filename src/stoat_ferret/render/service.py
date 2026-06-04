@@ -91,6 +91,22 @@ class RenderUnavailableError(Exception):
         super().__init__(reason)
 
 
+class CancelPreemptedError(Exception):
+    """Raised by cancel_job when the job reached a terminal state before cancellation.
+
+    Occurs when executor.cancel returns but the job was already completed by the
+    worker (TOCTOU race). The cancel compare-and-swap detected the concurrent
+    completion and suppresses RENDER_CANCELLED.
+
+    Attributes:
+        current_status: The terminal status value the job was found in.
+    """
+
+    def __init__(self, current_status: str) -> None:
+        self.current_status = current_status
+        super().__init__(f"Cancel preempted: job already in terminal state {current_status!r}")
+
+
 class RenderService:
     """Orchestrates the full render job lifecycle.
 
@@ -378,11 +394,21 @@ class RenderService:
             )
             return False
 
-        # Cancel executor process if running
+        # Cancel executor process if running; CAS re-read guards against concurrent completion.
         if job.status == RenderStatus.RUNNING:
             await self._executor.cancel(job_id)
+            # Re-read job after the await — worker may have committed COMPLETED while
+            # executor.cancel was in flight (BL-412 TOCTOU). Mirrors sweeper.py:64-78.
+            job = await self._repo.get(job_id) or job
+            try:
+                await self._repo.update_status(job_id, RenderStatus.CANCELLED)
+            except ValueError as exc:
+                logger.info("render.cancel_preempted", job_id=job_id, status=job.status.value)
+                raise CancelPreemptedError(job.status.value) from exc
+        else:
+            await self._repo.update_status(job_id, RenderStatus.CANCELLED)
 
-        await self._repo.update_status(job_id, RenderStatus.CANCELLED)
+        # Reached only after a successful status transition to CANCELLED.
         render_jobs_total.labels(status="cancelled").inc()
         log.info("render_job.cancelled")
         await self._broadcast_event(EventType.RENDER_CANCELLED, job)
