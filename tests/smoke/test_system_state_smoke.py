@@ -156,22 +156,28 @@ async def test_agent_can_determine_render_terminal_state_after_disconnect(
         cancel_resp = await smoke_client.post(f"/api/v1/render/{job_id}/cancel")
         assert cancel_resp.status_code == 200
 
-    # Recovery step A: poll until the job is no longer in active_jobs (up to 5 s).
-    # A fixed sleep is insufficient: in real-mode the render worker may race the cancel
-    # on the shared SQLite connection, causing transient retry cycles before the job
-    # reaches a durable terminal state (cancelled/failed after max retries).
+    # Poll until BOTH system/state excludes the job AND GET /render returns terminal status
+    # (up to 10 s). A fixed sleep is insufficient: in real-mode the render worker may race
+    # the cancel on the shared SQLite connection, causing transient retry cycles before the
+    # job reaches a durable terminal state (cancelled/failed after max retries). We check
+    # both endpoints atomically in each iteration to avoid the TOCTOU gap where system/state
+    # sees a momentary FAILED (not active) but the job immediately retries to QUEUED.
     terminal_statuses = {"completed", "failed", "cancelled"}
-    deadline = 5.0
-    interval = 0.1
+    deadline = 10.0
+    interval = 0.2
     elapsed = 0.0
-    active_render_ids: set[str] = {job_id}  # assume active until proven otherwise
+    active_render_ids: set[str] = {job_id}
+    final_status: str = "unknown"
     while elapsed < deadline:
         state_resp = await smoke_client.get("/api/v1/system/state")
         assert state_resp.status_code == 200
         active_render_ids = {
             j["job_id"] for j in state_resp.json()["active_jobs"] if j["job_type"] == "render"
         }
-        if job_id not in active_render_ids:
+        get_resp = await smoke_client.get(f"/api/v1/render/{job_id}")
+        assert get_resp.status_code == 200
+        final_status = get_resp.json()["status"]
+        if job_id not in active_render_ids and final_status in terminal_statuses:
             break
         await asyncio.sleep(interval)
         elapsed += interval
@@ -180,12 +186,7 @@ async def test_agent_can_determine_render_terminal_state_after_disconnect(
         f"Terminal render job {job_id} must not appear in system/state active_jobs "
         "after simulated disconnect"
     )
-
-    # Recovery step B: terminal state is determinable via GET /api/v1/render/{job_id}
-    get_resp = await smoke_client.get(f"/api/v1/render/{job_id}")
-    assert get_resp.status_code == 200
-    job_data = get_resp.json()
-    assert job_data["status"] in terminal_statuses, (
-        f"Render job status must be terminal; got {job_data['status']!r}. "
+    assert final_status in terminal_statuses, (
+        f"Render job status must be terminal; got {final_status!r}. "
         "Agent cannot determine terminal state via GET /api/v1/render/{job_id}."
     )
