@@ -64,7 +64,7 @@ export function useRenderEvents(): void {
             id: payload.job_id as string,
             project_id: payload.project_id as string,
             status: payload.status as string,
-            output_path: (payload.output_path as string | null) ?? null,
+            output_path: payload.output_path as string | null,
           })
           break
 
