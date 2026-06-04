@@ -137,6 +137,18 @@ class AsyncRenderRepository(Protocol):
         """
         ...
 
+    async def update_partial_signal(self, job_id: str, detected: bool) -> None:
+        """Set the partial_file_detected flag for a cancelled job.
+
+        Args:
+            job_id: The job UUID to update.
+            detected: True if a non-empty file exists at output_path after cancel.
+
+        Raises:
+            ValueError: If the job is not found.
+        """
+        ...
+
     async def delete(self, job_id: str) -> bool:
         """Delete a render job by ID.
 
@@ -327,6 +339,18 @@ class AsyncSQLiteRenderRepository:
         )
         await self._conn.commit()
 
+    async def update_partial_signal(self, job_id: str, detected: bool) -> None:
+        """Set the partial_file_detected flag for a cancelled job."""
+        current = await self.get(job_id)
+        if current is None:
+            raise ValueError(f"Render job {job_id} not found")
+
+        await self._conn.execute(
+            "UPDATE render_jobs SET partial_file_detected = ? WHERE id = ?",
+            (1 if detected else 0, job_id),
+        )
+        await self._conn.commit()
+
     async def list_stale_running(self, older_than: datetime) -> list[RenderJob]:
         """Return running jobs with updated_at older than the given threshold."""
         cursor = await self._conn.execute(
@@ -370,6 +394,7 @@ class AsyncSQLiteRenderRepository:
             completed_at=(
                 datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None
             ),
+            partial_file_detected=bool(row["partial_file_detected"]),
         )
 
 
@@ -466,6 +491,13 @@ class InMemoryRenderRepository:
 
         job.progress = progress
         job.updated_at = datetime.now(timezone.utc)
+
+    async def update_partial_signal(self, job_id: str, detected: bool) -> None:
+        """Set the partial_file_detected flag for a cancelled job."""
+        job = self._jobs.get(job_id)
+        if job is None:
+            raise ValueError(f"Render job {job_id} not found")
+        job.partial_file_detected = detected
 
     async def list_stale_running(self, older_than: datetime) -> list[RenderJob]:
         """Return running jobs with updated_at older than the given threshold."""

@@ -317,6 +317,13 @@ ENCODER_CACHE_CODEC_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_encoder_cache_codec ON encoder_cache(codec);
 """
 
+# Columns to add to render_jobs table for partial-file fingerprint.
+# Each entry is (column_name, column_type).
+RENDER_JOBS_PARTIAL_COLUMNS = [
+    ("partial_file_detected", "INTEGER NOT NULL DEFAULT 0"),
+]
+
+
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
 CLIPS_TIMELINE_COLUMNS = [
@@ -330,6 +337,20 @@ CLIPS_TIMELINE_COLUMNS = [
 PROJECTS_AUDIO_MIX_COLUMNS = [
     ("audio_mix_json", "TEXT"),
 ]
+
+
+def _alter_render_jobs_add_partial_columns(conn: sqlite3.Connection) -> None:
+    """Add partial_file_detected column to render_jobs table idempotently.
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in RENDER_JOBS_PARTIAL_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
 
 
 def _alter_projects_add_audio_mix_column(conn: sqlite3.Connection) -> None:
@@ -409,6 +430,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(ENCODER_CACHE_CODEC_INDEX)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
+    _alter_render_jobs_add_partial_columns(conn)
     conn.commit()
 
 
@@ -439,6 +461,22 @@ async def _alter_clips_add_timeline_columns_async(db: aiosqlite.Connection) -> N
     for col, col_type in CLIPS_TIMELINE_COLUMNS:
         try:
             await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
+async def _alter_render_jobs_add_partial_columns_async(
+    db: aiosqlite.Connection,
+) -> None:
+    """Add partial_file_detected column to render_jobs table idempotently (async).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in RENDER_JOBS_PARTIAL_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError as e:
             if "duplicate column name" not in str(e):
                 raise
@@ -489,4 +527,5 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(ENCODER_CACHE_CODEC_INDEX)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
+    await _alter_render_jobs_add_partial_columns_async(db)
     await db.commit()

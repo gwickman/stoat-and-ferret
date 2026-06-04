@@ -198,6 +198,7 @@ def _job_to_response(job: RenderJob) -> RenderJobResponse:
         created_at=job.created_at,
         updated_at=job.updated_at,
         completed_at=job.completed_at,
+        partial_file_detected=job.partial_file_detected,
     )
 
 
