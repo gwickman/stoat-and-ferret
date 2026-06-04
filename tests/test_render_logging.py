@@ -426,7 +426,9 @@ class TestExecutorLogging:
             )
 
             stderr_mock = AsyncMock()
-            stderr_mock.read = AsyncMock(return_value=b"Error: codec not found\nFailed to encode")
+            stderr_mock.readline = AsyncMock(
+                side_effect=[b"Error: codec not found\n", b"Failed to encode", b""]
+            )
 
             mock_process = MagicMock()
             mock_process.stdout = None

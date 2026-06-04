@@ -315,8 +315,12 @@ class RenderExecutor:
         # Wait for process to exit after stdout is exhausted
         await process.wait()
 
-        # Join stderr drain task with bounded timeout per LRN-406
-        done, pending = await asyncio.wait({stderr_task}, timeout=15.0)
+        # Join stderr drain task with bounded timeout per LRN-406.
+        # 5s is sufficient after process.wait() — any remaining stderr data is
+        # in the OS buffer and drains in ms on normal exits. Reduced from the
+        # reference impl's 15s so that the test budget (15s) is not consumed by
+        # a stuck pipe on Windows/Python 3.10.
+        done, pending = await asyncio.wait({stderr_task}, timeout=5.0)
         if pending:
             for task in pending:
                 task.cancel()
