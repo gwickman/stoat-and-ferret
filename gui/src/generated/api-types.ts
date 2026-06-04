@@ -3575,6 +3575,11 @@ export interface components {
             updated_at: string;
             /** Completed At */
             completed_at?: string | null;
+            /**
+             * Partial File Detected
+             * @default false
+             */
+            partial_file_detected: boolean;
         };
         /**
          * RenderListResponse

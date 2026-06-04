@@ -5590,6 +5590,11 @@
               }
             ],
             "title": "Completed At"
+          },
+          "partial_file_detected": {
+            "type": "boolean",
+            "title": "Partial File Detected",
+            "default": false
           }
         },
         "type": "object",
