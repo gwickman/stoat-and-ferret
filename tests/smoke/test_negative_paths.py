@@ -7,6 +7,7 @@ error details for timeline, audio, batch, and compose endpoints.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -192,3 +193,56 @@ async def test_compose_insufficient_inputs(
     assert resp.status_code == 422
     body = resp.json()
     assert body["detail"]["code"] == "INSUFFICIENT_INPUTS"
+
+
+_STUB_VIDEO_ID = "00000000-0000-0000-0000-000000000001"
+
+
+async def _ensure_stub_video(client: httpx.AsyncClient) -> str:
+    """Insert a minimal stub video row and return its ID."""
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    now_str = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT OR IGNORE INTO videos "
+        "(id, path, filename, duration_frames, frame_rate_numerator, frame_rate_denominator, "
+        "width, height, video_codec, file_size, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            _STUB_VIDEO_ID,
+            "/stub/video.mp4",
+            "stub.mp4",
+            100,
+            30,
+            1,
+            1280,
+            720,
+            "h264",
+            1000,
+            now_str,
+            now_str,
+        ),
+    )
+    await db.commit()  # type: ignore[union-attr]
+    return _STUB_VIDEO_ID
+
+
+async def test_video_delete_blocked_when_clip_references_it(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """DELETE video returns 409 when a clip still references it via FK constraint (BL-413, AC-4)."""
+    video_id = await _ensure_stub_video(smoke_client)
+
+    resp = await smoke_client.post("/api/v1/projects", json={"name": "FK Guard Test"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={"source_video_id": video_id, "in_point": 0, "out_point": 60, "timeline_position": 0},
+    )
+    assert resp.status_code == 201
+
+    resp = await smoke_client.delete(f"/api/v1/videos/{video_id}")
+    assert resp.status_code == 409
+    assert resp.json()["detail"]["code"] == "FK_CONSTRAINT_VIOLATION"
