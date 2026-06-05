@@ -22,7 +22,6 @@ from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip
 from tests.smoke.conftest import SAMPLE_EFFECT_DEFS
 
-
 _STUB_VIDEO_ID = "00000000-0000-0000-0000-000000000001"
 
 
@@ -36,7 +35,10 @@ async def _seed_clip_for_project(client: httpx.AsyncClient, project_id: str) -> 
         "(id, path, filename, duration_frames, frame_rate_numerator, frame_rate_denominator, "
         "width, height, video_codec, file_size, created_at, updated_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (_STUB_VIDEO_ID, "/stub/video.mp4", "video.mp4", 100, 30, 1, 1920, 1080, "h264", 1000, now_str, now_str),
+        (
+            _STUB_VIDEO_ID, "/stub/video.mp4", "video.mp4",
+            100, 30, 1, 1920, 1080, "h264", 1000, now_str, now_str,
+        ),
     )
     await db.commit()
     repo = AsyncSQLiteClipRepository(db)
