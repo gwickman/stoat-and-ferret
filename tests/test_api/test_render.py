@@ -6,10 +6,11 @@ and validation that public API rejects FFmpeg preset names and invalid values.
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
+import aiosqlite
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -503,3 +504,169 @@ async def test_partial_file_detected_true_for_cancelled_job(
     body = resp.json()
     assert "partial_file_detected" in body
     assert body["partial_file_detected"] is True
+
+
+# ---------- FK constraint enforcement tests (BL-413) ----------
+
+
+@pytest.fixture
+async def fk_db() -> AsyncGenerator[aiosqlite.Connection, None]:
+    """In-memory aiosqlite connection with FK enforcement ON via create_tables_async."""
+    from stoat_ferret.db.schema import create_tables_async
+
+    async with aiosqlite.connect(":memory:") as conn:
+        conn.row_factory = aiosqlite.Row
+        await create_tables_async(conn)
+        yield conn
+
+
+@pytest.fixture
+async def fk_video_app(fk_db: aiosqlite.Connection) -> FastAPI:
+    """App with real SQLite repos backed by FK-enforced in-memory DB."""
+    from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+    from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
+    from stoat_ferret.db.project_repository import AsyncSQLiteProjectRepository
+
+    return create_app(
+        video_repository=AsyncSQLiteVideoRepository(fk_db),
+        clip_repository=AsyncSQLiteClipRepository(fk_db),
+        project_repository=AsyncSQLiteProjectRepository(fk_db),
+    )
+
+
+async def test_delete_referenced_video_returns_409(
+    fk_db: aiosqlite.Connection,
+    fk_video_app: FastAPI,
+) -> None:
+    """DELETE /videos/{id} for a video referenced by a clip returns 409 FK_CONSTRAINT_VIOLATION."""
+    from httpx import ASGITransport, AsyncClient
+
+    from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+    from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
+    from stoat_ferret.db.project_repository import AsyncSQLiteProjectRepository
+    from tests.factories import make_test_video
+
+    video_repo = AsyncSQLiteVideoRepository(fk_db)
+    project_repo = AsyncSQLiteProjectRepository(fk_db)
+    clip_repo = AsyncSQLiteClipRepository(fk_db)
+
+    now = datetime.now(timezone.utc)
+    video = make_test_video()
+    await video_repo.add(video)
+
+    project = Project(
+        id=Project.new_id(),
+        name="FK Test Project",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repo.add(project)
+
+    clip = Clip(
+        id=Clip.new_id(),
+        project_id=project.id,
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repo.add(clip)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fk_video_app), base_url="http://test"
+    ) as client:
+        resp = await client.delete(f"/api/v1/videos/{video.id}")
+
+    assert resp.status_code == 409
+    body = resp.json()
+    assert body["detail"]["code"] == "FK_CONSTRAINT_VIOLATION"
+
+    # Video row still exists (not deleted)
+    still_there = await video_repo.get(video.id)
+    assert still_there is not None
+
+
+async def test_delete_unreferenced_video_returns_204(
+    fk_db: aiosqlite.Connection,
+    fk_video_app: FastAPI,
+) -> None:
+    """DELETE /videos/{id} for a video with no referencing clips returns 204."""
+    from httpx import ASGITransport, AsyncClient
+
+    from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+    from tests.factories import make_test_video
+
+    video_repo = AsyncSQLiteVideoRepository(fk_db)
+    video = make_test_video()
+    await video_repo.add(video)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fk_video_app), base_url="http://test"
+    ) as client:
+        resp = await client.delete(f"/api/v1/videos/{video.id}")
+
+    assert resp.status_code == 204
+
+    # Video row is gone
+    gone = await video_repo.get(video.id)
+    assert gone is None
+
+
+async def test_delete_project_cascades_clips(
+    fk_db: aiosqlite.Connection,
+    fk_video_app: FastAPI,
+) -> None:
+    """DELETE /projects/{id} with FK enforcement ON cascades to clips (AC-4)."""
+    from httpx import ASGITransport, AsyncClient
+
+    from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+    from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
+    from stoat_ferret.db.project_repository import AsyncSQLiteProjectRepository
+    from tests.factories import make_test_video
+
+    video_repo = AsyncSQLiteVideoRepository(fk_db)
+    project_repo = AsyncSQLiteProjectRepository(fk_db)
+    clip_repo = AsyncSQLiteClipRepository(fk_db)
+
+    now = datetime.now(timezone.utc)
+    video = make_test_video()
+    await video_repo.add(video)
+
+    project = Project(
+        id=Project.new_id(),
+        name="Cascade Test Project",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repo.add(project)
+
+    clip = Clip(
+        id=Clip.new_id(),
+        project_id=project.id,
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repo.add(clip)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fk_video_app), base_url="http://test"
+    ) as client:
+        resp = await client.delete(f"/api/v1/projects/{project.id}")
+
+    assert resp.status_code == 204
+
+    # Clips were cascade-deleted
+    clips_after = await clip_repo.list_by_project(project.id)
+    assert clips_after == []

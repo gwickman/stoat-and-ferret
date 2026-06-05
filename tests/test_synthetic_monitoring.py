@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -282,6 +283,10 @@ async def test_all_checks_handle_timeout() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32" and sys.version_info < (3, 11),
+    reason="asyncio IOCP cancellation hang on Python 3.10 Windows",
+)
 async def test_monitoring_task_continuous_execution() -> None:
     """With interval=0.05s, the loop completes multiple cycles per second."""
 
@@ -315,9 +320,11 @@ async def test_monitoring_task_continuous_execution() -> None:
         done, pending = await asyncio.wait({handle}, timeout=5.0)
         # Explicitly cancel and drain pending tasks so no dangling tasks remain
         # when the event loop closes — prevents IOCP teardown hangs on Windows.
+        # Use asyncio.wait (not gather) so the drain itself is bounded; asyncio.gather
+        # without a timeout can hang indefinitely on Windows 3.10 IOCP teardown.
         for t in pending:
             t.cancel()
-            await asyncio.gather(t, return_exceptions=True)
+            await asyncio.wait({t}, timeout=10.0)
         if handle in done:
             with pytest.raises(asyncio.CancelledError):
                 await handle

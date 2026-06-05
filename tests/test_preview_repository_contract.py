@@ -63,6 +63,13 @@ async def preview_repository(
     if request.param == "sqlite":
         conn = await aiosqlite.connect(":memory:")
         await create_tables_async(conn)
+        now = "2026-01-01T00:00:00"
+        for proj_id in ("project-1", "project-2", "proj-42"):
+            await conn.execute(
+                "INSERT INTO projects (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                (proj_id, proj_id, now, now),
+            )
+        await conn.commit()
 
         yield SQLitePreviewRepository(conn)
         await conn.close()
