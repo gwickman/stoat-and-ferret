@@ -48,6 +48,8 @@ class EventType(str, Enum):
     RENDER_QUEUE_STATUS = "render_queue_status"
     PROXY_READY = "proxy.ready"
     PROXY_FAILED = "proxy.failed"
+    VIDEO_DELETED = "video_deleted"
+    CLIP_DELETED = "clip_deleted"
 
 
 def _next_event_id(scope: str) -> str:

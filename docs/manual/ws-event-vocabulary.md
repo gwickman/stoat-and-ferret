@@ -24,7 +24,7 @@ Every frame emitted on `/ws` (including replays) is a flat JSON object with the 
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `type` | string | One of the 24 `EventType` values listed below. Stable wire format. |
+| `type` | string | One of the 27 `EventType` values listed below. Stable wire format. |
 | `payload` | object | Event-specific. Empty `{}` for `heartbeat`. Always present. |
 | `correlation_id` | string \| null | The HTTP request's correlation id when the event is broadcast inside a request handler; `null` for events emitted outside a request scope (heartbeats, async-job progress, recovery). |
 | `timestamp` | string | ISO 8601 with timezone (always UTC). Use for ordering within a scope and for replay TTL filtering. |
@@ -44,7 +44,7 @@ All events — including render lifecycle events and heartbeats — share a **si
 
 ## Quick Reference Table
 
-25 event types are defined. `Captured` rows below were observed live during v042 validation (see `Live Capture Evidence` at the end of this doc); all others are inferred from the emission site cited in the table.
+27 event types are defined. `Captured` rows below were observed live during v042 validation (see `Live Capture Evidence` at the end of this doc); all others are inferred from the emission site cited in the table.
 
 | # | `type` | Domain | Terminal | Scope | Status | Emitted from |
 |---|--------|--------|----------|-------|--------|--------------|
@@ -73,6 +73,8 @@ All events — including render lifecycle events and heartbeats — share a **si
 | 23 | `render_queue_status` | Render | No | global | Captured | `render/service.py:664-674` |
 | 24 | `proxy.ready` | Proxy | **Yes** (per-video) | global | Inferred | `api/services/proxy_service.py:319-327` |
 | 25 | `proxy.failed` | Proxy | **Yes** (per-job) | global | Inferred | `api/services/proxy_service.py` |
+| 26 | `video_deleted` | Library | **Yes** | global | Inferred | `api/routers/videos.py` |
+| 27 | `clip_deleted` | Library | **Yes** | global | Inferred | `api/routers/projects.py` |
 
 Inferred rows have payloads reconstructed from the emission site listed; the wire format is identical to captured events (the same `build_event` helper is used). Mark any field discrepancy as a documentation bug.
 
@@ -431,6 +433,27 @@ Emitted when proxy generation fails due to an FFmpeg non-zero exit code. Broadca
 Schema inferred from `api/services/proxy_service.py`.
 
 > **Recovery:** After receiving `proxy.failed`, poll `GET /api/v1/jobs/{job_id}` for the full error detail, or re-submit `POST /api/v1/videos/{video_id}/proxy` to retry.
+
+### `video_deleted` *(terminal)*
+
+Emitted on `DELETE /api/v1/videos/{video_id}` success (HTTP 204), after the video record is removed from the repository and before any optional file deletion. Only fires on the success path — FK constraint violations (409) suppress the broadcast.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `video_id` | string | UUID of the deleted video. |
+
+Schema inferred from `api/routers/videos.py`.
+
+### `clip_deleted` *(terminal)*
+
+Emitted on `DELETE /api/v1/projects/{project_id}/clips/{clip_id}` success (HTTP 204), after the clip record is removed from the repository. Removing a clip also implicitly removes it from any timeline placement (track assignment is stored on the clip row).
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `clip_id` | string | UUID of the deleted clip. |
+| `project_id` | string | UUID of the owning project. |
+
+Schema inferred from `api/routers/projects.py`.
 
 ### Reserved: `health_status`, `ai_action`
 
