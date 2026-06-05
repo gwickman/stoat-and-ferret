@@ -61,8 +61,18 @@ async def proxy_repository(
                 "video_codec, file_size, created_at, updated_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    vid_id, f"/videos/{vid_id}.mp4", f"{vid_id}.mp4",
-                    1000, 24, 1, 1920, 1080, "h264", 1000000, now, now,
+                    vid_id,
+                    f"/videos/{vid_id}.mp4",
+                    f"{vid_id}.mp4",
+                    1000,
+                    24,
+                    1,
+                    1920,
+                    1080,
+                    "h264",
+                    1000000,
+                    now,
+                    now,
                 ),
             )
         await conn.commit()
