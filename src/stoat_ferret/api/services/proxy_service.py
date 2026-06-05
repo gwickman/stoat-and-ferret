@@ -246,6 +246,10 @@ class ProxyService:
             target_w = source_width
             target_h = source_height
 
+        # Round to even dims; libx264 requires even width and height
+        target_w = target_w if target_w % 2 == 0 else target_w - 1
+        target_h = target_h if target_h % 2 == 0 else target_h - 1
+
         args = build_ffmpeg_args(source_path, output_path, target_w, target_h)
 
         # Build throttled progress callback
@@ -283,7 +287,7 @@ class ProxyService:
                 await self._repo.update_status(proxy.id, ProxyStatus.FAILED)
                 proxy_files_total.labels(status="pending").dec()
                 proxy_files_total.labels(status="failed").inc()
-                error_msg = result.stderr.decode("utf-8", errors="replace")[:500]
+                error_msg = result.stderr.decode("utf-8", errors="replace")[-500:]
                 logger.error(
                     "proxy_generation_failed",
                     job_id=job_id,
@@ -291,6 +295,13 @@ class ProxyService:
                     quality=quality.value,
                     error=error_msg,
                 )
+                if self._ws_manager:
+                    await self._ws_manager.broadcast(
+                        build_event(
+                            EventType.PROXY_FAILED,
+                            {"job_id": job_id, "error": error_msg},
+                        )
+                    )
                 raise RuntimeError(f"FFmpeg failed with code {result.returncode}: {error_msg}")
 
             # Get file size and mark as ready
