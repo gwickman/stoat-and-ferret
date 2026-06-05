@@ -101,12 +101,12 @@ These sit outside snf's non-realtime render paradigm or require large new subsys
 
 | Version | Wave(s) | Focus |
 |---------|---------|-------|
-| v074 | 0 + T | Keyframe compiler, markers/regions, test scaffolding |
-| v075 | 1 + T | QC/compliance pass, delivery profiles, QC-as-test layer |
-| v076 | 2 + T | Mastering chain + automation curves |
-| v077 | 3 + T | Immersive sound design + tone synthesis |
-| v078 | 4 + T | Reverse, split/razor, range-gating, time-remap |
-| v079 | 5 + T | Video FX + keyframed visuals |
+| v075 | 0 + T | Keyframe compiler, markers/regions, test scaffolding |
+| v076 | 1 + T | QC/compliance pass, delivery profiles, QC-as-test layer |
+| v077 | 2 + T | Mastering chain + automation curves |
+| v078 | 3 + T | Immersive sound design + tone synthesis |
+| v079 | 4 + T | Reverse, split/razor, range-gating, time-remap |
+| v080 | 5 + T | Video FX + keyframed visuals |
 
 Each version closes only when its capabilities, their tests (unit/contract/chatbot/UAT), and their traceability entries are complete and the regression suite is green.
 

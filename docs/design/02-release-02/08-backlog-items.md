@@ -8,7 +8,7 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 
 ---
 
-## Theme 0 — Enablers (v074)
+## Theme 0 — Enablers (v075)
 
 | # | Title | Size | Description | Acceptance Criteria |
 |---|-------|------|-------------|---------------------|
@@ -17,7 +17,7 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 | 3 | Automation envelope param plumbing | M | Allow effect params to accept `{automation:{…}}` in place of scalars; wire through registry/validation; surface compiled expr in `filter_preview`. | Volume accepts envelope; `filter_preview` shows compiled expr; schema validation; unit tests |
 | 4 | Test scaffolding for Release 2 | M | Golden render/QC fixtures from sample project; QC-assertion test helper; chatbot scenario runner hooks; new UAT journey skeleton. | Golden fixtures produce stable QC reports; helper asserts on QC report; UAT skeleton runs headless in CI |
 
-## Theme 1 — Verify & deliver (v075)
+## Theme 1 — Verify & deliver (v076)
 
 | # | Title | Size | Description | Acceptance Criteria |
 |---|-------|------|-------------|---------------------|
@@ -27,7 +27,7 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 | 8 | Chapter/metadata embedding from markers | S | Export embeds section labels + identifying metadata via `ffmetadata`. | `ffprobe` shows chapters == section count + metadata; QC `chapters_present` asserts |
 | 9 | QC-as-test layer + OC mapping | M | Map OC-* to QC check ids; assertion helpers; wire into PR-full CI tier. | OC→check table covered by tests; CI runs QC assertions on golden fixtures |
 
-## Theme 2 — Mastering (v076)
+## Theme 2 — Mastering (v077)
 
 | # | Title | Size | Description | Acceptance Criteria |
 |---|-------|------|-------------|---------------------|
@@ -37,7 +37,7 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 | 13 | Mastering limiter effect | S | `limiter` via `alimiter`. | True-peak limited (QC verifies ceiling); contract test |
 | 14 | LUFS normalization (two-pass) | M | `loudness_normalize` via two-pass `loudnorm`; integrate with delivery profile target. | Output within ±0.5 LU of target; true-peak ≤ ceiling (QC); contract test |
 
-## Theme 3 — Immersive sound design (v077)
+## Theme 3 — Immersive sound design (v078)
 
 | # | Title | Size | Description | Acceptance Criteria |
 |---|-------|------|-------------|---------------------|
@@ -48,7 +48,7 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 | 19 | Sub-bass layer + formalised sidechain ducking | S | `sub_layer`; `sidechain_duck` registry effect. | Ducking measurable (QC `ducking`); sub layer renders |
 | 20 | Generator/source-clip concept | M | Support clips with no source file (tone/noise/gradient generators). | Generator clips place on timeline; render; unit tests |
 
-## Theme 4 — Editing & time (v078)
+## Theme 4 — Editing & time (v079)
 
 | # | Title | Size | Description | Acceptance Criteria |
 |---|-------|------|-------------|---------------------|
@@ -58,7 +58,7 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 | 24 | Variable-speed / time-remap | L | Segmented speed curve (or PTS-integral); audio pitch-preserved. | Output duration ≈ integral (QC); constant-speed regression intact; UAT |
 | 25 | Frame-rate conversion | M | `framerate_convert` via `minterpolate`/`framerate`. | Output fps correct; interpolation modes; contract test |
 
-## Theme 5 — Video FX (v079)
+## Theme 5 — Video FX (v080)
 
 | # | Title | Size | Description | Acceptance Criteria |
 |---|-------|------|-------------|---------------------|
@@ -84,11 +84,11 @@ Consistent with Release 1: Documentation-only = Small; single focused code chang
 
 | Version | Theme(s) | Items |
 |---------|----------|-------|
-| v074 | 0 + T | 1–4, (32–33 scaffolding) |
-| v075 | 1 + T | 5–9, 34 |
-| v076 | 2 + T | 10–14 |
-| v077 | 3 + T | 15–20 |
-| v078 | 4 + T | 21–25 |
-| v079 | 5 + T | 26–31, 35 (full acceptance) |
+| v075 | 0 + T | 1–4, (32–33 scaffolding) |
+| v076 | 1 + T | 5–9, 34 |
+| v077 | 2 + T | 10–14 |
+| v078 | 3 + T | 15–20 |
+| v079 | 4 + T | 21–25 |
+| v080 | 5 + T | 26–31, 35 (full acceptance) |
 
 Totals: **35 items** (~6 S-heavy themes). Estimated split ~10 Small / ~17 Medium / ~8 Large. Each version closes only with its tests, chatbot scenarios, UAT journeys, and traceability rows complete and the regression suite green.
