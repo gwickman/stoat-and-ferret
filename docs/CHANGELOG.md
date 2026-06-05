@@ -4,6 +4,34 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v072] — Render Reliability & Data Integrity (2026-06-05)
+
+### Fixed
+- Eliminated TOCTOU race between cancel and render completion: added CAS re-read after `executor.cancel()` returns; duplicate terminal events suppressed via `CancelPreemptedError`; returns 409 for cancel-on-terminal-state (BL-412, PR #483)
+- Fixed stale `payload.status` in WS terminal events: `_broadcast_event` receives `target_status` kwarg sourced after `update_status`; REST and WS status fields are now always in agreement (BL-401, PR #484)
+- Fixed `render_completed` WS event missing `output_path` field: extended `_broadcast_event` with `output_path` kwarg; TypeScript interface updated to `string | null` (BL-411, PR #487)
+- Fixed concurrent renders sharing the same output path: render job now includes a 12-char UUID token in the output filename; each job gets a distinct, collision-free path (BL-403, PR #485)
+- Fixed proxy failure path: added odd-dimension rounding (even-pixel clamp), last-500-bytes stderr capture for accurate FFmpeg error messages, and `PROXY_FAILED` WS terminal event on proxy error (BL-406, PR #490)
+- Fixed SQLite foreign key enforcement never active: `PRAGMA foreign_keys=ON` added to all connection setup paths; `DELETE /videos/{id}` returns 409 when clips reference the video (BL-413, PR #491)
+- Fixed Pydantic extra-field silent drop on request bodies: `ConfigDict(extra="forbid")` applied to all `*Create`/`*Update`/`*Request` schemas; unknown fields now return HTTP 422 (BL-407, PR #492)
+- Fixed `POST /timeline/clips` acting as upsert: duplicate clip placement now returns 409 with the existing placement in the error body (BL-410, PR #493)
+
+### Added
+- Added `partial_file_detected` bool field to `RenderJob` model and API schema: set to `true` when a cancel race leaves a partial output file on disk; Alembic migration included (BL-415, PR #486)
+- Added concurrent stderr drain to render executor: `_drain_stderr` asyncio task runs alongside stdout readline loop; prevents blocking; accumulated stderr logged at error level (BL-394, PR #488)
+- Added `VIDEO_DELETED` and `CLIP_DELETED` WebSocket events: `DELETE /videos/{id}` and `DELETE /projects/{pid}/clips/{cid}` broadcast WS events on success; `timeline.duration` recomputed on clip deletion (BL-416, PR #494)
+- Added smoke test harness guide (`docs/manual/smoke-test-harness.md`): documents `STOAT_TEST_FFMPEG=1` discharge procedures for FFmpeg-gated deferred ACs and Python 3.13 environment requirements (PR #495)
+- Added preview lifecycle smoke test verifying HLS session lifecycle against real video files; Python 3.13 behavioral ACs deferred to UAT (BL-393, PR #489)
+- Extended smoke tests: WS event assertions, `output_path` assertions, and FK guard assertions added to `tests/smoke/`
+
+### Deferred
+- 6 behavioral ACs pending environment-specific test infrastructure:
+  - FFmpeg-gated (4 ACs): BL-394 AC-2/AC-3 (progress increment + WS events), BL-403 AC-3 (concurrent-no-contention file validity), BL-415 AC-3 (mid-encode cancel integration); discharge: `STOAT_TEST_FFMPEG=1 pytest tests/smoke/`
+  - Python-3.13-gated (2 ACs): BL-393 AC-1/AC-2 (preview end-to-end + manifest endpoint); discharge: `python3.13 -m pytest tests/smoke/`
+  - Discharge procedures documented in `docs/manual/smoke-test-harness.md`
+
+**Summary:** Render Reliability & Data Integrity — 4 themes (render-state-integrity, render-execution-and-media-reliability, data-correctness, quality-and-testing), 14 features, PRs #483–#495, 2639 passing tests. Closes BL-393, BL-394, BL-401, BL-403, BL-406, BL-407, BL-410, BL-411, BL-412, BL-413, BL-415, BL-416.
+
 ## [v071] — UAT Stability, Evidence Relocation & Architecture Documentation (2026-06-02)
 
 ### Fixed
