@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -282,6 +283,10 @@ async def test_all_checks_handle_timeout() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32" and sys.version_info < (3, 11),
+    reason="asyncio IOCP cancellation hang on Python 3.10 Windows",
+)
 async def test_monitoring_task_continuous_execution() -> None:
     """With interval=0.05s, the loop completes multiple cycles per second."""
 
