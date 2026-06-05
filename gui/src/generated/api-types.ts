@@ -293,6 +293,7 @@ export interface paths {
          *
          *     Args:
          *         video_id: The unique video identifier.
+         *         request: The FastAPI request object.
          *         repo: Video repository dependency.
          *         delete_file: If True, also delete the source file from disk.
          *
@@ -490,6 +491,7 @@ export interface paths {
          *     Args:
          *         project_id: The unique project identifier.
          *         clip_id: The unique clip identifier.
+         *         request: The FastAPI request object.
          *         clip_repo: Clip repository dependency.
          *
          *     Returns:

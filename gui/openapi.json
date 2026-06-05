@@ -3896,7 +3896,6 @@
         "description": "Response returned when a batch render is submitted.\n\nContains the batch identifier, number of jobs queued, and status."
       },
       "ClipCreate": {
-        "additionalProperties": false,
         "properties": {
           "source_video_id": {
             "type": "string",
@@ -3918,6 +3917,7 @@
             "title": "Timeline Position"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "source_video_id",
@@ -4017,7 +4017,6 @@
         "description": "Clip response."
       },
       "ClipUpdate": {
-        "additionalProperties": false,
         "properties": {
           "in_point": {
             "anyOf": [
@@ -4056,6 +4055,7 @@
             "title": "Timeline Position"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "ClipUpdate",
         "description": "Update clip request."
@@ -4134,6 +4134,7 @@
             "default": "{}"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "project_id"
@@ -5243,7 +5244,6 @@
         "description": "Response after stopping a preview session."
       },
       "ProjectCreate": {
-        "additionalProperties": false,
         "properties": {
           "name": {
             "type": "string",
@@ -5270,6 +5270,7 @@
             "default": 30
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name"
@@ -5666,6 +5667,7 @@
             "description": "Video encoder name (e.g. libx264, libx265, libvpx-vp9)"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "output_format",
@@ -5715,7 +5717,6 @@
         "description": "Response from restoring a previous version.\n\nAttributes:\n    restored_version: The source version number that was restored.\n    new_version: The newly created version number.\n    message: Confirmation message."
       },
       "ScanRequest": {
-        "additionalProperties": false,
         "properties": {
           "path": {
             "type": "string",
@@ -5727,6 +5728,7 @@
             "default": true
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "path"
@@ -5982,7 +5984,6 @@
         "description": "Metadata for a generated thumbnail strip sprite sheet.\n\nIncludes columns and rows so the client can calculate\nframe coordinates within the sprite sheet."
       },
       "TimelineClipCreate": {
-        "additionalProperties": false,
         "properties": {
           "clip_id": {
             "type": "string",
@@ -6003,6 +6004,7 @@
             "title": "Timeline End"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "clip_id",
@@ -6084,7 +6086,6 @@
         "description": "Timeline clip response."
       },
       "TimelineClipUpdate": {
-        "additionalProperties": false,
         "properties": {
           "timeline_start": {
             "anyOf": [
@@ -6122,6 +6123,7 @@
             "title": "Track Id"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "TimelineClipUpdate",
         "description": "Update clip timeline position."
@@ -6186,7 +6188,6 @@
         "description": "Per-track audio configuration.\n\nVolume validation is performed by the endpoint handler to return\ndomain-specific error codes (INVALID_AUDIO_VOLUME)."
       },
       "TrackCreate": {
-        "additionalProperties": false,
         "properties": {
           "track_type": {
             "type": "string",
@@ -6220,6 +6221,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "track_type",
