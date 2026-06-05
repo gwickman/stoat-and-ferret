@@ -6,7 +6,10 @@ retrieval, thumbnail generation, and video deletion.
 
 from __future__ import annotations
 
+import asyncio
+import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -148,3 +151,208 @@ async def test_video_delete(
     resp = await smoke_client.get("/api/v1/videos?limit=1&offset=0")
     assert resp.status_code == 200
     assert resp.json()["total"] == total_before - 1
+
+
+_STUB_VIDEO_ID = "00000000-0000-0000-0000-000000000001"
+
+
+async def _ensure_stub_video(client: httpx.AsyncClient) -> str:
+    """Insert a minimal stub video row and return its ID."""
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    now_str = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT OR IGNORE INTO videos "
+        "(id, path, filename, duration_frames, frame_rate_numerator, frame_rate_denominator, "
+        "width, height, video_codec, file_size, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            _STUB_VIDEO_ID,
+            "/stub/video.mp4",
+            "stub.mp4",
+            100,
+            30,
+            1,
+            1280,
+            720,
+            "h264",
+            1000,
+            now_str,
+            now_str,
+        ),
+    )
+    await db.commit()  # type: ignore[union-attr]
+    return _STUB_VIDEO_ID
+
+
+async def test_delete_library_resources_emit_ws_events(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """DELETE clip then video broadcasts clip_deleted and video_deleted WS events (BL-416, AC-1)."""
+    video_id = await _ensure_stub_video(smoke_client)
+
+    resp = await smoke_client.post("/api/v1/projects", json={"name": "WS Delete Events Test"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={"source_video_id": video_id, "in_point": 0, "out_point": 60, "timeline_position": 0},
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    ws_manager = transport.app.state.ws_manager  # type: ignore[union-attr]
+    captured: list[dict] = []
+    original_broadcast = ws_manager.broadcast
+
+    async def _capture(event: dict) -> None:
+        captured.append(event)
+
+    ws_manager.broadcast = _capture
+    try:
+        resp = await smoke_client.delete(f"/api/v1/projects/{project_id}/clips/{clip_id}")
+        assert resp.status_code == 204
+        clip_evts = [e for e in captured if e["type"] == "clip_deleted"]
+        assert len(clip_evts) == 1, (
+            f"Expected 1 clip_deleted event, got types: {[e['type'] for e in captured]}"
+        )
+        assert clip_evts[0]["payload"]["clip_id"] == clip_id
+        assert clip_evts[0]["payload"]["project_id"] == project_id
+
+        resp = await smoke_client.delete(f"/api/v1/videos/{video_id}")
+        assert resp.status_code == 204
+        video_evts = [e for e in captured if e["type"] == "video_deleted"]
+        assert len(video_evts) == 1, (
+            f"Expected 1 video_deleted event, got types: {[e['type'] for e in captured]}"
+        )
+        assert video_evts[0]["payload"]["video_id"] == video_id
+    finally:
+        ws_manager.broadcast = original_broadcast
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires real FFmpeg")
+async def test_render_completed_event_contains_output_path(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """render_completed WS event carries a non-empty output_path field (BL-411, AC-2)."""
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    ws_manager = transport.app.state.ws_manager  # type: ignore[union-attr]
+    ws_queue: asyncio.Queue[dict] = asyncio.Queue()
+    original_broadcast = ws_manager.broadcast
+
+    async def _capture(event: dict) -> None:
+        await ws_queue.put(event)
+
+    ws_manager.broadcast = _capture
+    try:
+        await scan_videos_and_wait(smoke_client, videos_dir)
+        resp = await smoke_client.get("/api/v1/videos?limit=1")
+        assert resp.status_code == 200
+        video_id = resp.json()["videos"][0]["id"]
+
+        resp = await smoke_client.post("/api/v1/projects", json={"name": "Render Output Path Test"})
+        assert resp.status_code == 201
+        project_id = resp.json()["id"]
+
+        resp = await smoke_client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "source_video_id": video_id,
+                "in_point": 0,
+                "out_point": 60,
+                "timeline_position": 0,
+            },
+        )
+        assert resp.status_code == 201
+
+        resp = await smoke_client.post("/api/v1/render", json={"project_id": project_id})
+        assert resp.status_code == 201
+        job_id = resp.json()["id"]
+
+        completed = None
+        deadline = asyncio.get_event_loop().time() + 60.0
+        while asyncio.get_event_loop().time() < deadline:
+            remaining = deadline - asyncio.get_event_loop().time()
+            event = await asyncio.wait_for(ws_queue.get(), timeout=remaining)
+            if event["type"] == "render_completed" and event["payload"].get("job_id") == job_id:
+                completed = event
+                break
+
+        assert completed is not None, "render_completed event not received within 60s"
+        assert completed["payload"]["output_path"], (
+            "output_path must be non-empty in render_completed payload"
+        )
+    finally:
+        ws_manager.broadcast = original_broadcast
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires real FFmpeg")
+async def test_concurrent_renders_have_distinct_output_paths(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Two concurrent renders produce distinct output_path values (BL-403, AC-3)."""
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    ws_manager = transport.app.state.ws_manager  # type: ignore[union-attr]
+    ws_queue: asyncio.Queue[dict] = asyncio.Queue()
+    original_broadcast = ws_manager.broadcast
+
+    async def _capture(event: dict) -> None:
+        await ws_queue.put(event)
+
+    ws_manager.broadcast = _capture
+    try:
+        await scan_videos_and_wait(smoke_client, videos_dir)
+        resp = await smoke_client.get("/api/v1/videos?limit=2")
+        assert resp.status_code == 200
+        videos = resp.json()["videos"]
+        vid_a = videos[0]["id"]
+        vid_b = videos[min(1, len(videos) - 1)]["id"]
+
+        async def _setup_project(name: str, video_id: str) -> str:
+            r = await smoke_client.post("/api/v1/projects", json={"name": name})
+            assert r.status_code == 201
+            pid = r.json()["id"]
+            r = await smoke_client.post(
+                f"/api/v1/projects/{pid}/clips",
+                json={
+                    "source_video_id": video_id,
+                    "in_point": 0,
+                    "out_point": 60,
+                    "timeline_position": 0,
+                },
+            )
+            assert r.status_code == 201
+            return pid
+
+        p1_id, p2_id = await asyncio.gather(
+            _setup_project("Concurrent Render A", vid_a),
+            _setup_project("Concurrent Render B", vid_b),
+        )
+
+        r1, r2 = await asyncio.gather(
+            smoke_client.post("/api/v1/render", json={"project_id": p1_id}),
+            smoke_client.post("/api/v1/render", json={"project_id": p2_id}),
+        )
+        assert r1.status_code == 201
+        assert r2.status_code == 201
+        job_ids = {r1.json()["id"], r2.json()["id"]}
+
+        completed_events: list[dict] = []
+        deadline = asyncio.get_event_loop().time() + 120.0
+        while len(completed_events) < 2 and asyncio.get_event_loop().time() < deadline:
+            remaining = deadline - asyncio.get_event_loop().time()
+            event = await asyncio.wait_for(ws_queue.get(), timeout=remaining)
+            if event["type"] == "render_completed" and event["payload"].get("job_id") in job_ids:
+                completed_events.append(event)
+
+        assert len(completed_events) == 2, (
+            f"Expected 2 render_completed events, got {len(completed_events)}"
+        )
+        paths = [e["payload"]["output_path"] for e in completed_events]
+        assert paths[0] != paths[1], f"Expected distinct output paths, got: {paths}"
+    finally:
+        ws_manager.broadcast = original_broadcast
