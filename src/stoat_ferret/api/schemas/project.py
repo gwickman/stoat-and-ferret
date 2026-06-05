@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class ProjectCreate(BaseModel):
     """Create project request."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str = Field(..., min_length=1)
     output_width: int = Field(default=1920, ge=1)
     output_height: int = Field(default=1080, ge=1)

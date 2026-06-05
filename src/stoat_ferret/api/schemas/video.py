@@ -60,6 +60,8 @@ class ScanRequest(BaseModel):
     Specifies the directory to scan and whether to recurse into subdirectories.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     path: str
     recursive: bool = True
 
