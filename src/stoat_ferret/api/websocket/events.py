@@ -47,6 +47,7 @@ class EventType(str, Enum):
     RENDER_FRAME_AVAILABLE = "render_frame_available"
     RENDER_QUEUE_STATUS = "render_queue_status"
     PROXY_READY = "proxy.ready"
+    PROXY_FAILED = "proxy.failed"
 
 
 def _next_event_id(scope: str) -> str:

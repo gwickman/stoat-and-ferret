@@ -6,15 +6,19 @@ and batch generation through the full HTTP stack with real app boot.
 
 from __future__ import annotations
 
+import asyncio
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+import pytest
 
-from stoat_ferret.db.models import ProxyFile, ProxyQuality, ProxyStatus
+from stoat_ferret.db.async_repository import AsyncSQLiteVideoRepository
+from stoat_ferret.db.models import ProxyFile, ProxyQuality, ProxyStatus, Video
 from stoat_ferret.db.proxy_repository import SQLiteProxyRepository
 
-from .conftest import scan_videos_and_wait
+from .conftest import poll_job_until_terminal, scan_videos_and_wait
 
 
 def _get_proxy_repo(client: httpx.AsyncClient) -> SQLiteProxyRepository:
@@ -158,3 +162,124 @@ async def test_proxy_batch(
     # First video should be skipped (already has proxy), others queued
     assert video_ids[0] in body["skipped"]
     assert len(body["queued"]) == len(video_ids) - 1
+
+
+async def test_proxy_odd_dimension(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Proxy generation succeeds for a source with odd width (BL-406-AC-1).
+
+    Inserts a video record with odd width (853) pointing to a real MP4, submits a
+    proxy job, waits for completion, and asserts status='ready' with non-zero file size.
+    Skips if FFmpeg is not installed.
+    """
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("FFmpeg not available — odd-dimension proxy requires real FFmpeg")
+
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    app = transport.app  # type: ignore[union-attr]
+    db = app.state.db
+
+    video_repo = AsyncSQLiteVideoRepository(db)
+    now = datetime.now(timezone.utc)
+    source_path = str(videos_dir / "running1.mp4")
+    video = Video(
+        id=Video.new_id(),
+        path=source_path,
+        filename="running1_odd_dim_test.mp4",
+        duration_frames=888,
+        frame_rate_numerator=30,
+        frame_rate_denominator=1,
+        width=853,
+        height=480,
+        video_codec="h264",
+        audio_codec="aac",
+        file_size=1024,
+        created_at=now,
+        updated_at=now,
+    )
+    await video_repo.add(video)
+
+    resp = await smoke_client.post(f"/api/v1/videos/{video.id}/proxy")
+    assert resp.status_code == 202
+    job_id = resp.json()["job_id"]
+
+    job_body = await poll_job_until_terminal(smoke_client, job_id, timeout=60.0)
+    assert job_body["status"] == "complete", (
+        f"Proxy job failed — odd-dim rounding may not be applied. "
+        f"Job status: {job_body['status']!r}, error: {job_body.get('error')!r}"
+    )
+
+    proxy_resp = await smoke_client.get(f"/api/v1/videos/{video.id}/proxy")
+    assert proxy_resp.status_code == 200
+    proxy_body = proxy_resp.json()
+    assert proxy_body["status"] == "ready"
+    assert proxy_body["file_size_bytes"] > 0
+
+
+async def test_proxy_failure_terminal_ws_event(
+    smoke_client: httpx.AsyncClient,
+    tmp_path: Path,
+) -> None:
+    """A failed proxy job emits exactly one proxy.failed WS event (BL-406-AC-3).
+
+    Creates a fake video record pointing to an invalid file, submits a proxy job,
+    waits for the job to fail, then asserts exactly one proxy.failed event for the
+    job_id appears in the WS replay buffer. Skips if FFmpeg is not installed.
+    """
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("FFmpeg not available — proxy failure path requires real FFmpeg")
+
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    app = transport.app  # type: ignore[union-attr]
+    db = app.state.db
+    ws_manager = app.state.ws_manager
+
+    # Create a file that exists but is not a valid video; FFmpeg will return non-zero
+    fake_video = tmp_path / "invalid_video.mp4"
+    fake_video.write_bytes(b"not a real video file")
+
+    video_repo = AsyncSQLiteVideoRepository(db)
+    now = datetime.now(timezone.utc)
+    video = Video(
+        id=Video.new_id(),
+        path=str(fake_video),
+        filename="invalid_video_test.mp4",
+        duration_frames=900,
+        frame_rate_numerator=30,
+        frame_rate_denominator=1,
+        width=960,
+        height=540,
+        video_codec="h264",
+        audio_codec="aac",
+        file_size=21,
+        created_at=now,
+        updated_at=now,
+    )
+    await video_repo.add(video)
+
+    resp = await smoke_client.post(f"/api/v1/videos/{video.id}/proxy")
+    assert resp.status_code == 202
+    job_id = resp.json()["job_id"]
+
+    await poll_job_until_terminal(smoke_client, job_id, timeout=30.0)
+
+    # After terminal state, proxy.failed must be in the WS replay buffer
+    deadline = asyncio.get_event_loop().time() + 5.0
+    proxy_failed_events: list[dict] = []
+    while asyncio.get_event_loop().time() < deadline:
+        proxy_failed_events = [
+            e
+            for e in ws_manager._replay_buffer
+            if e.get("type") == "proxy.failed" and e.get("payload", {}).get("job_id") == job_id
+        ]
+        if proxy_failed_events:
+            break
+        await asyncio.sleep(0.1)
+
+    assert len(proxy_failed_events) == 1, (
+        f"Expected exactly 1 proxy.failed event for job {job_id}, "
+        f"found {len(proxy_failed_events)}. "
+        f"Buffer types: {[e.get('type') for e in ws_manager._replay_buffer]}"
+    )

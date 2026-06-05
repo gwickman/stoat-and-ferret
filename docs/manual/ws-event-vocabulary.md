@@ -44,7 +44,7 @@ All events — including render lifecycle events and heartbeats — share a **si
 
 ## Quick Reference Table
 
-24 event types are defined. `Captured` rows below were observed live during v042 validation (see `Live Capture Evidence` at the end of this doc); all others are inferred from the emission site cited in the table.
+25 event types are defined. `Captured` rows below were observed live during v042 validation (see `Live Capture Evidence` at the end of this doc); all others are inferred from the emission site cited in the table.
 
 | # | `type` | Domain | Terminal | Scope | Status | Emitted from |
 |---|--------|--------|----------|-------|--------|--------------|
@@ -72,6 +72,7 @@ All events — including render lifecycle events and heartbeats — share a **si
 | 22 | `render_cancelled` | Render | **Yes** | global | Inferred | `render/service.py:363` |
 | 23 | `render_queue_status` | Render | No | global | Captured | `render/service.py:664-674` |
 | 24 | `proxy.ready` | Proxy | **Yes** (per-video) | global | Inferred | `api/services/proxy_service.py:319-327` |
+| 25 | `proxy.failed` | Proxy | **Yes** (per-job) | global | Inferred | `api/services/proxy_service.py` |
 
 Inferred rows have payloads reconstructed from the emission site listed; the wire format is identical to captured events (the same `build_event` helper is used). Mark any field discrepancy as a documentation bug.
 
@@ -417,6 +418,19 @@ Emitted when proxy generation finishes successfully for a `(video_id, quality)` 
 | `quality` | string | Proxy quality preset (e.g. `"low"`, `"medium"`). |
 
 Schema inferred from `api/services/proxy_service.py:319-327`.
+
+### `proxy.failed` *(per-job terminal)*
+
+Emitted when proxy generation fails due to an FFmpeg non-zero exit code. Broadcast in `proxy_service.py` immediately before raising `RuntimeError`, so WS-only observers (GUI, agents) receive a terminal event rather than treating the job as forever-pending. Broadcast occurs only in `proxy_service.py` — the `jobs/queue.py` exception handler has no WS broadcast (NFR-003).
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `job_id` | string \| null | Job identifier (the `job_id` returned by `POST /api/v1/videos/{id}/proxy`). |
+| `error` | string | Last 500 bytes of FFmpeg stderr — contains the actual error reason, not the version banner. |
+
+Schema inferred from `api/services/proxy_service.py`.
+
+> **Recovery:** After receiving `proxy.failed`, poll `GET /api/v1/jobs/{job_id}` for the full error detail, or re-submit `POST /api/v1/videos/{video_id}/proxy` to retry.
 
 ### Reserved: `health_status`, `ai_action`
 
