@@ -341,6 +341,23 @@ A project has a single output frame rate, but source videos can have different f
 
 Clips on the timeline are ordered by `timeline_position`. When adding transitions between clips, adjacency is determined by this ordering.
 
+## POST `.../timeline/clips` — Collision Semantics
+
+`POST /api/v1/projects/{project_id}/timeline/clips` creates a new timeline placement for a clip. If the `clip_id` is already placed on a track, the endpoint returns **409 Conflict** instead of silently overwriting the existing placement:
+
+```json
+{
+  "detail": {
+    "code": "CLIP_ALREADY_PLACED",
+    "message": "Clip clip-001 is already placed on track track-1",
+    "existing_track_id": "track-1",
+    "existing_timeline_start": 0.0
+  }
+}
+```
+
+To move a clip that is already placed, use `PATCH .../timeline/clips/{clip_id}` instead. The PATCH endpoint updates the clip's track or timeline position without the collision check.
+
 ## Planned Features
 
 The following timeline features are planned but not yet implemented:

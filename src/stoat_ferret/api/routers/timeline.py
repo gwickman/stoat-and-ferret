@@ -357,6 +357,18 @@ async def add_timeline_clip(
             detail={"code": "NOT_FOUND", "message": f"Clip {request.clip_id} not found"},
         )
 
+    # Collision check: reject duplicate placement
+    if clip.track_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "CLIP_ALREADY_PLACED",
+                "message": f"Clip {request.clip_id} is already placed on track {clip.track_id}",
+                "existing_track_id": clip.track_id,
+                "existing_timeline_start": clip.timeline_start,
+            },
+        )
+
     # Validate positions
     if request.timeline_start >= request.timeline_end:
         raise HTTPException(

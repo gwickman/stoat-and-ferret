@@ -18,8 +18,9 @@ from fastapi.testclient import TestClient
 from stoat_ferret.api.app import create_app
 from stoat_ferret.api.routers.render import _CODEC_ENCODER_MAP, QUALITY_PRESET_MAP
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
-from stoat_ferret.db.models import Clip, Project
+from stoat_ferret.db.models import Clip, Project, Track
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from stoat_ferret.render.service import CancelPreemptedError, RenderService
@@ -670,3 +671,63 @@ async def test_delete_project_cascades_clips(
     # Clips were cascade-deleted
     clips_after = await clip_repo.list_by_project(project.id)
     assert clips_after == []
+
+
+# ---------- Duplicate POST timeline clip returns 409 (BL-410) ----------
+
+
+@pytest.mark.api
+async def test_duplicate_post_timeline_clip_returns_409(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST .../timeline/clips twice for same clip returns 409 CLIP_ALREADY_PLACED."""
+    from tests.factories import make_test_video
+
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-409",
+        name="409 Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    track = Track(id="track-409", project_id="proj-409", track_type="video", label="V1", z_index=0)
+    await timeline_repository.create_track(track)
+
+    video = make_test_video()
+    clip = Clip(
+        id="clip-409",
+        project_id="proj-409",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    payload = {
+        "clip_id": "clip-409",
+        "track_id": "track-409",
+        "timeline_start": 0.0,
+        "timeline_end": 5.0,
+    }
+
+    # First placement → 201
+    resp1 = client.post("/api/v1/projects/proj-409/timeline/clips", json=payload)
+    assert resp1.status_code == 201
+
+    # Duplicate placement → 409
+    resp2 = client.post("/api/v1/projects/proj-409/timeline/clips", json=payload)
+    assert resp2.status_code == 409
+    body = resp2.json()
+    assert body["detail"]["code"] == "CLIP_ALREADY_PLACED"
+    assert body["detail"]["existing_track_id"] == "track-409"
