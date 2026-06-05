@@ -123,6 +123,6 @@ A software engineer who builds, tests, and extends stoat-and-ferret across three
 - [C4 Container Diagram](./c4-container.md) — Deployment view of all containers and their interfaces
 - [C4 Component Overview](./c4-component.md) — Internal component architecture and relationships
 - [System Architecture](../ARCHITECTURE.md) — High-level architecture overview
-- [Detailed Architecture](../design/02-architecture.md) — Technical architecture with data models and flows
-- [API Specification](../design/05-api-specification.md) — REST API endpoint reference
+- [Detailed Architecture](../design/01-release-01/02-architecture.md) — Technical architecture with data models and flows
+- [API Specification](../design/01-release-01/05-api-specification.md) — REST API endpoint reference
 - [Developer Guide](../../AGENTS.md) — Commands, coding standards, PR workflow

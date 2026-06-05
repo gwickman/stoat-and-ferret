@@ -35,11 +35,11 @@ The conclusion of the discussion was:
 
 Primary project grounding used for this design set:
 
-- [`01-roadmap.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/01-roadmap.md)
-- [`02-architecture.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/02-architecture.md)
-- [`05-api-specification.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/05-api-specification.md)
-- [`07-quality-architecture.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/07-quality-architecture.md)
-- [`08-gui-architecture.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/08-gui-architecture.md)
+- [`01-roadmap.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/01-release-01/01-roadmap.md)
+- [`02-architecture.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/01-release-01/02-architecture.md)
+- [`05-api-specification.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/01-release-01/05-api-specification.md)
+- [`07-quality-architecture.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/01-release-01/07-quality-architecture.md)
+- [`08-gui-architecture.md`](/Users/grant/Documents/projects/stoat-and-ferret/docs/design/01-release-01/08-gui-architecture.md)
 - [`CHANGELOG.md`](/Users/grant/Documents/projects/stoat-and-ferret/CHANGELOG.md)
 - [`app.py`](/Users/grant/Documents/projects/stoat-and-ferret/src/stoat_ferret/api/app.py)
 - [`effects.py`](/Users/grant/Documents/projects/stoat-and-ferret/src/stoat_ferret/api/routers/effects.py)
