@@ -245,7 +245,7 @@ async def test_render_progress_enriched_from_job_render_plan(
     # Create a render job (no real FFmpeg execution — just verifies job creation)
     resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={"project_id": project_id, "render_plan": _make_render_plan()},
     )
     assert resp.status_code == 201
     job_data = resp.json()

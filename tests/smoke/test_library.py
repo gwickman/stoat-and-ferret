@@ -7,6 +7,7 @@ retrieval, thumbnail generation, and video deletion.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -268,7 +269,10 @@ async def test_render_completed_event_contains_output_path(
         )
         assert resp.status_code == 201
 
-        resp = await smoke_client.post("/api/v1/render", json={"project_id": project_id})
+        resp = await smoke_client.post(
+            "/api/v1/render",
+            json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        )
         assert resp.status_code == 201
         job_id = resp.json()["id"]
 

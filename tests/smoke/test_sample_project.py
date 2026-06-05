@@ -164,7 +164,7 @@ async def test_sample_project_structure(
     # See BL-239 design investigation (comms/outbox/versions/design/v034/).
     render_resp = await client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
     )
     assert render_resp.status_code == 201
     render_data = render_resp.json()
