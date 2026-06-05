@@ -1719,10 +1719,15 @@ class TestSchemaExtraForbid:
         )
         assert resp.status_code == 201
 
-    def test_clip_create_rejects_unknown_field(self, render_client: TestClient) -> None:
+    def test_clip_create_rejects_unknown_field(self, client: TestClient) -> None:
         """POST /projects/{id}/clips with unknown field returns 422 (BL-407-AC-2)."""
-        resp = render_client.post(
-            f"/api/v1/projects/{TEST_PROJECT_UUID}/clips",
+        # Create a project first so the project_id is valid
+        proj_resp = client.post("/api/v1/projects", json={"name": "clip-test"})
+        assert proj_resp.status_code == 201
+        project_id = proj_resp.json()["id"]
+
+        resp = client.post(
+            f"/api/v1/projects/{project_id}/clips",
             json={
                 "source_video_id": "vid-1",
                 "in_point": 0,

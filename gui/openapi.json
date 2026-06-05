@@ -3896,6 +3896,7 @@
         "description": "Response returned when a batch render is submitted.\n\nContains the batch identifier, number of jobs queued, and status."
       },
       "ClipCreate": {
+        "additionalProperties": false,
         "properties": {
           "source_video_id": {
             "type": "string",
@@ -4016,6 +4017,7 @@
         "description": "Clip response."
       },
       "ClipUpdate": {
+        "additionalProperties": false,
         "properties": {
           "in_point": {
             "anyOf": [
@@ -5241,6 +5243,7 @@
         "description": "Response after stopping a preview session."
       },
       "ProjectCreate": {
+        "additionalProperties": false,
         "properties": {
           "name": {
             "type": "string",
@@ -5712,6 +5715,7 @@
         "description": "Response from restoring a previous version.\n\nAttributes:\n    restored_version: The source version number that was restored.\n    new_version: The newly created version number.\n    message: Confirmation message."
       },
       "ScanRequest": {
+        "additionalProperties": false,
         "properties": {
           "path": {
             "type": "string",
@@ -5978,6 +5982,7 @@
         "description": "Metadata for a generated thumbnail strip sprite sheet.\n\nIncludes columns and rows so the client can calculate\nframe coordinates within the sprite sheet."
       },
       "TimelineClipCreate": {
+        "additionalProperties": false,
         "properties": {
           "clip_id": {
             "type": "string",
@@ -6079,6 +6084,7 @@
         "description": "Timeline clip response."
       },
       "TimelineClipUpdate": {
+        "additionalProperties": false,
         "properties": {
           "timeline_start": {
             "anyOf": [
@@ -6180,6 +6186,7 @@
         "description": "Per-track audio configuration.\n\nVolume validation is performed by the endpoint handler to return\ndomain-specific error codes (INVALID_AUDIO_VOLUME)."
       },
       "TrackCreate": {
+        "additionalProperties": false,
         "properties": {
           "track_type": {
             "type": "string",
