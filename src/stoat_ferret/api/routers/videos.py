@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import Annotated
 
+import aiosqlite
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse
@@ -258,7 +259,13 @@ async def delete_video(
             detail={"code": "NOT_FOUND", "message": f"Video {video_id} not found"},
         )
 
-    await repo.delete(video_id)
+    try:
+        await repo.delete(video_id)
+    except aiosqlite.IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "FK_CONSTRAINT_VIOLATION", "detail": str(e)},
+        ) from e
 
     if delete_file and os.path.exists(video.path):
         with contextlib.suppress(OSError):

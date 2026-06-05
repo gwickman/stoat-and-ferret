@@ -393,6 +393,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
+    conn.execute("PRAGMA foreign_keys=ON")
     cursor = conn.cursor()
     cursor.execute(VIDEOS_TABLE)
     cursor.execute(VIDEOS_PATH_INDEX)
@@ -491,6 +492,7 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     Args:
         db: aiosqlite database connection.
     """
+    await db.execute("PRAGMA foreign_keys=ON")
     await db.execute(VIDEOS_TABLE)
     await db.execute(VIDEOS_PATH_INDEX)
     await db.execute(VIDEOS_FTS)

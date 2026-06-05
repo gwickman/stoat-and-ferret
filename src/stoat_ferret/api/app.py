@@ -176,6 +176,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Ensure schema exists (idempotent, uses IF NOT EXISTS)
     await create_tables_async(app.state.db)
+    # Enable FK enforcement on the async connection (BL-413).
+    # Must be set per-connection after Phase 6 DB open.
+    await app.state.db.execute("PRAGMA foreign_keys=ON")
 
     # Record feature flag state to feature_flag_log (BL-268) after schema
     # creation so the table definitely exists for the insert.
@@ -184,6 +187,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Open a separate sync connection for audit logging
     sync_conn = sqlite3.connect(str(settings.database_path_resolved))
     sync_conn.execute("PRAGMA journal_mode=WAL")
+    sync_conn.execute("PRAGMA foreign_keys=ON")
     audit_logger = AuditLogger(conn=sync_conn)
     app.state.audit_logger = audit_logger
 

@@ -277,6 +277,7 @@ Remove a video from the library. Optionally delete the source file from disk.
 **Errors:**
 
 - 404 `NOT_FOUND` -- Video does not exist
+- 409 `FK_CONSTRAINT_VIOLATION` -- Video is referenced as `source_video_id` by one or more clips. The video row is not deleted; referring clips are unchanged. Delete or reassign the referencing clips before deleting the video.
 
 **Examples:**
 
