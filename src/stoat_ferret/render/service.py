@@ -235,6 +235,13 @@ class RenderService:
                 f"Render queue at capacity: {queue_depth}/{self._queue._max_depth}"
             )
 
+        # Pre-flight: validate render plan completeness before job creation or enqueue (BL-460).
+        # Both noop and real mode share this gate so incomplete plans return 422 PREFLIGHT_FAILED
+        # regardless of render_mode, matching the documented contract.
+        plan_data = json.loads(render_plan_json)
+        if plan_data.get("total_duration") is None:
+            raise PreflightError("render plan missing required field: total_duration")
+
         # Create and enqueue
         job = RenderJob.create(
             project_id=project_id,
@@ -247,13 +254,9 @@ class RenderService:
         log.info("render_job.created", job_id=job.id)
 
         # Noop short-circuit: bypass queue enqueue so the background worker cannot
-        # race this job to FAILED. Checks total_duration before creation so
-        # incomplete plans are rejected at submit time (BL-355 AC-4, AC-5).
-        # Lock serializes concurrent noop submissions to prevent state race (BL-388).
+        # race this job to FAILED. Lock serializes concurrent noop submissions to
+        # prevent state race (BL-388).
         if self._render_mode == "noop":
-            plan_data = json.loads(render_plan_json)
-            if plan_data.get("total_duration") is None:
-                raise PreflightError("render plan missing required field: total_duration")
             async with self._submit_lock:
                 await self._repo.create(job)
                 log.info("render_job.noop_short_circuit", job_id=job.id)

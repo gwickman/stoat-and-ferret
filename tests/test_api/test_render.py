@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import aiosqlite
 import pytest
@@ -731,3 +731,203 @@ async def test_duplicate_post_timeline_clip_returns_409(
     body = resp2.json()
     assert body["detail"]["code"] == "CLIP_ALREADY_PLACED"
     assert body["detail"]["existing_track_id"] == "track-409"
+
+
+# ---------- Preflight hoist: real-mode 422 for incomplete plan (BL-460) ----------
+
+
+def _build_real_render_service_for_preflight(
+    render_repo: InMemoryRenderRepository,
+) -> RenderService:
+    """Build a real RenderService in real mode with peripherals mocked for preflight tests."""
+    from stoat_ferret.api.settings import Settings
+    from stoat_ferret.api.websocket.manager import ConnectionManager
+    from stoat_ferret.render.checkpoints import RenderCheckpointManager
+    from stoat_ferret.render.executor import RenderExecutor
+    from stoat_ferret.render.queue import RenderQueue
+
+    ws = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock()
+
+    checkpoint_mgr = MagicMock(spec=RenderCheckpointManager)
+    checkpoint_mgr.cleanup_stale = AsyncMock(return_value=0)
+
+    service = RenderService(
+        repository=render_repo,
+        queue=RenderQueue(render_repo),
+        executor=MagicMock(spec=RenderExecutor),
+        checkpoint_manager=checkpoint_mgr,
+        connection_manager=ws,
+        settings=Settings(render_mode="real"),
+    )
+    # Override FFmpeg availability so preflight tests run on hosts without FFmpeg.
+    service._ffmpeg_available = True
+    return service
+
+
+def _build_noop_render_service_for_preflight(
+    render_repo: InMemoryRenderRepository,
+) -> RenderService:
+    """Build a real RenderService in noop mode for preflight regression tests."""
+    from stoat_ferret.api.settings import Settings
+    from stoat_ferret.api.websocket.manager import ConnectionManager
+    from stoat_ferret.render.checkpoints import RenderCheckpointManager
+    from stoat_ferret.render.executor import RenderExecutor
+    from stoat_ferret.render.queue import RenderQueue
+
+    ws = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock()
+
+    checkpoint_mgr = MagicMock(spec=RenderCheckpointManager)
+    checkpoint_mgr.cleanup_stale = AsyncMock(return_value=0)
+
+    return RenderService(
+        repository=render_repo,
+        queue=RenderQueue(render_repo),
+        executor=MagicMock(spec=RenderExecutor),
+        checkpoint_manager=checkpoint_mgr,
+        connection_manager=ws,
+        settings=Settings(render_mode="noop"),
+    )
+
+
+def _make_preflight_repos() -> tuple[AsyncInMemoryProjectRepository, AsyncInMemoryClipRepository]:
+    """Create project and clip repos seeded with TEST_PROJECT_UUID data for preflight tests."""
+    now = datetime.now(timezone.utc)
+    project_repo = AsyncInMemoryProjectRepository()
+    project_repo.seed(
+        [
+            Project(
+                id=TEST_PROJECT_UUID,
+                name="Preflight Test Project",
+                output_width=1920,
+                output_height=1080,
+                output_fps=30,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    clip_repo = AsyncInMemoryClipRepository()
+    clip_repo.seed(
+        [
+            Clip(
+                id="33333333-3333-3333-3333-333333333333",
+                project_id=TEST_PROJECT_UUID,
+                source_video_id="vid-preflight",
+                in_point=0,
+                out_point=100,
+                timeline_position=0,
+                created_at=now,
+                updated_at=now,
+            )
+        ]
+    )
+    return project_repo, clip_repo
+
+
+@pytest.fixture
+def real_render_repo() -> InMemoryRenderRepository:
+    """Isolated in-memory render repository for real-mode preflight tests."""
+    return InMemoryRenderRepository()
+
+
+@pytest.fixture
+def real_preflight_app(real_render_repo: InMemoryRenderRepository) -> FastAPI:
+    """Test app with a real RenderService in real (default) mode for preflight tests."""
+    project_repo, clip_repo = _make_preflight_repos()
+    return create_app(
+        render_repository=real_render_repo,
+        render_service=_build_real_render_service_for_preflight(real_render_repo),
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+    )
+
+
+@pytest.fixture
+def real_preflight_client(
+    real_preflight_app: FastAPI,
+) -> Generator[TestClient, None, None]:
+    """Test client backed by a real RenderService in real (default) mode."""
+    with TestClient(real_preflight_app) as c:
+        yield c
+
+
+@pytest.fixture
+def noop_preflight_repo() -> InMemoryRenderRepository:
+    """Isolated in-memory render repository for noop-mode preflight regression tests."""
+    return InMemoryRenderRepository()
+
+
+@pytest.fixture
+def noop_preflight_app(noop_preflight_repo: InMemoryRenderRepository) -> FastAPI:
+    """Test app with a real RenderService in noop mode for preflight regression."""
+    project_repo, clip_repo = _make_preflight_repos()
+    return create_app(
+        render_repository=noop_preflight_repo,
+        render_service=_build_noop_render_service_for_preflight(noop_preflight_repo),
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+    )
+
+
+@pytest.fixture
+def noop_preflight_client(
+    noop_preflight_app: FastAPI,
+) -> Generator[TestClient, None, None]:
+    """Test client backed by a real RenderService in noop mode."""
+    with TestClient(noop_preflight_app) as c:
+        yield c
+
+
+def test_real_mode_incomplete_plan_returns_422_preflight_failed(
+    real_preflight_client: TestClient,
+) -> None:
+    """FR-001-AC-1: Real-mode POST /render with no total_duration returns 422 PREFLIGHT_FAILED."""
+    resp = real_preflight_client.post(
+        "/api/v1/render",
+        json={"project_id": TEST_PROJECT_UUID, "render_plan": "{}"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["code"] == "PREFLIGHT_FAILED"
+
+
+def test_real_mode_incomplete_plan_no_db_row_created(
+    real_preflight_client: TestClient,
+    real_render_repo: InMemoryRenderRepository,
+) -> None:
+    """FR-001-AC-2: Preflight fires before RenderJob.create(); no DB row created on 422."""
+    resp = real_preflight_client.post(
+        "/api/v1/render",
+        json={"project_id": TEST_PROJECT_UUID, "render_plan": "{}"},
+    )
+    assert resp.status_code == 422
+    assert len(real_render_repo._jobs) == 0
+
+
+def test_real_mode_complete_plan_returns_201(
+    real_preflight_client: TestClient,
+) -> None:
+    """FR-001-AC-3: POST /render with complete render_plan (total_duration present) returns 201."""
+    import json
+
+    resp = real_preflight_client.post(
+        "/api/v1/render",
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "render_plan": json.dumps({"total_duration": 10.0}),
+        },
+    )
+    assert resp.status_code == 201
+
+
+def test_noop_mode_incomplete_plan_still_returns_422_preflight_failed(
+    noop_preflight_client: TestClient,
+) -> None:
+    """FR-001-AC-4: Noop-mode 422 behaviour for incomplete plans is preserved (no regression)."""
+    resp = noop_preflight_client.post(
+        "/api/v1/render",
+        json={"project_id": TEST_PROJECT_UUID, "render_plan": "{}"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["code"] == "PREFLIGHT_FAILED"
