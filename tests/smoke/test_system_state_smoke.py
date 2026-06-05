@@ -19,16 +19,28 @@ from stoat_ferret.db.models import Clip
 from stoat_ferret.jobs.queue import JobStatus, _AsyncJobEntry
 
 
+_STUB_VIDEO_ID = "00000000-0000-0000-0000-000000000001"
+
+
 async def _seed_clip_for_project(client: httpx.AsyncClient, project_id: str) -> None:
     """Insert a stub clip row so the EMPTY_TIMELINE preflight passes."""
     transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
     db = transport.app.state.db  # type: ignore[union-attr]
+    now_str = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT OR IGNORE INTO videos "
+        "(id, path, filename, duration_frames, frame_rate_numerator, frame_rate_denominator, "
+        "width, height, video_codec, file_size, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (_STUB_VIDEO_ID, "/stub/video.mp4", "video.mp4", 100, 30, 1, 1920, 1080, "h264", 1000, now_str, now_str),
+    )
+    await db.commit()
     repo = AsyncSQLiteClipRepository(db)
     now = datetime.now(timezone.utc)
     clip = Clip(
         id=Clip.new_id(),
         project_id=project_id,
-        source_video_id="00000000-0000-0000-0000-000000000001",
+        source_video_id=_STUB_VIDEO_ID,
         in_point=0,
         out_point=100,
         timeline_position=0,
