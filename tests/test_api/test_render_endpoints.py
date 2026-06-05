@@ -1693,3 +1693,54 @@ class TestDimensionInjection:
         assert resp.status_code == 201
         assert captured[0]["settings"]["width"] == 1280
         assert captured[0]["settings"]["height"] == 720
+
+
+# ---------- BL-407: extra="forbid" on request schemas ----------
+
+
+class TestSchemaExtraForbid:
+    """BL-407: Unknown fields in request bodies return 422 (not silently dropped)."""
+
+    def test_project_create_rejects_unknown_field(self, render_client: TestClient) -> None:
+        """POST /projects with unknown field returns 422 naming the field (BL-407-AC-1)."""
+        resp = render_client.post(
+            "/api/v1/projects",
+            json={"name": "x", "width": 1280},
+        )
+        assert resp.status_code == 422
+        body = resp.json()
+        assert "width" in str(body)
+
+    def test_project_create_known_fields_succeed(self, render_client: TestClient) -> None:
+        """POST /projects with only known fields returns 201 (BL-407-AC-5)."""
+        resp = render_client.post(
+            "/api/v1/projects",
+            json={"name": "valid", "output_width": 1280, "output_height": 720, "output_fps": 24},
+        )
+        assert resp.status_code == 201
+
+    def test_clip_create_rejects_unknown_field(self, render_client: TestClient) -> None:
+        """POST /projects/{id}/clips with unknown field returns 422 (BL-407-AC-2)."""
+        resp = render_client.post(
+            f"/api/v1/projects/{TEST_PROJECT_UUID}/clips",
+            json={
+                "source_video_id": "vid-1",
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 0,
+                "bogus_field": "should_fail",
+            },
+        )
+        assert resp.status_code == 422
+        body = resp.json()
+        assert "bogus_field" in str(body)
+
+    def test_scan_rejects_unknown_field(self, render_client: TestClient) -> None:
+        """POST /videos/scan with unknown field returns 422 (BL-407-AC-3)."""
+        resp = render_client.post(
+            "/api/v1/videos/scan",
+            json={"path": "/tmp", "recursive": True, "unknown_param": "bad"},
+        )
+        assert resp.status_code == 422
+        body = resp.json()
+        assert "unknown_param" in str(body)

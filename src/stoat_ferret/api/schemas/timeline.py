@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class TrackCreate(BaseModel):
     """Create track request."""
 
+    model_config = ConfigDict(extra="forbid")
+
     track_type: str = Field(..., pattern=r"^(video|audio|text)$")
     label: str = Field(..., min_length=1)
     z_index: int | None = None
@@ -33,6 +35,8 @@ class TrackResponse(BaseModel):
 class TimelineClipCreate(BaseModel):
     """Assign clip to timeline track."""
 
+    model_config = ConfigDict(extra="forbid")
+
     clip_id: str
     track_id: str
     timeline_start: float = Field(..., ge=0)
@@ -41,6 +45,8 @@ class TimelineClipCreate(BaseModel):
 
 class TimelineClipUpdate(BaseModel):
     """Update clip timeline position."""
+
+    model_config = ConfigDict(extra="forbid")
 
     timeline_start: float | None = Field(default=None, ge=0)
     timeline_end: float | None = Field(default=None, gt=0)
