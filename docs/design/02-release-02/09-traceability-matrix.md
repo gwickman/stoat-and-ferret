@@ -49,36 +49,36 @@ Every capability links to a requirement, a use case, a verifiable outcome, and t
 
 | Requirement | Backlog # | Version | Notes |
 |-------------|-----------|---------|-------|
-| R-X01 keyframe compiler | 1 | v073 | enabler, build first |
-| R-P03 markers | 2 | v073 | |
-| R-Q01…R-Q11 QC | 5, 6 | v074 | the test oracle |
-| R-D01 delivery profiles | 7 | v074 | |
-| R-D04 chapters/metadata | 8 | v074 | |
-| R-M01 vol automation | 11 | v075 | needs R-X01 |
-| R-M02 parametric EQ | 10 | v075 | |
-| R-M03 multiband comp | 12 | v075 | |
-| R-M04 limiter | 13 | v075 | |
-| R-M05 LUFS normalize | 14 | v075 | |
-| R-S01/02 pan + auto-pan | 15 | v076 | |
-| R-S03 convolution reverb | 16 | v076 | |
-| R-S05 tone synthesis | 17 | v076 | needs R-X01 |
-| R-S04 loopable beds | 18 | v076 | |
-| R-S06/07 ducking + sub | 19 | v076 | |
-| R-V05 generators | 20, 30 | v076/v078 | generator-clip concept |
-| R-E03 reverse | 21 | v077 | |
-| R-E04 split/razor | 22 | v077 | |
-| R-E05 range gating | 23 | v077 | |
-| R-T02 variable speed | 24 | v077 | needs R-X01 |
-| R-T03 framerate convert | 25 | v077 | |
-| R-V01 color/LUT | 26 | v078 | |
-| R-V02 blur/sharpen | 27 | v078 | keyframable → R-X01 |
-| R-V03 keying + blend | 28 | v078 | |
-| R-V04 optical distortion | 29 | v078 | |
-| R-G01 keyframed opacity/scale | 31 | v078 | needs R-X01 |
+| R-X01 keyframe compiler | 1 | v074 | enabler, build first |
+| R-P03 markers | 2 | v074 | |
+| R-Q01…R-Q11 QC | 5, 6 | v075 | the test oracle |
+| R-D01 delivery profiles | 7 | v075 | |
+| R-D04 chapters/metadata | 8 | v075 | |
+| R-M01 vol automation | 11 | v076 | needs R-X01 |
+| R-M02 parametric EQ | 10 | v076 | |
+| R-M03 multiband comp | 12 | v076 | |
+| R-M04 limiter | 13 | v076 | |
+| R-M05 LUFS normalize | 14 | v076 | |
+| R-S01/02 pan + auto-pan | 15 | v077 | |
+| R-S03 convolution reverb | 16 | v077 | |
+| R-S05 tone synthesis | 17 | v077 | needs R-X01 |
+| R-S04 loopable beds | 18 | v077 | |
+| R-S06/07 ducking + sub | 19 | v077 | |
+| R-V05 generators | 20, 30 | v077/v079 | generator-clip concept |
+| R-E03 reverse | 21 | v078 | |
+| R-E04 split/razor | 22 | v078 | |
+| R-E05 range gating | 23 | v078 | |
+| R-T02 variable speed | 24 | v078 | needs R-X01 |
+| R-T03 framerate convert | 25 | v078 | |
+| R-V01 color/LUT | 26 | v079 | |
+| R-V02 blur/sharpen | 27 | v079 | keyframable → R-X01 |
+| R-V03 keying + blend | 28 | v079 | |
+| R-V04 optical distortion | 29 | v079 | |
+| R-G01 keyframed opacity/scale | 31 | v079 | needs R-X01 |
 
 **Deferred (no Release 2 backlog, tracked as out of scope):** R-A04 pitch/formant (candidate for v07x stretch), R-S08 Ambisonic, R-E06 ripple/grouping, R-E07 buses, R-V06 masking, R-G05 MOGRT, R-D05 A/B monitoring, plus all capture/comping. Listed in [01-roadmap.md](01-roadmap.md) "Out of scope."
 
-> Note: R-A01 (noise reduction), R-A02 (de-ess/de-plosive), R-A03 (time-stretch) underpin OC-2/3/4 and should be scheduled in v075–v076 alongside mastering/sound-design (folded into the repair/voice items); add explicit backlog rows when those versions are designed in detail.
+> Note: R-A01 (noise reduction), R-A02 (de-ess/de-plosive), R-A03 (time-stretch) underpin OC-2/3/4 and should be scheduled in v076–v077 alongside mastering/sound-design (folded into the repair/voice items); add explicit backlog rows when those versions are designed in detail.
 
 ---
 

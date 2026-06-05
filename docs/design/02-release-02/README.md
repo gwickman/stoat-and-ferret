@@ -2,7 +2,7 @@
 
 **Status:** Initial design. Open for refinement.
 **Builds on:** [Release 1](../01-release-01/README.md) (closed, ~v001–v072).
-**Target versions:** v073 onward.
+**Target versions:** v074 onward.
 
 ## What Release 2 is
 
