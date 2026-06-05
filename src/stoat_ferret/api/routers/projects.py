@@ -386,6 +386,7 @@ async def update_clip(
 async def delete_clip(
     project_id: str,
     clip_id: str,
+    request: Request,
     clip_repo: ClipRepoDep,
 ) -> Response:
     """Delete clip.
@@ -393,6 +394,7 @@ async def delete_clip(
     Args:
         project_id: The unique project identifier.
         clip_id: The unique clip identifier.
+        request: The FastAPI request object.
         clip_repo: Clip repository dependency.
 
     Returns:
@@ -409,4 +411,12 @@ async def delete_clip(
         )
 
     await clip_repo.delete(clip_id)
+    ws_manager: ConnectionManager | None = getattr(request.app.state, "ws_manager", None)
+    if ws_manager is not None:
+        await ws_manager.broadcast(
+            build_event(
+                EventType.CLIP_DELETED,
+                {"clip_id": str(clip_id), "project_id": str(project_id)},
+            )
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

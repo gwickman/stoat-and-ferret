@@ -21,6 +21,8 @@ from stoat_ferret.api.schemas.video import (
 )
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, validate_scan_path
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.api.websocket.events import EventType, build_event
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -236,6 +238,7 @@ async def scan_videos(
 @router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_video(
     video_id: str,
+    request: Request,
     repo: RepoDep,
     delete_file: Annotated[bool, Query(description="Also delete source file from disk")] = False,
 ) -> Response:
@@ -243,6 +246,7 @@ async def delete_video(
 
     Args:
         video_id: The unique video identifier.
+        request: The FastAPI request object.
         repo: Video repository dependency.
         delete_file: If True, also delete the source file from disk.
 
@@ -266,6 +270,12 @@ async def delete_video(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "FK_CONSTRAINT_VIOLATION", "detail": str(e)},
         ) from e
+
+    ws_manager: ConnectionManager | None = getattr(request.app.state, "ws_manager", None)
+    if ws_manager is not None:
+        await ws_manager.broadcast(
+            build_event(EventType.VIDEO_DELETED, {"video_id": str(video_id)})
+        )
 
     if delete_file and os.path.exists(video.path):
         with contextlib.suppress(OSError):

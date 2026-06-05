@@ -358,7 +358,7 @@
           "videos"
         ],
         "summary": "Delete Video",
-        "description": "Delete video from library.\n\nArgs:\n    video_id: The unique video identifier.\n    repo: Video repository dependency.\n    delete_file: If True, also delete the source file from disk.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if video not found.",
+        "description": "Delete video from library.\n\nArgs:\n    video_id: The unique video identifier.\n    request: The FastAPI request object.\n    repo: Video repository dependency.\n    delete_file: If True, also delete the source file from disk.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if video not found.",
         "operationId": "delete_video_api_v1_videos__video_id__delete",
         "parameters": [
           {
@@ -776,7 +776,7 @@
           "projects"
         ],
         "summary": "Delete Clip",
-        "description": "Delete clip.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if clip not found.",
+        "description": "Delete clip.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    request: The FastAPI request object.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Empty response with 204 status.\n\nRaises:\n    HTTPException: 404 if clip not found.",
         "operationId": "delete_clip_api_v1_projects__project_id__clips__clip_id__delete",
         "parameters": [
           {

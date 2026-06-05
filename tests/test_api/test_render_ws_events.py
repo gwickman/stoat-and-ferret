@@ -2,7 +2,8 @@
 
 Covers EventType enum extension, dual-threshold throttling (time + progress delta),
 per-job-per-event-type isolation, frame_available events, queue_status events,
-event payload schema, full lifecycle event sequences, and cancel/complete race invariants.
+event payload schema, full lifecycle event sequences, cancel/complete race invariants,
+and library DELETE WS events (video_deleted, clip_deleted).
 """
 
 from __future__ import annotations
@@ -10,7 +11,10 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.events import EventType, build_event
@@ -1027,3 +1031,121 @@ class TestRestWsStatusAgreement:
             assert len(failed) == 1
             ws_status = failed[0]["payload"]["status"]
             assert ws_status == rest_job.status.value == "failed"
+
+
+# ---------------------------------------------------------------------------
+# Library DELETE → WS events → GET timeline duration (BL-416)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.api
+async def test_delete_video_clip_sequence_ws_events_and_timeline_duration() -> None:
+    """DELETE sequence produces correct WS events; GET timeline duration reflects removal.
+
+    Verifies BL-416-AC-1 (video_deleted), BL-416-AC-2 (clip_deleted),
+    BL-416-AC-3 (timeline duration=0 after clip removal), BL-416-AC-5 (integration test).
+    """
+    from fastapi.testclient import TestClient
+
+    from stoat_ferret.api.app import create_app
+    from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
+    from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+    from stoat_ferret.db.models import Clip, Project, Track
+    from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+    from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
+    from stoat_ferret.jobs.queue import InMemoryJobQueue
+    from tests.factories import make_test_video
+
+    video_repo = AsyncInMemoryVideoRepository()
+    project_repo = AsyncInMemoryProjectRepository()
+    clip_repo = AsyncInMemoryClipRepository()
+    timeline_repo = AsyncInMemoryTimelineRepository()
+    job_queue = InMemoryJobQueue()
+
+    mock_ws = ConnectionManager()
+    mock_ws.broadcast = AsyncMock()  # type: ignore[method-assign]
+
+    app = create_app(
+        video_repository=video_repo,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+        timeline_repository=timeline_repo,
+        job_queue=job_queue,
+        ws_manager=mock_ws,
+    )
+
+    now = datetime.now(timezone.utc)
+
+    video = make_test_video()
+    await video_repo.add(video)
+
+    project = Project(
+        id=Project.new_id(),
+        name="bl416-delete-ws-test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repo.add(project)
+
+    clip = Clip(
+        id=Clip.new_id(),
+        project_id=project.id,
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repo.add(clip)
+
+    track = Track(
+        id=Track.new_id(),
+        project_id=project.id,
+        track_type="video",
+        label="V1",
+        z_index=0,
+    )
+    await timeline_repo.create_track(track)
+
+    with TestClient(app) as client:
+        # Place clip on timeline
+        place_resp = client.post(
+            f"/api/v1/projects/{project.id}/timeline/clips",
+            json={
+                "clip_id": clip.id,
+                "track_id": track.id,
+                "timeline_start": 0.0,
+                "timeline_end": 5.0,
+            },
+        )
+        assert place_resp.status_code == 201
+        mock_ws.broadcast.reset_mock()  # type: ignore[union-attr]
+
+        # Delete clip resource → clip_deleted WS event
+        del_clip_resp = client.delete(f"/api/v1/projects/{project.id}/clips/{clip.id}")
+        assert del_clip_resp.status_code == 204
+
+        clip_calls = mock_ws.broadcast.call_args_list  # type: ignore[union-attr]
+        clip_events = [c[0][0] for c in clip_calls if c[0][0]["type"] == "clip_deleted"]
+        assert len(clip_events) == 1
+        assert clip_events[0]["payload"]["clip_id"] == clip.id
+        assert clip_events[0]["payload"]["project_id"] == project.id
+        mock_ws.broadcast.reset_mock()  # type: ignore[union-attr]
+
+        # Delete video → video_deleted WS event
+        del_video_resp = client.delete(f"/api/v1/videos/{video.id}")
+        assert del_video_resp.status_code == 204
+
+        video_calls = mock_ws.broadcast.call_args_list  # type: ignore[union-attr]
+        video_events = [c[0][0] for c in video_calls if c[0][0]["type"] == "video_deleted"]
+        assert len(video_events) == 1
+        assert video_events[0]["payload"]["video_id"] == video.id
+
+        # GET /timeline duration reflects removal (AC-3 verification)
+        timeline_resp = client.get(f"/api/v1/projects/{project.id}/timeline")
+        assert timeline_resp.status_code == 200
+        assert timeline_resp.json()["duration"] == 0.0
