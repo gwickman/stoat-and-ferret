@@ -134,6 +134,10 @@ uv run pytest tests/ --cov=src --cov-fail-under=80
 uv run pytest tests/smoke/ -v --timeout=120 --no-cov
 ```
 
+### Smoke Test Harness
+
+See [docs/manual/smoke-test-harness.md](docs/manual/smoke-test-harness.md) for harness setup instructions, `STOAT_TEST_FFMPEG` usage, and discharge procedures for `deferred_post_merge` ACs.
+
 ### Frontend (TypeScript, Vitest)
 
 ```bash
