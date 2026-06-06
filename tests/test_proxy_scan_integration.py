@@ -102,6 +102,9 @@ class TestExistingScanTestsUnaffected:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             result = await handler("scan", {"path": str(tmp_path), "recursive": True})
 
@@ -146,6 +149,9 @@ class TestAutoProxyQueueing:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = True
@@ -194,6 +200,9 @@ class TestAutoProxyQueueing:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = False
@@ -240,6 +249,9 @@ class TestAutoProxyQueueing:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = True
@@ -270,6 +282,9 @@ class TestAutoProxyQueueing:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = True
@@ -320,6 +335,9 @@ class TestStaleProxyDetection:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = True
@@ -347,6 +365,9 @@ class TestStaleProxyDetection:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = True
@@ -392,6 +413,9 @@ class TestLoggingEvents:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = True
@@ -427,6 +451,9 @@ class TestLoggingEvents:
                 height=1080,
                 video_codec="h264",
                 audio_codec="aac",
+                subtitle_count=0,
+                data_count=0,
+                subtitle_streams=[],
             )
             settings = mock_settings.return_value
             settings.proxy_auto_generate = False

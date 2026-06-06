@@ -126,6 +126,23 @@ async def test_get_video_found(
 
 
 @pytest.mark.api
+async def test_get_video_response_includes_auxiliary_fields(
+    client: TestClient,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """VideoResponse includes subtitle_count, data_count, subtitle_streams (AC-4)."""
+    video = make_test_video()
+    await video_repository.add(video)
+
+    response = client.get(f"/api/v1/videos/{video.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["subtitle_count"] == 0
+    assert data["data_count"] == 0
+    assert data["subtitle_streams"] == []
+
+
+@pytest.mark.api
 async def test_search_finds_by_filename(
     client: TestClient,
     video_repository: AsyncInMemoryVideoRepository,

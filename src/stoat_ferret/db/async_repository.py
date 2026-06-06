@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 import sqlite3
 from datetime import datetime
@@ -144,9 +145,10 @@ class AsyncSQLiteVideoRepository:
                     id, path, filename, duration_frames,
                     frame_rate_numerator, frame_rate_denominator,
                     width, height, video_codec, audio_codec,
-                    file_size, thumbnail_path, created_at, updated_at
+                    file_size, thumbnail_path, created_at, updated_at,
+                    subtitle_count, data_count, subtitle_streams
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     video.id,
@@ -163,6 +165,9 @@ class AsyncSQLiteVideoRepository:
                     video.thumbnail_path,
                     video.created_at.isoformat(),
                     video.updated_at.isoformat(),
+                    video.subtitle_count,
+                    video.data_count,
+                    json.dumps(video.subtitle_streams),
                 ),
             )
             await self._conn.commit()
@@ -230,7 +235,10 @@ class AsyncSQLiteVideoRepository:
                 audio_codec = ?,
                 file_size = ?,
                 thumbnail_path = ?,
-                updated_at = ?
+                updated_at = ?,
+                subtitle_count = ?,
+                data_count = ?,
+                subtitle_streams = ?
             WHERE id = ?
             """,
             (
@@ -246,6 +254,9 @@ class AsyncSQLiteVideoRepository:
                 video.file_size,
                 video.thumbnail_path,
                 video.updated_at.isoformat(),
+                video.subtitle_count,
+                video.data_count,
+                json.dumps(video.subtitle_streams),
                 video.id,
             ),
         )
@@ -262,6 +273,11 @@ class AsyncSQLiteVideoRepository:
 
     def _row_to_video(self, row: Any) -> Video:
         """Convert a database row to a Video object."""
+        row_keys = row.keys()
+        subtitle_streams_raw = row["subtitle_streams"] if "subtitle_streams" in row_keys else None
+        subtitle_streams: list[dict[str, Any]] = (
+            json.loads(subtitle_streams_raw) if subtitle_streams_raw else []
+        )
         return Video(
             id=row["id"],
             path=row["path"],
@@ -277,6 +293,9 @@ class AsyncSQLiteVideoRepository:
             thumbnail_path=row["thumbnail_path"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
+            subtitle_count=row["subtitle_count"] if "subtitle_count" in row_keys else 0,
+            data_count=row["data_count"] if "data_count" in row_keys else 0,
+            subtitle_streams=subtitle_streams,
         )
 
 

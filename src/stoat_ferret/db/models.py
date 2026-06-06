@@ -449,6 +449,9 @@ class Video:
     updated_at: datetime
     audio_codec: str | None = None
     thumbnail_path: str | None = None
+    subtitle_count: int = 0
+    data_count: int = 0
+    subtitle_streams: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def frame_rate(self) -> float:

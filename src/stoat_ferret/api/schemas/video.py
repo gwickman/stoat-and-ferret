@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class VideoResponse(BaseModel):
@@ -29,6 +30,9 @@ class VideoResponse(BaseModel):
     thumbnail_path: str | None = None
     created_at: datetime
     updated_at: datetime
+    subtitle_count: int = 0
+    data_count: int = 0
+    subtitle_streams: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class VideoListResponse(BaseModel):

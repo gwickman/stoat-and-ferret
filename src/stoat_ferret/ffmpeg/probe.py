@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +19,7 @@ class VideoMetadata:
     """Video metadata extracted from ffprobe.
 
     Contains essential video file information including dimensions,
-    duration, codecs, and frame rate.
+    duration, codecs, frame rate, and auxiliary stream counts.
     """
 
     duration_seconds: float
@@ -30,6 +30,9 @@ class VideoMetadata:
     video_codec: str
     audio_codec: str | None
     file_size: int
+    subtitle_count: int = 0
+    data_count: int = 0
+    subtitle_streams: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def frame_rate(self) -> tuple[int, int]:
@@ -111,17 +114,31 @@ def _parse_ffprobe_output(data: dict[str, Any], file_path: Path) -> VideoMetadat
     Raises:
         ValueError: If no video stream is found in the data.
     """
+    streams = data.get("streams", [])
+
     video_stream = next(
-        (s for s in data.get("streams", []) if s.get("codec_type") == "video"),
+        (s for s in streams if s.get("codec_type") == "video"),
         None,
     )
     if not video_stream:
         raise ValueError(f"No video stream found in: {file_path}")
 
     audio_stream = next(
-        (s for s in data.get("streams", []) if s.get("codec_type") == "audio"),
+        (s for s in streams if s.get("codec_type") == "audio"),
         None,
     )
+
+    # Count auxiliary streams
+    subtitle_streams_raw = [s for s in streams if s.get("codec_type") == "subtitle"]
+    data_streams = [s for s in streams if s.get("codec_type") == "data"]
+
+    subtitle_stream_list: list[dict[str, Any]] = [
+        {
+            "codec_name": s.get("codec_name", "unknown"),
+            "language": s.get("tags", {}).get("language"),
+        }
+        for s in subtitle_streams_raw
+    ]
 
     # Parse frame rate (e.g., "24/1" or "30000/1001")
     r_frame_rate = video_stream.get("r_frame_rate", "24/1")
@@ -138,4 +155,7 @@ def _parse_ffprobe_output(data: dict[str, Any], file_path: Path) -> VideoMetadat
         video_codec=video_stream["codec_name"],
         audio_codec=audio_stream["codec_name"] if audio_stream else None,
         file_size=int(format_info.get("size", 0)),
+        subtitle_count=len(subtitle_streams_raw),
+        data_count=len(data_streams),
+        subtitle_streams=subtitle_stream_list,
     )

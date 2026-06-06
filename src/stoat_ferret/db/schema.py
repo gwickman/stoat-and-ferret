@@ -38,7 +38,10 @@ CREATE TABLE IF NOT EXISTS videos (
     file_size INTEGER NOT NULL,
     thumbnail_path TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    subtitle_count INTEGER NOT NULL DEFAULT 0,
+    data_count INTEGER NOT NULL DEFAULT 0,
+    subtitle_streams TEXT NOT NULL DEFAULT '[]'
 );
 """
 
@@ -317,6 +320,15 @@ ENCODER_CACHE_CODEC_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_encoder_cache_codec ON encoder_cache(codec);
 """
 
+# Columns to add to videos table for auxiliary stream metadata.
+# Each entry is (column_name, column_type).
+VIDEOS_AUXILIARY_COLUMNS = [
+    ("subtitle_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("data_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("subtitle_streams", "TEXT NOT NULL DEFAULT '[]'"),
+]
+
+
 # Columns to add to render_jobs table for partial-file fingerprint.
 # Each entry is (column_name, column_type).
 RENDER_JOBS_PARTIAL_COLUMNS = [
@@ -337,6 +349,20 @@ CLIPS_TIMELINE_COLUMNS = [
 PROJECTS_AUDIO_MIX_COLUMNS = [
     ("audio_mix_json", "TEXT"),
 ]
+
+
+def _alter_videos_add_auxiliary_columns(conn: sqlite3.Connection) -> None:
+    """Add auxiliary stream columns to videos table idempotently.
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in VIDEOS_AUXILIARY_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE videos ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
 
 
 def _alter_render_jobs_add_partial_columns(conn: sqlite3.Connection) -> None:
@@ -429,10 +455,25 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(RENDER_CHECKPOINTS_JOB_INDEX)
     cursor.execute(ENCODER_CACHE_TABLE)
     cursor.execute(ENCODER_CACHE_CODEC_INDEX)
+    _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     _alter_render_jobs_add_partial_columns(conn)
     conn.commit()
+
+
+async def _alter_videos_add_auxiliary_columns_async(db: aiosqlite.Connection) -> None:
+    """Add auxiliary stream columns to videos table idempotently (async).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in VIDEOS_AUXILIARY_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE videos ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
 
 
 async def _alter_projects_add_audio_mix_column_async(
@@ -527,6 +568,7 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(RENDER_CHECKPOINTS_JOB_INDEX)
     await db.execute(ENCODER_CACHE_TABLE)
     await db.execute(ENCODER_CACHE_CODEC_INDEX)
+    await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await _alter_render_jobs_add_partial_columns_async(db)

@@ -260,7 +260,7 @@ class TestClipParity:
         )
         await sqlite_conn.execute(
             "INSERT INTO videos VALUES ('video-1','/t.mp4','t.mp4',1000,24,1,1920,1080,"
-            "'h264',NULL,1000000,NULL,'2024-01-01','2024-01-01')"
+            "'h264',NULL,1000000,NULL,'2024-01-01','2024-01-01',0,0,'[]')"
         )
         await sqlite_conn.commit()
 
@@ -287,7 +287,7 @@ class TestClipParity:
         )
         await sqlite_conn.execute(
             "INSERT INTO videos VALUES ('video-1','/t.mp4','t.mp4',1000,24,1,1920,1080,"
-            "'h264',NULL,1000000,NULL,'2024-01-01','2024-01-01')"
+            "'h264',NULL,1000000,NULL,'2024-01-01','2024-01-01',0,0,'[]')"
         )
         await sqlite_conn.commit()
 

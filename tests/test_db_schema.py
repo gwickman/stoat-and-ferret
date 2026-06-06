@@ -72,6 +72,9 @@ def test_videos_table_has_correct_columns(db_conn: sqlite3.Connection) -> None:
         "thumbnail_path",
         "created_at",
         "updated_at",
+        "subtitle_count",
+        "data_count",
+        "subtitle_streams",
     }
     assert columns == expected_columns
 
