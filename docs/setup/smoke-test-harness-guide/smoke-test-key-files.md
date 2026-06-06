@@ -62,6 +62,15 @@ The test harness has three tiers:
 | `create_adjacent_clips_timeline()` | Helper to set up two adjacent clips on a timeline track for transition tests |
 | `create_version_repo()` | Factory to create `AsyncSQLiteVersionRepository` from the live ASGI transport DB |
 
+### Phase 5 — v074 Smoke Additions (BL-465, BL-409, BL-404, BL-405, BL-398)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_render_contract.py` | Settings-absent 422 gate (BL-465): render plan missing the `settings` key returns 422 PREFLIGHT_FAILED (v074). Parallel to the existing total_duration negative tests. |
+| `tests/smoke/test_clip_workflow.py` | GET /clips/{cid} returns ClipResponse (BL-409): end-to-end create-then-GET and GET /effects → `{"effects": []}` for a clip with no effects. Also verifies ClipResponse.effects defaults to `[]` not null (BL-405, v074). |
+| `tests/smoke/test_versions.py` | Optional version body (BL-404): POST /versions with no body creates a version with auto-snapshot timeline_json (v074). |
+| `tests/smoke/test_uat_runner.py` | UAT runner timeout guard (BL-398): asserts subprocess.run in run_journey() carries timeout=900; behavioral test simulates TimeoutExpired and verifies JourneyResult(status='failed') with timeout message (v074). |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
