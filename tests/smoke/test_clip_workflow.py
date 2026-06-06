@@ -149,3 +149,79 @@ async def test_uc10_modify_clips(
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
     assert resp.json()["clips"] == []
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_get_clip_by_id_returns_clip_response(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """GET /clips/{cid} returns 200 with ClipResponse matching the created clip.
+
+    Covers BL-409-AC-1 (GET clip by ID) and BL-405-AC-6 (effects default []).
+    """
+    await scan_videos_and_wait(smoke_client, videos_dir)
+
+    resp = await smoke_client.get("/api/v1/videos?limit=1")
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "GET Clip By ID Test Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    created_clip = resp.json()
+    clip_id = created_clip["id"]
+
+    resp = await smoke_client.get(f"/api/v1/projects/{project_id}/clips/{clip_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == clip_id
+    assert data["effects"] == []  # BL-405-AC-6: effects default is [] not null
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_get_clip_effects_returns_empty_list(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """GET /clips/{cid}/effects returns {"effects": []} for clip with no effects (BL-409-AC-3)."""
+    await scan_videos_and_wait(smoke_client, videos_dir)
+
+    resp = await smoke_client.get("/api/v1/videos?limit=1")
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "GET Clip Effects Test Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    resp = await smoke_client.get(f"/api/v1/projects/{project_id}/clips/{clip_id}/effects")
+    assert resp.status_code == 200
+    assert resp.json() == {"effects": []}

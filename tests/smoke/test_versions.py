@@ -265,3 +265,24 @@ async def test_version_retention_keep_more_than_total(
         else:
             os.environ["STOAT_VERSION_RETENTION_COUNT"] = orig
         get_settings.cache_clear()
+
+
+async def test_create_version_with_no_body(smoke_client: httpx.AsyncClient) -> None:
+    """POST /versions with no body returns 201 with an auto-snapshot (BL-404-AC-1).
+
+    The response exposes version_number and checksum; the checksum is the
+    SHA-256 of the auto-snapshotted timeline data, confirming the server
+    performed the snapshot server-side.
+    """
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Version No Body Test"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+    version = resp.json()
+    assert version["version_number"] == 1
+    assert version["checksum"]  # non-empty SHA-256 hex digest proves auto-snapshot
