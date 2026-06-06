@@ -4,6 +4,27 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v073] — Render Correctness & Test-Coverage Discharge (2026-06-06)
+
+### Fixed
+- Hoisted `total_duration` preflight validation before the noop/real-mode split in `RenderService.submit`; both modes now validate `total_duration` equally (BL-460, PR #498)
+- Fixed `build_command_for_job` missing `-progress pipe:1` flag; concurrent stderr drain now runs alongside the stdout readline loop, preventing blocking under real-mode render (BL-394, PR #501)
+- Fixed Python 3.13 `async_executor` race: replaced `communicate()` with `process.wait()` plus a dedicated stderr reader; eliminates `DeprecationWarning` under `-W error::DeprecationWarning` (BL-393, PR #501)
+- Repaired `test_concurrent_renders_have_distinct_output_paths` and `test_render_completed_event_contains_output_path` broken by the preflight hoist remediation pass (BL-461, PR #500)
+
+### Added
+- Added `ConfigDict(extra="forbid")` to `CreateRenderRequest` and `RenderPreviewRequest`; unknown fields now return HTTP 422 (BL-417, PR #499)
+- Added `test_partial_file_cancel`, `test_render_progress_increments`, and `test_preview_no_deadlock` smoke tests; discharges BL-415 and BL-394 behavioral ACs under `STOAT_TEST_FFMPEG=1`, and BL-393 behavioral AC on Python 3.13 (BL-462, PR #501)
+
+### Documentation
+- Corrected `docs/manual/smoke-test-harness.md` discharge procedures: fixed `uv run pytest` invocation syntax, corrected test keywords, added BL-415-AC-3 FFmpeg-gated discharge entry (BL-463, PR #502)
+
+### Deferred
+- 1 behavioral AC pending environment-specific test infrastructure:
+  - FFmpeg-gated (1 AC): BL-403 AC-3 (concurrent-no-contention file validity); discharge: `STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k test_concurrent_renders_have_distinct_output_paths`
+
+**Summary:** Render Correctness & Test-Coverage Discharge — 3 themes (render-correctness, render-data-correctness, render-test-coverage), 9 features, PRs #498–#502, 2645 passing tests. Closes BL-460, BL-393, BL-394, BL-415, BL-417, BL-461, BL-462, BL-463.
+
 ## [v072] — Render Reliability & Data Integrity (2026-06-05)
 
 ### Fixed
