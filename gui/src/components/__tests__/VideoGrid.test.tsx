@@ -27,6 +27,9 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     thumbnail_path: '/thumbs/v1.jpg',
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
+    subtitle_count: 0,
+    data_count: 0,
+    subtitle_streams: [],
     ...overrides,
   }
 }
