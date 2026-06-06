@@ -1749,3 +1749,24 @@ class TestSchemaExtraForbid:
         assert resp.status_code == 422
         body = resp.json()
         assert "unknown_param" in str(body)
+
+    def test_render_create_rejects_unknown_field(self, render_client: TestClient) -> None:
+        """POST /render with unknown field returns 422 (BL-417-AC-1, BL-417-AC-3)."""
+        resp = render_client.post(
+            "/api/v1/render",
+            json={"project_id": TEST_PROJECT_UUID, "unknown_field": "value"},
+        )
+        assert resp.status_code == 422
+
+    def test_render_preview_rejects_unknown_field(self, render_client: TestClient) -> None:
+        """POST /render/preview with unknown field returns 422 (BL-417-AC-2, BL-417-AC-3)."""
+        resp = render_client.post(
+            "/api/v1/render/preview",
+            json={
+                "output_format": "mp4",
+                "quality_preset": "standard",
+                "encoder": "libx264",
+                "unknown_param": 42,
+            },
+        )
+        assert resp.status_code == 422
