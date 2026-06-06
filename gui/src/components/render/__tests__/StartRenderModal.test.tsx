@@ -313,7 +313,7 @@ describe('StartRenderModal', () => {
         project_id: 'proj-1',
         output_format: 'mp4',
         quality_preset: 'draft',
-        render_plan: JSON.stringify({ total_duration: 90.0 }),
+        render_plan: JSON.stringify({ total_duration: 90.0, settings: {} }),
       })
     })
   })
@@ -646,7 +646,7 @@ describe('StartRenderModal', () => {
       )
       expect(renderCalls.length).toBe(1)
       const body = JSON.parse((renderCalls[0][1] as RequestInit).body as string)
-      expect(body.render_plan).toBe(JSON.stringify({ total_duration: 90.0 }))
+      expect(body.render_plan).toBe(JSON.stringify({ total_duration: 90.0, settings: {} }))
     })
   })
 })

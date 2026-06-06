@@ -863,7 +863,7 @@ Submit a render job for a project. The server queues the job and begins renderin
 | `project_id` | string | Yes | -- | Project UUID to render |
 | `output_format` | string | No | `"mp4"` | Output container format (`mp4`, `webm`, `mov`, `mkv`) |
 | `quality_preset` | string | No | `"standard"` | Quality preset (`draft`, `standard`, `high`) |
-| `render_plan` | string | No | `"{}"` | Serialized render plan JSON |
+| `render_plan` | string | No | `"{}"` | Serialized render plan JSON. Required top-level keys when provided: `settings` (object) and `total_duration` (float, seconds). |
 
 **Response (201 Created):**
 

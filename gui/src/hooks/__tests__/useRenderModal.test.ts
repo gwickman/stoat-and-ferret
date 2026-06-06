@@ -56,7 +56,7 @@ describe('useRenderModal', () => {
       expect(result.current.timeline).not.toBeNull()
     })
 
-    expect(result.current.renderPlanJson).toBe(JSON.stringify({ total_duration: 120.5 }))
+    expect(result.current.renderPlanJson).toBe(JSON.stringify({ total_duration: 120.5, settings: {} }))
     expect(result.current.timelineError).toBeNull()
   })
 

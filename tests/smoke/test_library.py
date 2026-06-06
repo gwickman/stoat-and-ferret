@@ -272,7 +272,10 @@ async def test_render_completed_event_contains_output_path(
 
         resp = await smoke_client_noop.post(
             "/api/v1/render",
-            json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 2.0})},
+            json={
+                "project_id": project_id,
+                "render_plan": json.dumps({"total_duration": 2.0, "settings": {}}),
+            },
         )
         assert resp.status_code == 201
         job_id = resp.json()["id"]

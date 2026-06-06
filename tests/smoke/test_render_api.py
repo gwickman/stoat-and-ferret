@@ -84,7 +84,10 @@ async def test_render_create(smoke_client: httpx.AsyncClient) -> None:
 
     resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
     )
     assert resp.status_code == 201
     body = resp.json()
@@ -108,7 +111,10 @@ async def test_render_get(smoke_client: httpx.AsyncClient) -> None:
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
     )
     assert create_resp.status_code == 201
     job_id = create_resp.json()["id"]
@@ -138,7 +144,10 @@ async def test_render_list(smoke_client: httpx.AsyncClient) -> None:
 
     await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
     )
 
     resp = await smoke_client.get("/api/v1/render")
@@ -295,7 +304,10 @@ async def test_render_delete(smoke_client: httpx.AsyncClient) -> None:
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
     )
     assert create_resp.status_code == 201
     job_id = create_resp.json()["id"]
@@ -321,7 +333,10 @@ async def test_render_cancel(smoke_client: httpx.AsyncClient) -> None:
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
     )
     assert create_resp.status_code == 201
     job_id = create_resp.json()["id"]
@@ -355,7 +370,10 @@ async def test_render_retry(smoke_client: httpx.AsyncClient) -> None:
 
     create_resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
     )
     assert create_resp.status_code == 201
     job_id = create_resp.json()["id"]
@@ -428,6 +446,7 @@ async def test_create_render_invalid_format_encoder(smoke_client: httpx.AsyncCli
             "project_id": project_id,
             "output_format": "webm",
             "encoder": "libx264",
+            "render_plan": json.dumps({"total_duration": 5.0, "settings": {}}),
         },
     )
     assert resp.status_code == 422
@@ -474,7 +493,10 @@ async def test_render_validation_project_not_found(smoke_client: httpx.AsyncClie
     """POST /render with valid UUID for non-existent project returns 404 PROJECT_NOT_FOUND."""
     resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": "00000000-0000-0000-0000-000000000000"},
+        json={
+            "project_id": "00000000-0000-0000-0000-000000000000",
+            "render_plan": json.dumps({"total_duration": 5.0, "settings": {}}),
+        },
     )
     assert resp.status_code == 404
     body = resp.json()
@@ -492,7 +514,10 @@ async def test_render_validation_empty_timeline(smoke_client: httpx.AsyncClient)
 
     resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 5.0, "settings": {}}),
+        },
     )
     assert resp.status_code == 422
     body = resp.json()
@@ -529,7 +554,7 @@ async def test_render_standard_preset_reaches_running(smoke_client: httpx.AsyncC
         json={
             "project_id": project_id,
             "quality_preset": "standard",
-            "render_plan": json.dumps({"total_duration": 10.0}),
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
         },
     )
     assert resp.status_code == 201
@@ -551,7 +576,7 @@ async def test_render_draft_preset_reaches_running(smoke_client: httpx.AsyncClie
         json={
             "project_id": project_id,
             "quality_preset": "draft",
-            "render_plan": json.dumps({"total_duration": 10.0}),
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
         },
     )
     assert resp.status_code == 201
@@ -568,7 +593,7 @@ async def test_render_high_preset_reaches_running(smoke_client: httpx.AsyncClien
         json={
             "project_id": project_id,
             "quality_preset": "high",
-            "render_plan": json.dumps({"total_duration": 10.0}),
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
         },
     )
     assert resp.status_code == 201
@@ -719,7 +744,7 @@ async def test_noop_mode_status_authoritative(
     project_id = resp.json()["id"]
     await _seed_clip_for_project(client, project_id)
 
-    render_plan = json.dumps({"total_duration": 5.0})
+    render_plan = json.dumps({"total_duration": 5.0, "settings": {}})
     resp = await client.post(
         "/api/v1/render",
         json={"project_id": project_id, "render_plan": render_plan},
