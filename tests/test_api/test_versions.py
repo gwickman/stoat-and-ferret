@@ -122,13 +122,15 @@ def test_create_version_project_not_found(client: TestClient) -> None:
 
 
 @pytest.mark.api
-def test_create_version_missing_body(client: TestClient) -> None:
-    """POST with missing timeline_json returns 422."""
+def test_create_version_empty_body_nonexistent_project(client: TestClient) -> None:
+    """POST with empty body (auto-snapshot) returns 404 when project does not exist."""
     response = client.post(
         "/api/v1/projects/some-project/versions",
         json={},
     )
-    assert response.status_code == 422
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
 
 
 @pytest.mark.api

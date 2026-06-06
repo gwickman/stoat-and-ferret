@@ -12,6 +12,7 @@ For surrounding context see `operator-guide.md` (canonical sequences), `api-usag
 4. [Long-Poll for Async Job Completion](#4-long-poll-for-async-job-completion)
 5. [WebSocket Event Monitoring with Reconnect](#5-websocket-event-monitoring-with-reconnect)
 6. [Batch Render Workflow](#6-batch-render-workflow)
+7. [Save, List, and Restore a Project Version](#7-save-list-and-restore-a-project-version)
 
 Recipes assume happy-path usage. The four error codes most agents need are `JOB_WAIT_TIMEOUT` (408), `INVALID_PRESET` / `INVALID_FORMAT` (400), `TESTING_MODE_DISABLED` (403), and `NOT_FOUND` (404); see `api-usage-examples.md` for full payloads.
 
@@ -413,6 +414,60 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 - Maximum jobs per batch is enforced by `Settings.batch_max_jobs`; oversize batches return `422`.
 - The batch endpoint accepts `quality` keys `draft|standard|high` (alias `medium` is rejected, matching the single-render endpoint).
 - An individual job's failure does not abort siblings; check each entry's `status` and `error`.
+
+---
+
+## 7. Save, List, and Restore a Project Version
+
+Snapshot the current project state, browse the version history, and restore an earlier snapshot. All three steps work without manually serializing the timeline.
+
+### Prompt Preamble
+
+> The user wants to checkpoint the current state of project `<project_id>` before making changes. Snapshot the live timeline with a body-less POST, then demonstrate how to list existing versions and restore one. No manual timeline serialization is required — the server snapshots the live state automatically.
+
+### API Sequence
+
+| # | Request | Status | Purpose |
+|---|---------|--------|---------|
+| 1 | `POST /api/v1/projects/{project_id}/versions` | 201 | Snapshot the current live timeline (no body required) |
+| 2 | `GET /api/v1/projects/{project_id}/versions` | 200 | List all versions, most recent first |
+| 3 | `POST /api/v1/projects/{project_id}/versions/{version_number}/restore` | 200 | Restore an earlier version (non-destructive; creates a new version) |
+
+### Sample Request Bodies
+
+```jsonc
+// Step 1 — body-less POST; the server auto-snapshots the live timeline
+// (no Content-Type header or body required)
+
+// Step 3 — body-less POST; version_number comes from step 2 listing
+// (no body required)
+```
+
+### Sample Response Shapes
+
+```jsonc
+// Step 1 → VersionResponse (201)
+{ "version_number": 1, "created_at": "2026-06-06T12:00:00Z",
+  "checksum": "a3f8..." }
+
+// Step 2 → VersionListResponse (200); versions ordered most-recent first
+{ "total": 2, "limit": 20, "offset": 0,
+  "versions": [
+    { "version_number": 2, "created_at": "2026-06-06T13:00:00Z", "checksum": "b9c1..." },
+    { "version_number": 1, "created_at": "2026-06-06T12:00:00Z", "checksum": "a3f8..." }
+  ] }
+
+// Step 3 → RestoreResponse (200); non-destructive — produces a new version
+{ "restored_version": 1, "new_version": 3,
+  "message": "Restored version 1 as version 3" }
+```
+
+### Error Notes
+
+- Step 1 returns `404 NOT_FOUND` if `project_id` does not exist.
+- An explicit `timeline_json` body is still accepted for backward compatibility: `{ "timeline_json": "<serialized>" }`.
+- Step 3 returns `404 PROJECT_VERSION_NOT_FOUND` if the requested `version_number` does not exist.
+- Restore is non-destructive: restoring version N creates a new highest version containing the restored data. The original version N is preserved.
 
 ---
 

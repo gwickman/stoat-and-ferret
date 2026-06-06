@@ -3324,7 +3324,7 @@
           "versions"
         ],
         "summary": "Create Version",
-        "description": "Create a new version snapshot of a project timeline.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Version creation request with timeline JSON data.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n\nReturns:\n    The created version with auto-incremented version number and checksum.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "description": "Create a new version snapshot of a project timeline.\n\nWhen body is absent or timeline_json is None, auto-snapshots the live\ntimeline via _build_timeline_response() + model_dump(mode=\"json\").\n\nArgs:\n    project_id: The unique project identifier.\n    body: Optional version creation request. When absent, the server\n        auto-snapshots the current live timeline.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The created version with auto-incremented version number and checksum.\n\nRaises:\n    HTTPException: 404 if project not found.",
         "operationId": "create_version_api_v1_projects__project_id__versions_post",
         "parameters": [
           {
@@ -3338,11 +3338,18 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VersionCreateRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/VersionCreateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
               }
             }
           }
@@ -6421,16 +6428,20 @@
       "VersionCreateRequest": {
         "properties": {
           "timeline_json": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Timeline Json"
           }
         },
         "type": "object",
-        "required": [
-          "timeline_json"
-        ],
         "title": "VersionCreateRequest",
-        "description": "Request body for creating a new version snapshot.\n\nAttributes:\n    timeline_json: Serialized timeline data to snapshot."
+        "description": "Request body for creating a new version snapshot.\n\nAttributes:\n    timeline_json: Serialized timeline data to snapshot. When absent or\n        None, the server auto-snapshots the current live timeline."
       },
       "VersionListResponse": {
         "properties": {

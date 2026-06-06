@@ -191,6 +191,49 @@ async def test_version_retention_prunes(
         get_settings.cache_clear()
 
 
+async def test_version_save_no_body_list_restore_round_trip(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """Body-less POST snapshot → list → restore round-trip works end-to-end."""
+    client = smoke_client
+
+    # Create a project
+    resp = await client.post(
+        "/api/v1/projects",
+        json={"name": "Version Round-Trip Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    # Step 1 — Save: body-less POST auto-snapshots the live timeline
+    resp = await client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+    snapshot = resp.json()
+    assert snapshot["version_number"] == 1
+    assert snapshot["checksum"]
+
+    # Step 2 — List: version appears in listing
+    resp = await client.get(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["versions"][0]["version_number"] == 1
+    assert body["versions"][0]["checksum"] == snapshot["checksum"]
+
+    # Step 3 — Restore: non-destructive restore creates a new version
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/versions/{snapshot['version_number']}/restore"
+    )
+    assert resp.status_code == 200
+    restore_body = resp.json()
+    assert restore_body["restored_version"] == 1
+    assert restore_body["new_version"] == 2
+
+    # Confirm two versions exist after restore
+    resp = await client.get(f"/api/v1/projects/{project_id}/versions")
+    assert resp.json()["total"] == 2
+
+
 async def test_version_retention_keep_more_than_total(
     smoke_client: httpx.AsyncClient,
 ) -> None:

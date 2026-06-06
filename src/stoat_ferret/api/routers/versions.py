@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from stoat_ferret.api.routers.timeline import _build_timeline_response, _get_clips_by_track
 from stoat_ferret.api.schemas.version import (
     RestoreResponse,
     VersionCreateRequest,
@@ -13,9 +15,14 @@ from stoat_ferret.api.schemas.version import (
     VersionResponse,
 )
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
+)
+from stoat_ferret.db.timeline_repository import (
+    AsyncSQLiteTimelineRepository,
+    AsyncTimelineRepository,
 )
 from stoat_ferret.db.version_repository import (
     AsyncSQLiteVersionRepository,
@@ -55,9 +62,41 @@ async def get_version_repository(request: Request) -> AsyncVersionRepository:
     return AsyncSQLiteVersionRepository(request.app.state.db)
 
 
+async def get_timeline_repository(request: Request) -> AsyncTimelineRepository:
+    """Get timeline repository from app state.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        Async timeline repository instance.
+    """
+    repo: AsyncTimelineRepository | None = getattr(request.app.state, "timeline_repository", None)
+    if repo is not None:
+        return repo
+    return AsyncSQLiteTimelineRepository(request.app.state.db)
+
+
+async def get_clip_repository(request: Request) -> AsyncClipRepository:
+    """Get clip repository from app state.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        Async clip repository instance.
+    """
+    repo: AsyncClipRepository | None = getattr(request.app.state, "clip_repository", None)
+    if repo is not None:
+        return repo
+    return AsyncSQLiteClipRepository(request.app.state.db)
+
+
 # Type aliases for dependencies
 ProjectRepoDep = Annotated[AsyncProjectRepository, Depends(get_project_repository)]
 VersionRepoDep = Annotated[AsyncVersionRepository, Depends(get_version_repository)]
+TimelineRepoDep = Annotated[AsyncTimelineRepository, Depends(get_timeline_repository)]
+ClipRepoDep = Annotated[AsyncClipRepository, Depends(get_clip_repository)]
 
 
 @router.get("/projects/{project_id}/versions", response_model=VersionListResponse)
@@ -116,17 +155,25 @@ async def list_versions(
 )
 async def create_version(
     project_id: str,
-    request: VersionCreateRequest,
     project_repo: ProjectRepoDep,
     version_repo: VersionRepoDep,
+    timeline_repo: TimelineRepoDep,
+    clip_repo: ClipRepoDep,
+    body: VersionCreateRequest | None = None,
 ) -> VersionResponse:
     """Create a new version snapshot of a project timeline.
 
+    When body is absent or timeline_json is None, auto-snapshots the live
+    timeline via _build_timeline_response() + model_dump(mode="json").
+
     Args:
         project_id: The unique project identifier.
-        request: Version creation request with timeline JSON data.
+        body: Optional version creation request. When absent, the server
+            auto-snapshots the current live timeline.
         project_repo: Project repository dependency.
         version_repo: Version repository dependency.
+        timeline_repo: Timeline repository dependency.
+        clip_repo: Clip repository dependency.
 
     Returns:
         The created version with auto-incremented version number and checksum.
@@ -141,7 +188,14 @@ async def create_version(
             detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
         )
 
-    record = await version_repo.save(project_id, request.timeline_json)
+    if body is None or body.timeline_json is None:
+        tracks = await timeline_repo.get_tracks_by_project(project_id)
+        clips_by_track = await _get_clips_by_track(clip_repo, project_id)
+        timeline = _build_timeline_response(project_id, tracks, clips_by_track)
+        snapshot_json = json.dumps(timeline.model_dump(mode="json"))
+        record = await version_repo.save(project_id, snapshot_json)
+    else:
+        record = await version_repo.save(project_id, body.timeline_json)
 
     retention_count = get_settings().version_retention_count
     if retention_count is not None:

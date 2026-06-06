@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from stoat_ferret.db.models import Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 
 
 @pytest.mark.api
@@ -225,3 +227,46 @@ async def test_list_projects_total_is_true_count(
     data = response.json()
     assert len(data["projects"]) == 10
     assert data["total"] == 25
+
+
+@pytest.mark.api
+async def test_create_version_no_body_auto_snapshots(
+    client: TestClient,
+    version_repository: AsyncInMemoryVersionRepository,
+) -> None:
+    """Body-less POST snapshots the live timeline with a non-empty timeline_json."""
+    resp = client.post("/api/v1/projects", json={"name": "Snapshot Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["version_number"] == 1
+    assert "checksum" in data
+    assert "created_at" in data
+
+    # Verify the stored timeline_json contains valid timeline structure
+    versions = await version_repository.list_versions(project_id)
+    assert len(versions) == 1
+    stored = json.loads(versions[0].timeline_json)
+    assert "project_id" in stored
+
+
+@pytest.mark.api
+def test_create_version_explicit_timeline_json_backward_compat(
+    client: TestClient,
+) -> None:
+    """POST /versions with explicit timeline_json still returns 201 (backward compat)."""
+    resp = client.post("/api/v1/projects", json={"name": "Explicit JSON Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = client.post(
+        f"/api/v1/projects/{project_id}/versions",
+        json={"timeline_json": '{"tracks": []}'},
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["version_number"] == 1
+    assert "checksum" in data

@@ -9,10 +9,11 @@ class VersionCreateRequest(BaseModel):
     """Request body for creating a new version snapshot.
 
     Attributes:
-        timeline_json: Serialized timeline data to snapshot.
+        timeline_json: Serialized timeline data to snapshot. When absent or
+            None, the server auto-snapshots the current live timeline.
     """
 
-    timeline_json: str
+    timeline_json: str | None = None
 
 
 class VersionResponse(BaseModel):
