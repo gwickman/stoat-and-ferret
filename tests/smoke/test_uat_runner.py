@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 import json
+import subprocess
+from pathlib import Path
 
 import pytest
 
-from scripts.uat_runner import get_journey_annotation, load_known_failures
+from scripts.uat_runner import get_journey_annotation, load_known_failures, run_journey
 
 # ---------------------------------------------------------------------------
 # load_known_failures — unit tests
@@ -122,3 +125,42 @@ def test_annotation_fail_unknown_journey() -> None:
 def test_annotation_pass_unknown_journey() -> None:
     """Journey not in registry that passes → PASS."""
     assert get_journey_annotation(201, "passed", {}) == "PASS"
+
+
+# ---------------------------------------------------------------------------
+# run_journey — timeout handling (BL-398)
+# ---------------------------------------------------------------------------
+
+
+def test_run_journey_timeout_returns_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TimeoutExpired causes run_journey to return JourneyResult(status='failed')."""
+
+    def mock_run(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd=args[0] if args else [], timeout=900)
+
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    # Create fake script at the expected location: PROJECT_ROOT / "scripts" / "uat_journey_604.py"
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    (scripts_dir / "uat_journey_604.py").write_text("", encoding="utf-8")
+
+    import scripts.uat_runner as _runner
+
+    original_root = _runner.PROJECT_ROOT
+    monkeypatch.setattr(_runner, "PROJECT_ROOT", tmp_path)
+    try:
+        result = run_journey(journey_id=604, output_dir=tmp_path, headed=False)
+    finally:
+        monkeypatch.setattr(_runner, "PROJECT_ROOT", original_root)
+
+    assert result.status == "failed"
+    assert "timed out" in result.message.lower()
+
+
+def test_run_journey_subprocess_run_has_timeout() -> None:
+    """Static: run_journey() source must contain timeout= (BL-398 regression guard)."""
+    source = inspect.getsource(run_journey)
+    assert "timeout=" in source, "run_journey() subprocess.run must include timeout="

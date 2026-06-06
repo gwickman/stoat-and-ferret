@@ -94,7 +94,9 @@ KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "tests" / "fixtures" / "baseline-uat-fa
 # ---------------------------------------------------------------------------
 
 
-def load_known_failures(registry_path: str | Path = KNOWN_FAILURES_REGISTRY) -> dict[int, dict]:
+def load_known_failures(
+    registry_path: str | Path = KNOWN_FAILURES_REGISTRY,
+) -> dict[int, dict[str, str]]:
     """Load known UAT failure registry.
 
     Returns dict mapping journey_id -> {reason, tracking_reference}.
@@ -120,7 +122,7 @@ def load_known_failures(registry_path: str | Path = KNOWN_FAILURES_REGISTRY) -> 
         if not isinstance(data, dict) or "failures" not in data:
             raise ValueError("Registry must contain 'failures' key")
 
-        failures_by_id: dict[int, dict] = {}
+        failures_by_id: dict[int, dict[str, str]] = {}
         for entry in data.get("failures", []):
             journey_id = entry.get("journey_id")
             if not isinstance(journey_id, int):
@@ -136,7 +138,9 @@ def load_known_failures(registry_path: str | Path = KNOWN_FAILURES_REGISTRY) -> 
         raise ValueError(f"Malformed registry JSON in {registry_path}: {e}") from e
 
 
-def get_journey_annotation(journey_id: int, status: str, known_failures: dict[int, dict]) -> str:
+def get_journey_annotation(
+    journey_id: int, status: str, known_failures: dict[int, dict[str, str]]
+) -> str:
     """Return the annotation label for a journey result.
 
     Args:
@@ -532,13 +536,21 @@ def run_journey(journey_id: int, output_dir: Path, headed: bool) -> JourneyResul
     env["UAT_HEADED"] = "1" if headed else "0"
     env["UAT_SERVER_URL"] = SERVER_URL
 
-    result = subprocess.run(
-        [sys.executable, str(script_path)],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=900,
+        )
+    except subprocess.TimeoutExpired:
+        return JourneyResult(
+            journey_id=journey_id,
+            status="failed",
+            message=f"Journey {journey_id} timed out after 900 s",
+        )
 
     if result.returncode == 0:
         return JourneyResult(
