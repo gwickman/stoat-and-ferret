@@ -233,13 +233,12 @@ async def test_delete_library_resources_emit_ws_events(
         ws_manager.broadcast = original_broadcast
 
 
-@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires real FFmpeg")
 async def test_render_completed_event_contains_output_path(
-    smoke_client: httpx.AsyncClient,
+    smoke_client_noop: httpx.AsyncClient,
     videos_dir: Path,
 ) -> None:
     """render_completed WS event carries a non-empty output_path field (BL-411, AC-2)."""
-    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    transport: httpx.ASGITransport = smoke_client_noop._transport  # type: ignore[assignment]
     ws_manager = transport.app.state.ws_manager  # type: ignore[union-attr]
     ws_queue: asyncio.Queue[dict] = asyncio.Queue()
     original_broadcast = ws_manager.broadcast
@@ -249,16 +248,18 @@ async def test_render_completed_event_contains_output_path(
 
     ws_manager.broadcast = _capture
     try:
-        await scan_videos_and_wait(smoke_client, videos_dir)
-        resp = await smoke_client.get("/api/v1/videos?limit=1")
+        await scan_videos_and_wait(smoke_client_noop, videos_dir)
+        resp = await smoke_client_noop.get("/api/v1/videos?limit=1")
         assert resp.status_code == 200
         video_id = resp.json()["videos"][0]["id"]
 
-        resp = await smoke_client.post("/api/v1/projects", json={"name": "Render Output Path Test"})
+        resp = await smoke_client_noop.post(
+            "/api/v1/projects", json={"name": "Render Output Path Test"}
+        )
         assert resp.status_code == 201
         project_id = resp.json()["id"]
 
-        resp = await smoke_client.post(
+        resp = await smoke_client_noop.post(
             f"/api/v1/projects/{project_id}/clips",
             json={
                 "source_video_id": video_id,
@@ -269,9 +270,9 @@ async def test_render_completed_event_contains_output_path(
         )
         assert resp.status_code == 201
 
-        resp = await smoke_client.post(
+        resp = await smoke_client_noop.post(
             "/api/v1/render",
-            json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 10.0})},
+            json={"project_id": project_id, "render_plan": json.dumps({"total_duration": 2.0})},
         )
         assert resp.status_code == 201
         job_id = resp.json()["id"]
@@ -316,7 +317,7 @@ async def test_concurrent_renders_have_distinct_output_paths(
         vid_a = videos[0]["id"]
         vid_b = videos[min(1, len(videos) - 1)]["id"]
 
-        async def _setup_project(name: str, video_id: str) -> str:
+        async def _setup_project(name: str, video_id: str) -> tuple[str, float]:
             r = await smoke_client.post("/api/v1/projects", json={"name": name})
             assert r.status_code == 201
             pid = r.json()["id"]
@@ -330,16 +331,34 @@ async def test_concurrent_renders_have_distinct_output_paths(
                 },
             )
             assert r.status_code == 201
-            return pid
+            # Derive timeline duration from clip length (60 frames) and video fps
+            v = await smoke_client.get(f"/api/v1/videos/{video_id}")
+            assert v.status_code == 200
+            vdata = v.json()
+            fps = vdata["frame_rate_numerator"] / vdata["frame_rate_denominator"]
+            timeline_duration = 60.0 / fps
+            return pid, timeline_duration
 
-        p1_id, p2_id = await asyncio.gather(
+        (p1_id, tl1_duration), (p2_id, tl2_duration) = await asyncio.gather(
             _setup_project("Concurrent Render A", vid_a),
             _setup_project("Concurrent Render B", vid_b),
         )
 
         r1, r2 = await asyncio.gather(
-            smoke_client.post("/api/v1/render", json={"project_id": p1_id}),
-            smoke_client.post("/api/v1/render", json={"project_id": p2_id}),
+            smoke_client.post(
+                "/api/v1/render",
+                json={
+                    "project_id": p1_id,
+                    "render_plan": json.dumps({"total_duration": tl1_duration, "settings": {}}),
+                },
+            ),
+            smoke_client.post(
+                "/api/v1/render",
+                json={
+                    "project_id": p2_id,
+                    "render_plan": json.dumps({"total_duration": tl2_duration, "settings": {}}),
+                },
+            ),
         )
         assert r1.status_code == 201
         assert r2.status_code == 201
