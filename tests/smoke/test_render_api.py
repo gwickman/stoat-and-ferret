@@ -446,6 +446,7 @@ async def test_create_render_invalid_format_encoder(smoke_client: httpx.AsyncCli
             "project_id": project_id,
             "output_format": "webm",
             "encoder": "libx264",
+            "render_plan": json.dumps({"settings": {}}),
         },
     )
     assert resp.status_code == 422
@@ -492,7 +493,10 @@ async def test_render_validation_project_not_found(smoke_client: httpx.AsyncClie
     """POST /render with valid UUID for non-existent project returns 404 PROJECT_NOT_FOUND."""
     resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": "00000000-0000-0000-0000-000000000000"},
+        json={
+            "project_id": "00000000-0000-0000-0000-000000000000",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     assert resp.status_code == 404
     body = resp.json()
@@ -510,7 +514,10 @@ async def test_render_validation_empty_timeline(smoke_client: httpx.AsyncClient)
 
     resp = await smoke_client.post(
         "/api/v1/render",
-        json={"project_id": project_id},
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     assert resp.status_code == 422
     body = resp.json()

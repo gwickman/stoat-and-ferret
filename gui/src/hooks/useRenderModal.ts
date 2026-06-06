@@ -81,7 +81,7 @@ export function useRenderModal(): UseRenderModalResult {
 
   const renderPlanJson =
     timeline !== null && timeline.duration > 0
-      ? JSON.stringify({ total_duration: timeline.duration })
+      ? JSON.stringify({ total_duration: timeline.duration, settings: {} })
       : null
 
   return { timelineLoading, timeline, timelineError, fetchTimeline, resetTimeline, renderPlanJson }
