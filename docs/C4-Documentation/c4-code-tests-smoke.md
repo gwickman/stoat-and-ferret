@@ -64,32 +64,49 @@
 
 ## Test Inventory
 
-- **Total Tests**: 84 (77 pre-v068 + 7 from test_render_contract.py; verify with `pytest --co -q`)
-- **Test Files**: 21
+- **Total Tests**: 191 (verify with `uv run pytest tests/smoke/ --co -q | tail -1`)
+- **Test Files**: 37
 - **Fixture Files**: 1 (conftest.py)
 
 | File | Test Count | Description |
 |------|-----------|-------------|
-| test_health.py | 2 | Liveness/readiness probes, health check structure |
-| test_library.py | 7 | Video search, detail, thumbnail, delete with pagination/FTS5 |
+| test_health.py | 4 | Liveness/readiness probes, health check structure |
+| test_library.py | 10 | Video search, detail, thumbnail, delete with pagination/FTS5 |
 | test_scan_workflow.py | 2 | Scan videos, cancel job with metadata validation |
+| test_scan_recursion.py | 3 | Recursive scan prohibition (RECURSIVE_SCAN_FORBIDDEN) on multi-subdir paths |
 | test_project_workflow.py | 2 | Project CRUD with default/custom settings, idempotent delete |
 | test_clip_workflow.py | 2 | Add, list, modify (PATCH in/out/timeline), delete clips |
 | test_timeline.py | 6 | Timeline/track CRUD, clip positioning, transition lifecycle |
+| test_timeline_contract.py | 4 | Timeline constraint and contract enforcement tests |
 | test_transitions.py | 3 | Fade transition create/delete, effects router interop |
-| test_effects.py | 13 | Effects catalog, preview, apply, update, delete, stacking, thumbnails, 4 effect type coverage |
+| test_effects.py | 9 | Effects catalog, preview, apply, update, delete, stacking, thumbnails, effect type coverage |
 | test_audio.py | 2 | Audio mix configure/preview with filter strings |
 | test_compose.py | 3 | Preset discovery, layout application, invalid preset |
-| test_render_api.py | 10 | CRUD, encoders, formats, queue, preview (single + all formats), delete |
-| test_render_contract.py | 7 | Render plan contract (noop mode): plan construction from timeline, multi-project isolation, 422 without total_duration, structured detail shape (BL-371, BL-372) |
+| test_render_api.py | 28 | CRUD, encoders, formats, queue, preview (single + all formats), delete, settings preflight |
+| test_render_contract.py | 10 | Render plan contract (noop mode): plan construction from timeline, multi-project isolation, 422 without total_duration/settings, structured detail shape (BL-371, BL-372) |
+| test_smoke_render.py | 7 | Render smoke tests exercising full render stack |
+| test_stuck_render_sweeper.py | 3 | StaleRenderSweeper integration: stale job detection, auto-fail, and threshold behavior |
 | test_batch.py | 2 | Batch submit/poll, persistence across restart |
-| test_proxy.py | 4 | Generate, status, delete, batch operations |
+| test_batch_quality.py | 9 | Batch quality field and quality_preset asymmetry validation |
+| test_proxy.py | 6 | Generate, status, delete, batch operations |
 | test_preview_endpoints.py | 5 | Preview start, proxy, cache, thumbnail strip, waveform |
 | test_preview.py | 1 | Preview session creation |
-| test_versions.py | 9 | List empty, create/list, restore (success/404/nonexistent), retention (default/prune/keep_more) |
+| test_preview_smoke.py | 2 | Preview endpoint smoke tests (added v073) |
+| test_versions.py | 10 | List empty, create/list, restore (success/404/nonexistent), retention (default/prune/keep_more) |
+| test_smoke_version.py | 3 | Version endpoint smoke tests |
 | test_filesystem.py | 3 | Directory listing with pagination, not found, hidden excluded |
-| test_negative_paths.py | 6 | Invalid track type, nonexistent resources, empty tracks, insufficient inputs |
-| test_sample_project.py | 1 | Running Montage regression: clip frames, source videos, effect mappings, render job queueing (BL-239) |
+| test_negative_paths.py | 7 | Invalid track type, nonexistent resources, empty tracks, insufficient inputs |
+| test_sample_project.py | 2 | Running Montage regression: clip frames, source videos, effect mappings, render job queueing (BL-239) |
+| test_schema.py | 7 | API schema and contract validation smoke tests |
+| test_smoke_flags.py | 3 | Feature flag and environment variable behavior smoke tests |
+| test_smoke_health.py | 7 | Health endpoint smoke tests (full liveness/readiness probe coverage) |
+| test_smoke_monitoring.py | 2 | Monitoring and metrics endpoint smoke tests |
+| test_system_state_smoke.py | 3 | System state endpoint smoke tests (`/api/v1/system/state`) |
+| test_uat_journey_names.py | 1 | UAT journey name registration validation |
+| test_uat_runner.py | 11 | UAT runner script execution, result parsing, and error handling |
+| test_uat_subprocess_timeout.py | 1 | UAT runner subprocess timeout guard (defence-in-depth, BL-398) |
+| test_websocket_replay.py | 6 | WebSocket event replay, reconnect, and Last-Event-ID semantics |
+| test_video_auxiliary_streams.py | 2 | Video auxiliary stream detection (subtitle count, data stream presence, BL-408) |
 | conftest.py | 0 | Fixtures and helpers (no direct tests) |
 
 ### Render Contract Test Module
@@ -164,7 +181,7 @@ flowchart TB
         create_project["create_project_with_clips<br/>Project + clips"]
     end
     
-    subgraph Tests["Test Modules (20 files, 77 tests)"]
+    subgraph Tests["Test Modules (37 files, 191 tests)"]
         health["test_health.py<br/>2 tests"]
         library["test_library.py<br/>7 tests"]
         scan["test_scan_workflow.py<br/>2 tests"]
