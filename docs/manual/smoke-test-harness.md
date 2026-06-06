@@ -46,6 +46,15 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k <keyword> -v
 | Preview smoke | No (mock) | Preview workflow completes; Python 3.13 asyncio behavior verified separately (see BL-393 below) |
 | Cancel partial file | Yes | Mid-encode cancel sets `partial_file_detected=True` on the job |
 
+## Recent Test Additions
+
+| Version | Tests added |
+|---------|-------------|
+| v073 | `test_preview_smoke.py` — preview workflow smoke coverage |
+| v074 | `test_render_contract.py`: settings-absent 422 gate (BL-465); `test_clip_workflow.py`: GET /clips/{cid} and GET /clips/{cid}/effects (BL-409, BL-405); `test_versions.py`: body-less POST auto-snapshot (BL-404); `test_uat_runner.py`: timeout regression guard (BL-398) |
+
+See [docs/setup/smoke-test-harness-guide/smoke-test-key-files.md](../setup/smoke-test-harness-guide/smoke-test-key-files.md) for the full per-file inventory.
+
 ## Deferred AC Discharge Procedures
 
 These ACs are classified `deferred_post_merge` in v072 (DECISION-003 from `docs/design/` risk assessment). They cannot be verified in CI due to environment constraints. Run these procedures in a suitable environment before marking v072 fully verified.
