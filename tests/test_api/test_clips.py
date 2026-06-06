@@ -456,3 +456,190 @@ async def test_list_clips_effects_default_empty_list(
     clip_data = data["clips"][0]
     assert clip_data["effects"] == []
     assert clip_data["effects"] is not None
+
+
+@pytest.mark.api
+async def test_get_clip_success(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """GET /clips/{cid} returns 200 with ClipResponse when clip exists."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    video = make_test_video()
+    await video_repository.add(video)
+
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.get("/api/v1/projects/proj-1/clips/clip-1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == "clip-1"
+    assert data["project_id"] == "proj-1"
+    assert data["source_video_id"] == video.id
+    assert data["in_point"] == 0
+    assert data["out_point"] == 100
+    assert data["effects"] == []
+
+
+@pytest.mark.api
+def test_get_clip_not_found(client: TestClient) -> None:
+    """GET /clips/{cid} returns 404 for nonexistent clip."""
+    response = client.get("/api/v1/projects/proj-1/clips/nonexistent")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_get_clip_wrong_project(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """GET /clips/{cid} returns 404 when clip belongs to a different project."""
+    now = datetime.now(timezone.utc)
+    project1 = Project(
+        id="proj-1",
+        name="Project 1",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    project2 = Project(
+        id="proj-2",
+        name="Project 2",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project1)
+    await project_repository.add(project2)
+
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id="video-1",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.get("/api/v1/projects/proj-2/clips/clip-1")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_get_clip_effects_empty(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """GET /clips/{cid}/effects returns 200 with empty list when no effects."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id="video-1",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.get("/api/v1/projects/proj-1/clips/clip-1/effects")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["effects"] == []
+
+
+@pytest.mark.api
+def test_get_clip_effects_not_found(client: TestClient) -> None:
+    """GET /clips/{cid}/effects returns 404 for nonexistent clip."""
+    response = client.get("/api/v1/projects/proj-1/clips/nonexistent/effects")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_get_clip_allow_header(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """405 on /clips/{cid} includes Allow header listing GET, PATCH, DELETE."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id="video-1",
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.put("/api/v1/projects/proj-1/clips/clip-1", json={})
+    assert response.status_code == 405
+    allow = response.headers.get("allow", "")
+    assert "GET" in allow
+    assert "PATCH" in allow
+    assert "DELETE" in allow

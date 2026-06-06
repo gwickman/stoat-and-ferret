@@ -481,7 +481,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Clip
+         * @description Get clip by ID.
+         *
+         *     Args:
+         *         project_id: The unique project identifier.
+         *         clip_id: The unique clip identifier.
+         *         clip_repo: Clip repository dependency.
+         *
+         *     Returns:
+         *         Clip details.
+         *
+         *     Raises:
+         *         HTTPException: 404 if clip not found or belongs to different project.
+         */
+        get: operations["get_clip_api_v1_projects__project_id__clips__clip_id__get"];
         put?: never;
         post?: never;
         /**
@@ -756,7 +771,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Clip Effects
+         * @description Get effects applied to a clip.
+         *
+         *     Args:
+         *         project_id: The unique project identifier.
+         *         clip_id: The unique clip identifier.
+         *         clip_repo: Clip repository dependency.
+         *
+         *     Returns:
+         *         Applied effects list for the clip (empty list when no effects).
+         *
+         *     Raises:
+         *         HTTPException: 404 if clip not found or belongs to different project.
+         */
+        get: operations["get_clip_effects_api_v1_projects__project_id__clips__clip_id__effects_get"];
         put?: never;
         /**
          * Apply Effect To Clip
@@ -2627,6 +2657,16 @@ export interface components {
             out_point: number;
             /** Timeline Position */
             timeline_position: number;
+        };
+        /**
+         * ClipEffectsResponse
+         * @description Clip applied-effects list response.
+         */
+        ClipEffectsResponse: {
+            /** Effects */
+            effects?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * ClipListResponse
@@ -4824,6 +4864,38 @@ export interface operations {
             };
         };
     };
+    get_clip_api_v1_projects__project_id__clips__clip_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_clip_api_v1_projects__project_id__clips__clip_id__delete: {
         parameters: {
             query?: never;
@@ -5071,6 +5143,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_clip_effects_api_v1_projects__project_id__clips__clip_id__effects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipEffectsResponse"];
                 };
             };
             /** @description Validation Error */

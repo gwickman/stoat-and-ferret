@@ -51,6 +51,12 @@ class ClipResponse(BaseModel):
         return v if v is not None else []
 
 
+class ClipEffectsResponse(BaseModel):
+    """Clip applied-effects list response."""
+
+    effects: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class ClipListResponse(BaseModel):
     """Clip list response."""
 

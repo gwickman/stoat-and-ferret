@@ -711,6 +711,56 @@
       }
     },
     "/api/v1/projects/{project_id}/clips/{clip_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Clip",
+        "description": "Get clip by ID.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Clip details.\n\nRaises:\n    HTTPException: 404 if clip not found or belongs to different project.",
+        "operationId": "get_clip_api_v1_projects__project_id__clips__clip_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClipResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "tags": [
           "projects"
@@ -1062,6 +1112,56 @@
       }
     },
     "/api/v1/projects/{project_id}/clips/{clip_id}/effects": {
+      "get": {
+        "tags": [
+          "effects"
+        ],
+        "summary": "Get Clip Effects",
+        "description": "Get effects applied to a clip.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Applied effects list for the clip (empty list when no effects).\n\nRaises:\n    HTTPException: 404 if clip not found or belongs to different project.",
+        "operationId": "get_clip_effects_api_v1_projects__project_id__clips__clip_id__effects_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClipEffectsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "effects"
@@ -3934,6 +4034,21 @@
         ],
         "title": "ClipCreate",
         "description": "Create clip request."
+      },
+      "ClipEffectsResponse": {
+        "properties": {
+          "effects": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Effects"
+          }
+        },
+        "type": "object",
+        "title": "ClipEffectsResponse",
+        "description": "Clip applied-effects list response."
       },
       "ClipListResponse": {
         "properties": {
