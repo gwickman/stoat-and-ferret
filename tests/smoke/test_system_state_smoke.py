@@ -137,9 +137,7 @@ async def test_running_render_job_included_in_active_jobs(
         while elapsed < deadline:
             state_resp = await smoke_client.get("/api/v1/system/state")
             assert state_resp.status_code == 200
-            render_entries = [
-                j for j in state_resp.json()["active_jobs"] if j["job_id"] == job_id
-            ]
+            render_entries = [j for j in state_resp.json()["active_jobs"] if j["job_id"] == job_id]
             if render_entries:
                 break
             # Check if the job reached terminal before we could observe it as active
