@@ -30,7 +30,7 @@ The stale-job sweeper runs as a background asyncio task and recovers render jobs
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` | `int` | `300` | Age in seconds beyond which a running render job is considered stale and transitioned to `failed` (valid range: 60-3600). The default 300s is appropriate for noop mode. Production deployments using real render mode should increase to 1800s (30 min) to avoid premature failure of slow-but-progressing encodes. |
+| `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` | `int` | `300` | Age in seconds beyond which a running render job is considered stale and transitioned to `failed`. **Valid range: 60–3600 seconds.** Values outside this range cause server startup to fail with a pydantic `ValidationError` — the server will not start until the value is corrected. The default 300s is appropriate for noop mode. Production deployments using real render mode should increase to 1800s (30 min) to avoid premature failure of slow-but-progressing encodes. |
 
 **Security implications**
 
