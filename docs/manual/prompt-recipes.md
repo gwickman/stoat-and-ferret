@@ -415,6 +415,8 @@ Submit multiple render jobs in one call, then poll the batch status until all jo
 - The batch endpoint accepts `quality` keys `draft|standard|high` (alias `medium` is rejected, matching the single-render endpoint).
 - An individual job's failure does not abort siblings; check each entry's `status` and `error`.
 
+> **Field-name asymmetry:** The batch `jobs[].quality` field uses `quality` (not `quality_preset`). Single-render `POST /api/v1/render` uses `quality_preset`. Both accept the same values (`draft`, `standard`, `high`) but the field names differ — do not substitute one for the other.
+
 ---
 
 ## 7. Save, List, and Restore a Project Version

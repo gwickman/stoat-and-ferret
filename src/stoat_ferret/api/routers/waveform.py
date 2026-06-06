@@ -177,8 +177,8 @@ async def get_waveform_metadata(
             },
         )
 
-    # samples_per_second: 0 for PNG (image), 10 for JSON (amplitude data)
-    samples_per_second = 10 if fmt == WaveformFormat.JSON else 0
+    # samples_per_second: None for PNG (image format, field not applicable), 10 for JSON
+    samples_per_second = 10 if fmt == WaveformFormat.JSON else None
 
     return WaveformMetadataResponse(
         waveform_id=waveform.id,

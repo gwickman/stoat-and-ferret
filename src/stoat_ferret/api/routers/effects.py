@@ -362,6 +362,7 @@ async def apply_effect_to_clip(
             detail={
                 "code": "EFFECT_NOT_FOUND",
                 "message": f"Unknown effect type: {request.effect_type}",
+                "valid_effect_types": [t for t, _ in registry.list_all()],
             },
         )
 

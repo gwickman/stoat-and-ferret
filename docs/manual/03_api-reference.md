@@ -291,6 +291,74 @@ curl -X DELETE "http://localhost:8765/api/v1/videos/vid-abc123?delete_file=true"
 
 ---
 
+### POST /api/v1/videos/{video_id}/proxy
+
+Submit an asynchronous proxy video generation job.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `video_id` | string | Unique video identifier |
+
+**Response:** 202 Accepted
+
+```json
+{ "job_id": "<uuid>" }
+```
+
+> **Async-ID field:** `job_id`. Poll `GET /api/v1/jobs/{job_id}` for status.
+
+---
+
+### POST /api/v1/videos/{video_id}/waveform
+
+Submit an asynchronous waveform generation job (PNG image or JSON amplitude data).
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `video_id` | string | Unique video identifier |
+
+**Request Body:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `format` | string | `"png"` | Output format: `"png"` for image, `"json"` for amplitude data |
+
+**Response:** 202 Accepted
+
+```json
+{ "waveform_id": "<uuid>", "status": "pending" }
+```
+
+> **Async-ID field:** `waveform_id` (NOT `job_id`). Poll `GET /api/v1/videos/{video_id}/waveform?format=<fmt>` for metadata and status.
+
+---
+
+### POST /api/v1/videos/{video_id}/thumbnails/strip
+
+Submit an asynchronous thumbnail strip generation job.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `video_id` | string | Unique video identifier |
+
+**Response:** 202 Accepted
+
+```json
+{ "strip_id": "<uuid>", "status": "pending" }
+```
+
+> **Async-ID field:** `strip_id` (NOT `job_id`). Poll `GET /api/v1/videos/{video_id}/thumbnails/strip` for metadata and status.
+
+> **Async-ID divergence summary:** These three sibling endpoints each use a different response key for the async identifier: `POST /proxy` → `job_id`, `POST /waveform` → `waveform_id`, `POST /thumbnails/strip` → `strip_id`. An agent must use the correct key for each endpoint rather than assuming a uniform `job_id`.
+
+---
+
 ## Projects
 
 ### GET /api/v1/projects
@@ -1301,10 +1369,16 @@ asyncio.run(listen())
 
 Prometheus-compatible metrics endpoint. Exposes request counts, latencies, effect application counts, and other operational metrics.
 
+> **Note:** `GET /metrics` redirects to `GET /metrics/` (trailing slash required by the Prometheus client mount). Use `GET /metrics/` directly or follow the redirect with `-L`:
+
 **Example:**
 
 ```bash
-curl http://localhost:8765/metrics
+# Recommended: use trailing slash directly
+curl http://localhost:8765/metrics/
+
+# Alternatively, follow the redirect
+curl -L http://localhost:8765/metrics
 ```
 
 ---

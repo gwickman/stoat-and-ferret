@@ -3984,18 +3984,11 @@
             "title": "Timeline Position"
           },
           "effects": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
             "title": "Effects"
           },
           "created_at": {
@@ -6714,7 +6707,14 @@
             "title": "Channels"
           },
           "samples_per_second": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Samples Per Second"
           }
         },

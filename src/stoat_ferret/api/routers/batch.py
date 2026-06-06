@@ -280,6 +280,20 @@ async def cancel_batch_job(
     job = await repository.get_by_job_id(job_id)
 
     if job is None:
+        # Check if the caller passed a batch_id instead of a job_id
+        batch_jobs = await repository.get_by_batch_id(job_id)
+        if batch_jobs:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "NOT_FOUND",
+                    "message": (
+                        f"Expected a render job ID. Got a batch ID — use "
+                        f"GET /api/v1/render/batch/{job_id} to inspect the batch. "
+                        "Cancel individual jobs by their job_id."
+                    ),
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "NOT_FOUND", "message": f"Job {job_id} not found"},
