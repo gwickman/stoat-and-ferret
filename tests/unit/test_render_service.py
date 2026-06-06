@@ -37,7 +37,7 @@ def _make_noop_service(render_repo: InMemoryRenderRepository) -> RenderService:
     )
 
 
-_NOOP_PLAN = '{"total_duration": 5.0}'
+_NOOP_PLAN = '{"total_duration": 5.0, "settings": {"quality_preset": "medium"}}'
 
 
 class TestSubmitJobLockAcquisition:

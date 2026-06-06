@@ -59,13 +59,13 @@ If you want to remove only specific tracks, use a PUT body that includes the tra
 
 #### Render Plan
 
-`POST /api/v1/render` requires `render_plan.total_duration` (float, seconds). Obtain it from the project's current timeline:
+`POST /api/v1/render` requires two top-level keys: `settings` (object) and `total_duration` (float, seconds). Obtain the duration from the project's current timeline:
 
 ```
 GET /api/v1/projects/{project_id}/timeline → .duration
 ```
 
-Derive `render_plan.total_duration` from the `.duration` value returned by the timeline endpoint. Do not hardcode a value; always read from the live timeline so the render plan matches the actual project content. Omitting `render_plan` or sending an empty plan returns `422 PREFLIGHT_FAILED`.
+Derive `render_plan.total_duration` from the `.duration` value returned by the timeline endpoint. Do not hardcode a value; always read from the live timeline so the render plan matches the actual project content. Omitting `render_plan`, or including a `render_plan` that lacks `total_duration` or `settings`, returns `422 PREFLIGHT_FAILED`.
 
 ### 2. WebSocket + Reconnect
 
@@ -152,7 +152,7 @@ Enable fixtures by starting the server with `STOAT_TESTING_MODE=true`. Endpoints
 
 - Seed: `POST /api/v1/testing/seed` `{"fixture_type": "project", "name": "demo", "data": {...}}` → `{fixture_id, fixture_type, name}`. All seeded names are prefixed `seeded_` for enumeration.
 - Teardown: `DELETE /api/v1/testing/seed/{fixture_id}?fixture_type=project`.
-- Canonical agent test loop: set `STOAT_RENDER_MODE=noop` in the test process → seed project → add timeline clip → call `GET /api/v1/projects/{project_id}/timeline` to read `.duration` → POST `/api/v1/render` with `{"project_id": "<id>", "output_format": "mp4", "quality_preset": "standard", "render_plan": {"total_duration": <duration>}}` (where `<duration>` is the `.duration` value from the timeline response) → assert `status == "completed"` without writing output → delete fixture. `render_plan.total_duration` is required and must be obtained from `GET /api/v1/projects/{project_id}/timeline .duration`; omitting it returns `422 PREFLIGHT_FAILED`. See *Synthetic render mode* below for environment variable details.
+- Canonical agent test loop: set `STOAT_RENDER_MODE=noop` in the test process → seed project → add timeline clip → call `GET /api/v1/projects/{project_id}/timeline` to read `.duration` → POST `/api/v1/render` with `{"project_id": "<id>", "output_format": "mp4", "quality_preset": "standard", "render_plan": {"settings": {}, "total_duration": <duration>}}` (where `<duration>` is the `.duration` value from the timeline response) → assert `status == "completed"` without writing output → delete fixture. `render_plan.total_duration` and `render_plan.settings` are both required and `total_duration` must be obtained from `GET /api/v1/projects/{project_id}/timeline .duration`; omitting either returns `422 PREFLIGHT_FAILED`. See *Synthetic render mode* below for environment variable details.
 - Fixtures live in the same SQLite database as production data; use a dedicated `STOAT_DATA_DIR` for isolation.
 
 ### Synthetic render mode (`STOAT_RENDER_MODE`)

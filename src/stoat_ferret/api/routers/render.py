@@ -392,6 +392,14 @@ async def create_render_job(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "INVALID_RENDER_PLAN", "message": "render_plan must be valid JSON"},
         ) from err
+    if "settings" not in plan_data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "PREFLIGHT_FAILED",
+                "message": "render plan missing required field: settings",
+            },
+        )
     plan_data.setdefault("settings", {})["quality_preset"] = quality_preset_ffmpeg
     render_plan_json = json.dumps(plan_data)
 

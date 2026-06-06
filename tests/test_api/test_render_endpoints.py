@@ -92,7 +92,7 @@ def _build_noop_render_service(render_repo: InMemoryRenderRepository) -> RenderS
     )
 
 
-_NOOP_RENDER_PLAN = json.dumps({"total_duration": 10.0})
+_NOOP_RENDER_PLAN = json.dumps({"total_duration": 10.0, "settings": {"quality_preset": "medium"}})
 
 
 # ---------- Fixtures ----------
@@ -185,7 +185,7 @@ def _create_job_via_api(client: TestClient, **overrides: str) -> dict:
         "project_id": TEST_PROJECT_UUID,
         "output_format": "mp4",
         "quality_preset": "standard",
-        "render_plan": "{}",
+        "render_plan": '{"settings": {}}',
     }
     body.update(overrides)
     resp = client.post("/api/v1/render", json=body)
@@ -559,7 +559,10 @@ class TestRenderSemanticPreflight:
         with TestClient(app) as client:
             resp = client.post(
                 "/api/v1/render",
-                json={"project_id": "00000000-0000-0000-0000-000000000000"},
+                json={
+                    "project_id": "00000000-0000-0000-0000-000000000000",
+                    "render_plan": '{"settings": {}}',
+                },
             )
         assert resp.status_code == 404
         assert resp.json()["detail"]["code"] == "PROJECT_NOT_FOUND"
@@ -595,7 +598,10 @@ class TestRenderSemanticPreflight:
         with TestClient(app) as client:
             resp = client.post(
                 "/api/v1/render",
-                json={"project_id": TEST_PROJECT_UUID},
+                json={
+                    "project_id": TEST_PROJECT_UUID,
+                    "render_plan": '{"settings": {}}',
+                },
             )
         assert resp.status_code == 422
         assert resp.json()["detail"]["code"] == "EMPTY_TIMELINE"
@@ -668,7 +674,7 @@ class TestNoopQueueOwnership:
         """POST /render in noop mode returns 422 when render_plan lacks total_duration (AC-5)."""
         resp = noop_render_client.post(
             "/api/v1/render",
-            json={"project_id": TEST_PROJECT_UUID, "render_plan": "{}"},
+            json={"project_id": TEST_PROJECT_UUID, "render_plan": '{"settings": {}}'},
         )
         assert resp.status_code == 422
         assert resp.json()["detail"]["code"] == "PREFLIGHT_FAILED"
@@ -1548,7 +1554,7 @@ class TestConcurrentNoopSubmissions:
         import httpx
 
         n = 10
-        render_plan = json.dumps({"total_duration": 5.0})
+        render_plan = json.dumps({"total_duration": 5.0, "settings": {"quality_preset": "medium"}})
 
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=noop_render_app),
@@ -1604,7 +1610,7 @@ class TestDimensionInjection:
                 "project_id": TEST_PROJECT_UUID,
                 "output_format": "mp4",
                 "quality_preset": "standard",
-                "render_plan": json.dumps({"total_duration": 10.0}),
+                "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
             },
         )
         assert resp.status_code == 201
@@ -1686,7 +1692,7 @@ class TestDimensionInjection:
                     "project_id": custom_project_id,
                     "output_format": "mp4",
                     "quality_preset": "standard",
-                    "render_plan": json.dumps({"total_duration": 10.0}),
+                    "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
                 },
             )
 

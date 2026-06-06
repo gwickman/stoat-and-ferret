@@ -25,7 +25,13 @@ class CreateRenderRequest(BaseModel):
         description="Video encoder name (e.g. libx264, libvpx-vp9). "
         "When omitted the format default is used.",
     )
-    render_plan: str = Field(default="{}", description="Serialized render plan JSON")
+    render_plan: str = Field(
+        default="{}",
+        description=(
+            "Serialized render plan JSON. Required top-level keys: 'settings' (object)"
+            " and 'total_duration' (float, seconds)."
+        ),
+    )
 
 
 class RenderJobResponse(BaseModel):

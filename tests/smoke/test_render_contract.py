@@ -128,7 +128,7 @@ async def test_render_plan_construction_from_timeline(
     timeline_duration = timeline_resp.json()["duration"]
     assert timeline_duration == pytest.approx(expected_duration)
 
-    render_plan = json.dumps({"total_duration": timeline_duration})
+    render_plan = json.dumps({"total_duration": timeline_duration, "settings": {}})
     resp = await smoke_client_noop.post(
         "/api/v1/render",
         json={"project_id": project_id, "render_plan": render_plan},
@@ -158,7 +158,7 @@ async def test_render_plan_multiple_projects(
         "/api/v1/render",
         json={
             "project_id": project_id_a,
-            "render_plan": json.dumps({"total_duration": duration_a}),
+            "render_plan": json.dumps({"total_duration": duration_a, "settings": {}}),
         },
     )
     assert resp_a.status_code == 201
@@ -168,7 +168,7 @@ async def test_render_plan_multiple_projects(
         "/api/v1/render",
         json={
             "project_id": project_id_b,
-            "render_plan": json.dumps({"total_duration": duration_b}),
+            "render_plan": json.dumps({"total_duration": duration_b, "settings": {}}),
         },
     )
     assert resp_b.status_code == 201
@@ -191,7 +191,7 @@ async def test_render_422_without_render_plan(
 
     resp = await smoke_client_noop.post(
         "/api/v1/render",
-        json={"project_id": project_id, "render_plan": json.dumps({})},
+        json={"project_id": project_id, "render_plan": json.dumps({"settings": {}})},
     )
     assert resp.status_code == 422
     body = resp.json()
@@ -243,7 +243,7 @@ async def test_error_response_missing_detail(
         "/api/v1/render",
         json={
             "project_id": "00000000-0000-0000-0000-000000000000",
-            "render_plan": json.dumps({"total_duration": 5.0}),
+            "render_plan": json.dumps({"total_duration": 5.0, "settings": {}}),
         },
     )
     assert resp.status_code == 404
@@ -265,7 +265,7 @@ async def test_noop_render_success(
         smoke_client_noop, "Noop Render Success", 50.0
     )
 
-    render_plan = json.dumps({"total_duration": duration})
+    render_plan = json.dumps({"total_duration": duration, "settings": {}})
     resp = await smoke_client_noop.post(
         "/api/v1/render",
         json={"project_id": project_id, "render_plan": render_plan},
@@ -296,7 +296,7 @@ async def test_job_polling_noop_completed(
         smoke_client_noop, "Noop Polling Test", 30.0
     )
 
-    render_plan = json.dumps({"total_duration": duration})
+    render_plan = json.dumps({"total_duration": duration, "settings": {}})
     resp = await smoke_client_noop.post(
         "/api/v1/render",
         json={"project_id": project_id, "render_plan": render_plan},
@@ -334,7 +334,7 @@ async def test_concurrent_renders_distinct_output_paths(
     project_id, duration = await _create_project_with_timeline(
         smoke_client_noop, "Concurrent Renders BL-403 Test", 50.0
     )
-    render_plan = json.dumps({"total_duration": duration})
+    render_plan = json.dumps({"total_duration": duration, "settings": {}})
 
     resp_a, resp_b = await asyncio.gather(
         smoke_client_noop.post(
@@ -393,7 +393,7 @@ async def test_render_progress_increments(
     project_id, duration = await _create_project_with_timeline(
         smoke_client_noop, "Progress Increment BL-394 Test", 50.0
     )
-    render_plan = json.dumps({"total_duration": duration})
+    render_plan = json.dumps({"total_duration": duration, "settings": {}})
 
     resp = await smoke_client_noop.post(
         "/api/v1/render",
@@ -429,3 +429,22 @@ async def test_render_progress_increments(
     # Real-mode behavioral assertion (deferred per BL-394-AC-2/AC-3):
     # len(set(progress_values)) > 2 indicates progress incremented during render.
     # Noop mode shows len(set(progress_values))=1 ([1.0] only) which is expected.
+
+
+async def test_settings_absent_returns_422_noop(
+    smoke_client_noop: httpx.AsyncClient,
+) -> None:
+    """Settings-absent render_plan returns 422 PREFLIGHT_FAILED in noop mode (BL-465-AC-2)."""
+    project_id, _duration = await _create_project_with_timeline(
+        smoke_client_noop, "BL-465 Settings Absent Test", 10.0
+    )
+
+    render_plan = json.dumps({"total_duration": 5.0})  # settings absent
+    resp = await smoke_client_noop.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": render_plan},
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["detail"]["code"] == "PREFLIGHT_FAILED"
+    assert "settings" in body["detail"]["message"]

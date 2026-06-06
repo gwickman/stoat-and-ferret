@@ -4130,7 +4130,7 @@
           "render_plan": {
             "type": "string",
             "title": "Render Plan",
-            "description": "Serialized render plan JSON",
+            "description": "Serialized render plan JSON. Required top-level keys: 'settings' (object) and 'total_duration' (float, seconds).",
             "default": "{}"
           }
         },

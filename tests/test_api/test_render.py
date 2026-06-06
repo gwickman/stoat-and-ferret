@@ -6,6 +6,7 @@ and validation that public API rejects FFmpeg preset names and invalid values.
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
@@ -145,7 +146,11 @@ def test_valid_preset_draft_accepted(render_client: TestClient) -> None:
     """POST /render with quality_preset='draft' returns 201."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "draft"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "draft",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     assert resp.status_code == 201
     assert resp.json()["quality_preset"] == "draft"
@@ -155,7 +160,11 @@ def test_valid_preset_standard_accepted(render_client: TestClient) -> None:
     """POST /render with quality_preset='standard' returns 201."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "standard"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "standard",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     assert resp.status_code == 201
     assert resp.json()["quality_preset"] == "standard"
@@ -165,7 +174,11 @@ def test_valid_preset_high_accepted(render_client: TestClient) -> None:
     """POST /render with quality_preset='high' returns 201."""
     resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "high"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "high",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     assert resp.status_code == 201
     assert resp.json()["quality_preset"] == "high"
@@ -243,11 +256,13 @@ def test_draft_translated_in_render_plan(
     mock_render_service: AsyncMock,
 ) -> None:
     """draft preset translates to 'veryfast' in the render_plan passed to service."""
-    import json
-
     render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "draft"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "draft",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])
@@ -259,11 +274,13 @@ def test_standard_translated_in_render_plan(
     mock_render_service: AsyncMock,
 ) -> None:
     """standard preset translates to 'medium' in the render_plan passed to service."""
-    import json
-
     render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "standard"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "standard",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])
@@ -275,11 +292,13 @@ def test_high_translated_in_render_plan(
     mock_render_service: AsyncMock,
 ) -> None:
     """high preset translates to 'slow' in the render_plan passed to service."""
-    import json
-
     render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "high"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "high",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     call_kwargs = mock_render_service.submit_job.call_args.kwargs
     plan = json.loads(call_kwargs["render_plan_json"])
@@ -378,7 +397,11 @@ def test_cancel_preempted_error_returns_409_not_cancellable(
     # Create a job via the API so the render_repo has it in QUEUED status.
     create_resp = render_client.post(
         "/api/v1/render",
-        json={"project_id": TEST_PROJECT_UUID, "quality_preset": "standard"},
+        json={
+            "project_id": TEST_PROJECT_UUID,
+            "quality_preset": "standard",
+            "render_plan": json.dumps({"settings": {}}),
+        },
     )
     assert create_resp.status_code == 201
     job_id = create_resp.json()["id"]
@@ -908,17 +931,32 @@ def test_real_mode_incomplete_plan_no_db_row_created(
 def test_real_mode_complete_plan_returns_201(
     real_preflight_client: TestClient,
 ) -> None:
-    """FR-001-AC-3: POST /render with complete render_plan (total_duration present) returns 201."""
+    """FR-001-AC-3: POST /render with both total_duration and settings returns 201."""
     import json
 
     resp = real_preflight_client.post(
         "/api/v1/render",
         json={
             "project_id": TEST_PROJECT_UUID,
-            "render_plan": json.dumps({"total_duration": 10.0}),
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
         },
     )
     assert resp.status_code == 201
+
+
+def test_real_mode_settings_absent_returns_422_preflight_failed(
+    real_preflight_client: TestClient,
+) -> None:
+    """BL-465-AC-1: Real-mode POST /render with settings absent returns 422 PREFLIGHT_FAILED."""
+    import json
+
+    resp = real_preflight_client.post(
+        "/api/v1/render",
+        json={"project_id": TEST_PROJECT_UUID, "render_plan": json.dumps({"total_duration": 10.0})},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["code"] == "PREFLIGHT_FAILED"
+    assert "settings" in resp.json()["detail"]["message"]
 
 
 def test_noop_mode_incomplete_plan_still_returns_422_preflight_failed(
