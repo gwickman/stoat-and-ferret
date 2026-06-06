@@ -16,9 +16,12 @@ from pathlib import Path
 import aiosqlite
 import httpx
 import structlog
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler as _default_http_exception_handler
+from fastapi.responses import FileResponse, JSONResponse, Response
 from prometheus_client import make_asgi_app
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.routing import Match
 
 from stoat_ferret.api.lifespan import record_feature_flags, run_startup_migrations
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
@@ -451,6 +454,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await app.state.db.close()
 
 
+async def _fix_405_allow_header(request: Request, exc: StarletteHTTPException) -> Response:
+    """Aggregate Allow header across all routes matching the request path.
+
+    Starlette 0.50.0 only includes the first matching route's methods in the
+    Allow header on 405 responses. This handler scans all app routes to collect
+    the full method set for the matched path before returning the 405.
+    """
+    if exc.status_code == 405:
+        probe_scope = {**request.scope, "method": "_PROBE_"}
+        allowed: set[str] = set()
+        for route in request.app.routes:
+            match, _ = route.matches(probe_scope)
+            if match == Match.PARTIAL and hasattr(route, "methods") and route.methods:
+                allowed.update(route.methods)
+        if allowed:
+            return JSONResponse(
+                status_code=405,
+                content={"detail": "Method Not Allowed"},
+                headers={"Allow": ", ".join(sorted(allowed))},
+            )
+    return await _default_http_exception_handler(request, exc)
+
+
 def create_app(
     *,
     video_repository: AsyncVideoRepository | None = None,
@@ -696,5 +722,9 @@ def create_app(
         return schema
 
     app.openapi = _custom_openapi  # type: ignore[method-assign]
+
+    # Fix 405 Allow header to aggregate all methods for the matched path.
+    # Starlette 0.50.0 only includes the first matching route's methods.
+    app.add_exception_handler(StarletteHTTPException, _fix_405_allow_header)  # type: ignore[arg-type]
 
     return app

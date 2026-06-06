@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from prometheus_client import Counter
 
+from stoat_ferret.api.schemas.clip import ClipEffectsResponse
 from stoat_ferret.api.schemas.effect import (
     EffectApplyRequest,
     EffectApplyResponse,
@@ -302,6 +303,37 @@ async def preview_effect_thumbnail(
         )
 
     return FileResponse(output_path, media_type="image/jpeg")
+
+
+@router.get(
+    "/projects/{project_id}/clips/{clip_id}/effects",
+    response_model=ClipEffectsResponse,
+)
+async def get_clip_effects(
+    project_id: str,
+    clip_id: str,
+    clip_repo: ClipRepoDep,
+) -> ClipEffectsResponse:
+    """Get effects applied to a clip.
+
+    Args:
+        project_id: The unique project identifier.
+        clip_id: The unique clip identifier.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        Applied effects list for the clip (empty list when no effects).
+
+    Raises:
+        HTTPException: 404 if clip not found or belongs to different project.
+    """
+    clip = await clip_repo.get(clip_id)
+    if clip is None or clip.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {clip_id} not found"},
+        )
+    return ClipEffectsResponse(effects=clip.effects or [])
 
 
 @router.post(

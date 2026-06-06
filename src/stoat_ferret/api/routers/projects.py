@@ -242,6 +242,34 @@ async def list_clips(
     )
 
 
+@router.get("/{project_id}/clips/{clip_id}", response_model=ClipResponse)
+async def get_clip(
+    project_id: str,
+    clip_id: str,
+    clip_repo: ClipRepoDep,
+) -> ClipResponse:
+    """Get clip by ID.
+
+    Args:
+        project_id: The unique project identifier.
+        clip_id: The unique clip identifier.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        Clip details.
+
+    Raises:
+        HTTPException: 404 if clip not found or belongs to different project.
+    """
+    clip = await clip_repo.get(clip_id)
+    if clip is None or clip.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {clip_id} not found"},
+        )
+    return ClipResponse.model_validate(clip)
+
+
 @router.post(
     "/{project_id}/clips", response_model=ClipResponse, status_code=status.HTTP_201_CREATED
 )
