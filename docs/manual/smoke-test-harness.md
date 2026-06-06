@@ -53,7 +53,7 @@ These ACs are classified `deferred_post_merge` in v072 (DECISION-003 from `docs/
 **Two distinct deferral reasons:**
 
 - **Python-version-dependent (BL-393-AC-1, BL-393-AC-2):** Deferred because Python 3.13 asyncio semantics are environment-specific. These do not require real FFmpeg — they require running under Python 3.13.
-- **FFmpeg-environment-dependent (BL-415-AC-3, BL-394-AC-5):** Deferred because real FFmpeg is needed to observe actual encode/cancel/concurrency behavior. These require `STOAT_TEST_FFMPEG=1`.
+- **FFmpeg-environment-dependent (BL-415-AC-3, BL-403-AC-3):** Deferred because real FFmpeg is needed to observe actual encode/cancel/concurrency behavior. These require `STOAT_TEST_FFMPEG=1`.
 
 ---
 
@@ -66,7 +66,7 @@ These ACs are classified `deferred_post_merge` in v072 (DECISION-003 from `docs/
 **Discharge command:**
 
 ```bash
-python3.13 -m pytest tests/smoke/ -k preview_no_deadlock -v
+uv run pytest tests/smoke/ -k preview_no_deadlock -v
 ```
 
 **Pass criteria:** Test exits within 30 seconds; no asyncio warnings or `TimeoutError` in stderr.
@@ -82,7 +82,7 @@ python3.13 -m pytest tests/smoke/ -k preview_no_deadlock -v
 **Discharge command:**
 
 ```bash
-python3.13 -m pytest tests/smoke/ -W error::DeprecationWarning -W error::RuntimeWarning -v
+uv run pytest tests/smoke/ -W error::DeprecationWarning -W error::RuntimeWarning -v
 ```
 
 **Pass criteria:** Zero warnings from the `asyncio` module. Test suite exits with code 0.
@@ -105,16 +105,16 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k partial_file_cancel -v
 
 ---
 
-### BL-394-AC-5: Concurrent-render stderr drain does not produce contention
+### BL-403-AC-3: Concurrent renders produce distinct output files
 
-**AC text:** Two simultaneous renders complete without stderr pipe deadlock.
+**AC text:** After two concurrent real-mode renders of the same project complete, each job carries a distinct `output_path` value and the file exists on disk.
 
-**Deferral reason:** FFmpeg-environment-dependent. Pipe deadlock is only observable under real concurrent FFmpeg processes. May be auto-satisfied by BL-403 per-job output path isolation (which eliminates shared pipe contention) — verify empirically.
+**Deferral reason:** FFmpeg-environment-dependent. Requires two real concurrent renders to complete successfully; cannot be verified without real FFmpeg.
 
 **Discharge command:**
 
 ```bash
-STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k concurrent_no_contention -v
+STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k test_concurrent_renders_have_distinct_output_paths -v
 ```
 
-**Pass criteria:** Both renders complete within the test timeout; no `asyncio.TimeoutError` in logs; both jobs reach `completed` status.
+**Pass criteria:** Both renders complete with distinct `output_path` values; test passes.
