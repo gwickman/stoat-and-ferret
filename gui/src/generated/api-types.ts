@@ -2243,11 +2243,17 @@ export interface paths {
          * Create Version
          * @description Create a new version snapshot of a project timeline.
          *
+         *     When body is absent or timeline_json is None, auto-snapshots the live
+         *     timeline via _build_timeline_response() + model_dump(mode="json").
+         *
          *     Args:
          *         project_id: The unique project identifier.
-         *         request: Version creation request with timeline JSON data.
+         *         body: Optional version creation request. When absent, the server
+         *             auto-snapshots the current live timeline.
          *         project_repo: Project repository dependency.
          *         version_repo: Version repository dependency.
+         *         timeline_repo: Timeline repository dependency.
+         *         clip_repo: Clip repository dependency.
          *
          *     Returns:
          *         The created version with auto-incremented version number and checksum.
@@ -4028,11 +4034,12 @@ export interface components {
          * @description Request body for creating a new version snapshot.
          *
          *     Attributes:
-         *         timeline_json: Serialized timeline data to snapshot.
+         *         timeline_json: Serialized timeline data to snapshot. When absent or
+         *             None, the server auto-snapshots the current live timeline.
          */
         VersionCreateRequest: {
             /** Timeline Json */
-            timeline_json: string;
+            timeline_json?: string | null;
         };
         /**
          * VersionListResponse
@@ -6645,9 +6652,9 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["VersionCreateRequest"];
+                "application/json": components["schemas"]["VersionCreateRequest"] | null;
             };
         };
         responses: {
