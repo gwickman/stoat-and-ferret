@@ -22,7 +22,7 @@ This layer bridges the API Gateway (which handles HTTP concerns) and the Data Ac
 - **Async Job Queue**: Background task processing with timeout, status tracking, and handler registration
 - **Path Security**: Scan path validation against allowed root directories
 - **Rust Command Bridge**: Integration layer connecting Rust FFmpegCommand builder with Python executor
-- **Render Pipeline**: RenderJob state machine, RenderQueue (persistent FIFO), RenderExecutor (FFmpeg subprocess), RenderService orchestration
+- **Render Pipeline**: RenderJob state machine, RenderQueue (persistent FIFO), RenderExecutor (FFmpeg subprocess), RenderService orchestration, StaleRenderSweeper (periodic stale-job detection and auto-fail alongside crash recovery)
 - **Render Checkpointing**: RenderCheckpointManager for resumable render operations
 - **Preview System**: PreviewCache (LRU+TTL), HLSGenerator (FFmpeg HLS VOD), PreviewManager session state machine (INITIALIZING→GENERATING→READY/SEEKING)
 - **Migration Safety Service**: MigrationService wraps Alembic `upgrade` with pre-upgrade backup, `migration_history` audit rows, and structured `deployment.migration` events; stored on `app.state.migration_service`

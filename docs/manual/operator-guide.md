@@ -147,6 +147,28 @@ else:
 
 This avoids a filesystem round-trip to determine whether a partial file was produced.
 
+## Stale Render Recovery
+
+### StaleRenderSweeper
+
+`StaleRenderSweeper` is a background asyncio task that automatically recovers render jobs stuck in `RUNNING` status. It runs on a configurable interval (default 60 s) and transitions any job whose `updated_at` timestamp is older than `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` from `RUNNING` to `FAILED`.
+
+**Behavior:**
+
+- Jobs that have been in `RUNNING` status without a progress update for longer than the configured threshold are automatically transitioned to `FAILED`.
+- Each auto-failed job emits a `RENDER_FAILED` WebSocket event (same shape as a normal render failure) and a `render.job_stale` structured log entry.
+- Concurrent transitions (e.g., the job was cancelled by another path) are handled gracefully — the sweeper skips without error.
+
+**Configuration:**
+
+The threshold is controlled by the `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` environment variable. See `docs/manual/configuration-reference.md` for the threshold bounds and startup validation behavior.
+
+**Operator checklist when renders appear stuck:**
+
+1. Check `GET /api/v1/render/{job_id}` — if `status` is already `failed` and `error_message` contains `"stale-running sweeper"`, the sweeper has already recovered the job.
+2. If the job is still `running` and older than the configured threshold, wait for the next sweep pass (up to `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` + sweep interval seconds).
+3. Review server logs for `render.sweeper_error` events, which indicate the sweeper encountered a repository error during a sweep pass.
+
 ## Testing Mode
 
 Enable fixtures by starting the server with `STOAT_TESTING_MODE=true`. Endpoints return `403 TESTING_MODE_DISABLED` otherwise.

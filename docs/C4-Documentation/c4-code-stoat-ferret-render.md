@@ -46,10 +46,18 @@
   Location: service.py:73-400
   Key Methods: submit_job, run_job, cancel_job, recover
 
+- StaleRenderSweeper: Background task that detects and fails stuck running jobs
+  Location: sweeper.py
+  Purpose: Periodically polls for render jobs that have been in RUNNING status longer than `STOAT_RENDER_STUCK_THRESHOLD_SECONDS`; transitions each stale job to FAILED and broadcasts a RENDER_FAILED WebSocket event
+  Key Method: `run()` — main async loop that calls `list_stale_running()` on each sweep pass and handles each stale job via `_handle_stale_job()`
+
 ### Repository Implementations
 
 - AsyncSQLiteRenderRepository: SQLite implementation
   Location: render_repository.py:141-353
+  Key Methods: save, get, list, update_status, list_stale_running
+
+  - `list_stale_running(older_than: datetime) -> list[RenderJob]` — Returns render jobs currently in RUNNING status whose `updated_at` timestamp is older than the given cutoff datetime. Used by `StaleRenderSweeper` to identify jobs stuck beyond the configured threshold. Both the concrete SQLite implementation and the InMemoryRenderRepository implement this method.
 
 - InMemoryRenderRepository: In-memory test implementation
   Location: render_repository.py:356-456
