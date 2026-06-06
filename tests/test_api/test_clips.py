@@ -413,3 +413,46 @@ async def test_list_clips_with_data(
     assert len(data["clips"]) == 1
     assert data["clips"][0]["id"] == "clip-1"
     assert data["total"] == 1
+
+
+@pytest.mark.api
+async def test_list_clips_effects_default_empty_list(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """Clips with no effects return effects: [] not effects: null."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    video = make_test_video()
+    await video_repository.add(video)
+
+    clip = Clip(
+        id="clip-1",
+        project_id="proj-1",
+        source_video_id=video.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+    )
+    await clip_repository.add(clip)
+
+    response = client.get("/api/v1/projects/proj-1/clips")
+    assert response.status_code == 200
+    data = response.json()
+    clip_data = data["clips"][0]
+    assert clip_data["effects"] == []
+    assert clip_data["effects"] is not None

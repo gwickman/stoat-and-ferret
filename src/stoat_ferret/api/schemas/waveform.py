@@ -38,7 +38,7 @@ class WaveformMetadataResponse(BaseModel):
     format: str
     duration: float
     channels: int
-    samples_per_second: int
+    samples_per_second: int | None
 
 
 class WaveformSample(BaseModel):

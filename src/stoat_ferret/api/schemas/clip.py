@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ClipCreate(BaseModel):
@@ -40,9 +40,15 @@ class ClipResponse(BaseModel):
     in_point: int
     out_point: int
     timeline_position: int
-    effects: list[dict[str, Any]] | None = None
+    effects: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("effects", mode="before")
+    @classmethod
+    def coerce_none_to_empty_list(cls, v: Any) -> list[dict[str, Any]]:
+        """Convert None effects to empty list for consistent API response."""
+        return v if v is not None else []
 
 
 class ClipListResponse(BaseModel):

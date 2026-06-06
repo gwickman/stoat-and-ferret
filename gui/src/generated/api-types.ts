@@ -2658,7 +2658,7 @@ export interface components {
             /** Effects */
             effects?: {
                 [key: string]: unknown;
-            }[] | null;
+            }[];
             /**
              * Created At
              * Format: date-time
@@ -4196,7 +4196,7 @@ export interface components {
             /** Channels */
             channels: number;
             /** Samples Per Second */
-            samples_per_second: number;
+            samples_per_second: number | null;
         };
         /**
          * WaveformSample

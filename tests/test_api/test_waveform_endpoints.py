@@ -193,12 +193,12 @@ class TestGetWaveformMetadata:
         assert data["channels"] == 2
         assert data["samples_per_second"] == 10
 
-    async def test_png_metadata_zero_samples_per_second(
+    async def test_png_metadata_null_samples_per_second(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
     ) -> None:
-        """GET PNG metadata returns samples_per_second=0."""
+        """GET PNG metadata returns samples_per_second=null (not applicable for image format)."""
         waveform = _make_ready_waveform("vid-1", WaveformFormat.PNG)
         mock_waveform_service.get_waveform.return_value = waveform
 
@@ -206,7 +206,7 @@ class TestGetWaveformMetadata:
         assert response.status_code == 200
         data = response.json()
         assert data["format"] == "png"
-        assert data["samples_per_second"] == 0
+        assert data["samples_per_second"] is None
 
     async def test_not_generated_returns_404(
         self,

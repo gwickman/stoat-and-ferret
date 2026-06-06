@@ -376,6 +376,8 @@ async def test_apply_effect_unknown_type_returns_400(
     assert response.status_code == 400
     data = response.json()
     assert data["detail"]["code"] == "EFFECT_NOT_FOUND"
+    assert "valid_effect_types" in data["detail"]
+    assert isinstance(data["detail"]["valid_effect_types"], list)
 
 
 @pytest.mark.api
