@@ -55,7 +55,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 
 // 7. Render create — quality_preset must be one of draft|standard|high;
 //    render_plan is a serialized JSON string (not a nested object);
-//    total_duration is required (omitting it returns 422 PREFLIGHT_FAILED)
+//    total_duration and settings are both required (omitting either returns 422 PREFLIGHT_FAILED)
 { "project_id": "<project_id>", "output_format": "mp4", "quality_preset": "standard",
   "render_plan": "{\"total_duration\": <duration_from_step_6>, \"settings\": {}}" }
 ```
@@ -88,7 +88,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 ### Error Notes
 
 - The 202 from step 1 only confirms enqueue; check `result.errors` on the terminal status — a missing path produces a `complete` job with non-empty `errors`.
-- Step 7 returns `422 PREFLIGHT_FAILED` if `render_plan` is absent or `total_duration` is missing; always fetch `.duration` from step 6 first.
+- Step 7 returns `422 PREFLIGHT_FAILED` if `render_plan` is absent, or if `render_plan` JSON is missing `total_duration` or `settings`; always fetch `.duration` from step 6 first.
 - Step 7 returns `400 INVALID_PRESET` if `quality_preset` is not `draft|standard|high`.
 - If the wait endpoint returns `408 JOB_WAIT_TIMEOUT`, the job is still running; re-call with the same `job_id`.
 

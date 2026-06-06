@@ -872,7 +872,7 @@ Submit a render job for a project. The server queues the job and begins renderin
   "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "project_id": "proj-xyz789",
   "status": "queued",
-  "output_path": "/output/proj-xyz789_20250115T110000.mp4",
+  "output_path": "data/renders/a1b2c3d4-e5f6-7890-abcd-ef1234567890.mp4",
   "output_format": "mp4",
   "quality_preset": "standard",
   "progress": 0.0,
@@ -918,7 +918,7 @@ Get the status of a render job by its ID.
   "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "project_id": "proj-xyz789",
   "status": "running",
-  "output_path": "/output/proj-xyz789_20250115T110000.mp4",
+  "output_path": "data/renders/a1b2c3d4-e5f6-7890-abcd-ef1234567890.mp4",
   "output_format": "mp4",
   "quality_preset": "standard",
   "progress": 0.45,
@@ -973,7 +973,7 @@ List all render jobs with pagination and optional status filter.
       "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "project_id": "proj-xyz789",
       "status": "completed",
-      "output_path": "/output/proj-xyz789_20250115T110000.mp4",
+      "output_path": "data/renders/a1b2c3d4-e5f6-7890-abcd-ef1234567890.mp4",
       "output_format": "mp4",
       "quality_preset": "standard",
       "progress": 1.0,
@@ -1463,6 +1463,7 @@ elif isinstance(detail, list):
 | `created_at` | datetime | Job creation time |
 | `updated_at` | datetime | Last update time |
 | `completed_at` | datetime or null | Completion time (null if not terminal) |
+| `partial_file_detected` | boolean | Set to true on cancelled jobs when a partial output file was written to disk during the interrupted render |
 
 ### QueueStatusResponse
 
