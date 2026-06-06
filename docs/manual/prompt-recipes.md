@@ -41,8 +41,8 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 ### Sample Request Bodies
 
 ```jsonc
-// 1. Scan request
-{ "path": "/abs/path/to/videos", "recursive": true }
+// 1. Scan request — use recursive:false on a multi-subdir path to avoid 400 RECURSIVE_SCAN_FORBIDDEN
+{ "path": "/abs/path/to/videos", "recursive": false }
 
 // 4. Project create
 { "name": "demo", "output_width": 1920, "output_height": 1080, "output_fps": 30 }
@@ -80,8 +80,9 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
   "quality_preset": "standard", "progress": 0.0, "retry_count": 0, … }
 
 // Step 8 → RenderJobResponse (200, terminal)
-{ "job_id": "job_xyz789", "status": "completed", "progress": 1.0,
-  "result": { "output_path": "renders/<project_id>.mp4", … }, "error": null }
+{ "id": "job_xyz789", "project_id": "<project_id>", "status": "completed",
+  "output_path": "renders/<job_uuid>/<project_id>.mp4", "output_format": "mp4",
+  "completed_at": "2026-04-25T12:05:00Z" }
 ```
 
 ### Error Notes
