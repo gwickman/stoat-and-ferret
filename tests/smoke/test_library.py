@@ -379,3 +379,193 @@ async def test_concurrent_renders_have_distinct_output_paths(
         assert paths[0] != paths[1], f"Expected distinct output paths, got: {paths}"
     finally:
         ws_manager.broadcast = original_broadcast
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
+async def test_partial_file_cancel(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Cancel mid-encode: partial_file_detected is True (BL-415-AC-3, BL-462-AC-1)."""
+    await scan_videos_and_wait(smoke_client, videos_dir)
+    resp = await smoke_client.get("/api/v1/videos?limit=100")
+    assert resp.status_code == 200
+    videos_list = resp.json()["videos"]
+    clip_video = next(
+        (v for v in videos_list if v["filename"] == "81872-577880797_medium.mp4"), None
+    )
+    assert clip_video is not None, "Expected 51s demo video not found in library"
+    video_id = clip_video["id"]
+    fps = clip_video["frame_rate_numerator"] / clip_video["frame_rate_denominator"]
+    clip_duration = clip_video["duration_frames"] / fps
+
+    resp = await smoke_client.post("/api/v1/projects", json={"name": "Partial File Cancel Test"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": clip_video["duration_frames"],
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+
+    for _attempt in range(2):
+        resp = await smoke_client.post(
+            "/api/v1/render",
+            json={
+                "project_id": project_id,
+                "render_plan": json.dumps({"total_duration": clip_duration, "settings": {}}),
+            },
+        )
+        assert resp.status_code == 201
+        job_id = resp.json()["id"]
+
+        cancelled = False
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + 120.0
+        while loop.time() < deadline:
+            r = await smoke_client.get(f"/api/v1/render/{job_id}")
+            assert r.status_code == 200
+            body = r.json()
+            if body["status"] == "running" and 0.0 < body["progress"] < 0.2:
+                cancel_resp = await smoke_client.post(f"/api/v1/render/{job_id}/cancel")
+                if cancel_resp.status_code == 409:
+                    break
+                assert cancel_resp.status_code == 200
+                cancelled = True
+                break
+            if body["status"] in {"completed", "failed", "cancelled"}:
+                break
+            await asyncio.sleep(0.5)
+
+        if not cancelled:
+            continue
+
+        deadline = asyncio.get_running_loop().time() + 30.0
+        while asyncio.get_running_loop().time() < deadline:
+            r = await smoke_client.get(f"/api/v1/render/{job_id}")
+            assert r.status_code == 200
+            body = r.json()
+            if body["status"] == "cancelled":
+                assert body["partial_file_detected"] is True, (
+                    "Expected partial_file_detected=True after mid-encode cancel"
+                )
+                return
+            if body["status"] in {"completed", "failed"}:
+                break
+            await asyncio.sleep(0.5)
+
+    pytest.fail("Could not achieve mid-encode cancel after 2 attempts")
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
+async def test_render_progress_increments(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """FFmpeg progress increments over time via REST and WS (BL-394-AC-2/3, BL-462-AC-2)."""
+    transport: httpx.ASGITransport = smoke_client._transport  # type: ignore[assignment]
+    ws_manager = transport.app.state.ws_manager  # type: ignore[union-attr]
+    ws_queue: asyncio.Queue[dict] = asyncio.Queue()
+    original_broadcast = ws_manager.broadcast
+
+    async def _capture(event: dict) -> None:
+        await ws_queue.put(event)
+
+    ws_manager.broadcast = _capture
+    try:
+        await scan_videos_and_wait(smoke_client, videos_dir)
+        resp = await smoke_client.get("/api/v1/videos?limit=100")
+        assert resp.status_code == 200
+        videos_list = resp.json()["videos"]
+        clip_video = next(
+            (v for v in videos_list if v["filename"] == "81872-577880797_medium.mp4"), None
+        )
+        assert clip_video is not None, "Expected 51s demo video not found in library"
+        video_id = clip_video["id"]
+        fps = clip_video["frame_rate_numerator"] / clip_video["frame_rate_denominator"]
+        clip_duration = clip_video["duration_frames"] / fps
+
+        resp = await smoke_client.post(
+            "/api/v1/projects", json={"name": "Render Progress Increments Test"}
+        )
+        assert resp.status_code == 201
+        project_id = resp.json()["id"]
+
+        resp = await smoke_client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "source_video_id": video_id,
+                "in_point": 0,
+                "out_point": clip_video["duration_frames"],
+                "timeline_position": 0,
+            },
+        )
+        assert resp.status_code == 201
+
+        resp = await smoke_client.post(
+            "/api/v1/render",
+            json={
+                "project_id": project_id,
+                "render_plan": json.dumps({"total_duration": clip_duration, "settings": {}}),
+            },
+        )
+        assert resp.status_code == 201
+        job_id = resp.json()["id"]
+
+        poll_progress_values: list[float] = []
+        ws_progress_values: list[float] = []
+        render_done = asyncio.Event()
+
+        async def _poll_rest() -> None:
+            terminal = {"completed", "failed", "cancelled"}
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + 200.0
+            while loop.time() < deadline and not render_done.is_set():
+                r = await smoke_client.get(f"/api/v1/render/{job_id}")
+                if r.status_code == 200:
+                    body = r.json()
+                    poll_progress_values.append(body["progress"])
+                    if body["status"] in terminal:
+                        render_done.set()
+                        return
+                await asyncio.sleep(1.0)
+
+        async def _collect_ws() -> None:
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + 200.0
+            while loop.time() < deadline:
+                if render_done.is_set():
+                    return
+                remaining = deadline - loop.time()
+                try:
+                    event = await asyncio.wait_for(ws_queue.get(), timeout=min(remaining, 5.0))
+                except asyncio.TimeoutError:
+                    if render_done.is_set():
+                        return
+                    continue
+                if event["type"] == "render_progress" and event["payload"].get("job_id") == job_id:
+                    ws_progress_values.append(event["payload"]["progress"])
+                elif (
+                    event["type"] == "render_completed" and event["payload"].get("job_id") == job_id
+                ):
+                    render_done.set()
+                    return
+
+        await asyncio.gather(_poll_rest(), _collect_ws())
+
+        distinct_nonzero = {p for p in poll_progress_values if p > 0.0}
+        assert len(distinct_nonzero) >= 2, (
+            f"Expected ≥2 distinct non-zero REST progress values, got: {sorted(distinct_nonzero)}"
+        )
+        if ws_progress_values:
+            ws_max = max(ws_progress_values)
+            poll_max = max(poll_progress_values)
+            assert ws_max >= poll_max, f"WS max progress {ws_max:.3f} < REST max {poll_max:.3f}"
+    finally:
+        ws_manager.broadcast = original_broadcast
