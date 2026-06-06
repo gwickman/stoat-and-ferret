@@ -6712,6 +6712,24 @@
             "type": "string",
             "format": "date-time",
             "title": "Updated At"
+          },
+          "subtitle_count": {
+            "type": "integer",
+            "title": "Subtitle Count",
+            "default": 0
+          },
+          "data_count": {
+            "type": "integer",
+            "title": "Data Count",
+            "default": 0
+          },
+          "subtitle_streams": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Subtitle Streams"
           }
         },
         "type": "object",

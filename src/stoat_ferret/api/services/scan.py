@@ -368,6 +368,9 @@ async def scan_directory(
                 thumbnail_path=thumbnail_path,
                 created_at=existing.created_at if existing else datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
+                subtitle_count=metadata.subtitle_count,
+                data_count=metadata.data_count,
+                subtitle_streams=metadata.subtitle_streams,
             )
 
             if existing:

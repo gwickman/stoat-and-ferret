@@ -4175,6 +4175,20 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Subtitle Count
+             * @default 0
+             */
+            subtitle_count: number;
+            /**
+             * Data Count
+             * @default 0
+             */
+            data_count: number;
+            /** Subtitle Streams */
+            subtitle_streams?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * VideoSearchResponse

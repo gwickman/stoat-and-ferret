@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from stoat_ferret.ffmpeg.probe import FFprobeError, VideoMetadata, ffprobe_video
+from stoat_ferret.ffmpeg.probe import (
+    FFprobeError,
+    VideoMetadata,
+    _parse_ffprobe_output,
+    ffprobe_video,
+)
 from tests.conftest import requires_ffprobe
 
 
@@ -83,6 +89,22 @@ class TestVideoMetadata:
             file_size=1000,
         )
         assert metadata.audio_codec is None
+
+    def test_auxiliary_stream_fields_default_to_zero(self) -> None:
+        """subtitle_count, data_count, subtitle_streams default to 0/[]."""
+        metadata = VideoMetadata(
+            duration_seconds=1.0,
+            width=320,
+            height=240,
+            frame_rate_numerator=24,
+            frame_rate_denominator=1,
+            video_codec="h264",
+            audio_codec=None,
+            file_size=1000,
+        )
+        assert metadata.subtitle_count == 0
+        assert metadata.data_count == 0
+        assert metadata.subtitle_streams == []
 
 
 @requires_ffprobe
@@ -175,3 +197,54 @@ class TestFFprobeExports:
     def test_ffprobe_error_is_exception(self) -> None:
         """Test FFprobeError is an exception type."""
         assert issubclass(FFprobeError, Exception)
+
+
+class TestParseFFprobeOutput:
+    """Tests for _parse_ffprobe_output subtitle/data stream parsing (AC-3)."""
+
+    def _base_data(self, extra_streams: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        streams: list[dict[str, Any]] = [
+            {
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 320,
+                "height": 240,
+                "r_frame_rate": "24/1",
+            },
+            {"codec_type": "audio", "codec_name": "aac"},
+        ]
+        if extra_streams:
+            streams.extend(extra_streams)
+        return {"streams": streams, "format": {"duration": "1.0", "size": "1000"}}
+
+    def test_subtitle_streams_parsed(self) -> None:
+        """subtitle_count and subtitle_streams reflect two subtitle tracks."""
+        data = self._base_data(
+            [
+                {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "eng"}},
+                {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "fra"}},
+            ]
+        )
+        metadata = _parse_ffprobe_output(data, Path("test.mkv"))
+
+        assert metadata.subtitle_count == 2
+        assert len(metadata.subtitle_streams) == 2
+        assert metadata.subtitle_streams[0] == {"codec_name": "subrip", "language": "eng"}
+        assert metadata.subtitle_streams[1] == {"codec_name": "subrip", "language": "fra"}
+
+    def test_data_count_parsed(self) -> None:
+        """data_count reflects data-type streams."""
+        data = self._base_data([{"codec_type": "data", "codec_name": "bin_data"}])
+        metadata = _parse_ffprobe_output(data, Path("test.mp4"))
+
+        assert metadata.data_count == 1
+        assert metadata.subtitle_count == 0
+
+    def test_no_auxiliary_streams(self) -> None:
+        """subtitle_count is 0 and subtitle_streams is [] when no subtitles present."""
+        data = self._base_data()
+        metadata = _parse_ffprobe_output(data, Path("test.mp4"))
+
+        assert metadata.subtitle_count == 0
+        assert metadata.data_count == 0
+        assert metadata.subtitle_streams == []
