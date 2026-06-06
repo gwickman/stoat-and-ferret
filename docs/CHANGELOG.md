@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v074] — Agent-Surface Accuracy & Architecture Hygiene (2026-06-06)
+
+### Fixed
+- Fixed operator-guide.md render payload examples to include `render_plan` wrapper; removed stale per-job `output_path` field from WebSocket poll-response shape (BL-375, PR #504)
+- Fixed 03_api-reference.md missing `partial_file_detected` field in RenderJob schema section (BL-464, PR #505)
+- Fixed agent-doc recipe examples showing outdated render response shape and incorrect PREFLIGHT_FAILED claim (BL-402, PR #504/#505)
+- Hoisted render settings validation to router level: `GET /render` returns 422 with `PREFLIGHT_FAILED` when `render_plan.settings` key is absent or malformed, before any job is created (BL-465, PR #503)
+
+### Added
+- Added `GET /api/v1/projects/{project_id}/clips/{clip_id}` and `GET /api/v1/projects/{project_id}/clips/{clip_id}/effects` endpoints (BL-409, PR #509)
+- Added 8 API ergonomics fixes: `ClipResponse.effects` defaults to `[]`, `waveform_id` is now an async-id string, `EFFECT_NOT_FOUND` enumerated in error schema, batch quality naming corrected, and 4 additional papercuts (BL-405, PR #508)
+- Added optional `VersionCreateRequest` body to `POST /versions`; body-less POST auto-snapshots the current timeline server-side (BL-404, PR #506)
+- Added `subtitle_count` and `data_count` fields to `VideoResponse` schema; backed by Alembic migration on video table; populated via FFmpeg probe (BL-408, PR #510)
+- Added `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` bounds documentation (60–3600) to `docs/setup/04_configuration.md` and `docs/manual/configuration-reference.md` (BL-414, PR #507)
+- Added `StaleRenderSweeper` to C4 component and code-level docs; updated smoke-test inventory from 84 to 191 tests across 37 files (BL-399, BL-400, PR #511)
+- Added `timeout=900` to `run_journey()` subprocess.run with `TimeoutExpired` handler in `scripts/uat_runner.py` (BL-398, PR #512)
+- Added smoke tests for v074 behavioral changes: settings-absent 422, render settings validation, subtitle/data stream counts (MANDATE_A, PR #513)
+- Updated smoke-test harness guide for v074 additions and discharge procedures (MANDATE_B, PR #514)
+
+### Deferred
+- 2 behavioral ACs pending FFmpeg environment and corpus:
+  - FFmpeg-gated (2 ACs): BL-408 AC-1 (`test_sintel_subtitle_count`) and AC-2 (`test_bbb_data_stream_count`); discharge: `STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_video_auxiliary_streams.py` with Sintel MKV and BBB MOV corpus
+
 ## [v073] — Render Correctness & Test-Coverage Discharge (2026-06-06)
 
 ### Fixed
