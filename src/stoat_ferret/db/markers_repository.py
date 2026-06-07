@@ -39,7 +39,9 @@ class MarkerRepository(Protocol):
         """Add a marker to the repository."""
         ...
 
-    async def list_by_project(self, project_id: str, region_type: str | None = None) -> list[Marker]:
+    async def list_by_project(
+        self, project_id: str, region_type: str | None = None
+    ) -> list[Marker]:
         """List markers for a project ordered by start_time ASC."""
         ...
 
@@ -99,7 +101,9 @@ class AsyncSQLiteMarkerRepository:
         await self._conn.commit()
         return marker
 
-    async def list_by_project(self, project_id: str, region_type: str | None = None) -> list[Marker]:
+    async def list_by_project(
+        self, project_id: str, region_type: str | None = None
+    ) -> list[Marker]:
         """List markers for a project ordered by start_time ASC."""
         if region_type is not None:
             cursor = await self._conn.execute(
@@ -220,7 +224,9 @@ class AsyncInMemoryMarkerRepository:
         self._markers[marker.id] = marker
         return marker
 
-    async def list_by_project(self, project_id: str, region_type: str | None = None) -> list[Marker]:
+    async def list_by_project(
+        self, project_id: str, region_type: str | None = None
+    ) -> list[Marker]:
         """List markers for a project ordered by start_time ASC."""
         result = [m for m in self._markers.values() if m.project_id == project_id]
         if region_type is not None:
