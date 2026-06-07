@@ -390,3 +390,117 @@ async def test_create_effect_type(
     clips = resp.json()["clips"]
     clip = next(c for c in clips if c["id"] == clip_id)
     assert any(e["effect_type"] == effect_type for e in clip["effects"])
+
+
+# ---------------------------------------------------------------------------
+# Automation envelope smoke tests (BL-420)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_apply_volume_with_automation_envelope(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Valid AutomationEnvelope on volume effect → 201, filter_preview non-null."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Automation Envelope Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "volume",
+            "parameters": {
+                "volume": {
+                    "default": 0.5,
+                    "keyframes": [
+                        {"t": 0.0, "value": 0.0, "curve": "linear"},
+                        {"t": 1.0, "value": 1.0, "curve": "linear"},
+                    ],
+                }
+            },
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["filter_preview"] is not None
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_apply_volume_with_malformed_envelope(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Non-monotonic keyframe times → 400 (validation error before Rust compiler)."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Malformed Envelope Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "volume",
+            "parameters": {
+                "volume": {
+                    "default": 0.5,
+                    "keyframes": [
+                        {"t": 1.0, "value": 1.0, "curve": "linear"},
+                        {"t": 0.0, "value": 0.0, "curve": "linear"},  # non-monotonic
+                    ],
+                }
+            },
+        },
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_apply_volume_scalar_regression(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Scalar parameter path unchanged — 201, filter_preview is None."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Scalar Regression Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "volume",
+            "parameters": {"volume": 0.8},
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data.get("filter_preview") is None
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_apply_non_automatable_with_envelope(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Envelope on a parameter not in the effect's automatable set → 400."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Non-Automatable Envelope Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "volume",
+            "parameters": {
+                "nonexistent_param": {
+                    "default": 0.5,
+                    "keyframes": [{"t": 0.0, "value": 0.5, "curve": "linear"}],
+                }
+            },
+        },
+    )
+    assert resp.status_code == 400

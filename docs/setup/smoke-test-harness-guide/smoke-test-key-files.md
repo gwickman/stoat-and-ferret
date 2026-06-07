@@ -23,7 +23,7 @@ The test harness has three tiers:
 | `tests/smoke/test_library.py` | UC-02: library search; also video detail, thumbnail, and delete (v019) |
 | `tests/smoke/test_project_workflow.py` | UC-03 and UC-09: project CRUD and deletion |
 | `tests/smoke/test_clip_workflow.py` | UC-04 and UC-10: clip add and modify |
-| `tests/smoke/test_effects.py` | UC-05, UC-06, UC-11: effects catalog, update/delete, speed and stacking |
+| `tests/smoke/test_effects.py` | UC-05, UC-06, UC-11: effects catalog, update/delete, speed and stacking; automation envelope coverage (valid envelope, malformed envelope, scalar regression, non-automatable parameter) (BL-420) |
 | `tests/smoke/test_transitions.py` | UC-07: fade transition |
 | `tests/smoke/test_health.py` | UC-08: health live and ready probes; preview and proxy subsystem checks (v026) |
 
