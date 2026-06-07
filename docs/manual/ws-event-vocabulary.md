@@ -513,4 +513,4 @@ Events with no captured emission during v042 validation are flagged `Inferred` i
 - [`prompt-recipes.md`](prompt-recipes.md#5-websocket-event-monitoring-with-reconnect) — Recipe 5 is the long-poll companion: how to consume this event stream from an agent, with a worked `Last-Event-ID` reconnect sequence.
 - [`api-usage-examples.md`](api-usage-examples.md) — error semantics for the HTTP requests that emit these events.
 - [`scripts/examples/dump-ws-events.py`](../../scripts/examples/dump-ws-events.py) — runnable consumer used to capture the evidence above.
-- OpenAPI state machine documentation (BL-278) — see `docs/design/05-api-specification.md` for state-transition diagrams that this vocabulary's terminal markings reference.
+- OpenAPI state machine documentation (BL-278) — see `docs/design/01-release-01/05-api-specification.md` for state-transition diagrams that this vocabulary's terminal markings reference.

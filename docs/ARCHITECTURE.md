@@ -63,8 +63,8 @@ stoat-and-ferret is an AI-driven video editor built on a **hybrid Python/Rust ar
 
 | Document | Description |
 |----------|-------------|
-| [docs/design/02-architecture.md](design/02-architecture.md) | Detailed architecture specification with data models and flows |
-| [docs/design/05-api-specification.md](design/05-api-specification.md) | REST API design |
-| [docs/design/07-quality-architecture.md](design/07-quality-architecture.md) | Quality attributes and implementation patterns |
+| [docs/design/01-release-01/02-architecture.md](design/01-release-01/02-architecture.md) | Detailed architecture specification with data models and flows |
+| [docs/design/01-release-01/05-api-specification.md](design/01-release-01/05-api-specification.md) | REST API design |
+| [docs/design/01-release-01/07-quality-architecture.md](design/01-release-01/07-quality-architecture.md) | Quality attributes and implementation patterns |
 | [docs/C4-Documentation/](C4-Documentation/README.md) | Generated C4 documentation (context, container, component, code levels) |
 | [AGENTS.md](../AGENTS.md) | Developer guide with commands, standards, and workflows |
