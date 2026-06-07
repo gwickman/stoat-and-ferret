@@ -47,6 +47,7 @@ class EffectDefinition:
     build_fn: Callable[[dict[str, Any]], str] = field(repr=False)
     ai_summary: str = ""
     example_prompt: str = ""
+    automatable: frozenset[str] = field(default_factory=frozenset)
 
 
 def _text_overlay_preview() -> str:
@@ -460,6 +461,7 @@ VOLUME = EffectDefinition(
     build_fn=_build_volume,
     ai_summary="Adjust audio loudness up or down using a linear multiplier or dB value.",
     example_prompt="Reduce the audio volume on this clip to 50%.",
+    automatable=frozenset({"volume"}),
 )
 
 AUDIO_FADE = EffectDefinition(
