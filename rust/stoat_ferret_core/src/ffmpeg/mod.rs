@@ -59,6 +59,7 @@
 //! ```
 
 pub mod audio;
+pub mod automation;
 mod command;
 pub mod drawtext;
 pub mod expression;

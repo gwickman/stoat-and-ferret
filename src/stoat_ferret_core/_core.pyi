@@ -1434,6 +1434,102 @@ def concat_filter(n: int, v: int, a: int) -> Filter:
     """
     ...
 
+# ========== Automation Types ==========
+
+class CurveKind:
+    """Interpolation curve kind for keyframe segments.
+
+    Used as string values in :class:`Keyframe`'s ``curve`` field.
+    """
+
+    Hold: str
+    Linear: str
+    Exponential: str
+    EaseInOut: str
+
+class Keyframe:
+    """A single keyframe with a time, value, and interpolation curve.
+
+    The ``curve`` field controls how the value is interpolated from this
+    keyframe to the next. Use :class:`CurveKind` constants for valid values.
+    """
+
+    @property
+    def t(self) -> float:
+        """Time position of this keyframe (in seconds)."""
+        ...
+
+    @property
+    def value(self) -> float:
+        """Value at this keyframe."""
+        ...
+
+    @property
+    def curve(self) -> str:
+        """Interpolation curve kind (see :class:`CurveKind`)."""
+        ...
+
+    def __new__(cls, t: float, value: float, curve: str) -> Keyframe:
+        """Creates a new Keyframe.
+
+        Args:
+            t: Time position in seconds.
+            value: Value at this keyframe.
+            curve: Interpolation curve kind string (e.g. ``"Linear"``).
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class Automation:
+    """An automation curve defined by a default value and a list of keyframes.
+
+    When compiled via :func:`compile_automation`, produces an FFmpeg
+    ``if(lt(t,...))`` expression tree that evaluates to the interpolated
+    value at any time ``t``.
+    """
+
+    @property
+    def default(self) -> float:
+        """Default value used when no keyframes are present."""
+        ...
+
+    @property
+    def keyframes(self) -> list[Keyframe]:
+        """Ordered list of keyframes defining the automation curve."""
+        ...
+
+    def __new__(cls, default: float, keyframes: list[Keyframe]) -> Automation:
+        """Creates a new Automation.
+
+        Args:
+            default: Fallback value when keyframes list is empty.
+            keyframes: List of keyframes defining the curve.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+# ========== Automation Functions ==========
+
+def compile_automation(automation: Automation) -> str:
+    """Compile an automation curve into an FFmpeg expression string.
+
+    Converts a keyframe list into a nested ``if(lt(t,...))`` expression
+    suitable for use in FFmpeg filter parameters that accept dynamic
+    expressions (e.g. ``volume``, ``x``, ``y``).
+
+    Args:
+        automation: The automation curve to compile.
+
+    Returns:
+        An FFmpeg expression string.
+
+    Raises:
+        ValueError: If keyframe times are not strictly increasing.
+    """
+    ...
+
 # ========== Layout Types ==========
 
 class LayoutPosition:
