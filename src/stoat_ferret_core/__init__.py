@@ -22,6 +22,13 @@ Speed Control
 -------------
 - SpeedControl: Speed adjustment builder with setpts and atempo auto-chaining
 
+Automation Engine
+-----------------
+- Automation: Keyframe-based automation curve
+- Keyframe: Single keyframe with time, value, and interpolation curve
+- CurveKind: Interpolation curve constants (Hold, Linear, Exponential, EaseInOut)
+- compile_automation: Compile an automation curve to an FFmpeg expression string
+
 FFmpeg Command Building
 -----------------------
 - FFmpegCommand: Type-safe builder for FFmpeg command arguments
@@ -54,12 +61,14 @@ try:
         AfadeBuilder,
         AmixBuilder,
         AudioMixSpec,
+        Automation,
         BatchJobStatus,
         BatchProgress,
         Clip,
         ClipValidationError,
         CommandError,
         CompositionClip,
+        CurveKind,
         DrawtextBuilder,
         DuckingPattern,
         Duration,
@@ -72,6 +81,7 @@ try:
         FilterChain,
         FilterGraph,
         FrameRate,
+        Keyframe,
         LayoutError,
         LayoutPosition,
         LayoutPreset,
@@ -103,6 +113,7 @@ try:
         calculate_composition_positions,
         calculate_progress,
         calculate_timeline_duration,
+        compile_automation,
         concat_filter,
         detect_hardware_encoders,
         escape_filter_text,
@@ -171,6 +182,10 @@ except ImportError:
     FadeBuilder = _not_built  # type: ignore[misc,assignment]
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
     AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
+    Automation = _not_built  # type: ignore[misc,assignment]
+    compile_automation = _not_built
+    CurveKind = _not_built  # type: ignore[misc,assignment]
+    Keyframe = _not_built  # type: ignore[misc,assignment]
     FFmpegCommand = _not_built  # type: ignore[misc,assignment]
     Filter = _not_built  # type: ignore[misc,assignment]
     FilterChain = _not_built  # type: ignore[misc,assignment]
@@ -260,6 +275,11 @@ __all__ = [
     "FadeBuilder",
     "XfadeBuilder",
     "AcrossfadeBuilder",
+    # Automation types and compiler
+    "Automation",
+    "compile_automation",
+    "CurveKind",
+    "Keyframe",
     # FFmpeg command building
     "FFmpegCommand",
     "Filter",

@@ -114,6 +114,12 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::transitions::XfadeBuilder>()?;
     m.add_class::<ffmpeg::transitions::AcrossfadeBuilder>()?;
 
+    // Register automation types and compiler
+    m.add_class::<ffmpeg::automation::Automation>()?;
+    m.add_class::<ffmpeg::automation::Keyframe>()?;
+    m.add_class::<ffmpeg::automation::CurveKind>()?;
+    m.add_function(wrap_pyfunction!(ffmpeg::automation::py_compile_automation, m)?)?;
+
     // Register layout types
     m.add_class::<layout::position::LayoutPosition>()?;
     m.add_class::<layout::preset::LayoutPreset>()?;
