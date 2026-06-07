@@ -71,6 +71,12 @@ The test harness has three tiers:
 | `tests/smoke/test_versions.py` | Optional version body (BL-404): POST /versions with no body creates a version with auto-snapshot timeline_json (v074). |
 | `tests/smoke/test_uat_runner.py` | UAT runner timeout guard (BL-398): asserts subprocess.run in run_journey() carries timeout=900; behavioral test simulates TimeoutExpired and verifies JourneyResult(status='failed') with timeout message (v074). |
 
+### Phase 6 — v075 Smoke Additions (BL-419)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_markers.py` | Timeline markers CRUD lifecycle (create/list/update/delete), overlap rejection for section-type markers (→ 422), start-time ASC ordering, and 404 on non-existent project (BL-419, v075). |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
