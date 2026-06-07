@@ -581,6 +581,57 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Project",
+        "description": "Update project fields (partial update).\n\nArgs:\n    project_id: The unique project identifier.\n    project_data: Fields to update (all optional).\n    repo: Project repository dependency.\n\nReturns:\n    Updated project details.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "update_project_api_v1_projects__project_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "projects"
@@ -5740,6 +5791,26 @@
             "minimum": 1.0,
             "title": "Output Fps",
             "default": 30
+          },
+          "sample_rate": {
+            "type": "integer",
+            "enum": [
+              44100,
+              48000,
+              96000
+            ],
+            "title": "Sample Rate",
+            "default": 48000
+          },
+          "bit_depth": {
+            "type": "integer",
+            "enum": [
+              16,
+              24,
+              32
+            ],
+            "title": "Bit Depth",
+            "default": 24
           }
         },
         "additionalProperties": false,
@@ -5794,6 +5865,14 @@
             "type": "integer",
             "title": "Output Fps"
           },
+          "sample_rate": {
+            "type": "integer",
+            "title": "Sample Rate"
+          },
+          "bit_depth": {
+            "type": "integer",
+            "title": "Bit Depth"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -5812,11 +5891,102 @@
           "output_width",
           "output_height",
           "output_fps",
+          "sample_rate",
+          "bit_depth",
           "created_at",
           "updated_at"
         ],
         "title": "ProjectResponse",
         "description": "Project response."
+      },
+      "ProjectUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "output_width": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Width"
+          },
+          "output_height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Height"
+          },
+          "output_fps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Fps"
+          },
+          "sample_rate": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  44100,
+                  48000,
+                  96000
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Rate"
+          },
+          "bit_depth": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  16,
+                  24,
+                  32
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bit Depth"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProjectUpdate",
+        "description": "Update project request (partial)."
       },
       "ProxyBatchRequest": {
         "properties": {

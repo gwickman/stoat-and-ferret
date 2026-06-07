@@ -367,6 +367,12 @@ PROJECTS_AUDIO_MIX_COLUMNS = [
     ("audio_mix_json", "TEXT"),
 ]
 
+# Columns to add to projects table for audio baseline (BL-422).
+PROJECTS_AUDIO_BASELINE_COLUMNS = [
+    ("sample_rate", "INTEGER NOT NULL DEFAULT 48000"),
+    ("bit_depth", "INTEGER NOT NULL DEFAULT 24"),
+]
+
 
 def _alter_videos_add_auxiliary_columns(conn: sqlite3.Connection) -> None:
     """Add auxiliary stream columns to videos table idempotently.
@@ -403,6 +409,20 @@ def _alter_projects_add_audio_mix_column(conn: sqlite3.Connection) -> None:
         conn: SQLite database connection.
     """
     for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
+def _alter_projects_add_audio_baseline_columns(conn: sqlite3.Connection) -> None:
+    """Add sample_rate and bit_depth columns to projects table idempotently.
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in PROJECTS_AUDIO_BASELINE_COLUMNS:
         try:
             conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError as e:
@@ -477,6 +497,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
+    _alter_projects_add_audio_baseline_columns(conn)
     _alter_render_jobs_add_partial_columns(conn)
     conn.commit()
 
@@ -504,6 +525,22 @@ async def _alter_projects_add_audio_mix_column_async(
         db: aiosqlite database connection.
     """
     for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
+async def _alter_projects_add_audio_baseline_columns_async(
+    db: aiosqlite.Connection,
+) -> None:
+    """Add sample_rate and bit_depth columns to projects table idempotently (async).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in PROJECTS_AUDIO_BASELINE_COLUMNS:
         try:
             await db.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError as e:
@@ -592,5 +629,6 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
+    await _alter_projects_add_audio_baseline_columns_async(db)
     await _alter_render_jobs_add_partial_columns_async(db)
     await db.commit()
