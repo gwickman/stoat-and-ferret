@@ -373,6 +373,30 @@ mod tests {
         assert!(result.ends_with(",1))"), "unexpected: {result}");
     }
 
+    // --- Constructor and repr coverage (py_new / __repr__) ---
+
+    #[test]
+    fn test_keyframe_py_new_and_repr() {
+        let kf = Keyframe::py_new(1.5, 2.0, "Linear".to_string());
+        assert!((kf.t - 1.5).abs() < 1e-10);
+        assert!((kf.value - 2.0).abs() < 1e-10);
+        assert_eq!(kf.curve, "Linear");
+        let repr = kf.__repr__();
+        assert!(repr.contains("Keyframe"), "repr: {repr}");
+        assert!(repr.contains("Linear"), "repr: {repr}");
+    }
+
+    #[test]
+    fn test_automation_py_new_and_repr() {
+        let kf = Keyframe::py_new(0.0, 0.5, "Hold".to_string());
+        let a = Automation::py_new(0.25, vec![kf]);
+        assert!((a.default - 0.25).abs() < 1e-10);
+        assert_eq!(a.keyframes.len(), 1);
+        let repr = a.__repr__();
+        assert!(repr.contains("Automation"), "repr: {repr}");
+        assert!(repr.contains("1 items"), "repr: {repr}");
+    }
+
     // --- Non-monotonic rejection ---
 
     #[test]
