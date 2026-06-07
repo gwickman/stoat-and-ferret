@@ -149,7 +149,7 @@ The FastAPI `lifespan()` function in `src/stoat_ferret/api/app.py:126` implement
 | 8 | Feature Flag Audit Log | 178 | Record enabled flags to `feature_flag_log` table (requires Phase 7) |
 | 9 | AuditLogger Initialization | 181–184 | Open sync `sqlite3` connection; create `AuditLogger`; required by repositories |
 | 10 | Repositories Initialized | 186–194 | Create `AsyncSQLiteBatchRepository`, `SQLiteProxyRepository`, and media repositories (require Phase 6) |
-| 11 | Application Services | 196–287 | Instantiate `ThumbnailService`, `WaveformService`, `ProxyService`, `RenderService`, `PreviewManager`; register job handlers at lines 273–287 |
+| 11 | Application Services | 196–287 | Instantiate `ThumbnailService`, `WaveformService`, `ProxyService`, `RenderService`, `PreviewManager`, `QCService`, `DeliveryProfileService`; register job handlers at lines 273–287 |
 | 12 | Background Job Worker | 289–291 | Start `asyncio.create_task(job_queue.process_jobs())`; all handlers must be registered first |
 | 13 | Gate Cleared & Startup Event | 305–313 | Set `app.state._startup_ready = True`; emit `deployment.startup` log event; `/health` returns 200 |
 | 14 | Optional Synthetic Monitoring | 320–337 | If `synthetic_monitoring` flag enabled, start `SyntheticMonitoringTask`; probes the initialized app via ASGITransport |
@@ -321,6 +321,7 @@ All structured log calls follow the pattern `logger.info("event_name", key=value
 | `render.*` | Domain | Render workflow events (endpoint-level) | `render.validation_failed` |
 | `render_worker.*` | Domain | Render worker operational events (command building, segment handling, worker lifecycle) | `render_worker.multi_segment_truncated` |
 | `testing.*` | Domain (gated) | Testing/debug operations behind feature flag | `testing.seed.created`, `testing.seed.forbidden` |
+| `qc.*` | Domain | QC analysis pass lifecycle events | `qc.started`, `qc.check_completed`, `qc.completed` |
 | (no namespace) | Domain background | High-volume background job lifecycle events | `batch_submitted`, `job_completed`, `scan_video_added`, `thumbnail_strip_generation_queued` |
 
 **Namespace boundaries:**
