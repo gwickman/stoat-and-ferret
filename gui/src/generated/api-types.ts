@@ -539,6 +539,54 @@ export interface paths {
         patch: operations["update_clip_api_v1_projects__project_id__clips__clip_id__patch"];
         trace?: never;
     };
+    "/api/v1/projects/{pid}/markers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Markers
+         * @description List all timeline markers for a project ordered by start_time ASC.
+         */
+        get: operations["list_markers_api_v1_projects__pid__markers_get"];
+        put?: never;
+        /**
+         * Create Marker
+         * @description Create a new timeline marker for a project.
+         */
+        post: operations["create_marker_api_v1_projects__pid__markers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{pid}/markers/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Marker
+         * @description Delete a timeline marker.
+         */
+        delete: operations["delete_marker_api_v1_projects__pid__markers__mid__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Marker
+         * @description Update mutable fields of a timeline marker.
+         */
+        patch: operations["update_marker_api_v1_projects__pid__markers__mid__patch"];
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -3273,6 +3321,58 @@ export interface components {
             z_index: number;
         };
         /**
+         * MarkerCreate
+         * @description Schema for creating a new timeline marker.
+         */
+        MarkerCreate: {
+            /** Start Time */
+            start_time: number;
+            /** End Time */
+            end_time?: number | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Region Type
+             * @default point
+             * @enum {string}
+             */
+            region_type: "point" | "section";
+        };
+        /**
+         * MarkerResponse
+         * @description Schema for marker responses.
+         */
+        MarkerResponse: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /** Start Time */
+            start_time: number;
+            /** End Time */
+            end_time: number | null;
+            /** Name */
+            name: string | null;
+            /** Region Type */
+            region_type: string;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * MarkerUpdate
+         * @description Schema for updating a timeline marker.
+         *
+         *     region_type is intentionally omitted — it is immutable after create.
+         */
+        MarkerUpdate: {
+            /** Start Time */
+            start_time?: number | null;
+            /** End Time */
+            end_time?: number | null;
+            /** Name */
+            name?: string | null;
+        };
+        /**
          * ParameterSchemaResponse
          * @description Structured parameter metadata for a single effect parameter.
          *
@@ -4965,6 +5065,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClipResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_markers_api_v1_projects__pid__markers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkerResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_marker_api_v1_projects__pid__markers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkerResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_marker_api_v1_projects__pid__markers__mid__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+                mid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_marker_api_v1_projects__pid__markers__mid__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+                mid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkerResponse"];
                 };
             };
             /** @description Validation Error */
