@@ -22,6 +22,7 @@ TABLE_PREVIEW_SESSIONS = "preview_sessions"
 TABLE_RENDER_JOBS = "render_jobs"
 TABLE_RENDER_CHECKPOINTS = "render_checkpoints"
 TABLE_ENCODER_CACHE = "encoder_cache"
+TABLE_MARKERS = "project_markers"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -303,6 +304,22 @@ RENDER_CHECKPOINTS_JOB_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_render_checkpoints_job ON render_checkpoints(job_id);
 """
 
+PROJECT_MARKERS_TABLE = """
+CREATE TABLE IF NOT EXISTS project_markers (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    start_time REAL NOT NULL,
+    end_time REAL,
+    name TEXT,
+    region_type TEXT NOT NULL DEFAULT 'point',
+    created_at TEXT NOT NULL
+);
+"""
+
+PROJECT_MARKERS_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_project_markers_project_id ON project_markers(project_id);
+"""
+
 ENCODER_CACHE_TABLE = """
 CREATE TABLE IF NOT EXISTS encoder_cache (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -455,6 +472,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(RENDER_CHECKPOINTS_JOB_INDEX)
     cursor.execute(ENCODER_CACHE_TABLE)
     cursor.execute(ENCODER_CACHE_CODEC_INDEX)
+    cursor.execute(PROJECT_MARKERS_TABLE)
+    cursor.execute(PROJECT_MARKERS_PROJECT_INDEX)
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
@@ -568,6 +587,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(RENDER_CHECKPOINTS_JOB_INDEX)
     await db.execute(ENCODER_CACHE_TABLE)
     await db.execute(ENCODER_CACHE_CODEC_INDEX)
+    await db.execute(PROJECT_MARKERS_TABLE)
+    await db.execute(PROJECT_MARKERS_PROJECT_INDEX)
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)

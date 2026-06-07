@@ -35,6 +35,7 @@ from stoat_ferret.api.routers import (
     flags,
     health,
     jobs,
+    markers,
     preview,
     projects,
     proxy,
@@ -70,6 +71,7 @@ from stoat_ferret.db.async_repository import (
 from stoat_ferret.db.audit import AuditLogger
 from stoat_ferret.db.batch_repository import AsyncBatchRepository, AsyncSQLiteBatchRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
+from stoat_ferret.db.markers_repository import AsyncSQLiteMarkerRepository
 from stoat_ferret.db.models import ProxyQuality, ProxyStatus
 from stoat_ferret.db.project_repository import AsyncProjectRepository
 from stoat_ferret.db.proxy_repository import AsyncProxyRepository, SQLiteProxyRepository
@@ -203,6 +205,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create thumbnail strip and waveform repositories
     app.state.thumbnail_strip_repository = SQLiteThumbnailStripRepository(app.state.db)
     app.state.waveform_repository = SQLiteWaveformRepository(app.state.db)
+
+    # Create markers repository (Phase 10: after DB open, before AuditLogger dependents)
+    app.state.markers_repository = AsyncSQLiteMarkerRepository(app.state.db)
 
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
@@ -616,6 +621,7 @@ def create_app(
     app.include_router(schema.router)
     app.include_router(videos.router)
     app.include_router(projects.router)
+    app.include_router(markers.router)
     app.include_router(jobs.router)
     app.include_router(effects.router)
     app.include_router(compose.router)
