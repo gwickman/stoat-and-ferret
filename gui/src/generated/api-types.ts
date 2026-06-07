@@ -423,7 +423,22 @@ export interface paths {
         delete: operations["delete_project_api_v1_projects__project_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Project
+         * @description Update project fields (partial update).
+         *
+         *     Args:
+         *         project_id: The unique project identifier.
+         *         project_data: Fields to update (all optional).
+         *         repo: Project repository dependency.
+         *
+         *     Returns:
+         *         Updated project details.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project not found.
+         */
+        patch: operations["update_project_api_v1_projects__project_id__patch"];
         trace?: never;
     };
     "/api/v1/projects/{project_id}/clips": {
@@ -3544,6 +3559,18 @@ export interface components {
              * @default 30
              */
             output_fps: number;
+            /**
+             * Sample Rate
+             * @default 48000
+             * @enum {integer}
+             */
+            sample_rate: 44100 | 48000 | 96000;
+            /**
+             * Bit Depth
+             * @default 24
+             * @enum {integer}
+             */
+            bit_depth: 16 | 24 | 32;
         };
         /**
          * ProjectListResponse
@@ -3570,6 +3597,10 @@ export interface components {
             output_height: number;
             /** Output Fps */
             output_fps: number;
+            /** Sample Rate */
+            sample_rate: number;
+            /** Bit Depth */
+            bit_depth: number;
             /**
              * Created At
              * Format: date-time
@@ -3580,6 +3611,24 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * ProjectUpdate
+         * @description Update project request (partial).
+         */
+        ProjectUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Output Width */
+            output_width?: number | null;
+            /** Output Height */
+            output_height?: number | null;
+            /** Output Fps */
+            output_fps?: number | null;
+            /** Sample Rate */
+            sample_rate?: (44100 | 48000 | 96000) | null;
+            /** Bit Depth */
+            bit_depth?: (16 | 24 | 32) | null;
         };
         /**
          * ProxyBatchRequest
@@ -4902,6 +4951,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_api_v1_projects__project_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

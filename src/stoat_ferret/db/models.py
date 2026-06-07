@@ -398,6 +398,8 @@ class Project:
     updated_at: datetime
     transitions: list[dict[str, Any]] | None = field(default=None)
     audio_mix: dict[str, Any] | None = field(default=None)
+    sample_rate: int = field(default=48000)
+    bit_depth: int = field(default=24)
 
     @staticmethod
     def new_id() -> str:

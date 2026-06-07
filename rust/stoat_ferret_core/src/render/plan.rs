@@ -76,6 +76,12 @@ pub struct RenderSettings {
     /// Frames per second for the output.
     #[pyo3(get)]
     pub fps: f64,
+    /// Audio sample rate in Hz (e.g., 44100, 48000, 96000). None = not set.
+    #[pyo3(get)]
+    pub audio_sample_rate: Option<u32>,
+    /// Audio bit depth (e.g., 16, 24, 32). None = not set.
+    #[pyo3(get)]
+    pub audio_bit_depth: Option<u32>,
 }
 
 #[pymethods]
@@ -89,7 +95,11 @@ impl RenderSettings {
     ///     codec: Video codec (e.g., "libx264").
     ///     quality_preset: Encoding preset (e.g., "medium").
     ///     fps: Output frame rate.
+    ///     audio_sample_rate: Audio sample rate in Hz (optional).
+    ///     audio_bit_depth: Audio bit depth (optional).
     #[new]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (output_format, width, height, codec, quality_preset, fps, audio_sample_rate=None, audio_bit_depth=None))]
     pub fn py_new(
         output_format: String,
         width: u32,
@@ -97,8 +107,23 @@ impl RenderSettings {
         codec: String,
         quality_preset: String,
         fps: f64,
+        audio_sample_rate: Option<u32>,
+        audio_bit_depth: Option<u32>,
     ) -> Self {
-        Self::new(output_format, width, height, codec, quality_preset, fps)
+        let mut s = Self::new(output_format, width, height, codec, quality_preset, fps);
+        s.audio_sample_rate = audio_sample_rate;
+        s.audio_bit_depth = audio_bit_depth;
+        s
+    }
+
+    /// Returns a copy with audio parameters set.
+    ///
+    /// Args:
+    ///     sample_rate: Audio sample rate in Hz.
+    ///     bit_depth: Audio bit depth.
+    #[pyo3(name = "with_audio")]
+    pub fn py_with_audio(&self, sample_rate: u32, bit_depth: u32) -> Self {
+        self.clone().with_audio(sample_rate, bit_depth)
     }
 
     fn __repr__(&self) -> String {
@@ -110,7 +135,7 @@ impl RenderSettings {
 }
 
 impl RenderSettings {
-    /// Creates a new RenderSettings.
+    /// Creates a new RenderSettings with audio fields initialised to None.
     pub fn new(
         output_format: String,
         width: u32,
@@ -126,7 +151,16 @@ impl RenderSettings {
             codec,
             quality_preset,
             fps,
+            audio_sample_rate: None,
+            audio_bit_depth: None,
         }
+    }
+
+    /// Returns a copy with audio parameters set.
+    pub fn with_audio(mut self, sample_rate: u32, bit_depth: u32) -> Self {
+        self.audio_sample_rate = Some(sample_rate);
+        self.audio_bit_depth = Some(bit_depth);
+        self
     }
 }
 

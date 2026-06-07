@@ -59,21 +59,25 @@ pytestmark = pytest.mark.timeout(30)
 SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
     {
         # _alter_videos_add_auxiliary_columns (sync) — BL-408
-        ("src/stoat_ferret/db/schema.py", 379),
+        ("src/stoat_ferret/db/schema.py", 385),
         # _alter_render_jobs_add_partial_columns (sync) — BL-415
-        ("src/stoat_ferret/db/schema.py", 393),
+        ("src/stoat_ferret/db/schema.py", 399),
         # _alter_projects_add_audio_mix_column (sync)
-        ("src/stoat_ferret/db/schema.py", 407),
+        ("src/stoat_ferret/db/schema.py", 413),
+        # _alter_projects_add_audio_baseline_columns (sync) — BL-422
+        ("src/stoat_ferret/db/schema.py", 427),
         # _alter_clips_add_timeline_columns (sync)
-        ("src/stoat_ferret/db/schema.py", 423),
+        ("src/stoat_ferret/db/schema.py", 443),
         # _alter_videos_add_auxiliary_columns_async — BL-408
-        ("src/stoat_ferret/db/schema.py", 492),
+        ("src/stoat_ferret/db/schema.py", 513),
         # _alter_projects_add_audio_mix_column_async
-        ("src/stoat_ferret/db/schema.py", 508),
+        ("src/stoat_ferret/db/schema.py", 529),
+        # _alter_projects_add_audio_baseline_columns_async — BL-422
+        ("src/stoat_ferret/db/schema.py", 545),
         # _alter_clips_add_timeline_columns_async
-        ("src/stoat_ferret/db/schema.py", 524),
+        ("src/stoat_ferret/db/schema.py", 561),
         # _alter_render_jobs_add_partial_columns_async (async) — BL-415
-        ("src/stoat_ferret/db/schema.py", 540),
+        ("src/stoat_ferret/db/schema.py", 577),
         ("src/stoat_ferret/api/services/migrations.py", 434),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound

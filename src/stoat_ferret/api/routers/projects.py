@@ -17,6 +17,7 @@ from stoat_ferret.api.schemas.project import (
     ProjectCreate,
     ProjectListResponse,
     ProjectResponse,
+    ProjectUpdate,
 )
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.api.websocket.manager import ConnectionManager
@@ -140,6 +141,8 @@ async def create_project(
         output_width=project_data.output_width,
         output_height=project_data.output_height,
         output_fps=project_data.output_fps,
+        sample_rate=project_data.sample_rate,
+        bit_depth=project_data.bit_depth,
         created_at=now,
         updated_at=now,
     )
@@ -180,6 +183,50 @@ async def get_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
         )
+    return ProjectResponse.model_validate(project)
+
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+async def update_project(
+    project_id: str,
+    project_data: ProjectUpdate,
+    repo: ProjectRepoDep,
+) -> ProjectResponse:
+    """Update project fields (partial update).
+
+    Args:
+        project_id: The unique project identifier.
+        project_data: Fields to update (all optional).
+        repo: Project repository dependency.
+
+    Returns:
+        Updated project details.
+
+    Raises:
+        HTTPException: 404 if project not found.
+    """
+    project = await repo.get(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
+        )
+
+    if project_data.name is not None:
+        project.name = project_data.name
+    if project_data.output_width is not None:
+        project.output_width = project_data.output_width
+    if project_data.output_height is not None:
+        project.output_height = project_data.output_height
+    if project_data.output_fps is not None:
+        project.output_fps = project_data.output_fps
+    if project_data.sample_rate is not None:
+        project.sample_rate = project_data.sample_rate
+    if project_data.bit_depth is not None:
+        project.bit_depth = project_data.bit_depth
+
+    project.updated_at = datetime.now(timezone.utc)
+    await repo.update(project)
     return ProjectResponse.model_validate(project)
 
 

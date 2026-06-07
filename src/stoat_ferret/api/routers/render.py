@@ -440,6 +440,9 @@ async def create_render_job(
     # Inject project output dimensions into render_plan settings (BL-390)
     plan_data["settings"]["width"] = project.output_width or 1920
     plan_data["settings"]["height"] = project.output_height or 1080
+    # Inject project audio baseline into render_plan settings (BL-422)
+    plan_data["settings"]["audio_sample_rate"] = project.sample_rate
+    plan_data["settings"]["audio_bit_depth"] = project.bit_depth
     render_plan_json = json.dumps(plan_data)
 
     # Empty timeline check (FR-002)

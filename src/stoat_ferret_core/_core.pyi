@@ -2177,6 +2177,16 @@ class RenderSettings:
         """Frames per second for the output."""
         ...
 
+    @property
+    def audio_sample_rate(self) -> int | None:
+        """Audio sample rate in Hz (e.g., 44100, 48000, 96000). None if not set."""
+        ...
+
+    @property
+    def audio_bit_depth(self) -> int | None:
+        """Audio bit depth (e.g., 16, 24, 32). None if not set."""
+        ...
+
     def __init__(
         self,
         output_format: str,
@@ -2185,6 +2195,8 @@ class RenderSettings:
         codec: str,
         quality_preset: str,
         fps: float,
+        audio_sample_rate: int | None = None,
+        audio_bit_depth: int | None = None,
     ) -> None:
         """Creates a new RenderSettings.
 
@@ -2195,6 +2207,20 @@ class RenderSettings:
             codec: Video codec (e.g., "libx264").
             quality_preset: Encoding preset (e.g., "medium").
             fps: Output frame rate.
+            audio_sample_rate: Audio sample rate in Hz (optional).
+            audio_bit_depth: Audio bit depth (optional).
+        """
+        ...
+
+    def with_audio(self, sample_rate: int, bit_depth: int) -> RenderSettings:
+        """Returns a copy with audio parameters set.
+
+        Args:
+            sample_rate: Audio sample rate in Hz.
+            bit_depth: Audio bit depth.
+
+        Returns:
+            A new RenderSettings with audio fields set.
         """
         ...
 

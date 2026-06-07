@@ -116,9 +116,10 @@ class AsyncSQLiteProjectRepository:
                 """
                 INSERT INTO projects (
                     id, name, output_width, output_height, output_fps,
-                    transitions_json, audio_mix_json, created_at, updated_at
+                    transitions_json, audio_mix_json, created_at, updated_at,
+                    sample_rate, bit_depth
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     project.id,
@@ -130,6 +131,8 @@ class AsyncSQLiteProjectRepository:
                     audio_mix_json,
                     project.created_at.isoformat(),
                     project.updated_at.isoformat(),
+                    project.sample_rate,
+                    project.bit_depth,
                 ),
             )
             await self._conn.commit()
@@ -167,7 +170,9 @@ class AsyncSQLiteProjectRepository:
                 output_fps = ?,
                 transitions_json = ?,
                 audio_mix_json = ?,
-                updated_at = ?
+                updated_at = ?,
+                sample_rate = ?,
+                bit_depth = ?
             WHERE id = ?
             """,
             (
@@ -178,6 +183,8 @@ class AsyncSQLiteProjectRepository:
                 transitions_json,
                 audio_mix_json,
                 project.updated_at.isoformat(),
+                project.sample_rate,
+                project.bit_depth,
                 project.id,
             ),
         )
@@ -215,6 +222,8 @@ class AsyncSQLiteProjectRepository:
             updated_at=datetime.fromisoformat(row["updated_at"]),
             transitions=transitions,
             audio_mix=audio_mix,
+            sample_rate=row["sample_rate"],
+            bit_depth=row["bit_depth"],
         )
 
 
