@@ -4,6 +4,24 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v075] — Release 2, Wave 0 — Enablers (2026-06-07)
+
+### Added
+- Added `compile_automation` Rust function with 4 curve kinds (linear, ease-in, ease-out, ease-in-out), proptest property suite (50 tests), and PyO3 binding `compile_automation(automation: Automation) -> str` (BL-418, PR #516)
+- Added `AutomationEnvelope` / `AutomationKeyframe` Pydantic schemas, `validate_with_automation()` registry method, and `filter_preview: str | None` field to `EffectApplyResponse`; envelopes compile to nested `if(lt(t,...))` FFmpeg expressions (BL-420, PR #517)
+- Added 4 automation envelope smoke tests to `tests/smoke/test_effects.py` (BL-420, PR #518)
+- Added Release 2 test scaffolding: `tests/qc/` package with `assert_qc_check()` helper; `tests/chatbot/scenarios/r2_scaffold.py` chatbot runner hook; `tests/uat/journeys/r2_skeleton.py` UAT journey registered as J206 (BL-421, PR #519)
+- Added project timeline markers CRUD REST API (`POST/GET/PATCH/DELETE /api/v1/projects/{pid}/markers`), `project_markers` Alembic migration with FK CASCADE, non-overlapping section marker validation (BL-419, PR #520)
+- Added 4 markers smoke tests to `tests/smoke/test_markers.py` (BL-419, PR #521)
+- Added `sample_rate` and `bit_depth` project audio baseline fields with `Literal[44100, 48000, 96000]` / `Literal[16, 24, 32]` Pydantic validation, PRAGMA-idempotent Alembic migration, and `RenderSettings` Rust `audio_sample_rate: Option<u32>` / `with_audio()` builder (no existing `new()` call sites changed) (BL-422, PR #522)
+- Added 3 audio baseline smoke tests to `tests/smoke/test_project_workflow.py` (BL-422, PR #523)
+
+### Deferred
+- 3 behavioral ACs pending FFmpeg environment:
+  - BL-418-AC-6: FFmpeg contract test for rendered automation envelope output; discharge: `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_contract/test_automation_contract.py`
+  - BL-421-AC-1: Golden QC fixture content; discharge: run with `STOAT_TEST_FFMPEG=1` after QCService is implemented in a downstream Release 2 feature
+  - BL-422-AC-3 (FR-003-AC-5): Rendered audio output at configured sample rate/bit depth; discharge: `STOAT_TEST_FFMPEG=1 uv run pytest` with ffprobe verification
+
 ## [v074] — Agent-Surface Accuracy & Architecture Hygiene (2026-06-06)
 
 ### Fixed
