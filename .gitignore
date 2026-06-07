@@ -226,6 +226,10 @@ logs/
 gui/node_modules/
 gui/dist/
 
+# Test output files (produced by CI and local test runs)
+*_output.txt
+pytest_*.txt
+
 # Claude Code session metadata — worktrees are local-only scratch areas.
 .claude/worktrees/
 
