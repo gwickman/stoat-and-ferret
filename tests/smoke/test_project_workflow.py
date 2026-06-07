@@ -83,3 +83,57 @@ async def test_uc09_project_deletion(smoke_client: httpx.AsyncClient) -> None:
     # Double-delete returns 404
     resp = await smoke_client.delete(f"/api/v1/projects/{project_id}")
     assert resp.status_code == 404
+
+
+async def test_project_create_audio_defaults(smoke_client: httpx.AsyncClient) -> None:
+    """Project created without audio fields has default sample_rate=48000, bit_depth=24."""
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Audio Defaults Test",
+            "output_width": 1920,
+            "output_height": 1080,
+            "output_fps": 30,
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["sample_rate"] == 48000
+    assert data["bit_depth"] == 24
+
+
+async def test_project_create_with_explicit_audio(smoke_client: httpx.AsyncClient) -> None:
+    """Project created with explicit audio fields persists and returns those values."""
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Explicit Audio Test",
+            "output_width": 1920,
+            "output_height": 1080,
+            "output_fps": 30,
+            "sample_rate": 96000,
+            "bit_depth": 16,
+        },
+    )
+    assert resp.status_code == 201
+    pid = resp.json()["id"]
+    resp = await smoke_client.get(f"/api/v1/projects/{pid}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sample_rate"] == 96000
+    assert data["bit_depth"] == 16
+
+
+async def test_project_create_invalid_sample_rate(smoke_client: httpx.AsyncClient) -> None:
+    """Invalid sample_rate (22050 not in allowed set) → 422."""
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Invalid Audio Test",
+            "output_width": 1920,
+            "output_height": 1080,
+            "output_fps": 30,
+            "sample_rate": 22050,
+        },
+    )
+    assert resp.status_code == 422
