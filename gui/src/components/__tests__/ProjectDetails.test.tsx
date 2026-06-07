@@ -10,6 +10,8 @@ const mockProject: Project = {
   output_width: 1920,
   output_height: 1080,
   output_fps: 30,
+  sample_rate: 48000,
+  bit_depth: 24,
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
 }
