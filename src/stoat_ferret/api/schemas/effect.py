@@ -2,9 +2,57 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, model_validator
+
+
+class AutomationKeyframe(BaseModel):
+    """A single keyframe in an automation envelope.
+
+    Attributes:
+        t: Time position in seconds.
+        value: Parameter value at this keyframe.
+        curve: Interpolation curve kind between this and the next keyframe.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    t: float
+    value: float
+    curve: Literal["hold", "linear", "exponential", "ease_in_out"] = "linear"
+
+
+class AutomationEnvelope(BaseModel):
+    """A time-varying automation envelope for a numeric effect parameter.
+
+    Attributes:
+        default: Fallback scalar value when automation is not active.
+        keyframes: Ordered list of keyframes with strictly increasing times.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    default: float
+    keyframes: list[AutomationKeyframe]
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_keyframes(cls, v: Any) -> Any:
+        """Validate keyframe list before field construction."""
+        if isinstance(v, dict) and "keyframes" in v:
+            kfs = v.get("keyframes", [])
+            if not kfs:
+                raise ValueError("at least one keyframe required")
+            for i in range(1, len(kfs)):
+                t_prev = kfs[i - 1]["t"] if isinstance(kfs[i - 1], dict) else kfs[i - 1].t
+                t_curr = kfs[i]["t"] if isinstance(kfs[i], dict) else kfs[i].t
+                if t_curr <= t_prev:
+                    raise ValueError(
+                        f"keyframe times must be strictly increasing: "
+                        f"t[{i - 1}]={t_prev} >= t[{i}]={t_curr}"
+                    )
+        return v
 
 
 class ParameterSchemaResponse(BaseModel):
@@ -66,6 +114,7 @@ class EffectApplyResponse(BaseModel):
     effect_type: str
     parameters: dict[str, Any]
     filter_string: str
+    filter_preview: str | None = None
 
 
 class EffectPreviewRequest(BaseModel):

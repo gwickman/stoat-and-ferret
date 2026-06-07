@@ -2835,6 +2835,8 @@ export interface components {
             };
             /** Filter String */
             filter_string: string;
+            /** Filter Preview */
+            filter_preview?: string | null;
         };
         /**
          * EffectDeleteResponse

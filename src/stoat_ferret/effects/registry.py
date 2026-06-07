@@ -6,10 +6,21 @@ from typing import Any
 
 import jsonschema
 import structlog
+from pydantic import ValidationError
 
+from stoat_ferret.api.schemas.effect import AutomationEnvelope
 from stoat_ferret.effects.definitions import EffectDefinition
+from stoat_ferret_core import Automation, Keyframe, compile_automation
 
 logger = structlog.get_logger(__name__)
+
+# Maps API curve names (lowercase) to Rust Keyframe curve strings (TitleCase).
+_CURVE_NAME_MAP: dict[str, str] = {
+    "hold": "Hold",
+    "linear": "Linear",
+    "exponential": "Exponential",
+    "ease_in_out": "EaseInOut",
+}
 
 
 class EffectValidationError:
@@ -70,6 +81,9 @@ class EffectRegistry:
     def validate(self, effect_type: str, parameters: dict[str, Any]) -> list[EffectValidationError]:
         """Validate parameters against the effect's JSON schema.
 
+        This method validates scalar parameters only. For automation envelope
+        support, use :meth:`validate_with_automation`.
+
         Args:
             effect_type: The effect type identifier.
             parameters: The parameters to validate.
@@ -92,3 +106,90 @@ class EffectRegistry:
             path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
             errors.append(EffectValidationError(path=path, message=error.message))
         return errors
+
+    def validate_with_automation(
+        self, effect_type: str, parameters: dict[str, Any]
+    ) -> tuple[list[EffectValidationError], str | None]:
+        """Validate parameters with automation envelope support.
+
+        Automation envelope parameters (dicts with a ``"keyframes"`` key) are
+        parsed via :class:`AutomationEnvelope`, routed through
+        ``compile_automation()``, and excluded from JSON schema validation.
+        Scalar parameters continue through JSON schema validation unchanged.
+
+        Args:
+            effect_type: The effect type identifier.
+            parameters: The parameters to validate. Values may be scalars or
+                dicts representing automation envelopes.
+
+        Returns:
+            A 2-tuple of (validation_errors, compiled_expression). The second
+            element is the Rust-compiled FFmpeg expression string when an
+            automation envelope was processed, or ``None`` for scalar-only
+            requests.
+
+        Raises:
+            KeyError: If the effect type is not registered.
+        """
+        definition = self._effects.get(effect_type)
+        if definition is None:
+            msg = f"Unknown effect type: {effect_type}"
+            raise KeyError(msg)
+
+        errors: list[EffectValidationError] = []
+        compiled_expression: str | None = None
+        scalar_parameters: dict[str, Any] = {}
+
+        for name, value in parameters.items():
+            if isinstance(value, dict) and "keyframes" in value:
+                # Parse and validate the automation envelope.
+                try:
+                    envelope = AutomationEnvelope.model_validate(value)
+                except ValidationError as exc:
+                    for error in exc.errors():
+                        loc = ".".join(str(p) for p in error["loc"]) if error["loc"] else ""
+                        errors.append(EffectValidationError(path=loc, message=error["msg"]))
+                    continue
+
+                # Check the parameter is declared automatable.
+                if name not in definition.automatable:
+                    errors.append(
+                        EffectValidationError(
+                            path=name,
+                            message=f"Parameter '{name}' is not automatable",
+                        )
+                    )
+                    continue
+
+                # Build Rust objects and compile.
+                rust_keyframes = [
+                    Keyframe(
+                        t=kf.t,
+                        value=kf.value,
+                        curve=_CURVE_NAME_MAP[kf.curve],
+                    )
+                    for kf in envelope.keyframes
+                ]
+                automation = Automation(default=envelope.default, keyframes=rust_keyframes)
+                try:
+                    compiled_expression = compile_automation(automation)
+                except ValueError as exc:
+                    errors.append(EffectValidationError(path=name, message=str(exc)))
+                    continue
+
+                # Inject the default scalar so JSON schema's "required" check passes.
+                # The schema is designed for scalar validation; the envelope bypasses
+                # range checks (the Rust compiler owns range correctness).
+                scalar_parameters[name] = envelope.default
+            else:
+                scalar_parameters[name] = value
+
+        # Run JSON schema validation on scalar parameters only.
+        if not errors:
+            schema = definition.parameter_schema
+            validator = jsonschema.Draft7Validator(schema)
+            for error in validator.iter_errors(scalar_parameters):
+                path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
+                errors.append(EffectValidationError(path=path, message=error.message))
+
+        return errors, compiled_expression

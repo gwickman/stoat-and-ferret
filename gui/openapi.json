@@ -4347,6 +4347,17 @@
           "filter_string": {
             "type": "string",
             "title": "Filter String"
+          },
+          "filter_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filter Preview"
           }
         },
         "type": "object",

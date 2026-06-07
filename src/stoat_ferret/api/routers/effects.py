@@ -398,8 +398,10 @@ async def apply_effect_to_clip(
             },
         )
 
-    # Validate parameters against JSON schema
-    validation_errors = registry.validate(request.effect_type, request.parameters)
+    # Validate parameters against JSON schema (envelopes bypass JSON schema).
+    validation_errors, compiled_expression = registry.validate_with_automation(
+        request.effect_type, request.parameters
+    )
     if validation_errors:
         messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
         raise HTTPException(
@@ -411,9 +413,17 @@ async def apply_effect_to_clip(
             },
         )
 
-    # Generate filter string via registered build function
+    # Generate filter string via registered build function.
+    # For automation envelopes, substitute the envelope's default scalar value
+    # so build_fn receives only floats.
+    scalar_params: dict[str, Any] = {
+        name: (
+            value.get("default", 0.0) if isinstance(value, dict) and "keyframes" in value else value
+        )
+        for name, value in request.parameters.items()
+    }
     try:
-        filter_string = definition.build_fn(request.parameters)
+        filter_string = definition.build_fn(scalar_params)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -448,6 +458,7 @@ async def apply_effect_to_clip(
         effect_type=request.effect_type,
         parameters=request.parameters,
         filter_string=filter_string,
+        filter_preview=compiled_expression,
     )
 
 
@@ -523,7 +534,9 @@ async def update_clip_effect(
             },
         )
 
-    validation_errors = registry.validate(effect_type, request.parameters)
+    validation_errors, compiled_expression = registry.validate_with_automation(
+        effect_type, request.parameters
+    )
     if validation_errors:
         messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
         raise HTTPException(
@@ -535,8 +548,14 @@ async def update_clip_effect(
             },
         )
 
+    scalar_params: dict[str, Any] = {
+        name: (
+            value.get("default", 0.0) if isinstance(value, dict) and "keyframes" in value else value
+        )
+        for name, value in request.parameters.items()
+    }
     try:
-        filter_string = definition.build_fn(request.parameters)
+        filter_string = definition.build_fn(scalar_params)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -566,6 +585,7 @@ async def update_clip_effect(
         effect_type=effect_type,
         parameters=request.parameters,
         filter_string=filter_string,
+        filter_preview=compiled_expression,
     )
 
 
