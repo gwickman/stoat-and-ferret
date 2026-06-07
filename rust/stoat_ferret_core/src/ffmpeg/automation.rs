@@ -54,7 +54,10 @@ impl Keyframe {
     }
 
     fn __repr__(&self) -> String {
-        format!("Keyframe(t={}, value={}, curve={:?})", self.t, self.value, self.curve)
+        format!(
+            "Keyframe(t={}, value={}, curve={:?})",
+            self.t, self.value, self.curve
+        )
     }
 }
 
@@ -80,7 +83,11 @@ impl Automation {
     }
 
     fn __repr__(&self) -> String {
-        format!("Automation(default={}, keyframes=[{} items])", self.default, self.keyframes.len())
+        format!(
+            "Automation(default={}, keyframes=[{} items])",
+            self.default,
+            self.keyframes.len()
+        )
     }
 }
 
@@ -169,10 +176,8 @@ fn build_segment(kf0: &Keyframe, kf1: &Keyframe) -> PyResult<Expr> {
         "EaseInOut" => {
             // s = 3u² − 2u³  where u = (t − t0) / dt
             // v = v0 + (v1 − v0) * s
-            let u_for_sq =
-                (Expr::var(Variable::T) - Expr::constant(t0)) / Expr::constant(dt);
-            let u_for_cu =
-                (Expr::var(Variable::T) - Expr::constant(t0)) / Expr::constant(dt);
+            let u_for_sq = (Expr::var(Variable::T) - Expr::constant(t0)) / Expr::constant(dt);
+            let u_for_cu = (Expr::var(Variable::T) - Expr::constant(t0)) / Expr::constant(dt);
             let u_sq = Expr::BinaryOp(
                 BinaryOp::Pow,
                 Box::new(u_for_sq),
@@ -187,7 +192,9 @@ fn build_segment(kf0: &Keyframe, kf1: &Keyframe) -> PyResult<Expr> {
             Ok(Expr::constant(v0) + Expr::constant(v1 - v0) * s)
         }
 
-        other => Err(PyValueError::new_err(format!("unknown curve kind: {other}"))),
+        other => Err(PyValueError::new_err(format!(
+            "unknown curve kind: {other}"
+        ))),
     }
 }
 
@@ -275,7 +282,10 @@ mod tests {
     #[test]
     fn test_exponential_midpoint() {
         // u² at u=0.5 → 0.25; v = 0 + 1*0.25 = 0.25
-        let a = auto(0.0, vec![kf(0.0, 0.0, "Exponential"), kf(1.0, 1.0, "Exponential")]);
+        let a = auto(
+            0.0,
+            vec![kf(0.0, 0.0, "Exponential"), kf(1.0, 1.0, "Exponential")],
+        );
         let expr = compile_automation_impl(&a).unwrap();
         assert!((eval_expr(&expr, 0.5) - 0.25).abs() < 1e-10);
     }
@@ -283,7 +293,10 @@ mod tests {
     #[test]
     fn test_ease_in_out_midpoint() {
         // s = 3*(0.5)² − 2*(0.5)³ = 0.75 − 0.25 = 0.5
-        let a = auto(0.0, vec![kf(0.0, 0.0, "EaseInOut"), kf(1.0, 1.0, "EaseInOut")]);
+        let a = auto(
+            0.0,
+            vec![kf(0.0, 0.0, "EaseInOut"), kf(1.0, 1.0, "EaseInOut")],
+        );
         let expr = compile_automation_impl(&a).unwrap();
         assert!((eval_expr(&expr, 0.5) - 0.5).abs() < 1e-10);
     }
@@ -364,18 +377,13 @@ mod tests {
 
     #[test]
     fn test_non_monotonic_rejected() {
-        let a = auto(
-            0.0,
-            vec![kf(1.0, 0.0, "Linear"), kf(0.5, 1.0, "Linear")],
-        );
+        let a = auto(0.0, vec![kf(1.0, 0.0, "Linear"), kf(0.5, 1.0, "Linear")]);
         let result = py_compile_automation(&a);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("strictly increasing")
-        );
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("strictly increasing"));
     }
 
     #[test]
