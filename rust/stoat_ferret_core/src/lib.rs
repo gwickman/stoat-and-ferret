@@ -118,7 +118,10 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::automation::Automation>()?;
     m.add_class::<ffmpeg::automation::Keyframe>()?;
     m.add_class::<ffmpeg::automation::CurveKind>()?;
-    m.add_function(wrap_pyfunction!(ffmpeg::automation::py_compile_automation, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        ffmpeg::automation::py_compile_automation,
+        m
+    )?)?;
 
     // Register layout types
     m.add_class::<layout::position::LayoutPosition>()?;
