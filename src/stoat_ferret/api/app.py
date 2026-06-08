@@ -39,6 +39,7 @@ from stoat_ferret.api.routers import (
     preview,
     projects,
     proxy,
+    qc,
     render,
     schema,
     system,
@@ -57,6 +58,7 @@ from stoat_ferret.api.services.proxy_service import (
     ProxyService,
     make_proxy_handler,
 )
+from stoat_ferret.api.services.qc_service import QCService
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.services.synthetic_monitoring import SyntheticMonitoringTask
 from stoat_ferret.api.services.thumbnail import ThumbnailService
@@ -208,6 +210,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Create markers repository (Phase 10: after DB open, before AuditLogger dependents)
     app.state.markers_repository = AsyncSQLiteMarkerRepository(app.state.db)
+
+    # Phase 11 — QCService (after Phase 10 repositories, before Phase 12 worker)
+    from stoat_ferret.db.qc_repository import AsyncSQLiteQCReportRepository
+
+    app.state.qc_service = QCService(
+        repository=AsyncSQLiteQCReportRepository(app.state.db),
+        connection_manager=app.state.ws_manager,
+        settings=settings,
+    )
 
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
@@ -505,6 +516,7 @@ def create_app(
     waveform_service: WaveformService | None = None,
     gui_static_path: str | Path | None = None,
     client_identity_store: ClientIdentityStore | None = None,
+    qc_service: QCService | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -536,6 +548,7 @@ def create_app(
         client_identity_store: Optional identity store for WebSocket client tracking.
             Defaults to a new ``InMemoryClientIdentityStore`` if not provided.
             Stored on ``app.state.client_identity_store`` for access by future features.
+        qc_service: Optional QCService for dependency injection in tests.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -615,6 +628,9 @@ def create_app(
     if waveform_service is not None:
         app.state.waveform_service = waveform_service
 
+    if qc_service is not None:
+        app.state.qc_service = qc_service
+
     app.include_router(health.router)
     app.include_router(version.router)
     app.include_router(flags.router)
@@ -631,6 +647,7 @@ def create_app(
     app.include_router(batch.router)
     app.include_router(preview.router)
     app.include_router(proxy.router)
+    app.include_router(qc.router)
     app.include_router(render.router)
     app.include_router(system.router)
     app.include_router(testing.router)

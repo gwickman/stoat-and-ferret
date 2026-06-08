@@ -2891,6 +2891,134 @@
         }
       }
     },
+    "/api/v1/qc/run": {
+      "post": {
+        "tags": [
+          "qc"
+        ],
+        "summary": "Run Qc",
+        "description": "Run all 11 QC checks over a rendered artifact and return a QCReport.\n\nReturns HTTP 201 with the complete QCReport on success.\nReturns HTTP 422 when the artifact path is missing or invalid.\nReturns HTTP 404 when delivery_profile_id is provided but not found.",
+        "operationId": "run_qc_api_v1_qc_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QCRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QCReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/qc/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "qc"
+        ],
+        "summary": "Get Qc Report",
+        "description": "Fetch a QCReport by UUID.\n\nReturns HTTP 200 with the QCReport.\nReturns HTTP 404 when the report does not exist.",
+        "operationId": "get_qc_report_api_v1_qc_reports__report_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QCReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/render/{job_id}/qc": {
+      "get": {
+        "tags": [
+          "qc"
+        ],
+        "summary": "Get Render Job Qc",
+        "description": "Return the latest QCReport for a render job.\n\nUses ORDER BY created_at DESC LIMIT 1 for deterministic lookup.\nReturns HTTP 404 when no report exists for the given job.",
+        "operationId": "get_render_job_qc_api_v1_render__job_id__qc_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QCReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/render": {
       "post": {
         "tags": [
@@ -6091,6 +6219,120 @@
         ],
         "title": "ProxyResponse",
         "description": "Single proxy status response."
+      },
+      "QCReportResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "artifact_path": {
+            "type": "string",
+            "title": "Artifact Path"
+          },
+          "delivery_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Profile Id"
+          },
+          "overall_verdict": {
+            "type": "string",
+            "title": "Overall Verdict"
+          },
+          "checks": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Checks"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "artifact_path",
+          "overall_verdict",
+          "checks",
+          "created_at"
+        ],
+        "title": "QCReportResponse",
+        "description": "Full QC analysis report returned by the API."
+      },
+      "QCRunRequest": {
+        "properties": {
+          "artifact_path": {
+            "type": "string",
+            "title": "Artifact Path"
+          },
+          "delivery_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Profile Id"
+          },
+          "assertions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assertions"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_path"
+        ],
+        "title": "QCRunRequest",
+        "description": "Request body for POST /api/v1/qc/run."
       },
       "QualityPresetInfo": {
         "properties": {
