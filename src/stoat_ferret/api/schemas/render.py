@@ -32,6 +32,14 @@ class CreateRenderRequest(BaseModel):
             " and 'total_duration' (float, seconds)."
         ),
     )
+    delivery_profile: str | None = Field(
+        default=None,
+        description=(
+            "Optional delivery profile name. When set, the render produces every"
+            " output format declared in the profile and runs the QC pass against"
+            " the profile's loudness and true-peak targets."
+        ),
+    )
 
 
 class RenderJobResponse(BaseModel):

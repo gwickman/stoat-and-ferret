@@ -246,10 +246,10 @@ class TestEnumValues:
         values = {p.value for p in QualityPreset}
         assert values == {"draft", "standard", "high"}
 
-    def test_render_status_has_five_values(self) -> None:
-        """RenderStatus enum has queued, running, completed, failed, cancelled."""
+    def test_render_status_has_six_values(self) -> None:
+        """RenderStatus enum has queued, running, completed, failed, cancelled, qc_failed."""
         values = {s.value for s in RenderStatus}
-        assert values == {"queued", "running", "completed", "failed", "cancelled"}
+        assert values == {"queued", "running", "completed", "failed", "cancelled", "qc_failed"}
 
 
 # ============================================================

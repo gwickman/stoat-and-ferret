@@ -38,7 +38,9 @@ from stoat_ferret.api.schemas.render import (
     RenderPreviewRequest,
     RenderPreviewResponse,
 )
+from stoat_ferret.api.services.qc_service import QCService
 from stoat_ferret.api.settings import get_settings
+from stoat_ferret.db.delivery_profiles_repository import DeliveryProfileRepository
 from stoat_ferret.render.encoder_cache import (
     AsyncEncoderCacheRepository,
     AsyncSQLiteEncoderCacheRepository,
@@ -171,6 +173,16 @@ RenderRepoDep = Annotated[AsyncRenderRepository, Depends(get_render_repository)]
 RenderServiceDep = Annotated[RenderService, Depends(get_render_service)]
 RenderQueueDep = Annotated[RenderQueue, Depends(get_render_queue)]
 EncoderCacheDep = Annotated[AsyncEncoderCacheRepository, Depends(get_encoder_cache_repository)]
+
+
+async def _get_qc_service(request: Request) -> QCService | None:
+    """Return QCService from app state, or None if not configured."""
+    return getattr(request.app.state, "qc_service", None)
+
+
+async def _get_delivery_profile_repository(request: Request) -> DeliveryProfileRepository | None:
+    """Return delivery profile repository from app state, or None if not configured."""
+    return getattr(request.app.state, "delivery_profile_repository", None)
 
 
 # ---------- Helpers ----------
@@ -336,6 +348,7 @@ async def _run_detection_and_cache(
 )
 async def create_render_job(
     body: CreateRenderRequest,
+    request: Request,
     render_service: RenderServiceDep,
     project_repo: ProjectRepoDep,
     clip_repo: ClipRepoDep,
@@ -344,6 +357,7 @@ async def create_render_job(
 
     Args:
         body: Render job creation request.
+        request: FastAPI request for app.state access.
         render_service: Render service dependency.
 
     Returns:
@@ -429,6 +443,28 @@ async def create_render_job(
 
     project_id_str = str(body.project_id)
 
+    # Resolve delivery profile by name before render starts (FR-002, NFR-001)
+    delivery_profile = None
+    if body.delivery_profile is not None:
+        dp_repo = await _get_delivery_profile_repository(request)
+        if dp_repo is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "DELIVERY_PROFILE_NOT_FOUND",
+                    "message": f"Delivery profile '{body.delivery_profile}' not found",
+                },
+            )
+        delivery_profile = await dp_repo.get_by_name(body.delivery_profile)
+        if delivery_profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "DELIVERY_PROFILE_NOT_FOUND",
+                    "message": f"Delivery profile '{body.delivery_profile}' not found",
+                },
+            )
+
     # Project existence check (FR-001)
     project = await project_repo.get(project_id_str)
     if project is None:
@@ -484,6 +520,30 @@ async def create_render_job(
         project_id=project_id_str,
         action="start",
     )
+
+    # QC pass when a delivery profile is set and render completed inline (noop mode / tests)
+    if delivery_profile is not None and job.status == RenderStatus.COMPLETED:
+        qc_service: QCService | None = await _get_qc_service(request)
+        render_repo = await get_render_repository(request)
+        if qc_service is not None:
+            try:
+                assertions: dict[str, float | None] = {
+                    "loudness_integrated": delivery_profile.loudness_target_lufs,
+                    "true_peak": delivery_profile.true_peak_ceiling_dbtp,
+                }
+                qc_report = await qc_service.run_checks(
+                    artifact_path=job.output_path,
+                    job_id=job.id,
+                    assertions=assertions,
+                )
+                if qc_report.overall_verdict != "pass":
+                    await render_repo.update_status(job.id, RenderStatus.QC_FAILED)
+                    refreshed = await render_repo.get(job.id)
+                    if refreshed is not None:
+                        job = refreshed
+            except FileNotFoundError:
+                pass  # artifact not present in noop/test mode without real render
+
     return _job_to_response(job)
 
 

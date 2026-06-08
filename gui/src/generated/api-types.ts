@@ -602,6 +602,90 @@ export interface paths {
         patch: operations["update_marker_api_v1_projects__pid__markers__mid__patch"];
         trace?: never;
     };
+    "/api/v1/delivery_profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Delivery Profiles
+         * @description List all delivery profiles.
+         *
+         *     Args:
+         *         repo: Delivery profile repository dependency.
+         *
+         *     Returns:
+         *         List of all delivery profiles.
+         */
+        get: operations["list_delivery_profiles_api_v1_delivery_profiles_get"];
+        put?: never;
+        /**
+         * Create Delivery Profile
+         * @description Create a new delivery profile.
+         *
+         *     Args:
+         *         body: Profile creation request.
+         *         repo: Delivery profile repository dependency.
+         *
+         *     Returns:
+         *         Created delivery profile with 201 status.
+         *
+         *     Raises:
+         *         HTTPException: 409 for duplicate name, 422 for validation errors.
+         */
+        post: operations["create_delivery_profile_api_v1_delivery_profiles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/delivery_profiles/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Delivery Profile
+         * @description Get a delivery profile by UUID.
+         *
+         *     Args:
+         *         profile_id: The profile UUID to retrieve.
+         *         repo: Delivery profile repository dependency.
+         *
+         *     Returns:
+         *         The delivery profile if found.
+         *
+         *     Raises:
+         *         HTTPException: 404 if not found.
+         */
+        get: operations["get_delivery_profile_api_v1_delivery_profiles__profile_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Delivery Profile
+         * @description Delete a delivery profile by UUID.
+         *
+         *     Args:
+         *         profile_id: The profile UUID to delete.
+         *         repo: Delivery profile repository dependency.
+         *
+         *     Returns:
+         *         204 No Content on success.
+         *
+         *     Raises:
+         *         HTTPException: 404 if not found.
+         */
+        delete: operations["delete_delivery_profile_api_v1_delivery_profiles__profile_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -1866,6 +1950,7 @@ export interface paths {
          *
          *     Args:
          *         body: Render job creation request.
+         *         request: FastAPI request for app.state access.
          *         render_service: Render service dependency.
          *
          *     Returns:
@@ -2877,6 +2962,40 @@ export interface components {
             quality_presets: components["schemas"]["QualityPresetInfo"][];
         };
         /**
+         * CreateDeliveryProfileRequest
+         * @description Request to create a new delivery profile.
+         */
+        CreateDeliveryProfileRequest: {
+            /**
+             * Name
+             * @description Unique name for this delivery profile
+             */
+            name: string;
+            /**
+             * Output Formats
+             * @description Output formats to produce
+             */
+            output_formats: components["schemas"]["OutputFormatSpec"][];
+            /**
+             * Loudness Target Lufs
+             * @description Integrated loudness target in LUFS (must be ≤ 0)
+             */
+            loudness_target_lufs: number;
+            /**
+             * True Peak Ceiling Dbtp
+             * @description True-peak ceiling in dBTP (must be ≤ 0)
+             * @default -1
+             */
+            true_peak_ceiling_dbtp: number;
+            /**
+             * Metadata Template
+             * @description Optional metadata key/value pairs to embed in output
+             */
+            metadata_template?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
          * CreateRenderRequest
          * @description Request to start a new render job.
          */
@@ -2911,6 +3030,43 @@ export interface components {
              * @default {}
              */
             render_plan: string;
+            /**
+             * Delivery Profile
+             * @description Optional delivery profile name. When set, the render produces every output format declared in the profile and runs the QC pass against the profile's loudness and true-peak targets.
+             */
+            delivery_profile?: string | null;
+        };
+        /**
+         * DeliveryProfileListResponse
+         * @description Paginated list of delivery profiles.
+         */
+        DeliveryProfileListResponse: {
+            /** Items */
+            items: components["schemas"]["DeliveryProfileResponse"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * DeliveryProfileResponse
+         * @description Response representing a single delivery profile.
+         */
+        DeliveryProfileResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Output Formats */
+            output_formats: components["schemas"]["OutputFormatSpec"][];
+            /** Loudness Target Lufs */
+            loudness_target_lufs: number;
+            /** True Peak Ceiling Dbtp */
+            true_peak_ceiling_dbtp: number;
+            /** Metadata Template */
+            metadata_template?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at: string;
         };
         /**
          * DirectoryEntry
@@ -3456,6 +3612,27 @@ export interface components {
             end_time?: number | null;
             /** Name */
             name?: string | null;
+        };
+        /**
+         * OutputFormatSpec
+         * @description A single output format specification within a delivery profile.
+         */
+        OutputFormatSpec: {
+            /**
+             * Container
+             * @description Container format (e.g. mp4, webm, mov)
+             */
+            container: string;
+            /**
+             * Codec
+             * @description Video codec (e.g. h264, h265, vp9)
+             */
+            codec: string;
+            /**
+             * Bitrate Kbps
+             * @description Target video bitrate in kilobits per second
+             */
+            bitrate_kbps: number;
         };
         /**
          * ParameterSchemaResponse
@@ -5390,6 +5567,119 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MarkerResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_delivery_profiles_api_v1_delivery_profiles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryProfileListResponse"];
+                };
+            };
+        };
+    };
+    create_delivery_profile_api_v1_delivery_profiles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDeliveryProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_delivery_profile_api_v1_delivery_profiles__profile_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_delivery_profile_api_v1_delivery_profiles__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

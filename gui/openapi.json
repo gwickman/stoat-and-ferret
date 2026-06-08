@@ -1119,6 +1119,145 @@
         }
       }
     },
+    "/api/v1/delivery_profiles": {
+      "get": {
+        "tags": [
+          "delivery_profiles"
+        ],
+        "summary": "List Delivery Profiles",
+        "description": "List all delivery profiles.\n\nArgs:\n    repo: Delivery profile repository dependency.\n\nReturns:\n    List of all delivery profiles.",
+        "operationId": "list_delivery_profiles_api_v1_delivery_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryProfileListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "delivery_profiles"
+        ],
+        "summary": "Create Delivery Profile",
+        "description": "Create a new delivery profile.\n\nArgs:\n    body: Profile creation request.\n    repo: Delivery profile repository dependency.\n\nReturns:\n    Created delivery profile with 201 status.\n\nRaises:\n    HTTPException: 409 for duplicate name, 422 for validation errors.",
+        "operationId": "create_delivery_profile_api_v1_delivery_profiles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeliveryProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryProfileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/delivery_profiles/{profile_id}": {
+      "get": {
+        "tags": [
+          "delivery_profiles"
+        ],
+        "summary": "Get Delivery Profile",
+        "description": "Get a delivery profile by UUID.\n\nArgs:\n    profile_id: The profile UUID to retrieve.\n    repo: Delivery profile repository dependency.\n\nReturns:\n    The delivery profile if found.\n\nRaises:\n    HTTPException: 404 if not found.",
+        "operationId": "get_delivery_profile_api_v1_delivery_profiles__profile_id__get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryProfileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "delivery_profiles"
+        ],
+        "summary": "Delete Delivery Profile",
+        "description": "Delete a delivery profile by UUID.\n\nArgs:\n    profile_id: The profile UUID to delete.\n    repo: Delivery profile repository dependency.\n\nReturns:\n    204 No Content on success.\n\nRaises:\n    HTTPException: 404 if not found.",
+        "operationId": "delete_delivery_profile_api_v1_delivery_profiles__profile_id__delete",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/jobs/{job_id}": {
       "get": {
         "tags": [
@@ -3025,7 +3164,7 @@
           "render"
         ],
         "summary": "Create Render Job",
-        "description": "Start a new render job with pre-flight validation.\n\nArgs:\n    body: Render job creation request.\n    render_service: Render service dependency.\n\nReturns:\n    Created render job with 201 status.\n\nRaises:\n    HTTPException: 400 for invalid format/preset/plan, 422 for pre-flight failure.",
+        "description": "Start a new render job with pre-flight validation.\n\nArgs:\n    body: Render job creation request.\n    request: FastAPI request for app.state access.\n    render_service: Render service dependency.\n\nReturns:\n    Created render job with 201 status.\n\nRaises:\n    HTTPException: 400 for invalid format/preset/plan, 422 for pre-flight failure.",
         "operationId": "create_render_job_api_v1_render_post",
         "requestBody": {
           "required": true,
@@ -4587,6 +4726,59 @@
         "title": "CodecInfo",
         "description": "Codec available within an output format, with quality presets."
       },
+      "CreateDeliveryProfileRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Unique name for this delivery profile"
+          },
+          "output_formats": {
+            "items": {
+              "$ref": "#/components/schemas/OutputFormatSpec"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Output Formats",
+            "description": "Output formats to produce"
+          },
+          "loudness_target_lufs": {
+            "type": "number",
+            "maximum": 0.0,
+            "title": "Loudness Target Lufs",
+            "description": "Integrated loudness target in LUFS (must be \u2264 0)"
+          },
+          "true_peak_ceiling_dbtp": {
+            "type": "number",
+            "maximum": 0.0,
+            "title": "True Peak Ceiling Dbtp",
+            "description": "True-peak ceiling in dBTP (must be \u2264 0)",
+            "default": -1.0
+          },
+          "metadata_template": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Template",
+            "description": "Optional metadata key/value pairs to embed in output"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "output_formats",
+          "loudness_target_lufs"
+        ],
+        "title": "CreateDeliveryProfileRequest",
+        "description": "Request to create a new delivery profile."
+      },
       "CreateRenderRequest": {
         "properties": {
           "project_id": {
@@ -4629,6 +4821,18 @@
             "title": "Render Plan",
             "description": "Serialized render plan JSON. Required top-level keys: 'settings' (object) and 'total_duration' (float, seconds).",
             "default": "{}"
+          },
+          "delivery_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Profile",
+            "description": "Optional delivery profile name. When set, the render produces every output format declared in the profile and runs the QC pass against the profile's loudness and true-peak targets."
           }
         },
         "additionalProperties": false,
@@ -4638,6 +4842,82 @@
         ],
         "title": "CreateRenderRequest",
         "description": "Request to start a new render job."
+      },
+      "DeliveryProfileListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryProfileResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "DeliveryProfileListResponse",
+        "description": "Paginated list of delivery profiles."
+      },
+      "DeliveryProfileResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "output_formats": {
+            "items": {
+              "$ref": "#/components/schemas/OutputFormatSpec"
+            },
+            "type": "array",
+            "title": "Output Formats"
+          },
+          "loudness_target_lufs": {
+            "type": "number",
+            "title": "Loudness Target Lufs"
+          },
+          "true_peak_ceiling_dbtp": {
+            "type": "number",
+            "title": "True Peak Ceiling Dbtp"
+          },
+          "metadata_template": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Template"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "output_formats",
+          "loudness_target_lufs",
+          "true_peak_ceiling_dbtp",
+          "created_at"
+        ],
+        "title": "DeliveryProfileResponse",
+        "description": "Response representing a single delivery profile."
       },
       "DirectoryEntry": {
         "properties": {
@@ -5597,6 +5877,33 @@
         "type": "object",
         "title": "MarkerUpdate",
         "description": "Schema for updating a timeline marker.\n\nregion_type is intentionally omitted \u2014 it is immutable after create."
+      },
+      "OutputFormatSpec": {
+        "properties": {
+          "container": {
+            "type": "string",
+            "title": "Container",
+            "description": "Container format (e.g. mp4, webm, mov)"
+          },
+          "codec": {
+            "type": "string",
+            "title": "Codec",
+            "description": "Video codec (e.g. h264, h265, vp9)"
+          },
+          "bitrate_kbps": {
+            "type": "integer",
+            "title": "Bitrate Kbps",
+            "description": "Target video bitrate in kilobits per second"
+          }
+        },
+        "type": "object",
+        "required": [
+          "container",
+          "codec",
+          "bitrate_kbps"
+        ],
+        "title": "OutputFormatSpec",
+        "description": "A single output format specification within a delivery profile."
       },
       "ParameterSchemaResponse": {
         "properties": {

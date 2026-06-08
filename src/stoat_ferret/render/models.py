@@ -15,9 +15,9 @@ from enum import Enum
 class RenderStatus(str, Enum):
     """Status of a render job through its lifecycle.
 
-    Transitions: queued -> running -> completed|failed|cancelled;
+    Transitions: queued -> running -> completed|failed|cancelled|qc_failed;
     failed -> queued (retry); queued -> cancelled; running -> cancelled.
-    cancelled is terminal — no transitions from cancelled.
+    cancelled and qc_failed are terminal — no transitions from either.
     """
 
     QUEUED = "queued"
@@ -25,6 +25,7 @@ class RenderStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    QC_FAILED = "qc_failed"
 
 
 class OutputFormat(str, Enum):
@@ -47,10 +48,11 @@ class QualityPreset(str, Enum):
 # Valid status transitions: from -> set of allowed targets
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     "queued": {"running", "cancelled"},
-    "running": {"completed", "failed", "cancelled"},
+    "running": {"completed", "failed", "cancelled", "qc_failed"},
     "failed": {"queued"},
-    "completed": set(),
+    "completed": {"qc_failed"},
     "cancelled": set(),
+    "qc_failed": set(),
 }
 
 

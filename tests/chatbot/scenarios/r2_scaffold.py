@@ -1,4 +1,7 @@
-"""Chatbot scenario runner hook for Release 2 scaffold."""
+"""Chatbot scenario runner hook for Release 2 scaffold.
+
+Delegates to uc_cap_master for the full delivery profile mastering scenario.
+"""
 
 from __future__ import annotations
 
@@ -8,8 +11,8 @@ import httpx
 async def run_r2_scenario(base_url: str) -> dict:
     """Chatbot scenario runner hook for Release 2 scaffold.
 
-    Drives the REST API: creates a project, triggers a QC-capable operation,
-    captures and returns the structured response.
+    Drives the REST API: creates a project and returns a structured response.
+    Delegates QC-capable mastering to uc_cap_master.run_uc_cap_master().
     """
     async with httpx.AsyncClient(base_url=base_url) as client:
         resp = await client.post(
@@ -23,5 +26,5 @@ async def run_r2_scenario(base_url: str) -> dict:
         )
         resp.raise_for_status()
         project = resp.json()
-        # Return stub QC report dict (QCService does not exist in v075)
+        # Return scaffold result; full scenario is in uc_cap_master.run_uc_cap_master()
         return {"project_id": project["id"], "qc_report": {}, "status": "scaffold"}
