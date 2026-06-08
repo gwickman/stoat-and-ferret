@@ -479,6 +479,11 @@ async def create_render_job(
     # Inject project audio baseline into render_plan settings (BL-422)
     plan_data["settings"]["audio_sample_rate"] = project.sample_rate
     plan_data["settings"]["audio_bit_depth"] = project.bit_depth
+    # Inject delivery profile metadata title for chapter embedding (BL-426)
+    if delivery_profile is not None and delivery_profile.metadata_template:
+        metadata_title = delivery_profile.metadata_template.get("title")
+        if metadata_title:
+            plan_data["settings"]["metadata_title"] = metadata_title
     render_plan_json = json.dumps(plan_data)
 
     # Empty timeline check (FR-002)
@@ -915,6 +920,7 @@ def render_preview(body: RenderPreviewRequest) -> RenderPreviewResponse:
         settings,
         "/tmp/input.mp4",
         f"/tmp/output.{body.output_format}",
+        None,
     )
 
     return RenderPreviewResponse(command="ffmpeg " + " ".join(cmd.args()))

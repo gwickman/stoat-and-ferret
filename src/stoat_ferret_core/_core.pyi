@@ -2578,6 +2578,7 @@ def build_render_command(
     settings: RenderSettings,
     input_path: str,
     output_path: str,
+    ffmetadata_path: str | None = None,
 ) -> RenderCommand:
     """Builds a complete FFmpeg render command for a single segment.
 

@@ -159,6 +159,7 @@ impl ConcatCommand {
 ///     settings: Render settings (format, resolution, fps).
 ///     input_path: Path to the input media file.
 ///     output_path: Path to write the rendered segment output.
+///     ffmetadata_path: Optional path to an ffmetadata file for chapter embedding.
 ///
 /// Returns:
 ///     A `RenderCommand` with the complete argument list.
@@ -169,11 +170,24 @@ pub fn build_render_command(
     settings: &RenderSettings,
     input_path: &str,
     output_path: &str,
+    ffmetadata_path: Option<&str>,
 ) -> RenderCommand {
     let mut args: Vec<String> = Vec::new();
 
     // Input
     args.extend(["-i".to_string(), input_path.to_string()]);
+
+    // Optional ffmetadata second input for chapter embedding
+    if let Some(meta_path) = ffmetadata_path {
+        args.extend([
+            "-i".to_string(),
+            meta_path.to_string(),
+            "-map_metadata".to_string(),
+            "1".to_string(),
+            "-map_chapters".to_string(),
+            "1".to_string(),
+        ]);
+    }
 
     // Seek to segment start
     args.extend(["-ss".to_string(), format!("{:.6}", segment.timeline_start)]);
@@ -216,6 +230,7 @@ pub fn build_render_command(
 /// PyO3 binding for `build_render_command`.
 #[pyfunction]
 #[pyo3(name = "build_render_command")]
+#[pyo3(signature = (segment, encoder, quality, settings, input_path, output_path, ffmetadata_path=None))]
 pub fn py_build_render_command(
     segment: &RenderSegment,
     encoder: &EncoderInfo,
@@ -223,8 +238,17 @@ pub fn py_build_render_command(
     settings: &RenderSettings,
     input_path: &str,
     output_path: &str,
+    ffmetadata_path: Option<String>,
 ) -> RenderCommand {
-    build_render_command(segment, encoder, quality, settings, input_path, output_path)
+    build_render_command(
+        segment,
+        encoder,
+        quality,
+        settings,
+        input_path,
+        output_path,
+        ffmetadata_path.as_deref(),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +421,7 @@ mod tests {
             &settings,
             "/input/video.mp4",
             "/output/seg_000.mp4",
+            None,
         );
 
         assert!(!cmd.args.is_empty());
@@ -450,6 +475,7 @@ mod tests {
             &settings,
             "/input.mp4",
             "/output.mp4",
+            None,
         );
 
         let ss_idx = cmd.args.iter().position(|a| a == "-ss").unwrap();
@@ -477,6 +503,7 @@ mod tests {
             &settings,
             "/input.mp4",
             "/output.mp4",
+            None,
         );
 
         assert!(cmd.args.contains(&"h264_nvenc".to_string()));
@@ -686,6 +713,7 @@ mod tests {
                 &settings,
                 "/input.mp4",
                 "/output.mp4",
+                None,
             );
 
             // Convert to Python to verify it's a valid PyO3 object
@@ -826,7 +854,7 @@ mod proptests {
         ) {
             let cmd = build_render_command(
                 &segment, &encoder, &quality, &settings,
-                "/input.mp4", "/output.mp4",
+                "/input.mp4", "/output.mp4", None,
             );
             prop_assert!(!cmd.args.is_empty());
             // Must contain input, seek, codec, format, progress, output
