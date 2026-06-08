@@ -261,6 +261,12 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 504 | `uat_journey_504.py` | **Render Failure Journey** — Creates a project with a clip pointing to a nonexistent source file, starts a render, and verifies the job transitions to failed status with an error message visible in the job card. Tests the retry button interaction. Depends on journey 501. |
 | 604 | `uat_journey_604.py` | **Keyboard Navigation via npx** — Validates keyboard-only navigation through the application by wrapping `gui/e2e/keyboard-navigation.spec.ts` via Playwright CLI. Resolves `npx` using `shutil.which()` for cross-platform compatibility (Windows `.cmd` shim support). Checks that all interactive elements are Tab-reachable, focus order is correct, and no focus traps exist. Independent. |
 | 605 | `uat_journey_605.py` | **Screen Reader Audit** — Validates WCAG AA compliance across all workspace routes (`/gui/`, `/gui/library`, `/gui/render`, `/gui/dashboard`, `/gui/preview`, `/gui/projects`, `/gui/timeline`) using axe-core. Injects axe-core and reports critical/serious violations per route. Journey passes when 0 critical and 0 serious violations are found across all routes. Independent. |
+| 701 | `tests/uat/journeys/j_markers.py` | **R2 Markers** — Navigates to the project timeline, creates section markers, and verifies that marker regions are displayed. Part of Release 2 test layer (v076). Independent. |
+| 702 | `tests/uat/journeys/j_mastering.py` | **R2 Mastering** — Navigates to delivery profiles, creates a profile with loudness and true-peak targets, triggers a QC-gated render, and verifies the QC report is visible. Depends on journey 701. |
+| 703 | `tests/uat/journeys/j_qc_fail.py` | **R2 QC Failure** — Navigates to a project in QC-failed state, asserts the failure state is visible in the QC panel, and verifies the re-master flow is accessible (`qc_fail` token in page content). Depends on journey 702. |
+| 704 | `tests/uat/journeys/j_automation.py` | **R2 Automation (stub)** — Placeholder for Release 2 automation envelope journey. Passes headlessly. Independent. |
+| 705 | `tests/uat/journeys/j_reverse_split.py` | **R2 Reverse/Split (stub)** — Placeholder for Release 2 reverse and split capability journey. Passes headlessly. Independent. |
+| 706 | `tests/uat/journeys/j_grade.py` | **R2 Grade (stub)** — Placeholder for Release 2 color grading capability journey. Passes headlessly. Independent. |
 
 ### Dependency graph
 
@@ -283,6 +289,13 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 
 604 (keyboard-navigation)   ← independent
 605 (screen-reader-audit)   ← independent
+
+701 (r2-markers)            ← independent
+ └─▶ 702 (r2-mastering)
+      └─▶ 703 (r2-qc-fail)
+704 (r2-automation)         ← independent
+705 (r2-reverse-split)      ← independent
+706 (r2-grade)              ← independent
 ```
 
-If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically. Journeys 604 and 605 always run regardless of other journey results.
+If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically. Journeys 604 and 605 always run regardless of other journey results. If journey 701 fails, journeys 702 and 703 are skipped. Journeys 704, 705, and 706 always run regardless of other journey results.

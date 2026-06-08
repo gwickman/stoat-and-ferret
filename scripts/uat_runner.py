@@ -60,6 +60,12 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     504: [501],
     604: [],
     605: [],
+    701: [],
+    702: [701],
+    703: [702],
+    704: [],
+    705: [],
+    706: [],
 }
 
 # Human-readable journey names for screenshot directories and reports
@@ -80,6 +86,12 @@ JOURNEY_NAMES: dict[int, str] = {
     504: "render-failure-journey",
     604: "keyboard-navigation",
     605: "screen-reader-audit",
+    701: "r2-markers",
+    702: "r2-mastering",
+    703: "r2-qc-fail",
+    704: "r2-automation",
+    705: "r2-reverse-split",
+    706: "r2-grade",
 }
 
 # Known benign console error patterns to exclude from reports
