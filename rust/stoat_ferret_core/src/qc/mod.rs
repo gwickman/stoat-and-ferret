@@ -319,13 +319,11 @@ pub fn py_parse_loudness_report(output: &str) -> PyResult<LoudnessReport> {
             )
         })?;
 
-    let lra = extract_json_float(output, "input_lra").ok_or_else(|| {
-        PyValueError::new_err("parse_loudness_report: missing 'input_lra' field")
-    })?;
+    let lra = extract_json_float(output, "input_lra")
+        .ok_or_else(|| PyValueError::new_err("parse_loudness_report: missing 'input_lra' field"))?;
 
-    let peak = extract_json_float(output, "input_tp").ok_or_else(|| {
-        PyValueError::new_err("parse_loudness_report: missing 'input_tp' field")
-    })?;
+    let peak = extract_json_float(output, "input_tp")
+        .ok_or_else(|| PyValueError::new_err("parse_loudness_report: missing 'input_tp' field"))?;
 
     Ok(LoudnessReport {
         integrated_lufs: integrated,
@@ -427,8 +425,7 @@ pub fn py_parse_silence_report(output: &str) -> PyResult<SilenceReport> {
 #[pyo3(name = "parse_spectral_report")]
 pub fn py_parse_spectral_report(output: &str) -> PyResult<SpectralReport> {
     // Use BTreeMap so channels are ordered by number
-    let mut channel_means: std::collections::BTreeMap<i64, f64> =
-        std::collections::BTreeMap::new();
+    let mut channel_means: std::collections::BTreeMap<i64, f64> = std::collections::BTreeMap::new();
 
     for line in output.lines() {
         let line = line.trim();
