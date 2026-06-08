@@ -86,14 +86,20 @@ try:
         LayoutPosition,
         LayoutPreset,
         LayoutSpec,
+        LoudnessReport,
         ParameterSchema,
+        PeakReport,
         Position,
         PreviewQuality,
         ProgressInfo,
+        Region,
         RenderCommand,
         RenderSegment,
         RenderSettings,
         SanitizationError,
+        SilenceRegion,
+        SilenceReport,
+        SpectralReport,
         SpeedControl,
         TimeRange,
         TrackAudioConfig,
@@ -101,6 +107,7 @@ try:
         TransitionType,
         ValidationError,
         VersionInfo,
+        VideoDefectReport,
         VolumeBuilder,
         XfadeBuilder,
         aggregate_segment_progress,
@@ -125,6 +132,11 @@ try:
         is_expensive_filter,
         parameter_schemas_from_dict,
         parse_ffmpeg_progress,
+        parse_loudness_report,
+        parse_peak_report,
+        parse_silence_report,
+        parse_spectral_report,
+        parse_video_defect_report,
         scale_filter,
         select_encoder,
         select_preview_quality,
@@ -227,6 +239,18 @@ except ImportError:
     validate_video_codec = _not_built
     validate_audio_codec = _not_built
     validate_preset = _not_built
+    LoudnessReport = _not_built  # type: ignore[misc,assignment]
+    PeakReport = _not_built  # type: ignore[misc,assignment]
+    Region = _not_built  # type: ignore[misc,assignment]
+    SilenceRegion = _not_built  # type: ignore[misc,assignment]
+    SilenceReport = _not_built  # type: ignore[misc,assignment]
+    SpectralReport = _not_built  # type: ignore[misc,assignment]
+    VideoDefectReport = _not_built  # type: ignore[misc,assignment]
+    parse_loudness_report = _not_built
+    parse_peak_report = _not_built
+    parse_silence_report = _not_built
+    parse_spectral_report = _not_built
+    parse_video_defect_report = _not_built
     # Aliasing exceptions to RuntimeError (intentional fallback)
     ValidationError = RuntimeError  # type: ignore[misc,assignment]
     CommandError = RuntimeError  # type: ignore[misc,assignment]
@@ -340,4 +364,17 @@ __all__ = [
     "LayoutError",
     # Version metadata
     "VersionInfo",
+    # QC measurement parsers
+    "LoudnessReport",
+    "PeakReport",
+    "Region",
+    "SilenceRegion",
+    "SilenceReport",
+    "SpectralReport",
+    "VideoDefectReport",
+    "parse_loudness_report",
+    "parse_peak_report",
+    "parse_silence_report",
+    "parse_spectral_report",
+    "parse_video_defect_report",
 ]

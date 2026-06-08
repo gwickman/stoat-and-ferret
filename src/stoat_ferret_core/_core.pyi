@@ -2900,3 +2900,197 @@ class VersionInfo:
     def current() -> VersionInfo:
         """Return a :class:`VersionInfo` populated from the build metadata."""
         ...
+
+# ========== QC Parser Types ==========
+
+class LoudnessReport:
+    """Loudness measurements parsed from ebur128/loudnorm JSON output."""
+
+    def __new__(
+        cls,
+        integrated_lufs: float,
+        lra: float,
+        true_peak_dbtp: float,
+    ) -> LoudnessReport:
+        """Creates a new LoudnessReport."""
+        ...
+
+    @property
+    def integrated_lufs(self) -> float:
+        """Integrated loudness in LUFS."""
+        ...
+
+    @property
+    def lra(self) -> float:
+        """Loudness range in LU."""
+        ...
+
+    @property
+    def true_peak_dbtp(self) -> float:
+        """True peak in dBTP."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class PeakReport:
+    """Peak/clipping measurements parsed from astats/volumedetect output."""
+
+    def __new__(cls, peak_level: float, clipped_samples: int) -> PeakReport:
+        """Creates a new PeakReport."""
+        ...
+
+    @property
+    def peak_level(self) -> float:
+        """Peak level in dB."""
+        ...
+
+    @property
+    def clipped_samples(self) -> int:
+        """Number of clipped samples."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class SilenceRegion:
+    """A single silence region with start and end times in seconds."""
+
+    def __new__(cls, start: float, end: float) -> SilenceRegion:
+        """Creates a new SilenceRegion."""
+        ...
+
+    @property
+    def start(self) -> float:
+        """Start of silence in seconds."""
+        ...
+
+    @property
+    def end(self) -> float:
+        """End of silence in seconds."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class SilenceReport:
+    """Silence analysis result containing all detected silence regions."""
+
+    def __new__(cls, regions: list[SilenceRegion]) -> SilenceReport:
+        """Creates a new SilenceReport."""
+        ...
+
+    @property
+    def regions(self) -> list[SilenceRegion]:
+        """Returns the list of silence regions."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class SpectralReport:
+    """Per-channel spectral statistics parsed from aspectralstats output."""
+
+    def __new__(cls, channel_count: int, channel_means: list[float]) -> SpectralReport:
+        """Creates a new SpectralReport."""
+        ...
+
+    @property
+    def channel_count(self) -> int:
+        """Number of channels detected."""
+        ...
+
+    @property
+    def channel_means(self) -> list[float]:
+        """Mean spectral energy per channel."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class Region:
+    """A detected time region with start and end times in seconds."""
+
+    def __new__(cls, start: float, end: float) -> Region:
+        """Creates a new Region."""
+        ...
+
+    @property
+    def start(self) -> float:
+        """Start of region in seconds."""
+        ...
+
+    @property
+    def end(self) -> float:
+        """End of region in seconds."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class VideoDefectReport:
+    """Video defect analysis result with black and freeze regions."""
+
+    def __new__(
+        cls, black_regions: list[Region], freeze_regions: list[Region]
+    ) -> VideoDefectReport:
+        """Creates a new VideoDefectReport."""
+        ...
+
+    @property
+    def black_regions(self) -> list[Region]:
+        """Returns the list of black detection regions."""
+        ...
+
+    @property
+    def freeze_regions(self) -> list[Region]:
+        """Returns the list of freeze detection regions."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+# ========== QC Parser Functions ==========
+
+def parse_loudness_report(output: str) -> LoudnessReport:
+    """Parse ebur128/loudnorm JSON output into a LoudnessReport.
+
+    Accepts both ``input_i`` (FFmpeg >=5.x) and ``integrated_loudness``
+    (FFmpeg <=4.x) field names. JSON values may be quoted strings or bare floats.
+
+    Raises ValueError on missing required fields.
+    """
+    ...
+
+def parse_peak_report(output: str) -> PeakReport:
+    """Parse astats/volumedetect text output into a PeakReport.
+
+    For astats: uses the "Overall" section, ignoring per-channel blocks.
+    For volumedetect: uses max_volume and histogram_0db fields.
+
+    Raises ValueError if no peak level field is found.
+    """
+    ...
+
+def parse_silence_report(output: str) -> SilenceReport:
+    """Parse silencedetect text output into a SilenceReport.
+
+    Pairs ``silence_start`` and ``silence_end`` lines in order. A trailing
+    start without a matching end gets end=float('inf').
+
+    Never raises; returns an empty SilenceReport on empty/garbled input.
+    """
+    ...
+
+def parse_spectral_report(output: str) -> SpectralReport:
+    """Parse aspectralstats lavfi key=value output into a SpectralReport.
+
+    Extracts ``lavfi.aspectralstats.{channel}.mean`` values per channel.
+    Channels are ordered by number (BTreeMap).
+
+    Raises ValueError if no channel mean data is found.
+    """
+    ...
+
+def parse_video_defect_report(output: str) -> VideoDefectReport:
+    """Parse blackdetect and freezedetect output into a VideoDefectReport.
+
+    blackdetect lines: ``black_start:X black_end:Y black_duration:Z``.
+    freezedetect lines: ``lavfi.freezedetect.freeze_start: X`` / ``freeze_end: X``.
+
+    Never raises; returns empty lists on empty/garbled input.
+    """
+    ...
