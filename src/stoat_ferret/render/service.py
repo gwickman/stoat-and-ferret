@@ -21,6 +21,7 @@ from PIL import Image
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.events import EventType, build_event, clear_event_counter
 from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.render.checkpoints import RenderCheckpointManager
 from stoat_ferret.render.executor import RenderExecutor
 from stoat_ferret.render.metrics import (
@@ -45,6 +46,37 @@ except ImportError:
     _HAS_RUST_BINDINGS = False
 
 logger = structlog.get_logger(__name__)
+
+
+def generate_ffmetadata(
+    markers: list[Marker],
+    metadata_title: str | None = None,
+) -> str:
+    """Build ffmetadata file content for chapter embedding.
+
+    Converts section markers into [CHAPTER] blocks with millisecond timebases.
+    Markers with missing end_time or zero/negative duration are skipped.
+    """
+    lines: list[str] = [";FFMETADATA1"]
+    if metadata_title:
+        lines.append(f"title={metadata_title}")
+    for marker in markers:
+        end_time = marker.end_time
+        if end_time is None or marker.start_time >= end_time:
+            logger.warning("chapter.skip_invalid_region", marker_id=marker.id)
+            continue
+        lines.extend(
+            [
+                "",
+                "[CHAPTER]",
+                "TIMEBASE=1/1000",
+                f"START={int(marker.start_time * 1000)}",
+                f"END={int(end_time * 1000)}",
+                f"title={marker.name or ''}",
+            ]
+        )
+    return "\n".join(lines)
+
 
 # Hardware encoder names — used to derive encoder_type ("HW" vs "SW") from encoder name.
 _HARDWARE_ENCODERS = frozenset(

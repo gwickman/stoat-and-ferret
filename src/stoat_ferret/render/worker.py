@@ -9,16 +9,20 @@ RenderWorkerLoop runs an infinite async loop that dequeues jobs and executes the
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import structlog
 
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
+from stoat_ferret.db.markers_repository import MarkerRepository
 from stoat_ferret.render.models import RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
-from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.service import RenderService, generate_ffmetadata
 
 logger = structlog.get_logger(__name__)
 
@@ -41,10 +45,21 @@ class CommandBuildError(Exception):
     """
 
 
+def _extract_metadata_title(render_plan_json: str) -> str | None:
+    """Extract the metadata title from render plan settings, or None if absent."""
+    try:
+        plan = json.loads(render_plan_json)
+        title = plan.get("settings", {}).get("metadata_title")
+        return str(title) if title is not None else None
+    except (json.JSONDecodeError, AttributeError):
+        return None
+
+
 async def build_command_for_job(
     job: RenderJob,
     clip_repository: AsyncClipRepository,
     video_repository: AsyncVideoRepository,
+    ffmetadata_path: str | None = None,
 ) -> list[str]:
     """Build an FFmpeg argument list for a render job.
 
@@ -56,6 +71,7 @@ async def build_command_for_job(
         job: The render job containing render_plan JSON and output_path.
         clip_repository: Async clip repository for project clip lookup.
         video_repository: Async video repository for video path lookup.
+        ffmetadata_path: Optional path to an ffmetadata file for chapter embedding.
 
     Returns:
         A list of strings representing the full FFmpeg command
@@ -128,6 +144,10 @@ async def build_command_for_job(
     # --- Assemble FFmpeg command ---
     cmd: list[str] = ["ffmpeg", "-i", input_path]
 
+    # Second input: ffmetadata file for chapter embedding (must precede output options)
+    if ffmetadata_path:
+        cmd.extend(["-i", ffmetadata_path])
+
     # Segment timing
     cmd.extend(["-ss", str(timeline_start), "-t", str(seg_duration)])
 
@@ -150,6 +170,10 @@ async def build_command_for_job(
     # Progress reporting (pipe:1 = stdout; progress parser reads from FFmpeg stdout)
     cmd.extend(["-progress", "pipe:1"])
 
+    # Chapter and container metadata from ffmetadata second input (index 1)
+    if ffmetadata_path:
+        cmd.extend(["-map_chapters", "1", "-map_metadata", "1"])
+
     # Output path (must be last)
     cmd.append(job.output_path)
 
@@ -159,7 +183,7 @@ async def build_command_for_job(
 class RenderWorkerLoop:
     """Background worker that continuously dequeues and executes render jobs.
 
-    Runs an infinite async loop: dequeue → build command → run_job → handle errors.
+    Runs an infinite async loop: dequeue -> build command -> run_job -> handle errors.
     Sleeps 100ms when the queue is idle to prevent CPU spin. Propagates
     CancelledError for clean shutdown; does not treat shutdown as a job failure.
 
@@ -168,6 +192,7 @@ class RenderWorkerLoop:
         queue: Render queue to dequeue jobs from.
         clip_repository: Repository for project clip lookups.
         video_repository: Repository for video path lookups.
+        markers_repository: Optional repository for project marker lookups (chapter embedding).
     """
 
     def __init__(
@@ -177,11 +202,13 @@ class RenderWorkerLoop:
         queue: RenderQueue,
         clip_repository: AsyncClipRepository,
         video_repository: AsyncVideoRepository,
+        markers_repository: MarkerRepository | None = None,
     ) -> None:
         self.service = service
         self.queue = queue
         self.clip_repository = clip_repository
         self.video_repository = video_repository
+        self.markers_repository = markers_repository
         self.logger = structlog.get_logger(__name__)
 
     async def run(self) -> None:
@@ -199,15 +226,41 @@ class RenderWorkerLoop:
                     continue
 
                 try:
-                    command = await build_command_for_job(
-                        job, self.clip_repository, self.video_repository
-                    )
-                    await self.service.run_job(job, command)
+                    await self._run_job(job)
                 except Exception as exc:
                     await self._handle_job_error(job, exc)
         except asyncio.CancelledError:
             self.logger.info("render_worker.stopped")
             raise
+
+    async def _run_job(self, job: RenderJob) -> None:
+        """Build command and execute a single render job, managing temp file lifecycle."""
+        ffmetadata_path: str | None = None
+        tmp_path: Path | None = None
+        try:
+            metadata_title = _extract_metadata_title(job.render_plan)
+            markers = []
+            if self.markers_repository is not None:
+                markers = await self.markers_repository.list_by_project(
+                    job.project_id, region_type="section"
+                )
+            if markers or metadata_title:
+                content = generate_ffmetadata(markers, metadata_title=metadata_title)
+                with tempfile.NamedTemporaryFile(
+                    suffix=".ffmetadata", delete=False, mode="w", encoding="utf-8"
+                ) as tmp:
+                    tmp.write(content)
+                    ffmetadata_path = tmp.name
+                    tmp_path = Path(tmp.name)
+
+            command = await build_command_for_job(
+                job, self.clip_repository, self.video_repository, ffmetadata_path
+            )
+            await self.service.run_job(job, command)
+        finally:
+            if tmp_path is not None:
+                with contextlib.suppress(OSError):
+                    tmp_path.unlink(missing_ok=True)
 
     async def _handle_job_error(self, job: RenderJob, exc: Exception) -> None:
         """Handle a job execution exception.
