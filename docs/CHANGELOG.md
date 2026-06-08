@@ -4,6 +4,28 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v076 — Release 2, Wave 1: Verify & Deliver (2026-06-08)
+
+### Added
+
+- **QC infrastructure**: QC namespace and module structure, Rust FFmpeg-output parsers (stub with deferred FFmpeg gate), QCService 11-pass analysis orchestrator, `/qc` API endpoint, QC smoke tests
+- **Delivery profiles**: `DeliveryProfile` model and database table, `/delivery-profiles` CRUD API, QC-gated export pipeline (blocks export on QC failures), render schema extended with `QC_FAILED` status
+- **Chapter and clip metadata embedding**: Metadata passthrough architecture and embedding hooks (FFmpeg-gated ACs deferred)
+- **QC-as-test layer**: OC→QC assertion mapping infrastructure (14/17 OC outcomes mapped), golden render and QC regression fixture infrastructure (FFmpeg-gated golden outputs deferred)
+- **Acceptance harness scaffold**: Chatbot scenario acceptance tests (4 ACs complete), browser UAT journeys for Release 2 use cases (6+ headless Playwright journeys), UC-MEDIA-MPS-001 full acceptance harness scaffold
+
+### Changed
+
+- Render schema: added `QC_FAILED` as a terminal render status
+
+### Deferred (FFmpeg-gated)
+
+The following ACs are deferred pending FFmpeg infrastructure: BL-423 (QC parsers, ACs 1–5), BL-424 (QCService AC-5), BL-426 (chapter metadata embedding, ACs 1–4), BL-427 (OC mapping, ACs 2–3), BL-458 (golden regression, ACs 2, 4), BL-459 (acceptance harness, ACs 1, 2, 4). BL-457-AC-2 deferred pending headed Playwright on Windows.
+
+### PRs
+
+#526, #527, #528, #529, #530, #531
+
 ## [v075] — Release 2, Wave 0 — Enablers (2026-06-07)
 
 ### Added
