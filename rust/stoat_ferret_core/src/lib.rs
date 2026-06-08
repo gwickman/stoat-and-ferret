@@ -26,6 +26,7 @@ pub mod compose;
 pub mod ffmpeg;
 pub mod layout;
 pub mod preview;
+pub mod qc;
 pub mod render;
 pub mod sanitize;
 pub mod schema;
@@ -159,6 +160,20 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sanitize::py_validate_video_codec, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_audio_codec, m)?)?;
     m.add_function(wrap_pyfunction!(sanitize::py_validate_preset, m)?)?;
+
+    // Register QC parser types and functions
+    m.add_class::<qc::LoudnessReport>()?;
+    m.add_class::<qc::PeakReport>()?;
+    m.add_class::<qc::SilenceRegion>()?;
+    m.add_class::<qc::SilenceReport>()?;
+    m.add_class::<qc::SpectralReport>()?;
+    m.add_class::<qc::Region>()?;
+    m.add_class::<qc::VideoDefectReport>()?;
+    m.add_function(wrap_pyfunction!(qc::py_parse_loudness_report, m)?)?;
+    m.add_function(wrap_pyfunction!(qc::py_parse_peak_report, m)?)?;
+    m.add_function(wrap_pyfunction!(qc::py_parse_silence_report, m)?)?;
+    m.add_function(wrap_pyfunction!(qc::py_parse_spectral_report, m)?)?;
+    m.add_function(wrap_pyfunction!(qc::py_parse_video_defect_report, m)?)?;
 
     // Register custom exception types
     // Note: ValidationError (exception) is distinct from ClipValidationError (struct)
