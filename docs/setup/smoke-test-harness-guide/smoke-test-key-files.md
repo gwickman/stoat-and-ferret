@@ -77,6 +77,14 @@ The test harness has three tiers:
 |------|-------------------|
 | `tests/smoke/test_markers.py` | Timeline markers CRUD lifecycle (create/list/update/delete), overlap rejection for section-type markers (→ 422), start-time ASC ordering, and 404 on non-existent project (BL-419, v075). |
 
+### Phase 7 — v076 QC and Delivery Smoke Additions (BL-423, BL-425, BL-426)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_qc_api.py` | QC API smoke tests (BL-423/BL-424, v076): `POST /api/v1/qc/run` → returns QCReport with pass/fail assertions; `GET /api/v1/qc/reports/{id}` → retrieves stored QC report; `GET /api/v1/render/{job_id}/qc` → fetches QC report attached to a render job. Uses a mock QCService (no FFmpeg required). |
+| `tests/smoke/test_render_api.py` | Delivery profile render path (BL-425, v076): `test_smoke_render_with_delivery_profile` verifies `POST /api/v1/render` with `delivery_profile` set to a non-existent name returns 422 `DELIVERY_PROFILE_NOT_FOUND`. `CreateRenderRequest.delivery_profile` is an optional `str | None` field. |
+| `tests/test_chapter_embedding.py` | Chapter metadata embedding integration tests (BL-426, v076): verifies FFmpeg chapter count equals section marker count, chapter titles match marker names, container title matches delivery profile `metadata_title`, QC `chapters_present` check passes, and zero-chapter baseline for renders without markers. All 5 tests are gated by `STOAT_TEST_FFMPEG=1` — skipped in CI. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
