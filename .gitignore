@@ -245,6 +245,7 @@ chatbot-testing-evidence/
 # root (e.g. `pytest > test_output.txt`). Ephemeral per-run artifacts that
 # repeatedly dirtied the tree; never tracked.
 /full_test_output.txt
+/full_test_output*.txt
 /test_output.txt
 /test_output_*.txt
 /test_*_results.txt
