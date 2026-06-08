@@ -1765,6 +1765,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/qc/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Qc
+         * @description Run all 11 QC checks over a rendered artifact and return a QCReport.
+         *
+         *     Returns HTTP 201 with the complete QCReport on success.
+         *     Returns HTTP 422 when the artifact path is missing or invalid.
+         *     Returns HTTP 404 when delivery_profile_id is provided but not found.
+         */
+        post: operations["run_qc_api_v1_qc_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/qc/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Qc Report
+         * @description Fetch a QCReport by UUID.
+         *
+         *     Returns HTTP 200 with the QCReport.
+         *     Returns HTTP 404 when the report does not exist.
+         */
+        get: operations["get_qc_report_api_v1_qc_reports__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/render/{job_id}/qc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Render Job Qc
+         * @description Return the latest QCReport for a render job.
+         *
+         *     Uses ORDER BY created_at DESC LIMIT 1 for deterministic lookup.
+         *     Returns HTTP 404 when no report exists for the given job.
+         */
+        get: operations["get_render_job_qc_api_v1_render__job_id__qc_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/render": {
         parameters: {
             query?: never;
@@ -3676,6 +3746,44 @@ export interface components {
             file_size_bytes: number;
             /** Generated At */
             generated_at?: string | null;
+        };
+        /**
+         * QCReportResponse
+         * @description Full QC analysis report returned by the API.
+         */
+        QCReportResponse: {
+            /** Id */
+            id: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** Artifact Path */
+            artifact_path: string;
+            /** Delivery Profile Id */
+            delivery_profile_id?: string | null;
+            /** Overall Verdict */
+            overall_verdict: string;
+            /** Checks */
+            checks: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * QCRunRequest
+         * @description Request body for POST /api/v1/qc/run.
+         */
+        QCRunRequest: {
+            /** Artifact Path */
+            artifact_path: string;
+            /** Delivery Profile Id */
+            delivery_profile_id?: string | null;
+            /** Assertions */
+            assertions?: {
+                [key: string]: number | null;
+            } | null;
+            /** Job Id */
+            job_id?: string | null;
         };
         /**
          * QualityPresetInfo
@@ -6495,6 +6603,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProxyBatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_qc_api_v1_qc_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QCRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QCReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_qc_report_api_v1_qc_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QCReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_render_job_qc_api_v1_render__job_id__qc_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QCReportResponse"];
                 };
             };
             /** @description Validation Error */

@@ -50,6 +50,9 @@ class EventType(str, Enum):
     PROXY_FAILED = "proxy.failed"
     VIDEO_DELETED = "video_deleted"
     CLIP_DELETED = "clip_deleted"
+    QC_STARTED = "qc.started"
+    QC_CHECK_COMPLETED = "qc.check_completed"
+    QC_COMPLETED = "qc.completed"
 
 
 def _next_event_id(scope: str) -> str:

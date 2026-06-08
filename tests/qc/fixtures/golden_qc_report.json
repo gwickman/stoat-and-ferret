@@ -1,1 +1,18 @@
-{"status": "placeholder", "checks": {}}
+{
+  "status": "placeholder",
+  "note": "Populated with real QCReport structure by BL-424 executor. Full fixture requires FFmpeg (STOAT_TEST_FFMPEG=1) for final discharge.",
+  "overall": "pass",
+  "checks": {
+    "loudness_integrated": {"measured": null, "target": null, "pass": null, "units": "LUFS"},
+    "true_peak": {"measured": null, "target": null, "pass": null, "units": "dBTP"},
+    "clipping": {"measured": null, "target": null, "pass": null, "units": "samples"},
+    "unintended_silence": {"measured": null, "target": null, "pass": null, "units": "regions"},
+    "loop_seam": {"measured": null, "target": null, "pass": null, "units": "errors"},
+    "tone_presence": {"measured": null, "target": null, "pass": null, "units": "dB"},
+    "ducking": {"measured": null, "target": null, "pass": null, "units": "dBFS"},
+    "section_arc": {"measured": null, "target": null, "pass": null, "units": "LU"},
+    "av_sync": {"measured": null, "target": null, "pass": null, "units": "ms"},
+    "decode_integrity": {"measured": null, "target": null, "pass": null, "units": "errors"},
+    "chapters_present": {"measured": null, "target": null, "pass": null, "units": "chapters"}
+  }
+}
