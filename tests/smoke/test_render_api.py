@@ -765,19 +765,21 @@ async def test_noop_mode_status_authoritative(
 
 
 async def test_smoke_render_with_delivery_profile(smoke_client: httpx.AsyncClient) -> None:
-    """POST /api/v1/render with delivery_profile field returns 422 (field not in schema).
+    """POST /api/v1/render with delivery_profile set to nonexistent name returns 422.
 
-    CreateRenderRequest uses extra='forbid', so unknown fields are rejected by Pydantic.
-    This test documents the current schema boundary for delivery_profile support.
+    CreateRenderRequest now accepts delivery_profile as an optional field.
+    A non-existent profile name is rejected with 422 DELIVERY_PROFILE_NOT_FOUND
+    before the render starts.
     """
     resp = await smoke_client.post(
         "/api/v1/render",
         json={
             "project_id": "00000000-0000-0000-0000-000000000001",
-            "render_plan": "{}",
+            "render_plan": '{"total_duration": 1.0, "settings": {}}',
             "delivery_profile": "test-profile-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         },
     )
     assert resp.status_code == 422
     body = resp.json()
     assert "detail" in body
+    assert body["detail"]["code"] == "DELIVERY_PROFILE_NOT_FOUND"

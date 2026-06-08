@@ -59,25 +59,25 @@ pytestmark = pytest.mark.timeout(30)
 SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
     {
         # _alter_videos_add_auxiliary_columns (sync) — BL-408
-        ("src/stoat_ferret/db/schema.py", 402),
-        # _alter_projects_add_audio_mix_column (sync)
-        ("src/stoat_ferret/db/schema.py", 416),
-        # _alter_projects_add_audio_baseline_columns (sync) — BL-422
-        ("src/stoat_ferret/db/schema.py", 430),
-        # _alter_clips_add_timeline_columns (sync)
-        ("src/stoat_ferret/db/schema.py", 444),
+        ("src/stoat_ferret/db/schema.py", 419),
         # _alter_render_jobs_add_partial_columns (sync) — BL-415
-        ("src/stoat_ferret/db/schema.py", 460),
+        ("src/stoat_ferret/db/schema.py", 433),
+        # _alter_projects_add_audio_mix_column (sync)
+        ("src/stoat_ferret/db/schema.py", 447),
+        # _alter_projects_add_audio_baseline_columns (sync) — BL-422
+        ("src/stoat_ferret/db/schema.py", 461),
+        # _alter_clips_add_timeline_columns (sync)
+        ("src/stoat_ferret/db/schema.py", 477),
         # _alter_videos_add_auxiliary_columns_async — BL-408
-        ("src/stoat_ferret/db/schema.py", 532),
+        ("src/stoat_ferret/db/schema.py", 551),
         # _alter_projects_add_audio_mix_column_async
-        ("src/stoat_ferret/db/schema.py", 548),
+        ("src/stoat_ferret/db/schema.py", 567),
         # _alter_projects_add_audio_baseline_columns_async — BL-422
-        ("src/stoat_ferret/db/schema.py", 564),
+        ("src/stoat_ferret/db/schema.py", 583),
         # _alter_clips_add_timeline_columns_async
-        ("src/stoat_ferret/db/schema.py", 580),
+        ("src/stoat_ferret/db/schema.py", 599),
         # _alter_render_jobs_add_partial_columns_async (async) — BL-415
-        ("src/stoat_ferret/db/schema.py", 596),
+        ("src/stoat_ferret/db/schema.py", 615),
         ("src/stoat_ferret/api/services/migrations.py", 434),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound

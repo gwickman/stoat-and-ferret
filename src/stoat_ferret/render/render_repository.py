@@ -285,6 +285,7 @@ class AsyncSQLiteRenderRepository:
                 RenderStatus.COMPLETED,
                 RenderStatus.FAILED,
                 RenderStatus.CANCELLED,
+                RenderStatus.QC_FAILED,
             )
             else None
         )
@@ -473,6 +474,9 @@ class InMemoryRenderRepository:
             job.completed_at = now
         elif status == RenderStatus.CANCELLED:
             job.error_message = None
+            job.completed_at = now
+        elif status == RenderStatus.QC_FAILED:
+            job.error_message = error_message
             job.completed_at = now
         else:
             job.error_message = error_message

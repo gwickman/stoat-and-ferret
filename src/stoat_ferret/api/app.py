@@ -30,6 +30,7 @@ from stoat_ferret.api.routers import (
     audio,
     batch,
     compose,
+    delivery_profiles,
     effects,
     filesystem,
     flags,
@@ -219,6 +220,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         connection_manager=app.state.ws_manager,
         settings=settings,
     )
+
+    # Phase 11 — DeliveryProfileRepository (same phase as QCService)
+    from stoat_ferret.db.delivery_profiles_repository import AsyncSQLiteDeliveryProfileRepository
+
+    app.state.delivery_profile_repository = AsyncSQLiteDeliveryProfileRepository(app.state.db)
 
     # Startup: create services, job queue, register handlers, and start worker
     job_queue = AsyncioJobQueue()
@@ -517,6 +523,7 @@ def create_app(
     gui_static_path: str | Path | None = None,
     client_identity_store: ClientIdentityStore | None = None,
     qc_service: QCService | None = None,
+    delivery_profile_repository: object | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -549,6 +556,7 @@ def create_app(
             Defaults to a new ``InMemoryClientIdentityStore`` if not provided.
             Stored on ``app.state.client_identity_store`` for access by future features.
         qc_service: Optional QCService for dependency injection in tests.
+        delivery_profile_repository: Optional delivery profile repository for DI in tests.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -631,6 +639,9 @@ def create_app(
     if qc_service is not None:
         app.state.qc_service = qc_service
 
+    if delivery_profile_repository is not None:
+        app.state.delivery_profile_repository = delivery_profile_repository
+
     app.include_router(health.router)
     app.include_router(version.router)
     app.include_router(flags.router)
@@ -638,6 +649,7 @@ def create_app(
     app.include_router(videos.router)
     app.include_router(projects.router)
     app.include_router(markers.router)
+    app.include_router(delivery_profiles.router)
     app.include_router(jobs.router)
     app.include_router(effects.router)
     app.include_router(compose.router)

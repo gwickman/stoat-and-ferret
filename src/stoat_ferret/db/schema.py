@@ -24,6 +24,7 @@ TABLE_RENDER_CHECKPOINTS = "render_checkpoints"
 TABLE_ENCODER_CACHE = "encoder_cache"
 TABLE_MARKERS = "project_markers"
 TABLE_QC_REPORTS = "qc_reports"
+TABLE_DELIVERY_PROFILES = "delivery_profiles"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -354,6 +355,22 @@ QC_REPORTS_JOB_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_qc_reports_job_id ON qc_reports(job_id);
 """
 
+DELIVERY_PROFILES_TABLE = """
+CREATE TABLE IF NOT EXISTS delivery_profiles (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    output_formats TEXT NOT NULL,
+    loudness_target_lufs REAL NOT NULL,
+    true_peak_ceiling_dbtp REAL NOT NULL,
+    metadata_template TEXT,
+    created_at TEXT NOT NULL
+)
+"""
+
+DELIVERY_PROFILES_NAME_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_delivery_profiles_name ON delivery_profiles(name);
+"""
+
 # Columns to add to videos table for auxiliary stream metadata.
 # Each entry is (column_name, column_type).
 VIDEOS_AUXILIARY_COLUMNS = [
@@ -513,6 +530,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(PROJECT_MARKERS_PROJECT_INDEX)
     cursor.execute(QC_REPORTS_TABLE)
     cursor.execute(QC_REPORTS_JOB_INDEX)
+    cursor.execute(DELIVERY_PROFILES_TABLE)
+    cursor.execute(DELIVERY_PROFILES_NAME_INDEX)
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
@@ -647,6 +666,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(PROJECT_MARKERS_PROJECT_INDEX)
     await db.execute(QC_REPORTS_TABLE)
     await db.execute(QC_REPORTS_JOB_INDEX)
+    await db.execute(DELIVERY_PROFILES_TABLE)
+    await db.execute(DELIVERY_PROFILES_NAME_INDEX)
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
