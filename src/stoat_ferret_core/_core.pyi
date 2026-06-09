@@ -1308,15 +1308,16 @@ class NoiseReductionBuilder:
     """Type-safe builder for FFmpeg noise reduction filters.
 
     Supports two modes:
-    - ``"broadband"``: uses ``afftdn`` (adaptive spectral noise reduction) with configurable strength
-    - ``"adeclick"``: uses ``adeclick`` (impulse/click removal) with configurable threshold
+    - ``"broadband"``: uses ``afftdn`` (adaptive spectral NR) with configurable strength
+    - ``"adeclick"``: uses ``adeclick`` (click/impulse removal) with configurable threshold
     """
 
     def __new__(cls, mode: str) -> NoiseReductionBuilder:
         """Create a new NoiseReductionBuilder.
 
         Args:
-            mode: ``"broadband"`` (afftdn adaptive spectral NR) or ``"adeclick"`` (click/impulse removal).
+            mode: ``"broadband"`` (afftdn adaptive spectral NR) or
+                ``"adeclick"`` (click/impulse removal).
 
         Raises:
             ValueError: If mode is not ``"broadband"`` or ``"adeclick"``.
