@@ -20,6 +20,7 @@ from stoat_ferret.effects.definitions import (
     AUDIO_DUCKING,
     AUDIO_FADE,
     AUDIO_MIX,
+    LOUDNESS_NORMALIZE,
     MASTERING_LIMITER,
     SPEED_CONTROL,
     TEXT_OVERLAY,
@@ -27,6 +28,7 @@ from stoat_ferret.effects.definitions import (
     VOLUME,
     XFADE,
     EffectDefinition,
+    _build_loudness_normalize,
     _build_mastering_limiter,
     _build_speed_control,
     _build_text_overlay,
@@ -51,6 +53,7 @@ EXPECTED_EFFECT_TYPES = {
     "deplosive",
     "time_stretch",
     "mastering_limiter",
+    "loudness_normalize",
 }
 
 # ---- Registry unit tests ----
@@ -761,6 +764,61 @@ def test_mastering_limiter_definition_registered() -> None:
     assert effect is MASTERING_LIMITER
     preview = effect.preview_fn()
     assert "alimiter" in preview, f"Preview missing alimiter: {preview}"
+
+
+# ---- loudness_normalize schema and round-trip tests ----
+
+
+@pytest.mark.contract
+def test_loudness_normalize_build_fn_pass1() -> None:
+    """loudness_normalize build_fn returns pass-1 filter string without measurements."""
+    filter_str = _build_loudness_normalize({"target_lufs": -16.0, "ceiling_dbtp": -1.0})
+    assert "loudnorm=" in filter_str, f"Expected loudnorm filter, got: {filter_str}"
+    assert "print_format=json" in filter_str, f"Expected pass-1 filter, got: {filter_str}"
+    assert "I=-16" in filter_str, f"Missing I=-16 in: {filter_str}"
+
+
+@pytest.mark.contract
+def test_loudness_normalize_build_fn_pass2_with_measurements() -> None:
+    """loudness_normalize build_fn returns pass-2 filter string when measurements are supplied."""
+    filter_str = _build_loudness_normalize(
+        {
+            "target_lufs": -16.0,
+            "ceiling_dbtp": -1.0,
+            "measured_i": -18.5,
+            "measured_lra": 9.2,
+            "measured_tp": -2.0,
+            "offset": 0.3,
+        }
+    )
+    assert "loudnorm=" in filter_str, f"Expected loudnorm filter, got: {filter_str}"
+    assert "linear=true" in filter_str, f"Expected pass-2 filter, got: {filter_str}"
+    assert "measured_I=-18.5" in filter_str, f"Missing measured_I in: {filter_str}"
+
+
+@pytest.mark.contract
+def test_loudness_normalize_delivery_profile_target_takes_precedence() -> None:
+    """delivery_profile_target_lufs overrides target_lufs in build_fn."""
+    filter_str = _build_loudness_normalize(
+        {
+            "target_lufs": -16.0,
+            "ceiling_dbtp": -1.0,
+            "delivery_profile_target_lufs": -23.0,
+        }
+    )
+    assert "I=-23" in filter_str, f"Expected delivery profile -23 LUFS, got: {filter_str}"
+    assert "I=-16" not in filter_str, f"Should not contain effect-level -16, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_loudness_normalize_definition_registered() -> None:
+    """loudness_normalize is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("loudness_normalize")
+    assert effect is not None, "loudness_normalize not found in default registry"
+    assert effect is LOUDNESS_NORMALIZE
+    preview = effect.preview_fn()
+    assert "loudnorm=" in preview, f"Preview missing loudnorm: {preview}"
 
 
 # ---- Prometheus metrics tests ----

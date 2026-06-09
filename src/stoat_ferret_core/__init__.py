@@ -90,6 +90,7 @@ try:
         LayoutSpec,
         LimiterBuilder,
         LoudnessReport,
+        LoudnormBuilder,
         NoiseReductionBuilder,
         ParameterSchema,
         PeakReport,
@@ -203,6 +204,7 @@ except ImportError:
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
+    LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
@@ -311,6 +313,7 @@ __all__ = [
     "TimeStretchBuilder",
     # Mastering builders
     "LimiterBuilder",
+    "LoudnormBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",
