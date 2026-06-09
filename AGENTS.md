@@ -111,6 +111,12 @@ Python type stubs for the Rust PyO3 bindings are maintained in `src/stoat_ferret
    cargo run --bin stub_gen
    ```
 
+   > **Warning — Do NOT copy stub_gen output wholesale.** Running
+   > `cargo run --bin stub_gen` and copying its output file directly to
+   > `src/stoat_ferret_core/_core.pyi` strips all hand-written `__new__`
+   > constructors and produces 100+ mypy errors. Always use append-only
+   > edits: restore from main and add only the new classes.
+
 2. Verify stubs are complete:
    ```bash
    uv run python scripts/verify_stubs.py
@@ -297,6 +303,12 @@ After modifying any PyO3 bindings, regenerate type stubs:
 cd rust/stoat_ferret_core
 cargo run --bin stub_gen
 ```
+
+> **Warning — Do NOT copy stub_gen output wholesale.** Running
+> `cargo run --bin stub_gen` and copying its output file directly to
+> `src/stoat_ferret_core/_core.pyi` strips all hand-written `__new__`
+> constructors and produces 100+ mypy errors. Always use append-only
+> edits: restore from main and add only the new classes.
 
 CI verifies stubs match the Rust API. Forgetting to regenerate will cause CI failure.
 
