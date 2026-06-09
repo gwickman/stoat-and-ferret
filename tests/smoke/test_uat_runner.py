@@ -167,6 +167,47 @@ def test_run_journey_subprocess_run_has_timeout() -> None:
 
 
 # ---------------------------------------------------------------------------
+# R2 journey dispatch — BL-457
+# ---------------------------------------------------------------------------
+
+R2_JOURNEY_IDS = [701, 702, 703, 704, 705, 706]
+
+
+def test_r2_journey_map_has_all_dispatch_entries() -> None:
+    """JOURNEY_MODULE_MAP must contain entries for all 6 R2 journey IDs 701-706 (BL-457-AC-1)."""
+    from scripts.uat_runner import JOURNEY_MODULE_MAP
+
+    for journey_id in R2_JOURNEY_IDS:
+        assert journey_id in JOURNEY_MODULE_MAP, (
+            f"Journey {journey_id} missing from JOURNEY_MODULE_MAP"
+        )
+
+
+def test_r2_journey_modules_resolve_to_actual_files() -> None:
+    """Each R2 module in JOURNEY_MODULE_MAP must resolve to an existing file (BL-457-AC-1)."""
+    import importlib.util
+
+    from scripts.uat_runner import JOURNEY_MODULE_MAP
+
+    for journey_id in R2_JOURNEY_IDS:
+        module_path = JOURNEY_MODULE_MAP[journey_id]
+        spec = importlib.util.find_spec(module_path)
+        assert spec is not None, (
+            f"Module {module_path!r} for journey {journey_id} not importable"
+        )
+
+
+def test_r2_qc_fail_has_playwright_assertions() -> None:
+    """j_qc_fail.py must contain real Playwright expect() assertions (BL-457-AC-3)."""
+    from tests.uat.journeys import j_qc_fail
+
+    source = inspect.getsource(j_qc_fail)
+    assert "expect(" in source, "j_qc_fail must contain Playwright expect() assertions"
+    assert "qc-status-fail" in source, "j_qc_fail must assert qc-status-fail element"
+    assert "remaster-btn" in source, "j_qc_fail must assert remaster-btn element"
+
+
+# ---------------------------------------------------------------------------
 # run_journey — absent-journey non-pass behavior (BL-473)
 # ---------------------------------------------------------------------------
 

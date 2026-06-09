@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from playwright.async_api import Page
+from playwright.async_api import Page, expect
 
 
 async def run(page: Page, base_url: str) -> None:
-    """J702: Navigate to delivery profiles, create profile, trigger render, verify QC pass.
+    """J702: Navigate to render page, verify render controls and start-render button visible.
 
     Depends on J701 (markers journey establishes project context).
     """
-    await page.goto(base_url)
+    await page.goto(base_url + "render")
     await page.wait_for_load_state("networkidle")
-    await page.screenshot(path="j702_home.png")
+    await expect(page.locator("[data-testid='render-page']")).to_be_visible()
+    await expect(page.locator("[data-testid='start-render-btn']")).to_be_visible()
+    await page.screenshot(path="j702_render.png")
