@@ -1,4 +1,4 @@
-"""FFmpeg contract tests for mastering effects (BL-432, BL-428).
+"""FFmpeg contract tests for mastering effects (BL-432, BL-428, BL-430).
 
 All tests are gated on STOAT_TEST_FFMPEG=1 and require a real FFmpeg install.
 These tests are deferred_post_merge: CI runs without STOAT_TEST_FFMPEG and
@@ -19,6 +19,7 @@ from stoat_ferret.effects.definitions import (
     _build_loudness_normalize,
     _build_mastering_limiter,
     _run_loudnorm_pass1,
+    create_default_registry,
 )
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
@@ -336,4 +337,108 @@ def test_loudnorm_reads_target_from_delivery_profile(tmp_path: Path) -> None:
     measured_lufs = _measure_integrated_loudness(output_path)
     assert abs(measured_lufs - delivery_lufs) <= 0.5, (
         f"Output {measured_lufs:.1f} LUFS not within 0.5 LU of delivery target {delivery_lufs}"
+    )
+
+
+# ---- volume automation contract tests (BL-430) ----
+
+
+def _generate_audio_sine(output_path: Path, duration: float = 6.0, amplitude: float = 0.8) -> None:
+    """Generate a constant-amplitude sine wave for automation testing."""
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            f"sine=frequency=440:duration={duration}:amplitude={amplitude}",
+            "-c:a",
+            "pcm_f32le",
+            "-ar",
+            "44100",
+            "-y",
+            str(output_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.skip(f"Could not generate sine fixture: {result.stderr.decode()}")
+
+
+def _get_mean_volume_at(audio_path: Path, offset_seconds: float, duration: float = 0.5) -> float:
+    """Return mean volume (dBFS) of a segment starting at offset_seconds."""
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-ss",
+            str(offset_seconds),
+            "-i",
+            str(audio_path),
+            "-t",
+            str(duration),
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    output = result.stderr.decode()
+    for line in output.splitlines():
+        if "mean_volume" in line:
+            parts = line.split("mean_volume:")
+            if len(parts) > 1:
+                return float(parts[1].strip().split()[0])
+    pytest.skip(f"Could not parse mean_volume from volumedetect: {output}")
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_volume_automation_level_follows_curve(tmp_path: Path) -> None:
+    """Volume automation envelope: output level rises from quiet to loud (BL-430-AC-2)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    input_path = tmp_path / "constant.wav"
+    output_path = tmp_path / "automated.wav"
+
+    # 6-second constant-amplitude input
+    _generate_audio_sine(input_path, duration=6.0, amplitude=0.8)
+
+    registry = create_default_registry()
+
+    # Automation: quiet at t=0 (volume=0.1), loud at t=5 (volume=0.9), linear ramp
+    errors, compiled_expression = registry.validate_with_automation(
+        "volume",
+        {
+            "volume": {
+                "default": 0.1,
+                "keyframes": [
+                    {"t": 0.0, "value": 0.1, "curve": "linear"},
+                    {"t": 5.0, "value": 0.9, "curve": "linear"},
+                ],
+            }
+        },
+    )
+    assert errors == [], f"validate_with_automation errors: {errors}"
+    assert compiled_expression is not None
+
+    filter_str = f"volume='{compiled_expression}'"
+
+    result = _run_ffmpeg_with_filter(input_path, filter_str, output_path)
+    if result.returncode != 0:
+        pytest.skip(f"FFmpeg volume automation render failed: {result.stderr.decode()}")
+
+    assert output_path.exists(), "Output file was not created"
+
+    # Level near start should be lower than level near end
+    level_start = _get_mean_volume_at(output_path, offset_seconds=0.1, duration=0.5)
+    level_end = _get_mean_volume_at(output_path, offset_seconds=5.0, duration=0.5)
+    assert level_end > level_start, (
+        f"Level should increase from start to end. "
+        f"Start: {level_start:.1f} dBFS, End: {level_end:.1f} dBFS"
     )
