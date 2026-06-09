@@ -18,7 +18,7 @@ stoat-and-ferret is an AI-driven video editor built on a **hybrid Python/Rust ar
 │          /compose, /audio, /timeline, /versions,          │
 │          /preview, /ws, /gui, /health, /metrics           │
 │  Middleware: Correlation ID, Metrics, Error Handling       │
-│  Effects: EffectRegistry with 16 built-in effects         │
+│  Effects: EffectRegistry with 17 built-in effects         │
 │  Jobs: Async job queue (scan, render)                     │
 └──────────────────────────┬──────────────────────────────┘
                            │
