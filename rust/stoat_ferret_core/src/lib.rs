@@ -109,6 +109,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::audio::TrackAudioConfig>()?;
     m.add_class::<ffmpeg::audio::AudioMixSpec>()?;
 
+    // Register voice repair builders
+    m.add_class::<ffmpeg::voice_repair::NoiseReductionBuilder>()?;
+
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
     m.add_class::<ffmpeg::transitions::FadeBuilder>()?;

@@ -108,6 +108,7 @@ try:
         ValidationError,
         VersionInfo,
         VideoDefectReport,
+        NoiseReductionBuilder,
         VolumeBuilder,
         XfadeBuilder,
         aggregate_segment_progress,
@@ -194,6 +195,7 @@ except ImportError:
     FadeBuilder = _not_built  # type: ignore[misc,assignment]
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
     AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
+    NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
     CurveKind = _not_built  # type: ignore[misc,assignment]
@@ -294,6 +296,8 @@ __all__ = [
     "DuckingPattern",
     "TrackAudioConfig",
     "AudioMixSpec",
+    # Voice repair builders
+    "NoiseReductionBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",

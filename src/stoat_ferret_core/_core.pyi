@@ -1302,6 +1302,65 @@ class AcrossfadeBuilder:
 
     def __repr__(self) -> str: ...
 
+# ========== Voice Repair Builders ==========
+
+class NoiseReductionBuilder:
+    """Type-safe builder for FFmpeg noise reduction filters.
+
+    Supports two modes:
+    - ``"broadband"``: uses ``afftdn`` (adaptive spectral noise reduction) with configurable strength
+    - ``"adeclick"``: uses ``adeclick`` (impulse/click removal) with configurable threshold
+    """
+
+    def __new__(cls, mode: str) -> NoiseReductionBuilder:
+        """Create a new NoiseReductionBuilder.
+
+        Args:
+            mode: ``"broadband"`` (afftdn adaptive spectral NR) or ``"adeclick"`` (click/impulse removal).
+
+        Raises:
+            ValueError: If mode is not ``"broadband"`` or ``"adeclick"``.
+        """
+        ...
+
+    def strength(self, strength: float) -> NoiseReductionBuilder:
+        """Set the noise reduction strength (0.0–1.0). Used in broadband mode.
+
+        Args:
+            strength: Strength in range [0.0, 1.0]; maps to afftdn nr=0..97.
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValueError: If strength is outside [0.0, 1.0].
+        """
+        ...
+
+    def threshold(self, threshold: float) -> NoiseReductionBuilder:
+        """Set the click detection threshold (0.0–1.0). Used in adeclick mode.
+
+        Args:
+            threshold: Threshold in range [0.0, 1.0].
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValueError: If threshold is outside [0.0, 1.0].
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the noise reduction Filter.
+
+        Returns:
+            A Filter with ``afftdn=nr=<nr>`` (broadband) or ``adeclick`` (adeclick mode).
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 

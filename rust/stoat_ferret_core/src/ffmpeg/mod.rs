@@ -66,6 +66,7 @@ pub mod expression;
 pub mod filter;
 pub mod speed;
 pub mod transitions;
+pub mod voice_repair;
 
 pub use command::{CommandError, FFmpegCommand};
 
