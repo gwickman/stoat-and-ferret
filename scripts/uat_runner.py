@@ -105,6 +105,7 @@ BENIGN_CONSOLE_PATTERNS: list[str] = [
 # Registry mapping Release-2 journey IDs to their module paths in tests/uat/journeys/.
 # Adding a new Release-2 journey requires only a new entry here — no changes to run_journey().
 JOURNEY_MODULE_MAP: dict[int, str] = {
+    206: "tests.uat.journeys.r2_skeleton",
     701: "tests.uat.journeys.j_markers",
     702: "tests.uat.journeys.j_mastering",
     703: "tests.uat.journeys.j_qc_fail",
@@ -552,6 +553,9 @@ def _run_module_journey(
     Returns:
         JourneyResult with the outcome.
     """
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
     try:
         module = importlib.import_module(module_name)
     except ImportError as exc:
