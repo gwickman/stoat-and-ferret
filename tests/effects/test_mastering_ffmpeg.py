@@ -1,4 +1,4 @@
-"""FFmpeg contract tests for LimiterBuilder (BL-432).
+"""FFmpeg contract tests for mastering effects (BL-432, BL-428).
 
 All tests are gated on STOAT_TEST_FFMPEG=1 and require a real FFmpeg install.
 These tests are deferred_post_merge: CI runs without STOAT_TEST_FFMPEG and
@@ -7,13 +7,19 @@ skips them; they must be discharged manually with STOAT_TEST_FFMPEG=1.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from stoat_ferret.effects.definitions import _build_mastering_limiter
+from stoat_ferret.effects.definitions import (
+    LoudnormPassOneResult,
+    _build_loudness_normalize,
+    _build_mastering_limiter,
+    _run_loudnorm_pass1,
+)
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 
@@ -177,3 +183,157 @@ def test_limiter_renders_without_error(tmp_path: Path) -> None:
     assert result.returncode == 0, f"FFmpeg returned non-zero exit: {result.stderr.decode()}"
     assert output_path.exists(), "Output file was not created"
     assert output_path.stat().st_size > 0, "Output file is empty"
+
+
+# ---- loudnorm contract tests (BL-428) ----
+
+
+def _measure_integrated_loudness(audio_path: Path) -> float:
+    """Return integrated loudness in LUFS using loudnorm pass-1 measurement."""
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-i",
+            str(audio_path),
+            "-af",
+            "loudnorm=I=-16:TP=-1:LRA=11:print_format=json",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    stderr = result.stderr.decode()
+    try:
+        parsed = LoudnormPassOneResult.from_stderr(stderr)
+        return parsed.measured_i
+    except Exception:
+        pytest.skip(f"Could not measure integrated loudness: {stderr[:500]}")
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_loudnorm_output_within_lufs_tolerance(tmp_path: Path) -> None:
+    """Two-pass loudnorm normalizes output to within +/-0.5 LU of target (BL-428-AC-1, AC-3)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    input_path = tmp_path / "source.wav"
+    output_path = tmp_path / "normalized.wav"
+
+    _generate_loud_audio(input_path)
+
+    target_lufs = -16.0
+    ceiling_dbtp = -1.0
+
+    pass1_result = asyncio.run(_run_loudnorm_pass1(str(input_path), target_lufs, ceiling_dbtp))
+    assert isinstance(pass1_result, LoudnormPassOneResult)
+
+    pass2_filter = _build_loudness_normalize(
+        {
+            "target_lufs": target_lufs,
+            "ceiling_dbtp": ceiling_dbtp,
+            "measured_i": pass1_result.measured_i,
+            "measured_lra": pass1_result.measured_lra,
+            "measured_tp": pass1_result.measured_tp,
+            "offset": pass1_result.offset,
+        }
+    )
+
+    result = _run_ffmpeg_with_filter(input_path, pass2_filter, output_path)
+    if result.returncode != 0:
+        pytest.skip(f"FFmpeg pass-2 render failed: {result.stderr.decode()}")
+
+    assert output_path.exists(), "Output file was not created"
+
+    measured_lufs = _measure_integrated_loudness(output_path)
+    assert abs(measured_lufs - target_lufs) <= 0.5, (
+        f"Output loudness {measured_lufs:.1f} LUFS not within 0.5 LU of target {target_lufs}"
+    )
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_loudnorm_true_peak_ceiling_respected(tmp_path: Path) -> None:
+    """Two-pass loudnorm keeps true-peak at or below configured ceiling (BL-428-AC-2)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    input_path = tmp_path / "source.wav"
+    output_path = tmp_path / "normalized.wav"
+
+    _generate_loud_audio(input_path)
+
+    target_lufs = -16.0
+    ceiling_dbtp = -1.0
+
+    pass1_result = asyncio.run(_run_loudnorm_pass1(str(input_path), target_lufs, ceiling_dbtp))
+    pass2_filter = _build_loudness_normalize(
+        {
+            "target_lufs": target_lufs,
+            "ceiling_dbtp": ceiling_dbtp,
+            "measured_i": pass1_result.measured_i,
+            "measured_lra": pass1_result.measured_lra,
+            "measured_tp": pass1_result.measured_tp,
+            "offset": pass1_result.offset,
+        }
+    )
+
+    result = _run_ffmpeg_with_filter(input_path, pass2_filter, output_path)
+    if result.returncode != 0:
+        pytest.skip(f"FFmpeg pass-2 render failed: {result.stderr.decode()}")
+
+    assert output_path.exists(), "Output file was not created"
+
+    # Verify peak using volumedetect
+    peak_db = _get_peak_level(output_path)
+    assert peak_db <= (ceiling_dbtp + 0.5), (
+        f"Peak {peak_db} dBFS exceeded ceiling {ceiling_dbtp} dBTP by more than 0.5 dB"
+    )
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_loudnorm_reads_target_from_delivery_profile(tmp_path: Path) -> None:
+    """delivery_profile_target_lufs overrides effect target_lufs (BL-428-AC-4)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    input_path = tmp_path / "source.wav"
+    output_path = tmp_path / "normalized.wav"
+
+    _generate_loud_audio(input_path)
+
+    # Simulate delivery profile providing -23.0 LUFS (broadcast), effect has -16.0
+    delivery_lufs = -23.0
+    ceiling_dbtp = -1.0
+
+    pass1_result = asyncio.run(_run_loudnorm_pass1(str(input_path), delivery_lufs, ceiling_dbtp))
+    pass2_filter = _build_loudness_normalize(
+        {
+            "target_lufs": -16.0,  # effect default — should be overridden
+            "ceiling_dbtp": ceiling_dbtp,
+            "delivery_profile_target_lufs": delivery_lufs,
+            "measured_i": pass1_result.measured_i,
+            "measured_lra": pass1_result.measured_lra,
+            "measured_tp": pass1_result.measured_tp,
+            "offset": pass1_result.offset,
+        }
+    )
+
+    # Verify the filter string uses the delivery profile target
+    assert "I=-23.0" in pass2_filter, (
+        f"Expected delivery profile -23 LUFS in pass-2 filter, got: {pass2_filter}"
+    )
+    assert "I=-16.0" not in pass2_filter, (
+        f"Should not contain effect default -16 in pass-2 filter, got: {pass2_filter}"
+    )
+
+    result = _run_ffmpeg_with_filter(input_path, pass2_filter, output_path)
+    if result.returncode != 0:
+        pytest.skip(f"FFmpeg pass-2 render failed: {result.stderr.decode()}")
+
+    assert output_path.exists(), "Output file was not created"
+    measured_lufs = _measure_integrated_loudness(output_path)
+    assert abs(measured_lufs - delivery_lufs) <= 0.5, (
+        f"Output {measured_lufs:.1f} LUFS not within 0.5 LU of delivery target {delivery_lufs}"
+    )

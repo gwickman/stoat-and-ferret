@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+import re
+from asyncio import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -16,6 +20,7 @@ from stoat_ferret_core import (
     DuckingPattern,
     FadeBuilder,
     LimiterBuilder,
+    LoudnormBuilder,
     NoiseReductionBuilder,
     SpeedControl,
     TimeStretchBuilder,
@@ -26,6 +31,10 @@ from stoat_ferret_core import (
 
 if TYPE_CHECKING:
     from stoat_ferret.effects.registry import EffectRegistry
+
+
+class RenderError(Exception):
+    """Raised when a render-related operation fails."""
 
 
 @dataclass(frozen=True)
@@ -1051,6 +1060,217 @@ MASTERING_LIMITER = EffectDefinition(
 )
 
 
+@dataclass
+class LoudnormPassOneResult:
+    """Pass-1 measurement result from FFmpeg loudnorm filter.
+
+    Parsed from the JSON block that loudnorm emits to stderr during the measurement pass.
+    Use :meth:`from_stderr` to construct from raw FFmpeg stderr output.
+    """
+
+    measured_i: float
+    measured_lra: float
+    measured_tp: float
+    offset: float
+
+    @classmethod
+    def from_stderr(cls, stderr: str) -> LoudnormPassOneResult:
+        """Parse loudnorm pass-1 JSON from FFmpeg stderr.
+
+        Finds the last JSON object in stderr (loudnorm emits it at the end of the
+        filter graph analysis) and extracts the four measurement fields.
+
+        Args:
+            stderr: Raw stderr string from the FFmpeg pass-1 run.
+
+        Returns:
+            LoudnormPassOneResult with parsed measurements.
+
+        Raises:
+            RenderError: If no valid JSON block is found or required fields are missing.
+        """
+        match = re.search(r"\{[^{}]*\}", stderr, re.DOTALL)
+        if not match:
+            raise RenderError(
+                f"loudnorm pass-1 produced no JSON block in stderr. stderr={stderr!r}"
+            )
+        try:
+            data = json.loads(match.group())
+        except json.JSONDecodeError as exc:
+            raise RenderError(
+                f"loudnorm pass-1 JSON is malformed: {exc}. stderr={stderr!r}"
+            ) from exc
+
+        required = ("input_i", "input_lra", "input_tp", "target_offset")
+        missing = [k for k in required if k not in data]
+        if missing:
+            raise RenderError(
+                f"loudnorm pass-1 JSON missing required fields {missing}. data={data!r}"
+            )
+
+        try:
+            return cls(
+                measured_i=float(data["input_i"]),
+                measured_lra=float(data["input_lra"]),
+                measured_tp=float(data["input_tp"]),
+                offset=float(data["target_offset"]),
+            )
+        except (ValueError, TypeError) as exc:
+            raise RenderError(
+                f"loudnorm pass-1 JSON field is not a valid float: {exc}. data={data!r}"
+            ) from exc
+
+
+async def _run_loudnorm_pass1(
+    artifact_path: str,
+    target_lufs: float,
+    ceiling_dbtp: float,
+    lra: float = 11.0,
+) -> LoudnormPassOneResult:
+    """Run FFmpeg loudnorm pass-1 measurement on an audio/video file.
+
+    Uses asyncio.create_subprocess_exec (QCService pattern) with stdout=PIPE,
+    stderr=PIPE. The loudnorm JSON measurement is written to stderr by FFmpeg.
+
+    Args:
+        artifact_path: Path to the input audio or video file.
+        target_lufs: Target integrated loudness in LUFS (e.g. -16.0).
+        ceiling_dbtp: True-peak ceiling in dBTP (must be <= 0.0).
+        lra: Loudness range target in LU (default 11.0).
+
+    Returns:
+        LoudnormPassOneResult with the four measured values.
+
+    Raises:
+        RenderError: If FFmpeg fails or the stderr JSON cannot be parsed.
+    """
+    builder = LoudnormBuilder(target_lufs, ceiling_dbtp, lra)
+    filter_str = str(builder.build_pass1())
+
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg",
+        "-i",
+        artifact_path,
+        "-af",
+        filter_str,
+        "-f",
+        "null",
+        "-",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout_b, stderr_b = await proc.communicate()
+    stderr_text = stderr_b.decode("utf-8", errors="replace")
+
+    if proc.returncode != 0:
+        raise RenderError(
+            f"loudnorm pass-1 FFmpeg exited {proc.returncode}. stderr={stderr_text!r}"
+        )
+
+    return LoudnormPassOneResult.from_stderr(stderr_text)
+
+
+def _build_loudness_normalize(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for loudness_normalize effect.
+
+    When pass-1 measurements are present in parameters (measured_i, measured_lra,
+    measured_tp, offset), builds the pass-2 linear normalization filter.
+    Otherwise builds the pass-1 measurement filter (used for schema preview and
+    API-level inspection without a real audio file).
+
+    Args:
+        parameters: Effect parameters dict. May contain:
+            - target_lufs (float, default -16.0)
+            - ceiling_dbtp (float, default -1.0)
+            - lra (float, default 11.0)
+            - delivery_profile_target_lufs (float, optional): takes precedence over target_lufs
+            - measured_i / measured_lra / measured_tp / offset: pass-1 measurements
+
+    Returns:
+        FFmpeg loudnorm filter string.
+    """
+    target_lufs = float(
+        parameters.get("delivery_profile_target_lufs", parameters.get("target_lufs", -16.0))
+    )
+    ceiling_dbtp = float(parameters.get("ceiling_dbtp", -1.0))
+    lra = float(parameters.get("lra", 11.0))
+    builder = LoudnormBuilder(target_lufs, ceiling_dbtp, lra)
+
+    if all(k in parameters for k in ("measured_i", "measured_lra", "measured_tp", "offset")):
+        return str(
+            builder.build_pass2(
+                float(parameters["measured_i"]),
+                float(parameters["measured_lra"]),
+                float(parameters["measured_tp"]),
+                float(parameters["offset"]),
+            )
+        )
+    return str(builder.build_pass1())
+
+
+def _loudness_normalize_preview() -> str:
+    """Generate a filter preview for loudness_normalize with default parameters."""
+    return str(LoudnormBuilder(-16.0, -1.0, 11.0).build_pass1())
+
+
+LOUDNESS_NORMALIZE = EffectDefinition(
+    name="Loudness Normalize",
+    description=(
+        "Two-pass LUFS loudness normalization to a target level with true-peak ceiling. "
+        "Uses EBU R128 / ITU-R BS.1770 integrated loudness measurement."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "target_lufs": {
+                "type": "number",
+                "maximum": 0.0,
+                "default": -16.0,
+                "description": (
+                    "Target integrated loudness in LUFS (must be <= 0.0). "
+                    "Common values: -16 LUFS (podcasts), -14 LUFS (streaming), "
+                    "-23 LUFS (broadcast EBU R128)."
+                ),
+            },
+            "ceiling_dbtp": {
+                "type": "number",
+                "maximum": 0.0,
+                "default": -1.0,
+                "description": (
+                    "True-peak ceiling in dBTP (must be <= 0.0). "
+                    "Use -1.0 for standard streaming delivery."
+                ),
+            },
+            "lra": {
+                "type": "number",
+                "minimum": 1.0,
+                "maximum": 50.0,
+                "default": 11.0,
+                "description": (
+                    "Loudness range target in LU (1–50). EBU R128 recommendation is 11.0 LU."
+                ),
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "target_lufs": (
+            "Use -16 LUFS for podcasts and general content, -14 for streaming platforms "
+            "(Spotify/Apple Music), -23 for broadcast (EBU R128). Values must be <= 0."
+        ),
+        "ceiling_dbtp": "Use -1.0 dBTP for standard delivery; -0.1 for maximum loudness.",
+        "lra": "Leave at 11.0 for most content. Reduce for tightly compressed material.",
+    },
+    preview_fn=_loudness_normalize_preview,
+    build_fn=_build_loudness_normalize,
+    ai_summary=(
+        "Normalize audio loudness to a target LUFS level using two-pass EBU R128 measurement."
+    ),
+    example_prompt="Normalize the audio to -16 LUFS for podcast delivery.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1074,4 +1294,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("deplosive", DEPLOSIVE)
     registry.register("time_stretch", TIME_STRETCH)
     registry.register("mastering_limiter", MASTERING_LIMITER)
+    registry.register("loudness_normalize", LOUDNESS_NORMALIZE)
     return registry

@@ -3342,4 +3342,81 @@ class LimiterBuilder:
             A Filter with ``alimiter=limit=<ratio>:level=disabled`` syntax.
         """
         ...
-    ...
+
+    def __repr__(self) -> str: ...
+
+class LoudnormBuilder:
+    """Type-safe builder for FFmpeg ``loudnorm`` two-pass LUFS normalization.
+
+    Pass-1 filter (``build_pass1``): emits ``loudnorm=I=...:TP=...:LRA=...:print_format=json``
+    so FFmpeg writes measurement JSON to stderr.
+
+    Pass-2 filter (``build_pass2``): emits the linear normalization filter using the
+    measurements from :class:`LoudnormPassOneResult`.
+
+    Default LRA is 11.0 LU (EBU R128 recommendation).
+    """
+
+    def __new__(
+        cls,
+        target_lufs: float,
+        ceiling_dbtp: float,
+        lra: float,
+    ) -> LoudnormBuilder:
+        """Creates a new LoudnormBuilder.
+
+        Args:
+            target_lufs: Target integrated loudness in LUFS (e.g. -16.0 for podcasts,
+                         -14.0 for streaming).
+            ceiling_dbtp: True-peak ceiling in dBTP (must be <= 0.0).
+            lra: Loudness range target in LU (default 11.0, EBU R128 recommendation).
+
+        Raises:
+            ValueError: If ceiling_dbtp > 0.0.
+        """
+        ...
+
+    @property
+    def target_lufs(self) -> float:
+        """Target integrated loudness in LUFS."""
+        ...
+
+    @property
+    def ceiling_dbtp(self) -> float:
+        """True-peak ceiling in dBTP."""
+        ...
+
+    @property
+    def lra(self) -> float:
+        """Loudness range target in LU."""
+        ...
+
+    def build_pass1(self) -> Filter:
+        """Build the pass-1 loudnorm filter (measurement pass).
+
+        Returns:
+            A Filter with ``loudnorm=I=...:TP=...:LRA=...:print_format=json`` syntax.
+        """
+        ...
+
+    def build_pass2(
+        self,
+        measured_i: float,
+        measured_lra: float,
+        measured_tp: float,
+        offset: float,
+    ) -> Filter:
+        """Build the pass-2 loudnorm filter using pass-1 measurements.
+
+        Args:
+            measured_i: Measured integrated loudness from pass-1 (LUFS).
+            measured_lra: Measured loudness range from pass-1 (LU).
+            measured_tp: Measured true-peak from pass-1 (dBTP).
+            offset: Gain offset from pass-1.
+
+        Returns:
+            A Filter with linear normalization syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
