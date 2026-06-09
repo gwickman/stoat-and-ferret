@@ -303,3 +303,81 @@ def test_deplosive_attenuates_low_freq_burst(tmp_path: Path) -> None:
     _apply_filter(click_path, deplosived_path, filter_str)
     assert deplosived_path.exists(), "deplosive output file was not created"
     assert deplosived_path.stat().st_size > 0, "deplosive output file is empty"
+
+
+def _measure_duration(audio_path: Path) -> float:
+    """Return audio duration in seconds using FFmpeg."""
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(audio_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    output = result.stdout.decode().strip()
+    try:
+        return float(output)
+    except ValueError:
+        pytest.skip(f"Could not parse duration from ffprobe output: {output!r}")
+
+
+def test_time_stretch_duration_matches_factor(tmp_path: Path) -> None:
+    """BL-435-AC-1/AC-2: atempo mode stretches duration by the given factor."""
+    if not _ffmpeg_available():
+        pytest.skip("ffmpeg binary not available")
+
+    input_path = tmp_path / "input.wav"
+    stretched_path = tmp_path / "stretched.wav"
+
+    # Generate a 2-second sine wave
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-c:a",
+            "pcm_s16le",
+            "-y",
+            str(input_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.skip(f"Could not generate sine wave: {result.stderr.decode()}")
+
+    from stoat_ferret_core import TimeStretchBuilder
+
+    # BL-435-AC-1: atempo=0.8 produces valid filter string
+    builder = TimeStretchBuilder(0.8, "atempo")
+    filter_str = str(builder.build())
+    assert "atempo=0.8" in filter_str, f"Expected atempo=0.8 in filter string, got: {filter_str}"
+
+    # BL-435-AC-2: renders without error and output duration is ~2.0/0.8 = 2.5s
+    _apply_filter(input_path, stretched_path, filter_str)
+    assert stretched_path.exists(), "time_stretch output file was not created"
+    assert stretched_path.stat().st_size > 0, "time_stretch output file is empty"
+
+    duration_before = _measure_duration(input_path)
+    duration_after = _measure_duration(stretched_path)
+    expected = duration_before / 0.8
+    assert abs(duration_after - expected) < 0.2, (
+        f"Expected duration ~{expected:.2f}s, got {duration_after:.2f}s"
+    )
+
+
+@pytest.mark.skip(reason="BL-435-AC-3: deferred_post_merge, requires rubberband + librosa")
+def test_time_stretch_spectral_centroid_stable(tmp_path: Path) -> None:
+    """BL-435-AC-3: rubberband mode preserves spectral centroid (pitch-invariant stretch)."""
+    pass

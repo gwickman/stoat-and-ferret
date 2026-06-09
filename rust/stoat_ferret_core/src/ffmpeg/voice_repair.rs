@@ -914,3 +914,450 @@ mod tests {
         });
     }
 }
+
+// ========== TimeStretchBuilder ==========
+
+/// Type-safe builder for FFmpeg time-stretch filter chain.
+///
+/// Adjusts audio playback duration without affecting pitch. Supports three modes:
+/// - `"rubberband"`: uses `rubberband` filter (high-quality, requires rubberband FFmpeg build)
+/// - `"atempo"`: uses chained `atempo` filters (always available, chains for factors outside [0.5, 2.0])
+/// - `"auto"`: probes FFmpeg for rubberband availability at build time, falls back to atempo
+///
+/// # Examples
+///
+/// ```
+/// use stoat_ferret_core::ffmpeg::voice_repair::TimeStretchBuilder;
+///
+/// let chain = TimeStretchBuilder::new(0.8, "atempo").unwrap().build();
+/// assert!(chain.to_string().contains("atempo=0.8"));
+///
+/// let chain = TimeStretchBuilder::new(1.5, "rubberband").unwrap().build();
+/// assert!(chain.to_string().contains("rubberband=tempo=1.5"));
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct TimeStretchBuilder {
+    /// Time-stretch factor (0.0 exclusive – 4.0 inclusive).
+    factor: f64,
+    /// Mode: "rubberband", "atempo", or "auto".
+    mode: String,
+}
+
+impl TimeStretchBuilder {
+    /// Creates a new `TimeStretchBuilder`.
+    ///
+    /// # Arguments
+    ///
+    /// * `factor` - Stretch factor in range (0.0, 4.0]. Values < 1.0 slow down, > 1.0 speed up.
+    /// * `mode` - Filter mode: "rubberband", "atempo", or "auto".
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if factor is <= 0.0 or > 4.0, or mode is not recognized.
+    pub fn new(factor: f64, mode: &str) -> Result<Self, String> {
+        if factor <= 0.0 || factor > 4.0 {
+            return Err(format!("factor must be in (0.0, 4.0], got {factor}"));
+        }
+        match mode {
+            "rubberband" | "atempo" | "auto" => {}
+            _ => {
+                return Err(format!(
+                    "mode must be 'rubberband', 'atempo', or 'auto', got '{mode}'"
+                ))
+            }
+        }
+        Ok(Self {
+            factor,
+            mode: mode.to_string(),
+        })
+    }
+
+    /// Probes whether the rubberband FFmpeg filter is available.
+    fn probe_rubberband_available() -> bool {
+        std::process::Command::new("ffmpeg")
+            .arg("-filters")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains("rubberband"))
+            .unwrap_or(false)
+    }
+
+    /// Builds the atempo `FilterChain` for the given factor.
+    fn build_atempo_chain(factor: f64) -> FilterChain {
+        let values = ts_atempo_chain(factor);
+        if values.is_empty() {
+            return FilterChain::new().filter(Filter::new("atempo=1"));
+        }
+        let mut chain = FilterChain::new();
+        for val in values {
+            let formatted = format_ts_value(val);
+            chain = chain.filter(Filter::new(format!("atempo={formatted}")));
+        }
+        chain
+    }
+
+    /// Builds the time-stretch `FilterChain`.
+    #[must_use]
+    pub fn build(&self) -> FilterChain {
+        match self.mode.as_str() {
+            "rubberband" => {
+                let tempo_str = format_ts_value(self.factor);
+                let f = Filter::new("rubberband")
+                    .param("tempo", tempo_str)
+                    .param("pitch", "1.0".to_string());
+                FilterChain::new().filter(f)
+            }
+            "atempo" => Self::build_atempo_chain(self.factor),
+            "auto" => {
+                if Self::probe_rubberband_available() {
+                    let tempo_str = format_ts_value(self.factor);
+                    let f = Filter::new("rubberband")
+                        .param("tempo", tempo_str)
+                        .param("pitch", "1.0".to_string());
+                    FilterChain::new().filter(f)
+                } else {
+                    Self::build_atempo_chain(self.factor)
+                }
+            }
+            _ => unreachable!("mode validated in new()"),
+        }
+    }
+}
+
+/// Computes a chain of atempo values for time-stretching, each within [0.5, 2.0].
+fn ts_atempo_chain(factor: f64) -> Vec<f64> {
+    if (factor - 1.0).abs() < f64::EPSILON {
+        return Vec::new();
+    }
+
+    if (0.5..=2.0).contains(&factor) {
+        return vec![factor];
+    }
+
+    let mut values = Vec::new();
+
+    if factor > 2.0 {
+        let mut remaining = factor;
+        while remaining > 2.0 {
+            values.push(2.0);
+            remaining /= 2.0;
+        }
+        if (remaining - 1.0).abs() > f64::EPSILON {
+            values.push(remaining);
+        }
+    } else {
+        // factor < 0.5
+        let mut remaining = factor;
+        while remaining < 0.5 {
+            values.push(0.5);
+            remaining /= 0.5;
+        }
+        if (remaining - 1.0).abs() > f64::EPSILON {
+            values.push(remaining);
+        }
+    }
+
+    values
+}
+
+/// Formats a stretch factor value, stripping unnecessary trailing zeros.
+fn format_ts_value(value: f64) -> String {
+    if (value - value.round()).abs() < 1e-9 {
+        format!("{}", value.round() as i64)
+    } else {
+        let s = format!("{value:.10}");
+        let s = s.trim_end_matches('0');
+        s.trim_end_matches('.').to_string()
+    }
+}
+
+// ========== TimeStretchBuilder PyO3 bindings ==========
+
+#[pymethods]
+impl TimeStretchBuilder {
+    /// Creates a new `TimeStretchBuilder`.
+    ///
+    /// Args:
+    ///     factor: Time-stretch factor in range (0.0, 4.0].
+    ///     mode: Filter mode - "rubberband", "atempo", or "auto".
+    ///
+    /// Raises:
+    ///     ValueError: If factor is out of range or mode is invalid.
+    #[new]
+    fn py_new(factor: f64, mode: &str) -> PyResult<Self> {
+        Self::new(factor, mode).map_err(PyValueError::new_err)
+    }
+
+    /// Builds the time-stretch `FilterChain`.
+    ///
+    /// Returns:
+    ///     A FilterChain with rubberband or chained atempo filters.
+    #[pyo3(name = "build")]
+    fn py_build(&self) -> FilterChain {
+        self.build()
+    }
+
+    /// Returns the stretch factor.
+    #[getter]
+    #[pyo3(name = "factor")]
+    fn py_factor(&self) -> f64 {
+        self.factor
+    }
+
+    /// Returns the filter mode.
+    #[getter]
+    #[pyo3(name = "mode")]
+    fn py_mode(&self) -> &str {
+        &self.mode
+    }
+
+    /// Returns a string representation of the builder.
+    fn __repr__(&self) -> String {
+        format!(
+            "TimeStretchBuilder(factor={}, mode='{}')",
+            self.factor, self.mode
+        )
+    }
+}
+
+#[cfg(test)]
+mod time_stretch_tests {
+    use super::*;
+    use pyo3::prelude::*;
+
+    // ========== Construction and validation ==========
+
+    #[test]
+    fn test_new_valid_atempo() {
+        let b = TimeStretchBuilder::new(0.8, "atempo").unwrap();
+        assert!((b.factor - 0.8).abs() < f64::EPSILON);
+        assert_eq!(b.mode, "atempo");
+    }
+
+    #[test]
+    fn test_new_valid_rubberband() {
+        let b = TimeStretchBuilder::new(1.5, "rubberband").unwrap();
+        assert_eq!(b.mode, "rubberband");
+    }
+
+    #[test]
+    fn test_new_valid_auto() {
+        let b = TimeStretchBuilder::new(2.0, "auto").unwrap();
+        assert_eq!(b.mode, "auto");
+    }
+
+    #[test]
+    fn test_new_factor_at_max() {
+        let b = TimeStretchBuilder::new(4.0, "atempo").unwrap();
+        assert!((b.factor - 4.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_new_factor_zero_rejected() {
+        let result = TimeStretchBuilder::new(0.0, "atempo");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("factor must be in"));
+    }
+
+    #[test]
+    fn test_new_factor_negative_rejected() {
+        let result = TimeStretchBuilder::new(-1.0, "atempo");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("factor must be in"));
+    }
+
+    #[test]
+    fn test_new_factor_above_max_rejected() {
+        let result = TimeStretchBuilder::new(4.1, "atempo");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("factor must be in"));
+    }
+
+    #[test]
+    fn test_new_invalid_mode_rejected() {
+        let result = TimeStretchBuilder::new(1.0, "invalid");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("mode must be"));
+    }
+
+    // ========== ts_atempo_chain logic ==========
+
+    #[test]
+    fn test_atempo_chain_within_range() {
+        let chain = ts_atempo_chain(0.8);
+        assert_eq!(chain.len(), 1);
+        assert!((chain[0] - 0.8).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atempo_chain_2_5x_two_stages() {
+        let chain = ts_atempo_chain(2.5);
+        assert_eq!(chain.len(), 2);
+        assert!((chain[0] - 2.0).abs() < f64::EPSILON);
+        assert!((chain[1] - 1.25).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atempo_chain_0_25x_two_stages() {
+        let chain = ts_atempo_chain(0.25);
+        assert_eq!(chain.len(), 2);
+        assert!((chain[0] - 0.5).abs() < f64::EPSILON);
+        assert!((chain[1] - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atempo_chain_1x_empty() {
+        let chain = ts_atempo_chain(1.0);
+        assert!(chain.is_empty());
+    }
+
+    #[test]
+    fn test_atempo_chain_all_in_range() {
+        for &factor in &[0.25_f64, 0.3, 0.5, 0.8, 1.5, 2.0, 2.5, 3.0, 4.0] {
+            let chain = ts_atempo_chain(factor);
+            for val in &chain {
+                assert!(
+                    *val >= 0.5 && *val <= 2.0,
+                    "factor={factor}: atempo value {val} out of [0.5, 2.0]"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_atempo_chain_product_correct() {
+        for &factor in &[0.25_f64, 0.3, 0.5, 0.8, 1.5, 2.0, 2.5, 3.0, 4.0] {
+            let chain = ts_atempo_chain(factor);
+            let product: f64 = chain.iter().product();
+            assert!(
+                (product - factor).abs() < 1e-9,
+                "factor={factor}: product {product} != {factor}"
+            );
+        }
+    }
+
+    // ========== build() output format ==========
+
+    #[test]
+    fn test_build_atempo_0_8() {
+        let chain = TimeStretchBuilder::new(0.8, "atempo").unwrap().build();
+        assert_eq!(chain.to_string(), "atempo=0.8");
+    }
+
+    #[test]
+    fn test_build_atempo_2_5_chains() {
+        let chain = TimeStretchBuilder::new(2.5, "atempo").unwrap().build();
+        assert_eq!(chain.to_string(), "atempo=2,atempo=1.25");
+    }
+
+    #[test]
+    fn test_build_atempo_0_25_chains() {
+        let chain = TimeStretchBuilder::new(0.25, "atempo").unwrap().build();
+        assert_eq!(chain.to_string(), "atempo=0.5,atempo=0.5");
+    }
+
+    #[test]
+    fn test_build_rubberband_1_5() {
+        let chain = TimeStretchBuilder::new(1.5, "rubberband").unwrap().build();
+        let s = chain.to_string();
+        assert!(s.contains("rubberband=tempo=1.5"), "Got: {s}");
+        assert!(s.contains("pitch=1.0"), "Got: {s}");
+    }
+
+    #[test]
+    fn test_build_rubberband_0_8() {
+        let chain = TimeStretchBuilder::new(0.8, "rubberband").unwrap().build();
+        let s = chain.to_string();
+        assert!(s.starts_with("rubberband=tempo=0.8"), "Got: {s}");
+    }
+
+    #[test]
+    fn test_build_auto_produces_valid_chain() {
+        let chain = TimeStretchBuilder::new(0.8, "auto").unwrap().build();
+        let s = chain.to_string();
+        assert!(
+            s.contains("rubberband") || s.contains("atempo"),
+            "Unexpected auto output: {s}"
+        );
+    }
+
+    // ========== format_ts_value ==========
+
+    #[test]
+    fn test_format_ts_value_integer() {
+        assert_eq!(format_ts_value(2.0), "2");
+        assert_eq!(format_ts_value(1.0), "1");
+    }
+
+    #[test]
+    fn test_format_ts_value_decimal() {
+        assert_eq!(format_ts_value(0.8), "0.8");
+        assert_eq!(format_ts_value(1.5), "1.5");
+        assert_eq!(format_ts_value(1.25), "1.25");
+    }
+
+    // ========== __repr__ ==========
+
+    #[test]
+    fn test_repr() {
+        let b = TimeStretchBuilder::new(0.8, "atempo").unwrap();
+        let repr = b.__repr__();
+        assert!(repr.contains("TimeStretchBuilder"));
+        assert!(repr.contains("0.8"));
+        assert!(repr.contains("atempo"));
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    #[test]
+    fn test_pyo3_time_stretch_atempo() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let ts = Bound::new(py, TimeStretchBuilder::new(0.8, "atempo").unwrap()).unwrap();
+
+            let chain: String = ts
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(chain.contains("atempo=0.8"));
+
+            let factor: f64 = ts.getattr("factor").unwrap().extract().unwrap();
+            assert!((factor - 0.8).abs() < f64::EPSILON);
+
+            let mode: String = ts.getattr("mode").unwrap().extract().unwrap();
+            assert_eq!(mode, "atempo");
+
+            let repr: String = ts.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("TimeStretchBuilder"));
+
+            assert!(TimeStretchBuilder::py_new(0.0, "atempo").is_err());
+            assert!(TimeStretchBuilder::py_new(1.0, "invalid").is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_time_stretch_rubberband() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let ts = Bound::new(py, TimeStretchBuilder::new(1.5, "rubberband").unwrap()).unwrap();
+
+            let chain: String = ts
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(chain.contains("rubberband=tempo=1.5"));
+            assert!(chain.contains("pitch=1.0"));
+
+            let repr: String = ts.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("TimeStretchBuilder"));
+            assert!(repr.contains("rubberband"));
+        });
+    }
+}

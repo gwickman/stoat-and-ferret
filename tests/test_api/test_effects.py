@@ -47,6 +47,7 @@ EXPECTED_EFFECT_TYPES = {
     "noise_reduction",
     "deesser",
     "deplosive",
+    "time_stretch",
 }
 
 # ---- Registry unit tests ----
@@ -721,6 +722,15 @@ def test_effect_definition_schema_roundtrip() -> None:
 
     errors = registry.validate("deplosive", {})
     assert errors == [], f"deplosive schema rejected empty params (all optional): {errors}"
+
+    errors = registry.validate("time_stretch", {"factor": 0.8})
+    assert errors == [], f"time_stretch schema rejected valid params: {errors}"
+
+    errors = registry.validate("time_stretch", {"factor": 2.5, "mode": "atempo"})
+    assert errors == [], f"time_stretch schema rejected factor+mode params: {errors}"
+
+    errors = registry.validate("time_stretch", {"factor": 1.5, "mode": "rubberband"})
+    assert errors == [], f"time_stretch schema rejected rubberband params: {errors}"
 
 
 # ---- Prometheus metrics tests ----

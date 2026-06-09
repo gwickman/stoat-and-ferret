@@ -1470,6 +1470,49 @@ class DeplosiveBuilder:
 
     def __repr__(self) -> str: ...
 
+class TimeStretchBuilder:
+    """Type-safe builder for FFmpeg time-stretch filter chain.
+
+    Adjusts audio playback duration without affecting pitch. Supports three modes:
+
+    - ``"rubberband"``: uses ``rubberband`` filter (high-quality, requires rubberband FFmpeg build)
+    - ``"atempo"``: uses chained ``atempo`` filters (always available, chains for factors
+      outside [0.5, 2.0])
+    - ``"auto"``: probes FFmpeg for rubberband availability at build time, falls back to atempo
+    """
+
+    def __new__(cls, factor: float, mode: str) -> TimeStretchBuilder:
+        """Create a new TimeStretchBuilder.
+
+        Args:
+            factor: Time-stretch factor in range (0.0, 4.0]. Values < 1.0 slow down, > 1.0 speed up.
+            mode: Filter mode - ``"rubberband"``, ``"atempo"``, or ``"auto"``.
+
+        Raises:
+            ValueError: If factor is out of range or mode is not recognized.
+        """
+        ...
+
+    @property
+    def factor(self) -> float:
+        """Returns the stretch factor."""
+        ...
+
+    @property
+    def mode(self) -> str:
+        """Returns the filter mode."""
+        ...
+
+    def build(self) -> FilterChain:
+        """Build the time-stretch FilterChain.
+
+        Returns:
+            A FilterChain with rubberband or chained atempo filters.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 
