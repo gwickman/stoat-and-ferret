@@ -15,6 +15,7 @@ from stoat_ferret_core import (
     DrawtextBuilder,
     DuckingPattern,
     FadeBuilder,
+    LimiterBuilder,
     NoiseReductionBuilder,
     SpeedControl,
     TimeStretchBuilder,
@@ -996,6 +997,60 @@ TIME_STRETCH = EffectDefinition(
 )
 
 
+def _build_mastering_limiter(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for mastering limiter effect.
+
+    Args:
+        parameters: Effect parameters with required 'ceiling_dbtp'.
+
+    Returns:
+        FFmpeg alimiter filter string.
+    """
+    ceiling_dbtp = float(parameters.get("ceiling_dbtp", -1.0))
+    return str(LimiterBuilder(ceiling_dbtp).build())
+
+
+def _mastering_limiter_preview() -> str:
+    """Generate a filter preview for mastering limiter with default parameters."""
+    return str(LimiterBuilder(-1.0).build())
+
+
+MASTERING_LIMITER = EffectDefinition(
+    name="Mastering Limiter",
+    description=(
+        "True-peak limiter for master bus protection. "
+        "Caps audio so true-peak does not exceed the configured ceiling."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "ceiling_dbtp": {
+                "type": "number",
+                "maximum": 0.0,
+                "default": -1.0,
+                "description": (
+                    "True-peak ceiling in dBTP (must be <= 0.0). "
+                    "Example: -1.0 dBTP → limit=0.891251 linear ratio."
+                ),
+            },
+        },
+        "required": ["ceiling_dbtp"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "ceiling_dbtp": (
+            "Use -1.0 dBTP for standard streaming/broadcast delivery. "
+            "Use -0.1 dBTP for maximum loudness with minimal headroom. "
+            "Values must be <= 0.0."
+        ),
+    },
+    preview_fn=_mastering_limiter_preview,
+    build_fn=_build_mastering_limiter,
+    ai_summary=("Limit master bus true-peak to a configured dBTP ceiling using FFmpeg alimiter."),
+    example_prompt="Limit the master to -1 dBTP true peak for streaming delivery.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1018,4 +1073,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("deesser", DEESSER)
     registry.register("deplosive", DEPLOSIVE)
     registry.register("time_stretch", TIME_STRETCH)
+    registry.register("mastering_limiter", MASTERING_LIMITER)
     return registry

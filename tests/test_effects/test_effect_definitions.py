@@ -36,7 +36,7 @@ def test_all_effects_have_nonempty_example_prompt() -> None:
     assert not missing, f"Effects missing example_prompt: {missing}"
 
 
-def test_registry_has_thirteen_builtin_effects() -> None:
+def test_registry_has_fourteen_builtin_effects() -> None:
     """Guards against silent removals from the default registry."""
     registry = create_default_registry()
-    assert len(registry.list_all()) == 13
+    assert len(registry.list_all()) == 14

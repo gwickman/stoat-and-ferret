@@ -88,6 +88,7 @@ try:
         LayoutPosition,
         LayoutPreset,
         LayoutSpec,
+        LimiterBuilder,
         LoudnessReport,
         NoiseReductionBuilder,
         ParameterSchema,
@@ -201,6 +202,7 @@ except ImportError:
     NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
+    LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
@@ -307,6 +309,8 @@ __all__ = [
     "DeesserBuilder",
     "DeplosiveBuilder",
     "TimeStretchBuilder",
+    # Mastering builders
+    "LimiterBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",

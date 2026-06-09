@@ -115,6 +115,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::voice_repair::DeplosiveBuilder>()?;
     m.add_class::<ffmpeg::voice_repair::TimeStretchBuilder>()?;
 
+    // Register mastering builders
+    m.add_class::<ffmpeg::mastering::LimiterBuilder>()?;
+
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
     m.add_class::<ffmpeg::transitions::FadeBuilder>()?;
