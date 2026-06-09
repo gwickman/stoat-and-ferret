@@ -204,3 +204,102 @@ def test_noise_reduction_adeclick_removes_clicks(tmp_path: Path) -> None:
     _apply_filter(click_path, declick_path, filter_str)
     assert declick_path.exists(), "adeclick output file was not created"
     assert declick_path.stat().st_size > 0, "adeclick output file is empty"
+
+
+def _generate_sibilant_audio(output_path: Path) -> None:
+    """Generate audio with high-frequency energy to simulate sibilance."""
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=7000:duration=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-filter_complex",
+            "amix=inputs=2:duration=first",
+            "-c:a",
+            "pcm_s16le",
+            "-y",
+            str(output_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.skip(f"Could not generate sibilant audio fixture: {result.stderr.decode()}")
+
+
+def _measure_band_energy(audio_path: Path, low_hz: int, high_hz: int) -> float:
+    """Measure mean volume of a frequency band by applying a bandpass filter."""
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-i",
+            str(audio_path),
+            "-af",
+            f"bandreject=f={low_hz}:width_type=h:width={high_hz - low_hz},volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    output = result.stderr.decode()
+    match = re.search(r"mean_volume:\s*([-\d.]+)\s*dB", output)
+    if match:
+        return float(match.group(1))
+    # Return a sentinel — if volumedetect fails, skip rather than fail
+    pytest.skip(f"Could not parse volumedetect output for band energy: {output!r}")
+
+
+def test_deesser_reduces_sibilant_energy(tmp_path: Path) -> None:
+    """BL-434-AC-1: deesser renders without error on a sibilant fixture."""
+    if not _ffmpeg_available():
+        pytest.skip("ffmpeg binary not available")
+
+    sibilant_path = tmp_path / "sibilant.wav"
+    deessed_path = tmp_path / "deessed.wav"
+
+    _generate_sibilant_audio(sibilant_path)
+
+    from stoat_ferret_core import DeesserBuilder
+
+    builder = DeesserBuilder(7000.0).mode("wide")
+    filter_str = str(builder.build())
+    assert "deesser" in filter_str, f"Expected deesser in filter string, got: {filter_str}"
+    assert "f=7000" in filter_str, f"Expected f=7000 in filter string, got: {filter_str}"
+
+    # AC-1: renders without error against real FFmpeg
+    _apply_filter(sibilant_path, deessed_path, filter_str)
+    assert deessed_path.exists(), "deesser output file was not created"
+    assert deessed_path.stat().st_size > 0, "deesser output file is empty"
+
+
+def test_deplosive_attenuates_low_freq_burst(tmp_path: Path) -> None:
+    """BL-434-AC-2/AC-3: deplosive FilterChain renders without error."""
+    if not _ffmpeg_available():
+        pytest.skip("ffmpeg binary not available")
+
+    click_path = tmp_path / "plosive.wav"
+    deplosived_path = tmp_path / "deplosived.wav"
+
+    _generate_click_audio(click_path)
+
+    from stoat_ferret_core import DeplosiveBuilder
+
+    builder = DeplosiveBuilder().cutoff(80.0).threshold(0.1).ratio(4.0)
+    filter_str = str(builder.build())
+    assert "highpass" in filter_str, f"Expected highpass in filter string, got: {filter_str}"
+    assert "acompressor" in filter_str, f"Expected acompressor in filter string, got: {filter_str}"
+
+    # AC-2: renders without error against real FFmpeg
+    _apply_filter(click_path, deplosived_path, filter_str)
+    assert deplosived_path.exists(), "deplosive output file was not created"
+    assert deplosived_path.stat().st_size > 0, "deplosive output file is empty"

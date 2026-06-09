@@ -1362,6 +1362,114 @@ class NoiseReductionBuilder:
 
     def __repr__(self) -> str: ...
 
+class DeesserBuilder:
+    """Type-safe builder for FFmpeg de-esser filter.
+
+    Reduces sibilant energy ("s", "sh") using the FFmpeg ``deesser`` filter.
+    Configurable frequency and mode (``"wide"`` or ``"split"``).
+    """
+
+    def __new__(cls, frequency: float) -> DeesserBuilder:
+        """Create a new DeesserBuilder.
+
+        Args:
+            frequency: Sibilance detection frequency in Hz (1000–16000).
+
+        Raises:
+            ValueError: If frequency is outside [1000, 16000].
+        """
+        ...
+
+    def mode(self, mode: str) -> DeesserBuilder:
+        """Set the filter mode (``"wide"`` or ``"split"``).
+
+        Args:
+            mode: ``"wide"`` (affects full range) or ``"split"`` (splits at frequency).
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValueError: If mode is not ``"wide"`` or ``"split"``.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the de-esser Filter.
+
+        Returns:
+            A Filter with ``deesser=f=<freq>:m=<mode>`` syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class DeplosiveBuilder:
+    """Type-safe builder for FFmpeg de-plosive filter chain.
+
+    Attenuates low-frequency plosive bursts ("p", "b") using a composite chain:
+    ``highpass`` (removes sub-cutoff energy) → ``acompressor`` (controls burst peaks).
+    """
+
+    def __new__(cls) -> DeplosiveBuilder:
+        """Create a new DeplosiveBuilder with default parameters.
+
+        Defaults: cutoff=60 Hz, threshold=0.1, ratio=4.0.
+        """
+        ...
+
+    def cutoff(self, cutoff: float) -> DeplosiveBuilder:
+        """Set the highpass cutoff frequency in Hz (10–200).
+
+        Args:
+            cutoff: Cutoff frequency in Hz in range [10, 200].
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValueError: If cutoff is outside [10, 200].
+        """
+        ...
+
+    def threshold(self, threshold: float) -> DeplosiveBuilder:
+        """Set the acompressor threshold (0.0–1.0).
+
+        Args:
+            threshold: Threshold in range [0.0, 1.0].
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValueError: If threshold is outside [0.0, 1.0].
+        """
+        ...
+
+    def ratio(self, ratio: float) -> DeplosiveBuilder:
+        """Set the acompressor ratio (1.0–20.0).
+
+        Args:
+            ratio: Compression ratio in range [1.0, 20.0].
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValueError: If ratio is outside [1.0, 20.0].
+        """
+        ...
+
+    def build(self) -> FilterChain:
+        """Build the de-plosive FilterChain.
+
+        Returns:
+            A FilterChain with ``highpass=f=<cutoff>,acompressor=...`` stages.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
 class Filter:
     """A single FFmpeg filter with optional parameters."""
 

@@ -10,6 +10,8 @@ from stoat_ferret_core import (
     AcrossfadeBuilder,
     AfadeBuilder,
     AmixBuilder,
+    DeesserBuilder,
+    DeplosiveBuilder,
     DrawtextBuilder,
     DuckingPattern,
     FadeBuilder,
@@ -795,6 +797,139 @@ NOISE_REDUCTION = EffectDefinition(
 )
 
 
+def _build_deesser(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for de-esser effect.
+
+    Args:
+        parameters: Effect parameters with optional 'frequency' (Hz) and 'mode'.
+
+    Returns:
+        FFmpeg deesser filter string.
+    """
+    frequency = float(parameters.get("frequency", 6000.0))
+    builder = DeesserBuilder(frequency)
+    if "mode" in parameters:
+        builder = builder.mode(parameters["mode"])
+    return str(builder.build())
+
+
+def _deesser_preview() -> str:
+    """Generate a filter preview for de-esser with default parameters."""
+    return str(DeesserBuilder(6000.0).build())
+
+
+DEESSER = EffectDefinition(
+    name="De-esser",
+    description="Reduce harsh sibilant sounds ('s', 'sh') in voice recordings.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "frequency": {
+                "type": "number",
+                "minimum": 1000.0,
+                "maximum": 16000.0,
+                "default": 6000.0,
+                "description": "Sibilance detection frequency in Hz (1000–16000).",
+            },
+            "mode": {
+                "type": "string",
+                "enum": ["wide", "split"],
+                "default": "wide",
+                "description": (
+                    "Filter mode: wide (affects full range) or split (splits at frequency)."
+                ),
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "frequency": (
+            "Typical sibilance sits between 5000–8000 Hz for most voices. "
+            "Use lower values (3000–5000) for deep voices."
+        ),
+        "mode": "Use 'wide' for general de-essing; use 'split' for more targeted treatment.",
+    },
+    preview_fn=_deesser_preview,
+    build_fn=_build_deesser,
+    ai_summary="Remove harsh 's' and 'sh' sounds from voice audio using FFmpeg de-esser filter.",
+    example_prompt="The narration sounds too sibilant, fix the harshness on the 's' sounds.",
+)
+
+
+def _build_deplosive(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for de-plosive effect.
+
+    Args:
+        parameters: Effect parameters with optional 'cutoff', 'threshold', 'ratio'.
+
+    Returns:
+        FFmpeg highpass+acompressor filter chain string.
+    """
+    builder = DeplosiveBuilder()
+    if "cutoff" in parameters:
+        builder = builder.cutoff(float(parameters["cutoff"]))
+    if "threshold" in parameters:
+        builder = builder.threshold(float(parameters["threshold"]))
+    if "ratio" in parameters:
+        builder = builder.ratio(float(parameters["ratio"]))
+    return str(builder.build())
+
+
+def _deplosive_preview() -> str:
+    """Generate a filter preview for de-plosive with default parameters."""
+    return str(DeplosiveBuilder().build())
+
+
+DEPLOSIVE = EffectDefinition(
+    name="De-plosive",
+    description="Attenuate low-frequency plosive bursts ('p', 'b') in voice recordings.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "cutoff": {
+                "type": "number",
+                "minimum": 10.0,
+                "maximum": 200.0,
+                "default": 60.0,
+                "description": (
+                    "Highpass cutoff frequency in Hz (10–200). Energy below this is removed."
+                ),
+            },
+            "threshold": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 0.1,
+                "description": "Acompressor threshold (0.0–1.0). Lower values catch more plosives.",
+            },
+            "ratio": {
+                "type": "number",
+                "minimum": 1.0,
+                "maximum": 20.0,
+                "default": 4.0,
+                "description": (
+                    "Acompressor ratio (1.0–20.0). Higher values apply more compression."
+                ),
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "cutoff": "60 Hz is a safe default; raise to 80–120 Hz if plosives are severe.",
+        "threshold": "Start at 0.1; lower to 0.05 if plosives persist.",
+        "ratio": "4:1 is typical for voice; increase to 8:1 or higher for severe plosives.",
+    },
+    preview_fn=_deplosive_preview,
+    build_fn=_build_deplosive,
+    ai_summary="Remove 'p' and 'b' plosive thumps from voice audio using highpass and compression.",
+    example_prompt=(
+        "There are loud plosive pops when the narrator says 'p' and 'b' sounds, please fix."
+    ),
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -814,4 +949,6 @@ def create_default_registry() -> EffectRegistry:
     registry.register("xfade", XFADE)
     registry.register("acrossfade", ACROSSFADE)
     registry.register("noise_reduction", NOISE_REDUCTION)
+    registry.register("deesser", DEESSER)
+    registry.register("deplosive", DEPLOSIVE)
     return registry
