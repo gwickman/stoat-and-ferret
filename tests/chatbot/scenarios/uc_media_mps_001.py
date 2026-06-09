@@ -84,9 +84,7 @@ async def run_uc_media_mps_001(base_url: str) -> dict[str, Any]:
         if render_resp.status_code in (200, 201, 202):
             render_job_id = render_resp.json().get("id")
             if render_job_id:
-                qc_resp = await client.get(
-                    f"/api/v1/render/{render_job_id}/qc"
-                )
+                qc_resp = await client.get(f"/api/v1/render/{render_job_id}/qc")
                 if qc_resp.status_code == 200:
                     qc_report = qc_resp.json()
                     status = "success" if qc_report.get("overall") == "pass" else "qc_failed"

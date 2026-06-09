@@ -164,3 +164,46 @@ def test_run_journey_subprocess_run_has_timeout() -> None:
     """Static: run_journey() source must contain timeout= (BL-398 regression guard)."""
     source = inspect.getsource(run_journey)
     assert "timeout=" in source, "run_journey() subprocess.run must include timeout="
+
+
+# ---------------------------------------------------------------------------
+# run_journey — absent-journey non-pass behavior (BL-473)
+# ---------------------------------------------------------------------------
+
+
+def test_absent_journey_returns_not_implemented(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run_journey() with no script and no module mapping returns not_implemented, never passed."""
+    import scripts.uat_runner as _runner
+
+    # Empty the module map so journey 999 has no dispatch target
+    monkeypatch.setattr(_runner, "JOURNEY_MODULE_MAP", {})
+    # Point PROJECT_ROOT at tmp_path so no uat_journey_999.py script exists
+    monkeypatch.setattr(_runner, "PROJECT_ROOT", tmp_path)
+
+    result = _runner.run_journey(journey_id=999, output_dir=tmp_path, headed=False)
+
+    assert result.status != "passed", (
+        f"Absent journey must not report 'passed', got {result.status!r}"
+    )
+    assert result.status == "not_implemented"
+
+
+def test_absent_journey_excluded_from_passed_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A not_implemented journey result does not appear in the Passed count."""
+    import scripts.uat_runner as _runner
+
+    monkeypatch.setattr(_runner, "JOURNEY_MODULE_MAP", {})
+    monkeypatch.setattr(_runner, "PROJECT_ROOT", tmp_path)
+
+    result = _runner.run_journey(journey_id=999, output_dir=tmp_path, headed=False)
+    assert result.status == "not_implemented"
+
+    # print_summary must show Passed: 0 and Not Implemented: 1
+    _runner.print_summary([result], tmp_path)
+    captured = capsys.readouterr()
+    assert "Passed: 0" in captured.out
+    assert "Not Implemented: 1" in captured.out
