@@ -821,6 +821,41 @@ def test_loudness_normalize_definition_registered() -> None:
     assert "loudnorm=" in preview, f"Preview missing loudnorm: {preview}"
 
 
+# ---- volume automation tests (BL-430-AC-1) ----
+
+
+@pytest.mark.contract
+def test_volume_automatable_contains_volume() -> None:
+    """volume EffectDefinition automatable frozenset contains 'volume' (BL-430-AC-1)."""
+    registry = create_default_registry()
+    effect = registry.get("volume")
+    assert effect is not None, "volume not found in default registry"
+    assert "volume" in effect.automatable, (
+        f"Expected 'volume' in automatable, got: {effect.automatable}"
+    )
+
+
+@pytest.mark.contract
+def test_volume_automation_envelope_accepted() -> None:
+    """validate_with_automation accepts volume keyframe envelope (BL-430-AC-1)."""
+    registry = create_default_registry()
+    errors, compiled_expression = registry.validate_with_automation(
+        "volume",
+        {
+            "volume": {
+                "default": 0.5,
+                "keyframes": [
+                    {"t": 0.0, "value": 0.2, "curve": "linear"},
+                    {"t": 5.0, "value": 0.8, "curve": "linear"},
+                ],
+            }
+        },
+    )
+    assert errors == [], f"Unexpected validation errors: {errors}"
+    assert compiled_expression is not None, "Expected a compiled expression for automation envelope"
+    assert len(compiled_expression) > 0, "Compiled expression should be non-empty"
+
+
 # ---- Prometheus metrics tests ----
 
 
