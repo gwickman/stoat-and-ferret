@@ -16,7 +16,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import contextlib
+import importlib
 import json
 import os
 import signal
@@ -100,6 +102,17 @@ BENIGN_CONSOLE_PATTERNS: list[str] = [
     "favicon",
 ]
 
+# Registry mapping Release-2 journey IDs to their module paths in tests/uat/journeys/.
+# Adding a new Release-2 journey requires only a new entry here — no changes to run_journey().
+JOURNEY_MODULE_MAP: dict[int, str] = {
+    701: "tests.uat.journeys.j_markers",
+    702: "tests.uat.journeys.j_mastering",
+    703: "tests.uat.journeys.j_qc_fail",
+    704: "tests.uat.journeys.j_automation",
+    705: "tests.uat.journeys.j_reverse_split",
+    706: "tests.uat.journeys.j_grade",
+}
+
 KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "tests" / "fixtures" / "baseline-uat-failures.json"
 
 
@@ -159,12 +172,14 @@ def get_journey_annotation(
 
     Args:
         journey_id: The journey ID.
-        status: Journey status ("passed", "failed", "skipped").
+        status: Journey status ("passed", "failed", "skipped", "not_implemented").
         known_failures: Dict of known failure entries keyed by journey_id.
 
     Returns:
-        Annotation string: KNOWN_FAILURE, UNEXPECTED_PASS, PASS, or FAIL.
+        Annotation string: KNOWN_FAILURE, UNEXPECTED_PASS, NOT_IMPLEMENTED, PASS, or FAIL.
     """
+    if status == "not_implemented":
+        return "NOT_IMPLEMENTED"
     if journey_id in known_failures:
         if status == "failed":
             return "KNOWN_FAILURE"
@@ -520,12 +535,67 @@ def should_skip_journey(
     return None
 
 
-def run_journey(journey_id: int, output_dir: Path, headed: bool) -> JourneyResult:
-    """Execute a single journey script.
+def _run_module_journey(
+    journey_id: int, output_dir: Path, headed: bool, module_name: str
+) -> JourneyResult:
+    """Dispatch a journey by importing its module and calling run() in an async context.
 
-    Currently a skeleton that reports journeys as passed since journey scripts
-    are implemented in later features. The headed flag and output_dir are passed
-    through for when journey scripts are available.
+    Used for Release-2 journeys (701-706) whose implementations live in
+    tests/uat/journeys/ rather than as standalone scripts/uat_journey_N.py files.
+
+    Args:
+        journey_id: The journey number to run.
+        output_dir: Directory for journey output artifacts.
+        headed: Whether to run in headed browser mode.
+        module_name: Dotted module path, e.g. "tests.uat.journeys.j_markers".
+
+    Returns:
+        JourneyResult with the outcome.
+    """
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        return JourneyResult(
+            journey_id=journey_id,
+            status="failed",
+            message=f"Cannot import module {module_name}: {exc}",
+        )
+
+    async def _go() -> None:
+        from playwright.async_api import async_playwright
+
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=not headed)
+            ctx = await browser.new_context()
+            page = await ctx.new_page()
+            try:
+                await module.run(page, f"{SERVER_URL}/gui/")
+            finally:
+                await ctx.close()
+                await browser.close()
+
+    try:
+        asyncio.run(_go())
+    except Exception as exc:
+        return JourneyResult(
+            journey_id=journey_id,
+            status="failed",
+            message=str(exc)[:200],
+        )
+    return JourneyResult(
+        journey_id=journey_id,
+        status="passed",
+        message="Journey completed successfully",
+    )
+
+
+def run_journey(journey_id: int, output_dir: Path, headed: bool) -> JourneyResult:
+    """Execute a single journey.
+
+    Checks JOURNEY_MODULE_MAP first (Release-2 module-based journeys), then falls
+    back to script-based dispatch (scripts/uat_journey_N.py). Returns
+    status="not_implemented" when neither a module mapping nor a script exists,
+    so absent implementations are never counted as Passed.
 
     Args:
         journey_id: The journey number to run.
@@ -535,16 +605,20 @@ def run_journey(journey_id: int, output_dir: Path, headed: bool) -> JourneyResul
     Returns:
         JourneyResult with the outcome.
     """
+    # Release-2 journeys: dispatch to tests/uat/journeys/ modules
+    if journey_id in JOURNEY_MODULE_MAP:
+        return _run_module_journey(journey_id, output_dir, headed, JOURNEY_MODULE_MAP[journey_id])
+
+    # Release-1 journeys: dispatch to scripts/uat_journey_N.py scripts
     script_path = PROJECT_ROOT / "scripts" / f"uat_journey_{journey_id}.py"
 
     if not script_path.exists():
         return JourneyResult(
             journey_id=journey_id,
-            status="passed",
-            message="Journey script not yet implemented (skeleton pass)",
+            status="not_implemented",
+            message="Journey has no runnable implementation",
         )
 
-    # When journey scripts exist, they will be invoked here
     env = os.environ.copy()
     env["UAT_OUTPUT_DIR"] = str(output_dir)
     env["UAT_HEADED"] = "1" if headed else "0"
@@ -736,19 +810,24 @@ def print_summary(results: list[JourneyResult], output_dir: Path) -> None:
     passed = [r for r in results if r.status == "passed"]
     failed = [r for r in results if r.status == "failed"]
     skipped = [r for r in results if r.status == "skipped"]
+    not_impl = [r for r in results if r.status == "not_implemented"]
 
     print(f"\n{'=' * 60}")
     print("UAT Run Summary")
     print(f"{'=' * 60}")
     print(f"  Output: {output_dir}")
-    print(f"  Passed: {len(passed)}  Failed: {len(failed)}  Skipped: {len(skipped)}")
+    print(
+        f"  Passed: {len(passed)}  Failed: {len(failed)}"
+        f"  Skipped: {len(skipped)}  Not Implemented: {len(not_impl)}"
+    )
 
     if failed:
         root_causes = find_root_causes(failed, results)
         print(f"\n  Root-cause failures: {', '.join(str(j) for j in root_causes)}")
 
+    _STATUS_ICON = {"passed": "OK", "failed": "FAIL", "skipped": "SKIP", "not_implemented": "NI"}
     for r in results:
-        status_icon = {"passed": "OK", "failed": "FAIL", "skipped": "SKIP"}[r.status]
+        status_icon = _STATUS_ICON.get(r.status, r.status.upper())
         print(f"  [{status_icon}] Journey {r.journey_id}: {r.message}")
 
     print(f"{'=' * 60}\n")
@@ -846,13 +925,13 @@ def generate_json_report(
     Returns:
         Path to the generated JSON report.
     """
-    any_failed = any(r.status == "failed" for r in reports)
+    any_not_pass = any(r.status in ("failed", "not_implemented") for r in reports)
 
     data = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "mode": mode,
         "duration_seconds": round(duration_seconds, 2),
-        "overall_status": "fail" if any_failed else "pass",
+        "overall_status": "fail" if any_not_pass else "pass",
         "journeys": [
             {
                 "name": r.name,
@@ -894,6 +973,7 @@ def generate_markdown_report(
     passed = sum(1 for r in reports if r.status == "passed")
     failed = sum(1 for r in reports if r.status == "failed")
     skipped = sum(1 for r in reports if r.status == "skipped")
+    not_impl = sum(1 for r in reports if r.status == "not_implemented")
 
     lines: list[str] = [
         "# UAT Report",
@@ -901,7 +981,7 @@ def generate_markdown_report(
         f"**Timestamp:** {timestamp}",
         f"**Mode:** {mode}",
         f"**Duration:** {duration_seconds:.1f}s",
-        f"**Result:** {passed} passed, {failed} failed, {skipped} skipped",
+        f"**Result:** {passed} passed, {failed} failed, {skipped} skipped, {not_impl} not implemented",  # noqa: E501
         "",
         "## Journey Summary",
         "",
@@ -909,8 +989,9 @@ def generate_markdown_report(
         "|---------|--------|-------|",
     ]
 
+    _STATUS_BADGE = {"passed": "PASS", "failed": "FAIL", "skipped": "SKIP", "not_implemented": "NI"}
     for r in reports:
-        status_badge = {"passed": "PASS", "failed": "FAIL", "skipped": "SKIP"}[r.status]
+        status_badge = _STATUS_BADGE.get(r.status, r.status.upper())
         steps = f"{r.steps_passed}/{r.steps_total}" if r.steps_total > 0 else "—"
         lines.append(f"| {r.name} | {status_badge} | {steps} |")
 
@@ -1017,9 +1098,9 @@ def main(argv: list[str] | None = None) -> int:
         # 7. Summary
         print_summary(results, output_dir)
 
-        # Exit code
-        any_failed = any(r.status == "failed" for r in results)
-        return 1 if any_failed else 0
+        # Exit code: non-zero for failures and for unimplemented journeys (not a pass)
+        any_not_pass = any(r.status in ("failed", "not_implemented") for r in results)
+        return 1 if any_not_pass else 0
 
     except KeyboardInterrupt:
         print("\n  Interrupted by user.", file=sys.stderr)
