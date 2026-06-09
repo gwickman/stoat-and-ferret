@@ -85,9 +85,7 @@ impl NoiseReductionBuilder {
     /// Returns an error if strength is outside [0.0, 1.0].
     pub fn with_strength(mut self, strength: f64) -> Result<Self, String> {
         if !(0.0..=1.0).contains(&strength) {
-            return Err(format!(
-                "strength must be in [0.0, 1.0], got {strength}"
-            ));
+            return Err(format!("strength must be in [0.0, 1.0], got {strength}"));
         }
         self.strength = strength;
         Ok(self)
@@ -100,9 +98,7 @@ impl NoiseReductionBuilder {
     /// Returns an error if threshold is outside [0.0, 1.0].
     pub fn with_threshold(mut self, threshold: f64) -> Result<Self, String> {
         if !(0.0..=1.0).contains(&threshold) {
-            return Err(format!(
-                "threshold must be in [0.0, 1.0], got {threshold}"
-            ));
+            return Err(format!("threshold must be in [0.0, 1.0], got {threshold}"));
         }
         self.threshold = threshold;
         Ok(self)
@@ -148,10 +144,7 @@ impl NoiseReductionBuilder {
     /// Raises:
     ///     ValueError: If strength is outside [0.0, 1.0].
     #[pyo3(name = "strength")]
-    fn py_strength<'a>(
-        mut slf: PyRefMut<'a, Self>,
-        strength: f64,
-    ) -> PyResult<PyRefMut<'a, Self>> {
+    fn py_strength<'a>(mut slf: PyRefMut<'a, Self>, strength: f64) -> PyResult<PyRefMut<'a, Self>> {
         if !(0.0..=1.0).contains(&strength) {
             return Err(PyValueError::new_err(format!(
                 "strength must be in [0.0, 1.0], got {strength}"
