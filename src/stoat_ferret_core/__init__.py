@@ -69,6 +69,8 @@ try:
         CommandError,
         CompositionClip,
         CurveKind,
+        DeesserBuilder,
+        DeplosiveBuilder,
         DrawtextBuilder,
         DuckingPattern,
         Duration,
@@ -196,6 +198,8 @@ except ImportError:
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
     AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
     NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
+    DeesserBuilder = _not_built  # type: ignore[misc,assignment]
+    DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
     CurveKind = _not_built  # type: ignore[misc,assignment]
@@ -298,6 +302,8 @@ __all__ = [
     "AudioMixSpec",
     # Voice repair builders
     "NoiseReductionBuilder",
+    "DeesserBuilder",
+    "DeplosiveBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",

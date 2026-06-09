@@ -45,6 +45,8 @@ EXPECTED_EFFECT_TYPES = {
     "xfade",
     "acrossfade",
     "noise_reduction",
+    "deesser",
+    "deplosive",
 }
 
 # ---- Registry unit tests ----
@@ -707,6 +709,18 @@ def test_effect_definition_schema_roundtrip() -> None:
 
     errors = registry.validate("noise_reduction", {})
     assert errors == [], f"noise_reduction schema rejected empty params (all optional): {errors}"
+
+    errors = registry.validate("deesser", {"frequency": 6000.0, "mode": "wide"})
+    assert errors == [], f"deesser schema rejected valid params: {errors}"
+
+    errors = registry.validate("deesser", {})
+    assert errors == [], f"deesser schema rejected empty params (all optional): {errors}"
+
+    errors = registry.validate("deplosive", {"cutoff": 60.0, "threshold": 0.1, "ratio": 4.0})
+    assert errors == [], f"deplosive schema rejected valid params: {errors}"
+
+    errors = registry.validate("deplosive", {})
+    assert errors == [], f"deplosive schema rejected empty params (all optional): {errors}"
 
 
 # ---- Prometheus metrics tests ----
