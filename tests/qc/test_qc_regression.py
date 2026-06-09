@@ -1,7 +1,8 @@
 """Golden QC regression and drift detection (BL-458).
 
 Compares current QCService output against the golden fixture JSON.
-All tests are FFmpeg-gated (STOAT_TEST_FFMPEG=1) and deferred_post_merge.
+FFmpeg-gated tests require STOAT_TEST_FFMPEG=1.
+test_coverage_threshold_configured runs without FFmpeg.
 
 Drift rules:
 - Boolean/count checks (pass/fail, integer measured): exact match required.
@@ -12,10 +13,16 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+from stoat_ferret.api.services.qc_service import ALL_CHECK_IDS, QCService
+from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.qc_repository import InMemoryQCReportRepository
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 GOLDEN_FIXTURE = Path(__file__).parent / "fixtures" / "golden_qc_report.json"
@@ -23,7 +30,7 @@ GOLDEN_FIXTURE = Path(__file__).parent / "fixtures" / "golden_qc_report.json"
 _LOUDNESS_CHECK_IDS = {"loudness_integrated", "true_peak"}
 _LOUDNESS_TOLERANCE = 0.1
 
-pytestmark = pytest.mark.skipif(
+_skip_no_ffmpeg = pytest.mark.skipif(
     not STOAT_TEST_FFMPEG,
     reason="requires FFmpeg (STOAT_TEST_FFMPEG=1)",
 )
@@ -58,6 +65,37 @@ def _checks_differ(golden: dict[str, Any], current: dict[str, Any], check_id: st
     return None
 
 
+def _make_real_service() -> tuple[QCService, InMemoryQCReportRepository]:
+    repo = InMemoryQCReportRepository()
+    ws = MagicMock(spec=ConnectionManager)
+    ws.broadcast = AsyncMock()
+    settings = MagicMock()
+    return QCService(repository=repo, connection_manager=ws, settings=settings), repo
+
+
+def _generate_test_audio(path: Path) -> None:
+    """Generate a 5-second sine wave test audio file via ffmpeg."""
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=5",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        check=True,
+        timeout=30,
+    )
+
+
+@_skip_no_ffmpeg
 def test_golden_fixture_is_not_placeholder() -> None:
     """After FFmpeg discharge, the fixture must contain real measurements."""
     fixture = _load_golden()
@@ -67,35 +105,71 @@ def test_golden_fixture_is_not_placeholder() -> None:
     )
 
 
+@_skip_no_ffmpeg
 def test_golden_fixture_has_overall_verdict() -> None:
     fixture = _load_golden()
     assert "overall" in fixture
     assert fixture["overall"] in ("pass", "fail")
 
 
+@_skip_no_ffmpeg
 def test_golden_fixture_has_all_11_check_ids() -> None:
-    from stoat_ferret.api.services.qc_service import ALL_CHECK_IDS
-
     fixture = _load_golden()
     checks = fixture.get("checks", {})
     missing = [cid for cid in ALL_CHECK_IDS if cid not in checks]
     assert not missing, f"Missing check IDs in golden fixture: {missing}"
 
 
-def test_no_drift_from_golden(tmp_path: pytest.TempPathFactory) -> None:
-    """Re-run QCService against the same sample render and compare to golden.
+@_skip_no_ffmpeg
+async def test_update_golden_fixture(update_golden: bool, tmp_path: Path) -> None:
+    """Regenerate golden_qc_report.json from current QCService output.
 
-    Placeholder: full implementation requires FFmpeg-rendered sample file.
-    When STOAT_TEST_FFMPEG=1: render sample project, run QCService, compare.
+    Skipped unless --update-golden is passed. Requires STOAT_TEST_FFMPEG=1.
+    """
+    if not update_golden:
+        pytest.skip("pass --update-golden to regenerate")
+
+    audio_path = tmp_path / "test_render.wav"
+    _generate_test_audio(audio_path)
+
+    svc, _ = _make_real_service()
+    record = await svc.run_checks(str(audio_path))
+    checks = json.loads(record.checks)
+    golden = {"overall": record.overall_verdict, "checks": checks}
+    GOLDEN_FIXTURE.write_text(json.dumps(golden, indent=2))
+
+
+@_skip_no_ffmpeg
+async def test_no_drift_from_golden(tmp_path: Path) -> None:
+    """Re-run QCService against a sample render and compare to golden.
+
+    Fails if loudness drifts beyond ±0.1 LUFS or structural fields differ.
+    Requires a non-placeholder golden fixture (run --update-golden first).
     """
     golden = _load_golden()
-    # When implemented: current = run_qc_service_on_sample_render()
-    # For now, re-loading golden as current to establish the infrastructure:
-    current_checks = golden.get("checks", {})
+    if golden.get("status") == "placeholder":
+        pytest.skip("Golden fixture is still placeholder — regenerate with --update-golden")
+
+    audio_path = tmp_path / "test_render.wav"
+    _generate_test_audio(audio_path)
+
+    svc, _ = _make_real_service()
+    record = await svc.run_checks(str(audio_path))
+    current_checks = json.loads(record.checks)
     golden_checks = golden.get("checks", {})
+
     drifts = []
     for check_id in golden_checks:
         drift = _checks_differ(golden_checks, current_checks, check_id)
         if drift:
             drifts.append(drift)
     assert not drifts, "QC regression drift detected:\n" + "\n".join(drifts)
+
+
+def test_coverage_threshold_configured() -> None:
+    """Assert that Python coverage fail-under threshold is configured in pyproject.toml."""
+    content = Path("pyproject.toml").read_text()
+    assert "fail_under" in content, (
+        "Coverage threshold not configured. "
+        "Add fail_under = 80 to [tool.coverage.report] in pyproject.toml."
+    )

@@ -14,7 +14,7 @@ from stoat_ferret_core import ParameterSchema, parameter_schemas_from_dict
 
 # Keys that the translator understands for a single property entry.
 _KNOWN_PROPERTY_KEYS: frozenset[str] = frozenset(
-    {"type", "default", "minimum", "maximum", "enum", "description", "items"}
+    {"type", "default", "minimum", "maximum", "enum", "description", "items", "minItems"}
 )
 
 

@@ -10,6 +10,21 @@ import pytest
 
 from tests.factories import ProjectFactory
 
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="Regenerate golden QC fixture from current QCService output",
+    )
+
+
+@pytest.fixture
+def update_golden(request: pytest.FixtureRequest) -> bool:
+    return request.config.getoption("--update-golden")  # type: ignore[no-any-return]
+
+
 TEST_PROJECT_UUID = "11111111-1111-1111-1111-111111111111"
 
 
