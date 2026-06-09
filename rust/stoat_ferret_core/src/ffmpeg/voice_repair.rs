@@ -303,4 +303,75 @@ mod tests {
         let filter = NoiseReductionBuilder::new("adeclick").unwrap().build();
         assert_eq!(filter.to_string(), "adeclick");
     }
+
+    // ========== __repr__ tests ==========
+
+    #[test]
+    fn test_noise_reduction_repr_broadband() {
+        let builder = NoiseReductionBuilder::new("broadband").unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("NoiseReductionBuilder"));
+        assert!(repr.contains("broadband"));
+        assert!(repr.contains("strength="));
+    }
+
+    #[test]
+    fn test_noise_reduction_repr_adeclick() {
+        let builder = NoiseReductionBuilder::new("adeclick").unwrap();
+        let repr = builder.__repr__();
+        assert!(repr.contains("NoiseReductionBuilder"));
+        assert!(repr.contains("adeclick"));
+        assert!(repr.contains("threshold="));
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_noise_reduction_broadband() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let nr = Bound::new(py, NoiseReductionBuilder::new("broadband").unwrap()).unwrap();
+            nr.call_method1("strength", (0.8f64,)).unwrap();
+            let filter: String = nr
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(filter.starts_with("afftdn=nr="));
+            let repr: String = nr.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("NoiseReductionBuilder"));
+
+            // Test py_new error
+            assert!(NoiseReductionBuilder::py_new("invalid").is_err());
+
+            // Test strength out-of-range error
+            assert!(nr.call_method1("strength", (1.5f64,)).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_noise_reduction_adeclick() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let nr = Bound::new(py, NoiseReductionBuilder::new("adeclick").unwrap()).unwrap();
+            nr.call_method1("threshold", (0.3f64,)).unwrap();
+            let filter: String = nr
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(filter, "adeclick");
+            let repr: String = nr.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("adeclick"));
+
+            // Test threshold out-of-range error
+            assert!(nr.call_method1("threshold", (-0.1f64,)).is_err());
+        });
+    }
 }
