@@ -13,6 +13,7 @@ from stoat_ferret_core import (
     DrawtextBuilder,
     DuckingPattern,
     FadeBuilder,
+    NoiseReductionBuilder,
     SpeedControl,
     TransitionType,
     VolumeBuilder,
@@ -725,6 +726,75 @@ ACROSSFADE = EffectDefinition(
 )
 
 
+def _build_noise_reduction(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for noise reduction effect.
+
+    Args:
+        parameters: Effect parameters with required 'mode' key and optional
+            'strength' (broadband) or 'threshold' (adeclick).
+
+    Returns:
+        FFmpeg afftdn or adeclick filter string.
+    """
+    mode = parameters.get("mode", "broadband")
+    builder = NoiseReductionBuilder(mode)
+    if mode == "broadband" and "strength" in parameters:
+        builder = builder.strength(float(parameters["strength"]))
+    elif mode == "adeclick" and "threshold" in parameters:
+        builder = builder.threshold(float(parameters["threshold"]))
+    return str(builder.build())
+
+
+def _noise_reduction_preview() -> str:
+    """Generate a filter preview for noise reduction with default parameters."""
+    return str(NoiseReductionBuilder("broadband").strength(0.5).build())
+
+
+NOISE_REDUCTION = EffectDefinition(
+    name="Noise Reduction",
+    description="Reduce broadband noise or remove clicks and impulses from audio.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "mode": {
+                "type": "string",
+                "enum": ["broadband", "adeclick"],
+                "default": "broadband",
+                "description": "Noise reduction mode: broadband (afftdn) or adeclick",
+            },
+            "strength": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 0.5,
+                "description": "Noise reduction strength (0.0–1.0). Broadband mode only.",
+            },
+            "threshold": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 0.5,
+                "description": "Click detection threshold (0.0=sensitive, 1.0=aggressive).",
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "mode": (
+            "Use 'broadband' for hum, room noise, HVAC, or tape hiss. "
+            "Use 'adeclick' for vinyl pops, mic plosives, or digital glitches."
+        ),
+        "strength": "Start at 0.3-0.5 for speech; higher values may remove low-frequency content.",
+        "threshold": "Lower values catch more clicks; raise if clean audio is being clipped.",
+    },
+    preview_fn=_noise_reduction_preview,
+    build_fn=_build_noise_reduction,
+    ai_summary="Reduce background noise or remove clicks from audio using FFmpeg adaptive filters.",
+    example_prompt="Remove the background hum from the narration track.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -743,4 +813,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("video_fade", VIDEO_FADE)
     registry.register("xfade", XFADE)
     registry.register("acrossfade", ACROSSFADE)
+    registry.register("noise_reduction", NOISE_REDUCTION)
     return registry

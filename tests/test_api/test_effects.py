@@ -44,6 +44,7 @@ EXPECTED_EFFECT_TYPES = {
     "video_fade",
     "xfade",
     "acrossfade",
+    "noise_reduction",
 }
 
 # ---- Registry unit tests ----
@@ -697,6 +698,15 @@ def test_effect_definition_schema_roundtrip() -> None:
 
     errors = registry.validate("speed_control", {"factor": 2.0})
     assert errors == [], f"speed_control schema rejected valid params: {errors}"
+
+    errors = registry.validate("noise_reduction", {"mode": "broadband", "strength": 0.5})
+    assert errors == [], f"noise_reduction schema rejected valid broadband params: {errors}"
+
+    errors = registry.validate("noise_reduction", {"mode": "adeclick", "threshold": 0.3})
+    assert errors == [], f"noise_reduction schema rejected valid adeclick params: {errors}"
+
+    errors = registry.validate("noise_reduction", {})
+    assert errors == [], f"noise_reduction schema rejected empty params (all optional): {errors}"
 
 
 # ---- Prometheus metrics tests ----
