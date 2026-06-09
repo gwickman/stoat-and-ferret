@@ -18,6 +18,7 @@ from stoat_ferret.effects.definitions import (
     LoudnormPassOneResult,
     _build_loudness_normalize,
     _build_mastering_limiter,
+    _build_parametric_eq,
     _run_loudnorm_pass1,
     create_default_registry,
 )
@@ -395,6 +396,61 @@ def _get_mean_volume_at(audio_path: Path, offset_seconds: float, duration: float
             if len(parts) > 1:
                 return float(parts[1].strip().split()[0])
     pytest.skip(f"Could not parse mean_volume from volumedetect: {output}")
+
+
+# ---- parametric_eq contract tests (BL-429) ----
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_parametric_eq_renders_without_error(tmp_path: Path) -> None:
+    """anequalizer renders without error with a single-band EQ (BL-429-AC-4)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    input_path = tmp_path / "source.wav"
+    output_path = tmp_path / "eq_output.wav"
+
+    _generate_loud_audio(input_path)
+
+    filter_str = _build_parametric_eq(
+        {"bands": [{"frequency": 1000.0, "gain": 3.0, "width": 200.0}]}
+    )
+
+    result = _run_ffmpeg_with_filter(input_path, filter_str, output_path)
+    assert result.returncode == 0, f"FFmpeg returned non-zero exit: {result.stderr.decode()}"
+    assert output_path.exists(), "Output file was not created"
+    assert output_path.stat().st_size > 0, "Output file is empty"
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_parametric_eq_band_gain_automation_in_filter(tmp_path: Path) -> None:
+    """Per-band gain is reflected in the compiled anequalizer filter string (BL-429-AC-3)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    # Verify that different gain values produce different filter strings
+    filter_boost = _build_parametric_eq(
+        {"bands": [{"frequency": 1000.0, "gain": 6.0, "width": 200.0}]}
+    )
+    filter_cut = _build_parametric_eq(
+        {"bands": [{"frequency": 1000.0, "gain": -6.0, "width": 200.0}]}
+    )
+
+    assert filter_boost != filter_cut, "Boost and cut filters should differ"
+    assert "g=6" in filter_boost, f"Missing g=6 in boost filter: {filter_boost}"
+    assert "g=-6" in filter_cut, f"Missing g=-6 in cut filter: {filter_cut}"
+
+    # Verify both render without error
+    input_path = tmp_path / "source.wav"
+    _generate_loud_audio(input_path)
+
+    output_boost = tmp_path / "boosted.wav"
+    result = _run_ffmpeg_with_filter(input_path, filter_boost, output_boost)
+    assert result.returncode == 0, f"Boost render failed: {result.stderr.decode()}"
+
+    output_cut = tmp_path / "cut.wav"
+    result = _run_ffmpeg_with_filter(input_path, filter_cut, output_cut)
+    assert result.returncode == 0, f"Cut render failed: {result.stderr.decode()}"
 
 
 @pytest.mark.filterwarnings("ignore")

@@ -22,6 +22,7 @@ from stoat_ferret.effects.definitions import (
     AUDIO_MIX,
     LOUDNESS_NORMALIZE,
     MASTERING_LIMITER,
+    PARAMETRIC_EQ,
     SPEED_CONTROL,
     TEXT_OVERLAY,
     VIDEO_FADE,
@@ -30,6 +31,7 @@ from stoat_ferret.effects.definitions import (
     EffectDefinition,
     _build_loudness_normalize,
     _build_mastering_limiter,
+    _build_parametric_eq,
     _build_speed_control,
     _build_text_overlay,
     create_default_registry,
@@ -54,6 +56,7 @@ EXPECTED_EFFECT_TYPES = {
     "time_stretch",
     "mastering_limiter",
     "loudness_normalize",
+    "parametric_eq",
 }
 
 # ---- Registry unit tests ----
@@ -744,6 +747,12 @@ def test_effect_definition_schema_roundtrip() -> None:
     errors = registry.validate("mastering_limiter", {"ceiling_dbtp": 0.0})
     assert errors == [], f"mastering_limiter schema rejected 0.0 dBTP: {errors}"
 
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 1000.0, "gain": 6.0, "width": 200.0}]},
+    )
+    assert errors == [], f"parametric_eq schema rejected valid params: {errors}"
+
 
 @pytest.mark.contract
 def test_mastering_limiter_build_fn() -> None:
@@ -819,6 +828,131 @@ def test_loudness_normalize_definition_registered() -> None:
     assert effect is LOUDNESS_NORMALIZE
     preview = effect.preview_fn()
     assert "loudnorm=" in preview, f"Preview missing loudnorm: {preview}"
+
+
+# ---- parametric_eq schema and round-trip tests (BL-429) ----
+
+
+@pytest.mark.contract
+def test_parametric_eq_build_fn_single_band() -> None:
+    """parametric_eq build_fn emits correct anequalizer filter string for a single band."""
+    filter_str = _build_parametric_eq(
+        {"bands": [{"frequency": 1000.0, "gain": 6.0, "width": 200.0}]}
+    )
+    assert filter_str.startswith("anequalizer="), f"Expected anequalizer=..., got: {filter_str}"
+    assert "c0 f=1000" in filter_str, f"Missing c0 f=1000 in: {filter_str}"
+    assert "g=6" in filter_str, f"Missing g=6 in: {filter_str}"
+    assert "t=1" in filter_str, f"Missing t=1 in: {filter_str}"
+
+
+@pytest.mark.contract
+def test_parametric_eq_build_fn_multi_band() -> None:
+    """parametric_eq build_fn emits pipe-separated bands for multiple bands."""
+    filter_str = _build_parametric_eq(
+        {
+            "bands": [
+                {"frequency": 1000.0, "gain": 6.0, "width": 200.0},
+                {"frequency": 5000.0, "gain": -3.0, "width": 500.0},
+            ]
+        }
+    )
+    assert "c0 f=1000" in filter_str, f"Missing c0 in: {filter_str}"
+    assert "c1 f=5000" in filter_str, f"Missing c1 in: {filter_str}"
+    assert "|" in filter_str, f"Missing pipe separator in: {filter_str}"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_validates_valid_bands() -> None:
+    """parametric_eq schema validates a valid bands array (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 1000.0, "gain": 6.0, "width": 200.0}]},
+    )
+    assert errors == [], f"parametric_eq schema rejected valid bands: {errors}"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_rejects_missing_bands() -> None:
+    """parametric_eq schema rejects missing bands key (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate("parametric_eq", {})
+    assert errors != [], "Schema should reject missing 'bands' key"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_rejects_empty_bands() -> None:
+    """parametric_eq schema rejects empty bands array (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate("parametric_eq", {"bands": []})
+    assert errors != [], "Schema should reject empty bands array"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_rejects_band_missing_frequency() -> None:
+    """parametric_eq schema rejects band missing frequency field (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"gain": 6.0, "width": 200.0}]},
+    )
+    assert errors != [], "Schema should reject band missing 'frequency'"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_rejects_frequency_out_of_range() -> None:
+    """parametric_eq schema rejects frequency outside 20-20000 Hz (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 10.0, "gain": 0.0, "width": 100.0}]},
+    )
+    assert errors != [], "Schema should reject frequency below 20 Hz"
+
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 25000.0, "gain": 0.0, "width": 100.0}]},
+    )
+    assert errors != [], "Schema should reject frequency above 20000 Hz"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_rejects_gain_out_of_range() -> None:
+    """parametric_eq schema rejects gain outside ±24 dB (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 1000.0, "gain": 30.0, "width": 100.0}]},
+    )
+    assert errors != [], "Schema should reject gain above +24 dB"
+
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 1000.0, "gain": -30.0, "width": 100.0}]},
+    )
+    assert errors != [], "Schema should reject gain below -24 dB"
+
+
+@pytest.mark.contract
+def test_parametric_eq_schema_rejects_non_positive_width() -> None:
+    """parametric_eq schema rejects width <= 0 (BL-429-AC-2)."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "parametric_eq",
+        {"bands": [{"frequency": 1000.0, "gain": 0.0, "width": 0.0}]},
+    )
+    assert errors != [], "Schema should reject width <= 0"
+
+
+@pytest.mark.contract
+def test_parametric_eq_definition_registered() -> None:
+    """parametric_eq is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("parametric_eq")
+    assert effect is not None, "parametric_eq not found in default registry"
+    assert effect is PARAMETRIC_EQ
+    preview = effect.preview_fn()
+    assert "anequalizer" in preview, f"Preview missing anequalizer: {preview}"
 
 
 # ---- volume automation tests (BL-430-AC-1) ----

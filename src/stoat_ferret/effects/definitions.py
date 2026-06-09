@@ -22,6 +22,7 @@ from stoat_ferret_core import (
     LimiterBuilder,
     LoudnormBuilder,
     NoiseReductionBuilder,
+    ParametricEqBuilder,
     SpeedControl,
     TimeStretchBuilder,
     TransitionType,
@@ -1271,6 +1272,81 @@ LOUDNESS_NORMALIZE = EffectDefinition(
 )
 
 
+def _build_parametric_eq(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for parametric_eq effect.
+
+    Args:
+        parameters: Effect parameters with required 'bands' key — a list of
+            dicts each with 'frequency', 'gain', and 'width' fields.
+
+    Returns:
+        FFmpeg anequalizer filter string.
+    """
+    bands = parameters.get("bands", [])
+    return str(ParametricEqBuilder(bands).build())
+
+
+def _parametric_eq_preview() -> str:
+    """Generate a filter preview for parametric_eq with default parameters."""
+    return str(ParametricEqBuilder([{"frequency": 1000.0, "gain": 0.0, "width": 200.0}]).build())
+
+
+PARAMETRIC_EQ = EffectDefinition(
+    name="Parametric EQ",
+    description=(
+        "Multi-band parametric equalizer for tonal shaping and vocal clarity. "
+        "Each band has configurable frequency, gain, and width."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "bands": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "required": ["frequency", "gain", "width"],
+                    "properties": {
+                        "frequency": {
+                            "type": "number",
+                            "minimum": 20,
+                            "maximum": 20000,
+                            "description": "Band center frequency in Hz (20–20000).",
+                        },
+                        "gain": {
+                            "type": "number",
+                            "minimum": -24,
+                            "maximum": 24,
+                            "description": "Band gain in dB (−24 to +24).",
+                        },
+                        "width": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Band width in Hz (must be > 0).",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+                "description": "Array of EQ bands. Minimum 1 band required.",
+            },
+        },
+        "required": ["bands"],
+    },
+    ai_hints={
+        "bands": (
+            "List of EQ bands. Each band needs frequency (20–20000 Hz), gain (−24 to +24 dB), "
+            "and width (Hz, > 0). Example: boost vocals at 3000 Hz, cut mud at 200 Hz."
+        ),
+    },
+    preview_fn=_parametric_eq_preview,
+    build_fn=_build_parametric_eq,
+    ai_summary=(
+        "Apply multi-band parametric EQ to boost or cut specific frequency ranges in audio."
+    ),
+    example_prompt="Boost presence at 3 kHz by 4 dB and cut muddiness at 200 Hz by 3 dB.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1295,4 +1371,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("time_stretch", TIME_STRETCH)
     registry.register("mastering_limiter", MASTERING_LIMITER)
     registry.register("loudness_normalize", LOUDNESS_NORMALIZE)
+    registry.register("parametric_eq", PARAMETRIC_EQ)
     return registry

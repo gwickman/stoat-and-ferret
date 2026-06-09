@@ -118,6 +118,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register mastering builders
     m.add_class::<ffmpeg::mastering::LimiterBuilder>()?;
     m.add_class::<ffmpeg::mastering::LoudnormBuilder>()?;
+    m.add_class::<ffmpeg::mastering::ParametricEqBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
