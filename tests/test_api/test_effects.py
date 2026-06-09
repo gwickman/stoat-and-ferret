@@ -20,22 +20,30 @@ from stoat_ferret.effects.definitions import (
     AUDIO_DUCKING,
     AUDIO_FADE,
     AUDIO_MIX,
+    DEESSER,
+    DEPLOSIVE,
     LOUDNESS_NORMALIZE,
     MASTERING_LIMITER,
     MULTIBAND_COMPRESSOR,
+    NOISE_REDUCTION,
     PARAMETRIC_EQ,
     SPEED_CONTROL,
     TEXT_OVERLAY,
+    TIME_STRETCH,
     VIDEO_FADE,
     VOLUME,
     XFADE,
     EffectDefinition,
+    _build_deesser,
+    _build_deplosive,
     _build_loudness_normalize,
     _build_mastering_limiter,
     _build_multiband_compressor,
+    _build_noise_reduction,
     _build_parametric_eq,
     _build_speed_control,
     _build_text_overlay,
+    _build_time_stretch,
     create_default_registry,
 )
 from stoat_ferret.effects.registry import EffectRegistry
@@ -2136,6 +2144,100 @@ def test_thumbnail_ffmpeg_command_has_correct_vf_filter(
     # Verify JPEG quality 3
     qv_idx = args.index("-q:v")
     assert args[qv_idx + 1] == "3"
+
+
+# ---- noise_reduction schema and round-trip tests (BL-433) ----
+
+
+@pytest.mark.contract
+def test_noise_reduction_build_fn_broadband() -> None:
+    """noise_reduction build_fn emits afftdn filter string in broadband mode."""
+    filter_str = _build_noise_reduction({"mode": "broadband", "strength": 0.5})
+    assert "afftdn" in filter_str, f"Expected afftdn in filter string, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_noise_reduction_build_fn_adeclick() -> None:
+    """noise_reduction build_fn emits adeclick filter string in adeclick mode."""
+    filter_str = _build_noise_reduction({"mode": "adeclick", "threshold": 0.3})
+    assert "adeclick" in filter_str, f"Expected adeclick in filter string, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_noise_reduction_definition_registered() -> None:
+    """noise_reduction is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("noise_reduction")
+    assert effect is not None, "noise_reduction not found in default registry"
+    assert effect is NOISE_REDUCTION
+    preview = effect.preview_fn()
+    assert "afftdn" in preview, f"Preview missing afftdn: {preview}"
+
+
+# ---- deesser schema and round-trip tests (BL-434) ----
+
+
+@pytest.mark.contract
+def test_deesser_build_fn() -> None:
+    """deesser build_fn emits deesser filter string with frequency."""
+    filter_str = _build_deesser({"frequency": 6000.0, "mode": "wide"})
+    assert "deesser" in filter_str, f"Expected deesser in filter string, got: {filter_str}"
+    assert "6000" in filter_str, f"Expected frequency 6000 in filter string, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_deesser_definition_registered() -> None:
+    """deesser is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("deesser")
+    assert effect is not None, "deesser not found in default registry"
+    assert effect is DEESSER
+    preview = effect.preview_fn()
+    assert "deesser" in preview, f"Preview missing deesser: {preview}"
+
+
+# ---- deplosive schema and round-trip tests (BL-434) ----
+
+
+@pytest.mark.contract
+def test_deplosive_build_fn() -> None:
+    """deplosive build_fn emits highpass+acompressor filter chain."""
+    filter_str = _build_deplosive({"cutoff": 60.0, "threshold": 0.1, "ratio": 4.0})
+    assert "highpass" in filter_str, f"Expected highpass in filter chain, got: {filter_str}"
+    assert "acompressor" in filter_str, f"Expected acompressor in filter chain, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_deplosive_definition_registered() -> None:
+    """deplosive is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("deplosive")
+    assert effect is not None, "deplosive not found in default registry"
+    assert effect is DEPLOSIVE
+    preview = effect.preview_fn()
+    assert "highpass" in preview, f"Preview missing highpass: {preview}"
+    assert "acompressor" in preview, f"Preview missing acompressor: {preview}"
+
+
+# ---- time_stretch schema and round-trip tests (BL-435) ----
+
+
+@pytest.mark.contract
+def test_time_stretch_build_fn_atempo() -> None:
+    """time_stretch build_fn emits atempo filter string in atempo mode."""
+    filter_str = _build_time_stretch({"factor": 0.8, "mode": "atempo"})
+    assert "atempo" in filter_str, f"Expected atempo in filter string, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_time_stretch_definition_registered() -> None:
+    """time_stretch is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("time_stretch")
+    assert effect is not None, "time_stretch not found in default registry"
+    assert effect is TIME_STRETCH
+    preview = effect.preview_fn()
+    assert "atempo" in preview, f"Preview missing atempo: {preview}"
 
 
 # ---- multiband_compressor schema and round-trip tests (BL-431) ----
