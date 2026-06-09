@@ -4,6 +4,32 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v077 — Release 2, Wave 2: Mastering + Voice Prep (2026-06-09)
+
+### Added
+
+- **Voice repair effects**: NoiseReductionBuilder, DeesserBuilder, DeplosiveBuilder, TimeStretchBuilder Rust builders with PyO3 bindings and effect registry integration (BL-428/429/430/431, PRs #535–#537)
+- **Mastering effects**: LimiterBuilder, LoudnormBuilder, ParametricEqBuilder, MultibandCompressorBuilder Rust builders with PyO3 bindings (BL-432/433/434/435, PRs #538–#542)
+- **Volume automation envelopes**: Envelope support on VOLUME effect (PR #540)
+- **DSP smoke test coverage**: FFmpeg-gated test files for voice repair, mastering, and mixdown; `tests/effects/test_voice_repair_ffmpeg.py`, `test_mastering_ffmpeg.py`, `test_mixdown_ffmpeg.py` (BL-436, PRs #543–#544)
+- **Golden QC regression suite**: `--update-golden` flag, real QC call in `test_qc_regression.py`, golden fixture infrastructure (BL-458, PR #546)
+- **Browser UAT journeys R2**: Playwright journey bodies for journeys 701–706 in `tests/uat/journeys/j_*.py` (BL-457, PR #547)
+- **UC-MEDIA-MPS-001 acceptance harness**: 15-assertion acceptance class with ≥14/17 OC threshold in `tests/acceptance/uc_media_mps_001_harness.py` (BL-459, PR #548)
+- **Smoke test harness guide**: Added `docs/setup/smoke-test-harness-guide/07-dsp-contract-tests.md` (PR #545)
+
+### Fixed
+
+- Fixed UAT runner false-green: `run_journey()` returns non-pass when implementation absent; exit code reflects not-run journeys (BL-473, PR #534)
+- Added stub_gen wholesale-copy trap warning co-located at all invocation points in AGENTS.md (BL-471, PR #533)
+
+### Deferred (FFmpeg-gated / UAT-gated)
+
+31 ACs deferred pending FFmpeg or UAT environment — see `source-to-outcome-evidence.json` for discharge commands. Key items: BL-428–436 behavioral render tests (FFmpeg), BL-458-AC-2/4 golden drift detection (FFmpeg), BL-457-AC-2 browser UAT journeys (headed Playwright), BL-459-AC-1/2/4 acceptance harness (FFmpeg). BL-458-AC-1 weakened (placeholder fixture; real fixture requires `STOAT_TEST_FFMPEG=1` discharge run).
+
+### PRs
+
+#533, #534, #535, #536, #537, #538, #539, #540, #541, #542, #543, #544, #545, #546, #547, #548
+
 ## v076 — Release 2, Wave 1: Verify & Deliver (2026-06-08)
 
 ### Added
