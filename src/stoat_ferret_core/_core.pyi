@@ -3420,3 +3420,35 @@ class LoudnormBuilder:
         ...
 
     def __repr__(self) -> str: ...
+
+class ParametricEqBuilder:
+    """Type-safe builder for FFmpeg ``anequalizer`` parametric equalizer filter.
+
+    Generates pipe-separated band specifications:
+    ``anequalizer=c0 f={hz} w={width} g={gain_db} t=1|c1 f={hz} w={width} g={gain_db} t=1|...``
+    """
+
+    def __new__(cls, bands: list[dict[str, float]]) -> ParametricEqBuilder:
+        """Create a new ParametricEqBuilder.
+
+        Args:
+            bands: List of band dicts, each with required keys:
+                - ``frequency`` (float): Band center frequency in Hz (20–20000).
+                - ``gain`` (float): Band gain in dB (−24 to +24).
+                - ``width`` (float): Band width in Hz (> 0).
+
+        Raises:
+            ValueError: If bands is empty, any frequency is outside 20–20000 Hz,
+                any gain is outside ±24 dB, or any width is <= 0.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the anequalizer Filter.
+
+        Returns:
+            A Filter with ``anequalizer=c0 f=... w=... g=... t=1|...`` syntax.
+        """
+        ...
+
+    def __repr__(self) -> str: ...

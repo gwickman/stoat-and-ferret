@@ -16,6 +16,8 @@
 //! assert!(filter.to_string().starts_with("alimiter=limit="));
 //! ```
 
+use std::collections::HashMap;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass;
@@ -284,6 +286,132 @@ impl LoudnormBuilder {
     }
 }
 
+// ========== ParametricEqBuilder ==========
+
+#[derive(Debug, Clone)]
+struct EqBand {
+    frequency: f64,
+    gain: f64,
+    width: f64,
+}
+
+/// Type-safe builder for FFmpeg `anequalizer` parametric equalizer filter.
+///
+/// Generates pipe-separated band specifications:
+/// `anequalizer=c0 f={hz} w={width} g={gain_db} t=1|c1 f={hz} w={width} g={gain_db} t=1|...`
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ParametricEqBuilder {
+    bands: Vec<EqBand>,
+}
+
+impl ParametricEqBuilder {
+    /// Creates a new ParametricEqBuilder with the given bands.
+    ///
+    /// # Arguments
+    ///
+    /// * `bands` - Vec of (frequency_hz, gain_db, width_hz) tuples.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if bands is empty or any band has an invalid parameter.
+    pub fn new(bands: Vec<(f64, f64, f64)>) -> Result<Self, String> {
+        if bands.is_empty() {
+            return Err("bands must not be empty".to_string());
+        }
+        let mut eq_bands = Vec::with_capacity(bands.len());
+        for (i, (frequency, gain, width)) in bands.iter().enumerate() {
+            if *frequency < 20.0 || *frequency > 20000.0 {
+                return Err(format!(
+                    "band {i}: frequency must be 20.0-20000.0 Hz, got {frequency}"
+                ));
+            }
+            if *gain < -24.0 || *gain > 24.0 {
+                return Err(format!("band {i}: gain must be -24.0-24.0 dB, got {gain}"));
+            }
+            if *width <= 0.0 {
+                return Err(format!("band {i}: width must be > 0, got {width}"));
+            }
+            eq_bands.push(EqBand {
+                frequency: *frequency,
+                gain: *gain,
+                width: *width,
+            });
+        }
+        Ok(Self { bands: eq_bands })
+    }
+
+    /// Builds the anequalizer Filter.
+    ///
+    /// Emits: `anequalizer=c0 f={hz} w={width} g={gain} t=1|c1 f={hz} w={width} g={gain} t=1|...`
+    #[must_use]
+    pub fn build(&self) -> Filter {
+        let band_specs: Vec<String> = self
+            .bands
+            .iter()
+            .enumerate()
+            .map(|(i, band)| {
+                format!(
+                    "c{i} f={} w={} g={} t=1",
+                    band.frequency, band.width, band.gain
+                )
+            })
+            .collect();
+        let params = band_specs.join("|");
+        Filter::new(format!("anequalizer={params}"))
+    }
+}
+
+// ========== ParametricEqBuilder PyO3 bindings ==========
+
+#[pymethods]
+impl ParametricEqBuilder {
+    /// Creates a new ParametricEqBuilder from a list of band dicts.
+    ///
+    /// Args:
+    ///     bands: List of band dicts, each with required keys:
+    ///         - ``frequency`` (float): Band center frequency in Hz (20–20000).
+    ///         - ``gain`` (float): Band gain in dB (−24 to +24).
+    ///         - ``width`` (float): Band width in Hz (> 0).
+    ///
+    /// Raises:
+    ///     ValueError: If bands is empty, any frequency is outside 20–20000 Hz,
+    ///         any gain is outside ±24 dB, or any width is <= 0.
+    #[new]
+    fn py_new(bands: Vec<HashMap<String, f64>>) -> PyResult<Self> {
+        let band_tuples: Result<Vec<_>, PyErr> = bands
+            .iter()
+            .map(|band| {
+                let frequency = *band.get("frequency").ok_or_else(|| {
+                    PyValueError::new_err("each band must have a 'frequency' key")
+                })?;
+                let gain = *band
+                    .get("gain")
+                    .ok_or_else(|| PyValueError::new_err("each band must have a 'gain' key"))?;
+                let width = *band
+                    .get("width")
+                    .ok_or_else(|| PyValueError::new_err("each band must have a 'width' key"))?;
+                Ok::<_, PyErr>((frequency, gain, width))
+            })
+            .collect();
+        Self::new(band_tuples?).map_err(PyValueError::new_err)
+    }
+
+    /// Builds the anequalizer Filter.
+    ///
+    /// Returns:
+    ///     A Filter with anequalizer pipe-separated band specification.
+    #[pyo3(name = "build")]
+    fn py_build(&self) -> Filter {
+        self.build()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ParametricEqBuilder(bands=[{}])", self.bands.len())
+    }
+}
+
 // ========== Tests ==========
 
 #[cfg(test)]
@@ -480,6 +608,155 @@ mod tests {
         pyo3::prepare_freethreaded_python();
         Python::with_gil(|_py| {
             let result = LoudnormBuilder::py_new(-16.0, 1.0, 11.0);
+            assert!(result.is_err());
+        });
+    }
+
+    // ========== ParametricEqBuilder tests ==========
+
+    #[test]
+    fn test_parametric_eq_single_band_builds_correct_filter() {
+        let builder = ParametricEqBuilder::new(vec![(1000.0, 6.0, 200.0)]).unwrap();
+        let s = builder.build().to_string();
+        assert!(
+            s.starts_with("anequalizer="),
+            "Expected anequalizer=..., got: {s}"
+        );
+        assert!(s.contains("c0 f=1000"), "Missing c0 f=1000 in: {s}");
+        assert!(s.contains("g=6"), "Missing g=6 in: {s}");
+        assert!(s.contains("w=200"), "Missing w=200 in: {s}");
+        assert!(s.contains("t=1"), "Missing t=1 in: {s}");
+    }
+
+    #[test]
+    fn test_parametric_eq_multi_band_pipe_separated() {
+        let builder =
+            ParametricEqBuilder::new(vec![(1000.0, 6.0, 200.0), (5000.0, -3.0, 500.0)]).unwrap();
+        let s = builder.build().to_string();
+        assert!(s.contains("c0 f=1000"), "Missing c0 in: {s}");
+        assert!(s.contains("c1 f=5000"), "Missing c1 in: {s}");
+        assert!(s.contains('|'), "Missing pipe separator in: {s}");
+    }
+
+    #[test]
+    fn test_parametric_eq_empty_bands_rejected() {
+        let result = ParametricEqBuilder::new(vec![]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("bands must not be empty"), "Got: {err}");
+    }
+
+    #[test]
+    fn test_parametric_eq_frequency_below_range_rejected() {
+        let result = ParametricEqBuilder::new(vec![(10.0, 0.0, 100.0)]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("frequency"), "Got: {err}");
+    }
+
+    #[test]
+    fn test_parametric_eq_frequency_above_range_rejected() {
+        let result = ParametricEqBuilder::new(vec![(25000.0, 0.0, 100.0)]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("frequency"), "Got: {err}");
+    }
+
+    #[test]
+    fn test_parametric_eq_gain_out_of_range_rejected() {
+        let result = ParametricEqBuilder::new(vec![(1000.0, 30.0, 100.0)]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("gain"), "Got: {err}");
+    }
+
+    #[test]
+    fn test_parametric_eq_negative_gain_out_of_range_rejected() {
+        let result = ParametricEqBuilder::new(vec![(1000.0, -30.0, 100.0)]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("gain"), "Got: {err}");
+    }
+
+    #[test]
+    fn test_parametric_eq_zero_width_rejected() {
+        let result = ParametricEqBuilder::new(vec![(1000.0, 0.0, 0.0)]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("width"), "Got: {err}");
+    }
+
+    #[test]
+    fn test_parametric_eq_boundary_frequency_accepted() {
+        let result = ParametricEqBuilder::new(vec![(20.0, 0.0, 10.0)]);
+        assert!(result.is_ok(), "20 Hz should be accepted");
+        let result = ParametricEqBuilder::new(vec![(20000.0, 0.0, 10.0)]);
+        assert!(result.is_ok(), "20000 Hz should be accepted");
+    }
+
+    #[test]
+    fn test_parametric_eq_boundary_gain_accepted() {
+        let result = ParametricEqBuilder::new(vec![(1000.0, 24.0, 100.0)]);
+        assert!(result.is_ok(), "+24 dB should be accepted");
+        let result = ParametricEqBuilder::new(vec![(1000.0, -24.0, 100.0)]);
+        assert!(result.is_ok(), "-24 dB should be accepted");
+    }
+
+    #[test]
+    fn test_parametric_eq_repr() {
+        let builder = ParametricEqBuilder::new(vec![(1000.0, 6.0, 200.0)]).unwrap();
+        let r = builder.__repr__();
+        assert!(r.contains("ParametricEqBuilder"), "Got: {r}");
+        assert!(r.contains('1'), "Got: {r}");
+    }
+
+    // ========== PyO3 GIL tests for ParametricEqBuilder ==========
+
+    #[test]
+    fn test_pyo3_parametric_eq_valid() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|_py| {
+            let mut band = HashMap::new();
+            band.insert("frequency".to_string(), 1000.0_f64);
+            band.insert("gain".to_string(), 6.0_f64);
+            band.insert("width".to_string(), 200.0_f64);
+            let builder = ParametricEqBuilder::py_new(vec![band]).unwrap();
+            let filter_str = builder.build().to_string();
+            assert!(filter_str.starts_with("anequalizer="));
+            assert!(filter_str.contains("c0 f=1000"));
+        });
+    }
+
+    #[test]
+    fn test_pyo3_parametric_eq_empty_bands_raises() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|_py| {
+            let result = ParametricEqBuilder::py_new(vec![]);
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_parametric_eq_missing_frequency_raises() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|_py| {
+            let mut band = HashMap::new();
+            band.insert("gain".to_string(), 6.0_f64);
+            band.insert("width".to_string(), 200.0_f64);
+            let result = ParametricEqBuilder::py_new(vec![band]);
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_parametric_eq_invalid_frequency_raises() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|_py| {
+            let mut band = HashMap::new();
+            band.insert("frequency".to_string(), 10.0_f64);
+            band.insert("gain".to_string(), 0.0_f64);
+            band.insert("width".to_string(), 100.0_f64);
+            let result = ParametricEqBuilder::py_new(vec![band]);
             assert!(result.is_err());
         });
     }

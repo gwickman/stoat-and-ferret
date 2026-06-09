@@ -93,6 +93,7 @@ try:
         LoudnormBuilder,
         NoiseReductionBuilder,
         ParameterSchema,
+        ParametricEqBuilder,
         PeakReport,
         Position,
         PreviewQuality,
@@ -205,6 +206,7 @@ except ImportError:
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
+    ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
@@ -314,6 +316,7 @@ __all__ = [
     # Mastering builders
     "LimiterBuilder",
     "LoudnormBuilder",
+    "ParametricEqBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",
