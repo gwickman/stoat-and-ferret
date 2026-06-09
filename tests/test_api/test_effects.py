@@ -22,6 +22,7 @@ from stoat_ferret.effects.definitions import (
     AUDIO_MIX,
     LOUDNESS_NORMALIZE,
     MASTERING_LIMITER,
+    MULTIBAND_COMPRESSOR,
     PARAMETRIC_EQ,
     SPEED_CONTROL,
     TEXT_OVERLAY,
@@ -31,6 +32,7 @@ from stoat_ferret.effects.definitions import (
     EffectDefinition,
     _build_loudness_normalize,
     _build_mastering_limiter,
+    _build_multiband_compressor,
     _build_parametric_eq,
     _build_speed_control,
     _build_text_overlay,
@@ -57,6 +59,7 @@ EXPECTED_EFFECT_TYPES = {
     "mastering_limiter",
     "loudness_normalize",
     "parametric_eq",
+    "multiband_compressor",
 }
 
 # ---- Registry unit tests ----
@@ -2133,3 +2136,126 @@ def test_thumbnail_ffmpeg_command_has_correct_vf_filter(
     # Verify JPEG quality 3
     qv_idx = args.index("-q:v")
     assert args[qv_idx + 1] == "3"
+
+
+# ---- multiband_compressor schema and round-trip tests (BL-431) ----
+
+
+@pytest.mark.contract
+def test_multiband_compressor_build_fn_two_bands() -> None:
+    """multiband_compressor build_fn emits asplit→acompressor×2→amix FilterGraph."""
+    filter_str = _build_multiband_compressor(
+        {
+            "bands": [
+                {"threshold": -20.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+            ]
+        }
+    )
+    assert "asplit" in filter_str, f"Expected asplit in filter graph, got: {filter_str}"
+    assert "acompressor" in filter_str, f"Expected acompressor in filter graph, got: {filter_str}"
+    assert "amix" in filter_str, f"Expected amix in filter graph, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_build_fn_three_bands() -> None:
+    """multiband_compressor build_fn emits asplit=outputs=3→acompressor×3→amix=inputs=3."""
+    filter_str = _build_multiband_compressor(
+        {
+            "bands": [
+                {"threshold": -20.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+                {"threshold": -30.0, "ratio": 4.0, "attack": 3.0, "release": 50.0},
+            ]
+        }
+    )
+    assert "asplit" in filter_str, f"Expected asplit in filter graph, got: {filter_str}"
+    assert filter_str.count("acompressor") == 3, (
+        f"Expected 3 acompressor filters, got: {filter_str}"
+    )
+    assert "amix" in filter_str, f"Expected amix in filter graph, got: {filter_str}"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_schema_validates_valid_bands() -> None:
+    """multiband_compressor schema validates a valid bands array (BL-431-AC-3)."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "multiband_compressor",
+        {
+            "bands": [
+                {"threshold": -20.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+            ]
+        },
+    )
+    assert errors == [], f"multiband_compressor schema rejected valid params: {errors}"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_schema_rejects_missing_bands() -> None:
+    """multiband_compressor schema rejects missing bands key."""
+    registry = create_default_registry()
+    errors = registry.validate("multiband_compressor", {})
+    assert errors != [], "Schema should reject missing 'bands' key"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_schema_rejects_non_negative_threshold() -> None:
+    """multiband_compressor schema rejects threshold >= 0."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "multiband_compressor",
+        {
+            "bands": [
+                {"threshold": 0.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+            ]
+        },
+    )
+    assert errors != [], "Schema should reject threshold >= 0"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_schema_rejects_ratio_le_one() -> None:
+    """multiband_compressor schema rejects ratio <= 1.0."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "multiband_compressor",
+        {
+            "bands": [
+                {"threshold": -20.0, "ratio": 1.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+            ]
+        },
+    )
+    assert errors != [], "Schema should reject ratio <= 1.0"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_schema_rejects_band_missing_required_key() -> None:
+    """multiband_compressor schema rejects band missing required key."""
+    registry = create_default_registry()
+    errors = registry.validate(
+        "multiband_compressor",
+        {
+            "bands": [
+                {"ratio": 2.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+            ]
+        },
+    )
+    assert errors != [], "Schema should reject band missing 'threshold'"
+
+
+@pytest.mark.contract
+def test_multiband_compressor_definition_registered() -> None:
+    """multiband_compressor is registered in the default registry (BL-431-AC-3)."""
+    registry = create_default_registry()
+    effect = registry.get("multiband_compressor")
+    assert effect is not None, "multiband_compressor not found in default registry"
+    assert effect is MULTIBAND_COMPRESSOR
+    preview = effect.preview_fn()
+    assert "asplit" in preview, f"Preview missing asplit: {preview}"
+    assert "acompressor" in preview, f"Preview missing acompressor: {preview}"
+    assert "amix" in preview, f"Preview missing amix: {preview}"

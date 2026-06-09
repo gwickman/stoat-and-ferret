@@ -91,6 +91,7 @@ try:
         LimiterBuilder,
         LoudnessReport,
         LoudnormBuilder,
+        MultibandCompressorBuilder,
         NoiseReductionBuilder,
         ParameterSchema,
         ParametricEqBuilder,
@@ -206,6 +207,7 @@ except ImportError:
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
+    MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
@@ -316,6 +318,7 @@ __all__ = [
     # Mastering builders
     "LimiterBuilder",
     "LoudnormBuilder",
+    "MultibandCompressorBuilder",
     "ParametricEqBuilder",
     # Transition builders
     "TransitionType",

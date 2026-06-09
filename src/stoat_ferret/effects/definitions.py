@@ -21,6 +21,7 @@ from stoat_ferret_core import (
     FadeBuilder,
     LimiterBuilder,
     LoudnormBuilder,
+    MultibandCompressorBuilder,
     NoiseReductionBuilder,
     ParametricEqBuilder,
     SpeedControl,
@@ -1347,6 +1348,93 @@ PARAMETRIC_EQ = EffectDefinition(
 )
 
 
+def _build_multiband_compressor(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter graph string for multiband_compressor effect.
+
+    Args:
+        parameters: Effect parameters with required 'bands' key — a list of
+            dicts each with 'threshold', 'ratio', 'attack', and 'release' fields.
+
+    Returns:
+        FFmpeg filter graph string with asplit→acompressor×N→amix topology.
+    """
+    bands = parameters.get("bands", [])
+    return str(MultibandCompressorBuilder(bands).build())
+
+
+def _multiband_compressor_preview() -> str:
+    """Generate a filter preview for multiband_compressor with 3 default bands."""
+    default_bands = [
+        {"threshold": -20.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+        {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+        {"threshold": -30.0, "ratio": 4.0, "attack": 3.0, "release": 50.0},
+    ]
+    return str(MultibandCompressorBuilder(default_bands).build())
+
+
+MULTIBAND_COMPRESSOR = EffectDefinition(
+    name="Multiband Compressor",
+    description=(
+        "Multiband dynamics processor splitting audio into independent bands, "
+        "each compressed with configurable threshold and ratio. "
+        "Uses asplit → acompressor × N → amix FilterGraph topology."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "bands": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                    "type": "object",
+                    "required": ["threshold", "ratio", "attack", "release"],
+                    "properties": {
+                        "threshold": {
+                            "type": "number",
+                            "exclusiveMaximum": 0,
+                            "description": "Compression threshold in dB (must be < 0).",
+                        },
+                        "ratio": {
+                            "type": "number",
+                            "exclusiveMinimum": 1.0,
+                            "description": "Compression ratio (must be > 1.0).",
+                        },
+                        "attack": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Attack time in ms (must be > 0).",
+                        },
+                        "release": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Release time in ms (must be > 0).",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+                "description": "Array of compressor bands. Minimum 2 bands required.",
+            },
+        },
+        "required": ["bands"],
+    },
+    ai_hints={
+        "bands": (
+            "List of compressor bands. Each band needs threshold (dB, < 0), "
+            "ratio (> 1.0), attack (ms, > 0), and release (ms, > 0). "
+            "Default: 3 bands for low/mid/high. "
+            "Example: threshold=-20, ratio=2.0, attack=10, release=100."
+        ),
+    },
+    preview_fn=_multiband_compressor_preview,
+    build_fn=_build_multiband_compressor,
+    ai_summary=(
+        "Apply multiband compression to independently control dynamics in low, "
+        "mid, and high frequency bands for broadcast-quality mastering."
+    ),
+    example_prompt="Apply gentle multiband compression with 3 bands for mastering.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1372,4 +1460,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("mastering_limiter", MASTERING_LIMITER)
     registry.register("loudness_normalize", LOUDNESS_NORMALIZE)
     registry.register("parametric_eq", PARAMETRIC_EQ)
+    registry.register("multiband_compressor", MULTIBAND_COMPRESSOR)
     return registry

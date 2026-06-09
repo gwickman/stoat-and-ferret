@@ -18,6 +18,7 @@ from stoat_ferret.effects.definitions import (
     LoudnormPassOneResult,
     _build_loudness_normalize,
     _build_mastering_limiter,
+    _build_multiband_compressor,
     _build_parametric_eq,
     _run_loudnorm_pass1,
     create_default_registry,
@@ -498,3 +499,33 @@ def test_volume_automation_level_follows_curve(tmp_path: Path) -> None:
         f"Level should increase from start to end. "
         f"Start: {level_start:.1f} dBFS, End: {level_end:.1f} dBFS"
     )
+
+
+# ---- multiband_compressor contract tests (BL-431) ----
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_multiband_compressor_renders_without_error(tmp_path: Path) -> None:
+    """multiband compressor renders without error with 3-band default config (BL-431-AC-2)."""
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+
+    input_path = tmp_path / "source.wav"
+    output_path = tmp_path / "compressed.wav"
+
+    _generate_loud_audio(input_path)
+
+    filter_str = _build_multiband_compressor(
+        {
+            "bands": [
+                {"threshold": -20.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+                {"threshold": -24.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+                {"threshold": -30.0, "ratio": 4.0, "attack": 3.0, "release": 50.0},
+            ]
+        }
+    )
+
+    result = _run_ffmpeg_with_filter(input_path, filter_str, output_path)
+    assert result.returncode == 0, f"FFmpeg returned non-zero exit: {result.stderr.decode()}"
+    assert output_path.exists(), "Output file was not created"
+    assert output_path.stat().st_size > 0, "Output file is empty"

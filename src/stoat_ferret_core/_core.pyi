@@ -3452,3 +3452,35 @@ class ParametricEqBuilder:
         ...
 
     def __repr__(self) -> str: ...
+
+class MultibandCompressorBuilder:
+    """Type-safe builder for multiband compression using asplit → acompressor×N → amix.
+
+    Each band applies independent dynamics control with configurable threshold, ratio,
+    attack, and release parameters.
+    """
+
+    def __new__(cls, bands: list[dict[str, float]]) -> MultibandCompressorBuilder:
+        """Create a new MultibandCompressorBuilder.
+
+        Args:
+            bands: List of band dicts, each with required keys:
+                - ``threshold`` (float): Compression threshold in dB (must be < 0).
+                - ``ratio`` (float): Compression ratio (must be > 1.0).
+                - ``attack`` (float): Attack time in ms (> 0).
+                - ``release`` (float): Release time in ms (> 0).
+
+        Raises:
+            ValueError: If bands is empty, any threshold >= 0, or any ratio <= 1.0.
+        """
+        ...
+
+    def build(self) -> FilterGraph:
+        """Build the multiband compressor FilterGraph.
+
+        Returns:
+            A FilterGraph with ``asplit=outputs=N`` → per-band ``acompressor`` → ``amix=inputs=N``.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
