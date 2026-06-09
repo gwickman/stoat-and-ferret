@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 from tests.chatbot.scenarios.r2_scaffold import run_r2_scenario
 
 _UC_MPS_001 = "tests.chatbot.scenarios.r2_scaffold.run_uc_media_mps_001"

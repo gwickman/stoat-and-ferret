@@ -223,7 +223,7 @@ async def test_qc_chapters_present_check_passes(
 
     checks = json.loads(record.checks)
     ch_check = checks.get("chapters_present", {})
-    assert ch_check.get("status") == "pass", f"chapters_present check failed: {ch_check}"
+    assert ch_check.get("pass") is True, f"chapters_present check failed: {ch_check}"
 
 
 async def test_render_without_markers_zero_chapters(
