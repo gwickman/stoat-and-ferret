@@ -105,6 +105,7 @@ try:
         SpectralReport,
         SpeedControl,
         TimeRange,
+        TimeStretchBuilder,
         TrackAudioConfig,
         TransitionSpec,
         TransitionType,
@@ -200,6 +201,7 @@ except ImportError:
     NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
+    TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
     CurveKind = _not_built  # type: ignore[misc,assignment]
@@ -304,6 +306,7 @@ __all__ = [
     "NoiseReductionBuilder",
     "DeesserBuilder",
     "DeplosiveBuilder",
+    "TimeStretchBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",

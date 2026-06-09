@@ -17,6 +17,7 @@ from stoat_ferret_core import (
     FadeBuilder,
     NoiseReductionBuilder,
     SpeedControl,
+    TimeStretchBuilder,
     TransitionType,
     VolumeBuilder,
     XfadeBuilder,
@@ -930,6 +931,71 @@ DEPLOSIVE = EffectDefinition(
 )
 
 
+def _build_time_stretch(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for time-stretch effect.
+
+    Args:
+        parameters: Effect parameters with required 'factor' and optional 'mode'.
+
+    Returns:
+        FFmpeg atempo or rubberband filter chain string.
+    """
+    factor = float(parameters.get("factor", 1.0))
+    mode = str(parameters.get("mode", "atempo"))
+    return str(TimeStretchBuilder(factor, mode).build())
+
+
+def _time_stretch_preview() -> str:
+    """Generate a filter preview for time-stretch with default parameters."""
+    return str(TimeStretchBuilder(0.8, "atempo").build())
+
+
+TIME_STRETCH = EffectDefinition(
+    name="Time Stretch",
+    description="Adjust audio playback speed without affecting pitch.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "factor": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 4.0,
+                "default": 1.0,
+                "description": (
+                    "Time-stretch factor (0.0 exclusive – 4.0 inclusive). "
+                    "Values < 1.0 slow down; values > 1.0 speed up."
+                ),
+            },
+            "mode": {
+                "type": "string",
+                "enum": ["atempo", "rubberband", "auto"],
+                "default": "atempo",
+                "description": (
+                    "Filter engine: 'atempo' (always available), "
+                    "'rubberband' (high-quality, optional FFmpeg build), "
+                    "or 'auto' (use rubberband if available, else atempo)."
+                ),
+            },
+        },
+        "required": ["factor"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "factor": (
+            "Use 0.8 to slow speech by 20%, 1.25 to speed it up by 25%. "
+            "Factors outside [0.5, 2.0] are automatically chained."
+        ),
+        "mode": "Leave as 'atempo' unless rubberband is known to be available.",
+    },
+    preview_fn=_time_stretch_preview,
+    build_fn=_build_time_stretch,
+    ai_summary=(
+        "Stretch or compress audio duration without pitch change using FFmpeg atempo/rubberband."
+    ),
+    example_prompt="Speed up the narration by 25% without changing the pitch.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -951,4 +1017,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("noise_reduction", NOISE_REDUCTION)
     registry.register("deesser", DEESSER)
     registry.register("deplosive", DEPLOSIVE)
+    registry.register("time_stretch", TIME_STRETCH)
     return registry
