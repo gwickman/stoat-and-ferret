@@ -20,12 +20,14 @@ from stoat_ferret.effects.definitions import (
     AUDIO_DUCKING,
     AUDIO_FADE,
     AUDIO_MIX,
+    MASTERING_LIMITER,
     SPEED_CONTROL,
     TEXT_OVERLAY,
     VIDEO_FADE,
     VOLUME,
     XFADE,
     EffectDefinition,
+    _build_mastering_limiter,
     _build_speed_control,
     _build_text_overlay,
     create_default_registry,
@@ -48,6 +50,7 @@ EXPECTED_EFFECT_TYPES = {
     "deesser",
     "deplosive",
     "time_stretch",
+    "mastering_limiter",
 }
 
 # ---- Registry unit tests ----
@@ -731,6 +734,33 @@ def test_effect_definition_schema_roundtrip() -> None:
 
     errors = registry.validate("time_stretch", {"factor": 1.5, "mode": "rubberband"})
     assert errors == [], f"time_stretch schema rejected rubberband params: {errors}"
+
+    errors = registry.validate("mastering_limiter", {"ceiling_dbtp": -1.0})
+    assert errors == [], f"mastering_limiter schema rejected valid params: {errors}"
+
+    errors = registry.validate("mastering_limiter", {"ceiling_dbtp": 0.0})
+    assert errors == [], f"mastering_limiter schema rejected 0.0 dBTP: {errors}"
+
+
+@pytest.mark.contract
+def test_mastering_limiter_build_fn() -> None:
+    """mastering_limiter build_fn emits correct alimiter filter string."""
+    filter_str = _build_mastering_limiter({"ceiling_dbtp": -1.0})
+    assert filter_str.startswith("alimiter=limit=0.891"), (
+        f"Expected alimiter=limit=0.891..., got: {filter_str}"
+    )
+    assert "level=disabled" in filter_str, f"Missing level=disabled in: {filter_str}"
+
+
+@pytest.mark.contract
+def test_mastering_limiter_definition_registered() -> None:
+    """mastering_limiter is registered in the default registry."""
+    registry = create_default_registry()
+    effect = registry.get("mastering_limiter")
+    assert effect is not None, "mastering_limiter not found in default registry"
+    assert effect is MASTERING_LIMITER
+    preview = effect.preview_fn()
+    assert "alimiter" in preview, f"Preview missing alimiter: {preview}"
 
 
 # ---- Prometheus metrics tests ----

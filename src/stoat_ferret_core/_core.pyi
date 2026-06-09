@@ -3306,3 +3306,40 @@ def parse_video_defect_report(output: str) -> VideoDefectReport:
     Never raises; returns empty lists on empty/garbled input.
     """
     ...
+
+# ========== Mastering Builders ==========
+
+class LimiterBuilder:
+    """Type-safe builder for FFmpeg ``alimiter`` true-peak limiter.
+
+    Converts ``ceiling_dbtp`` (a non-positive dBTP value) to a linear ratio for the
+    ``alimiter`` ``limit`` parameter: ``limit = 10^(ceiling_dbtp / 20)``.
+
+    Example: −1 dBTP → limit=0.891251 (verified at interface-contracts.md §3).
+    """
+
+    def __new__(cls, ceiling_dbtp: float) -> LimiterBuilder:
+        """Create a new LimiterBuilder.
+
+        Args:
+            ceiling_dbtp: Ceiling in dBTP. Must be <= 0.0; positive values would permit
+                          gain above 0 dBFS which is non-sensical for a true-peak ceiling.
+
+        Raises:
+            ValueError: If ceiling_dbtp > 0.0.
+        """
+        ...
+
+    @property
+    def ceiling_dbtp(self) -> float:
+        """Returns the ceiling in dBTP."""
+        ...
+
+    def build(self) -> Filter:
+        """Build the alimiter Filter.
+
+        Returns:
+            A Filter with ``alimiter=limit=<ratio>:level=disabled`` syntax.
+        """
+        ...
+    ...
