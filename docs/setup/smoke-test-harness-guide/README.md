@@ -74,3 +74,4 @@ Tier 1 (core API smoke tests) is **implemented** as of v014. Tier 2 (expanded AP
 | [04-ci-integration.md](./04-ci-integration.md) | GitHub Actions jobs for smoke tests and UAT |
 | [05-maintenance.md](./05-maintenance.md) | Trigger tables, sync strategy, impact assessment checks for both tiers |
 | [06-phase2-playwright.md](./06-phase2-playwright.md) | Playwright UAT harness — design origin and realisation |
+| [07-dsp-contract-tests.md](./07-dsp-contract-tests.md) | DSP contract tests (FFmpeg-gated): `tests/effects/`, `STOAT_TEST_FFMPEG` gate, v077 effect coverage |
