@@ -1,3 +1,14 @@
 {
-  "failures": []
+  "failures": [
+    {
+      "journey_id": 703,
+      "reason": "R2 GUI surface not built: qc-status-fail / remaster-btn testids absent from gui/src (QC-fail status + remaster flow UI unimplemented; journey encodes the design intent)",
+      "tracking_reference": "BL-480"
+    },
+    {
+      "journey_id": 704,
+      "reason": "R2 GUI surface not built: batch-panel not mounted on /render (automation lane UI unimplemented; journey encodes the design intent)",
+      "tracking_reference": "BL-480"
+    }
+  ]
 }
