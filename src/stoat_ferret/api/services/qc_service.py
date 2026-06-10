@@ -252,7 +252,7 @@ class QCService:
     async def _check_loudness_integrated(
         self, *, artifact_path: str, target: float | None
     ) -> dict[str, Any]:
-        """Measure integrated loudness via ebur128 filter."""
+        """Measure integrated loudness via loudnorm print_format=json measurement pass."""
         try:
             from stoat_ferret_core import parse_loudness_report
         except ImportError:
@@ -262,7 +262,7 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "ebur128=framelog=verbose",
+            "loudnorm=I=-23:TP=-1:LRA=11:print_format=json",
             "-f",
             "null",
             "/dev/null",
@@ -272,7 +272,8 @@ class QCService:
         try:
             report = parse_loudness_report(stderr)
             measured: float | None = report.integrated_lufs
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError) as exc:
+            logger.warning("loudness_integrated parse failed", error=str(exc))
             return dict(_NULL_CHECK)
 
         if target is None:
@@ -281,7 +282,7 @@ class QCService:
         return _make_check(measured, target, "LUFS", pass_override=pass_val)
 
     async def _check_true_peak(self, *, artifact_path: str, target: float | None) -> dict[str, Any]:
-        """Measure true peak via ebur128 filter."""
+        """Measure true peak via loudnorm print_format=json measurement pass."""
         try:
             from stoat_ferret_core import parse_loudness_report
         except ImportError:
@@ -291,7 +292,7 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "ebur128=framelog=verbose",
+            "loudnorm=I=-23:TP=-1:LRA=11:print_format=json",
             "-f",
             "null",
             "/dev/null",
@@ -301,7 +302,8 @@ class QCService:
         try:
             report = parse_loudness_report(stderr)
             measured = report.true_peak_dbtp
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError) as exc:
+            logger.warning("true_peak parse failed", error=str(exc))
             return dict(_NULL_CHECK)
 
         if target is None:
@@ -453,7 +455,7 @@ class QCService:
     async def _check_section_arc(
         self, *, artifact_path: str, target: float | None
     ) -> dict[str, Any]:
-        """Check section-level loudness range as section arc proxy."""
+        """Check section-level loudness range as section arc proxy via loudnorm JSON."""
         try:
             from stoat_ferret_core import parse_loudness_report
         except ImportError:
@@ -463,7 +465,7 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "ebur128=framelog=verbose",
+            "loudnorm=I=-23:TP=-1:LRA=11:print_format=json",
             "-f",
             "null",
             "/dev/null",
@@ -473,7 +475,8 @@ class QCService:
         try:
             report = parse_loudness_report(stderr)
             measured = report.lra
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError) as exc:
+            logger.warning("section_arc parse failed", error=str(exc))
             return dict(_NULL_CHECK)
 
         if target is None:
