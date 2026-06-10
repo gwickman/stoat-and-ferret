@@ -192,16 +192,18 @@ def test_r2_journey_modules_resolve_to_actual_files() -> None:
     for journey_id in R2_JOURNEY_IDS:
         module_path = JOURNEY_MODULE_MAP[journey_id]
         spec = importlib.util.find_spec(module_path)
-        assert spec is not None, (
-            f"Module {module_path!r} for journey {journey_id} not importable"
-        )
+        assert spec is not None, f"Module {module_path!r} for journey {journey_id} not importable"
 
 
 def test_r2_qc_fail_has_playwright_assertions() -> None:
-    """j_qc_fail.py must contain real Playwright expect() assertions (BL-457-AC-3)."""
-    from tests.uat.journeys import j_qc_fail
+    """j_qc_fail.py must contain real Playwright expect() assertions (BL-457-AC-3).
 
-    source = inspect.getsource(j_qc_fail)
+    Reads the journey source as text rather than importing the module:
+    importing j_qc_fail pulls in playwright at module level, which is not
+    installed in the smoke-test CI environments.
+    """
+    journey_path = Path(__file__).parent.parent / "uat" / "journeys" / "j_qc_fail.py"
+    source = journey_path.read_text(encoding="utf-8")
     assert "expect(" in source, "j_qc_fail must contain Playwright expect() assertions"
     assert "qc-status-fail" in source, "j_qc_fail must assert qc-status-fail element"
     assert "remaster-btn" in source, "j_qc_fail must assert remaster-btn element"
