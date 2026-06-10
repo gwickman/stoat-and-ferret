@@ -484,6 +484,9 @@ async def create_render_job(
         metadata_title = delivery_profile.metadata_template.get("title")
         if metadata_title:
             plan_data["settings"]["metadata_title"] = metadata_title
+    # Inject delivery profile ID for worker-path QC resolution (BL-477)
+    if delivery_profile is not None:
+        plan_data["settings"]["delivery_profile_id"] = str(delivery_profile.id)
     render_plan_json = json.dumps(plan_data)
 
     # Empty timeline check (FR-002)

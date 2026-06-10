@@ -286,6 +286,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         checkpoint_manager=checkpoint_manager,
         connection_manager=app.state.ws_manager,
         settings=settings,
+        qc_service=app.state.qc_service,
     )
     app.state.render_service = render_service
     await render_service.recover()

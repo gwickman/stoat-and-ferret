@@ -14,6 +14,7 @@ import shutil
 import time
 from contextlib import suppress
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 from PIL import Image
@@ -21,6 +22,9 @@ from PIL import Image
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.events import EventType, build_event, clear_event_counter
 from stoat_ferret.api.websocket.manager import ConnectionManager
+
+if TYPE_CHECKING:
+    from stoat_ferret.api.services.qc_service import QCService
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.render.checkpoints import RenderCheckpointManager
 from stoat_ferret.render.executor import RenderExecutor
@@ -168,6 +172,7 @@ class RenderService:
         checkpoint_manager: RenderCheckpointManager,
         connection_manager: ConnectionManager,
         settings: Settings,
+        qc_service: QCService | None = None,
     ) -> None:
         self._repo = repository
         self._queue = queue
@@ -177,6 +182,7 @@ class RenderService:
         self._max_retries = settings.render_retry_count
         self._render_mode = settings.render_mode
         self._shutting_down = False
+        self._qc_service = qc_service
         # Serializes concurrent noop-mode submissions to prevent state race (BL-388)
         self._submit_lock = asyncio.Lock()
         # In noop mode FFmpeg is irrelevant — always treat as available so
@@ -501,6 +507,23 @@ class RenderService:
         )
         await self._broadcast_queue_status()
         self._clear_throttle_state(job.id)
+        if self._qc_service is not None:
+            try:
+                plan_settings = json.loads(job.render_plan).get("settings") or {}
+                delivery_profile_id = plan_settings.get("delivery_profile_id")
+            except (json.JSONDecodeError, AttributeError):
+                delivery_profile_id = None
+            if delivery_profile_id:
+                try:
+                    qc_report = await self._qc_service.run_checks(
+                        artifact_path=job.output_path,
+                        job_id=job.id,
+                        delivery_profile_id=delivery_profile_id,
+                    )
+                    if qc_report.overall_verdict != "pass":
+                        await self._repo.update_status(job.id, RenderStatus.QC_FAILED)
+                except Exception:
+                    logger.error("qc.step_failed", job_id=job.id, exc_info=True)
         await self._cleanup(job.id)
 
     async def _handle_failure(self, job: RenderJob, error_message: str) -> None:
