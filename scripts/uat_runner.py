@@ -190,6 +190,33 @@ def get_journey_annotation(
     return "PASS"
 
 
+def compute_exit_code(
+    results: list[JourneyResult], known_failures: dict[int, dict[str, str]]
+) -> int:
+    """Return the process exit code for a set of journey results.
+
+    Non-zero for unregistered failures and for unimplemented journeys
+    (a not-run journey is never success — BL-473). Failures registered in
+    the known-failure registry (annotated KNOWN_FAILURE, each carrying a
+    tracking_reference) do NOT block: the registry exists to acknowledge
+    tracked failures at the gate (BL-325) so they surface in reports
+    without failing every CI run while the tracked fix is pending.
+
+    Args:
+        results: Journey results from execute_journeys.
+        known_failures: Dict of known failure entries keyed by journey_id.
+
+    Returns:
+        0 when every non-pass result is a registered known failure; 1 otherwise.
+    """
+    any_blocking = any(
+        (r.status == "failed" and r.journey_id not in known_failures)
+        or r.status == "not_implemented"
+        for r in results
+    )
+    return 1 if any_blocking else 0
+
+
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
@@ -668,7 +695,8 @@ def execute_journeys(journeys: list[int], output_dir: Path, headed: bool) -> lis
     Loads the known failure registry before journey execution. Failed journeys
     in the registry are annotated KNOWN_FAILURE; passing journeys in the
     registry are annotated UNEXPECTED_PASS; unexpected failures are FAIL.
-    Annotations are output-only; exit code behavior is unchanged.
+    Registered known failures do not block the exit code (see
+    compute_exit_code); unregistered failures and not-run journeys do.
 
     Args:
         journeys: Ordered list of journey IDs to execute.
@@ -1102,9 +1130,11 @@ def main(argv: list[str] | None = None) -> int:
         # 7. Summary
         print_summary(results, output_dir)
 
-        # Exit code: non-zero for failures and for unimplemented journeys (not a pass)
-        any_not_pass = any(r.status in ("failed", "not_implemented") for r in results)
-        return 1 if any_not_pass else 0
+        try:
+            known_failures = load_known_failures()
+        except ValueError:
+            known_failures = {}
+        return compute_exit_code(results, known_failures)
 
     except KeyboardInterrupt:
         print("\n  Interrupted by user.", file=sys.stderr)

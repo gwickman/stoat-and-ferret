@@ -192,16 +192,18 @@ def test_r2_journey_modules_resolve_to_actual_files() -> None:
     for journey_id in R2_JOURNEY_IDS:
         module_path = JOURNEY_MODULE_MAP[journey_id]
         spec = importlib.util.find_spec(module_path)
-        assert spec is not None, (
-            f"Module {module_path!r} for journey {journey_id} not importable"
-        )
+        assert spec is not None, f"Module {module_path!r} for journey {journey_id} not importable"
 
 
 def test_r2_qc_fail_has_playwright_assertions() -> None:
-    """j_qc_fail.py must contain real Playwright expect() assertions (BL-457-AC-3)."""
-    from tests.uat.journeys import j_qc_fail
+    """j_qc_fail.py must contain real Playwright expect() assertions (BL-457-AC-3).
 
-    source = inspect.getsource(j_qc_fail)
+    Reads the journey source as text rather than importing the module:
+    importing j_qc_fail pulls in playwright at module level, which is not
+    installed in the smoke-test CI environments.
+    """
+    journey_path = Path(__file__).parent.parent / "uat" / "journeys" / "j_qc_fail.py"
+    source = journey_path.read_text(encoding="utf-8")
     assert "expect(" in source, "j_qc_fail must contain Playwright expect() assertions"
     assert "qc-status-fail" in source, "j_qc_fail must assert qc-status-fail element"
     assert "remaster-btn" in source, "j_qc_fail must assert remaster-btn element"
@@ -248,3 +250,50 @@ def test_absent_journey_excluded_from_passed_count(
     captured = capsys.readouterr()
     assert "Passed: 0" in captured.out
     assert "Not Implemented: 1" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# compute_exit_code — registered known failures do not block; others do
+# ---------------------------------------------------------------------------
+
+
+def _jr(journey_id: int, status: str) -> object:
+    from scripts.uat_runner import JourneyResult
+
+    return JourneyResult(journey_id=journey_id, status=status, message="")
+
+
+def test_exit_code_zero_when_all_pass() -> None:
+    from scripts.uat_runner import compute_exit_code
+
+    assert compute_exit_code([_jr(701, "passed"), _jr(702, "passed")], {}) == 0
+
+
+def test_exit_code_nonzero_on_unregistered_failure() -> None:
+    from scripts.uat_runner import compute_exit_code
+
+    assert compute_exit_code([_jr(701, "passed"), _jr(703, "failed")], {}) == 1
+
+
+def test_exit_code_zero_when_failure_is_registered_known_failure() -> None:
+    """A failure registered in the known-failure registry (with tracking ref) does not block."""
+    from scripts.uat_runner import compute_exit_code
+
+    known = {703: {"reason": "GUI not built", "tracking_reference": "BL-480"}}
+    assert compute_exit_code([_jr(701, "passed"), _jr(703, "failed")], known) == 0
+
+
+def test_exit_code_nonzero_for_not_implemented_even_when_registered() -> None:
+    """A not-run journey is never success (BL-473) — registry does not exempt it."""
+    from scripts.uat_runner import compute_exit_code
+
+    known = {705: {"reason": "x", "tracking_reference": "BL-480"}}
+    assert compute_exit_code([_jr(705, "not_implemented")], known) == 1
+
+
+def test_exit_code_nonzero_when_only_some_failures_registered() -> None:
+    from scripts.uat_runner import compute_exit_code
+
+    known = {703: {"reason": "x", "tracking_reference": "BL-480"}}
+    results = [_jr(703, "failed"), _jr(704, "failed")]
+    assert compute_exit_code(results, known) == 1

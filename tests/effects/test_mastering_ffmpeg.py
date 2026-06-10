@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -53,7 +54,9 @@ def _generate_loud_audio(output_path: Path) -> None:
             "-f",
             "lavfi",
             "-i",
-            "sine=frequency=440:duration=2:amplitude=1.0",
+            "sine=frequency=440:duration=2",
+            "-af",
+            "volume=20dB",
             "-c:a",
             "pcm_f32le",
             "-ar",
@@ -324,7 +327,7 @@ def test_loudnorm_reads_target_from_delivery_profile(tmp_path: Path) -> None:
     )
 
     # Verify the filter string uses the delivery profile target
-    assert "I=-23.0" in pass2_filter, (
+    assert re.search(r"I=-23(?:\.0)?(?::|$)", pass2_filter), (
         f"Expected delivery profile -23 LUFS in pass-2 filter, got: {pass2_filter}"
     )
     assert "I=-16.0" not in pass2_filter, (
@@ -353,7 +356,10 @@ def _generate_audio_sine(output_path: Path, duration: float = 6.0, amplitude: fl
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency=440:duration={duration}:amplitude={amplitude}",
+            f"sine=frequency=440:duration={duration}",
+            "-af",
+            # sine source emits at fixed 1/8 amplitude; scale to the requested level
+            f"volume={amplitude / 0.125}",
             "-c:a",
             "pcm_f32le",
             "-ar",
