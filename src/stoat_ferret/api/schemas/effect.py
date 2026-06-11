@@ -80,7 +80,10 @@ class EffectResponse(BaseModel):
     and a filter preview string. The ``parameters`` list is a structured
     decomposition of ``parameter_schema`` intended for AI agent discovery;
     ``ai_summary`` and ``example_prompt`` give agents a one-line description
-    and a natural-language invocation example.
+    and a natural-language invocation example. ``automatable_parameters``
+    lists parameter names that accept automation envelopes (e.g. keyframe
+    sequences), enabling agents to discover which parameters support
+    time-varying control.
     """
 
     effect_type: str
@@ -92,6 +95,7 @@ class EffectResponse(BaseModel):
     parameters: list[ParameterSchemaResponse]
     ai_summary: str
     example_prompt: str
+    automatable_parameters: list[str]
 
 
 class EffectListResponse(BaseModel):

@@ -15,6 +15,7 @@ const mockEffects: Effect[] = [
     parameters: [],
     ai_summary: '',
     example_prompt: '',
+    automatable_parameters: [],
   },
   {
     effect_type: 'volume',
@@ -26,6 +27,7 @@ const mockEffects: Effect[] = [
     parameters: [],
     ai_summary: '',
     example_prompt: '',
+    automatable_parameters: ['volume'],
   },
   {
     effect_type: 'xfade',
@@ -37,6 +39,7 @@ const mockEffects: Effect[] = [
     parameters: [],
     ai_summary: '',
     example_prompt: '',
+    automatable_parameters: [],
   },
 ]
 

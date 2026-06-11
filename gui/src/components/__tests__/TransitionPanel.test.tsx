@@ -44,6 +44,7 @@ const mockTransitionEffects: Effect[] = [
     parameters: [],
     ai_summary: '',
     example_prompt: '',
+    automatable_parameters: [],
   },
   {
     effect_type: 'acrossfade',
@@ -60,6 +61,7 @@ const mockTransitionEffects: Effect[] = [
     parameters: [],
     ai_summary: '',
     example_prompt: '',
+    automatable_parameters: [],
   },
 ]
 
@@ -74,6 +76,7 @@ const mockAllEffects: Effect[] = [
     parameters: [],
     ai_summary: '',
     example_prompt: '',
+    automatable_parameters: [],
   },
   ...mockTransitionEffects,
 ]

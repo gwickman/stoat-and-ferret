@@ -150,6 +150,7 @@ async def list_effects(registry: RegistryDep) -> EffectListResponse:
                 parameters=parameters,
                 ai_summary=definition.ai_summary,
                 example_prompt=definition.example_prompt,
+                automatable_parameters=sorted(definition.automatable),
             )
         )
     return EffectListResponse(effects=effects, total=len(effects))

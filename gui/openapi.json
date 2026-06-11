@@ -5155,6 +5155,13 @@
           "example_prompt": {
             "type": "string",
             "title": "Example Prompt"
+          },
+          "automatable_parameters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Automatable Parameters"
           }
         },
         "type": "object",
@@ -5167,10 +5174,11 @@
           "filter_preview",
           "parameters",
           "ai_summary",
-          "example_prompt"
+          "example_prompt",
+          "automatable_parameters"
         ],
         "title": "EffectResponse",
-        "description": "Response schema for a single effect.\n\nContains the effect metadata, parameter schema, AI hints,\nand a filter preview string. The ``parameters`` list is a structured\ndecomposition of ``parameter_schema`` intended for AI agent discovery;\n``ai_summary`` and ``example_prompt`` give agents a one-line description\nand a natural-language invocation example."
+        "description": "Response schema for a single effect.\n\nContains the effect metadata, parameter schema, AI hints,\nand a filter preview string. The ``parameters`` list is a structured\ndecomposition of ``parameter_schema`` intended for AI agent discovery;\n``ai_summary`` and ``example_prompt`` give agents a one-line description\nand a natural-language invocation example. ``automatable_parameters``\nlists parameter names that accept automation envelopes (e.g. keyframe\nsequences), enabling agents to discover which parameters support\ntime-varying control."
       },
       "EffectThumbnailRequest": {
         "properties": {

@@ -713,12 +713,26 @@ List all available effects with their metadata, JSON parameter schemas, AI hints
         "text": "The text content to overlay on the video",
         "fontsize": "Font size in pixels, typical range 12-72"
       },
-      "filter_preview": "drawtext=text='Sample Text':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-text_h-20"
+      "filter_preview": "drawtext=text='Sample Text':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-text_h-20",
+      "automatable_parameters": []
     }
   ],
   "total": 9
 }
 ```
+
+Each effect object includes the following fields:
+
+- `effect_type` (string): Unique effect type key used in API requests.
+- `name` (string): Human-readable effect name.
+- `description` (string): Description of what the effect does.
+- `parameter_schema` (object): JSON Schema for the effect's parameters.
+- `ai_hints` (object): Natural-language hints for each parameter, for AI agent use.
+- `filter_preview` (string): Example FFmpeg filter string showing default parameters.
+- `parameters` (array): Structured parameter metadata (type, bounds, enum values, hints).
+- `ai_summary` (string): One-line summary for AI agent discovery.
+- `example_prompt` (string): Example natural-language prompt for invoking this effect.
+- `automatable_parameters` (array of strings): Parameter names that accept automation envelopes. For the `volume` effect this is `["volume"]`; for all other effects it is `[]`.
 
 **Example:**
 
