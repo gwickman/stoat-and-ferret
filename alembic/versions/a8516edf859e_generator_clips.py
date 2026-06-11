@@ -10,16 +10,17 @@ to support generator/source clips that synthesize audio via FFmpeg source filter
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a8516edf859e"
-down_revision: Union[str, Sequence[str], None] = "g1h2i3j4k5l6"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "g1h2i3j4k5l6"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -29,7 +30,7 @@ def upgrade() -> None:
             sa.Column("clip_type", sa.String(), nullable=False, server_default="file")
         )
         batch_op.add_column(sa.Column("generator_params", sa.Text(), nullable=True))
-        batch_op.alter_column("source_video_id", nullable=True)
+        batch_op.alter_column("source_video_id", existing_type=sa.String(), nullable=True)
 
 
 def downgrade() -> None:
@@ -37,4 +38,4 @@ def downgrade() -> None:
     with op.batch_alter_table("clips") as batch_op:
         batch_op.drop_column("generator_params")
         batch_op.drop_column("clip_type")
-        batch_op.alter_column("source_video_id", nullable=False)
+        batch_op.alter_column("source_video_id", existing_type=sa.String(), nullable=False)
