@@ -68,6 +68,7 @@ try:
         ClipValidationError,
         CommandError,
         CompositionClip,
+        ConvolutionReverbBuilder,
         CurveKind,
         DeesserBuilder,
         DeplosiveBuilder,
@@ -209,6 +210,7 @@ except ImportError:
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
+    ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
@@ -323,6 +325,7 @@ __all__ = [
     "MultibandCompressorBuilder",
     "ParametricEqBuilder",
     # Spatial audio builders
+    "ConvolutionReverbBuilder",
     "PanBuilder",
     # Transition builders
     "TransitionType",
