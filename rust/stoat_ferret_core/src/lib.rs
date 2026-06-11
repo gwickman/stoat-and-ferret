@@ -123,6 +123,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
 
     // Register spatial audio builders
     m.add_class::<ffmpeg::spatial::PanBuilder>()?;
+    m.add_class::<ffmpeg::spatial::ConvolutionReverbBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;

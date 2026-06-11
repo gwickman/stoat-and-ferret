@@ -66,6 +66,37 @@ impl PanBuilder {
     }
 }
 
+/// Convolution reverb builder using an impulse response file.
+///
+/// Generates an `afir=dry=1:wet=<mix>` filter string. The IR file path is
+/// resolved separately via `ir_name()` so callers can locate the asset.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ConvolutionReverbBuilder {
+    ir_name: String,
+    mix: f32,
+}
+
+#[pymethods]
+impl ConvolutionReverbBuilder {
+    #[new]
+    pub fn py_new(ir_name: String, mix: f32) -> Self {
+        Self {
+            ir_name,
+            mix: mix.clamp(0.0, 1.0),
+        }
+    }
+
+    pub fn build(&self) -> Filter {
+        Filter::new("afir").param("dry", "1").param("wet", self.mix)
+    }
+
+    pub fn ir_name(&self) -> String {
+        self.ir_name.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,5 +197,32 @@ mod tests {
             s.starts_with("aeval="),
             "expected aeval filter for automation, got: {s}"
         );
+    }
+
+    #[test]
+    fn test_conv_reverb_filter_string() {
+        let b = ConvolutionReverbBuilder::py_new("hall_small".to_string(), 0.4);
+        let s = b.build().to_string();
+        assert!(s.starts_with("afir="), "expected afir= prefix, got: {s}");
+        assert!(s.contains("dry=1"), "expected dry=1, got: {s}");
+        assert!(s.contains("wet="), "expected wet= param, got: {s}");
+    }
+
+    #[test]
+    fn test_conv_reverb_mix_clamped_above_max() {
+        let b = ConvolutionReverbBuilder::py_new("hall_small".to_string(), 2.0);
+        assert_eq!(b.mix, 1.0);
+    }
+
+    #[test]
+    fn test_conv_reverb_mix_clamped_below_min() {
+        let b = ConvolutionReverbBuilder::py_new("hall_small".to_string(), -0.5);
+        assert_eq!(b.mix, 0.0);
+    }
+
+    #[test]
+    fn test_conv_reverb_ir_name_accessor() {
+        let b = ConvolutionReverbBuilder::py_new("room_medium".to_string(), 0.5);
+        assert_eq!(b.ir_name(), "room_medium");
     }
 }

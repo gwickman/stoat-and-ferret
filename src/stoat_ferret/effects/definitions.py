@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.resources
 import json
 import re
 from asyncio import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from stoat_ferret_core import (
     AcrossfadeBuilder,
     AfadeBuilder,
     AmixBuilder,
+    ConvolutionReverbBuilder,
     DeesserBuilder,
     DeplosiveBuilder,
     DrawtextBuilder,
@@ -1490,6 +1493,68 @@ PAN = EffectDefinition(
 )
 
 
+_IR_NAMES = ("hall_small", "room_medium", "plate")
+
+
+def _resolve_ir_path(ir_name: str) -> Path:
+    """Resolve an IR name to its bundled WAV file path."""
+    try:
+        ref = importlib.resources.files("stoat_ferret") / "assets" / "reverb-irs" / f"{ir_name}.wav"
+        return Path(str(ref))
+    except Exception:
+        return Path(__file__).parent.parent / "assets" / "reverb-irs" / f"{ir_name}.wav"
+
+
+def _build_convolution_reverb(parameters: dict[str, Any]) -> str:
+    ir_name = str(parameters.get("ir_name", "hall_small"))
+    mix = float(parameters.get("mix", 0.5))
+    return str(ConvolutionReverbBuilder(ir_name, mix).build())
+
+
+def _convolution_reverb_preview() -> str:
+    return str(ConvolutionReverbBuilder("hall_small", 0.5).build())
+
+
+CONVOLUTION_REVERB = EffectDefinition(
+    name="convolution_reverb",
+    description=(
+        "Apply convolution reverb using a bundled impulse response. "
+        "Adds natural room ambience to dry audio."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "ir_name": {
+                "type": "string",
+                "enum": list(_IR_NAMES),
+                "description": "Name of the impulse response preset.",
+            },
+            "mix": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Wet/dry mix: 0.0 = dry, 1.0 = fully wet.",
+            },
+        },
+        "required": ["ir_name", "mix"],
+    },
+    ai_hints={
+        "ir_name": (
+            "Choose from: 'hall_small' (intimate hall), "
+            "'room_medium' (mid-size room), 'plate' (plate reverb)."
+        ),
+        "mix": ("Wet/dry mix in [0.0, 1.0]. 0.3–0.5 suits dialogue; 0.6–0.9 for ambient pads."),
+    },
+    preview_fn=_convolution_reverb_preview,
+    build_fn=_build_convolution_reverb,
+    ai_summary=(
+        "Add convolution reverb to audio using a bundled impulse response preset. "
+        "Supports hall, room, and plate presets with adjustable wet/dry mix."
+    ),
+    example_prompt="Add a small hall reverb at 40% wet to the narration track.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1517,4 +1582,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("parametric_eq", PARAMETRIC_EQ)
     registry.register("multiband_compressor", MULTIBAND_COMPRESSOR)
     registry.register("pan", PAN)
+    registry.register("convolution_reverb", CONVOLUTION_REVERB)
     return registry
