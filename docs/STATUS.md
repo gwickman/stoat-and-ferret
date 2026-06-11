@@ -30,4 +30,4 @@
 | Mixdown | `STOAT_TEST_FFMPEG=1 uv run pytest tests/effects/test_mixdown_ffmpeg.py -v` |
 | Golden QC | `STOAT_TEST_FFMPEG=1 uv run pytest tests/qc/test_qc_regression.py -v` |
 | Acceptance harness | `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py -v` |
-| UAT journeys R2 | `STOAT_TEST_UAT=1 python scripts/uat_runner.py --journeys 701-706 --headed` |
+| UAT journeys R2 | `STOAT_TEST_UAT=1 python scripts/uat_runner.py --headed --journey 703` |

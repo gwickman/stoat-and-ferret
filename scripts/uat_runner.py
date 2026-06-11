@@ -593,6 +593,8 @@ def _run_module_journey(
         )
 
     async def _go() -> None:
+        import inspect
+
         from playwright.async_api import async_playwright
 
         async with async_playwright() as pw:
@@ -600,7 +602,11 @@ def _run_module_journey(
             ctx = await browser.new_context()
             page = await ctx.new_page()
             try:
-                await module.run(page, f"{SERVER_URL}/gui/")
+                sig = inspect.signature(module.run)
+                if "output_dir" in sig.parameters:
+                    await module.run(page, f"{SERVER_URL}/gui/", output_dir=output_dir)
+                else:
+                    await module.run(page, f"{SERVER_URL}/gui/")
             finally:
                 await ctx.close()
                 await browser.close()

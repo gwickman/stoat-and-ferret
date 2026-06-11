@@ -296,9 +296,12 @@ export default function RenderPage() {
         </div>
       )}
 
+      {batchEnabled && (
+        <BatchPanel onBatchSubmitted={(id) => setActiveBatchId(id)} />
+      )}
+
       {activeTab === 'batch' && batchEnabled && (
         <div data-testid="render-tab-batch-content" className="space-y-4">
-          <BatchPanel onBatchSubmitted={(id) => setActiveBatchId(id)} />
           <section
             data-testid="batch-job-list-section"
             aria-label="Batch jobs"

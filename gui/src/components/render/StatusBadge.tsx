@@ -11,6 +11,7 @@ const STATUS_COLORS: Record<string, string> = {
   completed: 'bg-green-500',
   failed: 'bg-red-500',
   cancelled: 'bg-gray-500',
+  qc_failed: 'bg-orange-500',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -19,6 +20,7 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Completed',
   failed: 'Failed',
   cancelled: 'Cancelled',
+  qc_failed: 'QC Failed',
 }
 
 const FALLBACK_COLOR = 'bg-gray-500'
