@@ -31,7 +31,7 @@ class JobStatus(enum.Enum):
 
     PENDING = "pending"
     RUNNING = "running"
-    COMPLETE = "complete"
+    COMPLETED = "completed"
     FAILED = "failed"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
@@ -39,7 +39,7 @@ class JobStatus(enum.Enum):
 
 _TERMINAL_STATUSES: frozenset[JobStatus] = frozenset(
     {
-        JobStatus.COMPLETE,
+        JobStatus.COMPLETED,
         JobStatus.FAILED,
         JobStatus.TIMEOUT,
         JobStatus.CANCELLED,
@@ -277,7 +277,7 @@ class InMemoryJobQueue:
                 result_value = await handler(job_type, payload)
                 entry.result = JobResult(
                     job_id=job_id,
-                    status=JobStatus.COMPLETE,
+                    status=JobStatus.COMPLETED,
                     result=result_value,
                 )
             except Exception as exc:
@@ -293,7 +293,7 @@ class InMemoryJobQueue:
                 result_value = self._results.get(job_type, {"status": "ok"})
                 entry.result = JobResult(
                     job_id=job_id,
-                    status=JobStatus.COMPLETE,
+                    status=JobStatus.COMPLETED,
                     result=result_value,
                 )
             elif outcome == JobOutcome.FAILURE:
@@ -353,7 +353,7 @@ class InMemoryJobQueue:
     def list_jobs(self) -> list[JobSnapshot]:
         """Return a snapshot of tracked jobs in submission order.
 
-        Terminal jobs (COMPLETE, FAILED, TIMEOUT, CANCELLED) older than
+        Terminal jobs (COMPLETED, FAILED, TIMEOUT, CANCELLED) older than
         ``JOB_RETENTION_SECONDS`` are excluded so active_jobs stays current.
 
         Returns:
@@ -521,7 +521,7 @@ class AsyncioJobQueue:
     def list_jobs(self) -> list[JobSnapshot]:
         """Return a snapshot of tracked jobs in submission order.
 
-        Terminal jobs (COMPLETE, FAILED, TIMEOUT, CANCELLED) older than
+        Terminal jobs (COMPLETED, FAILED, TIMEOUT, CANCELLED) older than
         ``JOB_RETENTION_SECONDS`` are excluded so active_jobs stays current.
 
         Returns:
@@ -595,7 +595,7 @@ class AsyncioJobQueue:
                         entry.result = result
                         logger.info("job_cancelled", job_id=job_id, job_type=entry.job_type)
                     else:
-                        entry.status = JobStatus.COMPLETE
+                        entry.status = JobStatus.COMPLETED
                         entry.result = result
                         logger.info("job_completed", job_id=job_id, job_type=entry.job_type)
                 except asyncio.TimeoutError:

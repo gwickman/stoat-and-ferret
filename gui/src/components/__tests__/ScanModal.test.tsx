@@ -96,7 +96,7 @@ describe('ScanModal', () => {
     const ws = mockInstances[0]
     ws.simulateOpen()
     ws.simulateMessage(makeProgressEvent('job-1', 0.5))
-    ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'complete'))
+    ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'completed'))
 
     await waitFor(() => {
       expect(screen.getByTestId('scan-complete')).toBeDefined()
@@ -314,7 +314,7 @@ describe('ScanModal', () => {
     const ws = mockInstances[0]
     ws.simulateOpen()
     ws.simulateMessage(makeProgressEvent('job-2', 0.5))
-    ws.simulateMessage(makeProgressEvent('job-2', 1.0, 'complete'))
+    ws.simulateMessage(makeProgressEvent('job-2', 1.0, 'completed'))
 
     // Wait for completion state
     await waitFor(() => {
@@ -397,7 +397,7 @@ describe('ScanModal', () => {
     // Complete via WebSocket before polling interval fires
     const ws = mockInstances[0]
     ws.simulateOpen()
-    ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'complete'))
+    ws.simulateMessage(makeProgressEvent('job-1', 1.0, 'completed'))
 
     await waitFor(() => {
       expect(screen.getByTestId('scan-complete')).toBeDefined()
@@ -419,7 +419,7 @@ describe('ScanModal', () => {
         })
       }
       if (String(url).match(/\/api\/v1\/jobs\/[^/]+$/)) {
-        return new Response(JSON.stringify({ status: 'complete', progress: 1.0 }), {
+        return new Response(JSON.stringify({ status: 'completed', progress: 1.0 }), {
           status: 200,
         })
       }
@@ -438,7 +438,7 @@ describe('ScanModal', () => {
     fireEvent.change(input, { target: { value: '/videos' } })
     fireEvent.click(screen.getByTestId('scan-submit'))
 
-    // Polling interval fires at 2s and discovers "complete" — no WebSocket needed
+    // Polling interval fires at 2s and discovers "completed" — no WebSocket needed
     await waitFor(() => {
       expect(screen.getByTestId('scan-complete')).toBeDefined()
     }, { timeout: 5000 })

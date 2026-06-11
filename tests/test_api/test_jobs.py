@@ -50,7 +50,7 @@ def test_get_job_status_complete(client: TestClient, tmp_path: Path) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["job_id"] == job_id
-    assert data["status"] == "complete"
+    assert data["status"] == "completed"
     assert data["result"] is not None
     assert data["error"] is None
 
@@ -129,7 +129,7 @@ def test_full_async_scan_workflow(client: TestClient, tmp_path: Path) -> None:
     job = status_resp.json()
 
     # Step 3: Verify result
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     assert job["result"]["scanned"] == 1
     assert job["result"]["new"] == 1
     assert job["error"] is None
@@ -165,7 +165,7 @@ def test_job_status_progress_none_for_completed_empty_scan(
 
     response = client.get(f"/api/v1/jobs/{job_id}")
     data = response.json()
-    assert data["status"] == "complete"
+    assert data["status"] == "completed"
     # InMemoryJobQueue is a no-op for set_progress, so progress stays None
     assert data["progress"] is None
 
@@ -195,7 +195,7 @@ def test_cancel_completed_job_returns_409(client: TestClient, tmp_path: Path) ->
 
     # Verify it's complete
     status_resp = client.get(f"/api/v1/jobs/{job_id}")
-    assert status_resp.json()["status"] == "complete"
+    assert status_resp.json()["status"] == "completed"
 
     # Try to cancel
     cancel_resp = client.post(f"/api/v1/jobs/{job_id}/cancel")

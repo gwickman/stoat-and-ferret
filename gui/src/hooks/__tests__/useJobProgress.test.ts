@@ -149,13 +149,13 @@ describe('useJobProgress', () => {
     // Simulate 3 rapid messages outside act (burst simulation)
     mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.25))
     mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.5))
-    mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.75, 'complete'))
+    mockInstances[0].simulateMessage(makeProgressEvent('job-1', 0.75, 'completed'))
 
     // Flush all pending state updates and effects
     await act(async () => {})
 
     expect(result.current.progress).toBe(0.75)
-    expect(result.current.status).toBe('complete')
+    expect(result.current.status).toBe('completed')
   })
 
   it('resets state when jobId changes', () => {

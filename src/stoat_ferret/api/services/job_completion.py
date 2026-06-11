@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 # Terminal state values are stored as strings (not JobStatus enum members) to
 # avoid a module-level import cycle with stoat_ferret.jobs.queue, which imports
 # notify_job_terminal from this module.
-_TERMINAL_STATUS_VALUES = frozenset({"complete", "failed", "timeout", "cancelled"})
+_TERMINAL_STATUS_VALUES = frozenset({"completed", "failed", "timeout", "cancelled"})
 
 _terminal_events: dict[str, asyncio.Event] = {}
 

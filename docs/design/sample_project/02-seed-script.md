@@ -189,8 +189,8 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
         status_resp = client.get(f"/api/v1/jobs/{job_id}")
         status_resp.raise_for_status()
         status = status_resp.json()["status"].lower()
-        if status in ("complete", "failed", "timeout", "cancelled"):
-            if status != "complete":
+        if status in ("completed", "failed", "timeout", "cancelled"):
+            if status != "completed":
                 print(f"ERROR: Scan failed with status: {status}", file=sys.stderr)
                 sys.exit(1)
             return
@@ -476,7 +476,7 @@ if __name__ == "__main__":
 | `httpx.ConnectError` | Server not reachable | Health check at start catches this with a clear error message. |
 | Missing videos | Scan didn't find expected files | `resolve_video_ids()` exits with "Video 'X' not found" error. |
 | Project already exists | Name collision | `find_existing_project()` checks by name. Without `--force`, exits cleanly. With `--force`, deletes and recreates. |
-| Scan failure | Job completes with non-"complete" status | `scan_and_wait()` exits with status message. |
+| Scan failure | Job completes with non-"completed" status | `scan_and_wait()` exits with status message. |
 | Scan timeout | Job doesn't complete in 60 seconds | `scan_and_wait()` exits with timeout message. |
 | Render failure | Render job reaches `failed` or `cancelled` | `poll_render_job()` exits with status message. |
 | Render timeout | Render job doesn't complete in 120 seconds | `poll_render_job()` exits with timeout message (exit code 2). |

@@ -700,7 +700,7 @@ export interface paths {
          *     Returns a point-in-time snapshot of the job's state in the queue.
          *     The ``status`` field is one of the six ``JobStatus`` values, three
          *     non-terminal (``pending``, ``running``) and four terminal
-         *     (``complete``, ``failed``, ``timeout``, ``cancelled``). Callers that
+         *     (``completed``, ``failed``, ``timeout``, ``cancelled``). Callers that
          *     need to block until a terminal state can use
          *     ``GET /api/v1/jobs/{id}/wait`` instead of polling.
          *
@@ -741,7 +741,7 @@ export interface paths {
          *
          *     Drives the ``pending -> cancelled`` or ``running -> cancelled`` state
          *     transition. Cancellation is rejected with 409 when the job is already
-         *     in a terminal state (``complete``, ``failed``, ``timeout``, or
+         *     in a terminal state (``completed``, ``failed``, ``timeout``, or
          *     ``cancelled``) because terminal states are final.
          *
          *     Args:
@@ -780,7 +780,7 @@ export interface paths {
          *     Long-poll helper intended as a deterministic alternative to polling
          *     ``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at
          *     ``/ws``. The endpoint waits for the job to enter one of the terminal
-         *     states (``complete``, ``failed``, ``timeout``, ``cancelled``) and
+         *     states (``completed``, ``failed``, ``timeout``, ``cancelled``) and
          *     then returns the same payload as ``GET /api/v1/jobs/{id}``.
          *
          *     Semantics:
@@ -3026,8 +3026,8 @@ export interface components {
             encoder?: string | null;
             /**
              * Render Plan
-             * @description Serialized render plan JSON. Required top-level keys: 'settings' (object) and 'total_duration' (float, seconds).
-             * @default {}
+             * @description Serialized render plan JSON. Required top-level key: 'settings' (object).
+             * @default {"settings": {}}
              */
             render_plan: string;
             /**
@@ -3389,7 +3389,7 @@ export interface components {
          *       "result": {
          *         "output_path": "data/renders/clip_01.mp4"
          *       },
-         *       "status": "complete"
+         *       "status": "completed"
          *     }
          */
         JobStatusResponse: {
@@ -3400,7 +3400,7 @@ export interface components {
             job_id: string;
             /**
              * Status
-             * @description Current job status. One of ``pending``, ``running``, ``complete``, ``failed``, ``timeout``, ``cancelled``. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states are ``complete``, ``failed``, ``timeout``, and ``cancelled`` — once reached, the status never changes. See the ``JobStatus`` schema for the enumerated values.
+             * @description Current job status. One of ``pending``, ``running``, ``completed``, ``failed``, ``timeout``, ``cancelled``. Valid transitions: ``pending -> running -> (completed | failed | timeout | cancelled)``. Terminal states are ``completed``, ``failed``, ``timeout``, and ``cancelled`` — once reached, the status never changes. See the ``JobStatus`` schema for the enumerated values.
              */
             status: string;
             /**
@@ -3410,7 +3410,7 @@ export interface components {
             progress?: number | null;
             /**
              * Result
-             * @description Handler return value when ``status == 'complete'``; ``null`` for non-terminal states and for failure/timeout/cancelled.
+             * @description Handler return value when ``status == 'completed'``; ``null`` for non-terminal states and for failure/timeout/cancelled.
              */
             result?: unknown;
             /**
@@ -4745,7 +4745,7 @@ export interface components {
          * @description Job lifecycle state. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states (``complete``, ``failed``, ``timeout``, ``cancelled``) are final.
          * @enum {string}
          */
-        JobStatus: "pending" | "running" | "complete" | "failed" | "timeout" | "cancelled";
+        JobStatus: "pending" | "running" | "completed" | "failed" | "timeout" | "cancelled";
         /**
          * WebSocketEvent
          * @description Documentation-only schema for a broadcast WebSocket event envelope.

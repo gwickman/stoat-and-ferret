@@ -57,7 +57,7 @@ All events — including render lifecycle events and heartbeats — share a **si
 | 7 | `layout_applied` | Composition | No | global | Inferred | `api/routers/compose.py:212-217` |
 | 8 | `audio_mix_changed` | Audio | No | global | Inferred | `api/routers/audio.py:193-198` |
 | 9 | `transition_applied` | Timeline | No | global | Inferred | `api/routers/timeline.py:706-710, 833-837` |
-| 10 | `job_progress` | Async jobs | **Yes** when `status == "complete"` | global | Captured | `api/services/scan.py:104-109, 150-155`; `api/services/proxy_service.py:498-509`; `api/services/waveform.py:582-593`; `api/services/thumbnail.py:567-578` |
+| 10 | `job_progress` | Async jobs | **Yes** when `status == "completed"` | global | Captured | `api/services/scan.py:104-109, 150-155`; `api/services/proxy_service.py:498-509`; `api/services/waveform.py:582-593`; `api/services/thumbnail.py:567-578` |
 | 11 | `preview.generating` | Preview (HLS) | No | global | Inferred | `preview/manager.py:317` |
 | 12 | `preview.ready` | Preview (HLS) | **Yes** | global | Inferred | `preview/manager.py:400, 569` |
 | 13 | `preview.seeking` | Preview (HLS) | No | global | Inferred | `preview/manager.py:504` |
@@ -121,7 +121,7 @@ State transition: `scan job: pending → running` (the scan handler sets queue p
 
 ### `scan_completed` *(terminal)*
 
-Emitted once per scan request after the directory walk completes successfully. Followed immediately by a final `job_progress` with `status == "complete"`.
+Emitted once per scan request after the directory walk completes successfully. Followed immediately by a final `job_progress` with `status == "completed"`.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -206,7 +206,7 @@ Generic async-job progress event used by **multiple subsystems**. The `payload.s
 | `status` value | Meaning | Terminal? |
 |----------------|---------|-----------|
 | `"running"` | Job is in progress. | No |
-| `"complete"` | Job reached terminal success. | **Yes** |
+| `"completed"` | Job reached terminal success. | **Yes** |
 | `"failed"` | Job reached terminal failure (proxy/waveform/thumbnail subsystems). | **Yes** |
 | `"generating"` | Proxy/waveform-style intermediate state. | No |
 
@@ -232,7 +232,7 @@ Captured (scan):
 
 ```jsonc
 { "type": "job_progress",
-  "payload": { "job_id": "37a582b0-…", "progress": 1.0, "status": "complete" },
+  "payload": { "job_id": "37a582b0-…", "progress": 1.0, "status": "completed" },
   "correlation_id": null,
   "timestamp": "2026-04-26T17:24:37.712318+00:00",
   "event_id": "event-00005" }
@@ -497,7 +497,7 @@ The following frames were captured against a freshly-started v042 server using `
 {"type":"scan_started","payload":{"path":"C:/.../scan_target"},"correlation_id":null,"timestamp":"2026-04-26T17:24:37.020392+00:00","event_id":"event-00002"}
 {"type":"job_progress","payload":{"job_id":"37a582b0-…","progress":1.0,"status":"running"},"correlation_id":null,"timestamp":"2026-04-26T17:24:37.711429+00:00","event_id":"event-00003"}
 {"type":"scan_completed","payload":{"path":"C:/.../scan_target","video_count":0},"correlation_id":null,"timestamp":"2026-04-26T17:24:37.712217+00:00","event_id":"event-00004"}
-{"type":"job_progress","payload":{"job_id":"37a582b0-…","progress":1.0,"status":"complete"},"correlation_id":null,"timestamp":"2026-04-26T17:24:37.712318+00:00","event_id":"event-00005"}
+{"type":"job_progress","payload":{"job_id":"37a582b0-…","progress":1.0,"status":"completed"},"correlation_id":null,"timestamp":"2026-04-26T17:24:37.712318+00:00","event_id":"event-00005"}
 {"type":"render_queued","payload":{"job_id":"2c4763b8-…","project_id":"35e76266-…","status":"queued"},"correlation_id":"9bab51d4-…","timestamp":"2026-04-26T17:24:55.055181+00:00","event_id":"event-00000"}
 {"type":"render_queue_status","payload":{"active_count":0,"pending_count":28,"max_concurrent":4,"max_queue_depth":50},"correlation_id":"9bab51d4-…","timestamp":"2026-04-26T17:24:55.056735+00:00","event_id":"event-00006"}
 {"type":"render_started","payload":{"job_id":"2c4763b8-…","project_id":"35e76266-…","status":"queued"},"correlation_id":"9bab51d4-…","timestamp":"2026-04-26T17:24:55.056935+00:00","event_id":"event-00001"}

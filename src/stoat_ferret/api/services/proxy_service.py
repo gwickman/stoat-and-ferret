@@ -341,7 +341,7 @@ class ProxyService:
             await self._send_progress(
                 job_id=job_id,
                 progress=1.0,
-                status="complete",
+                status="completed",
                 quality=quality.value,
                 target_resolution=f"{target_w}x{target_h}",
             )

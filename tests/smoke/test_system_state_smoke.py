@@ -76,7 +76,7 @@ async def test_stale_terminal_job_excluded_from_active_jobs(
     # Seed a stale COMPLETE job (submitted > 300 s ago) — must be pruned
     stale = _AsyncJobEntry(job_id="stale-complete-sm-01", job_type="scan", payload={})
     stale.submitted_at = datetime.now(timezone.utc) - timedelta(seconds=301)
-    stale.status = JobStatus.COMPLETE
+    stale.status = JobStatus.COMPLETED
     job_queue._jobs[stale.job_id] = stale
 
     # Seed a fresh RUNNING job — must remain visible

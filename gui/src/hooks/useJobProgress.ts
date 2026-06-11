@@ -4,7 +4,7 @@ import { useWebSocket } from './useWebSocket'
 type JobProgressStatus =
   | 'pending'
   | 'running'
-  | 'complete'
+  | 'completed'
   | 'failed'
   | 'timeout'
   | 'cancelled'

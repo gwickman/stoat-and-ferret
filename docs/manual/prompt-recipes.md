@@ -68,7 +68,7 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 { "job_id": "job_abc123" }
 
 // Step 2 → JobStatusResponse (200, terminal)
-{ "job_id": "job_abc123", "status": "complete", "progress": 1.0,
+{ "job_id": "job_abc123", "status": "completed", "progress": 1.0,
   "result": { "scanned": 5, "new": 5, "updated": 0, "errors": [] }, "error": null }
 
 // Step 3 → VideoListResponse
@@ -313,7 +313,7 @@ Use `/api/v1/jobs/{job_id}/wait` instead of a `time.sleep` polling loop for **sc
 
 ```jsonc
 // Terminal success
-{ "job_id": "job_xyz", "status": "complete", "progress": 1.0,
+{ "job_id": "job_xyz", "status": "completed", "progress": 1.0,
   "result": { "output_path": "...", "scanned": 5 }, "error": null }
 
 // Terminal failure

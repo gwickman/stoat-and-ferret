@@ -94,7 +94,7 @@ async function setupProjectWithClip(
   for (let i = 0; i < 60; i++) {
     const jobRes = await request.get(`/api/v1/jobs/${job_id}`);
     const job = await jobRes.json();
-    if (job.status === "complete") break;
+    if (job.status === "completed") break;
     await new Promise((r) => setTimeout(r, 500));
   }
 
