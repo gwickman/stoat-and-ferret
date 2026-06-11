@@ -85,6 +85,13 @@ The test harness has three tiers:
 | `tests/smoke/test_render_api.py` | Delivery profile render path (BL-425, v076): `test_smoke_render_with_delivery_profile` verifies `POST /api/v1/render` with `delivery_profile` set to a non-existent name returns 422 `DELIVERY_PROFILE_NOT_FOUND`. `CreateRenderRequest.delivery_profile` is an optional `str | None` field. |
 | `tests/test_chapter_embedding.py` | Chapter metadata embedding integration tests (BL-426, v076): verifies FFmpeg chapter count equals section marker count, chapter titles match marker names, container title matches delivery profile `metadata_title`, QC `chapters_present` check passes, and zero-chapter baseline for renders without markers. All 5 tests are gated by `STOAT_TEST_FFMPEG=1` — skipped in CI. |
 
+### Phase 8 — v078 Smoke Additions (BL-481, BL-482, BL-477)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_effects.py` | `test_all_effects_have_automatable_parameters` (BL-481): every effect in `GET /effects` includes a list `automatable_parameters` field for agent discoverability. `test_preview_accepts_automation_envelope` (BL-482): `POST /effects/preview` accepts a volume keyframe automation envelope and returns 200 (verifies the preview endpoint honours `eval=frame` volume automation). |
+| `tests/smoke/test_qc_api.py` | `test_smoke_render_qc_worker_path` (BL-477): end-to-end worker-path test — creates a delivery profile, submits a noop render job, and asserts that `GET /api/v1/render/{job_id}/qc` returns 200 with a stored QCReport, confirming QC runs through `RenderService._complete_job` without FFmpeg. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
