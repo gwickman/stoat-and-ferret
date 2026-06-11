@@ -186,6 +186,40 @@ The threshold is controlled by the `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` enviro
 2. If the job is still `running` and older than the configured threshold, wait for the next sweep pass (up to `STOAT_RENDER_STUCK_THRESHOLD_SECONDS` + sweep interval seconds).
 3. Review server logs for `render.sweeper_error` events, which indicate the sweeper encountered a repository error during a sweep pass.
 
+## QC Surface
+
+Three endpoints expose quality control analysis over rendered artifacts. See [API Reference — QC](03_api-reference.md#qc) for full request/response schemas and check-level documentation.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/qc/run` | POST | Run all 11 QC checks; returns a QCReport (201) |
+| `/api/v1/qc/reports/{report_id}` | GET | Fetch a QCReport by UUID (200/404) |
+| `/api/v1/render/{job_id}/qc` | GET | Latest QCReport for a render job (200/404) |
+
+**`delivery_profile_id` vs `delivery_profile` — key distinction:**
+
+- `POST /api/v1/qc/run` → `delivery_profile_id` field takes a **UUID** (e.g. `"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`).
+- `POST /api/v1/render` → `delivery_profile` field (if present) takes a **name string** (e.g. `"broadcast"`).
+
+These are different fields with different types. Passing a profile name into `delivery_profile_id` returns `404 DELIVERY_PROFILE_NOT_FOUND`.
+
+**Typical QC flow after render:**
+
+```bash
+# 1. Run QC against the completed render artifact
+curl -X POST http://localhost:8765/api/v1/qc/run \
+  -H "Content-Type: application/json" \
+  -d '{"artifact_path": "/data/renders/<job_id>.mp4", "job_id": "<job_id>"}'
+
+# 2. Retrieve the report later by render job ID
+curl http://localhost:8765/api/v1/render/<job_id>/qc
+
+# 3. Or retrieve by report UUID
+curl http://localhost:8765/api/v1/qc/reports/<report_id>
+```
+
+When no `assertions` or `delivery_profile_id` is provided, checks run in measurement-only mode: every check returns `target: null, pass: null`, which sets `overall_verdict: "fail"`. Pass explicit `assertions` if you need a verdict.
+
 ## Testing Mode
 
 Enable fixtures by starting the server with `STOAT_TESTING_MODE=true`. Endpoints return `403 TESTING_MODE_DISABLED` otherwise.
