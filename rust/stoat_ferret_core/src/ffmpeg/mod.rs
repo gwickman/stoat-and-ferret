@@ -65,6 +65,7 @@ pub mod drawtext;
 pub mod expression;
 pub mod filter;
 pub mod mastering;
+pub mod spatial;
 pub mod speed;
 pub mod transitions;
 pub mod voice_repair;
