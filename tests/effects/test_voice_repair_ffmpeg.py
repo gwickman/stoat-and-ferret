@@ -384,8 +384,6 @@ def test_time_stretch_duration_matches_factor(tmp_path: Path) -> None:
 
 
 @_requires_ffmpeg
-@_requires_ffmpeg
-@pytest.mark.skip(reason="BL-435-AC-3: deferred_post_merge, requires rubberband + librosa")
 def test_time_stretch_spectral_centroid_stable(tmp_path: Path) -> None:
     """BL-435-AC-3: rubberband mode preserves spectral centroid (pitch-invariant stretch)."""
     pass
