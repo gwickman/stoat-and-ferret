@@ -69,6 +69,7 @@ EXPECTED_EFFECT_TYPES = {
     "parametric_eq",
     "multiband_compressor",
     "pan",
+    "convolution_reverb",
 }
 
 # ---- Registry unit tests ----
