@@ -980,6 +980,28 @@ def test_volume_automatable_contains_volume() -> None:
     )
 
 
+@pytest.mark.api
+def test_list_effects_volume_has_automatable_parameters(client: TestClient) -> None:
+    """volume effect exposes automatable_parameters=["volume"] in GET /effects (BL-481-AC-2)."""
+    resp = client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    volume = effects_by_type["volume"]
+    assert "automatable_parameters" in volume
+    assert volume["automatable_parameters"] == ["volume"]
+
+
+@pytest.mark.api
+def test_list_effects_dsp_effects_have_empty_automatable_parameters(client: TestClient) -> None:
+    """DSP effects expose automatable_parameters=[] in GET /api/v1/effects (BL-481-AC-2)."""
+    resp = client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    mastering_limiter = effects_by_type["mastering_limiter"]
+    assert "automatable_parameters" in mastering_limiter
+    assert mastering_limiter["automatable_parameters"] == []
+
+
 @pytest.mark.contract
 def test_volume_automation_envelope_accepted() -> None:
     """validate_with_automation accepts volume keyframe envelope (BL-430-AC-1)."""
