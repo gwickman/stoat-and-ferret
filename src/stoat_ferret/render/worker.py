@@ -107,7 +107,7 @@ async def build_command_for_job(
     first_clip = clips[0]
     if first_clip.clip_type == "generator":
         raise CommandBuildError(
-            f"Project {job.project_id}: generator clip rendering not yet supported via render worker"
+            f"Project {job.project_id}: generator clip rendering not yet supported"
         )
     video_id = first_clip.source_video_id
     if video_id is None:
