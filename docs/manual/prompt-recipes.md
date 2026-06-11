@@ -56,9 +56,9 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 
 // 7. Render create — quality_preset must be one of draft|standard|high;
 //    render_plan is a serialized JSON string (not a nested object);
-//    total_duration and settings are both required (omitting either returns 422 PREFLIGHT_FAILED)
+//    settings is required (omitting it returns 422 PREFLIGHT_FAILED); total_duration is optional
 { "project_id": "<project_id>", "output_format": "mp4", "quality_preset": "standard",
-  "render_plan": "{\"total_duration\": <duration_from_step_6>, \"settings\": {}}" }
+  "render_plan": "{\"settings\": {}}" }
 ```
 
 ### Sample Response Shapes
