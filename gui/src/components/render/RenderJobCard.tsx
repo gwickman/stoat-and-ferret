@@ -25,6 +25,7 @@ export default function RenderJobCard({ job }: RenderJobCardProps) {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [retryLoading, setRetryLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [remasterLoading, setRemasterLoading] = useState(false)
 
   const canCancel = job.status === 'queued' || job.status === 'running'
   const canRetry = job.status === 'failed' && !retryDisabled
@@ -63,6 +64,16 @@ export default function RenderJobCard({ job }: RenderJobCardProps) {
       if (res.ok) await fetchJobs()
     } finally {
       setDeleteLoading(false)
+    }
+  }
+
+  async function handleRemaster() {
+    setRemasterLoading(true)
+    try {
+      const res = await fetch(`/api/v1/render/${job.id}/remaster`, { method: 'POST' })
+      if (res.ok) await fetchJobs()
+    } finally {
+      setRemasterLoading(false)
     }
   }
 
@@ -133,6 +144,27 @@ export default function RenderJobCard({ job }: RenderJobCardProps) {
         <p className="mt-2 text-xs text-red-400" data-testid="retry-error">
           {retryError}
         </p>
+      )}
+
+      {/* QC failure section */}
+      {job.status === 'qc_failed' && (
+        <div className="mt-3 rounded border border-orange-700 bg-orange-900/20 p-3">
+          <p
+            data-testid="qc-status-fail"
+            className="mb-2 text-sm text-orange-300"
+          >
+            QC check failed — audio levels or codec constraints not met
+          </p>
+          <button
+            type="button"
+            onClick={handleRemaster}
+            data-testid="remaster-btn"
+            disabled={remasterLoading}
+            className="rounded bg-orange-700 px-3 py-1 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {remasterLoading ? 'Remastering…' : 'Re-master'}
+          </button>
+        </div>
       )}
     </div>
   )
