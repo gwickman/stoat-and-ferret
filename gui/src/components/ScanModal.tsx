@@ -44,7 +44,7 @@ export default function ScanModal({
       progressDebounceRef.current = setTimeout(() => {
         announce(`Scan in progress: ${pct}%`)
       }, 2000)
-    } else if (wsProgress.status === 'complete') {
+    } else if (wsProgress.status === 'completed') {
       if (!completedRef.current) {
         completedRef.current = true
         if (progressDebounceRef.current) {
@@ -80,7 +80,7 @@ export default function ScanModal({
         const res = await fetch(`/api/v1/jobs/${jobId}`)
         if (!res.ok) return
         const data = await res.json()
-        if (data.status === 'complete' && !completedRef.current) {
+        if (data.status === 'completed' && !completedRef.current) {
           completedRef.current = true
           setScanStatus('complete')
           setProgress(1.0)
