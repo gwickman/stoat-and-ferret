@@ -263,7 +263,7 @@ class TestScanBroadcasts:
         assert calls[0][0][0]["type"] == EventType.SCAN_STARTED.value
         assert calls[1][0][0]["type"] == EventType.SCAN_COMPLETED.value
         assert calls[2][0][0]["type"] == EventType.JOB_PROGRESS.value
-        assert calls[2][0][0]["payload"]["status"] == "complete"
+        assert calls[2][0][0]["payload"]["status"] == "completed"
 
     @pytest.mark.api
     async def test_job_progress_broadcast_payload_structure(self) -> None:
@@ -307,7 +307,7 @@ class TestScanBroadcasts:
         assert progress_events[1]["payload"]["progress"] == 1.0
         assert progress_events[1]["payload"]["status"] == "running"
         assert progress_events[2]["payload"]["progress"] == 1.0
-        assert progress_events[2]["payload"]["status"] == "complete"
+        assert progress_events[2]["payload"]["status"] == "completed"
 
     @pytest.mark.api
     async def test_broadcast_events_use_build_event_structure(self) -> None:

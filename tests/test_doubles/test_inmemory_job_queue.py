@@ -32,7 +32,7 @@ class TestSubmitAndStatus:
         queue = InMemoryJobQueue()
         job_id = await queue.submit("render", {})
         status = await queue.get_status(job_id)
-        assert status == JobStatus.COMPLETE
+        assert status == JobStatus.COMPLETED
 
 
 class TestGetResult:
@@ -45,7 +45,7 @@ class TestGetResult:
         result = await queue.get_result(job_id)
 
         assert result.job_id == job_id
-        assert result.status == JobStatus.COMPLETE
+        assert result.status == JobStatus.COMPLETED
         assert result.result is not None
         assert result.error is None
 
@@ -56,7 +56,7 @@ class TestGetResult:
         job_id = await queue.submit("render", {})
         result = await queue.get_result(job_id)
 
-        assert result.status == JobStatus.COMPLETE
+        assert result.status == JobStatus.COMPLETED
         assert result.result == {"output": "/tmp/out.mp4"}
 
     async def test_get_result_unknown_job_raises(self) -> None:
@@ -109,7 +109,7 @@ class TestConfigurableOutcomes:
         render_result = await queue.get_result(render_id)
         export_result = await queue.get_result(export_id)
 
-        assert render_result.status == JobStatus.COMPLETE
+        assert render_result.status == JobStatus.COMPLETED
         assert export_result.status == JobStatus.FAILED
 
     async def test_default_outcome_can_be_changed(self) -> None:

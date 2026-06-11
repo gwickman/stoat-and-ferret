@@ -112,7 +112,7 @@ async def _poll_scan_job(
     timeout: float = 30.0,
 ) -> None:
     """Poll GET /api/v1/jobs/{job_id} until the scan job reaches terminal state."""
-    terminal = {"complete", "failed", "timeout", "cancelled"}
+    terminal = {"completed", "failed", "timeout", "cancelled"}
     deadline = asyncio.get_event_loop().time() + timeout
     while asyncio.get_event_loop().time() < deadline:
         resp = await client.get(f"/api/v1/jobs/{job_id}")

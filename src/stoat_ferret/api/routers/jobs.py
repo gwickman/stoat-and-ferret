@@ -4,7 +4,7 @@ Job state machine (documented for external AI agents):
 
 - ``pending``    — submitted, not yet picked up by a worker.
 - ``running``    — worker is executing the handler.
-- ``complete``   — handler returned successfully (**terminal**).
+- ``completed``  — handler returned successfully (**terminal**).
 - ``failed``     — handler raised an exception (**terminal**).
 - ``timeout``    — handler exceeded the per-job-type timeout (**terminal**).
 - ``cancelled``  — caller invoked ``POST /api/v1/jobs/{id}/cancel`` before
@@ -13,11 +13,11 @@ Job state machine (documented for external AI agents):
 Valid transitions::
 
     pending -> running
-    running -> complete | failed | timeout | cancelled
+    running -> completed | failed | timeout | cancelled
     pending -> cancelled   (when cancel is requested before the worker
                             claims the entry)
 
-Terminal states (``complete``, ``failed``, ``timeout``, ``cancelled``) are
+Terminal states (``completed``, ``failed``, ``timeout``, ``cancelled``) are
 final: once a job enters a terminal state its status never changes again.
 See :class:`stoat_ferret.jobs.queue.JobStatus` for the authoritative enum.
 """
@@ -43,7 +43,7 @@ async def get_job_status(
     Returns a point-in-time snapshot of the job's state in the queue.
     The ``status`` field is one of the six ``JobStatus`` values, three
     non-terminal (``pending``, ``running``) and four terminal
-    (``complete``, ``failed``, ``timeout``, ``cancelled``). Callers that
+    (``completed``, ``failed``, ``timeout``, ``cancelled``). Callers that
     need to block until a terminal state can use
     ``GET /api/v1/jobs/{id}/wait`` instead of polling.
 
@@ -78,7 +78,7 @@ async def get_job_status(
     )
 
 
-_TERMINAL_STATUSES = {JobStatus.COMPLETE, JobStatus.FAILED, JobStatus.TIMEOUT, JobStatus.CANCELLED}
+_TERMINAL_STATUSES = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMEOUT, JobStatus.CANCELLED}
 
 
 @router.post("/{job_id}/cancel", response_model=JobStatusResponse)
@@ -90,7 +90,7 @@ async def cancel_job(
 
     Drives the ``pending -> cancelled`` or ``running -> cancelled`` state
     transition. Cancellation is rejected with 409 when the job is already
-    in a terminal state (``complete``, ``failed``, ``timeout``, or
+    in a terminal state (``completed``, ``failed``, ``timeout``, or
     ``cancelled``) because terminal states are final.
 
     Args:
@@ -185,7 +185,7 @@ async def wait_for_job_completion(
     Long-poll helper intended as a deterministic alternative to polling
     ``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at
     ``/ws``. The endpoint waits for the job to enter one of the terminal
-    states (``complete``, ``failed``, ``timeout``, ``cancelled``) and
+    states (``completed``, ``failed``, ``timeout``, ``cancelled``) and
     then returns the same payload as ``GET /api/v1/jobs/{id}``.
 
     Semantics:

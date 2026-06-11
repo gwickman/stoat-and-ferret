@@ -27,7 +27,7 @@ async def test_sintel_subtitle_count(smoke_client: httpx.AsyncClient) -> None:
 
     sintel_dir = SINTEL_MKV.parent
     job = await scan_videos_and_wait(smoke_client, sintel_dir)
-    assert job["status"].lower() == "complete"
+    assert job["status"].lower() == "completed"
 
     resp = await smoke_client.get("/api/v1/videos?limit=100")
     assert resp.status_code == 200
@@ -54,7 +54,7 @@ async def test_bbb_data_stream_count(smoke_client: httpx.AsyncClient) -> None:
 
     bbb_dir = BBB_MOV.parent
     job = await scan_videos_and_wait(smoke_client, bbb_dir)
-    assert job["status"].lower() == "complete"
+    assert job["status"].lower() == "completed"
 
     resp = await smoke_client.get("/api/v1/videos?limit=100")
     assert resp.status_code == 200

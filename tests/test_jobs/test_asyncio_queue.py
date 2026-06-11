@@ -85,10 +85,10 @@ class TestJobCompletion:
             await asyncio.sleep(0.05)
 
             status = await queue.get_status(job_id)
-            assert status == JobStatus.COMPLETE
+            assert status == JobStatus.COMPLETED
 
             result = await queue.get_result(job_id)
-            assert result.status == JobStatus.COMPLETE
+            assert result.status == JobStatus.COMPLETED
             assert result.result == {"status": "done", "type": "render"}
             assert result.error is None
         finally:
@@ -110,8 +110,8 @@ class TestJobCompletion:
 
             r1 = await queue.get_result(id1)
             r2 = await queue.get_result(id2)
-            assert r1.status == JobStatus.COMPLETE
-            assert r2.status == JobStatus.COMPLETE
+            assert r1.status == JobStatus.COMPLETED
+            assert r2.status == JobStatus.COMPLETED
         finally:
             worker.cancel()
             with pytest.raises(asyncio.CancelledError):
@@ -309,9 +309,45 @@ class TestProgress:
             await asyncio.sleep(0.05)
 
             result = await queue.get_result(job_id)
-            assert result.status == JobStatus.COMPLETE
+            assert result.status == JobStatus.COMPLETED
             assert result.progress == 1.0
             assert progress_values == [0.5, 1.0]
+        finally:
+            worker.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await worker
+
+
+class TestUnifiedTerminalStatus:
+    """Contract: all job types share a single terminal-success string "completed" (BL-490)."""
+
+    async def test_scan_and_render_jobs_share_completed_terminal_string(self) -> None:
+        """Scan-class and render-class jobs both reach terminal state via "completed".
+
+        Polling code can detect success for any job type with a single string match
+        against JobStatus.COMPLETED.value == "completed".
+        """
+        queue = AsyncioJobQueue()
+        queue.register_handler("scan", _success_handler)
+        queue.register_handler("render", _success_handler)
+
+        scan_id = await queue.submit("scan", {})
+        render_id = await queue.submit("render", {})
+
+        worker = asyncio.create_task(queue.process_jobs())
+        try:
+            await asyncio.sleep(0.05)
+
+            scan_result = await queue.get_result(scan_id)
+            render_result = await queue.get_result(render_id)
+
+            # Both use the same enum member and value.
+            assert scan_result.status == JobStatus.COMPLETED
+            assert render_result.status == JobStatus.COMPLETED
+            assert scan_result.status.value == "completed"
+            assert render_result.status.value == "completed"
+            # A single-string terminal check works for both job types.
+            assert scan_result.status.value == render_result.status.value
         finally:
             worker.cancel()
             with pytest.raises(asyncio.CancelledError):

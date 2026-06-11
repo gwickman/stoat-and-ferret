@@ -356,7 +356,7 @@ class WaveformService:
             waveform_id=wid,
             video_id=video_id,
             progress=1.0,
-            status="complete",
+            status="completed",
         )
 
         return waveform
@@ -511,7 +511,7 @@ class WaveformService:
             waveform_id=wid,
             video_id=video_id,
             progress=1.0,
-            status="complete",
+            status="completed",
         )
 
         return waveform

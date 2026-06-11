@@ -622,6 +622,6 @@ class TestJobProgressFormat:
         payload = final["payload"]
         assert payload["job_id"] == "job-format"
         assert payload["progress"] == 1.0
-        assert payload["status"] == "complete"
+        assert payload["status"] == "completed"
         assert "proxy_quality" in payload
         assert "target_resolution" in payload

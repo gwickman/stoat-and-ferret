@@ -45,7 +45,7 @@ class TestWorkerLifecycle:
 
         # Job should be processed
         result = await queue.get_result(job_id)
-        assert result.status.value == "complete"
+        assert result.status.value == "completed"
 
         worker.cancel()
         with pytest.raises(asyncio.CancelledError):

@@ -661,7 +661,7 @@ Get the status of an asynchronous job (e.g., a video scan).
 |--------|-------------|
 | `pending` | Job is queued but not yet started |
 | `running` | Job is currently executing |
-| `complete` | Job finished successfully (`result` field populated) |
+| `completed` | Job finished successfully (`result` field populated) |
 | `failed` | Job encountered an error (`error` field populated) |
 | `timeout` | Job exceeded its time limit |
 | `cancelled` | Job was cancelled by the user |

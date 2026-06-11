@@ -105,7 +105,7 @@ async def test_wait_returns_immediately_for_completed_job(
     assert response.status_code == 200
     body = response.json()
     assert body["job_id"] == job_id
-    assert body["status"] == "complete"
+    assert body["status"] == "completed"
     # INV-LP-2: no Event was created because the job was already terminal.
     assert job_id not in job_completion._terminal_events
 
@@ -187,7 +187,7 @@ async def test_wait_returns_when_notification_fires(
         entry = job_queue._jobs[_pending_job]
         entry.result = JobResult(
             job_id=_pending_job,
-            status=JobStatus.COMPLETE,
+            status=JobStatus.COMPLETED,
             result={"status": "ok"},
         )
         notify_job_terminal(_pending_job)
@@ -201,7 +201,7 @@ async def test_wait_returns_when_notification_fires(
     assert response.status_code == 200
     body = response.json()
     assert body["job_id"] == _pending_job
-    assert body["status"] == "complete"
+    assert body["status"] == "completed"
     assert body["result"] == {"status": "ok"}
     # Cleanup: event dict is emptied after the waiter returns.
     assert _pending_job not in job_completion._terminal_events
@@ -218,11 +218,11 @@ async def test_wait_for_job_terminal_short_circuits_on_terminal_status(
     """Already-terminal jobs return without creating a dict entry."""
     job_id = "already-done"
     entry = _JobEntry(job_id=job_id, job_type="scan", payload={})
-    entry.result = JobResult(job_id=job_id, status=JobStatus.COMPLETE, result={"x": 1})
+    entry.result = JobResult(job_id=job_id, status=JobStatus.COMPLETED, result={"x": 1})
     job_queue._jobs[job_id] = entry
 
     result = await wait_for_job_terminal(job_queue, job_id, timeout_seconds=5.0)
-    assert result.status is JobStatus.COMPLETE
+    assert result.status is JobStatus.COMPLETED
     assert result.result == {"x": 1}
     assert job_id not in job_completion._terminal_events
 
@@ -264,7 +264,7 @@ async def test_ordering_invariant_registry_write_precedes_notification(
 
     assert captured_job_id["id"] == job_id
     # The only observation must be terminal — never PENDING/RUNNING.
-    assert observed == [JobStatus.COMPLETE]
+    assert observed == [JobStatus.COMPLETED]
 
 
 async def test_concurrent_waiters_share_event_and_both_return(
@@ -280,7 +280,7 @@ async def test_concurrent_waiters_share_event_and_both_return(
         await asyncio.sleep(0.1)
         entry.result = JobResult(
             job_id=job_id,
-            status=JobStatus.COMPLETE,
+            status=JobStatus.COMPLETED,
             result={"status": "ok"},
         )
         notify_job_terminal(job_id)
@@ -291,6 +291,6 @@ async def test_concurrent_waiters_share_event_and_both_return(
 
     result_a, result_b, _ = await asyncio.gather(waiter_a, waiter_b, completer)
 
-    assert result_a.status is JobStatus.COMPLETE
-    assert result_b.status is JobStatus.COMPLETE
+    assert result_a.status is JobStatus.COMPLETED
+    assert result_b.status is JobStatus.COMPLETED
     assert job_id not in job_completion._terminal_events

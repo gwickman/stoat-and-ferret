@@ -146,11 +146,13 @@ def make_scan_handler(
                 )
             )
 
+        # Scan jobs live only in the in-memory AsyncJobQueue (no DB table), so
+        # renaming the terminal value from "complete" to "completed" needs no migration.
         if ws_manager and job_id:
             await ws_manager.broadcast(
                 build_event(
                     EventType.JOB_PROGRESS,
-                    {"job_id": str(job_id), "progress": 1.0, "status": "complete"},
+                    {"job_id": str(job_id), "progress": 1.0, "status": "completed"},
                 )
             )
 

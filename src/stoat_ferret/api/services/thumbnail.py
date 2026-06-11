@@ -496,7 +496,7 @@ class ThumbnailService:
             strip_id=sid,
             video_id=video_id,
             progress=1.0,
-            status="complete",
+            status="completed",
         )
 
         return strip
