@@ -980,7 +980,10 @@ mod tests {
         let builder = MultibandCompressorBuilder::new(bands).unwrap();
         let s = builder.build().to_string();
         // -20 dB → 10^(-20/20) = 0.1 → "0.100000000"
-        assert!(s.contains("threshold=0.100000000"), "Missing threshold=0.100000000 in: {s}");
+        assert!(
+            s.contains("threshold=0.100000000"),
+            "Missing threshold=0.100000000 in: {s}"
+        );
         assert!(s.contains("ratio=2"), "Missing ratio=2 in: {s}");
         assert!(s.contains("attack=10"), "Missing attack=10 in: {s}");
         assert!(s.contains("release=100"), "Missing release=100 in: {s}");
