@@ -45,8 +45,8 @@ Parameter notes for the v077 mastering and voice effects:
 - `multiband_compressor.threshold`: linear amplitude [0.000976563, 1.0] — **not dB**
 - `mastering_limiter.limit`: ceiling in dBFS (e.g. `-1.0`)
 - `loudness_normalize.target_lufs`: integrated loudness target (e.g. `-14.0` for streaming)
-| Get timeline duration | `GET /api/v1/projects/{project_id}/timeline` | 200 `{duration, ...}` | `duration` → `render_plan.total_duration` |
-| Start render | `POST /api/v1/render` `{"project_id": "<id>", "output_format": "mp4", "quality_preset": "standard", "render_plan": "{\"total_duration\": <duration>, \"settings\": {}}"}` | 201 `{id, status}` | render job id |
+| Get timeline duration | `GET /api/v1/projects/{project_id}/timeline` | 200 `{duration, ...}` | `duration` (optional, for reference) |
+| Start render | `POST /api/v1/render` `{"project_id": "<id>", "output_format": "mp4", "quality_preset": "standard", "render_plan": "{\"settings\": {}}"}` | 201 `{id, status}` | render job id |
 | Poll render status | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 `{id, status, progress, ...}` | `status ∈ {completed, failed, cancelled}` → read `output_path` |
 
 #### Timeline Clip Workflow
@@ -76,13 +76,9 @@ If you want to remove only specific tracks, use a PUT body that includes the tra
 
 #### Render Plan
 
-The `render_plan` field is a JSON-encoded string. Required keys inside the JSON: `total_duration` (float, seconds) and `settings` (object). Obtain the duration from the project's current timeline:
+The `render_plan` field is a JSON-encoded string. Required key inside the JSON: `settings` (object). Omitting `render_plan`, or including a `render_plan` that lacks `settings`, returns `422 PREFLIGHT_FAILED`. The `total_duration` field is accepted but not required by the router.
 
-```
-GET /api/v1/projects/{project_id}/timeline → .duration
-```
-
-Derive `total_duration` from the `.duration` value returned by the timeline endpoint. Do not hardcode a value; always read from the live timeline so the render plan matches the actual project content. Omitting `render_plan`, or including a `render_plan` that lacks `total_duration` or `settings`, returns `422 PREFLIGHT_FAILED`.
+The default value `'{"settings": {}}'` is valid and passes preflight — the router injects project dimensions, codec, and quality preset into `settings` automatically.
 
 #### Delivery Profile (optional)
 

@@ -26,11 +26,8 @@ class CreateRenderRequest(BaseModel):
         "When omitted the format default is used.",
     )
     render_plan: str = Field(
-        default="{}",
-        description=(
-            "Serialized render plan JSON. Required top-level keys: 'settings' (object)"
-            " and 'total_duration' (float, seconds)."
-        ),
+        default='{"settings": {}}',
+        description=("Serialized render plan JSON. Required top-level key: 'settings' (object)."),
     )
     delivery_profile: str | None = Field(
         default=None,
