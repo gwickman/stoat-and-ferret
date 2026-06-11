@@ -2182,7 +2182,8 @@ def test_deesser_build_fn() -> None:
     """deesser build_fn emits deesser filter string with frequency."""
     filter_str = _build_deesser({"frequency": 6000.0, "mode": "wide"})
     assert "deesser" in filter_str, f"Expected deesser in filter string, got: {filter_str}"
-    assert "6000" in filter_str, f"Expected frequency 6000 in filter string, got: {filter_str}"
+    # 6000 Hz / 22050 Hz ≈ 0.272109 (normalized to [0, 1])
+    assert "f=0.272109" in filter_str, f"Expected f=0.272109 in filter string, got: {filter_str}"
 
 
 @pytest.mark.contract

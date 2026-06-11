@@ -485,8 +485,9 @@ impl MultibandCompressorBuilder {
 
         let mut band_outputs = Vec::with_capacity(n);
         for (i, band) in self.bands.iter().enumerate() {
+            let threshold_linear = 10.0_f64.powf(band.threshold / 20.0);
             let filter = Filter::new("acompressor")
-                .param("threshold", format!("{}", band.threshold))
+                .param("threshold", format!("{threshold_linear:.9}"))
                 .param("ratio", format!("{}", band.ratio))
                 .param("attack", format!("{}", band.attack))
                 .param("release", format!("{}", band.release));
@@ -978,10 +979,30 @@ mod tests {
         let bands = vec![(-20.0, 2.0, 10.0, 100.0), (-24.0, 3.0, 5.0, 80.0)];
         let builder = MultibandCompressorBuilder::new(bands).unwrap();
         let s = builder.build().to_string();
-        assert!(s.contains("threshold=-20"), "Missing threshold=-20 in: {s}");
+        // -20 dB → 10^(-20/20) = 0.1 → "0.100000000"
+        assert!(s.contains("threshold=0.100000000"), "Missing threshold=0.100000000 in: {s}");
         assert!(s.contains("ratio=2"), "Missing ratio=2 in: {s}");
         assert!(s.contains("attack=10"), "Missing attack=10 in: {s}");
         assert!(s.contains("release=100"), "Missing release=100 in: {s}");
+    }
+
+    #[test]
+    fn test_multiband_compressor_threshold_in_valid_range() {
+        // acompressor threshold range: [0.000976563, 1] (approximately 2^-10 to 1)
+        let min_threshold = 0.000_976_563_f64;
+        for threshold_db in [-6.0, -20.0, -30.0, -60.0_f64] {
+            let bands = vec![(threshold_db, 2.0, 10.0, 100.0), (-20.0, 2.0, 5.0, 50.0)];
+            let builder = MultibandCompressorBuilder::new(bands).unwrap();
+            let s = builder.build().to_string();
+            for part in s.split("threshold=").skip(1) {
+                let t_str = part.split(':').next().expect("threshold value not found");
+                let t_value: f64 = t_str.parse().expect("threshold not parseable as f64");
+                assert!(
+                    t_value >= min_threshold && t_value <= 1.0,
+                    "threshold={t_value} out of [{min_threshold}, 1] for dB={threshold_db}"
+                );
+            }
+        }
     }
 
     #[test]
