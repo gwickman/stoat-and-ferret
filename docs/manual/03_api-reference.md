@@ -1646,6 +1646,174 @@ curl http://localhost:8765/api/v1/render/b2c3d4e5-f6a7-8901-bcde-f12345678901/qc
 
 ---
 
+## Delivery Profiles
+
+Delivery profiles store reusable output specifications: format targets, loudness targets, and optional metadata templates. Profiles are referenced by **name** in render requests and by **UUID** in QC run requests.
+
+> **Name vs UUID distinction:** `POST /api/v1/render` → `delivery_profile` field takes a **name string** (e.g. `"broadcast"`). `POST /api/v1/qc/run` → `delivery_profile_id` field takes a **UUID** (e.g. `"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`). These are different fields with different types. Passing a profile name string into `delivery_profile_id` returns `404 DELIVERY_PROFILE_NOT_FOUND`.
+
+### GET /api/v1/delivery_profiles
+
+List all delivery profiles.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Range | Description |
+|-----------|------|---------|-------|-------------|
+| `limit` | integer | 20 | 1-100 | Max profiles per page |
+| `offset` | integer | 0 | 0+ | Number to skip |
+
+**Response (200):**
+
+```json
+{
+  "items": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "broadcast",
+      "output_formats": [
+        {"container": "mp4", "codec": "h264", "bitrate_kbps": 8000}
+      ],
+      "loudness_target_lufs": -16.0,
+      "true_peak_ceiling_dbtp": -1.0,
+      "metadata_template": null,
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/delivery_profiles
+```
+
+---
+
+### POST /api/v1/delivery_profiles
+
+Create a new delivery profile.
+
+**Request Body (`CreateDeliveryProfileRequest`):**
+
+| Field | Type | Required | Constraints | Description |
+|-------|------|----------|-------------|-------------|
+| `name` | string | Yes | -- | Unique name for this profile (referenced by name in `CreateRenderRequest.delivery_profile`) |
+| `output_formats` | array of `OutputFormatSpec` | Yes | min 1 item | Output formats to produce; each is an object with `container`, `codec`, and `bitrate_kbps` |
+| `loudness_target_lufs` | float | Yes | ≤ 0 | Integrated loudness target in LUFS |
+| `true_peak_ceiling_dbtp` | float | No | ≤ 0; default `-1.0` | True-peak ceiling in dBTP |
+| `metadata_template` | object or null | No | -- | Optional key/value pairs to embed in output metadata |
+
+**`OutputFormatSpec` fields (each element in `output_formats`):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `container` | string | Yes | Container format (e.g. `"mp4"`, `"webm"`, `"mov"`) |
+| `codec` | string | Yes | Video codec (e.g. `"h264"`, `"h265"`, `"vp9"`) |
+| `bitrate_kbps` | integer | Yes | Target video bitrate in kilobits per second |
+
+**Response (201 Created):**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "broadcast",
+  "output_formats": [
+    {"container": "mp4", "codec": "h264", "bitrate_kbps": 8000},
+    {"container": "webm", "codec": "vp9", "bitrate_kbps": 6000}
+  ],
+  "loudness_target_lufs": -16.0,
+  "true_peak_ceiling_dbtp": -1.0,
+  "metadata_template": null,
+  "created_at": "2025-01-15T10:30:00Z"
+}
+```
+
+**Errors:**
+
+- 409 `CONFLICT` -- A profile with that name already exists
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/delivery_profiles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "broadcast",
+    "output_formats": [
+      {"container": "mp4", "codec": "h264", "bitrate_kbps": 8000}
+    ],
+    "loudness_target_lufs": -16.0,
+    "true_peak_ceiling_dbtp": -1.0
+  }'
+```
+
+---
+
+### GET /api/v1/delivery_profiles/{id}
+
+Get a single delivery profile by its UUID.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) | Delivery profile UUID |
+
+**Response (200):**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "broadcast",
+  "output_formats": [
+    {"container": "mp4", "codec": "h264", "bitrate_kbps": 8000}
+  ],
+  "loudness_target_lufs": -16.0,
+  "true_peak_ceiling_dbtp": -1.0,
+  "metadata_template": null,
+  "created_at": "2025-01-15T10:30:00Z"
+}
+```
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Delivery profile does not exist
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/delivery_profiles/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+---
+
+### DELETE /api/v1/delivery_profiles/{id}
+
+Delete a delivery profile by its UUID.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) | Delivery profile UUID |
+
+**Response:** 204 No Content (empty body)
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Delivery profile does not exist
+
+**Example:**
+
+```bash
+curl -X DELETE http://localhost:8765/api/v1/delivery_profiles/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+---
+
 ## WebSocket
 
 ### WS /ws
@@ -1939,3 +2107,32 @@ Each entry in `checks` contains:
 | `units` | string | Unit of measurement (e.g. `"LUFS"`, `"dBTP"`, `"ms"`, `"samples"`) |
 
 The 11 check IDs are: `loudness_integrated`, `true_peak`, `clipping`, `unintended_silence`, `loop_seam`, `tone_presence`, `ducking`, `section_arc`, `av_sync`, `decode_integrity`, `chapters_present`. See [POST /api/v1/qc/run](#post-apiv1qcrun) for per-check units and pass conditions.
+
+### OutputFormatSpec
+
+Single output format specification within a delivery profile. `output_formats` is an **array of objects**, not strings.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `container` | string | Container format (e.g. `mp4`, `webm`, `mov`) |
+| `codec` | string | Video codec (e.g. `h264`, `h265`, `vp9`) |
+| `bitrate_kbps` | integer | Target video bitrate in kilobits per second |
+
+### DeliveryProfileResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | Unique delivery profile identifier |
+| `name` | string | Profile name — used in `CreateRenderRequest.delivery_profile` (name string, not UUID) |
+| `output_formats` | array of `OutputFormatSpec` | Output format specifications |
+| `loudness_target_lufs` | float | Integrated loudness target in LUFS (≤ 0) |
+| `true_peak_ceiling_dbtp` | float | True-peak ceiling in dBTP (≤ 0) |
+| `metadata_template` | object or null | Optional metadata key/value pairs to embed in output |
+| `created_at` | datetime | ISO 8601 UTC creation timestamp |
+
+### DeliveryProfileListResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | array of `DeliveryProfileResponse` | Delivery profiles on this page |
+| `total` | integer | Total number of delivery profiles |

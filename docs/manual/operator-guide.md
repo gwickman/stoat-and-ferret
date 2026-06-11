@@ -84,6 +84,17 @@ GET /api/v1/projects/{project_id}/timeline → .duration
 
 Derive `total_duration` from the `.duration` value returned by the timeline endpoint. Do not hardcode a value; always read from the live timeline so the render plan matches the actual project content. Omitting `render_plan`, or including a `render_plan` that lacks `total_duration` or `settings`, returns `422 PREFLIGHT_FAILED`.
 
+#### Delivery Profile (optional)
+
+`CreateRenderRequest` accepts an optional `delivery_profile` field (string). When set, the render produces every output format declared in the profile and applies the profile's loudness and true-peak targets to the QC pass.
+
+```json
+{"project_id": "<id>", "output_format": "mp4", "quality_preset": "standard",
+ "render_plan": "...", "delivery_profile": "broadcast"}
+```
+
+**Key constraint:** `delivery_profile` takes a **profile name string** (e.g. `"broadcast"`), not a UUID. To look up available profiles or create new ones, see the [Delivery Profiles CRUD endpoints](03_api-reference.md#delivery-profiles). To run QC against a profile, use `delivery_profile_id` (UUID) in `POST /api/v1/qc/run` — these are distinct fields with different types; see the `delivery_profile_id` vs `delivery_profile` note in the QC Surface section below.
+
 ### 2. WebSocket + Reconnect
 
 1. Connect: `WS ws://localhost:8765/ws`. Server pushes one-way JSON.
