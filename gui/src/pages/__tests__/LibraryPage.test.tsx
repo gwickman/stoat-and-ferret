@@ -92,7 +92,7 @@ describe('LibraryPage', () => {
     // Simulate WebSocket completion
     const ws = mockInstances[0]
     ws.simulateOpen()
-    ws.simulateMessage(makeProgressEvent('scan-1', 1.0, 'complete'))
+    ws.simulateMessage(makeProgressEvent('scan-1', 1.0, 'completed'))
 
     await waitFor(() => {
       expect(mockAnnounce).toHaveBeenCalledWith('Scan complete')

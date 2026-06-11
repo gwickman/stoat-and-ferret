@@ -53,7 +53,7 @@ def test_system_state_lists_submitted_jobs(
     for job_id, status in (
         ("job-pending", JobStatus.PENDING),
         ("job-running", JobStatus.RUNNING),
-        ("job-complete", JobStatus.COMPLETE),
+        ("job-complete", JobStatus.COMPLETED),
     ):
         entry = _JobEntry(job_id=job_id, job_type="scan", payload={})
         entry.result = JobResult(job_id=job_id, status=status, progress=0.5)
@@ -62,7 +62,7 @@ def test_system_state_lists_submitted_jobs(
     # Seed a stale terminal job (submitted > 300 s ago) — must be absent.
     stale_entry = _JobEntry(job_id="job-stale", job_type="scan", payload={})
     stale_entry.submitted_at = datetime.now(timezone.utc) - timedelta(seconds=301)
-    stale_entry.result = JobResult(job_id="job-stale", status=JobStatus.COMPLETE, progress=1.0)
+    stale_entry.result = JobResult(job_id="job-stale", status=JobStatus.COMPLETED, progress=1.0)
     job_queue._jobs["job-stale"] = stale_entry
 
     response = client.get("/api/v1/system/state")
@@ -75,7 +75,7 @@ def test_system_state_lists_submitted_jobs(
     assert "job-stale" not in by_id
     assert by_id["job-pending"]["status"] == "pending"
     assert by_id["job-running"]["status"] == "running"
-    assert by_id["job-complete"]["status"] == "complete"
+    assert by_id["job-complete"]["status"] == "completed"
     for summary in data["active_jobs"]:
         assert summary["job_type"] == "scan"
         assert summary["progress"] == 0.5

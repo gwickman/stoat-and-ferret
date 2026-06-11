@@ -33,7 +33,7 @@ class JobStatusResponse(BaseModel):
             "examples": [
                 {
                     "job_id": "job_a1b2c3d4",
-                    "status": "complete",
+                    "status": "completed",
                     "progress": 1.0,
                     "result": {"output_path": "data/renders/clip_01.mp4"},
                     "error": None,
@@ -45,10 +45,10 @@ class JobStatusResponse(BaseModel):
     job_id: str = Field(description="Unique identifier for the job.")
     status: str = Field(
         description=(
-            "Current job status. One of ``pending``, ``running``, ``complete``, "
+            "Current job status. One of ``pending``, ``running``, ``completed``, "
             "``failed``, ``timeout``, ``cancelled``. Valid transitions: "
-            "``pending -> running -> (complete | failed | timeout | cancelled)``. "
-            "Terminal states are ``complete``, ``failed``, ``timeout``, and "
+            "``pending -> running -> (completed | failed | timeout | cancelled)``. "
+            "Terminal states are ``completed``, ``failed``, ``timeout``, and "
             "``cancelled`` — once reached, the status never changes. See the "
             "``JobStatus`` schema for the enumerated values."
         ),
@@ -60,7 +60,7 @@ class JobStatusResponse(BaseModel):
     )
     result: Any = Field(
         default=None,
-        description="Handler return value when ``status == 'complete'``; "
+        description="Handler return value when ``status == 'completed'``; "
         "``null`` for non-terminal states and for failure/timeout/cancelled.",
     )
     error: str | None = Field(

@@ -437,7 +437,7 @@ class TestStripProgressEvents:
         ws_manager.broadcast.assert_called()
         last_call = ws_manager.broadcast.call_args[0][0]
         assert last_call["type"] == "job_progress"
-        assert last_call["payload"]["status"] == "complete"
+        assert last_call["payload"]["status"] == "completed"
         assert last_call["payload"]["job_type"] == "thumbnail_strip"
         assert last_call["payload"]["video_id"] == "vid1"
 

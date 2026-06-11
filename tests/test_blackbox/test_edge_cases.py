@@ -74,7 +74,7 @@ class TestEmptyResults:
         assert job_resp.status_code == 200
 
         data = job_resp.json()
-        assert data["status"] == "complete"
+        assert data["status"] == "completed"
         result = data["result"]
         assert result["scanned"] == 0
         assert result["new"] == 0

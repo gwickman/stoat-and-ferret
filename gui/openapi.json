@@ -1264,7 +1264,7 @@
           "jobs"
         ],
         "summary": "Get Job Status",
-        "description": "Get the current status of a submitted job.\n\nReturns a point-in-time snapshot of the job's state in the queue.\nThe ``status`` field is one of the six ``JobStatus`` values, three\nnon-terminal (``pending``, ``running``) and four terminal\n(``complete``, ``failed``, ``timeout``, ``cancelled``). Callers that\nneed to block until a terminal state can use\n``GET /api/v1/jobs/{id}/wait`` instead of polling.\n\nValid state transitions are: ``pending -> running -> (complete |\nfailed | timeout | cancelled)``. Terminal states never change.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job status including progress and result when complete.\n\nRaises:\n    HTTPException: 404 if job ID is not found.",
+        "description": "Get the current status of a submitted job.\n\nReturns a point-in-time snapshot of the job's state in the queue.\nThe ``status`` field is one of the six ``JobStatus`` values, three\nnon-terminal (``pending``, ``running``) and four terminal\n(``completed``, ``failed``, ``timeout``, ``cancelled``). Callers that\nneed to block until a terminal state can use\n``GET /api/v1/jobs/{id}/wait`` instead of polling.\n\nValid state transitions are: ``pending -> running -> (complete |\nfailed | timeout | cancelled)``. Terminal states never change.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job status including progress and result when complete.\n\nRaises:\n    HTTPException: 404 if job ID is not found.",
         "operationId": "get_job_status_api_v1_jobs__job_id__get",
         "parameters": [
           {
@@ -1307,7 +1307,7 @@
           "jobs"
         ],
         "summary": "Cancel Job",
-        "description": "Request cancellation of a job.\n\nDrives the ``pending -> cancelled`` or ``running -> cancelled`` state\ntransition. Cancellation is rejected with 409 when the job is already\nin a terminal state (``complete``, ``failed``, ``timeout``, or\n``cancelled``) because terminal states are final.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Updated job status after the cancellation signal has been\n    recorded. The returned ``status`` may still be ``running`` if\n    the worker has not yet observed the cancellation flag; callers\n    should poll ``GET /api/v1/jobs/{id}`` or use\n    ``GET /api/v1/jobs/{id}/wait`` to observe the final\n    ``cancelled`` terminal state.\n\nRaises:\n    HTTPException: 404 if job not found, 409 if already in terminal state.",
+        "description": "Request cancellation of a job.\n\nDrives the ``pending -> cancelled`` or ``running -> cancelled`` state\ntransition. Cancellation is rejected with 409 when the job is already\nin a terminal state (``completed``, ``failed``, ``timeout``, or\n``cancelled``) because terminal states are final.\n\nArgs:\n    job_id: The unique job identifier.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Updated job status after the cancellation signal has been\n    recorded. The returned ``status`` may still be ``running`` if\n    the worker has not yet observed the cancellation flag; callers\n    should poll ``GET /api/v1/jobs/{id}`` or use\n    ``GET /api/v1/jobs/{id}/wait`` to observe the final\n    ``cancelled`` terminal state.\n\nRaises:\n    HTTPException: 404 if job not found, 409 if already in terminal state.",
         "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
         "parameters": [
           {
@@ -1350,7 +1350,7 @@
           "jobs"
         ],
         "summary": "Wait For Job Completion",
-        "description": "Block until the job reaches a terminal state, then return its final status.\n\nLong-poll helper intended as a deterministic alternative to polling\n``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at\n``/ws``. The endpoint waits for the job to enter one of the terminal\nstates (``complete``, ``failed``, ``timeout``, ``cancelled``) and\nthen returns the same payload as ``GET /api/v1/jobs/{id}``.\n\nSemantics:\n\n- If the job is already terminal at call time the handler returns\n  immediately without allocating an :class:`asyncio.Event`\n  (INV-LP-2).\n- Otherwise it awaits the per-job event that queue workers signal\n  after writing the terminal status (INV-LP-1).\n- The endpoint returns HTTP 408 (``code=\"JOB_WAIT_TIMEOUT\"``) when\n  the job is still non-terminal after ``timeout`` seconds \u2014 the job\n  itself continues running; the timeout is client-side only.\n- Not durable: if the server restarts while a waiter is blocked,\n  the waiter sees a timeout rather than a replay. Treat a restart\n  as equivalent to a timeout.\n\nArgs:\n    job_id: The job identifier to wait on.\n    request: The FastAPI request (used to resolve the job queue).\n    timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.\n\nReturns:\n    Final :class:`JobStatusResponse` once the job is terminal.\n\nRaises:\n    HTTPException: 404 when ``job_id`` is unknown. 408 when the job\n        does not reach a terminal state within ``timeout`` seconds.",
+        "description": "Block until the job reaches a terminal state, then return its final status.\n\nLong-poll helper intended as a deterministic alternative to polling\n``GET /api/v1/jobs/{id}`` or subscribing to the WebSocket stream at\n``/ws``. The endpoint waits for the job to enter one of the terminal\nstates (``completed``, ``failed``, ``timeout``, ``cancelled``) and\nthen returns the same payload as ``GET /api/v1/jobs/{id}``.\n\nSemantics:\n\n- If the job is already terminal at call time the handler returns\n  immediately without allocating an :class:`asyncio.Event`\n  (INV-LP-2).\n- Otherwise it awaits the per-job event that queue workers signal\n  after writing the terminal status (INV-LP-1).\n- The endpoint returns HTTP 408 (``code=\"JOB_WAIT_TIMEOUT\"``) when\n  the job is still non-terminal after ``timeout`` seconds \u2014 the job\n  itself continues running; the timeout is client-side only.\n- Not durable: if the server restarts while a waiter is blocked,\n  the waiter sees a timeout rather than a replay. Treat a restart\n  as equivalent to a timeout.\n\nArgs:\n    job_id: The job identifier to wait on.\n    request: The FastAPI request (used to resolve the job queue).\n    timeout: Maximum seconds to wait. Clamped to ``[1, 3600]``.\n\nReturns:\n    Final :class:`JobStatusResponse` once the job is terminal.\n\nRaises:\n    HTTPException: 404 when ``job_id`` is unknown. 408 when the job\n        does not reach a terminal state within ``timeout`` seconds.",
         "operationId": "wait_for_job_completion_api_v1_jobs__job_id__wait_get",
         "parameters": [
           {
@@ -5458,7 +5458,7 @@
           "status": {
             "type": "string",
             "title": "Status",
-            "description": "Current job status. One of ``pending``, ``running``, ``complete``, ``failed``, ``timeout``, ``cancelled``. Valid transitions: ``pending -> running -> (complete | failed | timeout | cancelled)``. Terminal states are ``complete``, ``failed``, ``timeout``, and ``cancelled`` \u2014 once reached, the status never changes. See the ``JobStatus`` schema for the enumerated values."
+            "description": "Current job status. One of ``pending``, ``running``, ``completed``, ``failed``, ``timeout``, ``cancelled``. Valid transitions: ``pending -> running -> (completed | failed | timeout | cancelled)``. Terminal states are ``completed``, ``failed``, ``timeout``, and ``cancelled`` \u2014 once reached, the status never changes. See the ``JobStatus`` schema for the enumerated values."
           },
           "progress": {
             "anyOf": [
@@ -5474,7 +5474,7 @@
           },
           "result": {
             "title": "Result",
-            "description": "Handler return value when ``status == 'complete'``; ``null`` for non-terminal states and for failure/timeout/cancelled."
+            "description": "Handler return value when ``status == 'completed'``; ``null`` for non-terminal states and for failure/timeout/cancelled."
           },
           "error": {
             "anyOf": [
@@ -5503,7 +5503,7 @@
             "result": {
               "output_path": "data/renders/clip_01.mp4"
             },
-            "status": "complete"
+            "status": "completed"
           }
         ]
       },
@@ -8079,7 +8079,7 @@
         "enum": [
           "pending",
           "running",
-          "complete",
+          "completed",
           "failed",
           "timeout",
           "cancelled"

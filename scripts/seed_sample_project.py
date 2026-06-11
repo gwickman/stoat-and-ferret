@@ -120,8 +120,8 @@ def scan_and_wait(client: httpx.Client, videos_dir: str) -> None:
         status_resp = client.get(f"/api/v1/jobs/{job_id}")
         status_resp.raise_for_status()
         status = status_resp.json()["status"].lower()
-        if status in ("complete", "failed", "timeout", "cancelled"):
-            if status != "complete":
+        if status in ("completed", "failed", "timeout", "cancelled"):
+            if status != "completed":
                 print(f"ERROR: Scan failed with status: {status}", file=sys.stderr)
                 sys.exit(1)
             return

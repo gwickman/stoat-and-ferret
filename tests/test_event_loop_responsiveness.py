@@ -129,7 +129,7 @@ async def test_event_loop_responsive_during_scan(tmp_path: Path) -> None:
                 # Status may be pending, running, or already complete —
                 # the important assertion is that we got a response at all
                 # within the timeout.
-                assert data["status"] in {"pending", "running", "complete"}
+                assert data["status"] in {"pending", "running", "completed"}
     finally:
         worker_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):

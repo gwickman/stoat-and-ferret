@@ -174,7 +174,7 @@ async def poll_job_until_terminal(
     Returns the final job status response body.
     Raises asyncio.TimeoutError if not terminal within timeout.
     """
-    terminal_statuses = {"complete", "failed", "timeout", "cancelled"}
+    terminal_statuses = {"completed", "failed", "timeout", "cancelled"}
     deadline = asyncio.get_event_loop().time() + timeout
 
     while asyncio.get_event_loop().time() < deadline:

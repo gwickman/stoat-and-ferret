@@ -100,7 +100,7 @@ job_id = resp.json()["job_id"]
 import time
 while True:
     status = client.get(f"/api/v1/jobs/{job_id}").json()
-    if status["status"] in ("complete", "failed", "timeout"):
+    if status["status"] in ("completed", "failed", "timeout"):
         break
     time.sleep(1)
 

@@ -300,7 +300,7 @@ def test_scan_empty_directory(client: TestClient, tmp_path: Path) -> None:
     job_id = _submit_scan(client, str(tmp_path))
     job = _get_job_result(client, job_id)
 
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     result = job["result"]
     assert result["scanned"] == 0
     assert result["new"] == 0
@@ -326,7 +326,7 @@ def test_scan_finds_video_files(client: TestClient, tmp_path: Path) -> None:
         job_id = _submit_scan(client, str(tmp_path))
 
     job = _get_job_result(client, job_id)
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     result = job["result"]
     assert result["scanned"] == 2
     assert result["new"] == 2
@@ -367,7 +367,7 @@ def test_scan_recursive_allowed_on_flat_dir(client: TestClient, tmp_path: Path) 
         job_id = _submit_scan(client, str(tmp_path), recursive=True)
 
     job = _get_job_result(client, job_id)
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     assert job["result"]["scanned"] == 1
 
 
@@ -389,7 +389,7 @@ def test_scan_non_recursive(client: TestClient, tmp_path: Path) -> None:
         job_id = _submit_scan(client, str(tmp_path), recursive=False)
 
     job = _get_job_result(client, job_id)
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     result = job["result"]
     assert result["scanned"] == 1
     assert result["new"] == 1
@@ -421,7 +421,7 @@ async def test_scan_updates_existing_videos(
         job_id = _submit_scan(client, str(tmp_path))
 
     job = _get_job_result(client, job_id)
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     result = job["result"]
     assert result["scanned"] == 1
     assert result["new"] == 0
@@ -448,7 +448,7 @@ def test_scan_handles_errors_gracefully(client: TestClient, tmp_path: Path) -> N
         job_id = _submit_scan(client, str(tmp_path))
 
     job = _get_job_result(client, job_id)
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     result = job["result"]
     assert result["scanned"] == 2
     assert result["new"] == 1
@@ -472,7 +472,7 @@ def test_scan_returns_summary(client: TestClient, tmp_path: Path) -> None:
         job_id = _submit_scan(client, str(tmp_path))
 
     job = _get_job_result(client, job_id)
-    assert job["status"] == "complete"
+    assert job["status"] == "completed"
     result = job["result"]
     assert "scanned" in result
     assert "new" in result

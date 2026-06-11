@@ -23,7 +23,7 @@ All 12 test cases are specified below. Each test is self-contained — it perfor
 
 2. Poll until terminal:
    - `GET /api/v1/jobs/{job_id}` (via `poll_job_until_terminal` helper)
-   - Assert: final `status` is `"complete"`
+   - Assert: final `status` is `"completed"`
 
 3. List scanned videos:
    - `GET /api/v1/videos?limit=100`
@@ -437,7 +437,7 @@ All 12 test cases are specified below. Each test is self-contained — it perfor
 
 3. If status was 200 (cancelled):
    - `GET /api/v1/jobs/{job_id}`
-   - Assert: `status` is a terminal status (`"cancelled"` or `"complete"`)
+   - Assert: `status` is a terminal status (`"cancelled"` or `"completed"`)
 
 4. Re-cancel (already terminal):
    - `POST /api/v1/jobs/{job_id}/cancel`

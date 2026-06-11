@@ -23,7 +23,7 @@ from stoat_ferret.jobs.queue import JobStatus
 
 OPENAPI_PATH = Path(__file__).resolve().parents[2] / "gui" / "openapi.json"
 
-_TERMINAL_STATUSES = {"complete", "failed", "timeout", "cancelled"}
+_TERMINAL_STATUSES = {"completed", "failed", "timeout", "cancelled"}
 
 
 @pytest.fixture(scope="module")

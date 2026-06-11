@@ -206,7 +206,7 @@ async def test_proxy_odd_dimension(
     job_id = resp.json()["job_id"]
 
     job_body = await poll_job_until_terminal(smoke_client, job_id, timeout=60.0)
-    assert job_body["status"] == "complete", (
+    assert job_body["status"] == "completed", (
         f"Proxy job failed — odd-dim rounding may not be applied. "
         f"Job status: {job_body['status']!r}, error: {job_body.get('error')!r}"
     )

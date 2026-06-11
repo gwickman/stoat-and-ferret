@@ -26,7 +26,7 @@ async def test_uc01_scan_videos(
 ) -> None:
     """Scan videos directory and verify all 6 videos with correct metadata."""
     job_status = await scan_videos_and_wait(smoke_client, videos_dir)
-    assert job_status["status"].lower() == "complete"
+    assert job_status["status"].lower() == "completed"
 
     resp = await smoke_client.get("/api/v1/videos?limit=100")
     assert resp.status_code == 200
