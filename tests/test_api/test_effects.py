@@ -68,6 +68,7 @@ EXPECTED_EFFECT_TYPES = {
     "loudness_normalize",
     "parametric_eq",
     "multiband_compressor",
+    "pan",
 }
 
 # ---- Registry unit tests ----
