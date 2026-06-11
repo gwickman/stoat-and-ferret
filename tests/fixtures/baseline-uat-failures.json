@@ -2,12 +2,12 @@
   "failures": [
     {
       "journey_id": 703,
-      "reason": "R2 GUI surface not built: qc-status-fail / remaster-btn testids absent from gui/src (QC-fail status + remaster flow UI unimplemented; journey encodes the design intent)",
+      "reason": "UAT seed gap: qc-status-fail and remaster-btn testids ARE present in gui/src (RenderJobCard.tsx, RenderPage.tsx — PR #562 landed the surfaces, verified 2026-06-11 against HEAD 4621d52a) but uat_runner.py's 'Seeding sample project data' step does not insert a QC-fail render row, so the assertions have nothing to match against. Tracked by BL-480-AC-5 (seed extension).",
       "tracking_reference": "BL-480"
     },
     {
       "journey_id": 704,
-      "reason": "R2 GUI surface not built: batch-panel not mounted on /render (automation lane UI unimplemented; journey encodes the design intent)",
+      "reason": "UAT seed gap: batch-panel testid IS present in gui/src (BatchPanel.tsx, mounted under /render Batch tab — PR #562 verified 2026-06-11 against HEAD 4621d52a) but uat_runner.py's seed step does not insert a batch row, so the panel renders empty/hidden and the assertion fails. Tracked by BL-480-AC-5 (seed extension).",
       "tracking_reference": "BL-480"
     }
   ]

@@ -14,7 +14,7 @@ import shutil
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from PIL import Image
@@ -25,6 +25,7 @@ from stoat_ferret.api.websocket.manager import ConnectionManager
 
 if TYPE_CHECKING:
     from stoat_ferret.api.services.qc_service import QCService
+    from stoat_ferret.db.delivery_profiles_repository import DeliveryProfileRepository
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.render.checkpoints import RenderCheckpointManager
 from stoat_ferret.render.executor import RenderExecutor
@@ -50,6 +51,14 @@ except ImportError:
     _HAS_RUST_BINDINGS = False
 
 logger = structlog.get_logger(__name__)
+
+
+def _build_assertions_from_profile(profile: Any) -> dict[str, float | None]:
+    """Build QC assertions dict from a delivery profile's loudness/true-peak targets."""
+    return {
+        "loudness_integrated": profile.loudness_target_lufs,
+        "true_peak": profile.true_peak_ceiling_dbtp,
+    }
 
 
 def generate_ffmetadata(
@@ -173,6 +182,7 @@ class RenderService:
         connection_manager: ConnectionManager,
         settings: Settings,
         qc_service: QCService | None = None,
+        dp_repo: DeliveryProfileRepository | None = None,
     ) -> None:
         self._repo = repository
         self._queue = queue
@@ -183,6 +193,7 @@ class RenderService:
         self._render_mode = settings.render_mode
         self._shutting_down = False
         self._qc_service = qc_service
+        self._dp_repo = dp_repo
         # Serializes concurrent noop-mode submissions to prevent state race (BL-388)
         self._submit_lock = asyncio.Lock()
         # In noop mode FFmpeg is irrelevant — always treat as available so
@@ -515,10 +526,27 @@ class RenderService:
                 delivery_profile_id = None
             if delivery_profile_id:
                 try:
+                    assertions: dict[str, float | None] | None = None
+                    if self._dp_repo is not None:
+                        try:
+                            profile = await self._dp_repo.get_by_id(delivery_profile_id)
+                            if profile is not None:
+                                assertions = _build_assertions_from_profile(profile)
+                            else:
+                                logger.warning(
+                                    "delivery_profile_not_found",
+                                    profile_id=delivery_profile_id,
+                                )
+                        except Exception:
+                            logger.warning(
+                                "delivery_profile_fetch_failed",
+                                profile_id=delivery_profile_id,
+                            )
                     qc_report = await self._qc_service.run_checks(
                         artifact_path=job.output_path,
                         job_id=job.id,
                         delivery_profile_id=delivery_profile_id,
+                        assertions=assertions,
                     )
                     if qc_report.overall_verdict != "pass":
                         await self._repo.update_status(job.id, RenderStatus.QC_FAILED)
