@@ -504,3 +504,52 @@ async def test_apply_non_automatable_with_envelope(
         },
     )
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# automatable_parameters smoke tests (BL-481)
+# ---------------------------------------------------------------------------
+
+
+async def test_all_effects_have_automatable_parameters(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """All effects returned by GET /effects include a list automatable_parameters field."""
+    resp = await smoke_client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    catalog = resp.json()
+    assert catalog["total"] > 0
+    for effect in catalog["effects"]:
+        assert "automatable_parameters" in effect, (
+            f"Effect {effect.get('effect_type')!r} missing automatable_parameters"
+        )
+        assert isinstance(effect["automatable_parameters"], list), (
+            f"Effect {effect.get('effect_type')!r} automatable_parameters is not a list"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Preview automation envelope smoke test (BL-482)
+# ---------------------------------------------------------------------------
+
+
+async def test_preview_accepts_automation_envelope(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """POST /effects/preview with volume + keyframes automation envelope returns 200."""
+    resp = await smoke_client.post(
+        "/api/v1/effects/preview",
+        json={
+            "effect_type": "volume",
+            "parameters": {
+                "volume": {
+                    "default": 0.5,
+                    "keyframes": [
+                        {"t": 0.0, "value": 0.0, "curve": "linear"},
+                        {"t": 1.0, "value": 1.0, "curve": "linear"},
+                    ],
+                }
+            },
+        },
+    )
+    assert resp.status_code == 200
