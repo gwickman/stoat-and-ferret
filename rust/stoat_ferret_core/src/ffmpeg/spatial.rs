@@ -59,9 +59,7 @@ impl PanBuilder {
             }
             Some(auto) => {
                 let pos_expr = py_compile_automation(auto)?;
-                let exprs = format!(
-                    "max(0\\,1-({pos_expr}))*c0|max(0\\,1+({pos_expr}))*c1"
-                );
+                let exprs = format!("max(0\\,1-({pos_expr}))*c0|max(0\\,1+({pos_expr}))*c1");
                 Ok(Filter::new(format!("aeval=exprs={exprs}:eval=frame")))
             }
         }
@@ -100,29 +98,44 @@ mod tests {
     fn test_static_center_pan_filter_prefix() {
         let b = PanBuilder::py_new(0.0);
         let s = b.build().unwrap().to_string();
-        assert!(s.starts_with("pan=stereo|"), "expected pan=stereo| prefix, got: {s}");
+        assert!(
+            s.starts_with("pan=stereo|"),
+            "expected pan=stereo| prefix, got: {s}"
+        );
     }
 
     #[test]
     fn test_static_center_equal_gains() {
         let b = PanBuilder::py_new(0.0);
         let s = b.build().unwrap().to_string();
-        assert!(s.contains("c0=1*c0"), "expected c0=1*c0 at center, got: {s}");
-        assert!(s.contains("c1=1*c1"), "expected c1=1*c1 at center, got: {s}");
+        assert!(
+            s.contains("c0=1*c0"),
+            "expected c0=1*c0 at center, got: {s}"
+        );
+        assert!(
+            s.contains("c1=1*c1"),
+            "expected c1=1*c1 at center, got: {s}"
+        );
     }
 
     #[test]
     fn test_static_full_right_zeroes_left_channel() {
         let b = PanBuilder::py_new(1.0);
         let s = b.build().unwrap().to_string();
-        assert!(s.contains("c0=0*c0"), "expected c0=0*c0 at full right, got: {s}");
+        assert!(
+            s.contains("c0=0*c0"),
+            "expected c0=0*c0 at full right, got: {s}"
+        );
     }
 
     #[test]
     fn test_static_full_left_zeroes_right_channel() {
         let b = PanBuilder::py_new(-1.0);
         let s = b.build().unwrap().to_string();
-        assert!(s.contains("c1=0*c1"), "expected c1=0*c1 at full left, got: {s}");
+        assert!(
+            s.contains("c1=0*c1"),
+            "expected c1=0*c1 at full left, got: {s}"
+        );
     }
 
     #[test]
@@ -131,13 +144,27 @@ mod tests {
         let auto = Automation {
             default: 0.0,
             keyframes: vec![
-                Keyframe { t: 0.0, value: -0.5, curve: "Linear".to_string() },
-                Keyframe { t: 1.0, value: 0.5, curve: "Linear".to_string() },
+                Keyframe {
+                    t: 0.0,
+                    value: -0.5,
+                    curve: "Linear".to_string(),
+                },
+                Keyframe {
+                    t: 1.0,
+                    value: 0.5,
+                    curve: "Linear".to_string(),
+                },
             ],
         };
         let b = PanBuilder::py_new(0.0).with_automation(auto);
         let s = b.build().unwrap().to_string();
-        assert!(s.contains("eval=frame"), "eval=frame must be present (LRN-583), got: {s}");
-        assert!(s.starts_with("aeval="), "expected aeval filter for automation, got: {s}");
+        assert!(
+            s.contains("eval=frame"),
+            "eval=frame must be present (LRN-583), got: {s}"
+        );
+        assert!(
+            s.starts_with("aeval="),
+            "expected aeval filter for automation, got: {s}"
+        );
     }
 }
