@@ -61,6 +61,53 @@
 - `async get_manifest(session_id: str, request: Request) -> Response`
 - `async get_segment(session_id: str, index: int, request: Request) -> Response`
 
+### Projects Router (projects.py)
+
+Provides CRUD operations for projects and clips under `/api/v1/projects`.
+
+#### Dependency Injection Functions
+- `async get_project_repository(request: Request) -> AsyncProjectRepository` - Returns injected or SQLite project repo from app state
+- `async get_clip_repository(request: Request) -> AsyncClipRepository` - Returns injected or SQLite clip repo from app state
+- `async get_video_repository(request: Request) -> AsyncVideoRepository` - Returns injected or SQLite video repo from app state
+
+#### Project Endpoints
+- `async list_projects(repo: ProjectRepoDep, limit: int, offset: int) -> ProjectListResponse` - `GET /api/v1/projects` — paginated project list
+- `async create_project(project_data: ProjectCreate, request: Request, repo: ProjectRepoDep) -> ProjectResponse` - `POST /api/v1/projects` — creates project, broadcasts PROJECT_CREATED WebSocket event
+- `async get_project(project_id: str, repo: ProjectRepoDep) -> ProjectResponse` - `GET /api/v1/projects/{project_id}` — 404 if not found
+- `async update_project(project_id: str, project_data: ProjectUpdate, repo: ProjectRepoDep) -> ProjectResponse` - `PATCH /api/v1/projects/{project_id}` — partial update
+- `async delete_project(project_id: str, repo: ProjectRepoDep) -> Response` - `DELETE /api/v1/projects/{project_id}` — 204 on success
+
+#### Clip Endpoints
+- `async list_clips(project_id: str, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep) -> ClipListResponse` - `GET /api/v1/projects/{project_id}/clips` — 404 if project not found
+- `async get_clip(project_id: str, clip_id: str, clip_repo: ClipRepoDep) -> ClipResponse` - `GET /api/v1/projects/{project_id}/clips/{clip_id}` — 404 if clip not found or belongs to different project
+- `async add_clip(project_id: str, request: ClipCreate, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep, video_repo: VideoRepoDep) -> ClipResponse` - `POST /api/v1/projects/{project_id}/clips` — validates clip via Rust, 400 on validation error
+- `async update_clip(project_id: str, clip_id: str, request: ClipUpdate, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep, video_repo: VideoRepoDep) -> ClipResponse` - `PATCH /api/v1/projects/{project_id}/clips/{clip_id}` — re-validates clip via Rust after update
+- `async delete_clip(project_id: str, clip_id: str, request: Request, clip_repo: ClipRepoDep) -> Response` - `DELETE /api/v1/projects/{project_id}/clips/{clip_id}` — 204 on success, broadcasts CLIP_DELETED WebSocket event
+
+### Effects Router (effects.py)
+
+Provides effect discovery, preview, application, update, deletion, and transition endpoints under `/api/v1`.
+
+#### Dependency Injection Functions
+- `async get_effect_registry(request: Request) -> EffectRegistry` - Returns injected registry or falls back to module-level default registry
+- `async _get_project_repository(request: Request) -> AsyncProjectRepository` - Returns injected or SQLite project repo from app state
+- `async _get_clip_repository(request: Request) -> AsyncClipRepository` - Returns injected or SQLite clip repo from app state
+- `async _get_thumbnail_service(request: Request) -> ThumbnailService` - Returns injected or freshly-created ThumbnailService
+
+#### Effects Discovery and Preview Endpoints
+- `async list_effects(registry: RegistryDep) -> EffectListResponse` - `GET /api/v1/effects` — lists all 17 built-in effects with parameter schemas, AI hints, filter preview strings, and automatable parameters
+- `async preview_effect(request: EffectPreviewRequest, registry: RegistryDep) -> EffectPreviewResponse` - `POST /api/v1/effects/preview` — validates parameters and returns generated FFmpeg filter string without applying
+- `async preview_effect_thumbnail(request: EffectThumbnailRequest, registry: RegistryDep, thumbnail_service: ThumbnailDep) -> FileResponse` - `POST /api/v1/effects/preview/thumbnail` — extracts first frame from video, applies effect, returns 320px-wide JPEG
+
+#### Clip Effect CRUD Endpoints
+- `async get_clip_effects(project_id: str, clip_id: str, clip_repo: ClipRepoDep) -> ClipEffectsResponse` - `GET /api/v1/projects/{project_id}/clips/{clip_id}/effects` — returns applied effects list (empty list when none)
+- `async apply_effect_to_clip(project_id: str, clip_id: str, request: EffectApplyRequest, registry: RegistryDep, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep) -> EffectApplyResponse` - `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` — validates effect type and parameters, generates filter string, stores effect on clip; increments `stoat_ferret_effect_applications_total` counter
+- `async update_clip_effect(project_id: str, clip_id: str, index: int, request: EffectUpdateRequest, registry: RegistryDep, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep) -> EffectApplyResponse` - `PATCH /api/v1/projects/{project_id}/clips/{clip_id}/effects/{index}` — validates index bounds, re-validates parameters, regenerates filter string
+- `async delete_clip_effect(project_id: str, clip_id: str, index: int, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep) -> EffectDeleteResponse` - `DELETE /api/v1/projects/{project_id}/clips/{clip_id}/effects/{index}` — removes effect at zero-based index from clip's effects list
+
+#### Transition Endpoint
+- `async apply_transition(project_id: str, request: TransitionRequest, registry: RegistryDep, project_repo: ProjectRepoDep, clip_repo: ClipRepoDep) -> EffectTransitionResponse` - `POST /api/v1/projects/{project_id}/effects/transition` — validates source and target clips are adjacent in timeline, generates filter string, stores transition on project; increments `stoat_ferret_transition_applications_total` counter
+
 ### System Router (system.py)
 
 Exposes `GET /api/v1/system/state` — a best-effort aggregate snapshot of in-memory job queue, render repository, and WebSocket connection manager state (BL-275).
@@ -88,12 +135,14 @@ Exposes `GET /api/v1/system/state` — a best-effort aggregate snapshot of in-me
 ## Dependencies
 
 ### Internal Dependencies
-- stoat_ferret.api.schemas (job, render, preview, system_state)
+- stoat_ferret.api.schemas (job, render, preview, system_state, clip, project, effect)
 - stoat_ferret.api.settings
 - stoat_ferret.db modules (models, repositories)
 - stoat_ferret.jobs.queue (AsyncJobQueue, JobSnapshot)
 - stoat_ferret.render (encoder_cache, models, queue, service, repository)
 - stoat_ferret.preview (manager, cache)
+- stoat_ferret.effects (registry, definitions)
+- stoat_ferret.api.services.thumbnail (ThumbnailService)
 - stoat_ferret_core (Rust FFI)
 
 ### External Dependencies
@@ -137,6 +186,19 @@ flowchart TB
         SST["get_system_state"]
     end
 
+    subgraph PRJ["Projects Endpoints"]
+        PCRUD["project CRUD"]
+        CCRUD["clip CRUD"]
+    end
+
+    subgraph EFX["Effects Endpoints"]
+        LST["list_effects"]
+        PREV["preview_effect"]
+        THUMB["preview_thumbnail"]
+        GFXC["get/apply/update/delete clip effects"]
+        TRN["apply_transition"]
+    end
+
     CRUD -.->|dependency| RenderService["RenderService"]
     ENC -.->|dependency| EncoderCache["EncoderCache"]
     SESS -.->|dependency| PreviewMgr["PreviewManager"]
@@ -144,6 +206,10 @@ flowchart TB
     SST -.->|reads| JobQueue["JobQueue.list_jobs()"]
     SST -.->|reads| RenderRepo["RenderRepository"]
     SST -.->|reads| WSManager["WSManager.active_connections"]
+    PCRUD -.->|dependency| ProjectRepo["ProjectRepository"]
+    CCRUD -.->|dependency| ClipRepo["ClipRepository"]
+    GFXC -.->|dependency| EffectReg["EffectRegistry"]
+    TRN -.->|dependency| EffectReg
 ```
 
 ## Notes

@@ -60,7 +60,7 @@ A software engineer who builds, tests, and extends stoat-and-ferret across three
 | 1 | Video Library | Scan directories, extract metadata via ffprobe, generate thumbnails/waveforms, full-text search | Editor, Agent | API Server, SQLite, File Storage |
 | 2 | Project Management | Create, update, delete, and version projects with snapshot/restore | Editor, Agent | API Server, SQLite |
 | 3 | Timeline Editing | Multi-track timeline with clip arrangement, track management, clip ordering | Editor, Agent | API Server, Rust Core |
-| 4 | Effects & Transitions | 9 built-in effects, 59 transition types, apply/update/remove with JSON Schema validation | Editor, Agent | API Server, Rust Core |
+| 4 | Effects & Transitions | 17 built-in effects, 59 transition types, apply/update/remove with JSON Schema validation | Editor, Agent | API Server, Rust Core |
 | 5 | Composition & Layout | Arrange multiple inputs using layout presets (side-by-side, picture-in-picture, grid) | Editor, Agent | API Server, Rust Core |
 | 6 | Audio Mixing | Configure audio mix settings and preview audio across clips | Editor, Agent | API Server, Rust Core |
 | 7 | HLS Preview | Stream timeline preview via HLS with seek, quality selection, caching, and theater mode | Editor | API Server, Web GUI, FFmpeg |

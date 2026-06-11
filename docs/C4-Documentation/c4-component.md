@@ -6,7 +6,7 @@
 |-----------|-------------|---------------|---------------|
 | Rust Core Engine | Frame-accurate timeline math, clip validation, FFmpeg command building, filter graphs, audio/transition builders, layout, composition, preview optimization, render planning, sanitization, and benchmarks | 13 files | [c4-component-rust-core-engine.md](./c4-component-rust-core-engine.md) |
 | Python Bindings Layer | Python re-export package and manually maintained type stubs bridging the Rust core to Python | 2 files | [c4-component-python-bindings.md](./c4-component-python-bindings.md) |
-| Effects Engine | Effect definition registry with 9 built-in effects, JSON Schema validation, AI hints, and filter preview/build functions | 2 files | [c4-component-effects-engine.md](./c4-component-effects-engine.md) |
+| Effects Engine | Effect definition registry with 17 built-in effects, JSON Schema validation, AI hints, and filter preview/build functions | 2 files | [c4-component-effects-engine.md](./c4-component-effects-engine.md) |
 | API Gateway | FastAPI REST/WebSocket endpoints, middleware, schemas, effects CRUD, transitions, render and preview routing | 7 files | [c4-component-api-gateway.md](./c4-component-api-gateway.md) |
 | Application Services | Video scanning, media generation (thumbnails/waveforms/proxies), FFmpeg execution, job queue, render pipeline, HLS preview system, dev scripts | 7 files | [c4-component-application-services.md](./c4-component-application-services.md) |
 | Data Access Layer | SQLite repository pattern for Video/Project/Clip/Preview/Proxy; domain models; Alembic migrations; structured logging configuration | 6 files | [c4-component-data-access.md](./c4-component-data-access.md) |
@@ -22,7 +22,7 @@ C4Component
     Container_Boundary(system, "stoat-and-ferret Video Editor") {
         Component(gui, "Web GUI", "React/TypeScript", "Timeline, preview, render, effects, library, dashboard — 7 routes, 17 stores, 12 hooks")
         Component(api, "API Gateway", "Python/FastAPI", "REST/WebSocket endpoints, middleware, schemas, effects CRUD, render and preview routing")
-        Component(effects, "Effects Engine", "Python", "9 built-in effects, JSON Schema validation, AI hints, filter preview/build")
+        Component(effects, "Effects Engine", "Python", "17 built-in effects, JSON Schema validation, AI hints, filter preview/build")
         Component(services, "Application Services", "Python", "Scan, media gen, FFmpeg, job queue, render pipeline, HLS preview")
         Component(data, "Data Access Layer", "Python/SQLite/Alembic", "Repositories for Video/Project/Clip/Preview/Proxy, models, migrations, logging config")
         Component(bindings, "Python Bindings", "Python", "stoat_ferret_core re-export package, .pyi type stubs")
