@@ -5,7 +5,7 @@ info:
     AI-driven video editor REST API. The Python/FastAPI layer handles HTTP routing and
     orchestration; compute-intensive operations (timeline math, filter generation,
     input sanitization) are delegated to the Rust core via PyO3 bindings. The effects
-    engine provides 9 built-in effects with full CRUD on clip effect stacks and
+    engine provides 17 built-in effects with full CRUD on clip effect stacks and
     transition application between adjacent clips. The WebSocket heartbeat interval is
     configurable via the STOAT_WS_HEARTBEAT_INTERVAL environment variable. Structured
     logging (JSON or console) is initialised on application startup via configure_logging().

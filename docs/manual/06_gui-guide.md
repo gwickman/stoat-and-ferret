@@ -126,7 +126,7 @@ Choose which clip to work with. The selector shows clips from your project with 
 
 ### Effect Catalog
 
-Browse all 9 available effects:
+Browse all 17 available effects:
 
 | Effect | Description |
 |--------|-------------|

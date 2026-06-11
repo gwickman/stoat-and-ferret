@@ -41,7 +41,7 @@ C4Container
 #### Components Deployed
 
 - [API Gateway](./c4-component-api-gateway.md) -- REST/WebSocket endpoints, middleware, schemas, settings
-- [Effects Engine](./c4-component-effects-engine.md) -- EffectRegistry with 9 built-in effects, JSON Schema validation, AI hints
+- [Effects Engine](./c4-component-effects-engine.md) -- EffectRegistry with 17 built-in effects, JSON Schema validation, AI hints
 - [Application Services](./c4-component-application-services.md) -- Scan, media gen, FFmpeg executor, job queue, render pipeline, HLS preview
 - [Data Access Layer](./c4-component-data-access.md) -- Repository pattern, domain models, schema, audit logging, Alembic migrations, logging config
 - [Python Bindings Layer](./c4-component-python-bindings.md) -- Re-exports from Rust core, type stubs

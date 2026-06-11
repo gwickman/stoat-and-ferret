@@ -45,9 +45,9 @@
 
 #### create_default_registry() (definitions.py:702)
 - **Signature**: `def create_default_registry() -> EffectRegistry`
-- **Return**: New EffectRegistry with all 9 built-in effects registered
+- **Return**: New EffectRegistry with all 17 built-in effects registered
 
-### Built-in Effects (9 total)
+### Built-in Effects (17 total)
 
 | Constant | Name | Builder | Required Params |
 |----------|------|---------|-----------------|

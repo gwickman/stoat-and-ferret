@@ -10,7 +10,7 @@
 
 The Effects Engine provides the domain model for video and audio effects discovery, validation, and parameter description. It defines what effects are available (text overlay, speed control, volume, audio fade, audio mix, audio ducking, video fade, crossfade, audio crossfade), describes their parameters using JSON Schema, provides AI guidance strings for each parameter, and validates user-supplied parameters against those schemas.
 
-The component follows a Registry pattern: effects are defined as immutable dataclass instances with embedded parameter schemas and callable build/preview functions, then registered into a mutable EffectRegistry. A factory function creates a fully populated default registry with all 9 built-in effects. Build functions generate real FFmpeg filter strings by delegating to the Rust Core Engine builders, ensuring outputs remain accurate as filter implementations evolve.
+The component follows a Registry pattern: effects are defined as immutable dataclass instances with embedded parameter schemas and callable build/preview functions, then registered into a mutable EffectRegistry. A factory function creates a fully populated default registry with all 17 built-in effects. Build functions generate real FFmpeg filter strings by delegating to the Rust Core Engine builders, ensuring outputs remain accurate as filter implementations evolve.
 
 This domain is kept separate from the API Gateway (which handles HTTP concerns) and Application Services (which handle execution concerns). The Effects Engine solely defines the effect catalogue -- what effects exist, how they are described, and how they produce filter strings.
 
@@ -20,14 +20,14 @@ This domain is kept separate from the API Gateway (which handles HTTP concerns) 
 - **JSON Schema Parameters**: Structured parameter schemas enabling API validation and dynamic UI generation
 - **AI Hints**: Per-parameter natural language guidance strings for AI-driven parameter generation
 - **Preview Generation**: Callable preview functions producing real FFmpeg filter strings via Rust builders
-- **9 Built-in Effects**: TEXT_OVERLAY, SPEED_CONTROL, VOLUME, AUDIO_FADE, AUDIO_MIX, AUDIO_DUCKING, VIDEO_FADE, XFADE, ACROSSFADE
+- **17 Built-in Effects**: TEXT_OVERLAY, SPEED_CONTROL, VOLUME, AUDIO_FADE, AUDIO_MIX, AUDIO_DUCKING, VIDEO_FADE, XFADE, ACROSSFADE, NOISE_REDUCTION, DEESSER, DEPLOSIVE, TIME_STRETCH, MASTERING_LIMITER, LOUDNESS_NORMALIZE, PARAMETRIC_EQ, MULTIBAND_COMPRESSOR
 - **Factory Function**: create_default_registry() bootstraps production-ready registry with all built-in effects
 
 ## Code Elements
 
 This component contains:
-- [c4-code-python-effects.md](./c4-code-python-effects.md) -- EffectDefinition dataclass, EffectRegistry with jsonschema validation, EffectValidationError, 9 built-in effects, create_default_registry()
-- [c4-code-stoat-ferret-effects.md](./c4-code-stoat-ferret-effects.md) -- Canonical view: builder functions for each of the 9 built-in effects (e.g., _build_text_overlay, _build_speed_control)
+- [c4-code-python-effects.md](./c4-code-python-effects.md) -- EffectDefinition dataclass, EffectRegistry with jsonschema validation, EffectValidationError, 17 built-in effects, create_default_registry()
+- [c4-code-stoat-ferret-effects.md](./c4-code-stoat-ferret-effects.md) -- Canonical view: builder functions for each of the 17 built-in effects (e.g., _build_text_overlay, _build_speed_control)
 
 ## Interfaces
 
@@ -35,7 +35,7 @@ This component contains:
 - **Protocol**: Python module import (internal)
 - **Description**: Discovery, retrieval, and validation of available video/audio effects
 - **Operations**:
-  - `create_default_registry() -> EffectRegistry` -- Create registry with all 9 built-in effects
+  - `create_default_registry() -> EffectRegistry` -- Create registry with all 17 built-in effects
   - `EffectRegistry.register(effect_type: str, definition: EffectDefinition) -> None` -- Register effect
   - `EffectRegistry.get(effect_type: str) -> EffectDefinition | None` -- Retrieve definition
   - `EffectRegistry.list_all() -> list[tuple[str, EffectDefinition]]` -- List all effects

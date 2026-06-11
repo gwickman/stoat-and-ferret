@@ -40,7 +40,7 @@ The [C4 model](https://c4model.com/) documents software architecture at four lev
 | [API Gateway](./c4-component-api-gateway.md) | FastAPI REST/WebSocket endpoints, middleware, schemas, effects CRUD, transitions, render and preview routing |
 | [Application Services](./c4-component-application-services.md) | Video scanning, media generation (thumbnails/waveforms/proxies), FFmpeg execution, job queue, render pipeline, HLS preview system |
 | [Data Access Layer](./c4-component-data-access.md) | SQLite repository pattern for Video/Project/Clip/Preview/Proxy; domain models; Alembic migrations; structured logging |
-| [Effects Engine](./c4-component-effects-engine.md) | EffectRegistry with 9 built-in effects, JSON Schema validation, AI hints |
+| [Effects Engine](./c4-component-effects-engine.md) | EffectRegistry with 17 built-in effects, JSON Schema validation, AI hints |
 | [Python Bindings Layer](./c4-component-python-bindings.md) | Python re-export package and manually maintained type stubs bridging Rust core to Python |
 | [Rust Core Engine](./c4-component-rust-core-engine.md) | Frame-accurate timeline math, clip validation, FFmpeg command building, filter graphs, layout, composition, preview, render, sanitization |
 | [Test Infrastructure](./c4-component-test-infrastructure.md) | Python test suites: unit, API, smoke, black-box, contract, security, job queue, test doubles, property-based |
