@@ -91,8 +91,8 @@ def _make_api_app(svc: QCService, repo: InMemoryQCReportRepository | None = None
 # ---------------------------------------------------------------------------
 
 
-async def test_qc_service_runs_all_11_checks(tmp_path: Path) -> None:
-    """QCReport contains all 11 check IDs when FFmpeg is mocked."""
+async def test_qc_service_runs_all_12_checks(tmp_path: Path) -> None:
+    """QCReport contains all 12 check IDs when FFmpeg is mocked."""
     artifact = tmp_path / "out.mp4"
     artifact.write_bytes(b"placeholder")
 
@@ -102,7 +102,7 @@ async def test_qc_service_runs_all_11_checks(tmp_path: Path) -> None:
     checks = json.loads(record.checks)
     missing = set(ALL_CHECK_IDS) - set(checks.keys())
     assert set(checks.keys()) == set(ALL_CHECK_IDS), f"Missing checks: {missing}"
-    assert len(checks) == 11
+    assert len(checks) == 12
 
 
 async def test_qc_service_overall_verdict_pass(tmp_path: Path) -> None:
@@ -350,7 +350,7 @@ async def test_qc_started_event_emitted(tmp_path: Path) -> None:
 
 
 async def test_qc_check_completed_event_emitted_for_each_check(tmp_path: Path) -> None:
-    """qc.check_completed is broadcast 11 times — once per check."""
+    """qc.check_completed is broadcast 12 times — once per check."""
     artifact = tmp_path / "out.mp4"
     artifact.write_bytes(b"placeholder")
 
@@ -358,7 +358,7 @@ async def test_qc_check_completed_event_emitted_for_each_check(tmp_path: Path) -
     await svc.run_checks(str(artifact))
 
     completed = [e for e in events if e.get("type") == EventType.QC_CHECK_COMPLETED.value]
-    assert len(completed) == 11
+    assert len(completed) == 12
     emitted_ids = {e["payload"]["check_id"] for e in completed}
     assert emitted_ids == set(ALL_CHECK_IDS)
 

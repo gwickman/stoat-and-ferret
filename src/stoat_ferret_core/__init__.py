@@ -93,6 +93,7 @@ try:
         LoudnormBuilder,
         MultibandCompressorBuilder,
         NoiseReductionBuilder,
+        PanBuilder,
         ParameterSchema,
         ParametricEqBuilder,
         PeakReport,
@@ -208,6 +209,7 @@ except ImportError:
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
+    PanBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     Automation = _not_built  # type: ignore[misc,assignment]
@@ -320,6 +322,8 @@ __all__ = [
     "LoudnormBuilder",
     "MultibandCompressorBuilder",
     "ParametricEqBuilder",
+    # Spatial audio builders
+    "PanBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",
