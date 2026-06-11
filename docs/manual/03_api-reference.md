@@ -1492,6 +1492,160 @@ curl http://localhost:8765/api/v1/render/queue
 
 ---
 
+## QC
+
+Quality Control (QC) endpoints analyze a rendered artifact against 11 checks spanning loudness, clipping, silence, sync, and structural integrity. All three endpoints return the same `QCReportResponse` shape.
+
+### POST /api/v1/qc/run
+
+Run all 11 QC checks over a rendered artifact file. Returns a complete `QCReportResponse` on success (HTTP 201).
+
+**Request Body (`QCRunRequest`):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `artifact_path` | string | Yes | Absolute local file path to the rendered artifact. **Not a URL** — must be a path the server can read from disk. |
+| `delivery_profile_id` | string (UUID) | No | UUID of a delivery profile whose assertion targets to apply. **Takes a UUID, not a name string** — see the `delivery_profile_id` vs `delivery_profile` note below. |
+| `assertions` | object | No | Map of `check_id → float` thresholds. Explicit assertions override profile targets when both are provided. When neither is present, all checks return `target: null, pass: null`. |
+| `job_id` | string | No | Optional render job UUID to associate with this report. |
+
+> **`delivery_profile_id` vs `delivery_profile` (name string):** `POST /api/v1/render` accepts a `delivery_profile` field that takes a **name string** (e.g. `"broadcast"`). The QC run endpoint's `delivery_profile_id` takes a **UUID** (e.g. `"a1b2c3d4-..."`). Passing a name string into `delivery_profile_id` returns `404 DELIVERY_PROFILE_NOT_FOUND`.
+
+**Response (201 Created):**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "job_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+  "artifact_path": "/data/renders/output.mp4",
+  "delivery_profile_id": null,
+  "overall_verdict": "pass",
+  "checks": {
+    "loudness_integrated": {"measured": -14.2, "target": -14.0, "pass": true, "units": "LUFS"},
+    "true_peak": {"measured": -1.5, "target": -1.0, "pass": true, "units": "dBTP"},
+    "clipping": {"measured": 0.0, "target": 0.0, "pass": true, "units": "samples"},
+    "unintended_silence": {"measured": 0.0, "target": null, "pass": null, "units": "regions"},
+    "loop_seam": {"measured": 0.0, "target": null, "pass": null, "units": "errors"},
+    "tone_presence": {"measured": -18.3, "target": null, "pass": null, "units": "dB"},
+    "ducking": {"measured": -6.2, "target": null, "pass": null, "units": "dBFS"},
+    "section_arc": {"measured": 7.1, "target": null, "pass": null, "units": "LU"},
+    "av_sync": {"measured": 2.4, "target": null, "pass": null, "units": "ms"},
+    "decode_integrity": {"measured": 0.0, "target": null, "pass": null, "units": "errors"},
+    "chapters_present": {"measured": 0.0, "target": 1.0, "pass": false, "units": "chapters"}
+  },
+  "created_at": "2025-01-15T11:00:00Z"
+}
+```
+
+The `overall_verdict` is `"pass"` only when every check's `pass` field is `true`. Any check with `pass: false` or `pass: null` causes `overall_verdict: "fail"`.
+
+Each check result has four fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `measured` | float or null | Measured value from FFmpeg analysis; null when FFmpeg is unavailable or the check errors |
+| `target` | float or null | Assertion threshold (from `assertions` or delivery profile); null when none provided |
+| `pass` | boolean or null | `true`/`false` when target is set; `null` when no target was provided |
+| `units` | string | Unit of measurement (e.g. `"LUFS"`, `"dBTP"`, `"ms"`) |
+
+**The 11 QC checks:**
+
+| Check ID | Units | Pass condition (when target set) |
+|----------|-------|----------------------------------|
+| `loudness_integrated` | LUFS | `measured >= target` |
+| `true_peak` | dBTP | `measured <= target` |
+| `clipping` | samples | `measured <= target` |
+| `unintended_silence` | regions | `measured <= target` |
+| `loop_seam` | errors | `measured == 0` |
+| `tone_presence` | dB | `measured >= target` |
+| `ducking` | dBFS | `measured >= target` |
+| `section_arc` | LU | `measured >= target` |
+| `av_sync` | ms | `measured <= target` |
+| `decode_integrity` | errors | `measured == 0` |
+| `chapters_present` | chapters | `measured >= target` (default target 1 if omitted) |
+
+**Errors:**
+
+- 422 `ARTIFACT_NOT_FOUND` -- `artifact_path` does not exist on the server's filesystem
+- 404 `DELIVERY_PROFILE_NOT_FOUND` -- `delivery_profile_id` UUID does not match any delivery profile
+
+**Example — run with explicit assertions:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/qc/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "artifact_path": "/data/renders/output.mp4",
+    "assertions": {
+      "loudness_integrated": -14.0,
+      "true_peak": -1.0,
+      "clipping": 0.0
+    }
+  }'
+```
+
+**Example — run measurement-only (no assertions):**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/qc/run \
+  -H "Content-Type: application/json" \
+  -d '{"artifact_path": "/data/renders/output.mp4"}'
+```
+
+---
+
+### GET /api/v1/qc/reports/{report_id}
+
+Fetch a QC report by its UUID.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `report_id` | string | QC report UUID |
+
+**Response (200):**
+
+Returns a `QCReportResponse` (same shape as `POST /api/v1/qc/run`).
+
+**Errors:**
+
+- 404 `QC_REPORT_NOT_FOUND` -- No report exists with the given UUID
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/qc/reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+---
+
+### GET /api/v1/render/{job_id}/qc
+
+Retrieve the most recent QC report associated with a render job. When multiple reports exist for the same job, the latest by `created_at` is returned.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | string | Render job UUID |
+
+**Response (200):**
+
+Returns a `QCReportResponse` (same shape as `POST /api/v1/qc/run`).
+
+**Errors:**
+
+- 404 `QC_REPORT_NOT_FOUND` -- No QC report found for the given render job
+
+**Example:**
+
+```bash
+curl http://localhost:8765/api/v1/render/b2c3d4e5-f6a7-8901-bcde-f12345678901/qc
+```
+
+---
+
 ## WebSocket
 
 ### WS /ws
@@ -1753,3 +1907,35 @@ elif isinstance(detail, list):
 | `supports_hw_accel` | boolean | Hardware-accelerated encoding available |
 | `supports_two_pass` | boolean | Two-pass encoding supported |
 | `supports_alpha` | boolean | Alpha channel transparency supported |
+
+### QCRunRequest
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `artifact_path` | string | Yes | Absolute local file path to the rendered artifact |
+| `delivery_profile_id` | string (UUID) or null | No | UUID of a delivery profile for assertion targets |
+| `assertions` | object or null | No | Map of `check_id → float` thresholds |
+| `job_id` | string or null | No | Render job UUID to associate with this report |
+
+### QCReportResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | QC report UUID |
+| `job_id` | string or null | Associated render job UUID |
+| `artifact_path` | string | Path to the analyzed artifact |
+| `delivery_profile_id` | string or null | Delivery profile UUID used for assertions |
+| `overall_verdict` | string | `"pass"` when every check passes; `"fail"` otherwise |
+| `checks` | object | Map of check ID → check result (see table below) |
+| `created_at` | datetime | ISO 8601 UTC timestamp |
+
+Each entry in `checks` contains:
+
+| Sub-field | Type | Description |
+|-----------|------|-------------|
+| `measured` | float or null | Value measured from the artifact; null when FFmpeg is unavailable |
+| `target` | float or null | Assertion threshold; null when no assertion was provided |
+| `pass` | boolean or null | `true`/`false` when target is set; `null` when no target was provided |
+| `units` | string | Unit of measurement (e.g. `"LUFS"`, `"dBTP"`, `"ms"`, `"samples"`) |
+
+The 11 check IDs are: `loudness_integrated`, `true_peak`, `clipping`, `unintended_silence`, `loop_seam`, `tone_presence`, `ducking`, `section_arc`, `av_sync`, `decode_integrity`, `chapters_present`. See [POST /api/v1/qc/run](#post-apiv1qcrun) for per-check units and pass conditions.
