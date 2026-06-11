@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 
 from stoat_ferret.api.settings import Settings
 from stoat_ferret.api.websocket.events import EventType
@@ -1513,3 +1515,78 @@ async def test_worker_loop_job_failed_on_executor_failure() -> None:
     final = await repo.get(raw_job.id)
     assert final is not None
     assert final.status == RenderStatus.FAILED, f"Expected FAILED, got {final.status}"
+
+
+# ---------------------------------------------------------------------------
+# render_plan schema contract tests (BL-489)
+# ---------------------------------------------------------------------------
+
+
+class TestRenderPlanSchemaContract:
+    """Contract tests for CreateRenderRequest.render_plan default and description.
+
+    Verifies that:
+    - AC-2: the new default '{"settings": {}}' passes the router's settings-required check
+    - AC-3: omitting 'settings' (e.g. only total_duration) produces 422 PREFLIGHT_FAILED
+    """
+
+    @pytest.fixture
+    def render_client(self) -> Generator[TestClient, None, None]:
+        from stoat_ferret.api.app import create_app
+        from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+        from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+        from stoat_ferret.render.render_repository import InMemoryRenderRepository
+
+        project_repo = AsyncInMemoryProjectRepository()
+        clip_repo = AsyncInMemoryClipRepository()
+        render_repo = InMemoryRenderRepository()
+        mock_svc = MagicMock(spec=RenderService)
+        mock_svc.submit_job = AsyncMock()
+        mock_svc.ffmpeg_available = True
+        app = create_app(
+            project_repository=project_repo,
+            clip_repository=clip_repo,
+            render_repository=render_repo,
+            render_service=mock_svc,
+        )
+        with TestClient(app) as client:
+            yield client
+
+    def test_render_plan_default_passes_preflight(self, render_client: TestClient) -> None:
+        """Default render_plan '{"settings": {}}' passes the router's settings check.
+
+        A non-existent project_id causes 404 PROJECT_NOT_FOUND, proving the settings
+        check was passed (which fires before project resolution).
+        """
+        resp = render_client.post(
+            "/api/v1/render",
+            json={
+                "project_id": "00000000-0000-0000-0000-000000000000",
+                "output_format": "mp4",
+                "quality_preset": "standard",
+                "render_plan": '{"settings": {}}',
+            },
+        )
+        detail = resp.json().get("detail", {})
+        assert detail.get("code") != "PREFLIGHT_FAILED" or "settings" not in detail.get(
+            "message", ""
+        ), (
+            f"render_plan default '{{\"settings\": {{}}}}' should pass the settings check "
+            f"but got PREFLIGHT_FAILED: {detail.get('message')}"
+        )
+
+    def test_render_plan_missing_settings_fails(self, render_client: TestClient) -> None:
+        """render_plan without 'settings' key returns 422 PREFLIGHT_FAILED."""
+        resp = render_client.post(
+            "/api/v1/render",
+            json={
+                "project_id": "00000000-0000-0000-0000-000000000000",
+                "output_format": "mp4",
+                "quality_preset": "standard",
+                "render_plan": json.dumps({"total_duration": 60}),
+            },
+        )
+        assert resp.status_code == 422
+        detail = resp.json().get("detail", {})
+        assert detail.get("code") == "PREFLIGHT_FAILED"
+        assert "settings" in detail.get("message", "")

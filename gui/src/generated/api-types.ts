@@ -3026,8 +3026,8 @@ export interface components {
             encoder?: string | null;
             /**
              * Render Plan
-             * @description Serialized render plan JSON. Required top-level keys: 'settings' (object) and 'total_duration' (float, seconds).
-             * @default {}
+             * @description Serialized render plan JSON. Required top-level key: 'settings' (object).
+             * @default {"settings": {}}
              */
             render_plan: string;
             /**
