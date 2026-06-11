@@ -1,8 +1,12 @@
-"""Unit tests for RenderService worker-path QC integration (BL-477).
+"""Unit tests for RenderService worker-path QC integration (BL-477, BL-488).
 
 Tests that _complete_job() invokes QCService when delivery_profile_id is
 present in render_plan settings, handles exceptions gracefully, and
 transitions to QC_FAILED on a fail verdict.
+
+BL-488 tests verify that delivery-profile assertions (loudness/true-peak
+targets) are built from the profile and passed to run_checks so that
+target and pass values are computed.
 """
 
 from __future__ import annotations
@@ -62,7 +66,21 @@ def _make_qc_report(*, verdict: str = "pass") -> MagicMock:
     return report
 
 
-def _make_service(*, qc_service: object | None = None) -> RenderService:
+def _make_profile(
+    *,
+    loudness_target_lufs: float = -16.0,
+    true_peak_ceiling_dbtp: float = -1.0,
+) -> MagicMock:
+    """Create a mock DeliveryProfile with the given targets."""
+    profile = MagicMock()
+    profile.loudness_target_lufs = loudness_target_lufs
+    profile.true_peak_ceiling_dbtp = true_peak_ceiling_dbtp
+    return profile
+
+
+def _make_service(
+    *, qc_service: object | None = None, dp_repo: object | None = None
+) -> RenderService:
     """Build a RenderService with all dependencies mocked."""
     repo = AsyncMock()
     repo.update_status = AsyncMock()
@@ -94,6 +112,7 @@ def _make_service(*, qc_service: object | None = None) -> RenderService:
         connection_manager=ws,
         settings=settings,
         qc_service=qc_service,  # type: ignore[arg-type]
+        dp_repo=dp_repo,  # type: ignore[arg-type]
     )
 
 
@@ -240,3 +259,112 @@ class TestWorkerPathQC:
 
         statuses = [c.args[1] for c in service._repo.update_status.call_args_list]
         assert RenderStatus.QC_FAILED not in statuses
+
+
+class TestWorkerPathQCAssertions:
+    """BL-488: _complete_job() builds delivery-profile assertions before run_checks."""
+
+    async def test_assertions_populated_from_profile(self) -> None:
+        """BL-488-AC-1/2: Worker path fetches profile and passes assertions to run_checks."""
+        qc_service = AsyncMock()
+        qc_service.run_checks = AsyncMock(return_value=_make_qc_report(verdict="pass"))
+
+        dp_repo = AsyncMock()
+        dp_repo.get_by_id = AsyncMock(
+            return_value=_make_profile(loudness_target_lufs=-16.0, true_peak_ceiling_dbtp=-1.0)
+        )
+
+        service = _make_service(qc_service=qc_service, dp_repo=dp_repo)
+        job = _make_job(with_profile=True)
+
+        with (
+            patch("stoat_ferret.render.service.render_jobs_total"),
+            patch("stoat_ferret.render.service.render_duration_seconds"),
+            patch("stoat_ferret.render.service.render_disk_usage_bytes"),
+        ):
+            await service._complete_job(job)
+
+        dp_repo.get_by_id.assert_awaited_once_with(_PROFILE_ID)
+        qc_service.run_checks.assert_awaited_once()
+        call_kwargs = qc_service.run_checks.call_args.kwargs
+        assert call_kwargs["assertions"] is not None
+        assert call_kwargs["assertions"]["loudness_integrated"] == -16.0
+        assert call_kwargs["assertions"]["true_peak"] == -1.0
+
+    async def test_assertions_none_when_profile_not_found(self) -> None:
+        """BL-488 guard: dp_repo.get_by_id returns None → assertions=None, run_checks called."""
+        qc_service = AsyncMock()
+        qc_service.run_checks = AsyncMock(return_value=_make_qc_report(verdict="pass"))
+
+        dp_repo = AsyncMock()
+        dp_repo.get_by_id = AsyncMock(return_value=None)
+
+        service = _make_service(qc_service=qc_service, dp_repo=dp_repo)
+        job = _make_job(with_profile=True)
+
+        with (
+            patch("stoat_ferret.render.service.render_jobs_total"),
+            patch("stoat_ferret.render.service.render_duration_seconds"),
+            patch("stoat_ferret.render.service.render_disk_usage_bytes"),
+        ):
+            await service._complete_job(job)
+
+        qc_service.run_checks.assert_awaited_once()
+        call_kwargs = qc_service.run_checks.call_args.kwargs
+        assert call_kwargs["assertions"] is None
+
+    async def test_assertions_none_when_dp_repo_raises(self) -> None:
+        """BL-488 guard: dp_repo.get_by_id raises → assertions=None, run_checks still called."""
+        qc_service = AsyncMock()
+        qc_service.run_checks = AsyncMock(return_value=_make_qc_report(verdict="pass"))
+
+        dp_repo = AsyncMock()
+        dp_repo.get_by_id = AsyncMock(side_effect=Exception("db error"))
+
+        service = _make_service(qc_service=qc_service, dp_repo=dp_repo)
+        job = _make_job(with_profile=True)
+
+        with (
+            patch("stoat_ferret.render.service.render_jobs_total"),
+            patch("stoat_ferret.render.service.render_duration_seconds"),
+            patch("stoat_ferret.render.service.render_disk_usage_bytes"),
+        ):
+            await service._complete_job(job)
+
+        qc_service.run_checks.assert_awaited_once()
+        call_kwargs = qc_service.run_checks.call_args.kwargs
+        assert call_kwargs["assertions"] is None
+
+    async def test_assertions_none_when_dp_repo_not_injected(self) -> None:
+        """BL-488 guard: dp_repo=None (not wired) → assertions=None, run_checks still called."""
+        qc_service = AsyncMock()
+        qc_service.run_checks = AsyncMock(return_value=_make_qc_report(verdict="pass"))
+
+        service = _make_service(qc_service=qc_service, dp_repo=None)
+        job = _make_job(with_profile=True)
+
+        with (
+            patch("stoat_ferret.render.service.render_jobs_total"),
+            patch("stoat_ferret.render.service.render_duration_seconds"),
+            patch("stoat_ferret.render.service.render_disk_usage_bytes"),
+        ):
+            await service._complete_job(job)
+
+        qc_service.run_checks.assert_awaited_once()
+        call_kwargs = qc_service.run_checks.call_args.kwargs
+        assert call_kwargs["assertions"] is None
+
+    async def test_inline_path_assertions_unchanged(self) -> None:
+        """BL-488-AC-4: Inline submit path assertions in render.py:538-545 not regressed.
+
+        The inline path is comprehensively tested in
+        tests/test_delivery_profiles.py::test_render_with_delivery_profile_triggers_qc.
+        This test guards that the inline path source was not modified.
+        """
+        import inspect
+
+        from stoat_ferret.api.routers import render as render_router
+
+        source = inspect.getsource(render_router)
+        assert '"loudness_integrated": delivery_profile.loudness_target_lufs' in source
+        assert '"true_peak": delivery_profile.true_peak_ceiling_dbtp' in source
