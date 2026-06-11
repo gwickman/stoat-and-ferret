@@ -185,7 +185,9 @@ async def preview_effect(
             },
         )
 
-    validation_errors = registry.validate(request.effect_type, request.parameters)
+    validation_errors, compiled_expression = registry.validate_with_automation(
+        request.effect_type, request.parameters
+    )
     if validation_errors:
         messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
         logger.warning(
@@ -202,16 +204,29 @@ async def preview_effect(
             },
         )
 
-    try:
-        filter_string = definition.build_fn(request.parameters)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_EFFECT_PARAMS",
-                "message": str(e),
-            },
-        ) from None
+    if compiled_expression is not None:
+        filter_string = registry.build_automation_filter_string(
+            request.effect_type, compiled_expression
+        )
+    else:
+        scalar_params_preview: dict[str, Any] = {
+            name: (
+                value.get("default", 0.0)
+                if isinstance(value, dict) and "keyframes" in value
+                else value
+            )
+            for name, value in request.parameters.items()
+        }
+        try:
+            filter_string = definition.build_fn(scalar_params_preview)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_EFFECT_PARAMS",
+                    "message": str(e),
+                },
+            ) from None
 
     return EffectPreviewResponse(
         effect_type=request.effect_type,
@@ -264,8 +279,10 @@ async def preview_effect_thumbnail(
             },
         )
 
-    # Validate parameters
-    validation_errors = registry.validate(request.effect_type, request.parameters)
+    # Validate parameters (automation envelopes accepted; compiled_expression discarded)
+    validation_errors, _compiled_expression = registry.validate_with_automation(
+        request.effect_type, request.parameters
+    )
     if validation_errors:
         messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
         raise HTTPException(
@@ -276,9 +293,15 @@ async def preview_effect_thumbnail(
             },
         )
 
-    # Build filter string
+    # Build filter string using scalar defaults for the visual frame
+    scalar_params_thumb: dict[str, Any] = {
+        name: (
+            value.get("default", 0.0) if isinstance(value, dict) and "keyframes" in value else value
+        )
+        for name, value in request.parameters.items()
+    }
     try:
-        filter_string = definition.build_fn(request.parameters)
+        filter_string = definition.build_fn(scalar_params_thumb)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -414,24 +437,30 @@ async def apply_effect_to_clip(
         )
 
     # Generate filter string via registered build function.
-    # For automation envelopes, substitute the envelope's default scalar value
-    # so build_fn receives only floats.
-    scalar_params: dict[str, Any] = {
-        name: (
-            value.get("default", 0.0) if isinstance(value, dict) and "keyframes" in value else value
+    # For automation envelopes, use the automation-aware filter string with :eval=frame.
+    if compiled_expression is not None:
+        filter_string = registry.build_automation_filter_string(
+            request.effect_type, compiled_expression
         )
-        for name, value in request.parameters.items()
-    }
-    try:
-        filter_string = definition.build_fn(scalar_params)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_EFFECT_PARAMS",
-                "message": str(e),
-            },
-        ) from None
+    else:
+        scalar_params: dict[str, Any] = {
+            name: (
+                value.get("default", 0.0)
+                if isinstance(value, dict) and "keyframes" in value
+                else value
+            )
+            for name, value in request.parameters.items()
+        }
+        try:
+            filter_string = definition.build_fn(scalar_params)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_EFFECT_PARAMS",
+                    "message": str(e),
+                },
+            ) from None
 
     # Store effect on clip
     effect_entry: dict[str, Any] = {
@@ -548,22 +577,27 @@ async def update_clip_effect(
             },
         )
 
-    scalar_params: dict[str, Any] = {
-        name: (
-            value.get("default", 0.0) if isinstance(value, dict) and "keyframes" in value else value
-        )
-        for name, value in request.parameters.items()
-    }
-    try:
-        filter_string = definition.build_fn(scalar_params)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_EFFECT_PARAMS",
-                "message": str(e),
-            },
-        ) from None
+    if compiled_expression is not None:
+        filter_string = registry.build_automation_filter_string(effect_type, compiled_expression)
+    else:
+        scalar_params: dict[str, Any] = {
+            name: (
+                value.get("default", 0.0)
+                if isinstance(value, dict) and "keyframes" in value
+                else value
+            )
+            for name, value in request.parameters.items()
+        }
+        try:
+            filter_string = definition.build_fn(scalar_params)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_EFFECT_PARAMS",
+                    "message": str(e),
+                },
+            ) from None
 
     effects[index] = {
         "effect_type": effect_type,

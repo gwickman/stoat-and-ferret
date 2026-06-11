@@ -499,7 +499,7 @@ def test_volume_automation_level_follows_curve(tmp_path: Path) -> None:
     assert errors == [], f"validate_with_automation errors: {errors}"
     assert compiled_expression is not None
 
-    filter_str = f"volume='{compiled_expression}'"
+    filter_str = f"volume='{compiled_expression}':eval=frame"
 
     result = _run_ffmpeg_with_filter(input_path, filter_str, output_path)
     if result.returncode != 0:
