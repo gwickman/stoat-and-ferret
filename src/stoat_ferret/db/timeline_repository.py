@@ -232,7 +232,7 @@ class AsyncSQLiteTimelineRepository:
     def _row_to_clip(self, row: Any) -> Clip:
         """Convert a database row to a Clip object.
 
-        Uses dict-style .get() for timeline columns so that rows from
+        Uses dict-style .get() for optional columns so that rows from
         databases that have not yet been migrated still work.
         """
         import json
@@ -241,10 +241,16 @@ class AsyncSQLiteTimelineRepository:
         effects_raw = row["effects_json"]
         effects = json.loads(effects_raw) if effects_raw is not None else None
         row_dict = dict(row)
+        generator_params_raw = row_dict.get("generator_params")
+        generator_params = (
+            json.loads(generator_params_raw) if generator_params_raw is not None else None
+        )
         return Clip(
             id=row["id"],
             project_id=row["project_id"],
-            source_video_id=row["source_video_id"],
+            source_video_id=row_dict.get("source_video_id"),
+            clip_type=row_dict.get("clip_type") or "file",
+            generator_params=generator_params,
             in_point=row["in_point"],
             out_point=row["out_point"],
             timeline_position=row["timeline_position"],

@@ -30,14 +30,18 @@ use crate::timeline::{Duration, Position};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-/// A video clip representing a segment of a source media file.
+/// A video clip representing a segment of a source media file or a generator clip.
 ///
 /// A clip defines a portion of a source video through in and out points,
 /// and optionally includes the source file's total duration for bounds validation.
+/// Generator clips (clip_type="generator") have no source file and instead carry
+/// generator parameters for FFmpeg source filter synthesis.
 ///
 /// # Fields
 ///
-/// - `source_path` - Path to the source media file
+/// - `source_path` - Path to the source media file (empty string for generator clips)
+/// - `clip_type` - Type of clip: "file" (default) or "generator"
+/// - `generator_params` - JSON-encoded generator parameters (None for file clips)
 /// - `in_point` - Start position within the source file (inclusive)
 /// - `out_point` - End position within the source file (exclusive)
 /// - `source_duration` - Total duration of the source file (optional, for validation)
@@ -61,9 +65,15 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct Clip {
-    /// Path to the source media file.
+    /// Path to the source media file (empty string for generator clips).
     #[pyo3(get)]
     pub source_path: String,
+    /// Clip type: "file" or "generator".
+    #[pyo3(get)]
+    pub clip_type: String,
+    /// JSON-encoded generator parameters (None for file clips).
+    #[pyo3(get)]
+    pub generator_params: Option<String>,
     /// Start position within the source file (inclusive).
     #[pyo3(get)]
     pub in_point: Position,
@@ -76,7 +86,7 @@ pub struct Clip {
 }
 
 impl Clip {
-    /// Creates a new clip.
+    /// Creates a new file clip.
     ///
     /// # Arguments
     ///
@@ -107,6 +117,8 @@ impl Clip {
     ) -> Self {
         Self {
             source_path,
+            clip_type: "file".to_string(),
+            generator_params: None,
             in_point,
             out_point,
             source_duration,
@@ -144,11 +156,12 @@ impl Clip {
     ///
     /// # Arguments
     ///
-    /// * `source_path` - Path to the source media file
+    /// * `source_path` - Path to the source media file (pass empty string for generator clips)
     /// * `in_point` - Start position within the source file
     /// * `out_point` - End position within the source file
     /// * `source_duration` - Total duration of the source file (optional)
     #[new]
+    #[pyo3(signature = (source_path, in_point, out_point, source_duration=None))]
     fn py_new(
         source_path: String,
         in_point: Position,
@@ -169,7 +182,8 @@ impl Clip {
     /// Returns a string representation of the clip.
     fn __repr__(&self) -> String {
         format!(
-            "Clip(source_path={:?}, in_point={}, out_point={}, source_duration={:?})",
+            "Clip(clip_type={:?}, source_path={:?}, in_point={}, out_point={}, source_duration={:?})",
+            self.clip_type,
             self.source_path,
             self.in_point.frames(),
             self.out_point.frames(),

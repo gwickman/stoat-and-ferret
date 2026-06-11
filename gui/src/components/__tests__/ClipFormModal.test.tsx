@@ -43,6 +43,7 @@ const mockClip: Clip = {
   id: 'clip-1',
   project_id: 'proj-1',
   source_video_id: 'vid-1',
+  clip_type: 'file',
   in_point: 10,
   out_point: 90,
   timeline_position: 0,

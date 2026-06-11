@@ -332,18 +332,21 @@ class Track:
 class Clip:
     """Video clip within a project.
 
-    Represents a segment of a source video placed on a timeline.
-    Validation is delegated to the Rust core library.
+    Represents a segment of a source video placed on a timeline, or a
+    generator clip that synthesizes audio via FFmpeg source filters.
+    Validation is delegated to the Rust core library for file clips.
     """
 
     id: str
     project_id: str
-    source_video_id: str
+    source_video_id: str | None
     in_point: int  # frames
     out_point: int  # frames
     timeline_position: int  # frames
     created_at: datetime
     updated_at: datetime
+    clip_type: str = field(default="file")
+    generator_params: dict[str, Any] | None = field(default=None)
     effects: list[dict[str, Any]] | None = field(default=None)
     track_id: str | None = field(default=None)
     timeline_start: float | None = field(default=None)
@@ -355,9 +358,10 @@ class Clip:
         return str(uuid.uuid4())
 
     def validate(self, source_path: str, source_duration_frames: int | None = None) -> None:
-        """Validate clip using Rust core.
+        """Validate file clip using Rust core.
 
-        Creates a Rust Clip and validates it. Raises ClipValidationError if invalid.
+        Skipped for generator clips (clip_type='generator'). For file clips,
+        creates a Rust Clip and validates it. Raises ClipValidationError if invalid.
 
         Args:
             source_path: Path to the source video file.
@@ -366,6 +370,9 @@ class Clip:
         Raises:
             ClipValidationError: If clip validation fails.
         """
+        if self.clip_type == "generator":
+            return
+
         from stoat_ferret_core import Clip as RustClip
         from stoat_ferret_core import Duration, Position, validate_clip
 

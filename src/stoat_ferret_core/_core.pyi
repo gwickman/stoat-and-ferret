@@ -68,7 +68,17 @@ class Clip:
 
     @property
     def source_path(self) -> str:
-        """Path to the source media file."""
+        """Path to the source media file (empty string for generator clips)."""
+        ...
+
+    @property
+    def clip_type(self) -> str:
+        """Clip type: 'file' or 'generator'."""
+        ...
+
+    @property
+    def generator_params(self) -> str | None:
+        """JSON-encoded generator parameters (None for file clips)."""
         ...
 
     @property
@@ -2862,6 +2872,33 @@ def estimate_output_size(
     """
     ...
 
+def build_generator_source_filter(params_json: str, duration: float) -> str:
+    """Build an FFmpeg source filter string for a generator clip.
+
+    Args:
+        params_json: JSON string with generator parameters including a 'type' field.
+        duration: Clip duration in seconds.
+
+    Returns:
+        FFmpeg source filter expression string.
+    """
+    ...
+
+def build_generator_render_command(
+    params_json: str, duration: float, output_path: str
+) -> RenderCommand:
+    """Build a complete FFmpeg render command for a generator clip.
+
+    Args:
+        params_json: JSON string with generator parameters including a 'type' field.
+        duration: Clip duration in seconds.
+        output_path: Path to write the rendered output.
+
+    Returns:
+        A RenderCommand with the complete argument list.
+    """
+    ...
+
 # ========== Progress Tracking Types ==========
 
 class FfmpegProgressUpdate:
@@ -3493,6 +3530,6 @@ class PanBuilder:
     def build(self) -> Filter: ...
 
 class ConvolutionReverbBuilder:
-    def __new__(cls, ir_name: str, mix: float) -> "ConvolutionReverbBuilder": ...
+    def __new__(cls, ir_name: str, mix: float) -> ConvolutionReverbBuilder: ...
     def build(self) -> Filter: ...
     def ir_name(self) -> str: ...

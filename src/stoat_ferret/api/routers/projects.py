@@ -349,37 +349,54 @@ async def add_clip(
             detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
         )
 
-    # Lookup the source video for validation
-    video = await video_repo.get(request.source_video_id)
-    if video is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "NOT_FOUND",
-                "message": f"Video {request.source_video_id} not found",
-            },
+    now = datetime.now(timezone.utc)
+
+    if request.clip_type == "generator":
+        # Generator clips have no source video; skip video lookup and Rust validation
+        clip = Clip(
+            id=Clip.new_id(),
+            project_id=project_id,
+            source_video_id=None,
+            clip_type="generator",
+            generator_params=request.generator_params,
+            in_point=request.in_point,
+            out_point=request.out_point,
+            timeline_position=request.timeline_position,
+            created_at=now,
+            updated_at=now,
+        )
+    else:
+        # File clips require a valid source video
+        video = await video_repo.get(request.source_video_id)  # type: ignore[arg-type]
+        if video is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "NOT_FOUND",
+                    "message": f"Video {request.source_video_id} not found",
+                },
+            )
+
+        clip = Clip(
+            id=Clip.new_id(),
+            project_id=project_id,
+            source_video_id=request.source_video_id,
+            clip_type="file",
+            in_point=request.in_point,
+            out_point=request.out_point,
+            timeline_position=request.timeline_position,
+            created_at=now,
+            updated_at=now,
         )
 
-    now = datetime.now(timezone.utc)
-    clip = Clip(
-        id=Clip.new_id(),
-        project_id=project_id,
-        source_video_id=request.source_video_id,
-        in_point=request.in_point,
-        out_point=request.out_point,
-        timeline_position=request.timeline_position,
-        created_at=now,
-        updated_at=now,
-    )
-
-    # Validate using Rust
-    try:
-        clip.validate(source_path=video.path, source_duration_frames=video.duration_frames)
-    except ClipValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "VALIDATION_ERROR", "message": str(e)},
-        ) from None
+        # Validate file clip using Rust
+        try:
+            clip.validate(source_path=video.path, source_duration_frames=video.duration_frames)
+        except ClipValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "VALIDATION_ERROR", "message": str(e)},
+            ) from None
 
     await clip_repo.add(clip)
     return ClipResponse.model_validate(clip)
@@ -424,17 +441,6 @@ async def update_clip(
             detail={"code": "NOT_FOUND", "message": f"Clip {clip_id} not found"},
         )
 
-    # Lookup the source video for validation
-    video = await video_repo.get(clip.source_video_id)
-    if video is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "NOT_FOUND",
-                "message": f"Video {clip.source_video_id} not found",
-            },
-        )
-
     # Apply updates
     if request.in_point is not None:
         clip.in_point = request.in_point
@@ -444,14 +450,25 @@ async def update_clip(
         clip.timeline_position = request.timeline_position
     clip.updated_at = datetime.now(timezone.utc)
 
-    # Validate using Rust
-    try:
-        clip.validate(source_path=video.path, source_duration_frames=video.duration_frames)
-    except ClipValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "VALIDATION_ERROR", "message": str(e)},
-        ) from None
+    if clip.clip_type != "generator":
+        # Lookup the source video for validation (file clips only)
+        video = await video_repo.get(clip.source_video_id)  # type: ignore[arg-type]
+        if video is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "NOT_FOUND",
+                    "message": f"Video {clip.source_video_id} not found",
+                },
+            )
+
+        try:
+            clip.validate(source_path=video.path, source_duration_frames=video.duration_frames)
+        except ClipValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "VALIDATION_ERROR", "message": str(e)},
+            ) from None
 
     await clip_repo.update(clip)
     return ClipResponse.model_validate(clip)

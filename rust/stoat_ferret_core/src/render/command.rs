@@ -371,6 +371,122 @@ pub fn py_estimate_output_size(duration_seconds: f64, codec: &str, quality_prese
 }
 
 // ---------------------------------------------------------------------------
+// Generator source filter
+// ---------------------------------------------------------------------------
+
+/// Builds an FFmpeg source filter string for a generator clip.
+///
+/// Inspects the `type` field in the generator params JSON and returns a
+/// `-filter_complex` source filter expression suitable for audio synthesis.
+///
+/// Supported types:
+/// - `"aevalsrc"`: Arbitrary expression evaluator. Uses `eval=frame` (mandatory per LRN-583)
+///   and `expr` from params. Duration defaults to params `duration` if present.
+/// - `"sine"`: Simple sine wave. Uses `frequency` from params.
+///
+/// Args:
+///     params_json: JSON string with generator parameters.
+///     duration: Clip duration in seconds.
+///
+/// Returns:
+///     A `RenderCommand`-compatible FFmpeg filter_complex expression string.
+pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result<String, String> {
+    let params: serde_json::Value = serde_json::from_str(params_json)
+        .map_err(|e| format!("Invalid generator_params JSON: {e}"))?;
+
+    let filter_type = params
+        .get("type")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "generator_params must have a 'type' field".to_string())?;
+
+    match filter_type {
+        "aevalsrc" => {
+            let expr = params
+                .get("expr")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "aevalsrc params must have an 'expr' field".to_string())?;
+            let dur = params
+                .get("duration")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(duration);
+            Ok(format!(
+                "aevalsrc=expr='{expr}':eval=frame:duration={dur:.6}"
+            ))
+        }
+        "sine" => {
+            let frequency = params
+                .get("frequency")
+                .and_then(|v| v.as_f64())
+                .ok_or_else(|| "sine params must have a 'frequency' field".to_string())?;
+            Ok(format!(
+                "sine=frequency={frequency:.3}:duration={duration:.6}"
+            ))
+        }
+        unknown => Err(format!("Unknown generator type: {unknown:?}")),
+    }
+}
+
+/// Builds a complete FFmpeg render command for a generator clip.
+///
+/// Generator clips use `-filter_complex "source_filter[a]" -map "[a]"` instead of
+/// a file input (`-i file.ext`).
+///
+/// Args:
+///     params_json: JSON string with generator parameters.
+///     duration: Clip duration in seconds.
+///     output_path: Path to write the rendered output.
+///
+/// Returns:
+///     A `RenderCommand` with the complete argument list.
+pub fn build_generator_render_command(
+    params_json: &str,
+    duration: f64,
+    output_path: &str,
+) -> Result<RenderCommand, String> {
+    let source_filter = build_generator_source_filter(params_json, duration)?;
+    let filter_complex = format!("{source_filter}[a]");
+
+    let args = vec![
+        "-filter_complex".to_string(),
+        filter_complex,
+        "-map".to_string(),
+        "[a]".to_string(),
+        "-t".to_string(),
+        format!("{duration:.6}"),
+        "-progress".to_string(),
+        "pipe:1".to_string(),
+        "-y".to_string(),
+        output_path.to_string(),
+    ];
+
+    Ok(RenderCommand {
+        args,
+        output_path: output_path.to_string(),
+        segment_index: 0,
+    })
+}
+
+/// PyO3 binding for `build_generator_source_filter`.
+#[pyfunction]
+#[pyo3(name = "build_generator_source_filter")]
+pub fn py_build_generator_source_filter(params_json: &str, duration: f64) -> PyResult<String> {
+    build_generator_source_filter(params_json, duration)
+        .map_err(pyo3::exceptions::PyValueError::new_err)
+}
+
+/// PyO3 binding for `build_generator_render_command`.
+#[pyfunction]
+#[pyo3(name = "build_generator_render_command")]
+pub fn py_build_generator_render_command(
+    params_json: &str,
+    duration: f64,
+    output_path: &str,
+) -> PyResult<RenderCommand> {
+    build_generator_render_command(params_json, duration, output_path)
+        .map_err(pyo3::exceptions::PyValueError::new_err)
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

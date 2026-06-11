@@ -4525,9 +4525,37 @@
       },
       "ClipCreate": {
         "properties": {
-          "source_video_id": {
+          "clip_type": {
             "type": "string",
+            "enum": [
+              "file",
+              "generator"
+            ],
+            "title": "Clip Type",
+            "default": "file"
+          },
+          "source_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source Video Id"
+          },
+          "generator_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generator Params"
           },
           "in_point": {
             "type": "integer",
@@ -4548,13 +4576,12 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "source_video_id",
           "in_point",
           "out_point",
           "timeline_position"
         ],
         "title": "ClipCreate",
-        "description": "Create clip request."
+        "description": "Create clip request.\n\nSupports both file clips (source_video_id required) and generator clips\n(generator_params required, source_video_id must be null)."
       },
       "ClipEffectsResponse": {
         "properties": {
@@ -4604,8 +4631,31 @@
             "title": "Project Id"
           },
           "source_video_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source Video Id"
+          },
+          "clip_type": {
+            "type": "string",
+            "title": "Clip Type"
+          },
+          "generator_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generator Params"
           },
           "in_point": {
             "type": "integer",
@@ -4643,6 +4693,7 @@
           "id",
           "project_id",
           "source_video_id",
+          "clip_type",
           "in_point",
           "out_point",
           "timeline_position",
@@ -7225,8 +7276,20 @@
             "title": "Project Id"
           },
           "source_video_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source Video Id"
+          },
+          "clip_type": {
+            "type": "string",
+            "title": "Clip Type",
+            "default": "file"
           },
           "track_id": {
             "anyOf": [

@@ -116,7 +116,9 @@ CLIPS_TABLE = """
 CREATE TABLE IF NOT EXISTS clips (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    source_video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE RESTRICT,
+    source_video_id TEXT REFERENCES videos(id) ON DELETE RESTRICT,
+    clip_type TEXT NOT NULL DEFAULT 'file',
+    generator_params TEXT,
     in_point INTEGER NOT NULL,
     out_point INTEGER NOT NULL,
     timeline_position INTEGER NOT NULL,
@@ -395,6 +397,12 @@ CLIPS_TIMELINE_COLUMNS = [
     ("timeline_end", "REAL"),
 ]
 
+# Columns to add to clips table for generator clip support (BL-441).
+CLIPS_GENERATOR_COLUMNS = [
+    ("clip_type", "TEXT NOT NULL DEFAULT 'file'"),
+    ("generator_params", "TEXT"),
+]
+
 
 # Columns to add to projects table for audio mix.
 PROJECTS_AUDIO_MIX_COLUMNS = [
@@ -480,6 +488,23 @@ def _alter_clips_add_timeline_columns(conn: sqlite3.Connection) -> None:
                 raise
 
 
+def _alter_clips_add_generator_columns(conn: sqlite3.Connection) -> None:
+    """Add clip_type and generator_params columns to clips table idempotently.
+
+    Fallback for databases where the alembic batch migration could not apply
+    batch_alter_table (e.g., SQLite FK-reflection edge cases on some platforms).
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in CLIPS_GENERATOR_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
 
@@ -534,6 +559,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(DELIVERY_PROFILES_NAME_INDEX)
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
+    _alter_clips_add_generator_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     _alter_projects_add_audio_baseline_columns(conn)
     _alter_render_jobs_add_partial_columns(conn)
@@ -595,6 +621,23 @@ async def _alter_clips_add_timeline_columns_async(db: aiosqlite.Connection) -> N
         db: aiosqlite database connection.
     """
     for col, col_type in CLIPS_TIMELINE_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
+async def _alter_clips_add_generator_columns_async(db: aiosqlite.Connection) -> None:
+    """Add clip_type and generator_params columns to clips table idempotently (async).
+
+    Fallback for databases where the alembic batch migration could not apply
+    batch_alter_table (e.g., SQLite FK-reflection edge cases on some platforms).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in CLIPS_GENERATOR_COLUMNS:
         try:
             await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError as e:
@@ -670,6 +713,7 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(DELIVERY_PROFILES_NAME_INDEX)
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
+    await _alter_clips_add_generator_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await _alter_projects_add_audio_baseline_columns_async(db)
     await _alter_render_jobs_add_partial_columns_async(db)

@@ -53,6 +53,14 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(command::py_build_concat_command, m)?)?;
     m.add_function(wrap_pyfunction!(command::py_check_output_conflict, m)?)?;
     m.add_function(wrap_pyfunction!(command::py_estimate_output_size, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        command::py_build_generator_source_filter,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        command::py_build_generator_render_command,
+        m
+    )?)?;
 
     // Progress tracking types
     m.add_class::<progress::FfmpegProgressUpdate>()?;
