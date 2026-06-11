@@ -202,13 +202,25 @@ Find an existing project, locate one of its clips, and append an effect by type.
 | 2 | `GET /api/v1/projects/{project_id}/clips` | 200 | Find target `clip_id` by `timeline_position` |
 | 3 | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` | 201 | Apply effect |
 
-### Sample Request Body
+### Sample Request Bodies
 
 ```jsonc
-// 3. Effect apply
+// 3a. Audio volume adjustment
 {
   "effect_type": "volume",
   "parameters": { "volume": 0.5 }
+}
+
+// 3b. Mastering limiter — prevents clipping; limit is in dBFS
+{
+  "effect_type": "mastering_limiter",
+  "parameters": { "limit": -1.0, "attack": 5.0, "release": 50.0 }
+}
+
+// 3c. Loudness normalization — target -14 LUFS (streaming standard)
+{
+  "effect_type": "loudness_normalize",
+  "parameters": { "target_lufs": -14.0, "true_peak": -1.0 }
 }
 ```
 
@@ -225,7 +237,7 @@ Find an existing project, locate one of its clips, and append an effect by type.
 
 ### Error Notes
 
-- Effect type discovery: `GET /api/v1/effects` returns the supported list with parameter schemas.
+- Effect type discovery: `GET /api/v1/effects` returns all 17 supported effects with parameter schemas. DSP categories include voice processing (`noise_reduction`, `deesser`, `deplosive`, `time_stretch`) and mastering (`mastering_limiter`, `loudness_normalize`, `parametric_eq`, `multiband_compressor`).
 - `GET /api/v1/effects/{effect_type}/preview` (POST in some builds) lets you validate parameters before persisting.
 - Step 3 returns `422` for parameter schema violations — payload includes the offending field path.
 

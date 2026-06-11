@@ -28,6 +28,23 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 | Create track | `PUT /api/v1/projects/{project_id}/timeline` `[{"track_type": "video", "label": "V1"}]` | 200 timeline | `tracks[0].id` → track_id |
 | Assign clip to timeline | `POST /api/v1/projects/{project_id}/timeline/clips` `{"clip_id": "<clip_id>", "track_id": "<track_id>", "timeline_start": 0.0, "timeline_end": 5.0}` | 201 clip | timeline positioned |
 | Apply effect | `POST /api/v1/projects/{project_id}/clips/{clip_id}/effects` `{"effect_type": "video_fade", "parameters": {...}}` | 201 effect | applied |
+
+#### Available Effect Types
+
+`GET /api/v1/effects` returns all 17 effects with full parameter schemas and AI hints. The complete set of effect type keys:
+
+| Category | Effect Types |
+|----------|-------------|
+| Video | `text_overlay`, `video_fade`, `crop`, `rotate`, `color_adjust` |
+| Audio | `volume`, `audio_fade`, `noise_reduction`, `deesser`, `deplosive`, `time_stretch` |
+| Transitions | `xfade`, `acrossfade` |
+| Mastering | `mastering_limiter`, `loudness_normalize`, `parametric_eq`, `multiband_compressor` |
+
+Parameter notes for the v077 mastering and voice effects:
+- `deesser.f`: normalized frequency [0.0, 1.0] — **not Hz**
+- `multiband_compressor.threshold`: linear amplitude [0.000976563, 1.0] — **not dB**
+- `mastering_limiter.limit`: ceiling in dBFS (e.g. `-1.0`)
+- `loudness_normalize.target_lufs`: integrated loudness target (e.g. `-14.0` for streaming)
 | Get timeline duration | `GET /api/v1/projects/{project_id}/timeline` | 200 `{duration, ...}` | `duration` → `render_plan.total_duration` |
 | Start render | `POST /api/v1/render` `{"project_id": "<id>", "output_format": "mp4", "quality_preset": "standard", "render_plan": "{\"total_duration\": <duration>, \"settings\": {}}"}` | 201 `{id, status}` | render job id |
 | Poll render status | `GET /api/v1/render/{job_id}` (repeat every 1–2 s until terminal) | 200 `{id, status, progress, ...}` | `status ∈ {completed, failed, cancelled}` → read `output_path` |
