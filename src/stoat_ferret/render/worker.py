@@ -104,7 +104,14 @@ async def build_command_for_job(
     if not clips:
         raise CommandBuildError(f"Project {job.project_id} has no clips in timeline")
 
-    video_id = clips[0].source_video_id
+    first_clip = clips[0]
+    if first_clip.clip_type == "generator":
+        raise CommandBuildError(
+            f"Project {job.project_id}: generator clip rendering not yet supported"
+        )
+    video_id = first_clip.source_video_id
+    if video_id is None:
+        raise CommandBuildError(f"File clip {first_clip.id} has no source_video_id")
     video = await video_repository.get(video_id)
     if video is None or not video.path:
         raise CommandBuildError(f"Video {video_id} not found for project {job.project_id}")

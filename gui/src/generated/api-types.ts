@@ -2865,10 +2865,23 @@ export interface components {
         /**
          * ClipCreate
          * @description Create clip request.
+         *
+         *     Supports both file clips (source_video_id required) and generator clips
+         *     (generator_params required, source_video_id must be null).
          */
         ClipCreate: {
+            /**
+             * Clip Type
+             * @default file
+             * @enum {string}
+             */
+            clip_type: "file" | "generator";
             /** Source Video Id */
-            source_video_id: string;
+            source_video_id?: string | null;
+            /** Generator Params */
+            generator_params?: {
+                [key: string]: unknown;
+            } | null;
             /** In Point */
             in_point: number;
             /** Out Point */
@@ -2906,7 +2919,13 @@ export interface components {
             /** Project Id */
             project_id: string;
             /** Source Video Id */
-            source_video_id: string;
+            source_video_id: string | null;
+            /** Clip Type */
+            clip_type: string;
+            /** Generator Params */
+            generator_params?: {
+                [key: string]: unknown;
+            } | null;
             /** In Point */
             in_point: number;
             /** Out Point */
@@ -4341,7 +4360,12 @@ export interface components {
             /** Project Id */
             project_id: string;
             /** Source Video Id */
-            source_video_id: string;
+            source_video_id: string | null;
+            /**
+             * Clip Type
+             * @default file
+             */
+            clip_type: string;
             /** Track Id */
             track_id: string | null;
             /** Timeline Start */

@@ -97,13 +97,17 @@ class AsyncSQLiteClipRepository:
     async def add(self, clip: Clip) -> Clip:
         """Add a clip to the repository."""
         effects_json = json.dumps(clip.effects) if clip.effects is not None else None
+        generator_params_json = (
+            json.dumps(clip.generator_params) if clip.generator_params is not None else None
+        )
         try:
             await self._conn.execute(
                 """
                 INSERT INTO clips (id, project_id, source_video_id, in_point, out_point,
                                   timeline_position, effects_json, created_at, updated_at,
-                                  track_id, timeline_start, timeline_end)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  track_id, timeline_start, timeline_end,
+                                  clip_type, generator_params)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     clip.id,
@@ -118,6 +122,8 @@ class AsyncSQLiteClipRepository:
                     clip.track_id,
                     clip.timeline_start,
                     clip.timeline_end,
+                    clip.clip_type,
+                    generator_params_json,
                 ),
             )
             await self._conn.commit()
@@ -177,17 +183,23 @@ class AsyncSQLiteClipRepository:
     def _row_to_clip(self, row: Any) -> Clip:
         """Convert a database row to a Clip object.
 
-        Uses dict-style .get() for timeline columns so that rows from
+        Uses dict-style .get() for optional columns so that rows from
         databases that have not yet been migrated still work.
         """
         effects_raw = row["effects_json"]
         effects = json.loads(effects_raw) if effects_raw is not None else None
         # Convert aiosqlite.Row to dict for safe .get() access on new columns
         row_dict = dict(row)
+        generator_params_raw = row_dict.get("generator_params")
+        generator_params = (
+            json.loads(generator_params_raw) if generator_params_raw is not None else None
+        )
         return Clip(
             id=row["id"],
             project_id=row["project_id"],
-            source_video_id=row["source_video_id"],
+            source_video_id=row_dict.get("source_video_id"),
+            clip_type=row_dict.get("clip_type") or "file",
+            generator_params=generator_params,
             in_point=row["in_point"],
             out_point=row["out_point"],
             timeline_position=row["timeline_position"],
