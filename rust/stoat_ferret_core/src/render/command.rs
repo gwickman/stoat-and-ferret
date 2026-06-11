@@ -471,7 +471,7 @@ pub fn build_generator_render_command(
 #[pyo3(name = "build_generator_source_filter")]
 pub fn py_build_generator_source_filter(params_json: &str, duration: f64) -> PyResult<String> {
     build_generator_source_filter(params_json, duration)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+        .map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
 /// PyO3 binding for `build_generator_render_command`.
@@ -483,7 +483,7 @@ pub fn py_build_generator_render_command(
     output_path: &str,
 ) -> PyResult<RenderCommand> {
     build_generator_render_command(params_json, duration, output_path)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+        .map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
 // ---------------------------------------------------------------------------

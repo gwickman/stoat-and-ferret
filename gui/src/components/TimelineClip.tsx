@@ -41,7 +41,9 @@ export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onS
       }}
       aria-pressed={isSelected}
     >
-      {trackType === 'audio' && <AudioWaveform videoId={clip.source_video_id} />}
+      {trackType === 'audio' && clip.source_video_id && (
+        <AudioWaveform videoId={clip.source_video_id} />
+      )}
       <span
         data-testid={`clip-duration-${clip.id}`}
         className="relative truncate px-1 text-gray-200"

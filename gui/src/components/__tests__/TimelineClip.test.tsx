@@ -7,6 +7,7 @@ const makeClip = (overrides: Partial<ClipType> = {}): ClipType => ({
   id: 'clip-1',
   project_id: 'proj-1',
   source_video_id: 'vid-1',
+  clip_type: 'file',
   track_id: 'track-1',
   timeline_start: 1,
   timeline_end: 4,
