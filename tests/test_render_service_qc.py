@@ -12,11 +12,17 @@ target and pass values are computed.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.service import RenderService
+
+STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 
 # ---------------------------------------------------------------------------
 # Test data helpers
@@ -368,3 +374,64 @@ class TestWorkerPathQCAssertions:
         source = inspect.getsource(render_router)
         assert '"loudness_integrated": delivery_profile.loudness_target_lufs' in source
         assert '"true_peak": delivery_profile.true_peak_ceiling_dbtp' in source
+
+
+@pytest.mark.skipif(
+    not STOAT_TEST_FFMPEG,
+    reason="requires FFmpeg (STOAT_TEST_FFMPEG=1); deferred_post_merge — BL-488-AC-5",
+)
+class TestWorkerQCContractFFmpeg:
+    """BL-488-AC-5: FFmpeg-gated contract test — deferred_post_merge.
+
+    Discharge: set STOAT_TEST_FFMPEG=1 and run:
+        uv run pytest tests/test_render_service_qc.py::TestWorkerQCContractFFmpeg -v
+    """
+
+    async def test_qc_assertions_non_null_with_delivery_profile(self, tmp_path: Path) -> None:
+        """BL-488-AC-5: QCService produces non-null target and pass with delivery assertions."""
+        import asyncio
+
+        from stoat_ferret.api.services.qc_service import QCService
+        from stoat_ferret.api.websocket.manager import ConnectionManager
+        from stoat_ferret.db.qc_repository import InMemoryQCReportRepository
+
+        sine_path = tmp_path / "sine.wav"
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=5",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            str(sine_path),
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await proc.wait()
+        assert proc.returncode == 0, "ffmpeg sine fixture generation failed"
+
+        ws = MagicMock(spec=ConnectionManager)
+        ws.broadcast = AsyncMock()
+        repo = InMemoryQCReportRepository()
+        settings = MagicMock()
+        qc_service = QCService(repository=repo, connection_manager=ws, settings=settings)
+
+        assertions = {"loudness_integrated": -16.0, "true_peak": -1.0}
+        report = await qc_service.run_checks(
+            artifact_path=str(sine_path),
+            job_id="test-contract-job",
+            delivery_profile_id="test-profile-001",
+            assertions=assertions,
+        )
+
+        checks = json.loads(report.checks)
+        loudness = checks["loudness_integrated"]
+        true_peak = checks["true_peak"]
+        assert loudness["target"] is not None, "loudness_integrated.target must be non-null"
+        assert loudness["pass"] is not None, "loudness_integrated.pass must be non-null"
+        assert true_peak["target"] is not None, "true_peak.target must be non-null"
+        assert true_peak["pass"] is not None, "true_peak.pass must be non-null"
