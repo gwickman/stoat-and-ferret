@@ -435,7 +435,7 @@ curl -s -X POST http://localhost:8765/api/v1/render \
         "project_id": "cad33e49-799e-4bcf-9bbe-839301b95551",
         "output_format": "mp4",
         "quality_preset": "standard",
-        "render_plan": "{}"
+        "render_plan": "{\"settings\": {}}"
       }'
 ```
 
@@ -671,7 +671,7 @@ curl -s -w "\n%{http_code}\n" http://localhost:8765/api/v1/projects/nonexistent
 
 curl -s -w "\n%{http_code}\n" -X POST http://localhost:8765/api/v1/render \
   -H "Content-Type: application/json" \
-  -d '{"project_id":"nonexistent","output_format":"xyz","quality_preset":"standard","render_plan":"{}"}'
+  -d '{"project_id":"nonexistent","output_format":"xyz","quality_preset":"standard","render_plan":"{\"settings\":{}}"}'
 # {"detail":{"code":"INVALID_FORMAT","message":"Invalid output format: xyz. Valid: ['mp4', 'webm', 'mov', 'mkv']"}}
 # 400
 ```
