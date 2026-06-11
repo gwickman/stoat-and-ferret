@@ -717,7 +717,7 @@ List all available effects with their metadata, JSON parameter schemas, AI hints
       "automatable_parameters": []
     }
   ],
-  "total": 9
+  "total": 17
 }
 ```
 
@@ -739,6 +739,171 @@ Each effect object includes the following fields:
 ```bash
 curl http://localhost:8765/api/v1/effects
 ```
+
+#### Effect Parameter Schemas
+
+The 17 available effects and their parameter schemas are listed below. Discover the full live schemas via `GET /api/v1/effects`.
+
+**Voice / Audio Processing Effects (v077+)**
+
+`noise_reduction` — Reduce background noise from audio.
+
+```json
+{
+  "effect_type": "noise_reduction",
+  "parameters": {
+    "sensitivity": 0.5
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `sensitivity` | float | [0.0, 1.0] | 0.5 | Noise reduction aggressiveness; higher values remove more noise |
+
+---
+
+`deesser` — Reduce sibilance ("s"/"sh" sounds) in vocal audio.
+
+```json
+{
+  "effect_type": "deesser",
+  "parameters": {
+    "f": 0.5,
+    "m": 0.5
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `f` | float | [0.0, 1.0] | 0.5 | Normalized crossover frequency (0 = low, 1 = high); **not Hz** |
+| `m` | float | [0.0, 1.0] | 0.5 | Detection mode blend |
+
+---
+
+`deplosive` — Attenuate plosive transients ("p"/"b" sounds) in vocal audio.
+
+```json
+{
+  "effect_type": "deplosive",
+  "parameters": {
+    "threshold": -20.0,
+    "ratio": 4.0
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `threshold` | float | dB | -20.0 | Level above which plosive suppression activates |
+| `ratio` | float | [1.0, 20.0] | 4.0 | Suppression ratio |
+
+---
+
+`time_stretch` — Change playback speed without affecting pitch.
+
+```json
+{
+  "effect_type": "time_stretch",
+  "parameters": {
+    "rate": 1.25
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `rate` | float | [0.5, 2.0] | 1.0 | Playback rate multiplier; 0.5 = half speed, 2.0 = double speed |
+
+---
+
+**Mastering Effects (v077+)**
+
+`mastering_limiter` — Brick-wall limiter to prevent output clipping.
+
+```json
+{
+  "effect_type": "mastering_limiter",
+  "parameters": {
+    "limit": -1.0,
+    "attack": 5.0,
+    "release": 50.0
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `limit` | float | dBFS | -1.0 | Ceiling level in dBFS; output will not exceed this value |
+| `attack` | float | ms | 5.0 | Attack time in milliseconds |
+| `release` | float | ms | 50.0 | Release time in milliseconds |
+
+---
+
+`loudness_normalize` — Normalize integrated loudness to a target LUFS level.
+
+```json
+{
+  "effect_type": "loudness_normalize",
+  "parameters": {
+    "target_lufs": -14.0,
+    "true_peak": -1.0
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `target_lufs` | float | LUFS | -14.0 | Target integrated loudness (e.g. -14 LUFS for streaming platforms) |
+| `true_peak` | float | dBTP | -1.0 | Maximum true-peak level in dBTP |
+
+---
+
+`parametric_eq` — Multi-band parametric equalizer.
+
+```json
+{
+  "effect_type": "parametric_eq",
+  "parameters": {
+    "bands": [
+      {"freq": 100, "gain": -3.0, "q": 0.7, "type": "highpass"},
+      {"freq": 3000, "gain": 2.0, "q": 1.4, "type": "peak"},
+      {"freq": 12000, "gain": 1.5, "q": 0.7, "type": "highshelf"}
+    ]
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bands[].freq` | float | Center or cutoff frequency in Hz |
+| `bands[].gain` | float | Gain in dB (not used for highpass/lowpass types) |
+| `bands[].q` | float | Q factor / bandwidth |
+| `bands[].type` | string | Filter type: `lowpass`, `highpass`, `peak`, `lowshelf`, `highshelf`, `notch` |
+
+---
+
+`multiband_compressor` — Frequency-band compressor for mastering control.
+
+```json
+{
+  "effect_type": "multiband_compressor",
+  "parameters": {
+    "threshold": 0.25,
+    "ratio": 4.0,
+    "attack": 10.0,
+    "release": 100.0
+  }
+}
+```
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `threshold` | float | [0.000976563, 1.0] | 0.25 | Compression threshold as **linear amplitude** (not dB); 1.0 = 0 dBFS, ~0.001 = -60 dBFS |
+| `ratio` | float | [1.0, 20.0] | 4.0 | Compression ratio |
+| `attack` | float | ms | 10.0 | Attack time in milliseconds |
+| `release` | float | ms | 100.0 | Release time in milliseconds |
 
 ---
 
