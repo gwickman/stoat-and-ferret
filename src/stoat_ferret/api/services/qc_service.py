@@ -1,4 +1,4 @@
-"""QCService orchestrating 11 analysis passes over rendered artifacts.
+"""QCService orchestrating 12 analysis passes over rendered artifacts.
 
 Runs FFmpeg analysis filters, parses output via Rust bindings, compares
 against targets from a delivery profile or explicit assertion set, persists
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from asyncio.subprocess import PIPE
 from collections.abc import Callable
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
-# Canonical check ID list — order is fixed, all 11 must appear in every report.
+# Canonical check ID list — order is fixed, all 12 must appear in every report.
 ALL_CHECK_IDS: list[str] = [
     "loudness_integrated",
     "true_peak",
@@ -40,6 +41,7 @@ ALL_CHECK_IDS: list[str] = [
     "av_sync",
     "decode_integrity",
     "chapters_present",
+    "spatial_correlation",
 ]
 
 # Default result for a missing or failed check (FFmpeg unavailable).
@@ -80,7 +82,7 @@ def _make_check(
 
 
 class QCService:
-    """Orchestrates all 11 QC analysis passes over a rendered artifact."""
+    """Orchestrates all 12 QC analysis passes over a rendered artifact."""
 
     def __init__(
         self,
@@ -223,6 +225,7 @@ class QCService:
             "av_sync": self._check_av_sync,
             "decode_integrity": self._check_decode_integrity,
             "chapters_present": self._check_chapters_present,
+            "spatial_correlation": self._check_spatial_correlation,
         }
         fn = dispatch[check_id]
         return cast(dict[str, Any], await fn(artifact_path=artifact_path, target=target))
@@ -572,3 +575,35 @@ class QCService:
             pass_override=pass_val,
             metadata={"chapters_ordered": chapters_ordered},
         )
+
+    async def _check_spatial_correlation(
+        self, *, artifact_path: str, target: float | None
+    ) -> dict[str, Any]:
+        """Measure L/R stereo correlation via astats filter.
+
+        Returns a ratio in [-1.0, 1.0] where 1.0 = perfectly mono (fully correlated)
+        and lower values indicate stereo divergence (panning or spatial movement).
+        Pass when correlation <= target (i.e., sufficient L/R divergence exists).
+        """
+        _, stderr, rc = await self._run_ffmpeg(
+            "-i",
+            artifact_path,
+            "-af",
+            "astats=measure_overall=Correlation",
+            "-f",
+            "null",
+            "/dev/null",
+        )
+        if rc != 0 and not stderr:
+            return dict(_NULL_CHECK)
+        match = re.search(r"Overall[^:]*Correlation[^:]*:\s*([-\d.]+)", stderr)
+        if not match:
+            return _make_check(None, target, "ratio")
+        try:
+            measured = float(match.group(1))
+        except ValueError:
+            return _make_check(None, target, "ratio")
+        if target is None:
+            return _make_check(measured, None, "ratio")
+        pass_val = measured <= target
+        return _make_check(measured, target, "ratio", pass_override=pass_val)

@@ -23,6 +23,7 @@ from stoat_ferret_core import (
     LoudnormBuilder,
     MultibandCompressorBuilder,
     NoiseReductionBuilder,
+    PanBuilder,
     ParametricEqBuilder,
     SpeedControl,
     TimeStretchBuilder,
@@ -1435,6 +1436,60 @@ MULTIBAND_COMPRESSOR = EffectDefinition(
 )
 
 
+def _build_pan(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for stereo pan effect.
+
+    Args:
+        parameters: Effect parameters with required 'position' key in [-1.0, 1.0].
+
+    Returns:
+        FFmpeg pan or aeval filter string.
+    """
+    position = float(parameters.get("position", 0.0))
+    builder = PanBuilder(position)
+    if "automation" in parameters:
+        builder = builder.with_automation(parameters["automation"])
+    return str(builder.build())
+
+
+def _pan_preview() -> str:
+    """Generate a filter preview for pan with default parameters."""
+    return str(PanBuilder(0.5).build())
+
+
+PAN = EffectDefinition(
+    name="pan",
+    description="Position a mono source in the stereo field with optional time-varying automation.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "position": {
+                "type": "number",
+                "minimum": -1.0,
+                "maximum": 1.0,
+                "description": "Stereo position: -1.0 = full left, 0.0 = center, 1.0 = full right.",
+            },
+        },
+        "required": ["position"],
+    },
+    ai_hints={
+        "position": (
+            "Stereo position in [-1.0, 1.0]. "
+            "-1.0 = hard left, 0.0 = center, 1.0 = hard right. "
+            "Use fractional values for subtle positioning (e.g., 0.3 for slightly right)."
+        ),
+    },
+    preview_fn=_pan_preview,
+    build_fn=_build_pan,
+    ai_summary=(
+        "Position a mono audio source in the stereo field. "
+        "Supports static positioning and gradual movement via automation envelopes."
+    ),
+    example_prompt="Pan the voice slightly to the right at position 0.3.",
+    automatable=frozenset({"position"}),
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1461,4 +1516,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("loudness_normalize", LOUDNESS_NORMALIZE)
     registry.register("parametric_eq", PARAMETRIC_EQ)
     registry.register("multiband_compressor", MULTIBAND_COMPRESSOR)
+    registry.register("pan", PAN)
     return registry

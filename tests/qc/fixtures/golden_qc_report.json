@@ -13,6 +13,7 @@
     "section_arc": {"measured": null, "target": null, "pass": null, "units": "LU"},
     "av_sync": {"measured": null, "target": null, "pass": null, "units": "ms"},
     "decode_integrity": {"measured": null, "target": null, "pass": null, "units": "errors"},
-    "chapters_present": {"measured": null, "target": null, "pass": null, "units": "chapters"}
+    "chapters_present": {"measured": null, "target": null, "pass": null, "units": "chapters"},
+    "spatial_correlation": {"measured": null, "target": null, "pass": null, "units": "ratio"}
   }
 }
