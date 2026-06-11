@@ -193,3 +193,23 @@ class EffectRegistry:
                 errors.append(EffectValidationError(path=path, message=error.message))
 
         return errors, compiled_expression
+
+    def build_automation_filter_string(self, effect_type: str, compiled_expression: str) -> str:
+        """Build a filter string for a time-varying expression.
+
+        Includes :eval=frame so FFmpeg evaluates the expression per frame
+        instead of once at stream start (the default eval=once mode).
+
+        Args:
+            effect_type: The effect type identifier (e.g., "volume").
+            compiled_expression: The Rust-compiled FFmpeg expression string.
+
+        Returns:
+            The full FFmpeg filter string with :eval=frame appended.
+
+        Raises:
+            ValueError: If the effect type does not support automation filter strings.
+        """
+        if effect_type == "volume":
+            return f"volume='{compiled_expression}':eval=frame"
+        raise ValueError(f"No automation filter string for effect_type: {effect_type}")
