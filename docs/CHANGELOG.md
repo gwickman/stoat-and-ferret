@@ -4,6 +4,44 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v078 — QC Integrity, DSP Correctness & R2 Doc Parity (2026-06-11)
+
+### Added
+
+- **automatable_parameters field**: `automatable_parameters: list[str]` on `EffectResponse`; clients can discover which parameters support automation envelopes (BL-481, PR #555)
+- **Preview automation envelope support**: VOLUME effect preview reflects automation envelope via `eval=frame` fix (BL-479+BL-482, PR #553)
+- **QA smoke tests**: Automatable-params, worker QC path, and preview automation smoke tests in `tests/smoke/` (PR #556)
+
+### Fixed
+
+- **QC loudness calculation**: Fixed `QCService` ebur128→loudnorm metric mapping that returned null integrated loudness values (BL-476, PR #550)
+- **Worker-path QC wiring**: `RenderService` now calls `QCService` after render completes; QC results stored and surfaced via render status (BL-477, PR #551)
+- **Deesser parameter normalization**: `DeesserBuilder` frequency converted from Hz to `[0,1]` range before FFmpeg filter string construction (BL-478, PR #552)
+- **Multiband compressor threshold normalization**: `MultibandCompressorBuilder` threshold converted from dB to linear before FFmpeg filter string construction (BL-478, PR #552)
+- **Volume automation frame evaluation**: `eval=frame` added to volume filter to ensure automation curve is applied per-frame (BL-479+BL-482, PR #553)
+- **QC-fail GUI surfaces**: `RenderJobCard` displays QC status badge and remaster button on QC failure; `uat_runner.py` false-green fix (BL-480, PR #562)
+- **Pitch stability regression**: Librosa-based pitch stability test corrected (BL-435, PR #554)
+
+### Documentation
+
+- **8 new DSP effects**: Agent docs for NoiseReductionBuilder, DeesserBuilder, DeplosiveBuilder, TimeStretchBuilder, LimiterBuilder, LoudnormBuilder, ParametricEqBuilder, MultibandCompressorBuilder in api-reference, operator-guide, and prompt-recipes (BL-483, PR #559)
+- **QC endpoints**: `/qc/run`, `/qc/reports/{id}`, `/render/{job_id}/qc` documented in api-reference and operator-guide (BL-484, PR #560)
+- **Delivery profiles CRUD**: `delivery_profiles` CRUD endpoints and name-vs-UUID distinction documented (BL-485, PR #561)
+- **C4 documentation**: Routers doc updated, effects count corrected from 9 to 17 across 14 locations (BL-469, PR #558)
+- **Smoke-test harness guide**: Updated with new DSP contract test section (PR #557)
+
+### Deferred (FFmpeg-gated / UAT-gated)
+
+- BL-476-AC-4: Golden QC fixture regeneration — `STOAT_TEST_FFMPEG=1 uv run pytest tests/qc/ --update-golden`
+- BL-477-AC-3: Worker-path QC E2E — `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py`
+- BL-478-AC-1/2: Deesser and multiband FFmpeg behavioral tests — `STOAT_TEST_FFMPEG=1 uv run pytest tests/effects/test_voice_repair_ffmpeg.py tests/effects/test_mastering_ffmpeg.py`
+- BL-479-AC-1: Volume automation render level — `STOAT_TEST_FFMPEG=1 uv run pytest tests/effects/test_mastering_ffmpeg.py::test_volume_automation_level_follows_curve`
+- BL-480-AC-1: j_qc_fail headed UAT journey — `python scripts/uat_runner.py --journey j_qc_fail` on Windows with headed Chromium
+
+### PRs
+
+#550, #551, #552, #553, #554, #555, #556, #557, #558, #559, #560, #561, #562, #563
+
 ## v077 — Release 2, Wave 2: Mastering + Voice Prep (2026-06-09)
 
 ### Added
