@@ -116,7 +116,9 @@ CLIPS_TABLE = """
 CREATE TABLE IF NOT EXISTS clips (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    source_video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE RESTRICT,
+    source_video_id TEXT REFERENCES videos(id) ON DELETE RESTRICT,
+    clip_type TEXT NOT NULL DEFAULT 'file',
+    generator_params TEXT,
     in_point INTEGER NOT NULL,
     out_point INTEGER NOT NULL,
     timeline_position INTEGER NOT NULL,

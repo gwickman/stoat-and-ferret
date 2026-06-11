@@ -60,7 +60,8 @@ class TimelineClipResponse(BaseModel):
 
     id: str
     project_id: str
-    source_video_id: str
+    source_video_id: str | None
+    clip_type: str = "file"
     track_id: str | None
     timeline_start: float | None
     timeline_end: float | None
