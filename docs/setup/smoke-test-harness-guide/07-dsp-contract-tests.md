@@ -38,6 +38,10 @@ All 9 v077 effect types have FFmpeg-gated contract tests:
 | De-plosive | `deplosive` | `tests/effects/test_voice_repair_ffmpeg.py` |
 | Time-stretch | `time_stretch` | `tests/effects/test_voice_repair_ffmpeg.py` |
 
+### v078: eval=frame requirement for volume automation
+
+v078 (PR #553, BL-479) changed the volume effect filter to include `eval=frame` so that keyframe automation envelopes are evaluated per-frame rather than at filter init. The FFmpeg-gated contract test in `test_mastering_ffmpeg.py` covers this effect; any future update to volume filter generation that removes `eval=frame` will break keyframe-driven automation. See also `tests/smoke/test_effects.py::test_preview_accepts_automation_envelope` (BL-482) for the API-level smoke regression.
+
 ### EXPECTED_EFFECT_TYPES completeness check
 
 `tests/test_api/test_effects.py` contains a constant `EXPECTED_EFFECT_TYPES` — the authoritative set of registered effect type strings. This set must include every effect type registered in the Rust core. When a new effect type is added, the corresponding type string must be added to `EXPECTED_EFFECT_TYPES`; failure to do so causes the effects catalog test to raise a missing-registration error.
