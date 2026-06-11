@@ -16,7 +16,7 @@ import pytest
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 
-pytestmark = pytest.mark.skipif(
+_requires_ffmpeg = pytest.mark.skipif(
     not STOAT_TEST_FFMPEG,
     reason="requires FFmpeg (STOAT_TEST_FFMPEG=1)",
 )
@@ -158,6 +158,7 @@ def _apply_filter(input_path: Path, output_path: Path, filter_str: str) -> None:
         )
 
 
+@_requires_ffmpeg
 def test_noise_reduction_broadband_lowers_noise_floor(tmp_path: Path) -> None:
     """BL-433-AC-1: broadband mode lowers measured noise floor on a noisy fixture."""
     if not _ffmpeg_available():
@@ -184,6 +185,7 @@ def test_noise_reduction_broadband_lowers_noise_floor(tmp_path: Path) -> None:
     )
 
 
+@_requires_ffmpeg
 def test_noise_reduction_adeclick_removes_clicks(tmp_path: Path) -> None:
     """BL-433-AC-2/AC-3: adeclick mode renders without error on a click fixture."""
     if not _ffmpeg_available():
@@ -259,6 +261,7 @@ def _measure_band_energy(audio_path: Path, low_hz: int, high_hz: int) -> float:
     pytest.skip(f"Could not parse volumedetect output for band energy: {output!r}")
 
 
+@_requires_ffmpeg
 def test_deesser_reduces_sibilant_energy(tmp_path: Path) -> None:
     """BL-434-AC-1: deesser renders without error on a sibilant fixture."""
     if not _ffmpeg_available():
@@ -274,7 +277,8 @@ def test_deesser_reduces_sibilant_energy(tmp_path: Path) -> None:
     builder = DeesserBuilder(7000.0).mode("wide")
     filter_str = str(builder.build())
     assert "deesser" in filter_str, f"Expected deesser in filter string, got: {filter_str}"
-    assert "f=7000" in filter_str, f"Expected f=7000 in filter string, got: {filter_str}"
+    # 7000 Hz / 22050 Hz ≈ 0.317460 (normalized to [0, 1])
+    assert "f=0.317460" in filter_str, f"Expected f=0.317460 in filter string, got: {filter_str}"
 
     # AC-1: renders without error against real FFmpeg
     _apply_filter(sibilant_path, deessed_path, filter_str)
@@ -282,6 +286,7 @@ def test_deesser_reduces_sibilant_energy(tmp_path: Path) -> None:
     assert deessed_path.stat().st_size > 0, "deesser output file is empty"
 
 
+@_requires_ffmpeg
 def test_deplosive_attenuates_low_freq_burst(tmp_path: Path) -> None:
     """BL-434-AC-2/AC-3: deplosive FilterChain renders without error."""
     if not _ffmpeg_available():
@@ -329,6 +334,7 @@ def _measure_duration(audio_path: Path) -> float:
         pytest.skip(f"Could not parse duration from ffprobe output: {output!r}")
 
 
+@_requires_ffmpeg
 def test_time_stretch_duration_matches_factor(tmp_path: Path) -> None:
     """BL-435-AC-1/AC-2: atempo mode stretches duration by the given factor."""
     if not _ffmpeg_available():
@@ -377,7 +383,21 @@ def test_time_stretch_duration_matches_factor(tmp_path: Path) -> None:
     )
 
 
+@_requires_ffmpeg
+@_requires_ffmpeg
 @pytest.mark.skip(reason="BL-435-AC-3: deferred_post_merge, requires rubberband + librosa")
 def test_time_stretch_spectral_centroid_stable(tmp_path: Path) -> None:
     """BL-435-AC-3: rubberband mode preserves spectral centroid (pitch-invariant stretch)."""
     pass
+
+
+def test_deesser_f_in_valid_range() -> None:
+    """BL-478-AC-3: DeesserBuilder emits f in [0, 1] for all valid Hz inputs (no FFmpeg needed)."""
+    from stoat_ferret_core import DeesserBuilder
+
+    for hz in [1000.0, 3000.0, 7000.0, 10000.0, 16000.0]:
+        filter_str = str(DeesserBuilder(hz).build())
+        f_match = re.search(r"f=([\d.]+)", filter_str)
+        assert f_match, f"f= not found in filter string: {filter_str}"
+        f_value = float(f_match.group(1))
+        assert 0.0 <= f_value <= 1.0, f"f={f_value} out of [0, 1] for Hz={hz}"

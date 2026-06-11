@@ -212,7 +212,7 @@ impl NoiseReductionBuilder {
 /// use stoat_ferret_core::ffmpeg::voice_repair::DeesserBuilder;
 ///
 /// let filter = DeesserBuilder::new(6000.0).unwrap().build();
-/// assert!(filter.to_string().starts_with("deesser=f=6000"));
+/// assert!(filter.to_string().starts_with("deesser=f=0.272109"));
 /// ```
 #[gen_stub_pyclass]
 #[pyclass]
@@ -262,11 +262,16 @@ impl DeesserBuilder {
 
     /// Builds the de-esser Filter.
     ///
-    /// Emits `deesser=f=<freq>:m=<mode>`.
+    /// Normalizes frequency to [0, 1] range required by FFmpeg deesser filter.
+    /// Assumes 44100 Hz sample rate (Nyquist = 22050 Hz).
+    /// TODO: Accept sample_rate parameter for sample-rate-aware normalization.
+    ///
+    /// Emits `deesser=f=<normalized>:m=<mode>`.
     #[must_use]
     pub fn build(&self) -> Filter {
+        let f_normalized = self.frequency / 22050.0;
         Filter::new("deesser")
-            .param("f", format!("{}", self.frequency as u32))
+            .param("f", format!("{f_normalized:.6}"))
             .param("m", self.mode.clone())
     }
 }
@@ -692,7 +697,7 @@ mod tests {
     #[test]
     fn test_deesser_default_mode() {
         let filter = DeesserBuilder::new(3000.0).unwrap().build();
-        assert_eq!(filter.to_string(), "deesser=f=3000:m=wide");
+        assert_eq!(filter.to_string(), "deesser=f=0.136054:m=wide");
     }
 
     #[test]
@@ -702,7 +707,7 @@ mod tests {
             .with_mode("split")
             .unwrap()
             .build();
-        assert_eq!(filter.to_string(), "deesser=f=5000:m=split");
+        assert_eq!(filter.to_string(), "deesser=f=0.226757:m=split");
     }
 
     #[test]
@@ -712,19 +717,37 @@ mod tests {
             .with_mode("wide")
             .unwrap()
             .build();
-        assert_eq!(filter.to_string(), "deesser=f=8000:m=wide");
+        assert_eq!(filter.to_string(), "deesser=f=0.362812:m=wide");
     }
 
     #[test]
     fn test_deesser_frequency_min_boundary() {
         let filter = DeesserBuilder::new(1000.0).unwrap().build();
-        assert!(filter.to_string().starts_with("deesser=f=1000"));
+        assert!(filter.to_string().starts_with("deesser=f=0.045351"));
     }
 
     #[test]
     fn test_deesser_frequency_max_boundary() {
         let filter = DeesserBuilder::new(16000.0).unwrap().build();
-        assert!(filter.to_string().starts_with("deesser=f=16000"));
+        assert!(filter.to_string().starts_with("deesser=f=0.725624"));
+    }
+
+    #[test]
+    fn test_deesser_f_param_in_valid_range() {
+        for hz in [1000.0, 3000.0, 7000.0, 10000.0, 16000.0_f64] {
+            let filter = DeesserBuilder::new(hz).unwrap().build();
+            let s = filter.to_string();
+            let f_str = s
+                .split("f=")
+                .nth(1)
+                .and_then(|t| t.split(':').next())
+                .expect("f= not found in filter string");
+            let f_value: f64 = f_str.parse().expect("f value not parseable as f64");
+            assert!(
+                (0.0..=1.0).contains(&f_value),
+                "f={f_value} out of [0,1] for Hz={hz}: {s}"
+            );
+        }
     }
 
     #[test]
@@ -870,7 +893,7 @@ mod tests {
                 .unwrap()
                 .extract()
                 .unwrap();
-            assert!(filter.starts_with("deesser=f=6000"));
+            assert!(filter.starts_with("deesser=f=0.272109"), "Got: {filter}");
             assert!(filter.contains("m=split"));
             let repr: String = ds.call_method0("__repr__").unwrap().extract().unwrap();
             assert!(repr.contains("DeesserBuilder"));

@@ -27,7 +27,7 @@ from stoat_ferret.effects.definitions import (
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 
-pytestmark = pytest.mark.skipif(
+_requires_ffmpeg = pytest.mark.skipif(
     not STOAT_TEST_FFMPEG,
     reason="requires FFmpeg (STOAT_TEST_FFMPEG=1)",
 )
@@ -122,6 +122,7 @@ def _get_peak_level(audio_path: Path) -> float:
     pytest.skip(f"Could not parse peak level from volumedetect: {output}")
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_limiter_true_peak_ceiling_respected(tmp_path: Path) -> None:
     """alimiter caps true-peak so it does not exceed the configured ceiling (BL-432-AC-1)."""
@@ -148,6 +149,7 @@ def test_limiter_true_peak_ceiling_respected(tmp_path: Path) -> None:
     )
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_limiter_no_clipped_samples(tmp_path: Path) -> None:
     """alimiter produces no clipped samples on loud input (BL-432-AC-2)."""
@@ -172,6 +174,7 @@ def test_limiter_no_clipped_samples(tmp_path: Path) -> None:
     assert peak_db <= 0.0, f"Output peak {peak_db} dBFS indicates clipping"
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_limiter_renders_without_error(tmp_path: Path) -> None:
     """alimiter renders without error (BL-432-AC-3)."""
@@ -219,6 +222,7 @@ def _measure_integrated_loudness(audio_path: Path) -> float:
         pytest.skip(f"Could not measure integrated loudness: {stderr[:500]}")
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_loudnorm_output_within_lufs_tolerance(tmp_path: Path) -> None:
     """Two-pass loudnorm normalizes output to within +/-0.5 LU of target (BL-428-AC-1, AC-3)."""
@@ -259,6 +263,7 @@ def test_loudnorm_output_within_lufs_tolerance(tmp_path: Path) -> None:
     )
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_loudnorm_true_peak_ceiling_respected(tmp_path: Path) -> None:
     """Two-pass loudnorm keeps true-peak at or below configured ceiling (BL-428-AC-2)."""
@@ -298,6 +303,7 @@ def test_loudnorm_true_peak_ceiling_respected(tmp_path: Path) -> None:
     )
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_loudnorm_reads_target_from_delivery_profile(tmp_path: Path) -> None:
     """delivery_profile_target_lufs overrides effect target_lufs (BL-428-AC-4)."""
@@ -408,6 +414,7 @@ def _get_mean_volume_at(audio_path: Path, offset_seconds: float, duration: float
 # ---- parametric_eq contract tests (BL-429) ----
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_parametric_eq_renders_without_error(tmp_path: Path) -> None:
     """anequalizer renders without error with a single-band EQ (BL-429-AC-4)."""
@@ -429,6 +436,7 @@ def test_parametric_eq_renders_without_error(tmp_path: Path) -> None:
     assert output_path.stat().st_size > 0, "Output file is empty"
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_parametric_eq_band_gain_automation_in_filter(tmp_path: Path) -> None:
     """Per-band gain is reflected in the compiled anequalizer filter string (BL-429-AC-3)."""
@@ -460,6 +468,7 @@ def test_parametric_eq_band_gain_automation_in_filter(tmp_path: Path) -> None:
     assert result.returncode == 0, f"Cut render failed: {result.stderr.decode()}"
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_volume_automation_level_follows_curve(tmp_path: Path) -> None:
     """Volume automation envelope: output level rises from quiet to loud (BL-430-AC-2)."""
@@ -510,6 +519,7 @@ def test_volume_automation_level_follows_curve(tmp_path: Path) -> None:
 # ---- multiband_compressor contract tests (BL-431) ----
 
 
+@_requires_ffmpeg
 @pytest.mark.filterwarnings("ignore")
 def test_multiband_compressor_renders_without_error(tmp_path: Path) -> None:
     """multiband compressor renders without error with 3-band default config (BL-431-AC-2)."""
@@ -535,3 +545,30 @@ def test_multiband_compressor_renders_without_error(tmp_path: Path) -> None:
     assert result.returncode == 0, f"FFmpeg returned non-zero exit: {result.stderr.decode()}"
     assert output_path.exists(), "Output file was not created"
     assert output_path.stat().st_size > 0, "Output file is empty"
+
+
+def test_multiband_compressor_threshold_in_valid_range() -> None:
+    """BL-478-AC-3: threshold in [0.000976563, 1] for valid dB inputs (no FFmpeg needed)."""
+    from stoat_ferret_core import MultibandCompressorBuilder
+
+    # acompressor accepts threshold in [0.000976563, 1]; test boundary and mid-range dB inputs
+    test_cases = [
+        [
+            {"threshold": -6.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+            {"threshold": -20.0, "ratio": 3.0, "attack": 5.0, "release": 80.0},
+        ],
+        [
+            {"threshold": -30.0, "ratio": 4.0, "attack": 3.0, "release": 50.0},
+            {"threshold": -60.0, "ratio": 2.0, "attack": 10.0, "release": 100.0},
+        ],
+    ]
+    min_threshold = 0.000_976_563
+    for bands in test_cases:
+        graph_str = str(MultibandCompressorBuilder(bands).build())
+        threshold_matches = re.findall(r"threshold=([\d.]+)", graph_str)
+        assert threshold_matches, f"No threshold= found in filter graph: {graph_str}"
+        for t_str in threshold_matches:
+            t_value = float(t_str)
+            assert min_threshold <= t_value <= 1.0, (
+                f"threshold={t_value} out of [{min_threshold}, 1] in: {graph_str}"
+            )
