@@ -3,6 +3,8 @@
 
 Creates a complete sample project with 4 clips, 5 effects, and 1 transition
 using the canonical project definition from docs/design/sample_project/.
+Also inserts a synthetic QC-fail render row directly into the DB so UAT
+journey J703 can assert qc-status-fail / remaster-btn testids.
 
 Usage:
     python scripts/seed_sample_project.py http://localhost:8765
@@ -14,9 +16,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 import time
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -87,6 +92,12 @@ def parse_args() -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Delete existing sample project and recreate",
+    )
+    parser.add_argument(
+        "--db-path",
+        default="data/stoat.db",
+        help="Path to the SQLite database for direct QC-fail row insertion"
+        " (default: data/stoat.db)",
     )
     return parser.parse_args()
 
@@ -342,6 +353,89 @@ def print_summary(result: SeedResult) -> None:
     print(f"{'=' * 50}\n")
 
 
+def _seed_qc_fail_row(project_id: str, db_path: str) -> str:
+    """Insert a synthetic QC-fail render job and linked QCReport directly into the DB.
+
+    Inserts a render job with status='qc_failed' and a QCReport with
+    overall_verdict='fail' so /gui/render renders the qc-status-fail and
+    remaster-btn testids required by UAT journey J703.  Direct DB insertion
+    is used because the render API cannot produce a qc_failed job without a
+    live FFmpeg cycle.
+
+    Args:
+        project_id: The project to link the render job to.
+        db_path: Path to the SQLite database file.
+
+    Returns:
+        The render job ID of the inserted row.
+    """
+    job_id = str(uuid.uuid4())
+    report_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+
+    checks = json.dumps(
+        {
+            "loudness_integrated": {
+                "measured": -27.0,
+                "target": -16.0,
+                "pass": False,
+                "units": "LUFS",
+            },
+            "true_peak": {"measured": -0.5, "target": -1.0, "pass": False, "units": "dBTP"},
+            "clipping": {"measured": 0.0, "target": None, "pass": None, "units": ""},
+            "unintended_silence": {"measured": 0.0, "target": None, "pass": None, "units": "s"},
+            "loop_seam": {"measured": None, "target": None, "pass": None, "units": ""},
+            "tone_presence": {"measured": None, "target": None, "pass": None, "units": ""},
+            "ducking": {"measured": None, "target": None, "pass": None, "units": ""},
+            "section_arc": {"measured": None, "target": None, "pass": None, "units": ""},
+            "av_sync": {"measured": None, "target": None, "pass": None, "units": "s"},
+            "decode_integrity": {"measured": 1, "target": None, "pass": True, "units": ""},
+            "chapters_present": {"measured": 0, "target": None, "pass": False, "units": ""},
+        }
+    )
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO render_jobs"
+            " (id, project_id, status, output_path, output_format, quality_preset,"
+            "  render_plan, progress, error_message, retry_count, created_at, updated_at,"
+            "  completed_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                job_id,
+                project_id,
+                "qc_failed",
+                "data/renders/seed-qc-fail.mp4",
+                "mp4",
+                "standard",
+                '{"settings": {}}',
+                1.0,
+                None,
+                0,
+                now,
+                now,
+                now,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO qc_reports"
+            " (id, job_id, artifact_path, delivery_profile_id, overall_verdict, checks, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                report_id,
+                job_id,
+                "data/renders/seed-qc-fail.mp4",
+                None,
+                "fail",
+                checks,
+                now,
+            ),
+        )
+        conn.commit()
+
+    return job_id
+
+
 def main() -> None:
     """Run the seed script."""
     args = parse_args()
@@ -389,7 +483,19 @@ def main() -> None:
         print("Verifying...")
         verify_project(client, result)
 
-        # 7. Print summary
+        # 7. Insert synthetic QC-fail row so J703 can assert qc-status-fail / remaster-btn
+        db_path = str(Path(args.db_path).resolve())
+        if Path(db_path).exists():
+            print("Inserting QC-fail seed row...")
+            qc_fail_job_id = _seed_qc_fail_row(result.project_id, db_path)
+            print(f"  QC-fail render job: {qc_fail_job_id} (status: qc_failed)")
+        else:
+            print(
+                f"WARNING: DB not found at {db_path} — skipping QC-fail seed row.",
+                file=sys.stderr,
+            )
+
+        # 8. Print summary
         print_summary(result)
 
 
