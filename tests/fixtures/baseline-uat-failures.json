@@ -2,12 +2,7 @@
   "failures": [
     {
       "journey_id": 703,
-      "reason": "UAT seed gap: qc-status-fail and remaster-btn testids ARE present in gui/src (RenderJobCard.tsx, RenderPage.tsx — PR #562 landed the surfaces, verified 2026-06-11 against HEAD 4621d52a) but uat_runner.py's 'Seeding sample project data' step does not insert a QC-fail render row, so the assertions have nothing to match against. Tracked by BL-480-AC-5 (seed extension).",
-      "tracking_reference": "BL-480"
-    },
-    {
-      "journey_id": 704,
-      "reason": "UAT seed gap: batch-panel testid IS present in gui/src (BatchPanel.tsx, mounted under /render Batch tab — PR #562 verified 2026-06-11 against HEAD 4621d52a) but uat_runner.py's seed step does not insert a batch row, so the panel renders empty/hidden and the assertion fails. Tracked by BL-480-AC-5 (seed extension).",
+      "reason": "UAT seed gap now fixed in code (BL-480-AC-5): seed_sample_project.py now inserts a QC-fail render row when the seed succeeds. CI headless run still fails because demo video files (videos/demo/) are absent on the CI runner, so seed_sample_project.py exits before the QC-fail row insertion step. J703 passes in a headed run with demo videos present. Discharge: BL-480-AC-1 (headed UAT run).",
       "tracking_reference": "BL-480"
     }
   ]
