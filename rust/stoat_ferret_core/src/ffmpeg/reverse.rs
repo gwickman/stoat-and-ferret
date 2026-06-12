@@ -137,6 +137,22 @@ mod tests {
         assert_eq!(builder.__repr__(), "ReverseBuilder()");
     }
 
+    #[test]
+    fn test_debug_format() {
+        let builder = ReverseBuilder::new();
+        let debug = format!("{builder:?}");
+        assert!(debug.contains("ReverseBuilder"));
+    }
+
+    // Call PyO3 wrapper methods directly from Rust to ensure llvm-cov marks them covered.
+    #[test]
+    fn test_pymethods_called_directly() {
+        let rb = ReverseBuilder::py_new();
+        assert_eq!(rb.py_video_filter().to_string(), "reverse");
+        assert_eq!(rb.py_audio_filter().to_string(), "areverse");
+        assert_eq!(rb.__repr__(), "ReverseBuilder()");
+    }
+
     // ========== PyO3 binding tests ==========
 
     use pyo3::prelude::*;
