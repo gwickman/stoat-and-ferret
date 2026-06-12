@@ -11,6 +11,8 @@ from stoat_ferret.api.schemas.clip import (
     ClipCreate,
     ClipListResponse,
     ClipResponse,
+    ClipSplitRequest,
+    ClipSplitResponse,
     ClipUpdate,
 )
 from stoat_ferret.api.schemas.project import (
@@ -472,6 +474,97 @@ async def update_clip(
 
     await clip_repo.update(clip)
     return ClipResponse.model_validate(clip)
+
+
+@router.post("/{project_id}/clips/{clip_id}/split", response_model=ClipSplitResponse)
+async def split_clip(
+    project_id: str,
+    clip_id: str,
+    body: ClipSplitRequest,
+    project_repo: ProjectRepoDep,
+    clip_repo: ClipRepoDep,
+) -> ClipSplitResponse:
+    """Split a clip at split_frame into two adjacent clips.
+
+    Args:
+        project_id: The unique project identifier.
+        clip_id: The unique clip identifier to split.
+        body: Request body containing split_frame.
+        project_repo: Project repository dependency.
+        clip_repo: Clip repository dependency.
+
+    Returns:
+        ClipSplitResponse with clip_a and clip_b.
+
+    Raises:
+        HTTPException: 404 if clip not found or belongs to different project.
+        HTTPException: 422 if split_frame is outside (in_point, out_point).
+    """
+    clip = await clip_repo.get(clip_id)
+    if clip is None or clip.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Clip {clip_id} not found"},
+        )
+
+    if body.split_frame <= clip.in_point or body.split_frame >= clip.out_point:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "invalid_split_frame",
+                "valid_range": [clip.in_point + 1, clip.out_point - 1],
+            },
+        )
+
+    project = await project_repo.get(project_id)
+    # project cannot be None: clip.project_id == project_id was already validated above
+    assert project is not None  # noqa: S101
+
+    split_time_s: float | None = None
+    if clip.timeline_start is not None:
+        split_time_s = clip.timeline_start + (body.split_frame - clip.in_point) / project.output_fps
+
+    now = datetime.now(timezone.utc)
+    clip_a_duration_frames = body.split_frame - clip.in_point
+
+    clip_a = Clip(
+        id=Clip.new_id(),
+        project_id=project_id,
+        source_video_id=clip.source_video_id,
+        clip_type=clip.clip_type,
+        generator_params=clip.generator_params,
+        in_point=clip.in_point,
+        out_point=body.split_frame,
+        timeline_position=clip.timeline_position,
+        timeline_start=clip.timeline_start,
+        timeline_end=split_time_s,
+        effects=[],
+        created_at=now,
+        updated_at=now,
+    )
+
+    clip_b = Clip(
+        id=Clip.new_id(),
+        project_id=project_id,
+        source_video_id=clip.source_video_id,
+        clip_type=clip.clip_type,
+        generator_params=clip.generator_params,
+        in_point=body.split_frame,
+        out_point=clip.out_point,
+        timeline_position=clip.timeline_position + clip_a_duration_frames,
+        timeline_start=split_time_s,
+        timeline_end=clip.timeline_end,
+        effects=[],
+        created_at=now,
+        updated_at=now,
+    )
+
+    await clip_repo.split_atomic(clip_a, clip_b, clip_id)
+
+    return ClipSplitResponse(
+        clip_a=ClipResponse.model_validate(clip_a),
+        clip_b=ClipResponse.model_validate(clip_b),
+    )
 
 
 @router.delete("/{project_id}/clips/{clip_id}", status_code=status.HTTP_204_NO_CONTENT)

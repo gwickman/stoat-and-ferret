@@ -554,6 +554,40 @@ export interface paths {
         patch: operations["update_clip_api_v1_projects__project_id__clips__clip_id__patch"];
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/clips/{clip_id}/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Split Clip
+         * @description Split a clip at split_frame into two adjacent clips.
+         *
+         *     Args:
+         *         project_id: The unique project identifier.
+         *         clip_id: The unique clip identifier to split.
+         *         body: Request body containing split_frame.
+         *         project_repo: Project repository dependency.
+         *         clip_repo: Clip repository dependency.
+         *
+         *     Returns:
+         *         ClipSplitResponse with clip_a and clip_b.
+         *
+         *     Raises:
+         *         HTTPException: 404 if clip not found or belongs to different project.
+         *         HTTPException: 422 if split_frame is outside (in_point, out_point).
+         */
+        post: operations["split_clip_api_v1_projects__project_id__clips__clip_id__split_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{pid}/markers": {
         parameters: {
             query?: never;
@@ -2932,6 +2966,10 @@ export interface components {
             out_point: number;
             /** Timeline Position */
             timeline_position: number;
+            /** Timeline Start */
+            timeline_start?: number | null;
+            /** Timeline End */
+            timeline_end?: number | null;
             /** Effects */
             effects?: {
                 [key: string]: unknown;
@@ -2946,6 +2984,22 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * ClipSplitRequest
+         * @description Split clip request — split_frame must be strictly between in_point and out_point.
+         */
+        ClipSplitRequest: {
+            /** Split Frame */
+            split_frame: number;
+        };
+        /**
+         * ClipSplitResponse
+         * @description Split clip response containing the two resulting clips.
+         */
+        ClipSplitResponse: {
+            clip_a: components["schemas"]["ClipResponse"];
+            clip_b: components["schemas"]["ClipResponse"];
         };
         /**
          * ClipUpdate
@@ -5482,6 +5536,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClipResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    split_clip_api_v1_projects__project_id__clips__clip_id__split_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClipSplitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipSplitResponse"];
                 };
             };
             /** @description Validation Error */

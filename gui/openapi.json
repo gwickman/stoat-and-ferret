@@ -916,6 +916,68 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/clips/{clip_id}/split": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Split Clip",
+        "description": "Split a clip at split_frame into two adjacent clips.\n\nArgs:\n    project_id: The unique project identifier.\n    clip_id: The unique clip identifier to split.\n    body: Request body containing split_frame.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    ClipSplitResponse with clip_a and clip_b.\n\nRaises:\n    HTTPException: 404 if clip not found or belongs to different project.\n    HTTPException: 422 if split_frame is outside (in_point, out_point).",
+        "operationId": "split_clip_api_v1_projects__project_id__clips__clip_id__split_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClipSplitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClipSplitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{pid}/markers": {
       "post": {
         "tags": [
@@ -4669,6 +4731,28 @@
             "type": "integer",
             "title": "Timeline Position"
           },
+          "timeline_start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Start"
+          },
+          "timeline_end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline End"
+          },
           "effects": {
             "items": {
               "additionalProperties": true,
@@ -4702,6 +4786,38 @@
         ],
         "title": "ClipResponse",
         "description": "Clip response."
+      },
+      "ClipSplitRequest": {
+        "properties": {
+          "split_frame": {
+            "type": "integer",
+            "title": "Split Frame"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "split_frame"
+        ],
+        "title": "ClipSplitRequest",
+        "description": "Split clip request \u2014 split_frame must be strictly between in_point and out_point."
+      },
+      "ClipSplitResponse": {
+        "properties": {
+          "clip_a": {
+            "$ref": "#/components/schemas/ClipResponse"
+          },
+          "clip_b": {
+            "$ref": "#/components/schemas/ClipResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clip_a",
+          "clip_b"
+        ],
+        "title": "ClipSplitResponse",
+        "description": "Split clip response containing the two resulting clips."
       },
       "ClipUpdate": {
         "properties": {

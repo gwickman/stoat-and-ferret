@@ -63,6 +63,8 @@ class ClipResponse(BaseModel):
     in_point: int
     out_point: int
     timeline_position: int
+    timeline_start: float | None = None
+    timeline_end: float | None = None
     effects: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -91,3 +93,18 @@ class ClipListResponse(BaseModel):
 
     clips: list[ClipResponse]
     total: int
+
+
+class ClipSplitRequest(BaseModel):
+    """Split clip request — split_frame must be strictly between in_point and out_point."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    split_frame: int
+
+
+class ClipSplitResponse(BaseModel):
+    """Split clip response containing the two resulting clips."""
+
+    clip_a: ClipResponse
+    clip_b: ClipResponse
