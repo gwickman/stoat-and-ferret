@@ -108,6 +108,10 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register reverse builder
     m.add_class::<ffmpeg::reverse::ReverseBuilder>()?;
 
+    // Register framerate conversion builder
+    m.add_class::<ffmpeg::framerate::FramerateMode>()?;
+    m.add_class::<ffmpeg::framerate::FramerateConvertBuilder>()?;
+
     // Register audio mixing builders
     m.add_class::<ffmpeg::audio::VolumeBuilder>()?;
     m.add_class::<ffmpeg::audio::AfadeBuilder>()?;

@@ -3839,3 +3839,99 @@ class VariableSpeedBuilder:
         ...
 
     def __repr__(self) -> str: ...
+
+# ========== Effect Builder — FramerateConvert ==========
+
+class FramerateMode:
+    """Interpolation mode for frame-rate conversion.
+
+    Variants:
+
+    - ``Blend``: frame-blending via ``minterpolate:mi_mode=blend``
+    - ``OpticalFlow``: optical-flow motion interpolation via ``minterpolate:mi_mode=mci``
+      (requires FFmpeg built with ``--enable-libopencv``)
+    - ``Duplicate``: simple frame duplication via the ``framerate`` filter (fastest)
+
+    Examples::
+
+        mode = FramerateMode.from_str("duplicate")
+        str(mode)  # "duplicate"
+    """
+
+    Blend: FramerateMode
+    OpticalFlow: FramerateMode
+    Duplicate: FramerateMode
+
+    @staticmethod
+    def from_str(name: str) -> FramerateMode:
+        """Convert a string name to a FramerateMode variant.
+
+        Args:
+            name: One of ``"blend"``, ``"optical_flow"``, or ``"duplicate"``.
+
+        Raises:
+            ValueError: If the name is not a recognised mode.
+        """
+        ...
+
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
+class FramerateConvertBuilder:
+    """Builder for FFmpeg frame-rate conversion filters.
+
+    Generates one of:
+
+    - ``minterpolate=fps={target}:mi_mode=blend`` (Blend)
+    - ``minterpolate=fps={target}:mi_mode=mci`` (OpticalFlow)
+    - ``framerate=fps={target}`` (Duplicate)
+
+    Requires FFmpeg 4.0+ for ``minterpolate``. OpticalFlow mode requires
+    an FFmpeg build with ``--enable-libopencv``.
+
+    Examples::
+
+        from stoat_ferret_core import FramerateConvertBuilder, FramerateMode
+
+        builder = FramerateConvertBuilder(60.0, FramerateMode.Blend)
+        str(builder.build())  # "minterpolate=fps=60:mi_mode=blend"
+
+        builder = FramerateConvertBuilder(24.0, FramerateMode.Duplicate)
+        str(builder.build())  # "framerate=fps=24"
+    """
+
+    def __new__(
+        cls,
+        target_fps: float,
+        mode: FramerateMode,
+    ) -> FramerateConvertBuilder:
+        """Creates a new FramerateConvertBuilder.
+
+        Args:
+            target_fps: Target frame rate in frames per second (must be > 0).
+            mode: Interpolation mode (FramerateMode.Blend, OpticalFlow, or Duplicate).
+
+        Raises:
+            ValueError: If target_fps is not > 0.
+        """
+        ...
+
+    @property
+    def target_fps(self) -> float:
+        """Target frame rate in frames per second."""
+        ...
+
+    @property
+    def mode(self) -> FramerateMode:
+        """Interpolation mode."""
+        ...
+
+    def build(self) -> Filter:
+        """Builds the FFmpeg filter for frame-rate conversion.
+
+        Returns:
+            A Filter with the appropriate minterpolate or framerate filter string.
+        """
+        ...
+
+    def __repr__(self) -> str: ...

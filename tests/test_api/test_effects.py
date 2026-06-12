@@ -72,6 +72,7 @@ EXPECTED_EFFECT_TYPES = {
     "convolution_reverb",
     "reverse",
     "variable_speed",
+    "framerate_convert",
 }
 
 # ---- Registry unit tests ----
