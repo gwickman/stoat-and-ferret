@@ -24,6 +24,7 @@ from stoat_ferret_core import (
     FadeBuilder,
     FramerateConvertBuilder,
     FramerateMode,
+    FreezeFrameBuilder,
     LimiterBuilder,
     LoudnormBuilder,
     MultibandCompressorBuilder,
@@ -1758,6 +1759,56 @@ FRAMERATE_CONVERT = EffectDefinition(
 )
 
 
+def _freeze_frame_preview() -> str:
+    """Generate a filter preview for freeze_frame with default parameters."""
+    return str(FreezeFrameBuilder(0, 2.0).build())
+
+
+def _build_freeze_frame(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for freeze_frame effect."""
+    frame_number = int(parameters.get("frame_number", 0))
+    duration_s = float(parameters.get("duration_s", 1.0))
+    return str(FreezeFrameBuilder(frame_number, duration_s).build())
+
+
+FREEZE_FRAME = EffectDefinition(
+    name="Freeze Frame",
+    description=(
+        "Hold a chosen frame for a configured duration, extending the clip. "
+        "Uses FFmpeg freezeframes+tpad filters. Requires FFmpeg 4.0+. "
+        "For a hold in the middle of the output timeline, use split (BL-445) + freeze composition."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "frame_number": {
+                "type": "integer",
+                "minimum": 0,
+                "description": (
+                    "0-indexed frame to freeze. Must be within the clip duration in frames."
+                ),
+            },
+            "duration_s": {
+                "type": "number",
+                "minimum": 0.01,
+                "default": 1.0,
+                "description": "Duration to hold the frozen frame in seconds (must be > 0).",
+            },
+        },
+        "required": ["frame_number", "duration_s"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "frame_number": "0-indexed frame to freeze. Frame 0 is the first frame of the clip.",
+        "duration_s": "Hold duration in seconds. Must be > 0. Example: 2.5 holds for 2.5 seconds.",
+    },
+    preview_fn=_freeze_frame_preview,
+    build_fn=_build_freeze_frame,
+    ai_summary="Hold a chosen frame for a configured duration, extending the clip by that amount.",
+    example_prompt="Freeze frame 30 for 2 seconds to create an emphasis hold.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1789,4 +1840,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("reverse", REVERSE)
     registry.register("variable_speed", VARIABLE_SPEED)
     registry.register("framerate_convert", FRAMERATE_CONVERT)
+    registry.register("freeze_frame", FREEZE_FRAME)
     return registry

@@ -3935,3 +3935,63 @@ class FramerateConvertBuilder:
         ...
 
     def __repr__(self) -> str: ...
+
+class FreezeFrameBuilder:
+    """Builder for FFmpeg freeze-frame filters.
+
+    Generates: ``freezeframes=first={F}:last={F}:replace={F},tpad=stop_duration={H}``
+
+    where F = ``frame_number`` (0-indexed) and H = ``hold_duration_s`` (seconds).
+
+    **Minimum FFmpeg version:** 4.0+ for ``freezeframes`` and ``tpad`` filters.
+
+    **Mid-clip freeze note:** This builder extends the clip at the freeze point
+    using ``tpad``. For a hold in the middle of the output timeline, use
+    split (BL-445) + freeze composition.
+
+    Examples::
+
+        from stoat_ferret_core import FreezeFrameBuilder
+
+        builder = FreezeFrameBuilder(5, 2.5)
+        str(builder.build())
+        # "freezeframes=first=5:last=5:replace=5,tpad=stop_duration=2.5"
+
+        builder = FreezeFrameBuilder(0, 2.0)
+        str(builder.build())
+        # "freezeframes=first=0:last=0:replace=0,tpad=stop_duration=2"
+    """
+
+    def __new__(cls, frame_number: int, hold_duration_s: float) -> FreezeFrameBuilder:
+        """Creates a new FreezeFrameBuilder.
+
+        Args:
+            frame_number: 0-indexed frame to freeze. Must be within the clip
+                duration in frames (validated by the application layer).
+            hold_duration_s: Duration to hold the frozen frame in seconds.
+                Must be > 0.
+
+        Raises:
+            ValueError: If hold_duration_s is not > 0.
+        """
+        ...
+
+    @property
+    def frame_number(self) -> int:
+        """The 0-indexed frame number to freeze."""
+        ...
+
+    @property
+    def hold_duration_s(self) -> float:
+        """The hold duration in seconds."""
+        ...
+
+    def build(self) -> Filter:
+        """Builds the FFmpeg filter for freeze-frame.
+
+        Returns:
+            A Filter with the freezeframes+tpad filter string.
+        """
+        ...
+
+    def __repr__(self) -> str: ...

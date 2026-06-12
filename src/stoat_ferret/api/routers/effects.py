@@ -439,6 +439,20 @@ async def apply_effect_to_clip(
                 },
             )
 
+    # Frame-number bounds check for freeze_frame (BL-449).
+    if request.effect_type == "freeze_frame":
+        frame_number = int(request.parameters.get("frame_number", 0))
+        clip_duration_in_frames = clip.out_point - clip.in_point
+        if frame_number >= clip_duration_in_frames:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "frame_number_out_of_range",
+                    "frame_number": frame_number,
+                    "clip_duration_in_frames": clip_duration_in_frames,
+                },
+            )
+
     # Validate parameters against JSON schema (envelopes bypass JSON schema).
     validation_errors, compiled_expression = registry.validate_with_automation(
         request.effect_type, request.parameters

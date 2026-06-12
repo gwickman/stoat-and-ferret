@@ -383,6 +383,25 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
 
 For video transitions, use `xfade`. For audio transitions, use `acrossfade`. Pair them together for a complete audio-visual crossfade.
 
+## Freeze Frame
+
+`freeze_frame` holds a chosen frame for a configured duration, extending the clip at that point. Uses FFmpeg `freezeframes` + `tpad` filters. Requires FFmpeg 4.0+.
+
+> **Note (NFR-001):** `FreezeFrameBuilder` freezes the chosen frame and extends the clip at that point. For a hold in the middle of the output timeline, use split (BL-445) + freeze composition.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `frame_number` | integer (≥ 0) | Yes | 0-indexed frame to freeze. Must be within the clip duration in frames. |
+| `duration_s` | number (> 0) | Yes | Duration to hold the frozen frame in seconds. |
+
+```bash
+curl -X POST http://localhost:8765/api/v1/projects/proj-1/clips/clip-1/effects \
+  -H "Content-Type: application/json" \
+  -d '{"effect_type": "freeze_frame", "parameters": {"frame_number": 30, "duration_s": 2.0}}'
+```
+
+The API validates that `frame_number` is within the clip's duration. A `frame_number >= clip_duration_in_frames` returns HTTP 422 with `"error": "frame_number_out_of_range"`.
+
 ## Effect Workshop (GUI)
 
 The web GUI at `/gui/effects` provides an interactive Effect Workshop with:
