@@ -3750,3 +3750,92 @@ class ReverseBuilder:
     def video_filter(self) -> Filter: ...
     def audio_filter(self) -> Filter: ...
     def __repr__(self) -> str: ...
+
+# ========== Effect Builder — VariableSpeed ==========
+
+class SpeedSegment:
+    """A speed segment defining a frame range and its constant speed factor.
+
+    Used with :class:`VariableSpeedBuilder` to specify per-segment speed curves.
+    Each segment covers frames ``[start_frame, end_frame)`` at a constant
+    ``speed_factor``.
+
+    Examples::
+
+        seg = SpeedSegment(0, 30, 2.0)  # frames 0–30 at 2x speed
+        seg.start_frame  # 0
+        seg.speed_factor  # 2.0
+    """
+
+    @property
+    def start_frame(self) -> int:
+        """First frame of the segment (inclusive)."""
+        ...
+
+    @property
+    def end_frame(self) -> int:
+        """Last frame of the segment (exclusive)."""
+        ...
+
+    @property
+    def speed_factor(self) -> float:
+        """Speed multiplier for this segment, in range (0, 100]."""
+        ...
+
+    def __new__(cls, start_frame: int, end_frame: int, speed_factor: float) -> SpeedSegment:
+        """Creates a new speed segment.
+
+        Args:
+            start_frame: First frame of the segment (inclusive).
+            end_frame: Last frame of the segment (exclusive).
+            speed_factor: Speed multiplier in range (0, 100].
+
+        Raises:
+            ValueError: If speed_factor is not in (0, 100].
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class VariableSpeedBuilder:
+    """Variable-speed builder using a segmented concat approach.
+
+    Divides a clip into constant-speed sub-ranges and concatenates them using
+    ``trim+setpts`` for video and ``atrim+asetpts+atempo`` for audio per segment.
+    Existing ``SpeedControl`` constant-speed behaviour is not affected.
+
+    Examples::
+
+        from stoat_ferret_core import SpeedSegment, VariableSpeedBuilder
+
+        segments = [
+            SpeedSegment(0, 30, 2.0),   # frames 0–30 at 2x
+            SpeedSegment(30, 60, 0.5),  # frames 30–60 at 0.5x
+        ]
+        builder = VariableSpeedBuilder(segments)
+        graph = builder.build_filter_graph()
+    """
+
+    def __new__(cls, segments: list[SpeedSegment]) -> VariableSpeedBuilder:
+        """Creates a new variable-speed builder with the given segments.
+
+        Args:
+            segments: List of SpeedSegment objects defining the speed curve.
+
+        Raises:
+            ValueError: If segments is empty or any segment has an invalid speed_factor.
+        """
+        ...
+
+    def build_filter_graph(self) -> str:
+        """Builds the complete FFmpeg filter graph string for variable-speed playback.
+
+        Returns a semicolon-separated filter graph with video trim+setpts chains,
+        audio atrim+asetpts+atempo chains, and concat filters for all segments.
+
+        Returns:
+            FFmpeg filter graph string.
+        """
+        ...
+
+    def __repr__(self) -> str: ...

@@ -262,14 +262,14 @@ async def test_window_conflicts_with_builtin_enable_returns_422() -> None:
 
 
 def test_all_effects_unchanged_with_window_none() -> None:
-    """All 20 effects produce identical filter strings with window=None (FR-004-AC-1).
+    """All 21 effects produce identical filter strings with window=None (FR-004-AC-1).
 
     Calls each effect's preview_fn and verifies no 'enable=' appears in the
     baseline output, confirming window=None doesn't alter any existing effect.
     """
     registry = create_default_registry()
     all_effects = registry.list_all()
-    assert len(all_effects) == 20, f"Expected 20 effects, got {len(all_effects)}"
+    assert len(all_effects) == 21, f"Expected 21 effects, got {len(all_effects)}"
 
     for effect_type, definition in all_effects:
         # Build the baseline (no-window) filter string via preview_fn

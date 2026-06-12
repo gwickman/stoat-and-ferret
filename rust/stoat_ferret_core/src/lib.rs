@@ -101,6 +101,10 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register speed control builder
     m.add_class::<ffmpeg::speed::SpeedControl>()?;
 
+    // Register variable-speed builder
+    m.add_class::<ffmpeg::speed::SpeedSegment>()?;
+    m.add_class::<ffmpeg::speed::VariableSpeedBuilder>()?;
+
     // Register reverse builder
     m.add_class::<ffmpeg::reverse::ReverseBuilder>()?;
 
