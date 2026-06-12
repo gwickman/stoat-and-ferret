@@ -81,6 +81,22 @@ class AsyncClipRepository(Protocol):
         """
         ...
 
+    async def split_atomic(self, clip_a: Clip, clip_b: Clip, original_id: str) -> tuple[Clip, Clip]:
+        """Create clip_a and clip_b and delete original in a single atomic transaction.
+
+        Args:
+            clip_a: First segment of the split.
+            clip_b: Second segment of the split.
+            original_id: ID of the original clip to delete.
+
+        Returns:
+            Tuple of (clip_a, clip_b) after successful commit.
+
+        Raises:
+            ValueError: If the insert or delete fails.
+        """
+        ...
+
 
 class AsyncSQLiteClipRepository:
     """Async SQLite implementation of the ClipRepository protocol."""
@@ -180,6 +196,48 @@ class AsyncSQLiteClipRepository:
         await self._conn.commit()
         return cursor.rowcount > 0
 
+    async def split_atomic(self, clip_a: Clip, clip_b: Clip, original_id: str) -> tuple[Clip, Clip]:
+        """Create clip_a and clip_b and delete original in a single atomic transaction."""
+        _insert = """
+            INSERT INTO clips (id, project_id, source_video_id, in_point, out_point,
+                               timeline_position, effects_json, created_at, updated_at,
+                               track_id, timeline_start, timeline_end,
+                               clip_type, generator_params)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        def _params(clip: Clip) -> tuple[Any, ...]:
+            effects_json = json.dumps(clip.effects) if clip.effects is not None else None
+            gen_json = (
+                json.dumps(clip.generator_params) if clip.generator_params is not None else None
+            )
+            return (
+                clip.id,
+                clip.project_id,
+                clip.source_video_id,
+                clip.in_point,
+                clip.out_point,
+                clip.timeline_position,
+                effects_json,
+                clip.created_at.isoformat(),
+                clip.updated_at.isoformat(),
+                clip.track_id,
+                clip.timeline_start,
+                clip.timeline_end,
+                clip.clip_type,
+                gen_json,
+            )
+
+        try:
+            await self._conn.execute(_insert, _params(clip_a))
+            await self._conn.execute(_insert, _params(clip_b))
+            await self._conn.execute("DELETE FROM clips WHERE id = ?", (original_id,))
+            await self._conn.commit()
+        except aiosqlite.IntegrityError as e:
+            await self._conn.rollback()
+            raise ValueError(f"Split failed: {e}") from e
+        return clip_a, clip_b
+
     def _row_to_clip(self, row: Any) -> Clip:
         """Convert a database row to a Clip object.
 
@@ -252,6 +310,13 @@ class AsyncInMemoryClipRepository:
             return False
         del self._clips[id]
         return True
+
+    async def split_atomic(self, clip_a: Clip, clip_b: Clip, original_id: str) -> tuple[Clip, Clip]:
+        """Create clip_a and clip_b and delete original atomically (in-memory)."""
+        self._clips[clip_a.id] = copy.deepcopy(clip_a)
+        self._clips[clip_b.id] = copy.deepcopy(clip_b)
+        del self._clips[original_id]
+        return copy.deepcopy(clip_a), copy.deepcopy(clip_b)
 
     def seed(self, clips: list[Clip]) -> None:
         """Populate the repository with initial test data.
