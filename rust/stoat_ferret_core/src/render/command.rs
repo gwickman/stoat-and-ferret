@@ -834,11 +834,9 @@ mod tests {
 
     #[test]
     fn build_generator_source_filter_aevalsrc_basic() {
-        let f = build_generator_source_filter(
-            r#"{"type":"aevalsrc","expr":"sin(2*PI*440*t)"}"#,
-            3.0,
-        )
-        .unwrap();
+        let f =
+            build_generator_source_filter(r#"{"type":"aevalsrc","expr":"sin(2*PI*440*t)"}"#, 3.0)
+                .unwrap();
         assert!(f.contains("aevalsrc=expr='sin(2*PI*440*t)'"));
         assert!(f.contains("eval=frame"));
         assert!(f.contains("duration=3.000000"));
@@ -846,8 +844,7 @@ mod tests {
 
     #[test]
     fn build_generator_source_filter_tone_constant() {
-        let f =
-            build_generator_source_filter(r#"{"type":"tone","frequency":440.0}"#, 5.0).unwrap();
+        let f = build_generator_source_filter(r#"{"type":"tone","frequency":440.0}"#, 5.0).unwrap();
         assert!(f.contains("aevalsrc"));
         assert!(f.contains("440.000"));
         assert!(f.contains("duration=5.000000"));
