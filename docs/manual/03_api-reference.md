@@ -625,6 +625,75 @@ curl -X DELETE http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def4
 
 ---
 
+### POST /api/v1/projects/{project_id}/clips/{clip_id}/split
+
+Split a clip into two clips at a specified frame number. The original clip is deleted and replaced with two new clips (`clip_a` and `clip_b`) that are positioned sequentially on the timeline.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `project_id` | string | Project identifier |
+| `clip_id` | string | Clip to split |
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `split_frame` | integer | Yes | Frame number (relative to the clip's source video) at which to split |
+
+**Response (201 Created):**
+
+```json
+{
+  "clip_a": {
+    "id": "clip-001a",
+    "project_id": "proj-xyz789",
+    "source_video_id": "vid-abc123",
+    "in_point": 0,
+    "out_point": 450,
+    "timeline_position": 0,
+    "timeline_start": 0.0,
+    "timeline_end": 15.0,
+    "effects": null,
+    "created_at": "2025-01-15T11:05:00Z",
+    "updated_at": "2025-01-15T11:05:00Z"
+  },
+  "clip_b": {
+    "id": "clip-001b",
+    "project_id": "proj-xyz789",
+    "source_video_id": "vid-abc123",
+    "in_point": 450,
+    "out_point": 900,
+    "timeline_position": 450,
+    "timeline_start": 15.0,
+    "timeline_end": 30.0,
+    "effects": null,
+    "created_at": "2025-01-15T11:05:00Z",
+    "updated_at": "2025-01-15T11:05:00Z"
+  }
+}
+```
+
+**Timeline Propagation Note:**
+
+The split operation computes the timeline position of `clip_b` as the timeline position of the original clip plus the duration of `clip_a` (in frames). The `timeline_start` and `timeline_end` fields (in seconds) are computed from the timeline position and the project's frame rate.
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Project or clip does not exist
+- 422 `INVALID_SPLIT_FRAME` -- `split_frame` is outside the valid range (must be ≥ `in_point` and ≤ `out_point`). The response includes a `valid_range` field with `min` and `max` values.
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/split \
+  -H "Content-Type: application/json" \
+  -d '{"split_frame": 450}'
+```
+
+---
+
 ## Jobs
 
 ### GET /api/v1/jobs/{job_id}
@@ -955,6 +1024,33 @@ Apply an effect to a clip. The effect is appended to the clip's effect stack.
 |-------|------|----------|-------------|
 | `effect_type` | string | Yes | Effect type key (e.g., `text_overlay`, `speed_control`) |
 | `parameters` | object | Yes | Effect parameters matching the schema |
+| `window` | object | No | Optional time range for effect application |
+
+**Window Parameter (optional):**
+
+The `window` parameter restricts effect application to a specific time range within the clip:
+
+```json
+{
+  "effect_type": "text_overlay",
+  "parameters": {"text": "Title", "fontsize": 48},
+  "window": {
+    "start_s": 2.5,
+    "end_s": 5.0
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `start_s` | float | Start time in seconds (relative to clip timeline start) |
+| `end_s` | float | End time in seconds (relative to clip timeline start) |
+
+When `window` is provided, the effect's FFmpeg filter string is automatically wrapped with an enable clause: `:enable='between(t,{start_s},{end_s})'`. The `filter_preview` field in the response contains the complete filter string with the enable clause applied.
+
+**Conflict Handling:**
+
+If the base effect filter string already contains an `enable=` expression, the request returns `409 CONFLICT` with error code `window_conflicts_with_builtin_enable`. This prevents enable-clause duplication. Effects with internal enable expressions (e.g., `drawtext` with `start_time` and `duration` parameters) should not use the `window` parameter.
 
 **Response (201 Created):**
 
@@ -962,6 +1058,7 @@ Apply an effect to a clip. The effect is appended to the clip's effect stack.
 {
   "effect_type": "video_fade",
   "parameters": {"fade_type": "in", "duration": 1.5},
+  "window": null,
   "filter_string": "fade=t=in:d=1.5"
 }
 ```
@@ -971,13 +1068,26 @@ Apply an effect to a clip. The effect is appended to the clip's effect stack.
 - 404 `NOT_FOUND` -- Project or clip does not exist
 - 400 `EFFECT_NOT_FOUND` -- Unknown effect type
 - 400 `INVALID_EFFECT_PARAMS` -- Parameters fail schema validation
+- 409 `WINDOW_CONFLICTS_WITH_BUILTIN_ENABLE` -- Effect's base filter string already contains an `enable=` expression
 
-**Example:**
+**Example (without window):**
 
 ```bash
 curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/effects \
   -H "Content-Type: application/json" \
   -d '{"effect_type": "video_fade", "parameters": {"fade_type": "in", "duration": 1.5}}'
+```
+
+**Example (with window):**
+
+```bash
+curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def456/effects \
+  -H "Content-Type: application/json" \
+  -d '{
+    "effect_type": "text_overlay",
+    "parameters": {"text": "Subtitle", "fontsize": 32},
+    "window": {"start_s": 2.5, "end_s": 8.0}
+  }'
 ```
 
 ---
@@ -2008,6 +2118,8 @@ elif isinstance(detail, list):
 | `in_point` | integer | Start frame in source video |
 | `out_point` | integer | End frame in source video |
 | `timeline_position` | integer | Position on the timeline (in frames) |
+| `timeline_start` | float or null | Clip start time in seconds (computed from timeline_position and project frame rate) |
+| `timeline_end` | float or null | Clip end time in seconds (computed from timeline_position, duration, and project frame rate) |
 | `effects` | array or null | List of applied effects |
 | `created_at` | datetime | Creation time |
 | `updated_at` | datetime | Last update time |
