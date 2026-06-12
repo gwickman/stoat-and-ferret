@@ -73,6 +73,7 @@ class TestImportFallback:
             "ReverseBuilder",
             "FramerateConvertBuilder",
             "FramerateMode",
+            "FreezeFrameBuilder",
             "SpeedControl",
             "SpeedSegment",
             "VariableSpeedBuilder",

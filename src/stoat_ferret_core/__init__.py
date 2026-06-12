@@ -86,6 +86,7 @@ try:
         FrameRate,
         FramerateConvertBuilder,
         FramerateMode,
+        FreezeFrameBuilder,
         Keyframe,
         LayoutError,
         LayoutPosition,
@@ -216,6 +217,7 @@ except ImportError:
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
     FramerateConvertBuilder = _not_built  # type: ignore[misc,assignment]
     FramerateMode = _not_built  # type: ignore[misc,assignment]
+    FreezeFrameBuilder = _not_built  # type: ignore[misc,assignment]
     AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
     NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
@@ -358,6 +360,8 @@ __all__ = [
     # Framerate conversion builder
     "FramerateConvertBuilder",
     "FramerateMode",
+    # Freeze-frame builder
+    "FreezeFrameBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",
