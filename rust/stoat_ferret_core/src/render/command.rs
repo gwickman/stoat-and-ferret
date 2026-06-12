@@ -422,6 +422,44 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
                 "sine=frequency={frequency:.3}:duration={duration:.6}"
             ))
         }
+        "tone" => {
+            let frequency = params
+                .get("frequency")
+                .and_then(|v| v.as_f64())
+                .ok_or_else(|| "tone params must have a 'frequency' field".to_string())?;
+            let frequency_end = params.get("frequency_end").and_then(|v| v.as_f64());
+            let binaural_offset = params.get("binaural_offset").and_then(|v| v.as_f64());
+
+            // Linear chirp when frequency_end is set:
+            // phase(t) = 2π*(f0*t + (f1-f0)*t²/(2*D))
+            let left_expr = match frequency_end {
+                Some(f1) => format!(
+                    "sin(2*PI*({frequency:.3}*t+({f1:.3}-{frequency:.3})*t*t/(2*{duration:.6})))"
+                ),
+                None => format!("sin(2*PI*{frequency:.3}*t)"),
+            };
+
+            match binaural_offset {
+                Some(offset) => {
+                    let rf = frequency + offset;
+                    let right_expr = match frequency_end {
+                        Some(f1) => {
+                            let rf1 = f1 + offset;
+                            format!(
+                                "sin(2*PI*({rf:.3}*t+({rf1:.3}-{rf:.3})*t*t/(2*{duration:.6})))"
+                            )
+                        }
+                        None => format!("sin(2*PI*{rf:.3}*t)"),
+                    };
+                    Ok(format!(
+                        "aevalsrc=expr='{left_expr}|{right_expr}':channel_layout=stereo:eval=frame:duration={duration:.6}"
+                    ))
+                }
+                None => Ok(format!(
+                    "aevalsrc=expr='{left_expr}':eval=frame:duration={duration:.6}"
+                )),
+            }
+        }
         unknown => Err(format!("Unknown generator type: {unknown:?}")),
     }
 }
@@ -484,6 +522,95 @@ pub fn py_build_generator_render_command(
 ) -> PyResult<RenderCommand> {
     build_generator_render_command(params_json, duration, output_path)
         .map_err(pyo3::exceptions::PyValueError::new_err)
+}
+
+// ---------------------------------------------------------------------------
+// Loopable bed render
+// ---------------------------------------------------------------------------
+
+/// Builds an FFmpeg render command to loop a short audio bed to a target duration.
+///
+/// Uses `-stream_loop -1` to repeat the input indefinitely, trimmed to
+/// `target_duration` seconds. An optional crossfade at the loop boundary
+/// smooths the seam using a short fade-out/fade-in pair around the loop point.
+///
+/// The `loop_start` parameter sets the intra-file seek position before
+/// looping begins, allowing the loop boundary to be reshaped to a zero
+/// crossing or a region with better spectral continuity.
+///
+/// Args:
+///     input_path: Path to the source audio file to loop.
+///     target_duration: Desired output duration in seconds.
+///     output_path: Path to write the looped output.
+///     crossfade_duration: Duration in seconds of the fade-out/fade-in applied
+///         at each loop boundary; 0.0 disables crossfading.
+///     loop_start: Seek offset into the source file before looping begins (seconds).
+///
+/// Returns:
+///     A `RenderCommand` with the complete argument list.
+pub fn build_loop_render_command(
+    input_path: &str,
+    target_duration: f64,
+    output_path: &str,
+    crossfade_duration: f64,
+    loop_start: f64,
+) -> RenderCommand {
+    let mut args: Vec<String> = vec![
+        "-stream_loop".to_string(),
+        "-1".to_string(),
+        "-i".to_string(),
+        input_path.to_string(),
+    ];
+
+    // Seek offset within the looped stream (loop boundary reshape, AC3)
+    if loop_start > 0.0 {
+        args.extend(["-ss".to_string(), format!("{loop_start:.6}")]);
+    }
+
+    // Trim to target duration
+    args.extend(["-t".to_string(), format!("{target_duration:.6}")]);
+
+    // Crossfade at loop boundary using afade in+out (AC2)
+    if crossfade_duration > 0.0 {
+        let fade_out_start = (target_duration - crossfade_duration).max(0.0);
+        let filter = format!(
+            "afade=t=in:d={crossfade_duration:.6},afade=t=out:st={fade_out_start:.6}:d={crossfade_duration:.6}"
+        );
+        args.extend(["-af".to_string(), filter]);
+    }
+
+    args.extend([
+        "-progress".to_string(),
+        "pipe:1".to_string(),
+        "-y".to_string(),
+        output_path.to_string(),
+    ]);
+
+    RenderCommand {
+        args,
+        output_path: output_path.to_string(),
+        segment_index: 0,
+    }
+}
+
+/// PyO3 binding for `build_loop_render_command`.
+#[pyfunction]
+#[pyo3(name = "build_loop_render_command")]
+#[pyo3(signature = (input_path, target_duration, output_path, crossfade_duration=0.0, loop_start=0.0))]
+pub fn py_build_loop_render_command(
+    input_path: &str,
+    target_duration: f64,
+    output_path: &str,
+    crossfade_duration: f64,
+    loop_start: f64,
+) -> RenderCommand {
+    build_loop_render_command(
+        input_path,
+        target_duration,
+        output_path,
+        crossfade_duration,
+        loop_start,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -783,6 +910,142 @@ mod tests {
         let unknown = estimate_output_size(10.0, "libx264", "unknown_preset");
         let standard = estimate_output_size(10.0, "libx264", "standard");
         assert_eq!(unknown, standard);
+    }
+
+    // -- build_generator_source_filter tests --
+
+    #[test]
+    fn build_generator_source_filter_sine_basic() {
+        let f = build_generator_source_filter(r#"{"type":"sine","frequency":440.0}"#, 5.0).unwrap();
+        assert!(f.contains("sine=frequency=440.000"));
+        assert!(f.contains("duration=5.000000"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_aevalsrc_basic() {
+        let f =
+            build_generator_source_filter(r#"{"type":"aevalsrc","expr":"sin(2*PI*440*t)"}"#, 3.0)
+                .unwrap();
+        assert!(f.contains("aevalsrc=expr='sin(2*PI*440*t)'"));
+        assert!(f.contains("eval=frame"));
+        assert!(f.contains("duration=3.000000"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_constant() {
+        let f = build_generator_source_filter(r#"{"type":"tone","frequency":440.0}"#, 5.0).unwrap();
+        assert!(f.contains("aevalsrc"));
+        assert!(f.contains("440.000"));
+        assert!(f.contains("duration=5.000000"));
+        assert!(!f.contains("stereo"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_sweep() {
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":100.0,"frequency_end":200.0}"#,
+            10.0,
+        )
+        .unwrap();
+        assert!(f.contains("aevalsrc"));
+        assert!(f.contains("100.000"));
+        assert!(f.contains("200.000"));
+        assert!(f.contains("duration=10.000000"));
+        // chirp formula has t*t
+        assert!(f.contains("t*t"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_binaural() {
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":200.0,"binaural_offset":4.0}"#,
+            5.0,
+        )
+        .unwrap();
+        assert!(f.contains("stereo"));
+        // Left channel at 200 Hz, right at 204 Hz
+        assert!(f.contains("200.000"));
+        assert!(f.contains("204.000"));
+        assert!(f.contains("duration=5.000000"));
+        // Two channel expressions separated by |
+        assert!(f.contains('|'));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_binaural_sweep() {
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":100.0,"frequency_end":200.0,"binaural_offset":4.0}"#,
+            5.0,
+        )
+        .unwrap();
+        assert!(f.contains("stereo"));
+        assert!(f.contains("100.000"));
+        assert!(f.contains("200.000"));
+        // Right channel: 104 Hz → 204 Hz
+        assert!(f.contains("104.000"));
+        assert!(f.contains("204.000"));
+        assert!(f.contains("t*t"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_missing_frequency() {
+        let r = build_generator_source_filter(r#"{"type":"tone"}"#, 5.0);
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("frequency"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_unknown_type() {
+        let r = build_generator_source_filter(r#"{"type":"unknown_type"}"#, 5.0);
+        assert!(r.is_err());
+    }
+
+    // -- build_loop_render_command tests --
+
+    #[test]
+    fn build_loop_render_command_basic() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.0, 0.0);
+        assert!(cmd.args.contains(&"-stream_loop".to_string()));
+        assert!(cmd.args.contains(&"-1".to_string()));
+        assert!(cmd.args.contains(&"-i".to_string()));
+        assert!(cmd.args.contains(&"/bed.wav".to_string()));
+        assert!(cmd.args.contains(&"-t".to_string()));
+        assert!(cmd.args.contains(&"60.000000".to_string()));
+        assert_eq!(cmd.args.last().unwrap(), "/out.wav");
+        assert!(!cmd.args.contains(&"-af".to_string()));
+        assert!(!cmd.args.contains(&"-ss".to_string()));
+    }
+
+    #[test]
+    fn build_loop_render_command_with_crossfade() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.05, 0.0);
+        assert!(cmd.args.contains(&"-af".to_string()));
+        let af_idx = cmd.args.iter().position(|a| a == "-af").unwrap();
+        let filter = &cmd.args[af_idx + 1];
+        assert!(filter.contains("afade=t=in"));
+        assert!(filter.contains("afade=t=out"));
+    }
+
+    #[test]
+    fn build_loop_render_command_with_loop_start() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.0, 2.5);
+        assert!(cmd.args.contains(&"-ss".to_string()));
+        let ss_idx = cmd.args.iter().position(|a| a == "-ss").unwrap();
+        assert_eq!(cmd.args[ss_idx + 1], "2.500000");
+    }
+
+    #[test]
+    fn build_loop_render_command_no_ss_when_zero_start() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.0, 0.0);
+        assert!(!cmd.args.contains(&"-ss".to_string()));
+    }
+
+    #[test]
+    fn build_loop_render_command_output_path_last() {
+        let cmd = build_loop_render_command("/input.wav", 120.0, "/output.wav", 0.1, 1.0);
+        assert_eq!(cmd.output_path, "/output.wav");
+        assert_eq!(cmd.args.last().unwrap(), "/output.wav");
+        assert_eq!(cmd.segment_index, 0);
     }
 
     // -- Contract tests --

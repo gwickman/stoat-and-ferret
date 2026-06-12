@@ -125,6 +125,7 @@ try:
         build_encoding_args,
         build_generator_render_command,
         build_generator_source_filter,
+        build_loop_render_command,
         build_overlay_filter,
         build_render_command,
         build_scale_for_layout,
@@ -257,6 +258,7 @@ except ImportError:
     build_render_command = _not_built
     build_generator_source_filter = _not_built
     build_generator_render_command = _not_built
+    build_loop_render_command = _not_built
     escape_filter_text = _not_built
     validate_path = _not_built
     validate_volume = _not_built
@@ -388,6 +390,7 @@ __all__ = [
     "build_render_command",
     "build_generator_source_filter",
     "build_generator_render_command",
+    "build_loop_render_command",
     "estimate_output_size",
     "validate_render_settings",
     # Encoder detection
