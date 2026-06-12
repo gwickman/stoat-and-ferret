@@ -8,6 +8,7 @@ effect types (audio_ducking, audio_fade, video_fade, acrossfade).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -553,3 +554,102 @@ async def test_preview_accepts_automation_envelope(
         },
     )
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Smoke tests for new effect types (v080 Feature 012)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_reverse_effect(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Reverse effect smoke test — apply reverse to a clip via API."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Reverse Effect Smoke Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={"effect_type": "reverse", "parameters": {}},
+    )
+    assert resp.status_code == 201
+    effect = resp.json()
+    assert effect["effect_type"] == "reverse"
+    assert "reverse" in effect["filter_string"].lower()
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_variable_speed_effect(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Variable speed effect smoke test — apply variable speed to a clip."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Variable Speed Effect Smoke Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "variable_speed",
+            "parameters": {"segments": [{"start_frame": 0, "end_frame": 100, "speed_factor": 1.5}]},
+        },
+    )
+    assert resp.status_code == 201
+    effect = resp.json()
+    assert effect["effect_type"] == "variable_speed"
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_framerate_convert_effect(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Framerate convert effect smoke test — apply framerate conversion to a clip."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Framerate Convert Effect Smoke Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "framerate_convert",
+            "parameters": {"target_fps": 24.0, "mode": "blend"},
+        },
+    )
+    assert resp.status_code == 201
+    effect = resp.json()
+    assert effect["effect_type"] == "framerate_convert"
+
+
+@pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_freeze_frame_effect(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Freeze frame effect smoke test — apply freeze frame to a clip."""
+    client = smoke_client
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, "Freeze Frame Effect Smoke Test"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "freeze_frame",
+            "parameters": {"frame_number": 0, "duration_s": 2.0},
+        },
+    )
+    assert resp.status_code == 201
+    effect = resp.json()
+    assert effect["effect_type"] == "freeze_frame"

@@ -23,7 +23,7 @@ from tests.qc.oc_mapping import OC_HUMAN_ONLY, OC_TO_QC_CHECK
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 
 # Reference to the Tier 2 headed perceptual checklist for human-only outcomes.
-tier2_checklist = "docs/uat/tier2-perceptual-checklist.md"
+tier2_checklist = "docs/manual/tier2-acceptance-checklist.md"
 
 # Total OC count for UC-MEDIA-MPS-001: 11 machine-verifiable + 4 human-only + 2 other = 17
 _TOTAL_OC_COUNT = 17
