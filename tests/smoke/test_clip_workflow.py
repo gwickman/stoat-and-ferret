@@ -225,3 +225,51 @@ async def test_get_clip_effects_returns_empty_list(
     resp = await smoke_client.get(f"/api/v1/projects/{project_id}/clips/{clip_id}/effects")
     assert resp.status_code == 200
     assert resp.json() == {"effects": []}
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_split_clip(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Split endpoint smoke test — split a clip and verify two resulting clips.
+
+    Feature 012 (smoke-tests) split endpoint coverage.
+    Not FFmpeg-gated: split is pure DB arithmetic.
+    """
+    await scan_videos_and_wait(smoke_client, videos_dir)
+
+    resp = await smoke_client.get("/api/v1/videos?limit=1")
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Split Smoke Test Project"},
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id = resp.json()["id"]
+
+    # Split at the midpoint
+    mid_frame = 50
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/split",
+        json={"split_frame": mid_frame},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "clip_a" in body
+    assert "clip_b" in body
+    assert body["clip_a"]["out_point"] == mid_frame
+    assert body["clip_b"]["in_point"] == mid_frame
