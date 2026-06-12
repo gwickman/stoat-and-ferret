@@ -764,6 +764,32 @@ async def test_noop_mode_status_authoritative(
     )
 
 
+async def test_render_plan_default_passes_preflight(smoke_client: httpx.AsyncClient) -> None:
+    """render_plan='{"settings":{}}' does not trigger PREFLIGHT_FAILED (BL-488 AC-3)."""
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects",
+        json={"name": "Render Plan Default Smoke"},
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+    await _seed_clip_for_project(smoke_client, project_id)
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={
+            "project_id": project_id,
+            "render_plan": '{"total_duration": 10.0, "settings": {}}',
+        },
+    )
+    if resp.status_code == 422:
+        body = resp.json()
+        assert body.get("detail", {}).get("code") != "PREFLIGHT_FAILED", (
+            f"render_plan default triggered PREFLIGHT_FAILED: {body}"
+        )
+    else:
+        assert resp.status_code == 201, f"Unexpected status: {resp.status_code} {resp.text}"
+
+
 async def test_smoke_render_with_delivery_profile(smoke_client: httpx.AsyncClient) -> None:
     """POST /api/v1/render with delivery_profile set to nonexistent name returns 422.
 
