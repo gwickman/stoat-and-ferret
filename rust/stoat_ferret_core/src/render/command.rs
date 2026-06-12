@@ -525,6 +525,95 @@ pub fn py_build_generator_render_command(
 }
 
 // ---------------------------------------------------------------------------
+// Loopable bed render
+// ---------------------------------------------------------------------------
+
+/// Builds an FFmpeg render command to loop a short audio bed to a target duration.
+///
+/// Uses `-stream_loop -1` to repeat the input indefinitely, trimmed to
+/// `target_duration` seconds. An optional crossfade at the loop boundary
+/// smooths the seam using a short fade-out/fade-in pair around the loop point.
+///
+/// The `loop_start` parameter sets the intra-file seek position before
+/// looping begins, allowing the loop boundary to be reshaped to a zero
+/// crossing or a region with better spectral continuity.
+///
+/// Args:
+///     input_path: Path to the source audio file to loop.
+///     target_duration: Desired output duration in seconds.
+///     output_path: Path to write the looped output.
+///     crossfade_duration: Duration in seconds of the fade-out/fade-in applied
+///         at each loop boundary; 0.0 disables crossfading.
+///     loop_start: Seek offset into the source file before looping begins (seconds).
+///
+/// Returns:
+///     A `RenderCommand` with the complete argument list.
+pub fn build_loop_render_command(
+    input_path: &str,
+    target_duration: f64,
+    output_path: &str,
+    crossfade_duration: f64,
+    loop_start: f64,
+) -> RenderCommand {
+    let mut args: Vec<String> = vec![
+        "-stream_loop".to_string(),
+        "-1".to_string(),
+        "-i".to_string(),
+        input_path.to_string(),
+    ];
+
+    // Seek offset within the looped stream (loop boundary reshape, AC3)
+    if loop_start > 0.0 {
+        args.extend(["-ss".to_string(), format!("{loop_start:.6}")]);
+    }
+
+    // Trim to target duration
+    args.extend(["-t".to_string(), format!("{target_duration:.6}")]);
+
+    // Crossfade at loop boundary using afade in+out (AC2)
+    if crossfade_duration > 0.0 {
+        let fade_out_start = (target_duration - crossfade_duration).max(0.0);
+        let filter = format!(
+            "afade=t=in:d={crossfade_duration:.6},afade=t=out:st={fade_out_start:.6}:d={crossfade_duration:.6}"
+        );
+        args.extend(["-af".to_string(), filter]);
+    }
+
+    args.extend([
+        "-progress".to_string(),
+        "pipe:1".to_string(),
+        "-y".to_string(),
+        output_path.to_string(),
+    ]);
+
+    RenderCommand {
+        args,
+        output_path: output_path.to_string(),
+        segment_index: 0,
+    }
+}
+
+/// PyO3 binding for `build_loop_render_command`.
+#[pyfunction]
+#[pyo3(name = "build_loop_render_command")]
+#[pyo3(signature = (input_path, target_duration, output_path, crossfade_duration=0.0, loop_start=0.0))]
+pub fn py_build_loop_render_command(
+    input_path: &str,
+    target_duration: f64,
+    output_path: &str,
+    crossfade_duration: f64,
+    loop_start: f64,
+) -> RenderCommand {
+    build_loop_render_command(
+        input_path,
+        target_duration,
+        output_path,
+        crossfade_duration,
+        loop_start,
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -909,6 +998,54 @@ mod tests {
     fn build_generator_source_filter_unknown_type() {
         let r = build_generator_source_filter(r#"{"type":"unknown_type"}"#, 5.0);
         assert!(r.is_err());
+    }
+
+    // -- build_loop_render_command tests --
+
+    #[test]
+    fn build_loop_render_command_basic() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.0, 0.0);
+        assert!(cmd.args.contains(&"-stream_loop".to_string()));
+        assert!(cmd.args.contains(&"-1".to_string()));
+        assert!(cmd.args.contains(&"-i".to_string()));
+        assert!(cmd.args.contains(&"/bed.wav".to_string()));
+        assert!(cmd.args.contains(&"-t".to_string()));
+        assert!(cmd.args.contains(&"60.000000".to_string()));
+        assert_eq!(cmd.args.last().unwrap(), "/out.wav");
+        assert!(!cmd.args.contains(&"-af".to_string()));
+        assert!(!cmd.args.contains(&"-ss".to_string()));
+    }
+
+    #[test]
+    fn build_loop_render_command_with_crossfade() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.05, 0.0);
+        assert!(cmd.args.contains(&"-af".to_string()));
+        let af_idx = cmd.args.iter().position(|a| a == "-af").unwrap();
+        let filter = &cmd.args[af_idx + 1];
+        assert!(filter.contains("afade=t=in"));
+        assert!(filter.contains("afade=t=out"));
+    }
+
+    #[test]
+    fn build_loop_render_command_with_loop_start() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.0, 2.5);
+        assert!(cmd.args.contains(&"-ss".to_string()));
+        let ss_idx = cmd.args.iter().position(|a| a == "-ss").unwrap();
+        assert_eq!(cmd.args[ss_idx + 1], "2.500000");
+    }
+
+    #[test]
+    fn build_loop_render_command_no_ss_when_zero_start() {
+        let cmd = build_loop_render_command("/bed.wav", 60.0, "/out.wav", 0.0, 0.0);
+        assert!(!cmd.args.contains(&"-ss".to_string()));
+    }
+
+    #[test]
+    fn build_loop_render_command_output_path_last() {
+        let cmd = build_loop_render_command("/input.wav", 120.0, "/output.wav", 0.1, 1.0);
+        assert_eq!(cmd.output_path, "/output.wav");
+        assert_eq!(cmd.args.last().unwrap(), "/output.wav");
+        assert_eq!(cmd.segment_index, 0);
     }
 
     // -- Contract tests --

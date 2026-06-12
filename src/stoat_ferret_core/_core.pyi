@@ -2913,6 +2913,32 @@ def build_generator_render_command(
     """
     ...
 
+def build_loop_render_command(
+    input_path: str,
+    target_duration: float,
+    output_path: str,
+    crossfade_duration: float = 0.0,
+    loop_start: float = 0.0,
+) -> RenderCommand:
+    """Build an FFmpeg render command to loop a short audio bed to a target duration.
+
+    Uses ``-stream_loop -1`` to repeat the input, trimmed to ``target_duration``.
+    An optional ``crossfade_duration`` applies fade-in/out around each loop boundary
+    to reduce the audible seam. ``loop_start`` shifts the loop boundary within the
+    source file (useful for reshaping the loop point to a zero crossing).
+
+    Args:
+        input_path: Path to the source audio file to loop.
+        target_duration: Desired output duration in seconds.
+        output_path: Path to write the looped output.
+        crossfade_duration: Seconds of fade-in/out at each loop boundary (0 = disabled).
+        loop_start: Seek offset into the source file before looping (seconds).
+
+    Returns:
+        A RenderCommand with the complete argument list.
+    """
+    ...
+
 # ========== Progress Tracking Types ==========
 
 class FfmpegProgressUpdate:
