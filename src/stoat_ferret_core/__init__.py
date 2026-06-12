@@ -75,6 +75,7 @@ try:
         DrawtextBuilder,
         DuckingPattern,
         Duration,
+        ducking_effect_schema,
         EncoderInfo,
         EncoderType,
         FadeBuilder,
@@ -95,6 +96,7 @@ try:
         MultibandCompressorBuilder,
         NoiseReductionBuilder,
         PanBuilder,
+        PitchShiftBuilder,
         ParameterSchema,
         ParametricEqBuilder,
         PeakReport,
@@ -111,6 +113,7 @@ try:
         SpectralReport,
         SpeedControl,
         TimeRange,
+        SubBassBuilder,
         TimeStretchBuilder,
         TrackAudioConfig,
         TransitionSpec,
@@ -215,8 +218,11 @@ except ImportError:
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
+    PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
+    SubBassBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
+    ducking_effect_schema = _not_built
     Automation = _not_built  # type: ignore[misc,assignment]
     compile_automation = _not_built
     CurveKind = _not_built  # type: ignore[misc,assignment]
@@ -324,7 +330,9 @@ __all__ = [
     "NoiseReductionBuilder",
     "DeesserBuilder",
     "DeplosiveBuilder",
+    "SubBassBuilder",
     "TimeStretchBuilder",
+    "ducking_effect_schema",
     # Mastering builders
     "LimiterBuilder",
     "LoudnormBuilder",
@@ -333,6 +341,7 @@ __all__ = [
     # Spatial audio builders
     "ConvolutionReverbBuilder",
     "PanBuilder",
+    "PitchShiftBuilder",
     # Transition builders
     "TransitionType",
     "FadeBuilder",

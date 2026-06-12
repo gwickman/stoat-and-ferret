@@ -20,10 +20,11 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
-use super::filter::{Filter, FilterGraph};
+use super::filter::{Filter, FilterChain, FilterGraph};
 use crate::sanitize;
+use crate::schema::ParameterSchema;
 
 // ========== FadeCurve Enum ==========
 
@@ -1105,6 +1106,294 @@ impl AudioMixSpec {
     /// Returns a string representation of the spec.
     fn __repr__(&self) -> String {
         format!("AudioMixSpec(tracks={})", self.tracks.len())
+    }
+}
+
+// ========== SubBassBuilder ==========
+
+/// Builds a sub-bass isolation filter chain with configurable crossover and level.
+///
+/// Extracts the sub-bass frequency band (below `cutoff_hz`) using a lowpass filter,
+/// then optionally adjusts the output level in dB. Useful for adding a grounding
+/// low-frequency layer to a mix.
+///
+/// # Examples
+///
+/// ```
+/// use stoat_ferret_core::ffmpeg::audio::SubBassBuilder;
+///
+/// let chain = SubBassBuilder::new(80.0).unwrap().build();
+/// assert!(chain.to_string().contains("lowpass"));
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct SubBassBuilder {
+    /// Lowpass crossover frequency in Hz ([20.0, 300.0]).
+    cutoff_hz: f64,
+    /// Output level adjustment in dB ([-20.0, 20.0]).
+    level_db: f64,
+}
+
+impl SubBassBuilder {
+    /// Creates a new `SubBassBuilder`.
+    ///
+    /// # Arguments
+    ///
+    /// * `cutoff_hz` - Lowpass crossover frequency in Hz, range [20.0, 300.0].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `cutoff_hz` is outside the allowed range.
+    pub fn new(cutoff_hz: f64) -> Result<Self, String> {
+        if !(20.0..=300.0).contains(&cutoff_hz) {
+            return Err(format!(
+                "cutoff_hz must be in [20.0, 300.0], got {cutoff_hz}"
+            ));
+        }
+        Ok(Self {
+            cutoff_hz,
+            level_db: 0.0,
+        })
+    }
+
+    /// Sets the output level adjustment.
+    ///
+    /// # Arguments
+    ///
+    /// * `level_db` - Level adjustment in dB, range [-20.0, 20.0].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `level_db` is outside the allowed range.
+    pub fn with_level_db(mut self, level_db: f64) -> Result<Self, String> {
+        if !(-20.0..=20.0).contains(&level_db) {
+            return Err(format!("level_db must be in [-20.0, 20.0], got {level_db}"));
+        }
+        self.level_db = level_db;
+        Ok(self)
+    }
+
+    /// Builds the sub-bass `FilterChain`.
+    ///
+    /// Generates `lowpass=f=<cutoff>` optionally chained with `volume=<linear>` when
+    /// `level_db` is non-zero.
+    #[must_use]
+    pub fn build(&self) -> FilterChain {
+        let mut chain = FilterChain::new()
+            .filter(Filter::new("lowpass").param("f", format!("{:.1}", self.cutoff_hz)));
+        if self.level_db.abs() > 1e-9 {
+            let linear = 10f64.powf(self.level_db / 20.0);
+            chain = chain.filter(Filter::new("volume").param("volume", format!("{linear:.4}")));
+        }
+        chain
+    }
+}
+
+// ========== SubBassBuilder PyO3 bindings ==========
+
+#[pymethods]
+impl SubBassBuilder {
+    /// Creates a new `SubBassBuilder`.
+    ///
+    /// Args:
+    ///     cutoff_hz: Lowpass crossover frequency in Hz, range [20.0, 300.0].
+    ///         Typical sub-bass: 60–100 Hz.
+    ///
+    /// Raises:
+    ///     ValueError: If cutoff_hz is outside the allowed range.
+    #[new]
+    fn py_new(cutoff_hz: f64) -> PyResult<Self> {
+        Self::new(cutoff_hz).map_err(PyValueError::new_err)
+    }
+
+    /// Sets the output level adjustment in dB.
+    ///
+    /// Args:
+    ///     level_db: Level adjustment in dB, range [-20.0, 20.0].
+    ///
+    /// Raises:
+    ///     ValueError: If level_db is outside the allowed range.
+    #[pyo3(name = "with_level_db")]
+    fn py_with_level_db(slf: PyRefMut<'_, Self>, level_db: f64) -> PyResult<Self> {
+        slf.clone()
+            .with_level_db(level_db)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Builds the sub-bass `FilterChain`.
+    ///
+    /// Returns:
+    ///     A FilterChain with a lowpass filter and optional volume adjustment.
+    #[pyo3(name = "build")]
+    fn py_build(&self) -> FilterChain {
+        self.build()
+    }
+
+    /// Returns the crossover frequency in Hz.
+    #[getter]
+    #[pyo3(name = "cutoff_hz")]
+    fn py_cutoff_hz(&self) -> f64 {
+        self.cutoff_hz
+    }
+
+    /// Returns the level adjustment in dB.
+    #[getter]
+    #[pyo3(name = "level_db")]
+    fn py_level_db(&self) -> f64 {
+        self.level_db
+    }
+
+    /// Returns a string representation of the builder.
+    fn __repr__(&self) -> String {
+        format!(
+            "SubBassBuilder(cutoff_hz={}, level_db={})",
+            self.cutoff_hz, self.level_db
+        )
+    }
+}
+
+// ========== ducking_effect_schema ==========
+
+/// Returns the `ParameterSchema` list for `DuckingPattern`.
+///
+/// Exposes `DuckingPattern` as a schema-validated registry effect so that
+/// agents and tooling can discover and validate its parameters without
+/// constructing an instance.
+///
+/// # Returns
+///
+/// A `Vec<ParameterSchema>` with entries for threshold, ratio, attack, and release.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "ducking_effect_schema")]
+pub fn py_ducking_effect_schema() -> Vec<ParameterSchema> {
+    vec![
+        ParameterSchema {
+            name: "threshold".to_string(),
+            param_type: "float".to_string(),
+            default_value: None,
+            min_value: Some(0.0009765625),
+            max_value: Some(1.0),
+            enum_values: None,
+            description: "Sidechaincompress detection threshold (linear amplitude, 0.00097563–1.0). Lower values duck on quieter signals.".to_string(),
+            ai_hint: "Voice detection trigger level — start at 0.125 for a vocal signal peaking around -18 dBFS".to_string(),
+        },
+        ParameterSchema {
+            name: "ratio".to_string(),
+            param_type: "float".to_string(),
+            default_value: None,
+            min_value: Some(1.0),
+            max_value: Some(20.0),
+            enum_values: None,
+            description: "Compression ratio applied when signal exceeds threshold (1.0–20.0).".to_string(),
+            ai_hint: "Duck depth — 2:1 is gentle, 10:1 is aggressive; typical ducking uses 3–6".to_string(),
+        },
+        ParameterSchema {
+            name: "attack".to_string(),
+            param_type: "float".to_string(),
+            default_value: None,
+            min_value: Some(0.01),
+            max_value: Some(2000.0),
+            enum_values: None,
+            description: "Attack time in milliseconds (0.01–2000 ms).".to_string(),
+            ai_hint: "How fast the duck engages — 20 ms is natural for voice; shorter = snappier".to_string(),
+        },
+        ParameterSchema {
+            name: "release".to_string(),
+            param_type: "float".to_string(),
+            default_value: None,
+            min_value: Some(0.01),
+            max_value: Some(9000.0),
+            enum_values: None,
+            description: "Release time in milliseconds (0.01–9000 ms).".to_string(),
+            ai_hint: "How fast background recovers after voice pauses — 250 ms is natural; longer = smoother".to_string(),
+        },
+    ]
+}
+
+// ========== SubBassBuilder unit tests ==========
+
+#[cfg(test)]
+mod sub_bass_tests {
+    use super::*;
+
+    #[test]
+    fn sub_bass_basic_structure() {
+        let chain = SubBassBuilder::new(80.0).unwrap().build();
+        let s = chain.to_string();
+        assert!(s.contains("lowpass"));
+        assert!(s.contains("f=80.0"));
+    }
+
+    #[test]
+    fn sub_bass_no_volume_when_zero_db() {
+        let chain = SubBassBuilder::new(80.0).unwrap().build();
+        assert!(!chain.to_string().contains("volume"));
+    }
+
+    #[test]
+    fn sub_bass_with_positive_level_db() {
+        let chain = SubBassBuilder::new(80.0)
+            .unwrap()
+            .with_level_db(6.0)
+            .unwrap()
+            .build();
+        assert!(chain.to_string().contains("volume"));
+    }
+
+    #[test]
+    fn sub_bass_with_negative_level_db() {
+        let chain = SubBassBuilder::new(80.0)
+            .unwrap()
+            .with_level_db(-6.0)
+            .unwrap()
+            .build();
+        assert!(chain.to_string().contains("volume"));
+    }
+
+    #[test]
+    fn sub_bass_out_of_range_cutoff_high() {
+        assert!(SubBassBuilder::new(301.0).is_err());
+    }
+
+    #[test]
+    fn sub_bass_out_of_range_cutoff_low() {
+        assert!(SubBassBuilder::new(19.9).is_err());
+    }
+
+    #[test]
+    fn sub_bass_out_of_range_level_db() {
+        assert!(SubBassBuilder::new(80.0)
+            .unwrap()
+            .with_level_db(21.0)
+            .is_err());
+    }
+
+    #[test]
+    fn sub_bass_boundary_values() {
+        assert!(SubBassBuilder::new(20.0).is_ok());
+        assert!(SubBassBuilder::new(300.0).is_ok());
+    }
+
+    #[test]
+    fn ducking_effect_schema_returns_four_fields() {
+        let schemas = py_ducking_effect_schema();
+        assert_eq!(schemas.len(), 4);
+        let names: Vec<&str> = schemas.iter().map(|s| s.name.as_str()).collect();
+        assert!(names.contains(&"threshold"));
+        assert!(names.contains(&"ratio"));
+        assert!(names.contains(&"attack"));
+        assert!(names.contains(&"release"));
+    }
+
+    #[test]
+    fn ducking_effect_schema_all_float() {
+        for schema in py_ducking_effect_schema() {
+            assert_eq!(schema.param_type, "float");
+            assert!(schema.min_value.is_some());
+            assert!(schema.max_value.is_some());
+        }
     }
 }
 

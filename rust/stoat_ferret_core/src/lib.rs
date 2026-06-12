@@ -108,12 +108,18 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::audio::DuckingPattern>()?;
     m.add_class::<ffmpeg::audio::TrackAudioConfig>()?;
     m.add_class::<ffmpeg::audio::AudioMixSpec>()?;
+    m.add_class::<ffmpeg::audio::SubBassBuilder>()?;
+    m.add_function(wrap_pyfunction!(
+        ffmpeg::audio::py_ducking_effect_schema,
+        m
+    )?)?;
 
     // Register voice repair builders
     m.add_class::<ffmpeg::voice_repair::NoiseReductionBuilder>()?;
     m.add_class::<ffmpeg::voice_repair::DeesserBuilder>()?;
     m.add_class::<ffmpeg::voice_repair::DeplosiveBuilder>()?;
     m.add_class::<ffmpeg::voice_repair::TimeStretchBuilder>()?;
+    m.add_class::<ffmpeg::voice_repair::PitchShiftBuilder>()?;
 
     // Register mastering builders
     m.add_class::<ffmpeg::mastering::LimiterBuilder>()?;

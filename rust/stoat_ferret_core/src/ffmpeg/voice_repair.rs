@@ -1384,3 +1384,288 @@ mod time_stretch_tests {
         });
     }
 }
+
+// ========== PitchShiftBuilder ==========
+
+/// Builds an `arubberband` pitch-shift filter for vocal warmth or correction.
+///
+/// Uses the FFmpeg `arubberband` filter (requires libRubberBand) to shift pitch
+/// by a configured number of semitones while optionally preserving formants for
+/// natural-sounding results.
+///
+/// # Examples
+///
+/// ```
+/// use stoat_ferret_core::ffmpeg::voice_repair::PitchShiftBuilder;
+///
+/// // Warm the voice up by 2 semitones, preserving formants
+/// let chain = PitchShiftBuilder::new(2.0).unwrap()
+///     .with_formant("preserved").unwrap()
+///     .build();
+/// assert!(chain.to_string().contains("arubberband"));
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct PitchShiftBuilder {
+    /// Pitch shift in semitones ([-24.0, 24.0]).
+    semitones: f64,
+    /// Formant mode: "shifted" or "preserved".
+    formant: String,
+    /// Pitch quality: "speedy", "consistency", or "quality".
+    quality: String,
+}
+
+impl PitchShiftBuilder {
+    /// Creates a new `PitchShiftBuilder`.
+    ///
+    /// # Arguments
+    ///
+    /// * `semitones` - Pitch shift in semitones, range [-24.0, 24.0].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if semitones is out of the allowed range.
+    pub fn new(semitones: f64) -> Result<Self, String> {
+        if semitones < -24.0 || semitones > 24.0 {
+            return Err(format!(
+                "semitones must be in [-24.0, 24.0], got {semitones}"
+            ));
+        }
+        Ok(Self {
+            semitones,
+            formant: "shifted".to_string(),
+            quality: "quality".to_string(),
+        })
+    }
+
+    /// Sets the formant mode.
+    ///
+    /// # Arguments
+    ///
+    /// * `formant` - "shifted" (default) or "preserved" (formant-preserving, more natural).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value is not "shifted" or "preserved".
+    pub fn with_formant(mut self, formant: &str) -> Result<Self, String> {
+        match formant {
+            "shifted" | "preserved" => {}
+            _ => {
+                return Err(format!(
+                    "formant must be 'shifted' or 'preserved', got '{formant}'"
+                ))
+            }
+        }
+        self.formant = formant.to_string();
+        Ok(self)
+    }
+
+    /// Sets the pitch quality mode.
+    ///
+    /// # Arguments
+    ///
+    /// * `quality` - "speedy" (fastest), "consistency" (stable), or "quality" (best quality, default).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value is not one of the allowed modes.
+    pub fn with_quality(mut self, quality: &str) -> Result<Self, String> {
+        match quality {
+            "speedy" | "consistency" | "quality" => {}
+            _ => {
+                return Err(format!(
+                    "quality must be 'speedy', 'consistency', or 'quality', got '{quality}'"
+                ))
+            }
+        }
+        self.quality = quality.to_string();
+        Ok(self)
+    }
+
+    /// Builds the pitch-shift `FilterChain`.
+    ///
+    /// The pitch factor is computed as `2^(semitones / 12)`.
+    #[must_use]
+    pub fn build(&self) -> FilterChain {
+        let pitch_factor = 2f64.powf(self.semitones / 12.0);
+        let f = Filter::new("arubberband")
+            .param("pitch", format!("{pitch_factor:.6}"))
+            .param("pitchq", self.quality.clone())
+            .param("formant", self.formant.clone());
+        FilterChain::new().filter(f)
+    }
+}
+
+// ========== PitchShiftBuilder PyO3 bindings ==========
+
+#[pymethods]
+impl PitchShiftBuilder {
+    /// Creates a new `PitchShiftBuilder`.
+    ///
+    /// Args:
+    ///     semitones: Pitch shift in semitones, range [-24.0, 24.0]. Positive values
+    ///         raise pitch, negative values lower it. Typical vocal warmth: +1 to +3.
+    ///
+    /// Raises:
+    ///     ValueError: If semitones is outside the allowed range.
+    #[new]
+    fn py_new(semitones: f64) -> PyResult<Self> {
+        Self::new(semitones).map_err(PyValueError::new_err)
+    }
+
+    /// Sets the formant mode.
+    ///
+    /// Args:
+    ///     formant: "shifted" (default, shifts formants with pitch) or
+    ///         "preserved" (preserves formant envelope for natural-sounding results).
+    ///
+    /// Raises:
+    ///     ValueError: If formant is not "shifted" or "preserved".
+    #[pyo3(name = "with_formant")]
+    fn py_with_formant(slf: PyRefMut<'_, Self>, formant: &str) -> PyResult<Self> {
+        slf.clone()
+            .with_formant(formant)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Sets the pitch quality mode.
+    ///
+    /// Args:
+    ///     quality: "speedy" (fastest), "consistency" (stable across frames),
+    ///         or "quality" (best quality, default).
+    ///
+    /// Raises:
+    ///     ValueError: If quality is not one of the allowed modes.
+    #[pyo3(name = "with_quality")]
+    fn py_with_quality(slf: PyRefMut<'_, Self>, quality: &str) -> PyResult<Self> {
+        slf.clone()
+            .with_quality(quality)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Builds the pitch-shift `FilterChain`.
+    ///
+    /// Returns:
+    ///     A FilterChain containing a single arubberband filter with the configured
+    ///     pitch factor, formant mode, and quality.
+    #[pyo3(name = "build")]
+    fn py_build(&self) -> FilterChain {
+        self.build()
+    }
+
+    /// Returns the pitch shift in semitones.
+    #[getter]
+    #[pyo3(name = "semitones")]
+    fn py_semitones(&self) -> f64 {
+        self.semitones
+    }
+
+    /// Returns the formant mode.
+    #[getter]
+    #[pyo3(name = "formant")]
+    fn py_formant(&self) -> &str {
+        &self.formant
+    }
+
+    /// Returns the pitch quality mode.
+    #[getter]
+    #[pyo3(name = "quality")]
+    fn py_quality(&self) -> &str {
+        &self.quality
+    }
+
+    /// Returns a string representation of the builder.
+    fn __repr__(&self) -> String {
+        format!(
+            "PitchShiftBuilder(semitones={}, formant='{}', quality='{}')",
+            self.semitones, self.formant, self.quality
+        )
+    }
+}
+
+// ========== PitchShiftBuilder unit tests ==========
+
+#[cfg(test)]
+mod pitch_shift_tests {
+    use super::*;
+
+    #[test]
+    fn pitch_shift_up_two_semitones() {
+        let chain = PitchShiftBuilder::new(2.0).unwrap().build();
+        let s = chain.to_string();
+        assert!(s.contains("arubberband"));
+        // 2^(2/12) ≈ 1.122462
+        assert!(s.contains("pitch=1.122462"));
+    }
+
+    #[test]
+    fn pitch_shift_zero_semitones() {
+        let chain = PitchShiftBuilder::new(0.0).unwrap().build();
+        let s = chain.to_string();
+        // 2^0 = 1.0
+        assert!(s.contains("pitch=1.000000"));
+    }
+
+    #[test]
+    fn pitch_shift_preserved_formant() {
+        let chain = PitchShiftBuilder::new(2.0)
+            .unwrap()
+            .with_formant("preserved")
+            .unwrap()
+            .build();
+        let s = chain.to_string();
+        assert!(s.contains("formant=preserved"));
+    }
+
+    #[test]
+    fn pitch_shift_speedy_quality() {
+        let chain = PitchShiftBuilder::new(1.0)
+            .unwrap()
+            .with_quality("speedy")
+            .unwrap()
+            .build();
+        let s = chain.to_string();
+        assert!(s.contains("pitchq=speedy"));
+    }
+
+    #[test]
+    fn pitch_shift_negative_semitones() {
+        let chain = PitchShiftBuilder::new(-3.0).unwrap().build();
+        let s = chain.to_string();
+        // 2^(-3/12) ≈ 0.840896
+        assert!(s.contains("pitch=0.840896"));
+    }
+
+    #[test]
+    fn pitch_shift_out_of_range_high() {
+        assert!(PitchShiftBuilder::new(25.0).is_err());
+    }
+
+    #[test]
+    fn pitch_shift_out_of_range_low() {
+        assert!(PitchShiftBuilder::new(-25.0).is_err());
+    }
+
+    #[test]
+    fn pitch_shift_invalid_formant() {
+        assert!(PitchShiftBuilder::new(1.0)
+            .unwrap()
+            .with_formant("wrong")
+            .is_err());
+    }
+
+    #[test]
+    fn pitch_shift_invalid_quality() {
+        assert!(PitchShiftBuilder::new(1.0)
+            .unwrap()
+            .with_quality("best")
+            .is_err());
+    }
+
+    #[test]
+    fn pitch_shift_boundary_24() {
+        assert!(PitchShiftBuilder::new(24.0).is_ok());
+        assert!(PitchShiftBuilder::new(-24.0).is_ok());
+    }
+}
