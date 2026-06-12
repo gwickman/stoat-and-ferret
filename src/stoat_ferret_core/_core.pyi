@@ -2875,12 +2875,26 @@ def estimate_output_size(
 def build_generator_source_filter(params_json: str, duration: float) -> str:
     """Build an FFmpeg source filter string for a generator clip.
 
+    Supported types in params_json:
+    - ``"sine"``: Simple sine wave. Requires ``frequency`` (Hz).
+    - ``"aevalsrc"``: Arbitrary expression evaluator. Requires ``expr``.
+      Optional ``duration`` overrides the clip duration.
+    - ``"tone"``: Entrainment tone with optional frequency sweep and binaural
+      beat mode. Requires ``frequency`` (Hz). Optional fields:
+      ``frequency_end`` (Hz) — sweeps from ``frequency`` to ``frequency_end``
+      using a linear chirp; ``binaural_offset`` (Hz) — adds a right-channel
+      copy offset by this amount to produce a binaural beat at that frequency.
+
     Args:
         params_json: JSON string with generator parameters including a 'type' field.
         duration: Clip duration in seconds.
 
     Returns:
         FFmpeg source filter expression string.
+
+    Raises:
+        ValueError: If params_json is invalid, 'type' is missing, a required
+            field for the chosen type is absent, or the type is unknown.
     """
     ...
 
@@ -2893,6 +2907,32 @@ def build_generator_render_command(
         params_json: JSON string with generator parameters including a 'type' field.
         duration: Clip duration in seconds.
         output_path: Path to write the rendered output.
+
+    Returns:
+        A RenderCommand with the complete argument list.
+    """
+    ...
+
+def build_loop_render_command(
+    input_path: str,
+    target_duration: float,
+    output_path: str,
+    crossfade_duration: float = 0.0,
+    loop_start: float = 0.0,
+) -> RenderCommand:
+    """Build an FFmpeg render command to loop a short audio bed to a target duration.
+
+    Uses ``-stream_loop -1`` to repeat the input, trimmed to ``target_duration``.
+    An optional ``crossfade_duration`` applies fade-in/out around each loop boundary
+    to reduce the audible seam. ``loop_start`` shifts the loop boundary within the
+    source file (useful for reshaping the loop point to a zero crossing).
+
+    Args:
+        input_path: Path to the source audio file to loop.
+        target_duration: Desired output duration in seconds.
+        output_path: Path to write the looped output.
+        crossfade_duration: Seconds of fade-in/out at each loop boundary (0 = disabled).
+        loop_start: Seek offset into the source file before looping (seconds).
 
     Returns:
         A RenderCommand with the complete argument list.

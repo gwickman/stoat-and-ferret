@@ -61,6 +61,7 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
         command::py_build_generator_render_command,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(command::py_build_loop_render_command, m)?)?;
 
     // Progress tracking types
     m.add_class::<progress::FfmpegProgressUpdate>()?;
