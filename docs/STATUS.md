@@ -1,5 +1,53 @@
 # STATUS.md
 
+## v080 — Release 2, Wave 4 — Editing & Time
+
+**Delivered:** 2026-06-12
+**PRs:** #580–#591 (11 PRs)
+**Tests:** 6967+ passing (baseline at start of v080)
+
+### Highlights
+
+- Reverse effect with 30s buffer-limit guard via STOAT_REVERSE_MAX_DURATION_S env var — BL-444
+- Range-window gating effect for time-domain window operations — BL-446
+- Variable-speed effect with segmented-concat rendering — BL-447
+- Framerate-convert effect with blend, optical-flow, and duplicate modes — BL-448
+- Freeze-frame effect for static frame extraction — BL-449
+- Clip split/razor endpoint with timeline propagation and GUI affordance — BL-445
+- j_reverse_split.py rewritten with real reverse+split API assertions; Tier-2 UAT checklist created — BL-457
+- Golden QC fixture regenerated with real FFmpeg measurements; BL-476 confirmed resolved — BL-458
+- Tier-2 acceptance harness and gate tests created; BL-476/477 confirmed passing — BL-459
+- Smoke tests for reverse, variable_speed, framerate_convert, freeze_frame, and split operations
+- Smoke-test-harness guide updated with v080 effect types, split endpoint, and STOAT_REVERSE_MAX_DURATION_S
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| effect-engine-core | BL-444, BL-446, BL-447, BL-448, BL-449 | #580–#584 | merged |
+| clip-operations-and-docs | BL-445 | #585–#587 | merged |
+| wave-t-testing-harness | BL-457, BL-458, BL-459 | #588–#591 | merged |
+
+### AC Status
+
+- All 11 features merged to main
+- 5 ACs deferred (require `STOAT_TEST_FFMPEG=1` or headed browser)
+- 1 AC blocked by BL-480 (GUI testids absent)
+- All deferred ACs have discharge commands below
+
+### Discharge Commands
+
+| Item | Description | Discharge |
+|------|-------------|-----------|
+| BL-457-AC-2 (FR-002-AC-2) | j_reverse_split.py headless UAT run | `python scripts/uat_runner.py --journey 705 --headless` (requires live server) |
+| BL-457-AC-3 (FR-003-AC-1) | J-QC-Fail journey | Blocked by BL-480 (qc-status-fail/remaster-btn testids absent from GUI) |
+| BL-459-AC-1/2/4 | Full acceptance harness (FFmpeg-gated) | `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py -v` |
+
+### User Actions Required
+
+1. **BL-457-AC-2** — Run `python scripts/uat_runner.py --journey 705 --headless` to discharge j_reverse_split.py UAT (requires live server)
+2. **BL-459-AC-1/2/4** — Run `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py -v` to discharge full acceptance harness (FFmpeg-gated)
+
 ## v078 — QC Integrity, DSP Correctness & R2 Doc Parity
 
 **Delivered:** 2026-06-11
