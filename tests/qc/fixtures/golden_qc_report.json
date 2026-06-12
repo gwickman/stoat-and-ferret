@@ -1,19 +1,80 @@
 {
-  "status": "placeholder",
-  "note": "Populated with real QCReport structure by BL-424 executor. Full fixture requires FFmpeg (STOAT_TEST_FFMPEG=1) for final discharge.",
-  "overall": "pass",
+  "overall": "fail",
   "checks": {
-    "loudness_integrated": {"measured": null, "target": null, "pass": null, "units": "LUFS"},
-    "true_peak": {"measured": null, "target": null, "pass": null, "units": "dBTP"},
-    "clipping": {"measured": null, "target": null, "pass": null, "units": "samples"},
-    "unintended_silence": {"measured": null, "target": null, "pass": null, "units": "regions"},
-    "loop_seam": {"measured": null, "target": null, "pass": null, "units": "errors"},
-    "tone_presence": {"measured": null, "target": null, "pass": null, "units": "dB"},
-    "ducking": {"measured": null, "target": null, "pass": null, "units": "dBFS"},
-    "section_arc": {"measured": null, "target": null, "pass": null, "units": "LU"},
-    "av_sync": {"measured": null, "target": null, "pass": null, "units": "ms"},
-    "decode_integrity": {"measured": null, "target": null, "pass": null, "units": "errors"},
-    "chapters_present": {"measured": null, "target": null, "pass": null, "units": "chapters"},
-    "spatial_correlation": {"measured": null, "target": null, "pass": null, "units": "ratio"}
+    "loudness_integrated": {
+      "measured": -21.75,
+      "target": null,
+      "pass": null,
+      "units": "LUFS"
+    },
+    "true_peak": {
+      "measured": -21.07,
+      "target": null,
+      "pass": null,
+      "units": "dBTP"
+    },
+    "clipping": {
+      "measured": 0.0,
+      "target": null,
+      "pass": null,
+      "units": "samples"
+    },
+    "unintended_silence": {
+      "measured": 0.0,
+      "target": null,
+      "pass": null,
+      "units": "regions"
+    },
+    "loop_seam": {
+      "measured": 0.0,
+      "target": null,
+      "pass": null,
+      "units": "errors"
+    },
+    "tone_presence": {
+      "measured": null,
+      "target": null,
+      "pass": false,
+      "units": ""
+    },
+    "ducking": {
+      "measured": -21.072762,
+      "target": null,
+      "pass": null,
+      "units": "dBFS"
+    },
+    "section_arc": {
+      "measured": 0.0,
+      "target": null,
+      "pass": null,
+      "units": "LU"
+    },
+    "av_sync": {
+      "measured": null,
+      "target": null,
+      "pass": false,
+      "units": ""
+    },
+    "decode_integrity": {
+      "measured": 0.0,
+      "target": null,
+      "pass": null,
+      "units": "errors"
+    },
+    "chapters_present": {
+      "measured": 0.0,
+      "target": 1.0,
+      "pass": false,
+      "units": "chapters",
+      "metadata": {
+        "chapters_ordered": true
+      }
+    },
+    "spatial_correlation": {
+      "measured": null,
+      "target": null,
+      "pass": null,
+      "units": "ratio"
+    }
   }
 }
