@@ -778,7 +778,7 @@ async def test_render_plan_default_passes_preflight(smoke_client: httpx.AsyncCli
         "/api/v1/render",
         json={
             "project_id": project_id,
-            "render_plan": '{"settings": {}}',
+            "render_plan": '{"total_duration": 10.0, "settings": {}}',
         },
     )
     if resp.status_code == 422:

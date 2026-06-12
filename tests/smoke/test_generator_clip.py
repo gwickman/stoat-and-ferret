@@ -7,7 +7,6 @@ requiring FFmpeg. Covers AC-4 of v079 feature 012-smoke-test-updates.
 from __future__ import annotations
 
 import httpx
-import pytest
 
 
 async def test_generator_clip_created_via_api(smoke_client: httpx.AsyncClient) -> None:
@@ -28,11 +27,16 @@ async def test_generator_clip_created_via_api(smoke_client: httpx.AsyncClient) -
                 "expr": "sin(2*PI*440*t)",
                 "duration": 5.0,
             },
+            "in_point": 0,
+            "out_point": 240,
+            "timeline_position": 0,
         },
     )
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     data = resp.json()
-    assert data["clip_type"] == "generator", f"Expected clip_type='generator', got {data['clip_type']!r}"
+    assert data["clip_type"] == "generator", (
+        f"Expected clip_type='generator', got {data['clip_type']!r}"
+    )
     assert data["source_video_id"] is None, "Generator clip should have null source_video_id"
     assert data["generator_params"] is not None
     assert data["generator_params"]["type"] == "aevalsrc"
@@ -52,6 +56,9 @@ async def test_generator_clip_persists_in_list(smoke_client: httpx.AsyncClient) 
         json={
             "clip_type": "generator",
             "generator_params": {"type": "tone", "frequency": 440.0, "duration": 10.0},
+            "in_point": 0,
+            "out_point": 480,
+            "timeline_position": 0,
         },
     )
     assert create_resp.status_code == 201
@@ -80,4 +87,6 @@ async def test_generator_clip_rejects_with_source_video_id(smoke_client: httpx.A
             "generator_params": {"type": "aevalsrc", "expr": "0", "duration": 1.0},
         },
     )
-    assert resp.status_code == 422, f"Expected 422 for generator+source_video_id, got {resp.status_code}"
+    assert resp.status_code == 422, (
+        f"Expected 422 for generator+source_video_id, got {resp.status_code}"
+    )
