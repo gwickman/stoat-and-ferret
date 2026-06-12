@@ -106,6 +106,7 @@ try:
         RenderCommand,
         RenderSegment,
         RenderSettings,
+        ReverseBuilder,
         SanitizationError,
         SilenceRegion,
         SilenceReport,
@@ -213,6 +214,7 @@ except ImportError:
     NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
+    ReverseBuilder = _not_built  # type: ignore[misc,assignment]
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
@@ -330,6 +332,7 @@ __all__ = [
     "NoiseReductionBuilder",
     "DeesserBuilder",
     "DeplosiveBuilder",
+    "ReverseBuilder",
     "SubBassBuilder",
     "TimeStretchBuilder",
     "ducking_effect_schema",

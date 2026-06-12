@@ -28,6 +28,7 @@ from stoat_ferret_core import (
     NoiseReductionBuilder,
     PanBuilder,
     ParametricEqBuilder,
+    ReverseBuilder,
     SpeedControl,
     TimeStretchBuilder,
     TransitionType,
@@ -1555,6 +1556,44 @@ CONVOLUTION_REVERB = EffectDefinition(
 )
 
 
+def _reverse_preview() -> str:
+    """Generate a filter preview for the reverse effect with default parameters."""
+    return str(ReverseBuilder().video_filter())
+
+
+def _build_reverse(parameters: dict[str, Any]) -> str:  # noqa: ARG001
+    """Build FFmpeg filter string for reverse effect.
+
+    Args:
+        parameters: Effect parameters (none required for reverse).
+
+    Returns:
+        FFmpeg reverse filter string.
+    """
+    return str(ReverseBuilder().video_filter())
+
+
+REVERSE = EffectDefinition(
+    name="Reverse",
+    description=(
+        "Reverse a clip so frames and audio play in reverse order. "
+        "Enforces a configurable maximum duration to prevent memory exhaustion "
+        "(see STOAT_REVERSE_MAX_DURATION_S)."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={},
+    preview_fn=_reverse_preview,
+    build_fn=_build_reverse,
+    ai_summary="Play a clip backwards — frames and audio are reversed.",
+    example_prompt="Play this clip in reverse.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1583,4 +1622,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("multiband_compressor", MULTIBAND_COMPRESSOR)
     registry.register("pan", PAN)
     registry.register("convolution_reverb", CONVOLUTION_REVERB)
+    registry.register("reverse", REVERSE)
     return registry
