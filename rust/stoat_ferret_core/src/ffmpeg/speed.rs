@@ -757,8 +757,14 @@ mod tests {
             graph.contains("[0:a]atrim=start_frame=30:end_frame=60,asetpts=NB_CONSUMED_SAMPLES/SR/TB,atempo=0.5[aseg1]"),
             "Got: {graph}"
         );
-        assert!(graph.contains("[vseg0][vseg1]concat=n=2:v=1:a=0[vout]"), "Got: {graph}");
-        assert!(graph.contains("[aseg0][aseg1]concat=n=2:v=0:a=1[aout]"), "Got: {graph}");
+        assert!(
+            graph.contains("[vseg0][vseg1]concat=n=2:v=1:a=0[vout]"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("[aseg0][aseg1]concat=n=2:v=0:a=1[aout]"),
+            "Got: {graph}"
+        );
     }
 
     #[test]
@@ -767,9 +773,18 @@ mod tests {
             VariableSpeedBuilder::new(vec![seg(0, 30, 2.0), seg(30, 60, 1.0), seg(60, 90, 0.5)])
                 .unwrap();
         let graph = builder.build_filter_graph();
-        assert!(graph.contains("trim=start_frame=0:end_frame=30"), "Got: {graph}");
-        assert!(graph.contains("trim=start_frame=30:end_frame=60"), "Got: {graph}");
-        assert!(graph.contains("trim=start_frame=60:end_frame=90"), "Got: {graph}");
+        assert!(
+            graph.contains("trim=start_frame=0:end_frame=30"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("trim=start_frame=30:end_frame=60"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("trim=start_frame=60:end_frame=90"),
+            "Got: {graph}"
+        );
         assert!(
             graph.contains("setpts=1*(PTS-STARTPTS)"),
             "1x speed should give setpts=1*(PTS-STARTPTS), got: {graph}"
@@ -777,7 +792,8 @@ mod tests {
         assert!(graph.contains("concat=n=3:v=1:a=0[vout]"), "Got: {graph}");
         assert!(graph.contains("concat=n=3:v=0:a=1[aout]"), "Got: {graph}");
         // 1x speed → atempo chain is empty, no ,atempo= for middle segment
-        let mid_audio = "[0:a]atrim=start_frame=30:end_frame=60,asetpts=NB_CONSUMED_SAMPLES/SR/TB[aseg1]";
+        let mid_audio =
+            "[0:a]atrim=start_frame=30:end_frame=60,asetpts=NB_CONSUMED_SAMPLES/SR/TB[aseg1]";
         assert!(graph.contains(mid_audio), "Got: {graph}");
     }
 
