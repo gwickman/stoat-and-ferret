@@ -71,6 +71,7 @@ EXPECTED_EFFECT_TYPES = {
     "pan",
     "convolution_reverb",
     "reverse",
+    "variable_speed",
 }
 
 # ---- Registry unit tests ----
