@@ -166,6 +166,21 @@ impl SpeedControl {
     }
 }
 
+/// Formats a setpts expression for use after trim, resetting PTS to segment start.
+/// Uses (1/speed)*(PTS-STARTPTS) form so each trimmed segment starts at t=0.
+fn format_setpts_expr(speed: f64) -> String {
+    let pts_mult = 1.0 / speed;
+    if (pts_mult - pts_mult.round()).abs() < 1e-9 {
+        let int_val = pts_mult.round() as i64;
+        format!("setpts={int_val}*(PTS-STARTPTS)")
+    } else {
+        let s = format!("{pts_mult:.10}");
+        let s = s.trim_end_matches('0');
+        let s = s.trim_end_matches('.');
+        format!("setpts={s}*(PTS-STARTPTS)")
+    }
+}
+
 /// Formats a PTS multiplier value, stripping unnecessary trailing zeros.
 /// For example, 0.5 -> "0.5*PTS", 1.0 -> "1*PTS", 2.0 -> "2*PTS".
 fn format_pts_multiplier(value: f64) -> String {
@@ -258,6 +273,179 @@ impl SpeedControl {
             "SpeedControl(factor={}, drop_audio={})",
             self.speed_factor, self.drop_audio
         )
+    }
+}
+
+// ========== VariableSpeedBuilder ==========
+
+/// A speed segment defining a frame range and its speed factor.
+///
+/// Used with [`VariableSpeedBuilder`] to specify per-segment speed curves.
+/// Each segment covers frames `[start_frame, end_frame)` at a constant `speed_factor`.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct SpeedSegment {
+    #[pyo3(get)]
+    pub start_frame: u64,
+    #[pyo3(get)]
+    pub end_frame: u64,
+    #[pyo3(get)]
+    pub speed_factor: f64,
+}
+
+#[pymethods]
+impl SpeedSegment {
+    /// Creates a new speed segment.
+    ///
+    /// Args:
+    ///     start_frame: First frame of the segment (inclusive).
+    ///     end_frame: Last frame of the segment (exclusive).
+    ///     speed_factor: Speed multiplier in range (0, 100].
+    ///
+    /// Raises:
+    ///     ValueError: If speed_factor is not in (0, 100].
+    #[new]
+    fn py_new(start_frame: u64, end_frame: u64, speed_factor: f64) -> PyResult<Self> {
+        if speed_factor <= 0.0 || speed_factor > 100.0 {
+            return Err(PyValueError::new_err(format!(
+                "speed_factor must be in range (0, 100], got {speed_factor}"
+            )));
+        }
+        Ok(Self {
+            start_frame,
+            end_frame,
+            speed_factor,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "SpeedSegment(start_frame={}, end_frame={}, speed_factor={})",
+            self.start_frame, self.end_frame, self.speed_factor
+        )
+    }
+}
+
+/// Variable-speed builder using a segmented concat approach.
+///
+/// Divides a clip into constant-speed sub-ranges and concatenates them, producing
+/// a segmented speed curve. Each segment uses `trim+setpts` for video and
+/// `atrim+atempo` (with automatic chaining) for audio.
+///
+/// # Examples
+///
+/// ```
+/// use stoat_ferret_core::ffmpeg::speed::{SpeedSegment, VariableSpeedBuilder};
+///
+/// let segments = vec![
+///     SpeedSegment { start_frame: 0, end_frame: 30, speed_factor: 2.0 },
+///     SpeedSegment { start_frame: 30, end_frame: 60, speed_factor: 0.5 },
+/// ];
+/// let builder = VariableSpeedBuilder::new(segments).unwrap();
+/// let graph = builder.build_filter_graph();
+/// assert!(graph.contains("trim=start_frame=0:end_frame=30"));
+/// assert!(graph.contains("concat=n=2"));
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct VariableSpeedBuilder {
+    segments: Vec<SpeedSegment>,
+}
+
+impl VariableSpeedBuilder {
+    /// Creates a new variable-speed builder with the given segments.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the segments list is empty or any segment has an
+    /// invalid speed_factor (must be in (0, 100]).
+    pub fn new(segments: Vec<SpeedSegment>) -> Result<Self, String> {
+        if segments.is_empty() {
+            return Err("segments list must not be empty".to_string());
+        }
+        for seg in &segments {
+            if seg.speed_factor <= 0.0 || seg.speed_factor > 100.0 {
+                return Err(format!(
+                    "speed_factor must be in range (0, 100], got {}",
+                    seg.speed_factor
+                ));
+            }
+        }
+        Ok(Self { segments })
+    }
+
+    /// Builds the complete FFmpeg filter graph string for variable-speed playback.
+    ///
+    /// Produces video trim+setpts chains and audio atrim+asetpts+atempo chains for each
+    /// segment, then concatenates all video segments and all audio segments.
+    #[must_use]
+    pub fn build_filter_graph(&self) -> String {
+        let n = self.segments.len();
+        let mut parts: Vec<String> = Vec::with_capacity(n * 2 + 2);
+
+        // Video chain for each segment
+        for (i, seg) in self.segments.iter().enumerate() {
+            let setpts = format_setpts_expr(seg.speed_factor);
+            parts.push(format!(
+                "[0:v]trim=start_frame={}:end_frame={},{setpts}[vseg{i}]",
+                seg.start_frame, seg.end_frame,
+            ));
+        }
+
+        // Audio chain for each segment: atrim + asetpts + atempo chain
+        for (i, seg) in self.segments.iter().enumerate() {
+            let chain = atempo_chain(seg.speed_factor);
+            let atempo_str: String = chain
+                .iter()
+                .map(|v| format!(",atempo={}", format_tempo_value(*v)))
+                .collect();
+            parts.push(format!(
+                "[0:a]atrim=start_frame={}:end_frame={},asetpts=NB_CONSUMED_SAMPLES/SR/TB{atempo_str}[aseg{i}]",
+                seg.start_frame, seg.end_frame,
+            ));
+        }
+
+        // Video concat
+        let v_inputs: String = (0..n).map(|i| format!("[vseg{i}]")).collect();
+        parts.push(format!("{v_inputs}concat=n={n}:v=1:a=0[vout]"));
+
+        // Audio concat
+        let a_inputs: String = (0..n).map(|i| format!("[aseg{i}]")).collect();
+        parts.push(format!("{a_inputs}concat=n={n}:v=0:a=1[aout]"));
+
+        parts.join(";")
+    }
+}
+
+// ========== PyO3 bindings for VariableSpeedBuilder ==========
+
+#[pymethods]
+impl VariableSpeedBuilder {
+    /// Creates a new variable-speed builder with the given segments.
+    ///
+    /// Args:
+    ///     segments: List of SpeedSegment objects defining the speed curve.
+    ///
+    /// Raises:
+    ///     ValueError: If segments is empty or any segment has invalid speed_factor.
+    #[new]
+    fn py_new(segments: Vec<SpeedSegment>) -> PyResult<Self> {
+        Self::new(segments).map_err(PyValueError::new_err)
+    }
+
+    /// Builds the complete FFmpeg filter graph string for variable-speed playback.
+    ///
+    /// Returns a semicolon-separated filter graph with video trim+setpts chains,
+    /// audio atrim+asetpts+atempo chains, and concat filters.
+    #[pyo3(name = "build_filter_graph")]
+    fn py_build_filter_graph(&self) -> String {
+        self.build_filter_graph()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("VariableSpeedBuilder(segments={})", self.segments.len())
     }
 }
 
@@ -539,6 +727,106 @@ mod tests {
         assert!(s.contains("[fast_a]"));
     }
 
+    // ========== VariableSpeedBuilder tests ==========
+
+    fn seg(start: u64, end: u64, speed: f64) -> SpeedSegment {
+        SpeedSegment {
+            start_frame: start,
+            end_frame: end,
+            speed_factor: speed,
+        }
+    }
+
+    #[test]
+    fn test_variable_speed_2_segment_filter_graph() {
+        let builder = VariableSpeedBuilder::new(vec![seg(0, 30, 2.0), seg(30, 60, 0.5)]).unwrap();
+        let graph = builder.build_filter_graph();
+        assert!(
+            graph.contains("[0:v]trim=start_frame=0:end_frame=30,setpts=0.5*(PTS-STARTPTS)[vseg0]"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("[0:v]trim=start_frame=30:end_frame=60,setpts=2*(PTS-STARTPTS)[vseg1]"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("[0:a]atrim=start_frame=0:end_frame=30,asetpts=NB_CONSUMED_SAMPLES/SR/TB,atempo=2[aseg0]"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("[0:a]atrim=start_frame=30:end_frame=60,asetpts=NB_CONSUMED_SAMPLES/SR/TB,atempo=0.5[aseg1]"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("[vseg0][vseg1]concat=n=2:v=1:a=0[vout]"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("[aseg0][aseg1]concat=n=2:v=0:a=1[aout]"),
+            "Got: {graph}"
+        );
+    }
+
+    #[test]
+    fn test_variable_speed_3_segment_filter_graph() {
+        let builder =
+            VariableSpeedBuilder::new(vec![seg(0, 30, 2.0), seg(30, 60, 1.0), seg(60, 90, 0.5)])
+                .unwrap();
+        let graph = builder.build_filter_graph();
+        assert!(
+            graph.contains("trim=start_frame=0:end_frame=30"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("trim=start_frame=30:end_frame=60"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("trim=start_frame=60:end_frame=90"),
+            "Got: {graph}"
+        );
+        assert!(
+            graph.contains("setpts=1*(PTS-STARTPTS)"),
+            "1x speed should give setpts=1*(PTS-STARTPTS), got: {graph}"
+        );
+        assert!(graph.contains("concat=n=3:v=1:a=0[vout]"), "Got: {graph}");
+        assert!(graph.contains("concat=n=3:v=0:a=1[aout]"), "Got: {graph}");
+        // 1x speed → atempo chain is empty, no ,atempo= for middle segment
+        let mid_audio =
+            "[0:a]atrim=start_frame=30:end_frame=60,asetpts=NB_CONSUMED_SAMPLES/SR/TB[aseg1]";
+        assert!(graph.contains(mid_audio), "Got: {graph}");
+    }
+
+    #[test]
+    fn test_variable_speed_empty_segments_rejected() {
+        let result = VariableSpeedBuilder::new(vec![]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("empty"));
+    }
+
+    #[test]
+    fn test_variable_speed_invalid_speed_factor_rejected() {
+        let result = VariableSpeedBuilder::new(vec![seg(0, 30, 0.0)]);
+        assert!(result.is_err());
+        let result2 = VariableSpeedBuilder::new(vec![seg(0, 30, 101.0)]);
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_format_setpts_expr_2x() {
+        assert_eq!(format_setpts_expr(2.0), "setpts=0.5*(PTS-STARTPTS)");
+    }
+
+    #[test]
+    fn test_format_setpts_expr_half() {
+        assert_eq!(format_setpts_expr(0.5), "setpts=2*(PTS-STARTPTS)");
+    }
+
+    #[test]
+    fn test_format_setpts_expr_1x() {
+        assert_eq!(format_setpts_expr(1.0), "setpts=1*(PTS-STARTPTS)");
+    }
+
     // ========== Proptest ==========
 
     use proptest::prelude::*;
@@ -706,6 +994,70 @@ mod tests {
                 .extract()
                 .unwrap();
             assert!(filters.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_speed_segment() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            // Valid construction via py_new
+            let seg = Bound::new(py, SpeedSegment::py_new(0, 30, 2.0).unwrap()).unwrap();
+
+            let start: u64 = seg.getattr("start_frame").unwrap().extract().unwrap();
+            assert_eq!(start, 0);
+            let end: u64 = seg.getattr("end_frame").unwrap().extract().unwrap();
+            assert_eq!(end, 30);
+            let speed: f64 = seg.getattr("speed_factor").unwrap().extract().unwrap();
+            assert!((speed - 2.0).abs() < f64::EPSILON);
+
+            // __repr__
+            let repr: String = seg.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("SpeedSegment"));
+            assert!(repr.contains("start_frame=0"));
+            assert!(repr.contains("end_frame=30"));
+
+            // Invalid speed_factor — below 0
+            assert!(SpeedSegment::py_new(0, 30, 0.0).is_err());
+            // Invalid speed_factor — above 100
+            assert!(SpeedSegment::py_new(0, 30, 100.1).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_variable_speed_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let segs = vec![
+                SpeedSegment {
+                    start_frame: 0,
+                    end_frame: 30,
+                    speed_factor: 2.0,
+                },
+                SpeedSegment {
+                    start_frame: 30,
+                    end_frame: 60,
+                    speed_factor: 0.5,
+                },
+            ];
+            let builder = Bound::new(py, VariableSpeedBuilder::py_new(segs).unwrap()).unwrap();
+
+            // __repr__
+            let repr: String = builder.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("VariableSpeedBuilder"));
+            assert!(repr.contains("2"));
+
+            // build_filter_graph
+            let graph: String = builder
+                .call_method0("build_filter_graph")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(graph.contains("concat=n=2"));
+            assert!(graph.contains("trim=start_frame=0:end_frame=30"));
+
+            // Invalid construction — empty
+            assert!(VariableSpeedBuilder::py_new(vec![]).is_err());
         });
     }
 }

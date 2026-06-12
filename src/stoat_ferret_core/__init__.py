@@ -112,6 +112,7 @@ try:
         SilenceReport,
         SpectralReport,
         SpeedControl,
+        SpeedSegment,
         SubBassBuilder,
         TimeRange,
         TimeStretchBuilder,
@@ -119,6 +120,7 @@ try:
         TransitionSpec,
         TransitionType,
         ValidationError,
+        VariableSpeedBuilder,
         VersionInfo,
         VideoDefectReport,
         VolumeBuilder,
@@ -215,6 +217,8 @@ except ImportError:
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
     DeplosiveBuilder = _not_built  # type: ignore[misc,assignment]
     ReverseBuilder = _not_built  # type: ignore[misc,assignment]
+    SpeedSegment = _not_built  # type: ignore[misc,assignment]
+    VariableSpeedBuilder = _not_built  # type: ignore[misc,assignment]
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
@@ -333,6 +337,8 @@ __all__ = [
     "DeesserBuilder",
     "DeplosiveBuilder",
     "ReverseBuilder",
+    "SpeedSegment",
+    "VariableSpeedBuilder",
     "SubBassBuilder",
     "TimeStretchBuilder",
     "ducking_effect_schema",
