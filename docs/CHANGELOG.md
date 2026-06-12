@@ -4,6 +4,37 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v080 — Release 2, Wave 4: Editing & Time (2026-06-12)
+
+### Added
+
+- **ReverseBuilder**: Rust+PyO3 reverse effect with 30-second buffer-limit guard; `STOAT_REVERSE_MAX_DURATION_S` configuration variable (BL-444, PR #580)
+- **FramerateConvertBuilder**: Rust+PyO3 framerate conversion with blend, optical-flow, and duplicate modes (BL-448, PR #583)
+- **FreezeFrameBuilder**: Rust+PyO3 freeze-frame effect; NFR-001 mid-clip composition note in effects guide (BL-449, PR #584)
+- **VariableSpeedBuilder**: Rust+PyO3 segmented-concat variable-speed with per-segment pitch control (BL-447, PR #582)
+- **Universal range-window / WindowSpec**: `window` parameter on all effects; Pydantic `WindowSpec` model with `mode='after'` validation (BL-446, PR #581)
+- **Clip split API**: `POST /clips/{id}/split` endpoint with atomic transaction (INSERT clip_a + INSERT clip_b + DELETE original); `ClipSplitRequest` / `ClipSplitResponse` schemas; GUI `RazorTool.tsx` component (BL-445, PR #586)
+- **UAT journey files 701–706**: Journeys for markers, mastering, QC-fail, automation, reverse-split, and grade registered in uat_runner.py; `j_reverse_split.py` rewritten with real API assertions (BL-457, PR #590)
+- **Acceptance harness**: `tests/acceptance/uc_media_mps_001_harness.py` for UC-MEDIA-MPS-001 with Tier-2 headed checklist (`docs/manual/tier2-acceptance-checklist.md`) (BL-459, PR #589)
+- **Golden QC regression suite**: `tests/qc/fixtures/golden_qc_report.json` regenerated with real FFmpeg measurements; drift detection active (BL-458, PR #588)
+- **Smoke test harness guide**: `docs/setup/smoke-test-harness-guide/07-dsp-contract-tests.md` updated with v080 effect types, split endpoint section, and `STOAT_REVERSE_MAX_DURATION_S` discharge procedures (PR #591)
+- **STOAT_REVERSE_MAX_DURATION_S**: Configuration reference entries in `docs/setup/04_configuration.md`, `docs/manual/configuration-reference.md`, and `.env.example` (BL-444, PR #585)
+
+### Deferred (FFmpeg-gated)
+
+- BL-444-AC-4: reverse render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_reverse.py::test_reverse_video_filter_produces_valid_output`
+- BL-446-AC-3: window render probe — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_window.py::test_window_render_probe`
+- BL-447-AC-1/2/3: variable-speed rendering — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_variable_speed.py -v`
+- BL-448-AC-1/2/3: framerate convert rendering — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_framerate.py -v`
+- BL-449-AC-3: freeze-frame render validation — `STOAT_TEST_FFMPEG=1 pytest tests/test_effects_freeze_frame.py::test_freeze_frame_produces_valid_output`
+- BL-457-AC-2: journey 705 headless run — `python scripts/uat_runner.py --journey 705 --headless`
+- BL-457-AC-3: journey 703 headed — blocked on BL-480 (qc-status-fail / remaster-btn testids)
+- BL-459-AC-1/2/4: full acceptance harness — `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py`
+
+### PRs
+
+#580, #581, #582, #583, #584, #585, #586, #587, #588, #589, #590, #591, #592
+
 ## v079 — Release 2, Wave 3: Sound Design + v078 Repair Rider (2026-06-12)
 
 ### Added
