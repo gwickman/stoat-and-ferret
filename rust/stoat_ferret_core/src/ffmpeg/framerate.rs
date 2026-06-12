@@ -138,9 +138,7 @@ impl FramerateConvertBuilder {
     /// Returns an error if `target_fps` is not > 0.
     pub fn new(target_fps: f64, mode: FramerateMode) -> Result<Self, String> {
         if target_fps <= 0.0 {
-            return Err(format!(
-                "target_fps must be > 0, got {target_fps}"
-            ));
+            return Err(format!("target_fps must be > 0, got {target_fps}"));
         }
         Ok(Self { target_fps, mode })
     }
@@ -250,8 +248,14 @@ mod tests {
     #[test]
     fn test_framerate_mode_repr() {
         assert_eq!(FramerateMode::Blend.__repr__(), "FramerateMode.blend");
-        assert_eq!(FramerateMode::OpticalFlow.__repr__(), "FramerateMode.optical_flow");
-        assert_eq!(FramerateMode::Duplicate.__repr__(), "FramerateMode.duplicate");
+        assert_eq!(
+            FramerateMode::OpticalFlow.__repr__(),
+            "FramerateMode.optical_flow"
+        );
+        assert_eq!(
+            FramerateMode::Duplicate.__repr__(),
+            "FramerateMode.duplicate"
+        );
     }
 
     #[test]
@@ -300,25 +304,37 @@ mod tests {
     #[test]
     fn test_build_blend_30fps() {
         let builder = FramerateConvertBuilder::new(30.0, FramerateMode::Blend).unwrap();
-        assert_eq!(builder.build().to_string(), "minterpolate=fps=30:mi_mode=blend");
+        assert_eq!(
+            builder.build().to_string(),
+            "minterpolate=fps=30:mi_mode=blend"
+        );
     }
 
     #[test]
     fn test_build_blend_60fps() {
         let builder = FramerateConvertBuilder::new(60.0, FramerateMode::Blend).unwrap();
-        assert_eq!(builder.build().to_string(), "minterpolate=fps=60:mi_mode=blend");
+        assert_eq!(
+            builder.build().to_string(),
+            "minterpolate=fps=60:mi_mode=blend"
+        );
     }
 
     #[test]
     fn test_build_optical_flow_30fps() {
         let builder = FramerateConvertBuilder::new(30.0, FramerateMode::OpticalFlow).unwrap();
-        assert_eq!(builder.build().to_string(), "minterpolate=fps=30:mi_mode=mci");
+        assert_eq!(
+            builder.build().to_string(),
+            "minterpolate=fps=30:mi_mode=mci"
+        );
     }
 
     #[test]
     fn test_build_optical_flow_60fps() {
         let builder = FramerateConvertBuilder::new(60.0, FramerateMode::OpticalFlow).unwrap();
-        assert_eq!(builder.build().to_string(), "minterpolate=fps=60:mi_mode=mci");
+        assert_eq!(
+            builder.build().to_string(),
+            "minterpolate=fps=60:mi_mode=mci"
+        );
     }
 
     #[test]
@@ -383,7 +399,10 @@ mod tests {
         let b = FramerateConvertBuilder::py_new(60.0, FramerateMode::Blend).unwrap();
         assert!((b.py_target_fps() - 60.0).abs() < f64::EPSILON);
         assert_eq!(b.py_mode(), FramerateMode::Blend);
-        assert_eq!(b.py_build().to_string(), "minterpolate=fps=60:mi_mode=blend");
+        assert_eq!(
+            b.py_build().to_string(),
+            "minterpolate=fps=60:mi_mode=blend"
+        );
         assert!(b.__repr__().contains("FramerateConvertBuilder"));
     }
 
