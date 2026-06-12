@@ -30,8 +30,10 @@ from stoat_ferret_core import (
     ParametricEqBuilder,
     ReverseBuilder,
     SpeedControl,
+    SpeedSegment,
     TimeStretchBuilder,
     TransitionType,
+    VariableSpeedBuilder,
     VolumeBuilder,
     XfadeBuilder,
 )
@@ -1594,6 +1596,95 @@ REVERSE = EffectDefinition(
 )
 
 
+def _variable_speed_preview() -> str:
+    """Generate a filter preview for variable_speed with default 2-segment parameters."""
+    segments = [SpeedSegment(0, 30, 2.0), SpeedSegment(30, 60, 0.5)]
+    return VariableSpeedBuilder(segments).build_filter_graph()
+
+
+def _build_variable_speed(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter graph string for variable_speed effect.
+
+    Args:
+        parameters: Effect parameters with required 'segments' key — a list of
+            dicts each with 'start_frame', 'end_frame', and 'speed_factor' fields.
+
+    Returns:
+        FFmpeg filter graph string using segmented concat with trim+setpts and atempo.
+    """
+    raw_segments = parameters.get("segments", [])
+    segments = [
+        SpeedSegment(
+            int(seg["start_frame"]),
+            int(seg["end_frame"]),
+            float(seg["speed_factor"]),
+        )
+        for seg in raw_segments
+    ]
+    return VariableSpeedBuilder(segments).build_filter_graph()
+
+
+VARIABLE_SPEED = EffectDefinition(
+    name="Variable Speed",
+    description=(
+        "Apply a non-constant speed curve to a clip using segmented concat. "
+        "Each segment defines a frame range and speed factor, allowing ramp "
+        "effects (slow-motion, fast-forward) within a single clip."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "segments": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "required": ["start_frame", "end_frame", "speed_factor"],
+                    "properties": {
+                        "start_frame": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "First frame of the segment (inclusive).",
+                        },
+                        "end_frame": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Last frame of the segment (exclusive).",
+                        },
+                        "speed_factor": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100.0,
+                            "description": (
+                                "Speed multiplier for this segment (0 exclusive – 100 inclusive). "
+                                "Values < 1 slow down; values > 1 speed up."
+                            ),
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+                "description": "Array of speed segments. Minimum 1 segment required.",
+            },
+        },
+        "required": ["segments"],
+    },
+    ai_hints={
+        "segments": (
+            "List of speed segments. Each needs start_frame (int ≥ 0), end_frame (int > 0), "
+            "and speed_factor (0 < x ≤ 100). Example: [{start_frame:0, end_frame:30, "
+            "speed_factor:2.0}, {start_frame:30, end_frame:60, speed_factor:0.5}]."
+        ),
+    },
+    preview_fn=_variable_speed_preview,
+    build_fn=_build_variable_speed,
+    ai_summary=(
+        "Apply a variable speed curve to a clip using segmented constant-speed ranges, "
+        "enabling smooth slow-motion and ramp effects within a single clip."
+    ),
+    example_prompt="Slow down the middle section of this clip to 0.5x speed for emphasis.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1623,4 +1714,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("pan", PAN)
     registry.register("convolution_reverb", CONVOLUTION_REVERB)
     registry.register("reverse", REVERSE)
+    registry.register("variable_speed", VARIABLE_SPEED)
     return registry

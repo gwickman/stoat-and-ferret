@@ -72,6 +72,8 @@ class TestImportFallback:
             "DrawtextBuilder",
             "ReverseBuilder",
             "SpeedControl",
+            "SpeedSegment",
+            "VariableSpeedBuilder",
             "FFmpegCommand",
             "Filter",
             "FilterChain",
