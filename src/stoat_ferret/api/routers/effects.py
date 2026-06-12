@@ -480,6 +480,26 @@ async def apply_effect_to_clip(
                 },
             ) from None
 
+    # Window range-gating (BL-446): conflict check, then append enable clause.
+    filter_preview: str | None = None
+    if request.window is not None:
+        if "enable=" in filter_string:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "window_conflicts_with_builtin_enable",
+                    "message": (
+                        "Effect output already contains an enable clause; window cannot be applied"
+                    ),
+                },
+            )
+        filter_string = (
+            f"{filter_string}:enable='between(t,{request.window.start_s},{request.window.end_s})'"
+        )
+        filter_preview = filter_string
+    elif compiled_expression is not None:
+        filter_preview = compiled_expression
+
     # Store effect on clip
     effect_entry: dict[str, Any] = {
         "effect_type": request.effect_type,
@@ -505,7 +525,7 @@ async def apply_effect_to_clip(
         effect_type=request.effect_type,
         parameters=request.parameters,
         filter_string=filter_string,
-        filter_preview=compiled_expression,
+        filter_preview=filter_preview,
     )
 
 

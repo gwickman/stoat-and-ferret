@@ -5036,6 +5036,16 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Parameters"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WindowSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8115,6 +8125,25 @@
         ],
         "title": "WaveformSamplesResponse",
         "description": "JSON waveform data with amplitude samples array."
+      },
+      "WindowSpec": {
+        "properties": {
+          "start_s": {
+            "type": "number",
+            "title": "Start S"
+          },
+          "end_s": {
+            "type": "number",
+            "title": "End S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_s",
+          "end_s"
+        ],
+        "title": "WindowSpec",
+        "description": "Optional time window for range-gating an effect to a sub-clip interval.\n\nWhen provided, the effect is active only between ``start_s`` and ``end_s``\nseconds relative to clip time, compiled to an FFmpeg\n``enable='between(t,a,b)'`` clause.\n\nAttributes:\n    start_s: Window start time in seconds (>= 0, finite).\n    end_s: Window end time in seconds (> start_s, finite)."
       },
       "ProxyStatus": {
         "enum": [

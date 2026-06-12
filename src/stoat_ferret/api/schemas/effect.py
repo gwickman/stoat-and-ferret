@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -105,11 +106,41 @@ class EffectListResponse(BaseModel):
     total: int
 
 
+class WindowSpec(BaseModel):
+    """Optional time window for range-gating an effect to a sub-clip interval.
+
+    When provided, the effect is active only between ``start_s`` and ``end_s``
+    seconds relative to clip time, compiled to an FFmpeg
+    ``enable='between(t,a,b)'`` clause.
+
+    Attributes:
+        start_s: Window start time in seconds (>= 0, finite).
+        end_s: Window end time in seconds (> start_s, finite).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    start_s: float
+    end_s: float
+
+    @model_validator(mode="after")
+    def check_window_values(self) -> WindowSpec:
+        """Validate that start_s and end_s are finite and properly ordered."""
+        if math.isnan(self.start_s) or math.isinf(self.start_s) or self.start_s < 0:
+            raise ValueError("start_s must be a non-negative finite number")
+        if math.isnan(self.end_s) or math.isinf(self.end_s):
+            raise ValueError("end_s must be a finite number")
+        if self.end_s <= self.start_s:
+            raise ValueError("end_s must be greater than start_s")
+        return self
+
+
 class EffectApplyRequest(BaseModel):
     """Request schema for applying an effect to a clip."""
 
     effect_type: str
     parameters: dict[str, Any]
+    window: WindowSpec | None = None
 
 
 class EffectApplyResponse(BaseModel):
