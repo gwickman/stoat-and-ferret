@@ -422,6 +422,44 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
                 "sine=frequency={frequency:.3}:duration={duration:.6}"
             ))
         }
+        "tone" => {
+            let frequency = params
+                .get("frequency")
+                .and_then(|v| v.as_f64())
+                .ok_or_else(|| "tone params must have a 'frequency' field".to_string())?;
+            let frequency_end = params.get("frequency_end").and_then(|v| v.as_f64());
+            let binaural_offset = params.get("binaural_offset").and_then(|v| v.as_f64());
+
+            // Linear chirp when frequency_end is set:
+            // phase(t) = 2π*(f0*t + (f1-f0)*t²/(2*D))
+            let left_expr = match frequency_end {
+                Some(f1) => format!(
+                    "sin(2*PI*({frequency:.3}*t+({f1:.3}-{frequency:.3})*t*t/(2*{duration:.6})))"
+                ),
+                None => format!("sin(2*PI*{frequency:.3}*t)"),
+            };
+
+            match binaural_offset {
+                Some(offset) => {
+                    let rf = frequency + offset;
+                    let right_expr = match frequency_end {
+                        Some(f1) => {
+                            let rf1 = f1 + offset;
+                            format!(
+                                "sin(2*PI*({rf:.3}*t+({rf1:.3}-{rf:.3})*t*t/(2*{duration:.6})))"
+                            )
+                        }
+                        None => format!("sin(2*PI*{rf:.3}*t)"),
+                    };
+                    Ok(format!(
+                        "aevalsrc=expr='{left_expr}|{right_expr}':channel_layout=stereo:eval=frame:duration={duration:.6}"
+                    ))
+                }
+                None => Ok(format!(
+                    "aevalsrc=expr='{left_expr}':eval=frame:duration={duration:.6}"
+                )),
+            }
+        }
         unknown => Err(format!("Unknown generator type: {unknown:?}")),
     }
 }
@@ -783,6 +821,97 @@ mod tests {
         let unknown = estimate_output_size(10.0, "libx264", "unknown_preset");
         let standard = estimate_output_size(10.0, "libx264", "standard");
         assert_eq!(unknown, standard);
+    }
+
+    // -- build_generator_source_filter tests --
+
+    #[test]
+    fn build_generator_source_filter_sine_basic() {
+        let f = build_generator_source_filter(r#"{"type":"sine","frequency":440.0}"#, 5.0).unwrap();
+        assert!(f.contains("sine=frequency=440.000"));
+        assert!(f.contains("duration=5.000000"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_aevalsrc_basic() {
+        let f = build_generator_source_filter(
+            r#"{"type":"aevalsrc","expr":"sin(2*PI*440*t)"}"#,
+            3.0,
+        )
+        .unwrap();
+        assert!(f.contains("aevalsrc=expr='sin(2*PI*440*t)'"));
+        assert!(f.contains("eval=frame"));
+        assert!(f.contains("duration=3.000000"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_constant() {
+        let f =
+            build_generator_source_filter(r#"{"type":"tone","frequency":440.0}"#, 5.0).unwrap();
+        assert!(f.contains("aevalsrc"));
+        assert!(f.contains("440.000"));
+        assert!(f.contains("duration=5.000000"));
+        assert!(!f.contains("stereo"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_sweep() {
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":100.0,"frequency_end":200.0}"#,
+            10.0,
+        )
+        .unwrap();
+        assert!(f.contains("aevalsrc"));
+        assert!(f.contains("100.000"));
+        assert!(f.contains("200.000"));
+        assert!(f.contains("duration=10.000000"));
+        // chirp formula has t*t
+        assert!(f.contains("t*t"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_binaural() {
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":200.0,"binaural_offset":4.0}"#,
+            5.0,
+        )
+        .unwrap();
+        assert!(f.contains("stereo"));
+        // Left channel at 200 Hz, right at 204 Hz
+        assert!(f.contains("200.000"));
+        assert!(f.contains("204.000"));
+        assert!(f.contains("duration=5.000000"));
+        // Two channel expressions separated by |
+        assert!(f.contains('|'));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_binaural_sweep() {
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":100.0,"frequency_end":200.0,"binaural_offset":4.0}"#,
+            5.0,
+        )
+        .unwrap();
+        assert!(f.contains("stereo"));
+        assert!(f.contains("100.000"));
+        assert!(f.contains("200.000"));
+        // Right channel: 104 Hz → 204 Hz
+        assert!(f.contains("104.000"));
+        assert!(f.contains("204.000"));
+        assert!(f.contains("t*t"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_tone_missing_frequency() {
+        let r = build_generator_source_filter(r#"{"type":"tone"}"#, 5.0);
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("frequency"));
+    }
+
+    #[test]
+    fn build_generator_source_filter_unknown_type() {
+        let r = build_generator_source_filter(r#"{"type":"unknown_type"}"#, 5.0);
+        assert!(r.is_err());
     }
 
     // -- Contract tests --

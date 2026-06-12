@@ -2875,12 +2875,26 @@ def estimate_output_size(
 def build_generator_source_filter(params_json: str, duration: float) -> str:
     """Build an FFmpeg source filter string for a generator clip.
 
+    Supported types in params_json:
+    - ``"sine"``: Simple sine wave. Requires ``frequency`` (Hz).
+    - ``"aevalsrc"``: Arbitrary expression evaluator. Requires ``expr``.
+      Optional ``duration`` overrides the clip duration.
+    - ``"tone"``: Entrainment tone with optional frequency sweep and binaural
+      beat mode. Requires ``frequency`` (Hz). Optional fields:
+      ``frequency_end`` (Hz) — sweeps from ``frequency`` to ``frequency_end``
+      using a linear chirp; ``binaural_offset`` (Hz) — adds a right-channel
+      copy offset by this amount to produce a binaural beat at that frequency.
+
     Args:
         params_json: JSON string with generator parameters including a 'type' field.
         duration: Clip duration in seconds.
 
     Returns:
         FFmpeg source filter expression string.
+
+    Raises:
+        ValueError: If params_json is invalid, 'type' is missing, a required
+            field for the chosen type is absent, or the type is unknown.
     """
     ...
 
