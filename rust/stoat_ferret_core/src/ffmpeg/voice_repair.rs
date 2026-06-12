@@ -1427,7 +1427,7 @@ impl PitchShiftBuilder {
     ///
     /// Returns an error if semitones is out of the allowed range.
     pub fn new(semitones: f64) -> Result<Self, String> {
-        if semitones < -24.0 || semitones > 24.0 {
+        if !(-24.0..=24.0).contains(&semitones) {
             return Err(format!(
                 "semitones must be in [-24.0, 24.0], got {semitones}"
             ));
@@ -1667,5 +1667,86 @@ mod pitch_shift_tests {
     fn pitch_shift_boundary_24() {
         assert!(PitchShiftBuilder::new(24.0).is_ok());
         assert!(PitchShiftBuilder::new(-24.0).is_ok());
+    }
+
+    #[test]
+    fn pitch_shift_consistency_quality() {
+        let chain = PitchShiftBuilder::new(1.0)
+            .unwrap()
+            .with_quality("consistency")
+            .unwrap()
+            .build();
+        assert!(chain.to_string().contains("pitchq=consistency"));
+    }
+
+    #[test]
+    fn pitch_shift_shifted_formant_explicit() {
+        let chain = PitchShiftBuilder::new(1.0)
+            .unwrap()
+            .with_formant("shifted")
+            .unwrap()
+            .build();
+        assert!(chain.to_string().contains("formant=shifted"));
+    }
+
+    // ========== PyO3 binding tests ==========
+
+    use pyo3::prelude::*;
+
+    #[test]
+    fn test_pyo3_pitch_shift_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            // Constructor and getters
+            let b = Bound::new(py, PitchShiftBuilder::new(3.0).unwrap()).unwrap();
+            let semitones: f64 = b.getattr("semitones").unwrap().extract().unwrap();
+            assert!((semitones - 3.0).abs() < f64::EPSILON);
+            let formant: String = b.getattr("formant").unwrap().extract().unwrap();
+            assert_eq!(formant, "shifted");
+            let quality: String = b.getattr("quality").unwrap().extract().unwrap();
+            assert_eq!(quality, "quality");
+
+            // with_formant via Python call
+            let b2: PitchShiftBuilder = b
+                .call_method1("with_formant", ("preserved",))
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(b2.formant, "preserved");
+
+            // with_quality via Python call
+            let b3 = Bound::new(py, PitchShiftBuilder::new(1.0).unwrap()).unwrap();
+            let b4: PitchShiftBuilder = b3
+                .call_method1("with_quality", ("speedy",))
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(b4.quality, "speedy");
+
+            // build via Python call
+            let b5 = Bound::new(py, PitchShiftBuilder::new(2.0).unwrap()).unwrap();
+            let chain_str: String = b5
+                .call_method0("build")
+                .unwrap()
+                .call_method0("__str__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(chain_str.contains("arubberband"));
+
+            // __repr__
+            let repr: String = b5.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("PitchShiftBuilder"));
+            assert!(repr.contains("2"));
+
+            // error paths via Python
+            let b_err = Bound::new(py, PitchShiftBuilder::new(1.0).unwrap()).unwrap();
+            assert!(b_err.call_method1("with_formant", ("bad",)).is_err());
+            assert!(b_err.call_method1("with_quality", ("bad",)).is_err());
+
+            // py_new error (out of range)
+            let result = PitchShiftBuilder::py_new(30.0);
+            assert!(result.is_err());
+        });
     }
 }
