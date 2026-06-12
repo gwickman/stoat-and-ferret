@@ -64,6 +64,7 @@ mod command;
 pub mod drawtext;
 pub mod expression;
 pub mod filter;
+pub mod framerate;
 pub mod mastering;
 pub mod reverse;
 pub mod spatial;

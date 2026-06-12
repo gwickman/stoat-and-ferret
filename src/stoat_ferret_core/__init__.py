@@ -84,6 +84,8 @@ try:
         FilterChain,
         FilterGraph,
         FrameRate,
+        FramerateConvertBuilder,
+        FramerateMode,
         Keyframe,
         LayoutError,
         LayoutPosition,
@@ -212,6 +214,8 @@ except ImportError:
     TransitionType = _not_built  # type: ignore[misc,assignment]
     FadeBuilder = _not_built  # type: ignore[misc,assignment]
     XfadeBuilder = _not_built  # type: ignore[misc,assignment]
+    FramerateConvertBuilder = _not_built  # type: ignore[misc,assignment]
+    FramerateMode = _not_built  # type: ignore[misc,assignment]
     AcrossfadeBuilder = _not_built  # type: ignore[misc,assignment]
     NoiseReductionBuilder = _not_built  # type: ignore[misc,assignment]
     DeesserBuilder = _not_built  # type: ignore[misc,assignment]
@@ -351,6 +355,9 @@ __all__ = [
     "ConvolutionReverbBuilder",
     "PanBuilder",
     "PitchShiftBuilder",
+    # Framerate conversion builder
+    "FramerateConvertBuilder",
+    "FramerateMode",
     # Transition builders
     "TransitionType",
     "FadeBuilder",
