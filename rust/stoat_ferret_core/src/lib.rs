@@ -112,6 +112,9 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::framerate::FramerateMode>()?;
     m.add_class::<ffmpeg::framerate::FramerateConvertBuilder>()?;
 
+    // Register freeze-frame builder
+    m.add_class::<ffmpeg::freeze::FreezeFrameBuilder>()?;
+
     // Register audio mixing builders
     m.add_class::<ffmpeg::audio::VolumeBuilder>()?;
     m.add_class::<ffmpeg::audio::AfadeBuilder>()?;
