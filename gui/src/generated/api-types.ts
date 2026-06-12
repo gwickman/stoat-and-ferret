@@ -3129,6 +3129,7 @@ export interface components {
             parameters: {
                 [key: string]: unknown;
             };
+            window?: components["schemas"]["WindowSpec"] | null;
         };
         /**
          * EffectApplyResponse
@@ -4748,6 +4749,24 @@ export interface components {
             samples_per_second: number;
             /** Samples */
             samples: components["schemas"]["WaveformSample"][];
+        };
+        /**
+         * WindowSpec
+         * @description Optional time window for range-gating an effect to a sub-clip interval.
+         *
+         *     When provided, the effect is active only between ``start_s`` and ``end_s``
+         *     seconds relative to clip time, compiled to an FFmpeg
+         *     ``enable='between(t,a,b)'`` clause.
+         *
+         *     Attributes:
+         *         start_s: Window start time in seconds (>= 0, finite).
+         *         end_s: Window end time in seconds (> start_s, finite).
+         */
+        WindowSpec: {
+            /** Start S */
+            start_s: number;
+            /** End S */
+            end_s: number;
         };
         /**
          * ProxyStatus
