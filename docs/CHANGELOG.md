@@ -4,6 +4,40 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v079 — Release 2, Wave 3: Sound Design + v078 Repair Rider (2026-06-12)
+
+### Added
+
+- **PanBuilder**: Stereo pan with static positioning and automation envelope; `eval=frame` enforced; `spatial_correlation` added as 12th QC check (BL-437, PRs #570)
+- **ConvolutionReverbBuilder**: IR-based reverb via `afir` filter; 3 bundled IRs (`hall_small`, `room_medium`, `plate`) (BL-438, PRs #571, #572)
+- **Generator clips**: `clip_type="generator"` + `generator_params` in Clips API; type-validated `ClipCreate` schema; `build_generator_source_filter` Rust dispatch (`aevalsrc`, `sine`) (BL-441, PRs #574, #575)
+- **Tone synthesis**: Constant frequency, linear chirp sweep, and binaural beat mode via `aevalsrc` with `eval=frame` (BL-439, PR #576)
+- **Loopable beds**: `build_loop_render_command` for seamless crossfaded loops (BL-440, PR #577)
+- **SubBassBuilder**: Sub-bass layer generation with duck-on-beat ducking schema (BL-442, PR #577)
+- **PitchShiftBuilder**: Formant-preserving pitch shift via `rubberband` filter (BL-443, PR #577)
+- **Smoke test coverage**: Generator clip API, QC oracle smoke tests; smoke harness guide updated with Wave-3 discharge commands (PRs #579)
+
+### Fixed
+
+- **QC worker-path assertions**: `RenderService._complete_job` now fetches delivery profile and builds loudness/true-peak assertions dict for `QCService.run_checks`; previously passed null targets (BL-488, PR #565)
+- **JobStatus enum rename**: `JobStatus.COMPLETE` → `COMPLETED` with value `"completed"` across 68+ occurrences; eliminates silent state mismatch in GUI and API (BL-490, PR #566)
+- **Render plan schema**: `total_duration` required field enforced at preflight; schema aligned with renderer expectations (BL-489, PRs #567, #568)
+- **UAT seed extension**: Seed DB includes QC-fail render row for journeys J703/J704 (BL-480, PR #569)
+- **ON DELETE CASCADE**: Restored on `clips.project_id` FK after `batch_alter_table` dropped it during generator-clip migration (BL-441, PR #575)
+
+### Deferred (FFmpeg-gated)
+
+- BL-437 ACs 1-4: pan contract tests — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_pan.py -k contract`
+- BL-438 ACs 1-3: convolution reverb contract test — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_reverb.py::test_convolution_reverb_contract_ffmpeg`
+- BL-439 AC-4: tone synthesis FFmpeg contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_api/test_tone_synthesis.py`
+- BL-439 AC-2: automation envelope for tone — static `frequency_end` only; `py_compile_automation` not integrated
+- BL-441 AC-2: generator clip render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_api/test_generator_clip.py -k ffmpeg`
+- BL-488 ACs 3+5: QC worker-path E2E — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render_service_qc.py::TestWorkerQCContractFFmpeg`
+
+### PRs
+
+#565, #566, #567, #568, #569, #570, #571, #572, #574, #575, #576, #577, #579
+
 ## v078 — QC Integrity, DSP Correctness & R2 Doc Parity (2026-06-11)
 
 ### Added
