@@ -70,6 +70,7 @@ class TestImportFallback:
             "Duration",
             "TimeRange",
             "DrawtextBuilder",
+            "ReverseBuilder",
             "SpeedControl",
             "FFmpegCommand",
             "Filter",

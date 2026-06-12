@@ -3728,3 +3728,25 @@ class ConvolutionReverbBuilder:
     def __new__(cls, ir_name: str, mix: float) -> ConvolutionReverbBuilder: ...
     def build(self) -> Filter: ...
     def ir_name(self) -> str: ...
+
+# ========== Effect Builder — Reverse ==========
+
+class ReverseBuilder:
+    """Type-safe builder for FFmpeg video and audio reversal filters.
+
+    Generates the ``reverse`` filter for video and the ``areverse`` filter for audio.
+    Both filters buffer the entire clip segment in memory — use only on short clips.
+    Maximum duration enforcement is handled by the application layer via
+    ``STOAT_REVERSE_MAX_DURATION_S``.
+
+    Examples::
+
+        builder = ReverseBuilder()
+        video_filter = builder.video_filter()  # "reverse"
+        audio_filter = builder.audio_filter()  # "areverse"
+    """
+
+    def __new__(cls) -> ReverseBuilder: ...
+    def video_filter(self) -> Filter: ...
+    def audio_filter(self) -> Filter: ...
+    def __repr__(self) -> str: ...

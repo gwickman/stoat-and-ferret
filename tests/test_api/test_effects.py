@@ -70,6 +70,7 @@ EXPECTED_EFFECT_TYPES = {
     "multiband_compressor",
     "pan",
     "convolution_reverb",
+    "reverse",
 }
 
 # ---- Registry unit tests ----
@@ -157,13 +158,18 @@ def test_effect_includes_parameter_schema(client: TestClient) -> None:
 
 @pytest.mark.api
 def test_effect_includes_ai_hints(client: TestClient) -> None:
-    """Each effect includes AI hints for parameters."""
+    """Effects with configurable parameters include AI hints for those parameters."""
     response = client.get("/api/v1/effects")
     data = response.json()
     for effect in data["effects"]:
         hints = effect["ai_hints"]
         assert isinstance(hints, dict)
-        assert len(hints) > 0
+        schema = effect.get("parameter_schema", {})
+        has_params = bool(schema.get("properties"))
+        if has_params:
+            assert len(hints) > 0, (
+                f"Effect '{effect['effect_type']}' has parameters but no AI hints"
+            )
 
 
 @pytest.mark.api

@@ -129,6 +129,12 @@ export STOAT_ALLOWED_SCAN_ROOTS='["/home/user/videos", "/mnt/media"]'
 |----------|------|---------|-------------|
 | `STOAT_RENDER_OUTPUT_DIR` | `str` | `data/renders` | Directory for storing rendered output files. Created automatically if it does not exist. |
 
+### Effects
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_REVERSE_MAX_DURATION_S` | `float` | `30.0` | Maximum clip duration in seconds allowed for the reverse effect (must be > 0). The FFmpeg `reverse`/`areverse` filters buffer the entire clip segment in memory; clips exceeding this limit are rejected with HTTP 422. Increase only when sufficient RAM is available and operators accept the corresponding memory cost. |
+
 ### Migration Safety
 
 | Variable | Type | Default | Description |
