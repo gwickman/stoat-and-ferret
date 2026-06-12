@@ -78,7 +78,5 @@ async def test_qc_oracle_populates_delivery_profile_assertions(
     assert loudness["target"] == -16.0
 
     true_peak = qc.get("checks", {}).get("true_peak", {})
-    assert true_peak.get("target") is not None, (
-        "BL-488 regression: true_peak.target is null"
-    )
+    assert true_peak.get("target") is not None, "BL-488 regression: true_peak.target is null"
     assert true_peak["target"] == -1.0
