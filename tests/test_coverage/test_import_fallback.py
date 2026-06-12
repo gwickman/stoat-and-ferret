@@ -71,6 +71,8 @@ class TestImportFallback:
             "TimeRange",
             "DrawtextBuilder",
             "ReverseBuilder",
+            "FramerateConvertBuilder",
+            "FramerateMode",
             "SpeedControl",
             "SpeedSegment",
             "VariableSpeedBuilder",

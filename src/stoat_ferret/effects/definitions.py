@@ -22,6 +22,8 @@ from stoat_ferret_core import (
     DrawtextBuilder,
     DuckingPattern,
     FadeBuilder,
+    FramerateConvertBuilder,
+    FramerateMode,
     LimiterBuilder,
     LoudnormBuilder,
     MultibandCompressorBuilder,
@@ -1685,6 +1687,77 @@ VARIABLE_SPEED = EffectDefinition(
 )
 
 
+def _framerate_convert_preview() -> str:
+    """Generate a filter preview for framerate_convert with default parameters."""
+    return str(FramerateConvertBuilder(30.0, FramerateMode.Duplicate).build())
+
+
+def _build_framerate_convert(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for framerate_convert effect.
+
+    Args:
+        parameters: Effect parameters with required 'target_fps' and 'mode' keys.
+
+    Returns:
+        FFmpeg minterpolate or framerate filter string.
+    """
+    target_fps = float(parameters.get("target_fps", 30.0))
+    mode_str = str(parameters.get("mode", "duplicate"))
+    mode = FramerateMode.from_str(mode_str)
+    return str(FramerateConvertBuilder(target_fps, mode).build())
+
+
+FRAMERATE_CONVERT = EffectDefinition(
+    name="Framerate Convert",
+    description=(
+        "Convert a clip to a target frame rate using duplicate, blend, or optical-flow "
+        "interpolation. Duplicate is fastest; blend uses minterpolate frame-blending; "
+        "optical_flow uses motion-compensated interpolation (requires libopencv FFmpeg build)."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "target_fps": {
+                "type": "number",
+                "minimum": 0.01,
+                "default": 30.0,
+                "description": "Target frame rate in frames per second (must be > 0).",
+            },
+            "mode": {
+                "type": "string",
+                "enum": ["duplicate", "blend", "optical_flow"],
+                "default": "duplicate",
+                "description": (
+                    "Interpolation mode: 'duplicate' (framerate filter, fastest), "
+                    "'blend' (minterpolate frame-blend), or "
+                    "'optical_flow' (minterpolate mci, requires libopencv)."
+                ),
+            },
+        },
+        "required": ["target_fps", "mode"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "target_fps": (
+            "Target frame rate in fps. Common values: 24 (cinema), 30 (NTSC), 60 (smooth). "
+            "Must be > 0. Fractional rates like 23.976 are supported."
+        ),
+        "mode": (
+            "Use 'duplicate' for simple frame copying (no quality loss, fastest). "
+            "Use 'blend' for smooth slow-motion or up-conversion with frame blending. "
+            "Use 'optical_flow' for highest quality but requires --enable-libopencv FFmpeg build."
+        ),
+    },
+    preview_fn=_framerate_convert_preview,
+    build_fn=_build_framerate_convert,
+    ai_summary=(
+        "Convert a clip to a target frame rate using duplicate, blend, or optical-flow "
+        "interpolation for smooth motion or simple frame-rate normalization."
+    ),
+    example_prompt="Convert this clip to 60fps using frame-blend interpolation.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1715,4 +1788,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("convolution_reverb", CONVOLUTION_REVERB)
     registry.register("reverse", REVERSE)
     registry.register("variable_speed", VARIABLE_SPEED)
+    registry.register("framerate_convert", FRAMERATE_CONVERT)
     return registry
