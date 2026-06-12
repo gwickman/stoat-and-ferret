@@ -211,4 +211,80 @@ mod tests {
     fn test_format_duration_fractional() {
         assert_eq!(format_duration(1.5), "1.5");
     }
+
+    #[test]
+    fn test_format_duration_many_decimals() {
+        // Should strip trailing zeros
+        let s = format_duration(1.250_000_00);
+        assert_eq!(s, "1.25");
+    }
+
+    // ========== PyO3 method coverage ==========
+
+    #[test]
+    fn test_py_new_valid() {
+        let b = FreezeFrameBuilder::py_new(10, 3.0).unwrap();
+        assert_eq!(b.frame_number, 10);
+        assert!((b.hold_duration_s - 3.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_py_new_invalid_zero_duration() {
+        let result = FreezeFrameBuilder::py_new(0, 0.0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_py_new_invalid_negative_duration() {
+        let result = FreezeFrameBuilder::py_new(0, -5.0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_py_frame_number_getter() {
+        let b = FreezeFrameBuilder::new(42, 1.0).unwrap();
+        assert_eq!(b.py_frame_number(), 42);
+    }
+
+    #[test]
+    fn test_py_hold_duration_s_getter() {
+        let b = FreezeFrameBuilder::new(0, 2.75).unwrap();
+        assert!((b.py_hold_duration_s() - 2.75).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_py_build_matches_build() {
+        let b = FreezeFrameBuilder::new(7, 1.5).unwrap();
+        assert_eq!(b.py_build().to_string(), b.build().to_string());
+    }
+
+    #[test]
+    fn test_repr_integer_duration() {
+        let b = FreezeFrameBuilder::new(3, 2.0).unwrap();
+        let r = b.__repr__();
+        assert!(r.contains("FreezeFrameBuilder"));
+        assert!(r.contains("frame_number=3"));
+        assert!(r.contains("hold_duration_s=2"));
+    }
+
+    #[test]
+    fn test_repr_fractional_duration() {
+        let b = FreezeFrameBuilder::new(0, 1.5).unwrap();
+        let r = b.__repr__();
+        assert!(r.contains("hold_duration_s=1.5"));
+    }
+
+    #[test]
+    fn test_clone() {
+        let b = FreezeFrameBuilder::new(5, 2.0).unwrap();
+        let c = b.clone();
+        assert_eq!(b.build().to_string(), c.build().to_string());
+    }
+
+    #[test]
+    fn test_debug() {
+        let b = FreezeFrameBuilder::new(1, 0.5).unwrap();
+        let s = format!("{b:?}");
+        assert!(s.contains("FreezeFrameBuilder"));
+    }
 }
