@@ -277,6 +277,18 @@ class Settings(BaseSettings):
         description="Enable the background render worker loop (STOAT_RENDER_WORKER_ENABLED).",
     )
 
+    # Reverse effect buffer limit (BL-444)
+    reverse_max_duration_s: float = Field(
+        default=30.0,
+        gt=0,
+        description=(
+            "Maximum clip duration in seconds allowed for the reverse effect "
+            "(STOAT_REVERSE_MAX_DURATION_S). The FFmpeg reverse/areverse filters buffer "
+            "the entire segment in memory; clips exceeding this limit are rejected with "
+            "HTTP 422. Default 30.0 s. Must be > 0."
+        ),
+    )
+
     # WebSocket replay buffer (BL-313)
     ws_replay_buffer_size: int = Field(
         default=1000,

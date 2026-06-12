@@ -120,9 +120,28 @@ Project versions accumulate over time and grow the SQLite database. The retentio
 
 - Unset retention means project versions accumulate indefinitely. On a long-running deployment this grows the SQLite database without bound — a slow-rolling availability risk rather than a security exploit, but worth monitoring. Set a finite count for deployments where retention is a compliance or capacity concern; the limit applies per project and is enforced at cleanup time, not write time, so operators retain control over when truncation runs.
 
+## Effect Limits
+
+Some effects buffer large amounts of data in memory during processing. These settings let operators cap that memory pressure at the deployment level.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_REVERSE_MAX_DURATION_S` | `float` | `30.0` | Maximum clip duration in seconds allowed for the reverse effect (must be > 0). Clips exceeding this limit are rejected with HTTP 422 before the render job is queued. |
+
+**Why this limit exists**
+
+The FFmpeg `reverse` and `areverse` filters work by reading the entire clip segment into RAM before producing output — they cannot stream. A 30-second clip at typical bitrates consumes hundreds of megabytes. Without a cap, an operator or API caller can trigger a reverse on an arbitrarily long clip, exhausting server RAM and crashing the process.
+
+**Tuning guidance**
+
+- The default of 30 s is conservative and suitable for deployments with 4–8 GB of RAM per worker.
+- Increase proportionally to available RAM and expected concurrent render load. A rough estimate: 1 minute of 1080p/30fps ProRes takes ~4–6 GB of buffered video frames.
+- Values ≤ 0 are rejected at startup with a pydantic `ValidationError`.
+- This limit applies per-clip. If multiple reverse-effect clips are rendered concurrently, peak RAM usage multiplies accordingly.
+
 ## See Also
 
-- [Setup — Configuration Reference](../setup/04_configuration.md) — full canonical reference for all 41 `STOAT_*` variables (name, type, default, valid range, plain-language description). Use this document for security-focused guidance and that document for the comprehensive list.
+- [Setup — Configuration Reference](../setup/04_configuration.md) — full canonical reference for all `STOAT_*` variables (name, type, default, valid range, plain-language description). Use this document for security-focused guidance and that document for the comprehensive list.
 - [Operator Runbook](runbook.md) — start, stop, back up, and monitor the service.
 - [Troubleshooting](troubleshooting.md) — decision trees for runtime incidents.
 - [Security Review (Phase 6)](../security/review-phase6.md) — original audit findings and the drift-baseline probe details.

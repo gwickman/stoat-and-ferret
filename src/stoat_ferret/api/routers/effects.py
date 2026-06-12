@@ -422,6 +422,23 @@ async def apply_effect_to_clip(
             },
         )
 
+    # Buffer-limit guard for memory-intensive effects (BL-444).
+    if request.effect_type == "reverse":
+        from stoat_ferret.api.settings import get_settings
+
+        settings = get_settings()
+        max_s = settings.reverse_max_duration_s
+        clip_s = (clip.out_point - clip.in_point) / project.output_fps
+        if clip_s > max_s:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "clip_too_long",
+                    "max_s": max_s,
+                    "clip_s": clip_s,
+                },
+            )
+
     # Validate parameters against JSON schema (envelopes bypass JSON schema).
     validation_errors, compiled_expression = registry.validate_with_automation(
         request.effect_type, request.parameters
