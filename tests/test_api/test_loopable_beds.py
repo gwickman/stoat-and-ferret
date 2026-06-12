@@ -107,9 +107,7 @@ def test_loop_command_renders_to_wav(tmp_path: object) -> None:
     bed = str(Path(str(tmp_path)) / "bed.wav")
     out = str(Path(str(tmp_path)) / "out.wav")
 
-    src_cmd = build_generator_render_command(
-        '{"type": "sine", "frequency": 220.0}', 2.0, bed
-    )
+    src_cmd = build_generator_render_command('{"type": "sine", "frequency": 220.0}', 2.0, bed)
     result = subprocess.run(["ffmpeg"] + src_cmd.args(), capture_output=True, text=True)
     assert result.returncode == 0, f"source render failed: {result.stderr[-300:]}"
 
@@ -131,9 +129,7 @@ def test_loop_command_crossfade_renders(tmp_path: object) -> None:
     bed = str(Path(str(tmp_path)) / "bed.wav")
     out = str(Path(str(tmp_path)) / "out.wav")
 
-    src_cmd = build_generator_render_command(
-        '{"type": "sine", "frequency": 220.0}', 2.0, bed
-    )
+    src_cmd = build_generator_render_command('{"type": "sine", "frequency": 220.0}', 2.0, bed)
     subprocess.run(["ffmpeg"] + src_cmd.args(), capture_output=True, check=True)
 
     loop_cmd = build_loop_render_command(bed, 10.0, out, crossfade_duration=0.1)

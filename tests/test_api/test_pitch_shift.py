@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import os
 
 import pytest
@@ -130,9 +129,7 @@ def test_pitch_shift_renders_voice(tmp_path: object) -> None:
     src = str(Path(str(tmp_path)) / "voice.wav")
     out = str(Path(str(tmp_path)) / "shifted.wav")
 
-    src_cmd = build_generator_render_command(
-        '{"type": "sine", "frequency": 200.0}', 2.0, src
-    )
+    src_cmd = build_generator_render_command('{"type": "sine", "frequency": 200.0}', 2.0, src)
     subprocess.run(["ffmpeg"] + src_cmd.args(), capture_output=True, check=True)
 
     chain = PitchShiftBuilder(2.0).with_formant("preserved").build()

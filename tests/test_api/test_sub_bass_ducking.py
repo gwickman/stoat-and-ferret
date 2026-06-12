@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from stoat_ferret_core import SubBassBuilder, ducking_effect_schema
