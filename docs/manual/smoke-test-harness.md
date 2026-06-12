@@ -52,8 +52,54 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k <keyword> -v
 |---------|-------------|
 | v073 | `test_preview_smoke.py` — preview workflow smoke coverage |
 | v074 | `test_render_contract.py`: settings-absent 422 gate (BL-465); `test_clip_workflow.py`: GET /clips/{cid} and GET /clips/{cid}/effects (BL-409, BL-405); `test_versions.py`: body-less POST auto-snapshot (BL-404); `test_uat_runner.py`: timeout regression guard (BL-398) |
+| v079 | `tests/test_api/test_tone_synthesis.py` (BL-441): ToneSynthBuilder; `tests/test_api/test_loopable_beds.py` (BL-440): `build_loop_render_command` crossfade/seek; `tests/test_api/test_pitch_shift.py` (BL-443): `PitchShiftBuilder` formant/quality; `tests/test_api/test_sub_bass_ducking.py` (BL-442): `SubBassBuilder` + `ducking_effect_schema`; `tests/smoke/test_generator_clip.py` (BL-441 AC-4): generator clip API; `tests/smoke/test_qc_oracle.py` (BL-488): QC oracle delivery-profile assertions (FFmpeg-gated) |
 
 See [docs/setup/smoke-test-harness-guide/smoke-test-key-files.md](../setup/smoke-test-harness-guide/smoke-test-key-files.md) for the full per-file inventory.
+
+## Wave-3 Effect Contract Tests (v079)
+
+Wave-3 adds audio DSP builders — tone synthesis, loopable beds, pitch/formant control, sub-bass isolation, and sidechain ducking. Most unit tests are FFmpeg-independent; FFmpeg-gated tests require a real `ffmpeg` binary on PATH.
+
+### FFmpeg-independent (run in any environment)
+
+```bash
+uv run pytest tests/test_api/test_tone_synthesis.py \
+              tests/test_api/test_loopable_beds.py \
+              tests/test_api/test_pitch_shift.py \
+              tests/test_api/test_sub_bass_ducking.py \
+              tests/smoke/test_generator_clip.py \
+              -x -q
+```
+
+### FFmpeg-gated (requires `STOAT_TEST_FFMPEG=1`)
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest \
+  tests/test_api/test_tone_synthesis.py \
+  tests/test_api/test_loopable_beds.py \
+  tests/test_api/test_pitch_shift.py \
+  -x -q
+```
+
+| Builder | Test file | FFmpeg required |
+|---------|-----------|-----------------|
+| `ToneSynthBuilder` | `tests/test_api/test_tone_synthesis.py` | FFmpeg-gated tests only |
+| `build_loop_render_command` | `tests/test_api/test_loopable_beds.py` | FFmpeg-gated tests only |
+| `PitchShiftBuilder` | `tests/test_api/test_pitch_shift.py` | FFmpeg-gated tests only |
+| `SubBassBuilder` / `ducking_effect_schema` | `tests/test_api/test_sub_bass_ducking.py` | No |
+| Generator clip API | `tests/smoke/test_generator_clip.py` | No |
+
+## QC Oracle Smoke Test (BL-488)
+
+`tests/smoke/test_qc_oracle.py` verifies that a render job submitted with a delivery profile propagates loudness and true-peak targets to the QC report. It requires a running server with a delivery profile fixture and a real FFmpeg encode.
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_qc_oracle.py -x -q
+```
+
+**Pass criteria:** `GET /api/v1/render/{job_id}/qc` returns `checks.loudness_integrated.target == -16.0` and `checks.true_peak.target == -1.0`.
+
+---
 
 ## Deferred AC Discharge Procedures
 
