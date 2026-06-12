@@ -996,4 +996,68 @@ mod tests {
             assert!(filters.is_empty());
         });
     }
+
+    #[test]
+    fn test_pyo3_speed_segment() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            // Valid construction via py_new
+            let seg = Bound::new(py, SpeedSegment::py_new(0, 30, 2.0).unwrap()).unwrap();
+
+            let start: u64 = seg.getattr("start_frame").unwrap().extract().unwrap();
+            assert_eq!(start, 0);
+            let end: u64 = seg.getattr("end_frame").unwrap().extract().unwrap();
+            assert_eq!(end, 30);
+            let speed: f64 = seg.getattr("speed_factor").unwrap().extract().unwrap();
+            assert!((speed - 2.0).abs() < f64::EPSILON);
+
+            // __repr__
+            let repr: String = seg.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("SpeedSegment"));
+            assert!(repr.contains("start_frame=0"));
+            assert!(repr.contains("end_frame=30"));
+
+            // Invalid speed_factor — below 0
+            assert!(SpeedSegment::py_new(0, 30, 0.0).is_err());
+            // Invalid speed_factor — above 100
+            assert!(SpeedSegment::py_new(0, 30, 100.1).is_err());
+        });
+    }
+
+    #[test]
+    fn test_pyo3_variable_speed_builder() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let segs = vec![
+                SpeedSegment {
+                    start_frame: 0,
+                    end_frame: 30,
+                    speed_factor: 2.0,
+                },
+                SpeedSegment {
+                    start_frame: 30,
+                    end_frame: 60,
+                    speed_factor: 0.5,
+                },
+            ];
+            let builder = Bound::new(py, VariableSpeedBuilder::py_new(segs).unwrap()).unwrap();
+
+            // __repr__
+            let repr: String = builder.call_method0("__repr__").unwrap().extract().unwrap();
+            assert!(repr.contains("VariableSpeedBuilder"));
+            assert!(repr.contains("2"));
+
+            // build_filter_graph
+            let graph: String = builder
+                .call_method0("build_filter_graph")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(graph.contains("concat=n=2"));
+            assert!(graph.contains("trim=start_frame=0:end_frame=30"));
+
+            // Invalid construction — empty
+            assert!(VariableSpeedBuilder::py_new(vec![]).is_err());
+        });
+    }
 }
