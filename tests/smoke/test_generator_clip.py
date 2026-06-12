@@ -28,6 +28,9 @@ async def test_generator_clip_created_via_api(smoke_client: httpx.AsyncClient) -
                 "expr": "sin(2*PI*440*t)",
                 "duration": 5.0,
             },
+            "in_point": 0,
+            "out_point": 240,
+            "timeline_position": 0,
         },
     )
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
@@ -52,6 +55,9 @@ async def test_generator_clip_persists_in_list(smoke_client: httpx.AsyncClient) 
         json={
             "clip_type": "generator",
             "generator_params": {"type": "tone", "frequency": 440.0, "duration": 10.0},
+            "in_point": 0,
+            "out_point": 480,
+            "timeline_position": 0,
         },
     )
     assert create_resp.status_code == 201
@@ -78,6 +84,9 @@ async def test_generator_clip_rejects_with_source_video_id(smoke_client: httpx.A
             "clip_type": "generator",
             "source_video_id": "00000000-0000-0000-0000-000000000001",
             "generator_params": {"type": "aevalsrc", "expr": "0", "duration": 1.0},
+            "in_point": 0,
+            "out_point": 48,
+            "timeline_position": 0,
         },
     )
     assert resp.status_code == 422, f"Expected 422 for generator+source_video_id, got {resp.status_code}"

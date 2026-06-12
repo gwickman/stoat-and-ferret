@@ -765,7 +765,7 @@ async def test_noop_mode_status_authoritative(
 
 
 async def test_render_plan_default_passes_preflight(smoke_client: httpx.AsyncClient) -> None:
-    """render_plan='{"settings":{}}' does not trigger PREFLIGHT_FAILED (BL-488 AC-3)."""
+    """render_plan with settings key present does not trigger PREFLIGHT_FAILED (BL-488 AC-3)."""
     proj_resp = await smoke_client.post(
         "/api/v1/projects",
         json={"name": "Render Plan Default Smoke"},
@@ -778,13 +778,13 @@ async def test_render_plan_default_passes_preflight(smoke_client: httpx.AsyncCli
         "/api/v1/render",
         json={
             "project_id": project_id,
-            "render_plan": '{"settings": {}}',
+            "render_plan": '{"total_duration": 5.0, "settings": {}}',
         },
     )
     if resp.status_code == 422:
         body = resp.json()
         assert body.get("detail", {}).get("code") != "PREFLIGHT_FAILED", (
-            f"render_plan default triggered PREFLIGHT_FAILED: {body}"
+            f"render_plan with settings key triggered PREFLIGHT_FAILED: {body}"
         )
     else:
         assert resp.status_code == 201, f"Unexpected status: {resp.status_code} {resp.text}"
