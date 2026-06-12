@@ -1071,6 +1071,79 @@ class AudioMixSpec:
 
     def __repr__(self) -> str: ...
 
+class SubBassBuilder:
+    """Type-safe builder for an FFmpeg sub-bass isolation filter chain.
+
+    Extracts the sub-bass frequency band using a ``lowpass`` filter and
+    optionally adjusts the output level. Useful for adding a grounding
+    low-frequency layer alongside the main mix.
+
+    Examples::
+
+        # 80 Hz crossover, no level change
+        chain = SubBassBuilder(80.0).build()
+
+        # 60 Hz crossover, boosted 6 dB
+        chain = SubBassBuilder(60.0).with_level_db(6.0).build()
+    """
+
+    def __new__(cls, cutoff_hz: float) -> SubBassBuilder:
+        """Create a new SubBassBuilder.
+
+        Args:
+            cutoff_hz: Lowpass crossover frequency in Hz, range [20.0, 300.0].
+                Typical sub-bass crossover: 60–100 Hz.
+
+        Raises:
+            ValueError: If cutoff_hz is outside the allowed range.
+        """
+        ...
+
+    def with_level_db(self, level_db: float) -> SubBassBuilder:
+        """Set the output level adjustment in dB.
+
+        Args:
+            level_db: Level adjustment in dB, range [-20.0, 20.0].
+
+        Raises:
+            ValueError: If level_db is outside the allowed range.
+        """
+        ...
+
+    def build(self) -> FilterChain:
+        """Build the sub-bass FilterChain.
+
+        Returns:
+            A FilterChain with ``lowpass=f=<cutoff>`` and optionally a
+            ``volume`` filter when level_db is non-zero.
+        """
+        ...
+
+    @property
+    def cutoff_hz(self) -> float:
+        """Returns the crossover frequency in Hz."""
+        ...
+
+    @property
+    def level_db(self) -> float:
+        """Returns the level adjustment in dB."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+def ducking_effect_schema() -> list[ParameterSchema]:
+    """Return the ParameterSchema list for DuckingPattern.
+
+    Exposes ``DuckingPattern`` as a schema-validated registry effect so that
+    agents and tooling can discover and validate its parameters without
+    constructing an instance.
+
+    Returns:
+        A list of four ``ParameterSchema`` entries: threshold, ratio, attack,
+        and release — each with type, bounds, description, and AI hint.
+    """
+    ...
+
 class TransitionType:
     """All FFmpeg xfade transition variants.
 
@@ -1519,6 +1592,88 @@ class TimeStretchBuilder:
         Returns:
             A FilterChain with rubberband or chained atempo filters.
         """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class PitchShiftBuilder:
+    """Type-safe builder for FFmpeg ``arubberband`` pitch-shift filter.
+
+    Shifts voice pitch by a configured number of semitones while optionally
+    preserving formants for natural-sounding vocal warmth or correction.
+
+    Requires FFmpeg built with libRubberBand (same dependency as
+    ``TimeStretchBuilder`` rubberband mode).
+
+    Examples::
+
+        # Warm the voice up by 2 semitones, preserving formants
+        chain = PitchShiftBuilder(2.0).with_formant("preserved").build()
+
+        # Lower pitch by a perfect fifth (7 semitones) with fast processing
+        chain = PitchShiftBuilder(-7.0).with_quality("speedy").build()
+    """
+
+    def __new__(cls, semitones: float) -> PitchShiftBuilder:
+        """Create a new PitchShiftBuilder.
+
+        Args:
+            semitones: Pitch shift in semitones, range [-24.0, 24.0].
+                Positive values raise pitch, negative values lower it.
+                Typical vocal warmth: +1 to +3 semitones.
+
+        Raises:
+            ValueError: If semitones is outside the allowed range.
+        """
+        ...
+
+    def with_formant(self, formant: str) -> PitchShiftBuilder:
+        """Set the formant mode.
+
+        Args:
+            formant: ``"shifted"`` (default, formants shift with pitch) or
+                ``"preserved"`` (formant envelope preserved, more natural).
+
+        Raises:
+            ValueError: If formant is not ``"shifted"`` or ``"preserved"``.
+        """
+        ...
+
+    def with_quality(self, quality: str) -> PitchShiftBuilder:
+        """Set the pitch quality mode.
+
+        Args:
+            quality: ``"speedy"`` (fastest), ``"consistency"`` (stable across frames),
+                or ``"quality"`` (best quality, default).
+
+        Raises:
+            ValueError: If quality is not one of the allowed modes.
+        """
+        ...
+
+    def build(self) -> FilterChain:
+        """Build the pitch-shift FilterChain.
+
+        The pitch factor is computed as ``2 ** (semitones / 12)``.
+
+        Returns:
+            A FilterChain containing a single ``arubberband`` filter.
+        """
+        ...
+
+    @property
+    def semitones(self) -> float:
+        """Returns the pitch shift in semitones."""
+        ...
+
+    @property
+    def formant(self) -> str:
+        """Returns the formant mode."""
+        ...
+
+    @property
+    def quality(self) -> str:
+        """Returns the pitch quality mode."""
         ...
 
     def __repr__(self) -> str: ...
