@@ -210,6 +210,7 @@ class EffectRegistry:
         Raises:
             ValueError: If the effect type does not support automation filter strings.
         """
-        if effect_type == "volume":
-            return f"volume='{compiled_expression}':eval=frame"
-        raise ValueError(f"No automation filter string for effect_type: {effect_type}")
+        effect_def = self._effects.get(effect_type)
+        if effect_def is None or effect_def.automation_filter_template is None:
+            raise ValueError(f"No automation filter string for effect_type: {effect_type}")
+        return effect_def.automation_filter_template.replace("{expr}", compiled_expression)

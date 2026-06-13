@@ -74,6 +74,7 @@ class EffectDefinition:
     ai_summary: str = ""
     example_prompt: str = ""
     automatable: frozenset[str] = field(default_factory=frozenset)
+    automation_filter_template: str | None = None
 
 
 def _text_overlay_preview() -> str:
@@ -488,6 +489,7 @@ VOLUME = EffectDefinition(
     ai_summary="Adjust audio loudness up or down using a linear multiplier or dB value.",
     example_prompt="Reduce the audio volume on this clip to 50%.",
     automatable=frozenset({"volume"}),
+    automation_filter_template="volume='{expr}':eval=frame",
 )
 
 AUDIO_FADE = EffectDefinition(
@@ -1496,6 +1498,7 @@ PAN = EffectDefinition(
     ),
     example_prompt="Pan the voice slightly to the right at position 0.3.",
     automatable=frozenset({"position"}),
+    automation_filter_template="aeval=exprs=max(0\\,1-({expr}))*c0|max(0\\,1+({expr}))*c1:eval=frame",
 )
 
 
