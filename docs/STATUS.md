@@ -1,5 +1,44 @@
 # STATUS.md
 
+## v082 — Release 2, Wave 5 Carry-Forward
+
+**Delivered:** 2026-06-13
+**PRs:** #608–#614 (7 PRs)
+**Tests:** 3275 passing (baseline 3199, +76)
+
+### Highlights
+
+- FFmpeg path fix: backslash→forward-slash in color_lut filter — BL-499
+- FFmpeg dblur fix: radius used instead of sigma for directional blur — BL-500
+- Removed invalid cellauto `d=` option from NoiseGeneratorBuilder — BL-501
+- Escaped commas in automation expressions for FFmpeg filter-graph parser — BL-502
+- ChromaticAberrationBuilder added via `rgbashift` filter (34th effect in registry) — BL-453-AC-2
+- chromatic_aberration added to smoke test parametrize
+- Smoke-test-harness guide updated with chromatic_aberration row and cellauto fix note
+- FFmpeg contract discharge: blur/sharpen PASS, generators PASS, lens distort PASS, keying/blend partial, color-lut partial (path colon escaping carry-forward)
+- UAT discharge: journeys 701/702/704/705/706 PASS, journey 703 blocked by BL-480
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| ffmpeg-correctness-hotfixes | BL-499, BL-500, BL-501, BL-502 | #608–#611 | merged |
+| chromatic-aberration | BL-453-AC-2 | #612–#614 | merged |
+
+### AC Status
+
+- All 7 PRs merged to main
+- FFmpeg contract verification complete for blur/sharpen, generators, lens distort
+- UAT journeys 701/702/704/705/706 discharged
+- 2 ACs carry-forward (see below)
+
+### Carry-Forwards
+
+| Item | Description | Status |
+|------|-------------|--------|
+| BL-457-AC-3 | J703 QC-fail journey | Blocked by BL-480 (qc-status-fail/remaster-btn testids absent from GUI) |
+| color-lut path colon escaping | FFmpeg color_lut filter with colon in path | Partial — forward-slash fix merged; colon escaping still needed |
+
 ## v080 — Release 2, Wave 4 — Editing & Time
 
 **Delivered:** 2026-06-12
