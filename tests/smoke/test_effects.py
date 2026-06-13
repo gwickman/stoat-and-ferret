@@ -618,6 +618,12 @@ async def test_preview_accepts_automation_envelope(
             "lenscorrection",
             id="lens_distort",
         ),
+        pytest.param(
+            "chromatic_aberration",
+            {"rx": 5, "ry": 0, "gx": 0, "gy": 0, "bx": -5, "by": 0},
+            "rgbashift",
+            id="chromatic_aberration",
+        ),
     ],
 )
 async def test_v081_video_fx_effect(
