@@ -26,11 +26,11 @@ def test_blur_gaussian_build_produces_gblur() -> None:
 
 
 def test_blur_directional_build_produces_dblur() -> None:
-    """BlurBuilder(sigma, 'directional').build() produces dblur=sigma=<sigma>."""
+    """BlurBuilder(sigma, 'directional').build() produces dblur=radius=<sigma>."""
     f = BlurBuilder(3.0, "directional").build()
     s = str(f)
     assert s.startswith("dblur="), f"Expected dblur filter, got: {s}"
-    assert "sigma=3" in s, f"Expected sigma=3 in: {s}"
+    assert "radius=3" in s, f"Expected radius=3 in: {s}"
 
 
 def test_blur_invalid_sigma_raises() -> None:
@@ -167,7 +167,7 @@ def test_blur_build_fn_directional() -> None:
     """BLUR.build_fn with blur_type=directional produces dblur filter string."""
     result = BLUR.build_fn({"sigma": 2.0, "blur_type": "directional"})
     assert "dblur" in result
-    assert "sigma=2" in result
+    assert "radius=2" in result
 
 
 def test_sharpen_build_fn() -> None:

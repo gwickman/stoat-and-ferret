@@ -13,7 +13,7 @@ use super::filter::Filter;
 /// Gaussian or directional blur filter builder with optional automation envelope.
 ///
 /// Gaussian mode (`blur_type="gaussian"`) generates `gblur=sigma={sigma}`.
-/// Directional mode (`blur_type="directional"`) generates `dblur=sigma={sigma}`.
+/// Directional mode (`blur_type="directional"`) generates `dblur=radius={sigma_rounded}`.
 /// When automation is present, build() produces `gblur=sigma='{expr}':eval=frame`
 /// using the compiled expression from `compile_automation`.
 #[gen_stub_pyclass]
@@ -58,13 +58,12 @@ impl BlurBuilder {
     #[pyo3(name = "build")]
     pub fn py_build(&self) -> PyResult<Filter> {
         match &self.automation {
-            None => {
-                let filter_name = match self.blur_type.as_str() {
-                    "directional" => "dblur",
-                    _ => "gblur",
-                };
-                Ok(Filter::new(filter_name).param("sigma", self.sigma))
-            }
+            None => match self.blur_type.as_str() {
+                "directional" => {
+                    Ok(Filter::new("dblur").param("radius", self.sigma.round() as i32))
+                }
+                _ => Ok(Filter::new("gblur").param("sigma", self.sigma)),
+            },
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
                 Ok(Filter::new(format!("gblur=sigma='{}':eval=frame", expr)))
@@ -507,7 +506,7 @@ mod tests {
     fn test_blur_directional() {
         let builder = BlurBuilder::py_new(3.0, "directional").unwrap();
         let filter = builder.py_build().unwrap();
-        assert_eq!(filter.to_string(), "dblur=sigma=3");
+        assert_eq!(filter.to_string(), "dblur=radius=3");
     }
 
     #[test]
