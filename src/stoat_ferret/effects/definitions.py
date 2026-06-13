@@ -2166,7 +2166,7 @@ def _resolve_lut_path(preset_name: str) -> Path:
 
 def _color_lut_preview() -> str:
     lut_path = _resolve_lut_path("identity")
-    return f"lut3d=file={lut_path}"
+    return f"lut3d=file={str(lut_path).replace(chr(92), '/')}"
 
 
 def _build_color_lut(parameters: dict[str, Any]) -> str:
@@ -2181,7 +2181,7 @@ def _build_color_lut(parameters: dict[str, Any]) -> str:
     preset = str(parameters.get("preset", "identity"))
     builder = ColorLutBuilder(preset)
     lut_path = _resolve_lut_path(builder.preset_name())
-    return f"lut3d=file={lut_path}"
+    return f"lut3d=file={str(lut_path).replace(chr(92), '/')}"
 
 
 COLOR_LUT = EffectDefinition(
