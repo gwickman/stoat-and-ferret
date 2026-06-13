@@ -147,6 +147,14 @@ def test_build_automation_filter_string_volume_unchanged(registry: EffectRegistr
     assert "eval=frame" in result
 
 
+def test_build_automation_filter_string_blur_radius(registry: EffectRegistry) -> None:
+    """build_automation_filter_string for 'blur' produces gblur sigma eval=frame (BL-451-AC-3)."""
+    result = registry.build_automation_filter_string("blur", "1+0.5*t")
+    assert "eval=frame" in result, f"Expected eval=frame in blur filter: {result}"
+    assert "gblur" in result, f"Expected gblur in blur filter: {result}"
+    assert "1+0.5*t" in result, f"Expected expression in blur filter: {result}"
+
+
 @pytest.mark.api
 def test_update_endpoint_automation_filter_contains_eval_frame() -> None:
     """update endpoint with automation envelope stores filter_string with :eval=frame.

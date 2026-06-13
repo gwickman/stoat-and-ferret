@@ -74,6 +74,8 @@ EXPECTED_EFFECT_TYPES = {
     "variable_speed",
     "framerate_convert",
     "freeze_frame",
+    "blur",
+    "sharpen",
 }
 
 # ---- Registry unit tests ----

@@ -64,6 +64,7 @@ try:
         Automation,
         BatchJobStatus,
         BatchProgress,
+        BlurBuilder,
         Clip,
         ClipValidationError,
         CommandError,
@@ -111,6 +112,7 @@ try:
         RenderSettings,
         ReverseBuilder,
         SanitizationError,
+        SharpenBuilder,
         SilenceRegion,
         SilenceReport,
         SpectralReport,
@@ -229,6 +231,8 @@ except ImportError:
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
+    BlurBuilder = _not_built  # type: ignore[misc,assignment]
+    SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
@@ -353,6 +357,9 @@ __all__ = [
     "LoudnormBuilder",
     "MultibandCompressorBuilder",
     "ParametricEqBuilder",
+    # Video effect builders
+    "BlurBuilder",
+    "SharpenBuilder",
     # Spatial audio builders
     "ConvolutionReverbBuilder",
     "PanBuilder",

@@ -145,6 +145,10 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::spatial::PanBuilder>()?;
     m.add_class::<ffmpeg::spatial::ConvolutionReverbBuilder>()?;
 
+    // Register video effect builders
+    m.add_class::<ffmpeg::video::BlurBuilder>()?;
+    m.add_class::<ffmpeg::video::SharpenBuilder>()?;
+
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
     m.add_class::<ffmpeg::transitions::FadeBuilder>()?;
