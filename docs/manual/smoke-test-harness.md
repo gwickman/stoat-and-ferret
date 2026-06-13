@@ -112,6 +112,7 @@ v081 added 10 new video FX effect types to the registry. Their smoke coverage li
 | `chroma_key` | `{"color": "green", "similarity": 0.1}` | `chromakey` |
 | `color_key` | `{"color": "white", "similarity": 0.1}` | `colorkey` |
 | `lens_distort` | `{"k1": 0.1, "k2": 0.05}` | `lenscorrection` |
+| `chromatic_aberration` | `{"rx": 5, "ry": 0, "gx": 0, "gy": 0, "bx": -5, "by": 0}` | `rgbashift` |
 
 ### Preview pattern (2 generator effects)
 
@@ -121,10 +122,10 @@ v081 added 10 new video FX effect types to the registry. Their smoke coverage li
 
 Generator effects produce synthetic video output and cannot be applied to a clip directly; they are validated via the preview endpoint.
 
-| Effect type | Parameters | Expected FFmpeg filter |
-|-------------|-----------|------------------------|
-| `gradient_generator` | `{"color1": "black", "color2": "white", "duration": 5.0}` | `gradients` |
-| `noise_generator` | `{"duration": 5.0}` | `cellauto` |
+| Effect type | Parameters | Expected FFmpeg filter | Notes |
+|-------------|-----------|------------------------|-------|
+| `gradient_generator` | `{"color1": "black", "color2": "white", "duration": 5.0}` | `gradients` | |
+| `noise_generator` | `{"duration": 5.0}` | `cellauto` | v082 BL-501 (PR #610): `d=` duration option removed from filter string; duration now controlled via `-t` at command level |
 
 ### Running v081 FX tests
 
