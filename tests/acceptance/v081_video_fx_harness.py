@@ -204,34 +204,30 @@ async def _submit_render(client: httpx.AsyncClient, project_id: str) -> str:
 class TestV081VideoFXCoverage:
     """Gate verification: v081 effects are in catalog and smoke coverage is in place."""
 
-    async def test_all_v081_effects_in_catalog(
-        self, acceptance_client: httpx.AsyncClient
-    ) -> None:
+    async def test_all_v081_effects_in_catalog(self, acceptance_client: httpx.AsyncClient) -> None:
         """All 10 v081 video FX effect types are registered in GET /effects catalog."""
         resp = await acceptance_client.get("/api/v1/effects")
         assert resp.status_code == 200
         catalog = {e["effect_type"] for e in resp.json()["effects"]}
 
         required = {
-            "color_lut",          # BL-450
-            "blur",               # BL-451
-            "sharpen",            # BL-451
-            "chroma_key",         # BL-452
-            "color_key",          # BL-452
-            "lens_distort",       # BL-453
-            "gradient_generator", # BL-454
-            "noise_generator",    # BL-454
-            "opacity",            # BL-455
-            "scale",              # BL-455
+            "color_lut",  # BL-450
+            "blur",  # BL-451
+            "sharpen",  # BL-451
+            "chroma_key",  # BL-452
+            "color_key",  # BL-452
+            "lens_distort",  # BL-453
+            "gradient_generator",  # BL-454
+            "noise_generator",  # BL-454
+            "opacity",  # BL-455
+            "scale",  # BL-455
         }
         missing = required - catalog
         assert not missing, f"v081 effects missing from catalog: {sorted(missing)}"
 
     def test_smoke_test_file_covers_v081_effects(self) -> None:
         """Smoke test file contains parametrized tests for all v081 clip-applicable effects."""
-        smoke_file = (
-            Path(__file__).resolve().parent.parent / "smoke" / "test_effects.py"
-        )
+        smoke_file = Path(__file__).resolve().parent.parent / "smoke" / "test_effects.py"
         assert smoke_file.exists(), f"Smoke file not found: {smoke_file}"
         content = smoke_file.read_text()
 
@@ -242,24 +238,24 @@ class TestV081VideoFXCoverage:
             "test_v081_generator_fx_catalog_and_preview not found in test_effects.py"
         )
         for effect in (
-            "blur", "sharpen", "opacity", "scale",
-            "color_lut", "chroma_key", "color_key", "lens_distort",
+            "blur",
+            "sharpen",
+            "opacity",
+            "scale",
+            "color_lut",
+            "chroma_key",
+            "color_key",
+            "lens_distort",
         ):
-            assert f'"{effect}"' in content, (
-                f"Effect {effect!r} not in smoke test parametrize list"
-            )
+            assert f'"{effect}"' in content, f"Effect {effect!r} not in smoke test parametrize list"
 
     def test_uat_journeys_registered_for_v081(self) -> None:
         """UAT runner has v081 journeys J707–J710 in JOURNEY_DEPS and JOURNEY_MODULE_MAP."""
-        runner = (
-            Path(__file__).resolve().parent.parent.parent / "scripts" / "uat_runner.py"
-        )
+        runner = Path(__file__).resolve().parent.parent.parent / "scripts" / "uat_runner.py"
         assert runner.exists(), f"uat_runner.py not found at {runner}"
         content = runner.read_text()
         for journey_id in (707, 708, 709, 710):
-            assert str(journey_id) in content, (
-                f"Journey {journey_id} not found in uat_runner.py"
-            )
+            assert str(journey_id) in content, f"Journey {journey_id} not found in uat_runner.py"
 
     def test_deferred_ffmpeg_acs_documented(self) -> None:
         """All FFmpeg-deferred ACs have entries in _DEFERRED_FFMPEG_ACS."""
@@ -326,9 +322,7 @@ class TestV081FfmpegContracts:
             f"BL-450-AC-3: color_lut render ended with unexpected status {status!r}"
         )
 
-    async def test_bl451_blur_render_contract(
-        self, acceptance_client: httpx.AsyncClient
-    ) -> None:
+    async def test_bl451_blur_render_contract(self, acceptance_client: httpx.AsyncClient) -> None:
         """BL-451-AC-4: blur renders without error under real FFmpeg."""
         video_id = await _scan_and_get_video(acceptance_client, _DEMO_VIDEOS_DIR)
         project_id, clip_id = await _create_project_with_clip(

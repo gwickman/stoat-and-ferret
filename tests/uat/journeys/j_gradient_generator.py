@@ -32,9 +32,7 @@ async def run(page: Page, base_url: str) -> None:
                 "parameters": {"color1": "black", "color2": "white", "duration": 5.0},
             },
         )
-        assert resp.status_code == 200, (
-            f"Effects preview failed: {resp.status_code} {resp.text}"
-        )
+        assert resp.status_code == 200, f"Effects preview failed: {resp.status_code} {resp.text}"
         preview = resp.json()
         assert "filter_string" in preview, f"Response missing filter_string: {preview}"
         assert "gradients" in preview["filter_string"], (
