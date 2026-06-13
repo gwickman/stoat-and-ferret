@@ -146,4 +146,35 @@ mod tests {
         assert!(SharpenBuilder::py_new(0.0).is_err());
         assert!(SharpenBuilder::py_new(-1.0).is_err());
     }
+
+    #[test]
+    fn test_blur_with_automation_stores_envelope() {
+        let auto = Automation {
+            default: 1.0,
+            keyframes: vec![
+                super::super::automation::Keyframe { t: 0.0, value: 1.0, curve: "Linear".to_string() },
+                super::super::automation::Keyframe { t: 5.0, value: 5.0, curve: "Linear".to_string() },
+            ],
+        };
+        let builder = BlurBuilder::py_new(2.0, "gaussian").unwrap();
+        let with_auto = builder.py_with_automation(auto);
+        assert!(with_auto.automation.is_some());
+    }
+
+    #[test]
+    fn test_blur_build_with_automation_contains_eval_frame() {
+        let auto = Automation {
+            default: 1.0,
+            keyframes: vec![
+                super::super::automation::Keyframe { t: 0.0, value: 1.0, curve: "Linear".to_string() },
+                super::super::automation::Keyframe { t: 5.0, value: 5.0, curve: "Linear".to_string() },
+            ],
+        };
+        let builder = BlurBuilder::py_new(2.0, "gaussian")
+            .unwrap()
+            .py_with_automation(auto);
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(filter_str.contains("eval=frame"), "expected eval=frame in: {filter_str}");
+        assert!(filter_str.contains("gblur"), "expected gblur in: {filter_str}");
+    }
 }
