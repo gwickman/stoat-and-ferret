@@ -4260,3 +4260,73 @@ class LensDistortBuilder:
             A Filter with ``lenscorrection=k1={k1}:k2={k2}``.
         """
         ...
+
+class GradientGeneratorBuilder:
+    """Gradient generator source filter builder using FFmpeg ``gradients`` lavfi source.
+
+    Generates ``gradients=s={w}x{h}:c0={color1}:c1={color2}:d={duration}`` filter.
+    Colors accept ``#RRGGBB`` CSS hex or a CSS named colour. Duration must be > 0.
+    """
+
+    def __new__(
+        cls,
+        color1: str,
+        color2: str,
+        duration: float,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> GradientGeneratorBuilder:
+        """Creates a new GradientGeneratorBuilder.
+
+        Args:
+            color1: First gradient colour as ``#RRGGBB`` hex or CSS named colour.
+            color2: Second gradient colour as ``#RRGGBB`` hex or CSS named colour.
+            duration: Clip duration in seconds (must be > 0).
+            width: Output width in pixels. Defaults to 1920.
+            height: Output height in pixels. Defaults to 1080.
+
+        Raises:
+            ValueError: If a colour format is invalid, duration <= 0, or size is 0.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the gradients source Filter.
+
+        Returns:
+            A Filter with ``gradients=s={w}x{h}:c0={color1}:c1={color2}:d={duration}``.
+        """
+        ...
+
+class NoiseGeneratorBuilder:
+    """Noise/pattern generator source filter builder using FFmpeg ``cellauto`` lavfi source.
+
+    Generates ``cellauto=s={w}x{h}:d={duration}`` filter.
+    Duration must be > 0. Width and height default to 1920×1080.
+    """
+
+    def __new__(
+        cls,
+        duration: float,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> NoiseGeneratorBuilder:
+        """Creates a new NoiseGeneratorBuilder.
+
+        Args:
+            duration: Clip duration in seconds (must be > 0).
+            width: Output width in pixels. Defaults to 1920.
+            height: Output height in pixels. Defaults to 1080.
+
+        Raises:
+            ValueError: If duration <= 0 or width/height is 0.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the cellauto source Filter.
+
+        Returns:
+            A Filter with ``cellauto=s={w}x{h}:d={duration}``.
+        """
+        ...

@@ -29,10 +29,12 @@ from stoat_ferret_core import (
     FramerateConvertBuilder,
     FramerateMode,
     FreezeFrameBuilder,
+    GradientGeneratorBuilder,
     LensDistortBuilder,
     LimiterBuilder,
     LoudnormBuilder,
     MultibandCompressorBuilder,
+    NoiseGeneratorBuilder,
     NoiseReductionBuilder,
     OpacityBuilder,
     PanBuilder,
@@ -2279,6 +2281,164 @@ LENS_DISTORT_EFFECT = EffectDefinition(
 )
 
 
+def _gradient_generator_preview() -> str:
+    """Generate a filter preview for gradient_generator with default parameters."""
+    return str(GradientGeneratorBuilder("black", "white", 5.0).build())
+
+
+def _build_gradient_generator(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for gradient_generator effect.
+
+    Args:
+        parameters: Effect parameters with required 'color1', 'color2', 'duration'.
+
+    Returns:
+        FFmpeg gradients lavfi source filter string.
+    """
+    color1 = str(parameters.get("color1", "black"))
+    color2 = str(parameters.get("color2", "white"))
+    duration = float(parameters.get("duration", 5.0))
+    width = parameters.get("width")
+    height = parameters.get("height")
+    builder = GradientGeneratorBuilder(
+        color1,
+        color2,
+        duration,
+        int(width) if width is not None else None,
+        int(height) if height is not None else None,
+    )
+    return str(builder.build())
+
+
+GRADIENT_GENERATOR = EffectDefinition(
+    name="Gradient Generator",
+    description=(
+        "Generate a gradient source clip with two configurable colours. "
+        "Uses FFmpeg gradients lavfi source; suitable for calming visual backgrounds."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "color1": {
+                "type": "string",
+                "default": "black",
+                "description": "First gradient colour as #RRGGBB hex or CSS named colour.",
+            },
+            "color2": {
+                "type": "string",
+                "default": "white",
+                "description": "Second gradient colour as #RRGGBB hex or CSS named colour.",
+            },
+            "duration": {
+                "type": "number",
+                "minimum": 0.01,
+                "default": 5.0,
+                "description": "Clip duration in seconds (must be > 0).",
+            },
+            "width": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1920,
+                "description": "Output width in pixels.",
+            },
+            "height": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1080,
+                "description": "Output height in pixels.",
+            },
+        },
+        "required": ["color1", "color2", "duration"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "color1": "Start colour as '#RRGGBB' hex (e.g. '#000080' for navy) or named CSS colour.",
+        "color2": "End colour as '#RRGGBB' hex or named CSS colour (e.g. 'white').",
+        "duration": "Clip duration in seconds (> 0). Use 5–30 for background loops.",
+        "width": "Output width in pixels. Default 1920 for HD.",
+        "height": "Output height in pixels. Default 1080 for HD.",
+    },
+    preview_fn=_gradient_generator_preview,
+    build_fn=_build_gradient_generator,
+    ai_summary=(
+        "Generate a two-colour gradient source clip of configurable duration "
+        "using FFmpeg gradients lavfi source."
+    ),
+    example_prompt="Create a 10-second gradient from navy blue to white for a calming background.",
+)
+
+
+def _noise_generator_preview() -> str:
+    """Generate a filter preview for noise_generator with default parameters."""
+    return str(NoiseGeneratorBuilder(5.0).build())
+
+
+def _build_noise_generator(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for noise_generator effect.
+
+    Args:
+        parameters: Effect parameters with required 'duration' key.
+
+    Returns:
+        FFmpeg cellauto lavfi source filter string.
+    """
+    duration = float(parameters.get("duration", 5.0))
+    width = parameters.get("width")
+    height = parameters.get("height")
+    builder = NoiseGeneratorBuilder(
+        duration,
+        int(width) if width is not None else None,
+        int(height) if height is not None else None,
+    )
+    return str(builder.build())
+
+
+NOISE_GENERATOR = EffectDefinition(
+    name="Noise Generator",
+    description=(
+        "Generate an evolving cellular-automaton pattern source clip. "
+        "Uses FFmpeg cellauto lavfi source for animated noise patterns."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "duration": {
+                "type": "number",
+                "minimum": 0.01,
+                "default": 5.0,
+                "description": "Clip duration in seconds (must be > 0).",
+            },
+            "width": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1920,
+                "description": "Output width in pixels.",
+            },
+            "height": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1080,
+                "description": "Output height in pixels.",
+            },
+        },
+        "required": ["duration"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "duration": "Clip duration in seconds (> 0). Use 5–30 for background loops.",
+        "width": "Output width in pixels. Default 1920 for HD.",
+        "height": "Output height in pixels. Default 1080 for HD.",
+    },
+    preview_fn=_noise_generator_preview,
+    build_fn=_build_noise_generator,
+    ai_summary=(
+        "Generate an evolving cellular-automaton noise/pattern source clip "
+        "using FFmpeg cellauto lavfi source."
+    ),
+    example_prompt="Create a 10-second evolving noise pattern for a background visual.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2319,4 +2479,6 @@ def create_default_registry() -> EffectRegistry:
     registry.register("color_key", COLOR_KEY_EFFECT)
     registry.register("color_lut", COLOR_LUT)
     registry.register("lens_distort", LENS_DISTORT_EFFECT)
+    registry.register("gradient_generator", GRADIENT_GENERATOR)
+    registry.register("noise_generator", NOISE_GENERATOR)
     return registry
