@@ -15,7 +15,8 @@ BL-454 generators              smoke         smoke         smoke            DEFE
 BL-455 opacity/scale           smoke         smoke         smoke            DEFER:UAT
 
 Smoke test coverage: tests/smoke/test_effects.py
-  - test_v081_video_fx_effect[blur,sharpen,opacity,scale,color_lut,chroma_key,color_key,lens_distort]
+  - test_v081_video_fx_effect[blur,sharpen,opacity,scale,color_lut,chroma_key,color_key,
+    lens_distort]
   - test_v081_generator_fx_catalog_and_preview[gradient_generator,noise_generator]
 
 BL-453 AC-2 gap: chromatic_aberration (rgbashift) has no clip-apply smoke test; lens_distort covers
@@ -24,14 +25,15 @@ BL-453 AC-2 gap: chromatic_aberration (rgbashift) has no clip-apply smoke test; 
 Deferred discharge commands
 ===========================
 FFmpeg contract tests:
-  STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/v081_video_fx_harness.py::TestV081FfmpegContracts -v
+  STOAT_TEST_FFMPEG=1 uv run pytest \
+    tests/acceptance/v081_video_fx_harness.py::TestV081FfmpegContracts -v
 
 Headed UAT journeys:
   python scripts/uat_runner.py --headed --journey 706   # BL-450-AC-4: color grading GUI preview
   python scripts/uat_runner.py --headed --journey 707   # blur headed visual verification
   python scripts/uat_runner.py --headed --journey 708   # chroma_key headed visual verification
   python scripts/uat_runner.py --headed --journey 709   # lens_distort headed visual verification
-  python scripts/uat_runner.py --headed --journey 710   # gradient_generator headed visual verification
+  python scripts/uat_runner.py --headed --journey 710   # gradient_generator visual verification
   # BL-455-AC-4 (automation lane GUI): manual verification — apply opacity/scale effect,
   # confirm the automation lane renders in the effects panel, add/edit keyframes interactively.
 """
@@ -299,7 +301,8 @@ class TestV081FfmpegContracts:
     All tests require STOAT_TEST_FFMPEG=1 and demo video files at videos/demo/.
 
     Discharge:
-        STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/v081_video_fx_harness.py::TestV081FfmpegContracts -v
+        STOAT_TEST_FFMPEG=1 uv run pytest \
+            tests/acceptance/v081_video_fx_harness.py::TestV081FfmpegContracts -v
     """
 
     async def test_bl450_color_lut_render_contract(
