@@ -561,6 +561,158 @@ async def test_preview_accepts_automation_envelope(
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Smoke tests for new v081 video FX effects (BL-454, BL-452, BL-453, BL-455, BL-450)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("videos_dir")
+@pytest.mark.parametrize(
+    ("effect_type", "parameters", "filter_keyword"),
+    [
+        pytest.param(
+            "blur",
+            {"sigma": 2.0},
+            "gblur",
+            id="blur",
+        ),
+        pytest.param(
+            "sharpen",
+            {"amount": 1.0},
+            "unsharp",
+            id="sharpen",
+        ),
+        pytest.param(
+            "opacity",
+            {"opacity": 0.5},
+            "colorchannelmixer",
+            id="opacity",
+        ),
+        pytest.param(
+            "scale",
+            {"scale": 1.5},
+            "scale",
+            id="scale",
+        ),
+        pytest.param(
+            "color_lut",
+            {"preset": "warm_fade"},
+            "lut3d",
+            id="color_lut",
+        ),
+        pytest.param(
+            "chroma_key",
+            {"color": "green", "similarity": 0.1},
+            "chromakey",
+            id="chroma_key",
+        ),
+        pytest.param(
+            "color_key",
+            {"color": "white", "similarity": 0.1},
+            "colorkey",
+            id="color_key",
+        ),
+        pytest.param(
+            "lens_distort",
+            {"k1": 0.1, "k2": 0.05},
+            "lenscorrection",
+            id="lens_distort",
+        ),
+    ],
+)
+async def test_v081_video_fx_effect(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+    effect_type: str,
+    parameters: dict[str, Any],
+    filter_keyword: str,
+) -> None:
+    """v081 video FX: effect is in catalog and builds a valid filter string on a clip."""
+    client = smoke_client
+
+    # Verify effect is registered in the catalog
+    resp = await client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    assert effect_type in effects_by_type, (
+        f"Effect {effect_type!r} not found in GET /effects catalog"
+    )
+
+    # Apply to a real clip and verify 201 + filter keyword
+    project_id, clip_id = await _setup_project_with_clip(
+        client, videos_dir, f"v081 FX Smoke: {effect_type}"
+    )
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={"effect_type": effect_type, "parameters": parameters},
+    )
+    assert resp.status_code == 201, (
+        f"Expected 201 for {effect_type!r}, got {resp.status_code}: {resp.text}"
+    )
+    effect = resp.json()
+    assert effect["effect_type"] == effect_type
+    assert filter_keyword in effect["filter_string"], (
+        f"Expected {filter_keyword!r} in filter_string for {effect_type!r}, "
+        f"got: {effect['filter_string']!r}"
+    )
+
+    # Verify effect appears on the clip
+    resp = await client.get(f"/api/v1/projects/{project_id}/clips")
+    assert resp.status_code == 200
+    clips = resp.json()["clips"]
+    clip = next(c for c in clips if c["id"] == clip_id)
+    assert any(e["effect_type"] == effect_type for e in clip["effects"])
+
+
+@pytest.mark.parametrize(
+    ("effect_type", "parameters", "filter_keyword"),
+    [
+        pytest.param(
+            "gradient_generator",
+            {"color1": "black", "color2": "white", "duration": 5.0},
+            "gradients",
+            id="gradient_generator",
+        ),
+        pytest.param(
+            "noise_generator",
+            {"duration": 5.0},
+            "cellauto",
+            id="noise_generator",
+        ),
+    ],
+)
+async def test_v081_generator_fx_catalog_and_preview(
+    smoke_client: httpx.AsyncClient,
+    effect_type: str,
+    parameters: dict[str, Any],
+    filter_keyword: str,
+) -> None:
+    """v081 generator FX: effect is in catalog and preview returns a valid filter string."""
+    client = smoke_client
+
+    # Verify effect is registered in the catalog
+    resp = await client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    assert effect_type in effects_by_type, (
+        f"Effect {effect_type!r} not found in GET /effects catalog"
+    )
+
+    # Verify build via preview endpoint
+    resp = await client.post(
+        "/api/v1/effects/preview",
+        json={"effect_type": effect_type, "parameters": parameters},
+    )
+    assert resp.status_code == 200, (
+        f"Expected 200 for preview of {effect_type!r}, got {resp.status_code}: {resp.text}"
+    )
+    assert filter_keyword in resp.json()["filter_string"], (
+        f"Expected {filter_keyword!r} in filter_string for {effect_type!r}, "
+        f"got: {resp.json()['filter_string']!r}"
+    )
+
+
 @pytest.mark.skipif(not os.getenv("STOAT_TEST_FFMPEG"), reason="requires STOAT_TEST_FFMPEG=1")
 @pytest.mark.usefixtures("videos_dir")
 async def test_smoke_reverse_effect(
