@@ -4330,3 +4330,38 @@ class NoiseGeneratorBuilder:
             A Filter with ``cellauto=s={w}x{h}``.
         """
         ...
+
+class ChromaticAberrationBuilder:
+    """Applies configurable chromatic aberration (RGB channel shift) using rgbashift filter."""
+
+    def __new__(
+        cls,
+        rx: int,
+        ry: int,
+        gx: int,
+        gy: int,
+        bx: int,
+        by: int,
+    ) -> ChromaticAberrationBuilder:
+        """Create a new ChromaticAberrationBuilder.
+
+        Args:
+            rx: Red channel horizontal shift in [-255, 255].
+            ry: Red channel vertical shift in [-255, 255].
+            gx: Green channel horizontal shift in [-255, 255].
+            gy: Green channel vertical shift in [-255, 255].
+            bx: Blue channel horizontal shift in [-255, 255].
+            by: Blue channel vertical shift in [-255, 255].
+
+        Raises:
+            ValueError: If any shift value is outside [-255, 255].
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the rgbashift Filter.
+
+        Returns:
+            A Filter with ``rgbashift=rh={rx}:rv={ry}:gh={gx}:gv={gy}:bh={bx}:bv={by}``.
+        """
+        ...

@@ -508,6 +508,46 @@ impl LensDistortBuilder {
     }
 }
 
+/// Chromatic aberration filter builder using the FFmpeg `rgbashift` filter.
+///
+/// Shifts each RGB channel independently by configurable horizontal/vertical pixel offsets.
+/// All parameters are in the range `[-255, 255]`; all default to 0 (pass-through).
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ChromaticAberrationBuilder {
+    rx: i32,
+    ry: i32,
+    gx: i32,
+    gy: i32,
+    bx: i32,
+    by: i32,
+}
+
+#[pymethods]
+impl ChromaticAberrationBuilder {
+    #[new]
+    pub fn py_new(rx: i32, ry: i32, gx: i32, gy: i32, bx: i32, by: i32) -> PyResult<Self> {
+        for &v in &[rx, ry, gx, gy, bx, by] {
+            if !(-255..=255).contains(&v) {
+                return Err(PyValueError::new_err("shift values must be in [-255, 255]"));
+            }
+        }
+        Ok(Self { rx, ry, gx, gy, bx, by })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        Ok(Filter::new("rgbashift")
+            .param("rh", self.rx)
+            .param("rv", self.ry)
+            .param("gh", self.gx)
+            .param("gv", self.gy)
+            .param("bh", self.bx)
+            .param("bv", self.by))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -66,6 +66,7 @@ try:
         BatchProgress,
         BlurBuilder,
         ChromaKeyBuilder,
+        ChromaticAberrationBuilder,
         Clip,
         ClipValidationError,
         ColorKeyBuilder,
@@ -243,6 +244,7 @@ except ImportError:
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
     GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
+    ChromaticAberrationBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
@@ -375,6 +377,7 @@ __all__ = [
     "ParametricEqBuilder",
     # Video effect builders
     "BlurBuilder",
+    "ChromaticAberrationBuilder",
     "GradientGeneratorBuilder",
     "LensDistortBuilder",
     "SharpenBuilder",

@@ -1,9 +1,9 @@
 """Tests for optical distortion effects (BL-453).
 
-Unit tests for LensDistortBuilder (builder validation, build output, determinism)
-and effect registry registration.
+Unit tests for LensDistortBuilder and ChromaticAberrationBuilder (builder validation,
+build output, determinism) and effect registry registration.
 
-Contract test (BL-453-AC-4) is deferred_post_merge and gated by STOAT_TEST_FFMPEG=1.
+Contract test (BL-453-AC-3/4) is deferred_post_merge and gated by STOAT_TEST_FFMPEG=1.
 """
 
 from __future__ import annotations
@@ -12,8 +12,12 @@ import os
 
 import pytest
 
-from stoat_ferret.effects.definitions import LENS_DISTORT_EFFECT, create_default_registry
-from stoat_ferret_core import LensDistortBuilder
+from stoat_ferret.effects.definitions import (
+    CHROMATIC_ABERRATION_EFFECT,
+    LENS_DISTORT_EFFECT,
+    create_default_registry,
+)
+from stoat_ferret_core import ChromaticAberrationBuilder, LensDistortBuilder
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "0") == "1"
 
@@ -209,3 +213,86 @@ def test_lens_distort_contract_ffmpeg(tmp_path: pytest.TempPathFactory) -> None:
     )
     assert result.returncode == 0, f"FFmpeg failed: {result.stderr.decode()}"
     assert output.exists()
+
+
+# ---------------------------------------------------------------------------
+# ChromaticAberrationBuilder — construction validation (BL-453-AC-2)
+# ---------------------------------------------------------------------------
+
+
+def test_chromatic_aberration_valid_construction() -> None:
+    """ChromaticAberrationBuilder accepts valid shift values and builds rgbashift filter."""
+    b = ChromaticAberrationBuilder(5, 0, 0, 0, -5, 0)
+    result = str(b.build())
+    assert "rgbashift" in result
+    assert "rh=5" in result
+    assert "bh=-5" in result
+
+
+def test_chromatic_aberration_zero_shifts_passthrough() -> None:
+    """ChromaticAberrationBuilder with all zeros builds a pass-through rgbashift filter."""
+    b = ChromaticAberrationBuilder(0, 0, 0, 0, 0, 0)
+    result = str(b.build())
+    assert "rgbashift" in result
+    assert "rh=0" in result
+
+
+def test_chromatic_aberration_range_validation() -> None:
+    """ChromaticAberrationBuilder raises ValueError when any shift is outside [-255, 255]."""
+    with pytest.raises(ValueError):
+        ChromaticAberrationBuilder(256, 0, 0, 0, 0, 0)
+    with pytest.raises(ValueError):
+        ChromaticAberrationBuilder(0, 0, 0, 0, -256, 0)
+    with pytest.raises(ValueError):
+        ChromaticAberrationBuilder(0, 256, 0, 0, 0, 0)
+
+
+def test_chromatic_aberration_boundary_values_accepted() -> None:
+    """ChromaticAberrationBuilder accepts boundary values -255 and 255."""
+    assert ChromaticAberrationBuilder(-255, -255, -255, -255, -255, -255) is not None
+    assert ChromaticAberrationBuilder(255, 255, 255, 255, 255, 255) is not None
+
+
+def test_chromatic_aberration_build_encodes_all_params() -> None:
+    """build() encodes all 6 channel shift parameters in the filter string."""
+    b = ChromaticAberrationBuilder(10, 2, 3, 4, -10, -2)
+    result = str(b.build())
+    assert "rh=10" in result
+    assert "rv=2" in result
+    assert "gh=3" in result
+    assert "gv=4" in result
+    assert "bh=-10" in result
+    assert "bv=-2" in result
+
+
+def test_chromatic_aberration_deterministic() -> None:
+    """build() called twice on the same instance returns the same string."""
+    b = ChromaticAberrationBuilder(5, 0, 0, 0, -5, 0)
+    assert str(b.build()) == str(b.build())
+
+
+def test_chromatic_aberration_registered_in_default_registry() -> None:
+    """chromatic_aberration is registered in the default effect registry."""
+    registry = create_default_registry()
+    definition = registry.get("chromatic_aberration")
+    assert definition is not None
+
+
+def test_chromatic_aberration_effect_preview_returns_string() -> None:
+    """CHROMATIC_ABERRATION_EFFECT.preview_fn returns a non-empty rgbashift string."""
+    result = CHROMATIC_ABERRATION_EFFECT.preview_fn()
+    assert isinstance(result, str)
+    assert "rgbashift" in result
+
+
+def test_chromatic_aberration_build_fn_uses_defaults() -> None:
+    """CHROMATIC_ABERRATION_EFFECT.build_fn uses default values for absent params."""
+    result = CHROMATIC_ABERRATION_EFFECT.build_fn({})
+    assert "rgbashift" in result
+
+
+def test_chromatic_aberration_build_fn_uses_provided_params() -> None:
+    """CHROMATIC_ABERRATION_EFFECT.build_fn uses provided parameter values."""
+    result = CHROMATIC_ABERRATION_EFFECT.build_fn({"rx": 10, "bx": -10})
+    assert "rh=10" in result
+    assert "bh=-10" in result
