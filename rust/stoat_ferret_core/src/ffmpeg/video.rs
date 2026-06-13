@@ -1124,4 +1124,65 @@ mod tests {
             b2.build().unwrap().to_string()
         );
     }
+
+    // -- ChromaticAberrationBuilder --
+
+    #[test]
+    fn test_chromatic_aberration_valid_construction() {
+        assert!(ChromaticAberrationBuilder::py_new(5, 0, 0, 0, -5, 0).is_ok());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 0, 0).is_ok());
+        assert!(ChromaticAberrationBuilder::py_new(-255, 255, -255, 255, -255, 255).is_ok());
+    }
+
+    #[test]
+    fn test_chromatic_aberration_invalid_range() {
+        assert!(ChromaticAberrationBuilder::py_new(256, 0, 0, 0, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, -256, 0, 0, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 256, 0, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, -256, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 256, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 0, -256).is_err());
+    }
+
+    #[test]
+    fn test_chromatic_aberration_build_output() {
+        let b = ChromaticAberrationBuilder::py_new(5, 0, 0, 0, -5, 0).unwrap();
+        let filter_str = b.py_build().unwrap().to_string();
+        assert!(
+            filter_str.starts_with("rgbashift="),
+            "expected rgbashift= prefix in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("rh=5"),
+            "expected rh=5 in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("bh=-5"),
+            "expected bh=-5 in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_chromatic_aberration_all_params_encoded() {
+        let b = ChromaticAberrationBuilder::py_new(10, 2, 3, 4, -10, -2).unwrap();
+        let filter_str = b.py_build().unwrap().to_string();
+        assert!(filter_str.contains("rh=10"));
+        assert!(filter_str.contains("rv=2"));
+        assert!(filter_str.contains("gh=3"));
+        assert!(filter_str.contains("gv=4"));
+        assert!(filter_str.contains("bh=-10"));
+        assert!(filter_str.contains("bv=-2"));
+    }
+
+    #[test]
+    fn test_chromatic_aberration_zero_passthrough() {
+        let b = ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 0, 0).unwrap();
+        let filter_str = b.py_build().unwrap().to_string();
+        assert!(filter_str.contains("rh=0"));
+        assert!(filter_str.contains("rv=0"));
+        assert!(filter_str.contains("gh=0"));
+        assert!(filter_str.contains("gv=0"));
+        assert!(filter_str.contains("bh=0"));
+        assert!(filter_str.contains("bv=0"));
+    }
 }
