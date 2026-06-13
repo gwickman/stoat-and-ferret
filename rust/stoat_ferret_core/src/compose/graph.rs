@@ -23,7 +23,7 @@
 //! let transitions = vec![
 //!     TransitionSpec::new(TransitionType::Fade, 1.0, 0.0),
 //! ];
-//! let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+//! let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
 //! let s = graph.to_string();
 //! assert!(s.contains("xfade"));
 //! assert!(s.contains("acrossfade"));
@@ -151,6 +151,19 @@ impl LayoutSpec {
     }
 }
 
+/// Builds a `blend=all_mode={mode}` filter chain for blend-mode compositing.
+///
+/// This is a crate-internal helper appended to the layout graph when `blend_mode` is set.
+/// Supported modes: `screen`, `multiply`, `overlay`, `difference`, `hardlight`,
+/// `softlight`, `darken`, `lighten`, `addition`, `exclusion`.
+pub(crate) fn build_blend_filter(mode: &str) -> FilterChain {
+    FilterChain::new()
+        .input("outv")
+        .input("second_input")
+        .filter(Filter::new("blend").param("all_mode", mode))
+        .output("outv")
+}
+
 /// Builds a complete FilterGraph for multi-clip composition.
 ///
 /// This is the primary composition entry point. Depending on whether a layout
@@ -166,6 +179,10 @@ impl LayoutSpec {
 /// * `audio_mix` - Optional audio mix specification (used in layout mode)
 /// * `output_width` - Output canvas width in pixels
 /// * `output_height` - Output canvas height in pixels
+/// * `blend_mode` - Optional blend mode applied after final overlay compositing.
+///   Supported: `screen`, `multiply`, `overlay`, `difference`, `hardlight`,
+///   `softlight`, `darken`, `lighten`, `addition`, `exclusion`.
+///   Returns an error string for unknown modes.
 ///
 /// # Returns
 ///
@@ -177,19 +194,36 @@ pub fn build_composition_graph(
     audio_mix: Option<&AudioMixSpec>,
     output_width: u32,
     output_height: u32,
-) -> FilterGraph {
+    blend_mode: Option<&str>,
+) -> Result<FilterGraph, String> {
+    if let Some(mode) = blend_mode {
+        let allowed = [
+            "screen", "multiply", "overlay", "difference",
+            "hardlight", "softlight", "darken", "lighten", "addition", "exclusion",
+        ];
+        if !allowed.contains(&mode) {
+            return Err(format!("Unknown blend mode: {mode}"));
+        }
+    }
+
     if clips.is_empty() {
-        return FilterGraph::new();
+        return Ok(FilterGraph::new());
     }
 
-    if clips.len() == 1 {
-        return build_single_clip_graph(clips, output_width, output_height);
+    let mut graph = if clips.len() == 1 {
+        build_single_clip_graph(clips, output_width, output_height)
+    } else {
+        match layout {
+            Some(spec) => build_layout_graph(clips, spec, audio_mix, output_width, output_height),
+            None => build_sequential_graph(clips, transitions),
+        }
+    };
+
+    if let Some(mode) = blend_mode {
+        graph = graph.chain(build_blend_filter(mode));
     }
 
-    match layout {
-        Some(spec) => build_layout_graph(clips, spec, audio_mix, output_width, output_height),
-        None => build_sequential_graph(clips, transitions),
-    }
+    Ok(graph)
 }
 
 /// Builds a graph for a single clip (scale to output size).
@@ -498,11 +532,18 @@ fn add_audio_mix(mut graph: FilterGraph, audio_mix: &AudioMixSpec) -> FilterGrap
 ///     audio_mix: Optional AudioMixSpec for multi-track audio mixing.
 ///     output_width: Output canvas width in pixels.
 ///     output_height: Output canvas height in pixels.
+///     blend_mode: Optional blend mode applied after final overlay compositing.
+///         Supported: screen, multiply, overlay, difference, hardlight,
+///         softlight, darken, lighten, addition, exclusion.
 ///
 /// Returns:
 ///     A FilterGraph ready for FFmpeg's -filter_complex argument.
+///
+/// Raises:
+///     ValueError: If blend_mode is not a supported mode.
 #[pyfunction]
 #[pyo3(name = "build_composition_graph")]
+#[pyo3(signature = (clips, transitions, layout, audio_mix, output_width, output_height, blend_mode=None))]
 fn py_build_composition_graph(
     clips: Vec<CompositionClip>,
     transitions: Vec<TransitionSpec>,
@@ -510,7 +551,8 @@ fn py_build_composition_graph(
     audio_mix: Option<AudioMixSpec>,
     output_width: u32,
     output_height: u32,
-) -> FilterGraph {
+    blend_mode: Option<String>,
+) -> PyResult<FilterGraph> {
     build_composition_graph(
         &clips,
         &transitions,
@@ -518,7 +560,9 @@ fn py_build_composition_graph(
         audio_mix.as_ref(),
         output_width,
         output_height,
+        blend_mode.as_deref(),
     )
+    .map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
 /// Registers graph builder types and functions with the Python module.
@@ -575,7 +619,7 @@ mod tests {
 
     #[test]
     fn empty_clips_returns_empty_graph() {
-        let graph = build_composition_graph(&[], &[], None, None, 1920, 1080);
+        let graph = build_composition_graph(&[], &[], None, None, 1920, 1080, None).unwrap();
         assert_eq!(graph.to_string(), "");
     }
 
@@ -584,7 +628,7 @@ mod tests {
     #[test]
     fn single_clip_produces_scale_graph() {
         let clips = vec![make_clip(0, 0.0, 5.0)];
-        let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("[0:v]"), "Should reference input 0:v: {s}");
         assert!(s.contains("scale="), "Should contain scale filter: {s}");
@@ -598,7 +642,7 @@ mod tests {
     #[test]
     fn two_clips_no_transitions_uses_concat() {
         let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 5.0, 10.0)];
-        let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("concat="), "Should use concat: {s}");
         assert!(s.contains("n=2"), "Should concat 2 segments: {s}");
@@ -614,7 +658,7 @@ mod tests {
     fn two_clips_with_transition_uses_xfade() {
         let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 0.0, 5.0)];
         let transitions = vec![make_transition(1.0)];
-        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("xfade="), "Should use xfade: {s}");
         assert!(
@@ -632,7 +676,7 @@ mod tests {
     fn two_clips_xfade_correct_input_labels() {
         let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 0.0, 5.0)];
         let transitions = vec![make_transition(1.0)];
-        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("[0:v][1:v]xfade="), "Video inputs: {s}");
         assert!(s.contains("[0:a][1:a]acrossfade="), "Audio inputs: {s}");
@@ -648,7 +692,7 @@ mod tests {
             make_clip(2, 0.0, 5.0),
         ];
         let transitions = vec![make_transition(1.0), make_transition(1.0)];
-        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // First xfade: [0:v][1:v]xfade=...offset=4[xv0]
         assert!(
@@ -678,7 +722,7 @@ mod tests {
             make_clip(2, 0.0, 5.0),
         ];
         let transitions = vec![make_transition(1.0), make_transition(1.0)];
-        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // First xfade offset: 5-1=4
         assert!(s.contains("offset=4"), "First offset should be 4: {s}");
@@ -696,7 +740,7 @@ mod tests {
             LayoutPosition::new(0.73, 0.02, 0.25, 0.25, 1), // PIP overlay
         ];
         let layout = LayoutSpec::new(positions).unwrap();
-        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("color="), "Should have canvas: {s}");
         assert!(s.contains("scale="), "Should have scale filters: {s}");
@@ -712,7 +756,7 @@ mod tests {
             LayoutPosition::new(0.5, 0.5, 0.25, 0.25, 1),
         ];
         let layout = LayoutSpec::new(positions).unwrap();
-        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // First overlay (z=0 base at 0,0): overlay=x=0:y=0
         assert!(s.contains("x=0"), "Base should be at x=0: {s}");
@@ -732,7 +776,7 @@ mod tests {
             LayoutPosition::new(0.5, 0.0, 0.5, 1.0, 0),
         ];
         let layout = LayoutSpec::new(positions).unwrap();
-        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("scale="), "Should have scale: {s}");
         assert!(s.contains("overlay="), "Should have overlay: {s}");
@@ -756,7 +800,7 @@ mod tests {
             LayoutPosition::new(0.5, 0.5, 0.5, 0.5, 0),
         ];
         let layout = LayoutSpec::new(positions).unwrap();
-        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // Should have 4 scale chains + 4 overlay chains + canvas
         assert!(s.contains("[s0]"), "Should have scaled input 0: {s}");
@@ -781,7 +825,7 @@ mod tests {
             LayoutPosition::new(0.5, 0.5, 0.5, 0.5, 0),
         ];
         let layout = LayoutSpec::new(positions).unwrap();
-        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // 0.5 * 1920 = 960, 0.5 * 1080 = 540 → both even
         assert!(s.contains("w=960"), "Should scale to w=960: {s}");
@@ -804,7 +848,7 @@ mod tests {
         ];
         let audio_mix = AudioMixSpec::new(tracks).unwrap();
         let graph =
-            build_composition_graph(&clips, &[], Some(&layout), Some(&audio_mix), 1920, 1080);
+            build_composition_graph(&clips, &[], Some(&layout), Some(&audio_mix), 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("overlay="), "Should have overlay: {s}");
         assert!(s.contains("volume="), "Should have volume filter: {s}");
@@ -828,7 +872,7 @@ mod tests {
         ];
         let audio_mix = AudioMixSpec::new(tracks).unwrap();
         let graph =
-            build_composition_graph(&clips, &[], Some(&layout), Some(&audio_mix), 1920, 1080);
+            build_composition_graph(&clips, &[], Some(&layout), Some(&audio_mix), 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // Should have amix but no volume/fade filters
         assert!(s.contains("amix="), "Should have amix: {s}");
@@ -845,7 +889,7 @@ mod tests {
     fn zero_duration_transition() {
         let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 0.0, 5.0)];
         let transitions = vec![make_transition(0.0)];
-        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // Should still produce xfade with 0 duration and offset=5
         assert!(s.contains("xfade="), "Should use xfade: {s}");
@@ -858,7 +902,7 @@ mod tests {
         // 2s and 3s clips, transition 5s → clamped to 2s
         let clips = vec![make_clip(0, 0.0, 2.0), make_clip(1, 0.0, 3.0)];
         let transitions = vec![make_transition(5.0)];
-        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         // Clamped to min(2, 3) = 2, offset = 2-2 = 0
         assert!(
@@ -871,7 +915,7 @@ mod tests {
     #[test]
     fn non_zero_input_indices() {
         let clips = vec![make_clip(2, 0.0, 5.0), make_clip(5, 0.0, 5.0)];
-        let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080);
+        let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080, None).unwrap();
         let s = graph.to_string();
         assert!(s.contains("[2:v]"), "Should reference input 2:v: {s}");
         assert!(s.contains("[2:a]"), "Should reference input 2:a: {s}");
@@ -911,6 +955,55 @@ mod tests {
         assert_eq!(round_even(0.0), 2);
         assert_eq!(round_even(1.0), 2);
     }
+
+    // -- blend_mode tests --
+
+    #[test]
+    fn blend_mode_none_unchanged() {
+        let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 0.0, 5.0)];
+        let positions = vec![
+            LayoutPosition::new(0.0, 0.0, 1.0, 1.0, 0),
+            LayoutPosition::new(0.73, 0.02, 0.25, 0.25, 1),
+        ];
+        let layout = LayoutSpec::new(positions).unwrap();
+        let graph_no_blend = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
+        let s = graph_no_blend.to_string();
+        assert!(!s.contains("blend="), "None blend_mode should not add blend filter: {s}");
+    }
+
+    #[test]
+    fn blend_mode_screen_adds_blend_filter() {
+        let clips = vec![make_clip(0, 0.0, 5.0), make_clip(1, 0.0, 5.0)];
+        let positions = vec![
+            LayoutPosition::new(0.0, 0.0, 1.0, 1.0, 0),
+            LayoutPosition::new(0.73, 0.02, 0.25, 0.25, 1),
+        ];
+        let layout = LayoutSpec::new(positions).unwrap();
+        let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, Some("screen")).unwrap();
+        let s = graph.to_string();
+        assert!(s.contains("blend="), "screen blend_mode should add blend filter: {s}");
+        assert!(s.contains("all_mode=screen"), "should contain all_mode=screen: {s}");
+    }
+
+    #[test]
+    fn blend_mode_unknown_returns_error() {
+        let clips = vec![make_clip(0, 0.0, 5.0)];
+        let result = build_composition_graph(&clips, &[], None, None, 1920, 1080, Some("invalid_mode"));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("Unknown blend mode"), "error should mention Unknown blend mode: {err}");
+    }
+
+    #[test]
+    fn blend_mode_all_supported_modes_ok() {
+        let modes = ["screen", "multiply", "overlay", "difference",
+                     "hardlight", "softlight", "darken", "lighten", "addition", "exclusion"];
+        for mode in modes {
+            let clips = vec![make_clip(0, 0.0, 5.0)];
+            let result = build_composition_graph(&clips, &[], None, None, 1920, 1080, Some(mode));
+            assert!(result.is_ok(), "mode '{mode}' should be accepted");
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -947,7 +1040,7 @@ mod proptests {
             clips in arb_clips(1, 8),
             transitions in proptest::collection::vec(arb_transition(), 0..=7),
         ) {
-            let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080);
+            let graph = build_composition_graph(&clips, &transitions, None, None, 1920, 1080, None).unwrap();
             let _ = graph.to_string();
         }
 
@@ -966,7 +1059,7 @@ mod proptests {
                 })
                 .collect();
             let layout = LayoutSpec::new(positions).unwrap();
-            let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080);
+            let graph = build_composition_graph(&clips, &[], Some(&layout), None, 1920, 1080, None).unwrap();
             let _ = graph.to_string();
         }
 
@@ -974,7 +1067,7 @@ mod proptests {
         fn output_contains_outv_for_multi_clip(
             clips in arb_clips(2, 6),
         ) {
-            let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080);
+            let graph = build_composition_graph(&clips, &[], None, None, 1920, 1080, None).unwrap();
             let s = graph.to_string();
             prop_assert!(s.contains("[outv]"), "Must contain [outv]: {}", s);
         }

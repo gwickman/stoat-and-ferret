@@ -209,6 +209,106 @@ impl ScaleBuilder {
     }
 }
 
+/// Parses a CSS `#RRGGBB` or `0xRRGGBB` color string and returns it in `0xRRGGBB` format.
+///
+/// Accepts `#RRGGBB` (6 hex digits after `#`) and `0xRRGGBB` passthrough.
+/// Returns `PyValueError` for any other format.
+fn parse_color_to_hex(color: &str) -> PyResult<String> {
+    if let Some(hex) = color.strip_prefix('#') {
+        if hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Ok(format!("0x{}", hex.to_uppercase()));
+        }
+        return Err(PyValueError::new_err(format!(
+            "Invalid color format: '{color}'. Expected #RRGGBB or a CSS color name."
+        )));
+    }
+    if let Some(hex) = color.strip_prefix("0x").or_else(|| color.strip_prefix("0X")) {
+        if hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Ok(format!("0x{}", hex.to_uppercase()));
+        }
+        return Err(PyValueError::new_err(format!(
+            "Invalid color format: '{color}'. Expected #RRGGBB or a CSS color name."
+        )));
+    }
+    // CSS named colors: validate as a non-empty alphabetic-only string
+    let trimmed = color.trim();
+    if !trimmed.is_empty() && trimmed.chars().all(|c| c.is_ascii_alphabetic()) {
+        return Ok(trimmed.to_lowercase());
+    }
+    Err(PyValueError::new_err(format!(
+        "Invalid color format: '{color}'. Expected #RRGGBB or a CSS color name."
+    )))
+}
+
+/// Chroma-key (green-screen) filter builder.
+///
+/// `build()` produces `chromakey=color={hex}:similarity={similarity}`.
+/// Keyed pixels become transparent (not black).
+/// Color accepts `#RRGGBB` CSS hex or a CSS color name (e.g. `"green"`).
+/// `similarity` must be in [0.0, 1.0] (default 0.1).
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ChromaKeyBuilder {
+    color: String,
+    similarity: f32,
+}
+
+#[pymethods]
+impl ChromaKeyBuilder {
+    #[new]
+    #[pyo3(signature = (color, similarity=None))]
+    pub fn py_new(color: &str, similarity: Option<f32>) -> PyResult<Self> {
+        let hex = parse_color_to_hex(color)?;
+        let sim = similarity.unwrap_or(0.1);
+        if !(0.0..=1.0).contains(&sim) {
+            return Err(PyValueError::new_err("similarity must be in [0.0, 1.0]"));
+        }
+        Ok(Self { color: hex, similarity: sim })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        Ok(Filter::new("chromakey")
+            .param("color", &self.color)
+            .param("similarity", self.similarity))
+    }
+}
+
+/// Color-key filter builder.
+///
+/// `build()` produces `colorkey=color={hex}:similarity={similarity}`.
+/// Color accepts `#RRGGBB` CSS hex or a CSS color name.
+/// `similarity` must be in [0.0, 1.0] (default 0.1).
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ColorKeyBuilder {
+    color: String,
+    similarity: f32,
+}
+
+#[pymethods]
+impl ColorKeyBuilder {
+    #[new]
+    #[pyo3(signature = (color, similarity=None))]
+    pub fn py_new(color: &str, similarity: Option<f32>) -> PyResult<Self> {
+        let hex = parse_color_to_hex(color)?;
+        let sim = similarity.unwrap_or(0.1);
+        if !(0.0..=1.0).contains(&sim) {
+            return Err(PyValueError::new_err("similarity must be in [0.0, 1.0]"));
+        }
+        Ok(Self { color: hex, similarity: sim })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        Ok(Filter::new("colorkey")
+            .param("color", &self.color)
+            .param("similarity", self.similarity))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -462,5 +562,98 @@ mod tests {
             filter_str.contains("scale="),
             "expected scale= in: {filter_str}"
         );
+    }
+
+    // -- parse_color_to_hex --
+
+    #[test]
+    fn test_parse_color_css_hex() {
+        let result = parse_color_to_hex("#00FF00").unwrap();
+        assert_eq!(result, "0x00FF00");
+    }
+
+    #[test]
+    fn test_parse_color_lowercase_hex() {
+        let result = parse_color_to_hex("#00ff00").unwrap();
+        assert_eq!(result, "0x00FF00");
+    }
+
+    #[test]
+    fn test_parse_color_0x_passthrough() {
+        let result = parse_color_to_hex("0x00FF00").unwrap();
+        assert_eq!(result, "0x00FF00");
+    }
+
+    #[test]
+    fn test_parse_color_named() {
+        let result = parse_color_to_hex("green").unwrap();
+        assert_eq!(result, "green");
+    }
+
+    #[test]
+    fn test_parse_color_invalid() {
+        assert!(parse_color_to_hex("#GGGGGG").is_err());
+        assert!(parse_color_to_hex("#1234").is_err());
+        assert!(parse_color_to_hex("123456").is_err());
+        assert!(parse_color_to_hex("").is_err());
+    }
+
+    // -- ChromaKeyBuilder --
+
+    #[test]
+    fn test_chroma_key_hex_color() {
+        let builder = ChromaKeyBuilder::py_new("#00FF00", None).unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(filter_str.contains("chromakey="), "expected chromakey: {filter_str}");
+        assert!(filter_str.contains("0x00FF00"), "expected hex color: {filter_str}");
+        assert!(filter_str.contains("similarity=0.1"), "expected default similarity: {filter_str}");
+    }
+
+    #[test]
+    fn test_chroma_key_named_color() {
+        let builder = ChromaKeyBuilder::py_new("green", Some(0.3)).unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(filter_str.contains("color=green"), "expected named color: {filter_str}");
+        assert!(filter_str.contains("similarity=0.3"), "expected custom similarity: {filter_str}");
+    }
+
+    #[test]
+    fn test_chroma_key_invalid_color() {
+        assert!(ChromaKeyBuilder::py_new("notacolor123", None).is_err());
+        assert!(ChromaKeyBuilder::py_new("#GGGGGG", None).is_err());
+    }
+
+    #[test]
+    fn test_chroma_key_invalid_similarity() {
+        assert!(ChromaKeyBuilder::py_new("#00FF00", Some(-0.1)).is_err());
+        assert!(ChromaKeyBuilder::py_new("#00FF00", Some(1.1)).is_err());
+    }
+
+    #[test]
+    fn test_chroma_key_similarity_bounds() {
+        assert!(ChromaKeyBuilder::py_new("#00FF00", Some(0.0)).is_ok());
+        assert!(ChromaKeyBuilder::py_new("#00FF00", Some(1.0)).is_ok());
+    }
+
+    // -- ColorKeyBuilder --
+
+    #[test]
+    fn test_color_key_hex_color() {
+        let builder = ColorKeyBuilder::py_new("#FF0000", None).unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(filter_str.contains("colorkey="), "expected colorkey: {filter_str}");
+        assert!(filter_str.contains("0xFF0000"), "expected hex color: {filter_str}");
+    }
+
+    #[test]
+    fn test_color_key_named_color() {
+        let builder = ColorKeyBuilder::py_new("red", Some(0.2)).unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(filter_str.contains("color=red"), "expected named color: {filter_str}");
+    }
+
+    #[test]
+    fn test_color_key_invalid_similarity() {
+        assert!(ColorKeyBuilder::py_new("#FF0000", Some(2.0)).is_err());
     }
 }
