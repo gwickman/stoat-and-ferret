@@ -35,7 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### PRs
 
-#594, #595, #597, #598, #599, #600, #601, #602, #603, #604, #605
+#594, #595, #597, #598, #599, #600, #601, #602, #603, #604, #605, #606
 
 ## v080 — Release 2, Wave 4: Editing & Time (2026-06-12)
 
