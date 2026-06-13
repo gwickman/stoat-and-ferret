@@ -417,14 +417,18 @@ impl GradientGeneratorBuilder {
 
 /// Noise/pattern generator source filter builder using FFmpeg `cellauto` lavfi source.
 ///
-/// `build()` produces `cellauto=s={w}x{h}:d={duration}`.
-/// `duration` must be > 0. `width` and `height` default to 1920×1080.
+/// `build()` produces `cellauto=s={w}x{h}`.
+/// `duration` must be > 0 (validated at construction; not emitted — duration is
+/// controlled via the FFmpeg `-t` flag at the command level).
+/// `width` and `height` default to 1920×1080.
 #[gen_stub_pyclass]
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct NoiseGeneratorBuilder {
     width: u32,
     height: u32,
+    /// Retained for API-level validation; not emitted in the filter string.
+    #[allow(dead_code)]
     duration: f64,
 }
 
@@ -453,8 +457,8 @@ impl NoiseGeneratorBuilder {
 
     pub fn build(&self) -> PyResult<Filter> {
         Ok(Filter::new(format!(
-            "cellauto=s={}x{}:d={}",
-            self.width, self.height, self.duration
+            "cellauto=s={}x{}",
+            self.width, self.height
         )))
     }
 }
@@ -975,7 +979,7 @@ mod tests {
         let b = NoiseGeneratorBuilder::py_new(5.0, None, None).unwrap();
         let s = b.build().unwrap().to_string();
         assert!(s.starts_with("cellauto="), "expected cellauto= prefix: {s}");
-        assert!(s.contains("d=5"), "expected d=5 in: {s}");
+        assert!(!s.contains("d="), "expected no d= in: {s}");
     }
 
     #[test]

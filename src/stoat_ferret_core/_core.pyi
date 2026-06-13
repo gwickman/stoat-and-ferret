@@ -4301,7 +4301,7 @@ class GradientGeneratorBuilder:
 class NoiseGeneratorBuilder:
     """Noise/pattern generator source filter builder using FFmpeg ``cellauto`` lavfi source.
 
-    Generates ``cellauto=s={w}x{h}:d={duration}`` filter.
+    Generates ``cellauto=s={w}x{h}`` filter.
     Duration must be > 0. Width and height default to 1920×1080.
     """
 
@@ -4327,6 +4327,6 @@ class NoiseGeneratorBuilder:
         """Builds the cellauto source Filter.
 
         Returns:
-            A Filter with ``cellauto=s={w}x{h}:d={duration}``.
+            A Filter with ``cellauto=s={w}x{h}``.
         """
         ...

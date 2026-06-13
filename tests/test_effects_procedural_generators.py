@@ -120,7 +120,7 @@ def test_noise_generator_duration_in_filter() -> None:
     """NoiseGeneratorBuilder encodes duration in the filter string (AC-3)."""
     b = NoiseGeneratorBuilder(8.0)
     s = str(b.build())
-    assert "d=8" in s, f"Expected d=8 in: {s}"
+    assert "d=" not in s, f"Expected no d= in: {s}"
 
 
 def test_noise_generator_custom_size() -> None:
