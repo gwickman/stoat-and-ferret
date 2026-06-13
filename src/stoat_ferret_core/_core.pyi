@@ -4060,3 +4060,80 @@ class SharpenBuilder:
             A Filter with the unsharp masking parameters.
         """
         ...
+
+class OpacityBuilder:
+    """Opacity filter builder using colorchannelmixer alpha channel adjustment.
+
+    Static mode generates ``format=rgba,colorchannelmixer=aa={opacity}``.
+    When automation is set, ``build()`` produces
+    ``format=rgba,colorchannelmixer=aa='{expr}':eval=frame``.
+    """
+
+    def __new__(cls, opacity: float) -> OpacityBuilder:
+        """Creates a new OpacityBuilder.
+
+        Args:
+            opacity: Opacity value in [0.0, 1.0]. 0.0 = transparent, 1.0 = opaque.
+
+        Raises:
+            ValueError: If opacity is outside [0.0, 1.0].
+        """
+        ...
+
+    def with_automation(self, automation: Automation) -> OpacityBuilder:
+        """Returns a new OpacityBuilder with the given automation envelope stored.
+
+        Args:
+            automation: Keyframe-based automation curve for opacity.
+
+        Returns:
+            A new OpacityBuilder with the automation set.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the opacity Filter.
+
+        Returns:
+            A Filter for colorchannelmixer; with automation, includes eval=frame expression.
+        """
+        ...
+
+class ScaleBuilder:
+    """Scale filter builder with even-dimension trunc rounding.
+
+    Static mode generates
+    ``scale=trunc(iw*{scale}/2)*2:trunc(ih*{scale}/2)*2``.
+    When automation is set, ``build()`` produces
+    ``scale=trunc(iw*('{expr}')/2)*2:trunc(ih*('{expr}')/2)*2:eval=frame``.
+    """
+
+    def __new__(cls, scale: float) -> ScaleBuilder:
+        """Creates a new ScaleBuilder.
+
+        Args:
+            scale: Scale factor. Must be > 0.
+
+        Raises:
+            ValueError: If scale is <= 0.
+        """
+        ...
+
+    def with_automation(self, automation: Automation) -> ScaleBuilder:
+        """Returns a new ScaleBuilder with the given automation envelope stored.
+
+        Args:
+            automation: Keyframe-based automation curve for scale.
+
+        Returns:
+            A new ScaleBuilder with the automation set.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the scale Filter.
+
+        Returns:
+            A Filter for scale with trunc rounding; with automation, includes eval=frame.
+        """
+        ...
