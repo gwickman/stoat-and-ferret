@@ -1,53 +1,55 @@
 # Project Status — stoat-and-ferret
 
-**Current version:** v079 (Release 2, Wave 3: Sound Design + v078 Repair Rider)
-**Status:** Completed 2026-06-12
+**Current version:** v081 (Release 2, Wave 5 — Video FX)
+**Status:** Completed 2026-06-13
 
-## v079 Summary
+## v081 Summary
 
-Release 2, Wave 3 delivers immersive sound-design capabilities (spatial audio, generator clips, tone synthesis, loopable beds, sub-bass and pitch-shift processing) and repairs four v078 correctness items (QC oracle worker path, JobStatus enum rename, render-plan schema alignment, UAT seed extension).
+Release 2, Wave 5 delivers 11 video effects across three themes: automated video FX (blur, sharpen, opacity, scale, color grading), compositing and stylization (chromakey, colorkey, lens distortion, generators), and test coverage with smoke tests and acceptance harness updates.
 
 ### Delivered
 
 | Theme | Feature | Status | PR |
 |-------|---------|--------|----|
-| qc-and-agent-surface-repair | qc-worker-path-assertions | ✓ | #565 |
-| qc-and-agent-surface-repair | job-status-enum-rename | ✓ | #566 |
-| qc-and-agent-surface-repair | render-plan-schema-alignment | ✓ | #567, #568 |
-| qc-and-agent-surface-repair | uat-seed-extension | ✓ | #569 |
-| spatial-audio | stereo-pan-automation | ✓ | #570 |
-| spatial-audio | convolution-reverb | ✓ | #571, #572 |
-| sound-design | generator-clip-enabler | ✓ | #574, #575 |
-| sound-design | tone-synthesis | ✓ | #576 |
-| sound-design | loopable-beds | ✓ | #577 |
-| voice-and-bass | sub-bass-layer | ✓ | #577 |
-| voice-and-bass | pitch-shift-formant | ✓ | #577 |
-| wave-t-coverage | smoke-test-updates | ✓ | #579 |
-| wave-t-coverage | harness-guide-update | ✓ | #579 |
+| automated-video-fx | automation-dispatch-refactor | ✓ | #594 |
+| automated-video-fx | blur-sharpen-effects | ✓ | #595 |
+| automated-video-fx | opacity-scale-animation | ✓ | #596 |
+| automated-video-fx | color-lut-grading | ✓ | #597 |
+| compositing-and-stylization | keying-blend-compositing | ✓ | #598 |
+| compositing-and-stylization | optical-distortion | ✓ | #599 |
+| compositing-and-stylization | procedural-generators | ✓ | #600 |
+| test-coverage-and-release-acceptance | video-fx-smoke-tests | ✓ | #601 |
+| test-coverage-and-release-acceptance | smoke-harness-guide-update | ✓ | #602 |
+| test-coverage-and-release-acceptance | uat-journeys | ✓ | #603 |
+| test-coverage-and-release-acceptance | acceptance-harness | ✓ | #604 |
 
 ### Test Results
 
-- **Test count:** 3010 passed, 52 skipped (2873 baseline → +137)
+- **Test count:** ~3199 passed (3069 baseline → +130)
 - **Regressions:** 0
-- **FFmpeg-gated (deferred_post_merge):** BL-437 ACs 1-4, BL-438 ACs 1-3, BL-439 ACs 2+4, BL-441 AC-2, BL-488 ACs 3+5
+- **FFmpeg-gated (deferred_post_merge):** BL-450 ACs 3-4, BL-451 AC-4, BL-452 AC-4, BL-453 AC-4, BL-454 AC-4, BL-455 AC-4
 
 ### Key Capabilities Added
 
-- **PanBuilder** (`ffmpeg/spatial.rs`) — stereo pan with static positioning and automation envelope; `eval=frame` enforced; `spatial_correlation` added as 12th QC check
-- **ConvolutionReverbBuilder** (`ffmpeg/spatial.rs`) — IR-based reverb via `afir` filter; 3 bundled IRs (`hall_small`, `room_medium`, `plate`)
-- **Generator clips** (`clip_type="generator"`) — `ClipCreate` schema validates generator vs. file type; `build_generator_source_filter` dispatch (`aevalsrc`, `sine`) in Rust; `ON DELETE CASCADE` restored on `clips.project_id` FK
-- **Tone synthesis** (`generator_params["type"] = "tone"`) — constant frequency, linear chirp sweep (`frequency_end`), binaural beat (`binaural_offset`); all `aevalsrc` with mandatory `eval=frame`
-- **Loopable beds** — `build_loop_render_command` for seamless crossfaded loops
-- **SubBassBuilder** — sub-bass layer with duck-on-beat ducking schema
-- **PitchShiftBuilder** (`ffmpeg/voice_repair.rs`) — formant-preserving pitch shift via `rubberband`
-- **QC worker-path assertions** — `RenderService._complete_job` fetches delivery profile and builds `{loudness_integrated, true_peak}` assertions dict for `QCService.run_checks`
-- **JobStatus.COMPLETED** — renamed from `COMPLETE` across 68+ occurrences; enum value `"completed"` unchanged
+- **automation_filter_template** — generic `automation_filter_template` on EffectDefinition; `build_automation_filter_string` dispatcher supports all automatable effects
+- **BlurBuilder** — gaussian blur (`gblur`) and directional blur (`dblur`) with automatable radius parameter; `automation=True` on effect definition
+- **SharpenBuilder** — unsharp mask sharpening with automation support
+- **OpacityBuilder** — keyframed opacity envelopes with full automation contract support
+- **ScaleBuilder** — video scaling with automatable width/height parameters and envelope keyframes
+- **ColorLutBuilder** — 3D LUT-based color grading; 3 bundled presets (`identity`, `calming_teal`, `warm_fade`)
+- **ChromaKeyBuilder** — chroma key compositing with configurable thresholds and similarity tolerance
+- **ColorKeyBuilder** — color-range keying for selective color removal
+- **LensDistortBuilder** — barrel and pincushion distortion correction via `lenscorrection` filter; k1/k2 coefficients
+- **GradientGeneratorBuilder** — procedural gradient generation using `gradients` lavfi source
+- **NoiseGeneratorBuilder** — procedural noise generation using `cellauto` lavfi source
+- **Effect registry expansion** — 27 → 33 effects (+6 effect types, +4 builders with automation support)
+- **blend_mode schema** — added to `build_composition_graph` for advanced compositing control
 
-### Deferred (FFmpeg-gated)
+### Deferred (FFmpeg/UAT-gated)
 
-- BL-437 ACs 1-4: pan contract tests — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_pan.py -k contract -v`
-- BL-438 ACs 1-3: convolution reverb contract test — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_reverb.py::test_convolution_reverb_contract_ffmpeg -v`
-- BL-439 AC-4: tone synthesis FFmpeg contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_api/test_tone_synthesis.py -v`
-- BL-439 AC-2: automation envelope for tone — `frequency_end` is static; `py_compile_automation` not integrated
-- BL-441 AC-2: generator clip render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_api/test_generator_clip.py -k ffmpeg -v`
-- BL-488 ACs 3+5: QC worker-path E2E — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render_service_qc.py::TestWorkerQCContractFFmpeg -v`
+- BL-450 ACs 3-4: blur effect FFmpeg contract tests
+- BL-451 AC-4: sharpen effect UAT discharge
+- BL-452 AC-4: opacity-scale automation FFmpeg contract
+- BL-453 AC-4: color LUT grading FFmpeg contract
+- BL-454 AC-4: keying blend compositing FFmpeg contract
+- BL-455 AC-4: optical-distortion and generator FFmpeg contract

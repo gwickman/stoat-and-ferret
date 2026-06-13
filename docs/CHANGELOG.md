@@ -4,6 +4,39 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v081 — Release 2, Wave 5: Video FX (2026-06-13)
+
+### Added
+
+- **Automation dispatch refactor**: Generic `automation_filter_template` field on `EffectDefinition` eliminates hardcoded conditionals across all effect builders (PR #594)
+- **Blur and sharpen effects**: `BlurBuilder` (Gaussian/directional) and `SharpenBuilder` (unsharp mask) with keyframable radius; 3 contract tests (BL-451, PR #595)
+- **Color LUT grading**: `ColorLutBuilder` with 3D LUT application and 3 bundled presets (`cinematic`, `warm_sunset`, `cool_shadows`) (BL-450, PR #597)
+- **Keying and compositing**: `ChromaKeyBuilder`, `ColorKeyBuilder`, and `BlendModeBuilder` with 10 blend modes (BL-452, PR #598)
+- **Optical distortion**: `LensDistortBuilder` for barrel/pincushion lens distortion (BL-453, PR #599)
+- **Procedural generators**: `GradientGeneratorBuilder` and `NoiseGeneratorBuilder` via `lavfi` source (BL-454, PR #600)
+- **Opacity and scale animation**: `OpacityBuilder` and `ScaleBuilder` with keyframed fades and slow-zoom envelopes (BL-455)
+- **Smoke test coverage**: 10 new smoke tests covering all v081 video FX effects (PR #601)
+- **Smoke-test harness guide**: Updated with v081 video FX coverage and discharge commands (PR #602)
+- **UAT journeys**: J707–J710 for blur, chroma_key, lens_distort, gradient_generator; J706 for LUT grading (BL-457, PR #603)
+- **Acceptance harness**: `tests/acceptance/v081_video_fx_harness.py` with 11 gate tests; Tier-2 checklist updated (PR #604)
+
+### Deferred (FFmpeg-gated)
+
+- BL-450 AC-3: color LUT render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_color_lut.py -k contract`
+- BL-451 AC-4: blur/sharpen render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_blur_sharpen.py -k contract`
+- BL-452 AC-4: keying/blend render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_keying_blend.py -k contract`
+- BL-453 AC-3: lens_distort render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_optical_distortion.py -k contract`
+- BL-454 AC-4: procedural generators render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_procedural_generators.py -k contract`
+- BL-455 AC-4: opacity/scale render contract — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_opacity_scale.py -k contract`
+- BL-450 AC-4: J706 (j_grade) headed UAT
+- BL-455 AC-4: automation lane headed UAT (opacity/scale)
+- BL-457 AC-2: journey 706 headless — `python scripts/uat_runner.py --headless --journey 706`
+- BL-457 AC-3: J-QC-Fail headed — blocked on BL-480 (qc-status-fail / remaster-btn testids)
+
+### PRs
+
+#594, #595, #597, #598, #599, #600, #601, #602, #603, #604, #605
+
 ## v080 — Release 2, Wave 4: Editing & Time (2026-06-12)
 
 ### Added
