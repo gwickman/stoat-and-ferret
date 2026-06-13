@@ -162,9 +162,16 @@ def test_blend_mode_all_supported_modes_succeed() -> None:
         CompositionClip(1, 0.0, 5.0, 0, 0),
     ]
     supported_modes = [
-        "screen", "multiply", "overlay", "difference",
-        "hardlight", "softlight", "darken", "lighten",
-        "addition", "exclusion",
+        "screen",
+        "multiply",
+        "overlay",
+        "difference",
+        "hardlight",
+        "softlight",
+        "darken",
+        "lighten",
+        "addition",
+        "exclusion",
     ]
     for mode in supported_modes:
         graph = build_composition_graph(clips, [], None, None, 1920, 1080, mode)
@@ -253,10 +260,14 @@ def test_chromakey_renders_without_error() -> None:
     result = subprocess.run(
         [
             "ffmpeg",
-            "-f", "lavfi",
-            "-i", "testsrc2=size=64x64:duration=0.1",
-            "-vf", filter_str,
-            "-f", "null",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=64x64:duration=0.1",
+            "-vf",
+            filter_str,
+            "-f",
+            "null",
             "-",
         ],
         capture_output=True,
@@ -279,10 +290,14 @@ def test_colorkey_renders_without_error() -> None:
     result = subprocess.run(
         [
             "ffmpeg",
-            "-f", "lavfi",
-            "-i", "testsrc2=size=64x64:duration=0.1",
-            "-vf", filter_str,
-            "-f", "null",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=64x64:duration=0.1",
+            "-vf",
+            filter_str,
+            "-f",
+            "null",
             "-",
         ],
         capture_output=True,
