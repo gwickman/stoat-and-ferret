@@ -16,7 +16,7 @@ from playwright.async_api import Page, expect
 
 
 async def run(page: Page, base_url: str) -> None:
-    """J709: Create project+clip via API, apply lens_distort, assert lenscorrection in filter_string.
+    """J709: Create project+clip via API, apply lens_distort, assert lenscorrection.
 
     Uses a generator clip (no video file required) to exercise the lens distortion effect
     API endpoint introduced in v081. Navigates to the effects page for screenshot evidence.
