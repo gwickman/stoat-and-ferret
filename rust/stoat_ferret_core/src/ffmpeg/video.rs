@@ -359,6 +359,107 @@ impl ColorKeyBuilder {
     }
 }
 
+/// Gradient generator source filter builder using FFmpeg `gradients` lavfi source.
+///
+/// `build()` produces `gradients=s={w}x{h}:c0={color1}:c1={color2}:d={duration}`.
+/// Colors accept `#RRGGBB` CSS hex or a CSS color name (e.g. `"blue"`).
+/// `duration` must be > 0. `width` and `height` default to 1920×1080.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct GradientGeneratorBuilder {
+    color1: String,
+    color2: String,
+    width: u32,
+    height: u32,
+    duration: f64,
+}
+
+#[pymethods]
+impl GradientGeneratorBuilder {
+    #[new]
+    #[pyo3(signature = (color1, color2, duration, width=None, height=None))]
+    pub fn py_new(
+        color1: &str,
+        color2: &str,
+        duration: f64,
+        width: Option<u32>,
+        height: Option<u32>,
+    ) -> PyResult<Self> {
+        let c1 = parse_color_to_hex(color1)?;
+        let c2 = parse_color_to_hex(color2)?;
+        if duration <= 0.0 {
+            return Err(PyValueError::new_err("duration must be > 0"));
+        }
+        let w = width.unwrap_or(1920);
+        let h = height.unwrap_or(1080);
+        if w == 0 {
+            return Err(PyValueError::new_err("width must be > 0"));
+        }
+        if h == 0 {
+            return Err(PyValueError::new_err("height must be > 0"));
+        }
+        Ok(Self {
+            color1: c1,
+            color2: c2,
+            width: w,
+            height: h,
+            duration,
+        })
+    }
+
+    pub fn build(&self) -> PyResult<Filter> {
+        Ok(Filter::new(format!(
+            "gradients=s={}x{}:c0={}:c1={}:d={}",
+            self.width, self.height, self.color1, self.color2, self.duration
+        )))
+    }
+}
+
+/// Noise/pattern generator source filter builder using FFmpeg `cellauto` lavfi source.
+///
+/// `build()` produces `cellauto=s={w}x{h}:d={duration}`.
+/// `duration` must be > 0. `width` and `height` default to 1920×1080.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct NoiseGeneratorBuilder {
+    width: u32,
+    height: u32,
+    duration: f64,
+}
+
+#[pymethods]
+impl NoiseGeneratorBuilder {
+    #[new]
+    #[pyo3(signature = (duration, width=None, height=None))]
+    pub fn py_new(duration: f64, width: Option<u32>, height: Option<u32>) -> PyResult<Self> {
+        if duration <= 0.0 {
+            return Err(PyValueError::new_err("duration must be > 0"));
+        }
+        let w = width.unwrap_or(1920);
+        let h = height.unwrap_or(1080);
+        if w == 0 {
+            return Err(PyValueError::new_err("width must be > 0"));
+        }
+        if h == 0 {
+            return Err(PyValueError::new_err("height must be > 0"));
+        }
+        Ok(Self {
+            width: w,
+            height: h,
+            duration,
+        })
+    }
+
+    pub fn build(&self) -> PyResult<Filter> {
+        Ok(Filter::new(format!(
+            "cellauto=s={}x{}:d={}",
+            self.width, self.height, self.duration
+        )))
+    }
+}
+
 /// Lens distortion filter builder using the FFmpeg `lenscorrection` filter.
 ///
 /// `k1` and `k2` are barrel/pincushion distortion coefficients in [-1.0, 1.0].
@@ -807,6 +908,112 @@ mod tests {
     }
 
     // -- LensDistortBuilder --
+
+    // -- GradientGeneratorBuilder --
+
+    #[test]
+    fn test_gradient_generator_valid() {
+        let b = GradientGeneratorBuilder::py_new("black", "white", 5.0, None, None).unwrap();
+        let s = b.build().unwrap().to_string();
+        assert!(
+            s.starts_with("gradients="),
+            "expected gradients= prefix: {s}"
+        );
+        assert!(s.contains("c0="), "expected c0= in: {s}");
+        assert!(s.contains("c1="), "expected c1= in: {s}");
+        assert!(s.contains("d=5"), "expected d=5 in: {s}");
+    }
+
+    #[test]
+    fn test_gradient_generator_hex_colors() {
+        let b = GradientGeneratorBuilder::py_new("#000080", "#FF8C00", 10.0, None, None).unwrap();
+        let s = b.build().unwrap().to_string();
+        assert!(s.contains("0x000080"), "expected 0x000080 in: {s}");
+        assert!(s.contains("0xFF8C00"), "expected 0xFF8C00 in: {s}");
+    }
+
+    #[test]
+    fn test_gradient_generator_custom_size() {
+        let b =
+            GradientGeneratorBuilder::py_new("black", "white", 3.0, Some(640), Some(480)).unwrap();
+        let s = b.build().unwrap().to_string();
+        assert!(s.contains("640x480"), "expected 640x480 in: {s}");
+    }
+
+    #[test]
+    fn test_gradient_generator_invalid_duration() {
+        assert!(GradientGeneratorBuilder::py_new("black", "white", 0.0, None, None).is_err());
+        assert!(GradientGeneratorBuilder::py_new("black", "white", -1.0, None, None).is_err());
+    }
+
+    #[test]
+    fn test_gradient_generator_invalid_color() {
+        assert!(
+            GradientGeneratorBuilder::py_new("notacolor123", "white", 5.0, None, None).is_err()
+        );
+    }
+
+    #[test]
+    fn test_gradient_generator_zero_size() {
+        assert!(GradientGeneratorBuilder::py_new("black", "white", 5.0, Some(0), None).is_err());
+        assert!(GradientGeneratorBuilder::py_new("black", "white", 5.0, None, Some(0)).is_err());
+    }
+
+    #[test]
+    fn test_gradient_generator_deterministic() {
+        let b1 = GradientGeneratorBuilder::py_new("black", "white", 5.0, None, None).unwrap();
+        let b2 = GradientGeneratorBuilder::py_new("black", "white", 5.0, None, None).unwrap();
+        assert_eq!(
+            b1.build().unwrap().to_string(),
+            b2.build().unwrap().to_string()
+        );
+    }
+
+    // -- NoiseGeneratorBuilder --
+
+    #[test]
+    fn test_noise_generator_valid() {
+        let b = NoiseGeneratorBuilder::py_new(5.0, None, None).unwrap();
+        let s = b.build().unwrap().to_string();
+        assert!(s.starts_with("cellauto="), "expected cellauto= prefix: {s}");
+        assert!(s.contains("d=5"), "expected d=5 in: {s}");
+    }
+
+    #[test]
+    fn test_noise_generator_custom_size() {
+        let b = NoiseGeneratorBuilder::py_new(3.0, Some(640), Some(480)).unwrap();
+        let s = b.build().unwrap().to_string();
+        assert!(s.contains("640x480"), "expected 640x480 in: {s}");
+    }
+
+    #[test]
+    fn test_noise_generator_default_size() {
+        let b = NoiseGeneratorBuilder::py_new(5.0, None, None).unwrap();
+        let s = b.build().unwrap().to_string();
+        assert!(s.contains("1920x1080"), "expected 1920x1080 in: {s}");
+    }
+
+    #[test]
+    fn test_noise_generator_invalid_duration() {
+        assert!(NoiseGeneratorBuilder::py_new(0.0, None, None).is_err());
+        assert!(NoiseGeneratorBuilder::py_new(-1.0, None, None).is_err());
+    }
+
+    #[test]
+    fn test_noise_generator_zero_size() {
+        assert!(NoiseGeneratorBuilder::py_new(5.0, Some(0), None).is_err());
+        assert!(NoiseGeneratorBuilder::py_new(5.0, None, Some(0)).is_err());
+    }
+
+    #[test]
+    fn test_noise_generator_deterministic() {
+        let b1 = NoiseGeneratorBuilder::py_new(5.0, None, None).unwrap();
+        let b2 = NoiseGeneratorBuilder::py_new(5.0, None, None).unwrap();
+        assert_eq!(
+            b1.build().unwrap().to_string(),
+            b2.build().unwrap().to_string()
+        );
+    }
 
     #[test]
     fn test_lens_distort_valid_construction() {

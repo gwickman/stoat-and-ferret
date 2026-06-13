@@ -82,6 +82,8 @@ EXPECTED_EFFECT_TYPES = {
     "color_key",
     "color_lut",
     "lens_distort",
+    "gradient_generator",
+    "noise_generator",
 }
 
 # ---- Registry unit tests ----

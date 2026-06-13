@@ -91,6 +91,7 @@ try:
         FramerateConvertBuilder,
         FramerateMode,
         FreezeFrameBuilder,
+        GradientGeneratorBuilder,
         Keyframe,
         LayoutError,
         LayoutPosition,
@@ -101,6 +102,7 @@ try:
         LoudnessReport,
         LoudnormBuilder,
         MultibandCompressorBuilder,
+        NoiseGeneratorBuilder,
         NoiseReductionBuilder,
         OpacityBuilder,
         PanBuilder,
@@ -236,8 +238,10 @@ except ImportError:
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
+    NoiseGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
+    GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
@@ -371,6 +375,7 @@ __all__ = [
     "ParametricEqBuilder",
     # Video effect builders
     "BlurBuilder",
+    "GradientGeneratorBuilder",
     "LensDistortBuilder",
     "SharpenBuilder",
     "OpacityBuilder",
@@ -378,6 +383,7 @@ __all__ = [
     "ChromaKeyBuilder",
     "ColorKeyBuilder",
     "ColorLutBuilder",
+    "NoiseGeneratorBuilder",
     # Spatial audio builders
     "ConvolutionReverbBuilder",
     "PanBuilder",
