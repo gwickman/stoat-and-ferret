@@ -140,7 +140,15 @@ Expected result:
 - job enters queue
 - job transitions to running
 - progress/ETA events arrive
-- job reaches completed or failed terminal state
+- job reaches a terminal state — one of `completed`, `failed`, or `qc_failed`
+
+> **Note on terminal states:** when the render is submitted with a `delivery_profile`,
+> a QC pass runs after encode. If any QC check fails (loudness, true-peak, chapters,
+> tone, etc.) the job lands in `qc_failed` rather than `completed`. This is a third
+> terminal state — `progress=1.0`, `completed_at` is populated, and the encoded file
+> is on disk. A poller that watches only `{completed, failed}` will hang. Treat
+> `qc_failed` as terminal-with-quality-fail and fetch `/render/{job_id}/qc` for the
+> per-check report.
 
 ### 8. Validate Output
 
