@@ -53,6 +53,7 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k <keyword> -v
 | v073 | `test_preview_smoke.py` — preview workflow smoke coverage |
 | v074 | `test_render_contract.py`: settings-absent 422 gate (BL-465); `test_clip_workflow.py`: GET /clips/{cid} and GET /clips/{cid}/effects (BL-409, BL-405); `test_versions.py`: body-less POST auto-snapshot (BL-404); `test_uat_runner.py`: timeout regression guard (BL-398) |
 | v079 | `tests/test_api/test_tone_synthesis.py` (BL-441): ToneSynthBuilder; `tests/test_api/test_loopable_beds.py` (BL-440): `build_loop_render_command` crossfade/seek; `tests/test_api/test_pitch_shift.py` (BL-443): `PitchShiftBuilder` formant/quality; `tests/test_api/test_sub_bass_ducking.py` (BL-442): `SubBassBuilder` + `ducking_effect_schema`; `tests/smoke/test_generator_clip.py` (BL-441 AC-4): generator clip API; `tests/smoke/test_qc_oracle.py` (BL-488): QC oracle delivery-profile assertions (FFmpeg-gated) |
+| v081 | `tests/smoke/test_effects.py`: 10 new video FX smoke tests — 8 clip-applicable effects (`test_v081_video_fx_effect`) and 2 generator effects (`test_v081_generator_fx_catalog_and_preview`) (BL-450, BL-452, BL-453, BL-454, BL-455) |
 
 See [docs/setup/smoke-test-harness-guide/smoke-test-key-files.md](../setup/smoke-test-harness-guide/smoke-test-key-files.md) for the full per-file inventory.
 
@@ -88,6 +89,56 @@ STOAT_TEST_FFMPEG=1 uv run pytest \
 | `PitchShiftBuilder` | `tests/test_api/test_pitch_shift.py` | FFmpeg-gated tests only |
 | `SubBassBuilder` / `ducking_effect_schema` | `tests/test_api/test_sub_bass_ducking.py` | No |
 | Generator clip API | `tests/smoke/test_generator_clip.py` | No |
+
+## v081 Video FX Smoke Tests (BL-450, BL-452, BL-453, BL-454, BL-455)
+
+v081 added 10 new video FX effect types to the registry. Their smoke coverage lives in `tests/smoke/test_effects.py` and uses two patterns:
+
+### Clip-application pattern (8 effects)
+
+`test_v081_video_fx_effect` is a parametrized test that:
+1. Verifies the effect is present in `GET /effects` catalog
+2. Creates a project + clip via `_setup_project_with_clip`
+3. POSTs the effect to the clip and asserts `201` + expected FFmpeg filter keyword in `filter_string`
+4. GETs the clip list and confirms the effect appears
+
+| Effect type | Parameters | Expected FFmpeg filter |
+|-------------|-----------|------------------------|
+| `blur` | `{"sigma": 2.0}` | `gblur` |
+| `sharpen` | `{"amount": 1.0}` | `unsharp` |
+| `opacity` | `{"opacity": 0.5}` | `colorchannelmixer` |
+| `scale` | `{"scale": 1.5}` | `scale` |
+| `color_lut` | `{"preset": "warm_fade"}` | `lut3d` |
+| `chroma_key` | `{"color": "green", "similarity": 0.1}` | `chromakey` |
+| `color_key` | `{"color": "white", "similarity": 0.1}` | `colorkey` |
+| `lens_distort` | `{"k1": 0.1, "k2": 0.05}` | `lenscorrection` |
+
+### Preview pattern (2 generator effects)
+
+`test_v081_generator_fx_catalog_and_preview` is a parametrized test that:
+1. Verifies the effect is in the catalog
+2. POSTs to `POST /effects/preview` and asserts `200` + expected filter keyword
+
+Generator effects produce synthetic video output and cannot be applied to a clip directly; they are validated via the preview endpoint.
+
+| Effect type | Parameters | Expected FFmpeg filter |
+|-------------|-----------|------------------------|
+| `gradient_generator` | `{"color1": "black", "color2": "white", "duration": 5.0}` | `gradients` |
+| `noise_generator` | `{"duration": 5.0}` | `cellauto` |
+
+### Running v081 FX tests
+
+These tests are FFmpeg-independent — no `STOAT_TEST_FFMPEG=1` required:
+
+```bash
+# Run all v081 video FX smoke tests
+uv run pytest tests/smoke/test_effects.py -k "v081" -v
+
+# Run specific effect
+uv run pytest tests/smoke/test_effects.py -k "v081_video_fx_effect[blur]" -v
+```
+
+---
 
 ## QC Oracle Smoke Test (BL-488)
 
