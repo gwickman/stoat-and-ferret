@@ -81,6 +81,7 @@ EXPECTED_EFFECT_TYPES = {
     "chroma_key",
     "color_key",
     "color_lut",
+    "lens_distort",
 }
 
 # ---- Registry unit tests ----

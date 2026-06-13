@@ -29,6 +29,7 @@ from stoat_ferret_core import (
     FramerateConvertBuilder,
     FramerateMode,
     FreezeFrameBuilder,
+    LensDistortBuilder,
     LimiterBuilder,
     LoudnormBuilder,
     MultibandCompressorBuilder,
@@ -2210,6 +2211,74 @@ COLOR_LUT = EffectDefinition(
 )
 
 
+def _lens_distort_preview() -> str:
+    """Generate a filter preview for lens_distort with default parameters."""
+    return str(LensDistortBuilder(0.0, 0.0).build())
+
+
+def _build_lens_distort(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for lens_distort effect.
+
+    Args:
+        parameters: Effect parameters with required 'k1' and 'k2' keys.
+
+    Returns:
+        FFmpeg lenscorrection filter string.
+    """
+    k1 = float(parameters.get("k1", 0.0))
+    k2 = float(parameters.get("k2", 0.0))
+    return str(LensDistortBuilder(k1, k2).build())
+
+
+LENS_DISTORT_EFFECT = EffectDefinition(
+    name="Lens Distort",
+    description=(
+        "Apply barrel or pincushion lens distortion to a video clip "
+        "using FFmpeg lenscorrection. Positive k values produce barrel distortion; "
+        "negative values produce pincushion distortion."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "k1": {
+                "type": "number",
+                "minimum": -1.0,
+                "maximum": 1.0,
+                "default": 0.0,
+                "description": "Radial distortion coefficient for x-axis. Range [-1.0, 1.0].",
+            },
+            "k2": {
+                "type": "number",
+                "minimum": -1.0,
+                "maximum": 1.0,
+                "default": 0.0,
+                "description": "Radial distortion coefficient for y-axis. Range [-1.0, 1.0].",
+            },
+        },
+        "required": ["k1", "k2"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "k1": (
+            "Radial distortion for x-axis in [-1.0, 1.0]. "
+            "Positive = barrel (edges bow outward); negative = pincushion (edges bow inward). "
+            "Values near 0 produce subtle corrections; ±0.5 produce strong distortion."
+        ),
+        "k2": (
+            "Radial distortion for y-axis in [-1.0, 1.0]. "
+            "Typically set to the same value as k1 for symmetric distortion. "
+            "Use different values for asymmetric lens effects."
+        ),
+    },
+    preview_fn=_lens_distort_preview,
+    build_fn=_build_lens_distort,
+    ai_summary=(
+        "Apply barrel or pincushion lens distortion to a clip using FFmpeg lenscorrection."
+    ),
+    example_prompt="Add barrel lens distortion with k1=0.5, k2=0.5 to this clip.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2249,4 +2318,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("chroma_key", CHROMA_KEY_EFFECT)
     registry.register("color_key", COLOR_KEY_EFFECT)
     registry.register("color_lut", COLOR_LUT)
+    registry.register("lens_distort", LENS_DISTORT_EFFECT)
     return registry

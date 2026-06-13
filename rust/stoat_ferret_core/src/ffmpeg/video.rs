@@ -359,6 +359,38 @@ impl ColorKeyBuilder {
     }
 }
 
+/// Lens distortion filter builder using the FFmpeg `lenscorrection` filter.
+///
+/// `k1` and `k2` are barrel/pincushion distortion coefficients in [-1.0, 1.0].
+/// Negative values produce barrel distortion; positive values produce pincushion.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct LensDistortBuilder {
+    k1: f64,
+    k2: f64,
+}
+
+#[pymethods]
+impl LensDistortBuilder {
+    #[new]
+    pub fn py_new(k1: f64, k2: f64) -> PyResult<Self> {
+        if !(-1.0..=1.0).contains(&k1) {
+            return Err(PyValueError::new_err("k1 must be in [-1.0, 1.0]"));
+        }
+        if !(-1.0..=1.0).contains(&k2) {
+            return Err(PyValueError::new_err("k2 must be in [-1.0, 1.0]"));
+        }
+        Ok(Self { k1, k2 })
+    }
+
+    pub fn build(&self) -> PyResult<Filter> {
+        Ok(Filter::new("lenscorrection")
+            .param("k1", self.k1)
+            .param("k2", self.k2))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -772,5 +804,48 @@ mod tests {
     #[test]
     fn test_color_key_invalid_similarity() {
         assert!(ColorKeyBuilder::py_new("#FF0000", Some(2.0)).is_err());
+    }
+
+    // -- LensDistortBuilder --
+
+    #[test]
+    fn test_lens_distort_valid_construction() {
+        assert!(LensDistortBuilder::py_new(0.0, 0.0).is_ok());
+        assert!(LensDistortBuilder::py_new(-1.0, 1.0).is_ok());
+        assert!(LensDistortBuilder::py_new(0.5, -0.5).is_ok());
+    }
+
+    #[test]
+    fn test_lens_distort_invalid_k1() {
+        assert!(LensDistortBuilder::py_new(1.1, 0.0).is_err());
+        assert!(LensDistortBuilder::py_new(-1.1, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_lens_distort_invalid_k2() {
+        assert!(LensDistortBuilder::py_new(0.0, 1.1).is_err());
+        assert!(LensDistortBuilder::py_new(0.0, -1.1).is_err());
+    }
+
+    #[test]
+    fn test_lens_distort_build_output() {
+        let builder = LensDistortBuilder::py_new(0.3, -0.2).unwrap();
+        let filter_str = builder.build().unwrap().to_string();
+        assert!(
+            filter_str.starts_with("lenscorrection="),
+            "expected lenscorrection= prefix in: {filter_str}"
+        );
+        assert!(filter_str.contains("k1="), "expected k1= in: {filter_str}");
+        assert!(filter_str.contains("k2="), "expected k2= in: {filter_str}");
+    }
+
+    #[test]
+    fn test_lens_distort_deterministic() {
+        let b1 = LensDistortBuilder::py_new(0.1, 0.2).unwrap();
+        let b2 = LensDistortBuilder::py_new(0.1, 0.2).unwrap();
+        assert_eq!(
+            b1.build().unwrap().to_string(),
+            b2.build().unwrap().to_string()
+        );
     }
 }
