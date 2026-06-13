@@ -30,9 +30,11 @@ from stoat_ferret_core import (
     LoudnormBuilder,
     MultibandCompressorBuilder,
     NoiseReductionBuilder,
+    OpacityBuilder,
     PanBuilder,
     ParametricEqBuilder,
     ReverseBuilder,
+    ScaleBuilder,
     SharpenBuilder,
     SpeedControl,
     SpeedSegment,
@@ -1921,6 +1923,117 @@ SHARPEN = EffectDefinition(
 )
 
 
+def _opacity_preview() -> str:
+    """Generate a filter preview for opacity with default parameters."""
+    return str(OpacityBuilder(1.0).build())
+
+
+def _build_opacity(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for opacity effect.
+
+    Args:
+        parameters: Effect parameters with required 'opacity' key.
+
+    Returns:
+        FFmpeg format=rgba,colorchannelmixer filter string.
+    """
+    opacity = float(parameters.get("opacity", 1.0))
+    builder = OpacityBuilder(opacity)
+    if "automation" in parameters:
+        builder = builder.with_automation(parameters["automation"])
+    return str(builder.build())
+
+
+OPACITY_EFFECT = EffectDefinition(
+    name="Opacity",
+    description=(
+        "Adjust the opacity (alpha channel) of a video clip. "
+        "Supports automation envelopes for keyframed crossfades."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "opacity": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 1.0,
+                "description": "Opacity in [0.0, 1.0]. 0.0 = transparent, 1.0 = opaque.",
+            },
+        },
+        "required": ["opacity"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "opacity": (
+            "Opacity in [0.0, 1.0]. 0.0 = fully transparent, 1.0 = fully opaque. "
+            "Use automation for smooth crossfades."
+        ),
+    },
+    preview_fn=_opacity_preview,
+    build_fn=_build_opacity,
+    ai_summary="Adjust clip opacity (alpha) with optional keyframed crossfade automation.",
+    example_prompt="Fade this clip from transparent to fully opaque over 2 seconds.",
+    automatable=frozenset({"opacity"}),
+    automation_filter_template="format=rgba,colorchannelmixer=aa='{expr}':eval=frame",
+)
+
+
+def _scale_preview() -> str:
+    """Generate a filter preview for scale with default parameters."""
+    return str(ScaleBuilder(1.0).build())
+
+
+def _build_scale(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for scale effect.
+
+    Args:
+        parameters: Effect parameters with required 'scale' key.
+
+    Returns:
+        FFmpeg scale filter string with trunc rounding.
+    """
+    scale = float(parameters.get("scale", 1.0))
+    builder = ScaleBuilder(scale)
+    if "automation" in parameters:
+        builder = builder.with_automation(parameters["automation"])
+    return str(builder.build())
+
+
+SCALE_EFFECT = EffectDefinition(
+    name="Scale",
+    description=(
+        "Scale a video clip by a multiplier with even-dimension rounding. "
+        "Supports automation envelopes for slow-zoom effects."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "scale": {
+                "type": "number",
+                "minimum": 0.0,
+                "default": 1.0,
+                "description": "Scale factor (must be > 0). 1.0 = original size, 2.0 = double.",
+            },
+        },
+        "required": ["scale"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "scale": (
+            "Scale factor > 0. 1.0 = original, 0.5 = half size, 2.0 = double. "
+            "Use automation for slow-zoom (Ken Burns) effects."
+        ),
+    },
+    preview_fn=_scale_preview,
+    build_fn=_build_scale,
+    ai_summary="Scale a clip by a multiplier; supports keyframed slow-zoom automation.",
+    example_prompt="Apply a slow zoom from 1.0 to 1.2 scale over 5 seconds.",
+    automatable=frozenset({"scale"}),
+    automation_filter_template="scale=trunc(iw*('{expr}')/2)*2:trunc(ih*('{expr}')/2)*2:eval=frame",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1955,4 +2068,6 @@ def create_default_registry() -> EffectRegistry:
     registry.register("freeze_frame", FREEZE_FRAME)
     registry.register("blur", BLUR)
     registry.register("sharpen", SHARPEN)
+    registry.register("opacity", OPACITY_EFFECT)
+    registry.register("scale", SCALE_EFFECT)
     return registry
