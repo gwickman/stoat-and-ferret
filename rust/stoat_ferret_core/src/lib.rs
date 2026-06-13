@@ -149,6 +149,8 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::video::BlurBuilder>()?;
     m.add_class::<ffmpeg::video::SharpenBuilder>()?;
     m.add_class::<ffmpeg::video::ColorLutBuilder>()?;
+    m.add_class::<ffmpeg::video::OpacityBuilder>()?;
+    m.add_class::<ffmpeg::video::ScaleBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;

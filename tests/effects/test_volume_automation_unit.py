@@ -155,6 +155,22 @@ def test_build_automation_filter_string_blur_radius(registry: EffectRegistry) ->
     assert "1+0.5*t" in result, f"Expected expression in blur filter: {result}"
 
 
+def test_build_automation_filter_string_opacity(registry: EffectRegistry) -> None:
+    """build_automation_filter_string for 'opacity' → colorchannelmixer eval=frame (BL-455-AC-1)."""
+    result = registry.build_automation_filter_string("opacity", "0.5+0.5*sin(t)")
+    assert "eval=frame" in result, f"Expected eval=frame in opacity filter: {result}"
+    assert "colorchannelmixer" in result, f"Expected colorchannelmixer in opacity filter: {result}"
+    assert "0.5+0.5*sin(t)" in result, f"Expected expression in opacity filter: {result}"
+
+
+def test_build_automation_filter_string_scale(registry: EffectRegistry) -> None:
+    """build_automation_filter_string for 'scale' produces scale trunc eval=frame (BL-455-AC-2)."""
+    result = registry.build_automation_filter_string("scale", "1+0.1*t")
+    assert "eval=frame" in result, f"Expected eval=frame in scale filter: {result}"
+    assert "scale=" in result, f"Expected scale= in scale filter: {result}"
+    assert "1+0.1*t" in result, f"Expected expression in scale filter: {result}"
+
+
 @pytest.mark.api
 def test_update_endpoint_automation_filter_contains_eval_frame() -> None:
     """update endpoint with automation envelope stores filter_string with :eval=frame.

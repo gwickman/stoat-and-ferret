@@ -2,7 +2,6 @@
 //!
 //! [`BlurBuilder`] generates FFmpeg gblur/dblur filters with optional automation.
 //! [`SharpenBuilder`] generates FFmpeg unsharp masking filters.
-//! [`ColorLutBuilder`] generates FFmpeg lut3d filters with bundled preset validation.
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -145,6 +144,112 @@ impl ColorLutBuilder {
     }
 }
 
+/// Opacity filter builder using `colorchannelmixer` alpha channel adjustment.
+///
+/// Static mode generates `format=rgba,colorchannelmixer=aa={opacity}`.
+/// When automation is present, `build()` produces
+/// `format=rgba,colorchannelmixer=aa='{expr}':eval=frame`.
+///
+/// `opacity` must be in [0.0, 1.0] (0 = transparent, 1 = opaque).
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct OpacityBuilder {
+    opacity: f32,
+    automation: Option<Automation>,
+}
+
+#[pymethods]
+impl OpacityBuilder {
+    #[new]
+    pub fn py_new(opacity: f32) -> PyResult<Self> {
+        if !(0.0..=1.0).contains(&opacity) {
+            return Err(PyValueError::new_err("opacity must be in [0.0, 1.0]"));
+        }
+        Ok(Self {
+            opacity,
+            automation: None,
+        })
+    }
+
+    #[pyo3(name = "with_automation")]
+    pub fn py_with_automation(&self, automation: Automation) -> Self {
+        Self {
+            automation: Some(automation),
+            ..self.clone()
+        }
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        match &self.automation {
+            None => Ok(Filter::new("format=rgba,colorchannelmixer").param("aa", self.opacity)),
+            Some(auto) => {
+                let expr = py_compile_automation(auto)?;
+                Ok(Filter::new(format!(
+                    "format=rgba,colorchannelmixer=aa='{}':eval=frame",
+                    expr
+                )))
+            }
+        }
+    }
+}
+
+/// Scale filter builder with even-dimension trunc rounding.
+///
+/// Static mode generates `scale=trunc(iw*{scale}/2)*2:trunc(ih*{scale}/2)*2`.
+/// When automation is present, `build()` produces
+/// `scale=trunc(iw*('{expr}')/2)*2:trunc(ih*('{expr}')/2)*2:eval=frame`.
+///
+/// `scale` must be > 0.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ScaleBuilder {
+    scale: f32,
+    automation: Option<Automation>,
+}
+
+#[pymethods]
+impl ScaleBuilder {
+    #[new]
+    pub fn py_new(scale: f32) -> PyResult<Self> {
+        if scale <= 0.0 {
+            return Err(PyValueError::new_err("scale must be > 0"));
+        }
+        Ok(Self {
+            scale,
+            automation: None,
+        })
+    }
+
+    #[pyo3(name = "with_automation")]
+    pub fn py_with_automation(&self, automation: Automation) -> Self {
+        Self {
+            automation: Some(automation),
+            ..self.clone()
+        }
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        match &self.automation {
+            None => {
+                let w = format!("trunc(iw*{}/2)*2", self.scale);
+                let h = format!("trunc(ih*{}/2)*2", self.scale);
+                Ok(Filter::new("scale").param("w", w).param("h", h))
+            }
+            Some(auto) => {
+                let expr = py_compile_automation(auto)?;
+                Ok(Filter::new(format!(
+                    "scale=trunc(iw*('{}')/2)*2:trunc(ih*('{}')/2)*2:eval=frame",
+                    expr, expr
+                )))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,5 +388,163 @@ mod tests {
     fn test_color_lut_preset_name_getter() {
         let builder = ColorLutBuilder::py_new("calming_teal").unwrap();
         assert_eq!(builder.py_preset_name(), "calming_teal");
+    }
+
+    #[test]
+    fn test_opacity_valid_range() {
+        assert!(OpacityBuilder::py_new(0.0).is_ok());
+        assert!(OpacityBuilder::py_new(0.5).is_ok());
+        assert!(OpacityBuilder::py_new(1.0).is_ok());
+    }
+
+    #[test]
+    fn test_opacity_invalid_range() {
+        assert!(OpacityBuilder::py_new(-0.1).is_err());
+        assert!(OpacityBuilder::py_new(1.1).is_err());
+    }
+
+    #[test]
+    fn test_opacity_static_build() {
+        let builder = OpacityBuilder::py_new(0.5).unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(
+            filter_str.contains("colorchannelmixer"),
+            "expected colorchannelmixer in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("aa=0.5"),
+            "expected aa=0.5 in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_opacity_with_automation_stores_envelope() {
+        let auto = Automation {
+            default: 0.5,
+            keyframes: vec![
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 0.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 5.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+            ],
+        };
+        let builder = OpacityBuilder::py_new(0.5).unwrap();
+        let with_auto = builder.py_with_automation(auto);
+        assert!(with_auto.automation.is_some());
+    }
+
+    #[test]
+    fn test_opacity_build_with_automation_contains_eval_frame() {
+        let auto = Automation {
+            default: 0.5,
+            keyframes: vec![
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 0.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 5.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+            ],
+        };
+        let builder = OpacityBuilder::py_new(0.5)
+            .unwrap()
+            .py_with_automation(auto);
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(
+            filter_str.contains("eval=frame"),
+            "expected eval=frame in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("colorchannelmixer"),
+            "expected colorchannelmixer in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_scale_valid() {
+        assert!(ScaleBuilder::py_new(1.0).is_ok());
+        assert!(ScaleBuilder::py_new(0.5).is_ok());
+        assert!(ScaleBuilder::py_new(2.0).is_ok());
+    }
+
+    #[test]
+    fn test_scale_invalid() {
+        assert!(ScaleBuilder::py_new(0.0).is_err());
+        assert!(ScaleBuilder::py_new(-1.0).is_err());
+    }
+
+    #[test]
+    fn test_scale_static_build() {
+        let builder = ScaleBuilder::py_new(1.5).unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(
+            filter_str.starts_with("scale="),
+            "expected scale= prefix in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("trunc(iw"),
+            "expected trunc(iw in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_scale_with_automation_stores_envelope() {
+        let auto = Automation {
+            default: 1.0,
+            keyframes: vec![
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 5.0,
+                    value: 2.0,
+                    curve: "Linear".to_string(),
+                },
+            ],
+        };
+        let builder = ScaleBuilder::py_new(1.0).unwrap();
+        let with_auto = builder.py_with_automation(auto);
+        assert!(with_auto.automation.is_some());
+    }
+
+    #[test]
+    fn test_scale_build_with_automation_contains_eval_frame() {
+        let auto = Automation {
+            default: 1.0,
+            keyframes: vec![
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 5.0,
+                    value: 2.0,
+                    curve: "Linear".to_string(),
+                },
+            ],
+        };
+        let builder = ScaleBuilder::py_new(1.0).unwrap().py_with_automation(auto);
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(
+            filter_str.contains("eval=frame"),
+            "expected eval=frame in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("scale="),
+            "expected scale= in: {filter_str}"
+        );
     }
 }

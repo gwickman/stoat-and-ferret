@@ -99,6 +99,7 @@ try:
         LoudnormBuilder,
         MultibandCompressorBuilder,
         NoiseReductionBuilder,
+        OpacityBuilder,
         PanBuilder,
         ParameterSchema,
         ParametricEqBuilder,
@@ -113,6 +114,7 @@ try:
         RenderSettings,
         ReverseBuilder,
         SanitizationError,
+        ScaleBuilder,
         SharpenBuilder,
         SilenceRegion,
         SilenceReport,
@@ -235,6 +237,8 @@ except ImportError:
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
     ColorLutBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
+    OpacityBuilder = _not_built  # type: ignore[misc,assignment]
+    ScaleBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
@@ -363,6 +367,8 @@ __all__ = [
     "BlurBuilder",
     "ColorLutBuilder",
     "SharpenBuilder",
+    "OpacityBuilder",
+    "ScaleBuilder",
     # Spatial audio builders
     "ConvolutionReverbBuilder",
     "PanBuilder",
