@@ -170,11 +170,11 @@ def test_run_journey_subprocess_run_has_timeout() -> None:
 # R2 journey dispatch — BL-457
 # ---------------------------------------------------------------------------
 
-R2_JOURNEY_IDS = [701, 702, 703, 704, 705, 706]
+R2_JOURNEY_IDS = [701, 702, 703, 704, 705, 706, 707, 708, 709, 710]
 
 
 def test_r2_journey_map_has_all_dispatch_entries() -> None:
-    """JOURNEY_MODULE_MAP must contain entries for all 6 R2 journey IDs 701-706 (BL-457-AC-1)."""
+    """JOURNEY_MODULE_MAP must contain entries for all R2 journey IDs 701-710 (BL-457-AC-1)."""
     from scripts.uat_runner import JOURNEY_MODULE_MAP
 
     for journey_id in R2_JOURNEY_IDS:
