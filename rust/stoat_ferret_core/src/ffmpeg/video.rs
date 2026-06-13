@@ -10,6 +10,16 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 use super::automation::{py_compile_automation, Automation};
 use super::filter::Filter;
 
+/// Escape commas in FFmpeg filter-option values.
+///
+/// FFmpeg's filter-graph parser treats `,` as an option separator inside a
+/// filter's argument list.  Automation expressions like `if(lt(t,0),0,1)`
+/// contain bare commas that break FFmpeg parsing when embedded as option
+/// values.  Replace each `,` with `\,` before format! substitution.
+pub(crate) fn escape_for_filter(expr: &str) -> String {
+    expr.replace(',', r"\,")
+}
+
 /// Gaussian or directional blur filter builder with optional automation envelope.
 ///
 /// Gaussian mode (`blur_type="gaussian"`) generates `gblur=sigma={sigma}`.
@@ -66,7 +76,8 @@ impl BlurBuilder {
             },
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
-                Ok(Filter::new(format!("gblur=sigma='{}':eval=frame", expr)))
+                let escaped = escape_for_filter(&expr);
+                Ok(Filter::new(format!("gblur=sigma='{}':eval=frame", escaped)))
             }
         }
     }
@@ -185,9 +196,10 @@ impl OpacityBuilder {
             None => Ok(Filter::new("format=rgba,colorchannelmixer").param("aa", self.opacity)),
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
+                let escaped = escape_for_filter(&expr);
                 Ok(Filter::new(format!(
                     "format=rgba,colorchannelmixer=aa='{}':eval=frame",
-                    expr
+                    escaped
                 )))
             }
         }
@@ -240,9 +252,10 @@ impl ScaleBuilder {
             }
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
+                let escaped = escape_for_filter(&expr);
                 Ok(Filter::new(format!(
                     "scale=trunc(iw*('{}')/2)*2:trunc(ih*('{}')/2)*2:eval=frame",
-                    expr, expr
+                    escaped, escaped
                 )))
             }
         }
@@ -498,6 +511,12 @@ impl LensDistortBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_escape_for_filter_commas() {
+        assert_eq!(escape_for_filter("if(lt(t,0),0,1)"), r"if(lt(t\,0)\,0\,1)");
+        assert_eq!(escape_for_filter("no_commas"), "no_commas");
+    }
 
     #[test]
     fn test_blur_gaussian_default() {

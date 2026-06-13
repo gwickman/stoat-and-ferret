@@ -213,4 +213,5 @@ class EffectRegistry:
         effect_def = self._effects.get(effect_type)
         if effect_def is None or effect_def.automation_filter_template is None:
             raise ValueError(f"No automation filter string for effect_type: {effect_type}")
-        return effect_def.automation_filter_template.replace("{expr}", compiled_expression)
+        escaped = compiled_expression.replace(",", r"\,")
+        return effect_def.automation_filter_template.replace("{expr}", escaped)
