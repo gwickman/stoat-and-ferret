@@ -13,7 +13,14 @@ from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.effects.definitions import create_default_registry
+from stoat_ferret.effects.registry import EffectRegistry
 from tests.factories import make_test_video
+
+
+@pytest.fixture()
+def registry() -> EffectRegistry:
+    """Fully-populated EffectRegistry for automation dispatch tests."""
+    return create_default_registry()
 
 
 @pytest.mark.contract
@@ -125,6 +132,19 @@ def test_apply_endpoint_automation_filter_contains_eval_frame() -> None:
     assert "eval=frame" in data["filter_string"], (
         f"Expected 'eval=frame' in apply filter_string: {data['filter_string']}"
     )
+
+
+def test_build_automation_filter_string_unknown_raises(registry: EffectRegistry) -> None:
+    """ValueError raised for unregistered or non-automatable effect types."""
+    with pytest.raises(ValueError, match="No automation filter string"):
+        registry.build_automation_filter_string("nonexistent_effect", "expr")
+
+
+def test_build_automation_filter_string_volume_unchanged(registry: EffectRegistry) -> None:
+    """Volume template path is backward-compatible with the old hardcoded result."""
+    result = registry.build_automation_filter_string("volume", "if(lt(t,1),0.5,1.0)")
+    assert result.startswith("volume=")
+    assert "eval=frame" in result
 
 
 @pytest.mark.api
