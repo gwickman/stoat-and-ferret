@@ -96,6 +96,7 @@ try:
         LayoutPosition,
         LayoutPreset,
         LayoutSpec,
+        LensDistortBuilder,
         LimiterBuilder,
         LoudnessReport,
         LoudnormBuilder,
@@ -237,6 +238,7 @@ except ImportError:
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
+    LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
@@ -369,6 +371,7 @@ __all__ = [
     "ParametricEqBuilder",
     # Video effect builders
     "BlurBuilder",
+    "LensDistortBuilder",
     "SharpenBuilder",
     "OpacityBuilder",
     "ScaleBuilder",

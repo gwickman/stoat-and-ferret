@@ -4233,3 +4233,30 @@ class ColorLutBuilder:
             The preset name string for bundled asset path resolution.
         """
         ...
+
+class LensDistortBuilder:
+    """Lens distortion filter builder wrapping FFmpeg ``lenscorrection``.
+
+    Generates ``lenscorrection=k1={k1}:k2={k2}`` filter.
+    Both ``k1`` and ``k2`` must be in ``[-1.0, 1.0]``.
+    """
+
+    def __new__(cls, k1: float, k2: float) -> LensDistortBuilder:
+        """Creates a new LensDistortBuilder.
+
+        Args:
+            k1: Radial distortion coefficient for x-axis. Must be in ``[-1.0, 1.0]``.
+            k2: Radial distortion coefficient for y-axis. Must be in ``[-1.0, 1.0]``.
+
+        Raises:
+            ValueError: If ``k1`` or ``k2`` is outside ``[-1.0, 1.0]``.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the lenscorrection Filter.
+
+        Returns:
+            A Filter with ``lenscorrection=k1={k1}:k2={k2}``.
+        """
+        ...
