@@ -4009,7 +4009,7 @@ class FreezeFrameBuilder:
 class BlurBuilder:
     """Gaussian or directional blur filter builder with optional automation envelope.
 
-    Generates ``gblur=sigma={sigma}`` (gaussian) or ``dblur=sigma={sigma}`` (directional).
+    Generates ``gblur=sigma={sigma}`` (gaussian) or ``dblur=radius={sigma}`` (directional).
     When automation is set, ``build()`` produces ``gblur=sigma='{expr}':eval=frame``.
     """
 
