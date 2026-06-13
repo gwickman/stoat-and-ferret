@@ -67,6 +67,7 @@ try:
         BlurBuilder,
         Clip,
         ClipValidationError,
+        ColorLutBuilder,
         CommandError,
         CompositionClip,
         ConvolutionReverbBuilder,
@@ -232,6 +233,7 @@ except ImportError:
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
+    ColorLutBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
@@ -359,6 +361,7 @@ __all__ = [
     "ParametricEqBuilder",
     # Video effect builders
     "BlurBuilder",
+    "ColorLutBuilder",
     "SharpenBuilder",
     # Spatial audio builders
     "ConvolutionReverbBuilder",

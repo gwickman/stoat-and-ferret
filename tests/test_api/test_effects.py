@@ -76,6 +76,7 @@ EXPECTED_EFFECT_TYPES = {
     "freeze_frame",
     "blur",
     "sharpen",
+    "color_lut",
 }
 
 # ---- Registry unit tests ----

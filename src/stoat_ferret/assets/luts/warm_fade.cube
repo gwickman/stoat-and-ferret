@@ -1,0 +1,10 @@
+# warm_fade LUT 2x2x2 - lifts shadows and pushes highlights warm
+LUT_3D_SIZE 2
+0.05 0.04 0.03
+0.9 0.12 0.05
+0.12 0.88 0.08
+0.92 0.9 0.1
+0.08 0.1 0.82
+0.88 0.15 0.82
+0.12 0.88 0.82
+0.95 0.92 0.85

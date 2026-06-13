@@ -2,6 +2,7 @@
 //!
 //! [`BlurBuilder`] generates FFmpeg gblur/dblur filters with optional automation.
 //! [`SharpenBuilder`] generates FFmpeg unsharp masking filters.
+//! [`ColorLutBuilder`] generates FFmpeg lut3d filters with bundled preset validation.
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -103,6 +104,47 @@ impl SharpenBuilder {
     }
 }
 
+/// Bundled LUT preset names. The `identity` preset is mandatory for unit testing.
+const BUNDLED_PRESETS: &[&str] = &["calming_teal", "warm_fade", "identity"];
+
+/// 3D LUT color grading filter builder with bundled preset validation.
+///
+/// Validates `preset` against a fixed set of bundled preset names.
+/// `build()` produces `lut3d=file={preset}.cube` using the preset name as a
+/// logical filename; callers resolve the bundled asset path to a real file.
+/// `preset_name()` exposes the validated name for path resolution.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ColorLutBuilder {
+    preset: String,
+}
+
+#[pymethods]
+impl ColorLutBuilder {
+    #[new]
+    pub fn py_new(preset: &str) -> PyResult<Self> {
+        if !BUNDLED_PRESETS.contains(&preset) {
+            return Err(PyValueError::new_err(format!(
+                "Unknown LUT preset: {preset}"
+            )));
+        }
+        Ok(Self {
+            preset: preset.to_string(),
+        })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        Ok(Filter::new("lut3d").param("file", format!("{}.cube", self.preset)))
+    }
+
+    #[pyo3(name = "preset_name")]
+    pub fn py_preset_name(&self) -> String {
+        self.preset.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,5 +240,48 @@ mod tests {
             filter_str.contains("gblur"),
             "expected gblur in: {filter_str}"
         );
+    }
+
+    #[test]
+    fn test_color_lut_valid_presets() {
+        assert!(ColorLutBuilder::py_new("identity").is_ok());
+        assert!(ColorLutBuilder::py_new("calming_teal").is_ok());
+        assert!(ColorLutBuilder::py_new("warm_fade").is_ok());
+    }
+
+    #[test]
+    fn test_color_lut_invalid_preset() {
+        assert!(ColorLutBuilder::py_new("unknown").is_err());
+        assert!(ColorLutBuilder::py_new("").is_err());
+    }
+
+    #[test]
+    fn test_color_lut_build_contains_lut3d() {
+        let builder = ColorLutBuilder::py_new("identity").unwrap();
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(
+            filter_str.starts_with("lut3d"),
+            "expected lut3d prefix in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("identity.cube"),
+            "expected identity.cube in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_color_lut_deterministic() {
+        let b1 = ColorLutBuilder::py_new("identity").unwrap();
+        let b2 = ColorLutBuilder::py_new("identity").unwrap();
+        assert_eq!(
+            b1.py_build().unwrap().to_string(),
+            b2.py_build().unwrap().to_string()
+        );
+    }
+
+    #[test]
+    fn test_color_lut_preset_name_getter() {
+        let builder = ColorLutBuilder::py_new("calming_teal").unwrap();
+        assert_eq!(builder.py_preset_name(), "calming_teal");
     }
 }
