@@ -18,6 +18,7 @@ from stoat_ferret_core import (
     AmixBuilder,
     BlurBuilder,
     ChromaKeyBuilder,
+    ChromaticAberrationBuilder,
     ColorKeyBuilder,
     ColorLutBuilder,
     ConvolutionReverbBuilder,
@@ -2281,6 +2282,101 @@ LENS_DISTORT_EFFECT = EffectDefinition(
 )
 
 
+def _chromatic_aberration_preview() -> str:
+    """Generate a filter preview for chromatic_aberration with default parameters."""
+    return str(ChromaticAberrationBuilder(5, 0, 0, 0, -5, 0).build())
+
+
+def _build_chromatic_aberration(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for chromatic_aberration effect.
+
+    Args:
+        parameters: Effect parameters with optional rx/ry/gx/gy/bx/by shift values.
+
+    Returns:
+        FFmpeg rgbashift filter string.
+    """
+    rx = int(parameters.get("rx", 5))
+    ry = int(parameters.get("ry", 0))
+    gx = int(parameters.get("gx", 0))
+    gy = int(parameters.get("gy", 0))
+    bx = int(parameters.get("bx", -5))
+    by = int(parameters.get("by", 0))
+    return str(ChromaticAberrationBuilder(rx, ry, gx, gy, bx, by).build())
+
+
+CHROMATIC_ABERRATION_EFFECT = EffectDefinition(
+    name="Chromatic Aberration",
+    description=(
+        "Apply configurable chromatic aberration (RGB channel shift) to a video clip "
+        "using FFmpeg rgbashift. Shifts each RGB channel independently by pixel offsets."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "rx": {
+                "type": "integer",
+                "minimum": -255,
+                "maximum": 255,
+                "default": 5,
+                "description": "Red channel horizontal shift in [-255, 255].",
+            },
+            "ry": {
+                "type": "integer",
+                "minimum": -255,
+                "maximum": 255,
+                "default": 0,
+                "description": "Red channel vertical shift in [-255, 255].",
+            },
+            "gx": {
+                "type": "integer",
+                "minimum": -255,
+                "maximum": 255,
+                "default": 0,
+                "description": "Green channel horizontal shift in [-255, 255].",
+            },
+            "gy": {
+                "type": "integer",
+                "minimum": -255,
+                "maximum": 255,
+                "default": 0,
+                "description": "Green channel vertical shift in [-255, 255].",
+            },
+            "bx": {
+                "type": "integer",
+                "minimum": -255,
+                "maximum": 255,
+                "default": -5,
+                "description": "Blue channel horizontal shift in [-255, 255].",
+            },
+            "by": {
+                "type": "integer",
+                "minimum": -255,
+                "maximum": 255,
+                "default": 0,
+                "description": "Blue channel vertical shift in [-255, 255].",
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "rx": "Red channel horizontal shift in pixels [-255, 255]. Positive shifts right.",
+        "ry": "Red channel vertical shift in pixels [-255, 255]. Positive shifts down.",
+        "gx": "Green channel horizontal shift in pixels [-255, 255]. Usually kept near 0.",
+        "gy": "Green channel vertical shift in pixels [-255, 255]. Usually kept near 0.",
+        "bx": "Blue channel horizontal shift in pixels [-255, 255]. Opposite of rx for aberration.",
+        "by": "Blue channel vertical shift in pixels [-255, 255]. Positive shifts down.",
+    },
+    preview_fn=_chromatic_aberration_preview,
+    build_fn=_build_chromatic_aberration,
+    ai_summary=(
+        "Apply chromatic aberration by shifting RGB channels independently using FFmpeg rgbashift."
+    ),
+    example_prompt="Add chromatic aberration with red shifted right 5px and blue shifted left 5px.",
+)
+
+
 def _gradient_generator_preview() -> str:
     """Generate a filter preview for gradient_generator with default parameters."""
     return str(GradientGeneratorBuilder("black", "white", 5.0).build())
@@ -2481,4 +2577,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("lens_distort", LENS_DISTORT_EFFECT)
     registry.register("gradient_generator", GRADIENT_GENERATOR)
     registry.register("noise_generator", NOISE_GENERATOR)
+    registry.register("chromatic_aberration", CHROMATIC_ABERRATION_EFFECT)
     return registry

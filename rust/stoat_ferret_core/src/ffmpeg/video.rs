@@ -508,6 +508,53 @@ impl LensDistortBuilder {
     }
 }
 
+/// Chromatic aberration filter builder using the FFmpeg `rgbashift` filter.
+///
+/// Shifts each RGB channel independently by configurable horizontal/vertical pixel offsets.
+/// All parameters are in the range `[-255, 255]`; all default to 0 (pass-through).
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ChromaticAberrationBuilder {
+    rx: i32,
+    ry: i32,
+    gx: i32,
+    gy: i32,
+    bx: i32,
+    by: i32,
+}
+
+#[pymethods]
+impl ChromaticAberrationBuilder {
+    #[new]
+    pub fn py_new(rx: i32, ry: i32, gx: i32, gy: i32, bx: i32, by: i32) -> PyResult<Self> {
+        for &v in &[rx, ry, gx, gy, bx, by] {
+            if !(-255..=255).contains(&v) {
+                return Err(PyValueError::new_err("shift values must be in [-255, 255]"));
+            }
+        }
+        Ok(Self {
+            rx,
+            ry,
+            gx,
+            gy,
+            bx,
+            by,
+        })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        Ok(Filter::new("rgbashift")
+            .param("rh", self.rx)
+            .param("rv", self.ry)
+            .param("gh", self.gx)
+            .param("gv", self.gy)
+            .param("bh", self.bx)
+            .param("bv", self.by))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1076,5 +1123,66 @@ mod tests {
             b1.build().unwrap().to_string(),
             b2.build().unwrap().to_string()
         );
+    }
+
+    // -- ChromaticAberrationBuilder --
+
+    #[test]
+    fn test_chromatic_aberration_valid_construction() {
+        assert!(ChromaticAberrationBuilder::py_new(5, 0, 0, 0, -5, 0).is_ok());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 0, 0).is_ok());
+        assert!(ChromaticAberrationBuilder::py_new(-255, 255, -255, 255, -255, 255).is_ok());
+    }
+
+    #[test]
+    fn test_chromatic_aberration_invalid_range() {
+        assert!(ChromaticAberrationBuilder::py_new(256, 0, 0, 0, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, -256, 0, 0, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 256, 0, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, -256, 0, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 256, 0).is_err());
+        assert!(ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 0, -256).is_err());
+    }
+
+    #[test]
+    fn test_chromatic_aberration_build_output() {
+        let b = ChromaticAberrationBuilder::py_new(5, 0, 0, 0, -5, 0).unwrap();
+        let filter_str = b.py_build().unwrap().to_string();
+        assert!(
+            filter_str.starts_with("rgbashift="),
+            "expected rgbashift= prefix in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("rh=5"),
+            "expected rh=5 in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("bh=-5"),
+            "expected bh=-5 in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_chromatic_aberration_all_params_encoded() {
+        let b = ChromaticAberrationBuilder::py_new(10, 2, 3, 4, -10, -2).unwrap();
+        let filter_str = b.py_build().unwrap().to_string();
+        assert!(filter_str.contains("rh=10"));
+        assert!(filter_str.contains("rv=2"));
+        assert!(filter_str.contains("gh=3"));
+        assert!(filter_str.contains("gv=4"));
+        assert!(filter_str.contains("bh=-10"));
+        assert!(filter_str.contains("bv=-2"));
+    }
+
+    #[test]
+    fn test_chromatic_aberration_zero_passthrough() {
+        let b = ChromaticAberrationBuilder::py_new(0, 0, 0, 0, 0, 0).unwrap();
+        let filter_str = b.py_build().unwrap().to_string();
+        assert!(filter_str.contains("rh=0"));
+        assert!(filter_str.contains("rv=0"));
+        assert!(filter_str.contains("gh=0"));
+        assert!(filter_str.contains("gv=0"));
+        assert!(filter_str.contains("bh=0"));
+        assert!(filter_str.contains("bv=0"));
     }
 }
