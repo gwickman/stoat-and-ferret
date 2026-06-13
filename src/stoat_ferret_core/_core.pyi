@@ -3995,3 +3995,68 @@ class FreezeFrameBuilder:
         ...
 
     def __repr__(self) -> str: ...
+
+# ========== Video Effect Builders ==========
+
+class BlurBuilder:
+    """Gaussian or directional blur filter builder with optional automation envelope.
+
+    Generates ``gblur=sigma={sigma}`` (gaussian) or ``dblur=sigma={sigma}`` (directional).
+    When automation is set, ``build()`` produces ``gblur=sigma='{expr}':eval=frame``.
+    """
+
+    def __new__(cls, sigma: float, blur_type: str) -> BlurBuilder:
+        """Creates a new BlurBuilder.
+
+        Args:
+            sigma: Blur radius. Must be > 0.
+            blur_type: Filter type: ``"gaussian"`` (gblur) or ``"directional"`` (dblur).
+
+        Raises:
+            ValueError: If sigma is <= 0 or blur_type is not one of the two accepted strings.
+        """
+        ...
+
+    def with_automation(self, automation: Automation) -> BlurBuilder:
+        """Returns a new BlurBuilder with the given automation envelope stored.
+
+        Args:
+            automation: Keyframe-based automation curve for sigma.
+
+        Returns:
+            A new BlurBuilder with the automation set.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the blur Filter.
+
+        Returns:
+            A Filter for gblur/dblur; with automation, gblur with eval=frame expression.
+        """
+        ...
+
+class SharpenBuilder:
+    """Unsharp masking filter builder.
+
+    Generates ``unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount={amount}``.
+    """
+
+    def __new__(cls, amount: float) -> SharpenBuilder:
+        """Creates a new SharpenBuilder.
+
+        Args:
+            amount: Sharpening strength. Must be > 0.
+
+        Raises:
+            ValueError: If amount is <= 0.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the unsharp Filter.
+
+        Returns:
+            A Filter with the unsharp masking parameters.
+        """
+        ...

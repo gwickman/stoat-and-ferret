@@ -71,6 +71,7 @@ pub mod reverse;
 pub mod spatial;
 pub mod speed;
 pub mod transitions;
+pub mod video;
 pub mod voice_repair;
 
 pub use command::{CommandError, FFmpegCommand};

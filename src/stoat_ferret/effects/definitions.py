@@ -16,6 +16,7 @@ from stoat_ferret_core import (
     AcrossfadeBuilder,
     AfadeBuilder,
     AmixBuilder,
+    BlurBuilder,
     ConvolutionReverbBuilder,
     DeesserBuilder,
     DeplosiveBuilder,
@@ -32,6 +33,7 @@ from stoat_ferret_core import (
     PanBuilder,
     ParametricEqBuilder,
     ReverseBuilder,
+    SharpenBuilder,
     SpeedControl,
     SpeedSegment,
     TimeStretchBuilder,
@@ -1812,6 +1814,113 @@ FREEZE_FRAME = EffectDefinition(
 )
 
 
+def _blur_preview() -> str:
+    """Generate a filter preview for blur with default parameters."""
+    return str(BlurBuilder(2.0, "gaussian").build())
+
+
+def _build_blur(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for blur effect.
+
+    Args:
+        parameters: Effect parameters with required 'sigma' and optional 'blur_type'.
+
+    Returns:
+        FFmpeg gblur or dblur filter string.
+    """
+    sigma = float(parameters.get("sigma", 2.0))
+    blur_type = str(parameters.get("blur_type", "gaussian"))
+    builder = BlurBuilder(sigma, blur_type)
+    if "automation" in parameters:
+        builder = builder.with_automation(parameters["automation"])
+    return str(builder.build())
+
+
+BLUR = EffectDefinition(
+    name="Blur",
+    description=(
+        "Apply gaussian or directional blur to a video clip. "
+        "Blur radius accepts an automation envelope for keyframable softness (slow defocus)."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "sigma": {
+                "type": "number",
+                "minimum": 0.01,
+                "default": 2.0,
+                "description": "Blur radius (must be > 0).",
+            },
+            "blur_type": {
+                "type": "string",
+                "enum": ["gaussian", "directional"],
+                "default": "gaussian",
+                "description": "Filter type: gaussian (gblur) or directional (dblur).",
+            },
+        },
+        "required": ["sigma"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "sigma": "Blur radius in pixels (> 0). Range 1–20 for typical use; higher = more blur.",
+        "blur_type": "Use 'gaussian' for soft defocus; 'directional' for motion-blur style.",
+    },
+    preview_fn=_blur_preview,
+    build_fn=_build_blur,
+    ai_summary="Apply gaussian or directional blur to a clip with optional keyframable radius.",
+    example_prompt="Add a soft gaussian blur with radius 3 to this clip.",
+    automatable=frozenset({"sigma"}),
+    automation_filter_template="gblur=sigma='{expr}':eval=frame",
+)
+
+
+def _sharpen_preview() -> str:
+    """Generate a filter preview for sharpen with default parameters."""
+    return str(SharpenBuilder(1.0).build())
+
+
+def _build_sharpen(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for sharpen effect.
+
+    Args:
+        parameters: Effect parameters with required 'amount'.
+
+    Returns:
+        FFmpeg unsharp filter string.
+    """
+    amount = float(parameters.get("amount", 1.0))
+    return str(SharpenBuilder(amount).build())
+
+
+SHARPEN = EffectDefinition(
+    name="Sharpen",
+    description="Apply unsharp masking to sharpen a video clip.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "amount": {
+                "type": "number",
+                "minimum": 0.01,
+                "default": 1.0,
+                "description": "Sharpening strength (must be > 0). Typical range 0.5–3.0.",
+            },
+        },
+        "required": ["amount"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "amount": (
+            "Sharpening amount (> 0). 1.0 = moderate sharpening; "
+            "values > 2.0 produce a crisper, more aggressive result."
+        ),
+    },
+    preview_fn=_sharpen_preview,
+    build_fn=_build_sharpen,
+    ai_summary="Apply unsharp masking to increase perceived sharpness of a video clip.",
+    example_prompt="Sharpen this clip to make the details crisper.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -1844,4 +1953,6 @@ def create_default_registry() -> EffectRegistry:
     registry.register("variable_speed", VARIABLE_SPEED)
     registry.register("framerate_convert", FRAMERATE_CONVERT)
     registry.register("freeze_frame", FREEZE_FRAME)
+    registry.register("blur", BLUR)
+    registry.register("sharpen", SHARPEN)
     return registry
