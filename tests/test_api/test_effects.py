@@ -80,6 +80,7 @@ EXPECTED_EFFECT_TYPES = {
     "scale",
     "chroma_key",
     "color_key",
+    "color_lut",
 }
 
 # ---- Registry unit tests ----

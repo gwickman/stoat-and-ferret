@@ -69,6 +69,7 @@ try:
         Clip,
         ClipValidationError,
         ColorKeyBuilder,
+        ColorLutBuilder,
         CommandError,
         CompositionClip,
         ConvolutionReverbBuilder,
@@ -241,6 +242,7 @@ except ImportError:
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
     ChromaKeyBuilder = _not_built  # type: ignore[misc,assignment]
     ColorKeyBuilder = _not_built  # type: ignore[misc,assignment]
+    ColorLutBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
@@ -372,6 +374,7 @@ __all__ = [
     "ScaleBuilder",
     "ChromaKeyBuilder",
     "ColorKeyBuilder",
+    "ColorLutBuilder",
     # Spatial audio builders
     "ConvolutionReverbBuilder",
     "PanBuilder",
