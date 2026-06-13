@@ -533,7 +533,14 @@ impl ChromaticAberrationBuilder {
                 return Err(PyValueError::new_err("shift values must be in [-255, 255]"));
             }
         }
-        Ok(Self { rx, ry, gx, gy, bx, by })
+        Ok(Self {
+            rx,
+            ry,
+            gx,
+            gy,
+            bx,
+            by,
+        })
     }
 
     #[pyo3(name = "build")]
