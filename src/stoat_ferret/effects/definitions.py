@@ -17,6 +17,7 @@ from stoat_ferret_core import (
     AfadeBuilder,
     AmixBuilder,
     BlurBuilder,
+    ColorLutBuilder,
     ConvolutionReverbBuilder,
     DeesserBuilder,
     DeplosiveBuilder,
@@ -2034,6 +2035,67 @@ SCALE_EFFECT = EffectDefinition(
 )
 
 
+_LUT_PRESET_NAMES = ("calming_teal", "warm_fade", "identity")
+
+
+def _resolve_lut_path(preset_name: str) -> Path:
+    """Resolve a LUT preset name to its bundled .cube file path."""
+    try:
+        ref = importlib.resources.files("stoat_ferret") / "assets" / "luts" / f"{preset_name}.cube"
+        return Path(str(ref))
+    except Exception:
+        return Path(__file__).parent.parent / "assets" / "luts" / f"{preset_name}.cube"
+
+
+def _color_lut_preview() -> str:
+    lut_path = _resolve_lut_path("identity")
+    return f"lut3d=file={lut_path}"
+
+
+def _build_color_lut(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for color LUT effect.
+
+    Args:
+        parameters: Effect parameters with required 'preset'.
+
+    Returns:
+        FFmpeg lut3d filter string with resolved bundled asset path.
+    """
+    preset = str(parameters.get("preset", "identity"))
+    builder = ColorLutBuilder(preset)
+    lut_path = _resolve_lut_path(builder.preset_name())
+    return f"lut3d=file={lut_path}"
+
+
+COLOR_LUT = EffectDefinition(
+    name="Color LUT",
+    description="Apply a 3D color look-up table (LUT) to grade a video clip.",
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "preset": {
+                "type": "string",
+                "enum": list(_LUT_PRESET_NAMES),
+                "description": "Bundled LUT preset name.",
+            },
+        },
+        "required": ["preset"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "preset": (
+            "Choose from: 'calming_teal' (cool, cyan-shifted look), "
+            "'warm_fade' (lifted shadows with warm highlights), "
+            "'identity' (passthrough, no color change)."
+        ),
+    },
+    preview_fn=_color_lut_preview,
+    build_fn=_build_color_lut,
+    ai_summary="Apply a bundled 3D color LUT preset to grade the video clip's look.",
+    example_prompt="Apply a calming teal color grade to this clip.",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2070,4 +2132,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("sharpen", SHARPEN)
     registry.register("opacity", OPACITY_EFFECT)
     registry.register("scale", SCALE_EFFECT)
+    registry.register("color_lut", COLOR_LUT)
     return registry

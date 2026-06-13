@@ -78,6 +78,7 @@ EXPECTED_EFFECT_TYPES = {
     "sharpen",
     "opacity",
     "scale",
+    "color_lut",
 }
 
 # ---- Registry unit tests ----

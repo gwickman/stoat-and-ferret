@@ -1,0 +1,10 @@
+# calming_teal LUT 2x2x2 - shifts highlights toward cyan/teal
+LUT_3D_SIZE 2
+0.0 0.0 0.0
+0.85 0.05 0.05
+0.05 0.9 0.1
+0.82 0.88 0.12
+0.05 0.1 0.9
+0.82 0.12 0.88
+0.08 0.88 0.9
+0.82 0.9 0.9

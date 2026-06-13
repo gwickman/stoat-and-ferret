@@ -4137,3 +4137,39 @@ class ScaleBuilder:
             A Filter for scale with trunc rounding; with automation, includes eval=frame.
         """
         ...
+
+class ColorLutBuilder:
+    """3D LUT color grading filter builder with bundled preset validation.
+
+    Validates preset against a fixed set of bundled names.
+    build() produces lut3d=file={preset}.cube using the preset name as a
+    logical filename; callers resolve the bundled asset path to a real file.
+    preset_name() exposes the validated name for path resolution.
+    """
+
+    def __new__(cls, preset: str) -> ColorLutBuilder:
+        """Create a ColorLutBuilder for the given bundled preset name.
+
+        Args:
+            preset: Bundled LUT preset name ('calming_teal', 'warm_fade', 'identity').
+
+        Raises:
+            ValueError: If preset is not a known bundled preset.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the lut3d Filter.
+
+        Returns:
+            A Filter with lut3d=file={preset}.cube.
+        """
+        ...
+
+    def preset_name(self) -> str:
+        """Returns the validated preset name.
+
+        Returns:
+            The preset name string for bundled asset path resolution.
+        """
+        ...
