@@ -4,6 +4,34 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v082 — Release 2, Wave 5 Carry-Forward (2026-06-13)
+
+### Added
+
+- **ChromaticAberrationBuilder**: RGB-channel shift optical aberration effect using FFmpeg `rgbashift` filter (BL-453-AC-2, PR #612)
+- **Chromatic aberration smoke test**: Parametrized smoke test entry and harness guide row (PRs #613, #614)
+- **Animation expression escaping**: `escape_for_filter` helper applied to automation expressions to fix FFmpeg filter-graph comma-parsing errors (BL-502, PR #611)
+
+### Fixed
+
+- **BlurBuilder directional mode**: Replaced non-existent `dblur sigma` option with `avgblur` for correct directional blur output (BL-500, PR #609)
+- **NoiseGeneratorBuilder**: Removed non-existent `cellauto 'd'` option; fixed seed parameter handling (BL-501, PR #610)
+- **ColorLutBuilder path handling**: Converted backslash separators to forward slashes in Windows LUT file paths (BL-499, PR #608)
+
+### Deferred (FFmpeg-gated / pending discharge)
+
+- BL-499 AC-1/2/3: ColorLutBuilder Windows drive-letter colon escaping — `lut3d=file=C:/path` requires `C\:/path` to avoid filter-graph parser treating `:` as separator
+- BL-453 AC-3: ChromaticAberrationBuilder FFmpeg contract test missing — mirror `test_lens_distort_contract_ffmpeg` pattern
+- BL-452 AC-4: BlendModeBuilder FFmpeg contract test missing — `test_blend_mode_renders_contract` not yet written
+- BL-502 AC-1/2/3: Animation contract tests SKIPPED — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_opacity_scale.py -k animation_renders`
+- BL-457 AC-4: Browser UAT headless journey — blocked on BL-480 (qc-status-fail testid resolves to 3 elements)
+
+### PRs
+
+#608, #609, #610, #611, #612, #613, #614, #615
+
+---
+
 ## v081 — Release 2, Wave 5: Video FX (2026-06-13)
 
 ### Added
