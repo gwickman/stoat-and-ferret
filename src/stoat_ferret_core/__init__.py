@@ -65,8 +65,10 @@ try:
         BatchJobStatus,
         BatchProgress,
         BlurBuilder,
+        ChromaKeyBuilder,
         Clip,
         ClipValidationError,
+        ColorKeyBuilder,
         ColorLutBuilder,
         CommandError,
         CompositionClip,
@@ -235,10 +237,12 @@ except ImportError:
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
-    ColorLutBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
+    ChromaKeyBuilder = _not_built  # type: ignore[misc,assignment]
+    ColorKeyBuilder = _not_built  # type: ignore[misc,assignment]
+    ColorLutBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
@@ -365,10 +369,12 @@ __all__ = [
     "ParametricEqBuilder",
     # Video effect builders
     "BlurBuilder",
-    "ColorLutBuilder",
     "SharpenBuilder",
     "OpacityBuilder",
     "ScaleBuilder",
+    "ChromaKeyBuilder",
+    "ColorKeyBuilder",
+    "ColorLutBuilder",
     # Spatial audio builders
     "ConvolutionReverbBuilder",
     "PanBuilder",

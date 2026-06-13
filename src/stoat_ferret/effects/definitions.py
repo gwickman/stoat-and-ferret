@@ -17,6 +17,8 @@ from stoat_ferret_core import (
     AfadeBuilder,
     AmixBuilder,
     BlurBuilder,
+    ChromaKeyBuilder,
+    ColorKeyBuilder,
     ColorLutBuilder,
     ConvolutionReverbBuilder,
     DeesserBuilder,
@@ -2035,6 +2037,118 @@ SCALE_EFFECT = EffectDefinition(
 )
 
 
+def _chroma_key_preview() -> str:
+    """Generate a filter preview for chroma key with default parameters."""
+    return str(ChromaKeyBuilder("#00FF00").build())
+
+
+def _build_chroma_key(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for chroma key effect.
+
+    Args:
+        parameters: Effect parameters with required 'color' and optional 'similarity'.
+
+    Returns:
+        FFmpeg chromakey filter string.
+    """
+    color = str(parameters.get("color", "#00FF00"))
+    similarity = parameters.get("similarity")
+    builder = ChromaKeyBuilder(color, float(similarity) if similarity is not None else None)
+    return str(builder.build())
+
+
+CHROMA_KEY_EFFECT = EffectDefinition(
+    name="Chroma Key",
+    description=(
+        "Remove a background colour using chroma keying (green/blue screen). "
+        "Accepts a hex colour (#RRGGBB) or CSS named colour."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "color": {
+                "type": "string",
+                "default": "#00FF00",
+                "description": "Key colour as #RRGGBB hex or CSS named colour (e.g. 'green').",
+            },
+            "similarity": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 0.1,
+                "description": "Similarity threshold in [0.0, 1.0]. Higher = removes more colours.",
+            },
+        },
+        "required": ["color"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "color": "Key colour as '#RRGGBB' hex (e.g. '#00FF00') or named CSS colour (e.g. 'green').",
+        "similarity": "Tolerance [0.0, 1.0]. Start at 0.1; increase if fringing remains.",
+    },
+    preview_fn=_chroma_key_preview,
+    build_fn=_build_chroma_key,
+    ai_summary="Remove a green/blue-screen background using FFmpeg chromakey.",
+    example_prompt="Key out the green screen background on this clip.",
+)
+
+
+def _color_key_preview() -> str:
+    """Generate a filter preview for color key with default parameters."""
+    return str(ColorKeyBuilder("#FFFFFF").build())
+
+
+def _build_color_key(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for color key effect.
+
+    Args:
+        parameters: Effect parameters with required 'color' and optional 'similarity'.
+
+    Returns:
+        FFmpeg colorkey filter string.
+    """
+    color = str(parameters.get("color", "#FFFFFF"))
+    similarity = parameters.get("similarity")
+    builder = ColorKeyBuilder(color, float(similarity) if similarity is not None else None)
+    return str(builder.build())
+
+
+COLOR_KEY_EFFECT = EffectDefinition(
+    name="Color Key",
+    description=(
+        "Remove a flat-colour background using colour keying. "
+        "Suitable for solid backgrounds such as white or black."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "color": {
+                "type": "string",
+                "default": "#FFFFFF",
+                "description": "Key colour as #RRGGBB hex or CSS named colour (e.g. 'white').",
+            },
+            "similarity": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 0.1,
+                "description": "Similarity threshold in [0.0, 1.0]. Higher = removes more colours.",
+            },
+        },
+        "required": ["color"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "color": "Key colour as '#RRGGBB' hex (e.g. '#FFFFFF') or named CSS colour (e.g. 'white').",
+        "similarity": "Tolerance [0.0, 1.0]. Start at 0.1; increase if edges remain.",
+    },
+    preview_fn=_color_key_preview,
+    build_fn=_build_color_key,
+    ai_summary="Remove a flat-colour background (e.g. white or black) using FFmpeg colorkey.",
+    example_prompt="Remove the white background from this clip using colour keying.",
+)
+
+
 _LUT_PRESET_NAMES = ("calming_teal", "warm_fade", "identity")
 
 
@@ -2132,5 +2246,7 @@ def create_default_registry() -> EffectRegistry:
     registry.register("sharpen", SHARPEN)
     registry.register("opacity", OPACITY_EFFECT)
     registry.register("scale", SCALE_EFFECT)
+    registry.register("chroma_key", CHROMA_KEY_EFFECT)
+    registry.register("color_key", COLOR_KEY_EFFECT)
     registry.register("color_lut", COLOR_LUT)
     return registry

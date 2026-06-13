@@ -78,6 +78,8 @@ EXPECTED_EFFECT_TYPES = {
     "sharpen",
     "opacity",
     "scale",
+    "chroma_key",
+    "color_key",
     "color_lut",
 }
 

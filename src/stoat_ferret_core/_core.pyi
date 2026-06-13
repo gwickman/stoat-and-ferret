@@ -2218,6 +2218,7 @@ def build_composition_graph(
     audio_mix: AudioMixSpec | None,
     output_width: int,
     output_height: int,
+    blend_mode: str | None = None,
 ) -> FilterGraph:
     """Builds a complete FilterGraph for multi-clip composition.
 
@@ -2232,9 +2233,16 @@ def build_composition_graph(
         audio_mix: Optional AudioMixSpec for multi-track audio mixing.
         output_width: Output canvas width in pixels.
         output_height: Output canvas height in pixels.
+        blend_mode: Optional blend mode applied after compositing. Supported
+            values: ``"screen"``, ``"multiply"``, ``"overlay"``, ``"difference"``,
+            ``"hardlight"``, ``"softlight"``, ``"darken"``, ``"lighten"``,
+            ``"addition"``, ``"exclusion"``.
 
     Returns:
         A FilterGraph ready for FFmpeg's -filter_complex argument.
+
+    Raises:
+        ValueError: If blend_mode is not a supported value.
     """
     ...
 
@@ -4135,6 +4143,58 @@ class ScaleBuilder:
 
         Returns:
             A Filter for scale with trunc rounding; with automation, includes eval=frame.
+        """
+        ...
+
+class ChromaKeyBuilder:
+    """Chroma key filter builder for green/blue screen removal.
+
+    Generates ``chromakey=color={color}:similarity={similarity}`` filter.
+    """
+
+    def __new__(cls, color: str, similarity: float | None = None) -> ChromaKeyBuilder:
+        """Creates a new ChromaKeyBuilder.
+
+        Args:
+            color: Key colour as ``#RRGGBB`` hex or CSS named colour (e.g. ``"green"``).
+            similarity: Similarity threshold in ``[0.0, 1.0]``. Defaults to ``0.1``.
+
+        Raises:
+            ValueError: If colour format is invalid or similarity is out of range.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the chromakey Filter.
+
+        Returns:
+            A Filter with ``chromakey=color={color}:similarity={similarity}``.
+        """
+        ...
+
+class ColorKeyBuilder:
+    """Color key filter builder for flat-colour background removal.
+
+    Generates ``colorkey=color={color}:similarity={similarity}`` filter.
+    """
+
+    def __new__(cls, color: str, similarity: float | None = None) -> ColorKeyBuilder:
+        """Creates a new ColorKeyBuilder.
+
+        Args:
+            color: Key colour as ``#RRGGBB`` hex or CSS named colour (e.g. ``"white"``).
+            similarity: Similarity threshold in ``[0.0, 1.0]``. Defaults to ``0.1``.
+
+        Raises:
+            ValueError: If colour format is invalid or similarity is out of range.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Builds the colorkey Filter.
+
+        Returns:
+            A Filter with ``colorkey=color={color}:similarity={similarity}``.
         """
         ...
 

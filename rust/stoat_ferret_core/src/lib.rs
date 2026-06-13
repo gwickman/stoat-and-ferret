@@ -151,6 +151,8 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::video::ColorLutBuilder>()?;
     m.add_class::<ffmpeg::video::OpacityBuilder>()?;
     m.add_class::<ffmpeg::video::ScaleBuilder>()?;
+    m.add_class::<ffmpeg::video::ChromaKeyBuilder>()?;
+    m.add_class::<ffmpeg::video::ColorKeyBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
