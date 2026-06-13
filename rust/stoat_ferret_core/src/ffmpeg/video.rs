@@ -152,8 +152,16 @@ mod tests {
         let auto = Automation {
             default: 1.0,
             keyframes: vec![
-                super::super::automation::Keyframe { t: 0.0, value: 1.0, curve: "Linear".to_string() },
-                super::super::automation::Keyframe { t: 5.0, value: 5.0, curve: "Linear".to_string() },
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 5.0,
+                    value: 5.0,
+                    curve: "Linear".to_string(),
+                },
             ],
         };
         let builder = BlurBuilder::py_new(2.0, "gaussian").unwrap();
@@ -166,15 +174,29 @@ mod tests {
         let auto = Automation {
             default: 1.0,
             keyframes: vec![
-                super::super::automation::Keyframe { t: 0.0, value: 1.0, curve: "Linear".to_string() },
-                super::super::automation::Keyframe { t: 5.0, value: 5.0, curve: "Linear".to_string() },
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 5.0,
+                    value: 5.0,
+                    curve: "Linear".to_string(),
+                },
             ],
         };
         let builder = BlurBuilder::py_new(2.0, "gaussian")
             .unwrap()
             .py_with_automation(auto);
         let filter_str = builder.py_build().unwrap().to_string();
-        assert!(filter_str.contains("eval=frame"), "expected eval=frame in: {filter_str}");
-        assert!(filter_str.contains("gblur"), "expected gblur in: {filter_str}");
+        assert!(
+            filter_str.contains("eval=frame"),
+            "expected eval=frame in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("gblur"),
+            "expected gblur in: {filter_str}"
+        );
     }
 }
