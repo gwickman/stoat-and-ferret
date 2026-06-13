@@ -156,7 +156,7 @@ def test_build_automation_filter_string_blur_radius(registry: EffectRegistry) ->
 
 
 def test_build_automation_filter_string_opacity(registry: EffectRegistry) -> None:
-    """build_automation_filter_string for 'opacity' produces colorchannelmixer eval=frame (BL-455-AC-1)."""
+    """build_automation_filter_string for 'opacity' → colorchannelmixer eval=frame (BL-455-AC-1)."""
     result = registry.build_automation_filter_string("opacity", "0.5+0.5*sin(t)")
     assert "eval=frame" in result, f"Expected eval=frame in opacity filter: {result}"
     assert "colorchannelmixer" in result, f"Expected colorchannelmixer in opacity filter: {result}"
