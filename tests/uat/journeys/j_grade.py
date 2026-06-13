@@ -6,7 +6,7 @@ from playwright.async_api import Page, expect
 
 
 async def run(page: Page, base_url: str) -> None:
-    """J706: Open effects page, select color_lut effect, pick calming_teal preset, verify preview."""
+    """J706: Open effects page, select color_lut, pick calming_teal preset, verify preview."""
     await page.goto(base_url + "effects")
     await page.wait_for_load_state("networkidle")
     await expect(page.locator("[data-testid='effects-page']")).to_be_visible()
