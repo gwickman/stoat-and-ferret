@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from stoat_ferret.effects.definitions import COLOR_LUT, create_default_registry
+from stoat_ferret.effects.definitions import COLOR_LUT, _build_color_lut, create_default_registry
 from stoat_ferret_core import ColorLutBuilder
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
@@ -142,6 +142,13 @@ def test_color_lut_build_fn_path_points_to_existing_file() -> None:
     path = Path(path_part)
     assert path.exists(), f"Resolved LUT path does not exist: {path}"
     assert path.suffix == ".cube", f"Expected .cube extension: {path}"
+
+
+def test_color_lut_build_fn_path_uses_forward_slashes() -> None:
+    """Verify _build_color_lut returns a filter string with no backslashes (BL-499)."""
+    result = _build_color_lut({"preset": "identity"})
+    assert "\\" not in result, f"Expected forward slashes only, got: {result}"
+    assert "lut3d=file=" in result
 
 
 def test_color_lut_bundled_assets_exist() -> None:
