@@ -22,6 +22,11 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   useEffect(() => {
     if (open) {
       previousFocusRef.current = document.activeElement as HTMLElement
+    } else {
+      // Restore focus after the modal unmounts. This effect fires after React
+      // removes the aria-modal element from the DOM, so Chrome's aria-modal
+      // focus scope is already released when .focus() is called.
+      previousFocusRef.current?.focus()
     }
   }, [open])
 
@@ -30,7 +35,6 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        previousFocusRef.current?.focus()
         onClose()
       }
     }
@@ -60,16 +64,7 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
           </h2>
           <button
             type="button"
-            onMouseDown={(e) => {
-              // Prevent Chrome from giving the button pointer-focus, which
-              // would create a sticky aria-modal scope that zombies after DOM
-              // removal and blocks Tab navigation (click path of Playwright e2e).
-              e.preventDefault()
-            }}
-            onClick={() => {
-              previousFocusRef.current?.focus()
-              onClose()
-            }}
+            onClick={onClose}
             data-testid="settings-panel-close"
             aria-label="Close settings"
             className="rounded border border-gray-600 px-2 py-1 text-sm text-gray-300 hover:bg-gray-700"
