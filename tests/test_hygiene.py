@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 _DOCS_ROOT = pathlib.Path(__file__).parent.parent / "docs"
 # Operator-facing manual documentation; design docs are excluded as historical artifacts.
 _MANUAL_DOCS = _DOCS_ROOT / "manual"
@@ -43,3 +45,56 @@ def test_no_complete_status_literal_in_manual_docs() -> None:
                 errors.append(f"{rel}:{lineno}: banned effect type in example: {line}")
 
     assert not errors, "Documentation hygiene failures:\n" + "\n".join(errors)
+
+
+def _check_clearance_note_structure(audit_doc: pathlib.Path) -> None:
+    assert audit_doc.exists(), "docs/legal/relicense-ownership-audit.md must exist"
+    content = audit_doc.read_text()
+    required_headers = [
+        "# Sole-ownership audit",
+        "## Audited revision",
+        "## Audit scope",
+        "## Method",
+        "## Conclusion",
+        "## Exceptions",
+        "## Signer + date",
+        "## Authorisation",
+    ]
+    for header in required_headers:
+        assert header in content, f"Required section header missing: {header}"
+    lines = content.splitlines()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped not in required_headers:
+            continue
+        heading_lvl = len(stripped) - len(stripped.lstrip("#"))
+        # Section body extends to the next heading at same or higher level (or EOF)
+        next_peer = next(
+            (
+                j
+                for j in range(i + 1, len(lines))
+                if lines[j].startswith("#")
+                and (len(lines[j]) - len(lines[j].lstrip("#"))) <= heading_lvl
+            ),
+            len(lines),
+        )
+        body = "\n".join(lines[i + 1 : next_peer]).strip()
+        assert body, f"Section '{stripped}' must not be empty"
+
+
+# Structure-only validation — does not verify legal/provenance conclusions
+def test_ownership_audit_clearance_note_structure() -> None:
+    repo_root = pathlib.Path(__file__).parents[1]
+    audit_doc = repo_root / "docs" / "legal" / "relicense-ownership-audit.md"
+    _check_clearance_note_structure(audit_doc)
+
+
+def test_ownership_audit_clearance_note_structure_bites(tmp_path: pathlib.Path) -> None:
+    repo_root = pathlib.Path(__file__).parents[1]
+    audit_doc = repo_root / "docs" / "legal" / "relicense-ownership-audit.md"
+    content = audit_doc.read_text()
+    malformed = content.replace("## Authorisation", "## REMOVED_SECTION")
+    malformed_doc = tmp_path / "relicense-ownership-audit.md"
+    malformed_doc.write_text(malformed)
+    with pytest.raises(AssertionError, match="Required section header missing"):
+        _check_clearance_note_structure(malformed_doc)
