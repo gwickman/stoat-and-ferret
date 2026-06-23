@@ -19,7 +19,9 @@ afterEach(() => {
 describe('SettingsPanel', () => {
   it('does not render when closed', () => {
     render(<SettingsPanel open={false} onClose={vi.fn()} />)
-    expect(screen.queryByTestId('settings-panel')).toBeNull()
+    // Element stays in DOM as a hidden sentinel to allow Chrome to cleanly
+    // release its aria-modal scope; check it is not visible rather than null.
+    expect(screen.queryByTestId('settings-panel')).not.toBeVisible()
   })
 
   it('renders panel chrome and child sections when open', () => {

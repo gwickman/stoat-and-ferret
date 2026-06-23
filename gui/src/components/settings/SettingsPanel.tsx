@@ -15,6 +15,12 @@ interface SettingsPanelProps {
  * Dismissed via the close button or by pressing Escape while the panel is
  * open. Mounted at z-50 over the workspace so it does not interfere with
  * panel resize chrome.
+ *
+ * When closed, a hidden sentinel div (without role/aria-modal) stays in the
+ * DOM. Keeping a DOM node prevents the "remove focused element from DOM"
+ * path that leaves Chrome with a zombie aria-modal scope. Stripping
+ * role/aria-modal from the sentinel ensures Chrome processes the attribute
+ * removal and cleanly releases the focus scope before the next Tab event.
  */
 export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   useEffect(() => {
@@ -31,7 +37,9 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open) {
+    return <div hidden data-testid="settings-panel" />
+  }
 
   return (
     <div
