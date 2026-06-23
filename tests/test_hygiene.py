@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 
 import pytest
@@ -98,3 +99,65 @@ def test_ownership_audit_clearance_note_structure_bites(tmp_path: pathlib.Path) 
     malformed_doc.write_text(malformed)
     with pytest.raises(AssertionError, match="Required section header missing"):
         _check_clearance_note_structure(malformed_doc)
+
+
+_REPO_ROOT = pathlib.Path(__file__).parents[1]
+
+_AUTO_DEV_SENTINEL_NAMES = frozenset(
+    {"IMPACT_ASSESSMENT.md", "handoff-template.md", "BACKLOG.md", "backlog.json"}
+)
+
+
+def _auto_dev_artifacts_present(repo_root: pathlib.Path) -> list[str]:
+    """Return list of artifact violations; non-empty means auto-dev artefacts found."""
+    violations: list[str] = []
+    auto_dev_dir = repo_root / "docs" / "auto-dev"
+    if auto_dev_dir.exists():
+        violations.append(str(auto_dev_dir))
+    for name in _AUTO_DEV_SENTINEL_NAMES:
+        if (repo_root / name).exists():
+            violations.append(str(repo_root / name))
+        if (auto_dev_dir / name).exists():
+            violations.append(str(auto_dev_dir / name))
+    return violations
+
+
+def test_no_auto_dev_artifacts_in_product_tree() -> None:
+    violations = _auto_dev_artifacts_present(_REPO_ROOT)
+    assert not violations, "docs/auto-dev/ artifacts found in product tree: " + str(violations)
+
+
+def test_gitignore_blocks_auto_dev_dir() -> None:
+    gitignore = _REPO_ROOT / ".gitignore"
+    assert gitignore.exists()
+    content = gitignore.read_text()
+    assert "docs/auto-dev/" in content, ".gitignore must contain docs/auto-dev/ recurrence guard"
+
+
+def test_agents_md_has_no_auto_dev_path_references() -> None:
+    agents_md = _REPO_ROOT / "AGENTS.md"
+    content = agents_md.read_text()
+    assert "docs/auto-dev/handoff-template.md" not in content, (
+        "AGENTS.md must not reference docs/auto-dev/handoff-template.md"
+    )
+
+
+def test_canonical_impact_assessment_has_license_header_section() -> None:
+    artifacts_root = os.environ.get("STOAT_ARTIFACTS_ROOT")
+    if not artifacts_root:
+        pytest.skip("STOAT_ARTIFACTS_ROOT not set — skipping cross-repo check")
+    impact_doc = pathlib.Path(artifacts_root) / "docs" / "auto-dev" / "IMPACT_ASSESSMENT.md"
+    if not impact_doc.exists():
+        pytest.skip(f"Canonical IMPACT_ASSESSMENT.md not found at {impact_doc}")
+    content = impact_doc.read_text()
+    assert "License Header Compliance (per-file SPDX)" in content, (
+        "Canonical IMPACT_ASSESSMENT.md must contain License Header Compliance section"
+    )
+
+
+def test_no_auto_dev_artifacts_in_product_tree_bites(tmp_path: pathlib.Path) -> None:
+    auto_dev_dir = tmp_path / "docs" / "auto-dev"
+    auto_dev_dir.mkdir(parents=True)
+    (auto_dev_dir / "IMPACT_ASSESSMENT.md").write_text("# test")
+    violations = _auto_dev_artifacts_present(tmp_path)
+    assert violations, "bite test: expected violations when docs/auto-dev/ recreated in tmp_path"

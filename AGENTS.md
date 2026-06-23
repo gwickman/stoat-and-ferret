@@ -12,7 +12,6 @@ stoat-and-ferret/
 ├── gui/                    # Frontend (React/TypeScript/Vite)
 ├── tests/                  # Python tests (pytest)
 ├── docs/design/            # Architecture and design documents
-├── docs/auto-dev/          # Auto-dev process documentation
 └── comms/                  # MCP communication folders
 ```
 
@@ -478,8 +477,8 @@ For `explore_project` tasks called by the MCP server:
 ## Sequential Feature Handoffs
 
 When a feature produces artifacts consumed by a downstream sequential feature, the executor must
-complete a handoff document before the downstream feature begins. Use the template at
-`docs/auto-dev/handoff-template.md`.
+complete a handoff document before the downstream feature begins. Use the handoff template
+from the auto-dev-mcp templates root (accessible via `get_project_info().paths.templates_root`). Do not hardcode the path.
 
 Required sections:
 - **Files Modified** — every file created or changed, with a one-line description
