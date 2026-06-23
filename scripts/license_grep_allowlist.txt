@@ -1,0 +1,31 @@
+# Intentional Apache/MIT references — do not flag in CI license grep
+# Each line is a file path (relative to repo root, no leading ./) whose
+# Apache/MIT references are expected and intentional.
+
+# Historical reconciliation records the original mixed Apache-2.0/MIT declarations
+docs/legal/historical-license-reconciliation.md
+
+# CHANGELOG records the relicense history including mixed Apache-2.0/MIT pre-v083 state
+docs/CHANGELOG.md
+
+# This allowlist file itself (comments reference Apache/MIT)
+scripts/license_grep_allowlist.txt
+
+# Dependency inventory uses SPDX names including Apache-2.0 and MIT throughout dep tables
+docs/legal/dependency-license-inventory.md
+
+# Ownership audit references the original Apache-2.0 LICENSE text
+docs/legal/relicense-ownership-audit.md
+
+# CLA template is adapted from Apache Software Foundation ICLA/CCLA wording
+CLA.md
+
+# License check script tracks dep license strings including "MIT License" and Apache-2.0
+scripts/check_dependency_licenses.py
+
+# NOTICE.md summarizes the dep license landscape (permissive deps are MIT/Apache-2.0)
+NOTICE.md
+
+# Design docs reference historical Apache-2.0/MIT license state
+docs/design/03-release-03/01-roadmap.md
+docs/design/03-release-03/backlog/BL-DRAFT-bl516-tts.md

@@ -4,6 +4,40 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v083 — AGPL Relicense + Repo Hygiene (2026-06-23)
+
+### License Change
+
+stoat-and-ferret is relicensed to **AGPL-3.0-or-later** from this version onward.
+
+Releases prior to v083 remain under the license terms under which they were
+actually distributed. The pre-v083 declaration was mixed (Apache-2.0 LICENSE
+file alongside a `license = { text = "MIT" }` declaration in pyproject.toml);
+the historical reconciliation is recorded in
+docs/legal/historical-license-reconciliation.md (see BL-530).
+
+### Added
+
+- **Sole-ownership audit**: Clearance note at `docs/legal/relicense-ownership-audit.md` establishing sole-copyright provenance for the AGPL relicense gate (BL-521, PR #616)
+- **Core license swap**: LICENSE replaced with AGPL-3.0-or-later text; pyproject.toml and Cargo.toml updated to AGPL-3.0-or-later (BL-522, PR #617)
+- **Historical license reconciliation**: `docs/legal/historical-license-reconciliation.md` records pre-v083 distribution history and reconciliation verdict — no distributed artefacts pre-v083 (BL-530, PR #618)
+- **SPDX header backfill**: All `.py` and `.rs` source files carry `# SPDX-License-Identifier: AGPL-3.0-or-later` and copyright headers (BL-523, PR #620)
+- **SPDX CI + pre-commit gate**: `.github/workflows/license-headers.yml` and pre-commit hook enforce SPDX headers on every PR (BL-524, PR #621)
+- **AGPL §13 source-offer endpoint**: `GET /api/v1/source` returns `source_url`, `version`, `commit`, `license`; `STOAT_SOURCE_URL` and `STOAT_BUILD_COMMIT` settings (BL-525, PRs #622 #623)
+- **Source endpoint UAT step**: UAT step added to `docs/manual/uat-testing.md` for the Source compliance link (Impact-U3, PR #626)
+- **CLA guardrail**: `CONTRIBUTING.md`, `CLA.md`, `.github/PULL_REQUEST_TEMPLATE.md`, and `.cla-assistant.json` added for contribution governance (BL-526, PR #627)
+- **Dependency license inventory**: `docs/legal/dependency-license-inventory.md` with full transitive dep scan; `scripts/check_dependency_licenses.py` CI enforcement script (BL-529, PR #628)
+- **AGPL badge**: README.md includes AGPL-3.0-or-later shields.io badge (BL-527)
+- **NOTICE.md**: Project notice file documenting dependency license findings (BL-527)
+- **Stray-reference allowlist**: `scripts/license_grep_allowlist.txt` and CI stray-reference check (BL-527)
+- **auto-dev directory removal**: Removed rogue `docs/auto-dev/` from product repo; `.gitignore` guard added; hygiene tests added (BL-528, PR #619)
+
+### PRs
+
+#616, #617, #618, #619, #620, #621, #622, #623, #624, #625, #626, #627, #628, #629
+
+---
+
 ## v082 — Release 2, Wave 5 Carry-Forward (2026-06-13)
 
 ### Added
