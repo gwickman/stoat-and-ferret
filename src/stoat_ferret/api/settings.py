@@ -304,6 +304,23 @@ class Settings(BaseSettings):
         description="Time-to-live for buffered replay messages in seconds.",
     )
 
+    # AGPL §13 source-offer (BL-525)
+    source_url: str = Field(
+        default="https://github.com/gwickman/stoat-and-ferret",
+        description=(
+            "URL of the corresponding source code for AGPL §13 compliance "
+            "(STOAT_SOURCE_URL). Operator MUST override per network-served "
+            "deployment to point at the actual deployed commit's source."
+        ),
+    )
+    build_commit: str = Field(
+        default="unknown",
+        description=(
+            "Build commit SHA injected by the deploy pipeline (STOAT_BUILD_COMMIT). "
+            "Returned verbatim in GET /api/v1/source. If not set, returns 'unknown'."
+        ),
+    )
+
     @property
     def database_path_resolved(self) -> Path:
         """Get database path as a Path object.

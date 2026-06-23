@@ -4307,6 +4307,32 @@
           }
         }
       }
+    },
+    "/api/v1/source": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Get Source",
+        "description": "Return source URL, version, commit, and license for AGPL \u00a713 compliance.\n\nReturns:\n    JSON with source_url, version, commit, and license fields.",
+        "operationId": "get_source_api_v1_source_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Get Source Api V1 Source Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
