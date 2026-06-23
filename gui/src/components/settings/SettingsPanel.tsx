@@ -22,9 +22,6 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   useEffect(() => {
     if (open) {
       previousFocusRef.current = document.activeElement as HTMLElement
-    } else if (previousFocusRef.current) {
-      previousFocusRef.current.focus()
-      previousFocusRef.current = null
     }
   }, [open])
 
@@ -33,6 +30,7 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
+        previousFocusRef.current?.focus()
         onClose()
       }
     }
@@ -62,7 +60,10 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              previousFocusRef.current?.focus()
+              onClose()
+            }}
             data-testid="settings-panel-close"
             aria-label="Close settings"
             className="rounded border border-gray-600 px-2 py-1 text-sm text-gray-300 hover:bg-gray-700"
