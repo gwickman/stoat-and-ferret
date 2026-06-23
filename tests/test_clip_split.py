@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for POST /api/v1/projects/{project_id}/clips/{clip_id}/split endpoint."""
 
 from __future__ import annotations

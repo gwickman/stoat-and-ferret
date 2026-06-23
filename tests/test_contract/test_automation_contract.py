@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Deferred contract tests verifying compile_automation output is accepted by FFmpeg.
 
 Gate: set STOAT_TEST_FFMPEG=1 (or equivalent) to run these tests.

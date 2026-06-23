@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Black box test fixtures with full DI wiring.
 
 All fixtures inject in-memory test doubles via create_app() so tests

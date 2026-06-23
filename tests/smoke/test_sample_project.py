@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Regression smoke test for the Running Montage sample project (BL-128, BL-239).
 
 Validates that the complete sample project structure — project metadata,

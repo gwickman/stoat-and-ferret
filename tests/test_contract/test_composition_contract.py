@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Contract tests for Phase 3 composition filter builders against real FFmpeg.
 
 Validates that overlay, composition graph, and audio mix filter builders

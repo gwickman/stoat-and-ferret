@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for the ``GET /api/v1/jobs/{id}/wait`` long-poll endpoint (BL-277).
 
 Covers the three acceptance criteria:

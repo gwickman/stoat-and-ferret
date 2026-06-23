@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Golden QC regression and drift detection (BL-458).
 
 Compares current QCService output against the golden fixture JSON.

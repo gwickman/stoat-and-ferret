@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """FFmpeg contract tests for mastering effects (BL-432, BL-428, BL-430).
 
 All tests are gated on STOAT_TEST_FFMPEG=1 and require a real FFmpeg install.

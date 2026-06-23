@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for batch render quality field enum validation.
 
 Verifies that BatchJobConfig.quality enforces Literal["draft","standard","high"]:

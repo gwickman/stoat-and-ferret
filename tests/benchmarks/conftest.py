@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Shared fixtures for the BL-288 performance benchmark suite.
 
 The benchmarks intentionally avoid mocks (LRN-250 / NFR-003): they hit

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Job queue abstractions and implementations."""
 
 from stoat_ferret.jobs.queue import (

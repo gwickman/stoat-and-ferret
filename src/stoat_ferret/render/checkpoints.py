@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Render checkpoint manager for crash recovery.
 
 Writes per-segment checkpoints to SQLite after each segment completes,

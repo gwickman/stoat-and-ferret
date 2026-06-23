@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for clip management (UC-04) and clip modification (UC-10).
 
 Validates adding, listing, modifying, and deleting clips through the full

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 708 — Chroma Key: apply chroma key to a generator clip, assert chromakey filter.
 
 Exercises:

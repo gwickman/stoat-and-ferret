@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Builder-pattern fixture factories for test data construction.
 
 Provides fluent builders for creating test domain objects (via ``build()``)

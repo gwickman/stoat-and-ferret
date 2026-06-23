@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """add_transitions_and_effects_json_columns
 
 Revision ID: 1e895699ad50
@@ -77,6 +80,4 @@ def downgrade() -> None:
     op.execute("DROP TABLE clips")
     op.execute("ALTER TABLE clips_backup RENAME TO clips")
     op.execute("CREATE INDEX idx_clips_project ON clips(project_id)")
-    op.execute(
-        "CREATE INDEX idx_clips_timeline ON clips(project_id, timeline_position)"
-    )
+    op.execute("CREATE INDEX idx_clips_timeline ON clips(project_id, timeline_position)")

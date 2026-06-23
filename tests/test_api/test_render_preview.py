@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for POST /render/preview endpoint.
 
 Validates that the render preview returns FFmpeg command strings for

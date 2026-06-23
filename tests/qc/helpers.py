@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """QC assertion helpers for Release 2 test infrastructure."""
 
 from __future__ import annotations

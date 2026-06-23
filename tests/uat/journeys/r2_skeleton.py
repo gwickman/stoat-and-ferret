@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Release 2 skeleton UAT journey — boots app, verifies R2 surface exists or noops."""
 
 from playwright.async_api import Page

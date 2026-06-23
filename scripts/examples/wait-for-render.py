@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Poll a generic queue job (scan/proxy/waveform/thumbnail) until completion.
 
 Long-poll wrapper around ``GET /api/v1/jobs/{job_id}/wait``.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """add_clips_table
 
 Revision ID: 39896ab3d0b7
@@ -32,9 +35,7 @@ def upgrade() -> None:
         )
     """)
     op.execute("CREATE INDEX idx_clips_project ON clips(project_id)")
-    op.execute(
-        "CREATE INDEX idx_clips_timeline ON clips(project_id, timeline_position)"
-    )
+    op.execute("CREATE INDEX idx_clips_timeline ON clips(project_id, timeline_position)")
 
 
 def downgrade() -> None:

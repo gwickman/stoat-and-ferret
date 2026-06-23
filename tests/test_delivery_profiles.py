@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for delivery profile CRUD, render integration, and QC failure path."""
 
 from __future__ import annotations

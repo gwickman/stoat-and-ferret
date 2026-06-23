@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Criterion benchmarks for Phase 2 filter builders.
 //!
 //! Measures filter string generation performance for drawtext, speed, audio,

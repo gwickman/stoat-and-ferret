@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for generator clip (clip_type='generator') support — BL-441."""
 
 from __future__ import annotations

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 605: Screen Reader Audit (J605).
 
 Validates WCAG AA compliance across all workspace routes using axe-core.

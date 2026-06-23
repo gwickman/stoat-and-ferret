@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for FFmpeg observability DI wiring.
 
 Verifies that ObservableFFmpegExecutor is correctly wired into the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Export OpenAPI spec to a static JSON file for offline type generation."""
 
 from __future__ import annotations

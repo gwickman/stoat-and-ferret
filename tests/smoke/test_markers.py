@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for timeline markers API (BL-419).
 
 Covers CRUD lifecycle, overlap rejection (section type), start-time ordering,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Render job CRUD API endpoints.
 
 Provides POST/GET/DELETE for render job lifecycle management

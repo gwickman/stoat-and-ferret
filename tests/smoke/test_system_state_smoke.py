@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for system/state endpoint: terminal pruning and render visibility (BL-357).
 
 Verifies:

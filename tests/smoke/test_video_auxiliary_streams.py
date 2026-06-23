@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """FFmpeg-gated smoke tests for auxiliary stream counts (BL-408, AC-1 and AC-2).
 
 These tests require real FFmpeg and the test corpus video files.

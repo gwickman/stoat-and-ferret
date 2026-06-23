@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """FFmpeg contract tests for 4-track mixdown (BL-436).
 
 Verifies that AmixBuilder with inputs=4 produces a single output from

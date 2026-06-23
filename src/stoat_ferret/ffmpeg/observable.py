@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Observable FFmpeg executor with logging and metrics.
 
 Provides a wrapper executor that adds structured logging and Prometheus

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Application lifespan helpers for deployment-safety services (BL-266, BL-268).
 
 This module holds the migration-safety and feature-flag audit portions of

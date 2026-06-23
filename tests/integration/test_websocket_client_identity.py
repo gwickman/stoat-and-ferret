@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Integration tests for WebSocket client identity feature (BL-315).
 
 Covers connection lifecycle with subscribe_token, token validation,

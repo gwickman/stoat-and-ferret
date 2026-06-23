@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Preview filter graph simplification, cost estimation, and scale injection.
 //!
 //! This module provides quality-level-based simplification of FFmpeg filter

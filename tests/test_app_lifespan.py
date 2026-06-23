@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Integration tests for app lifespan: render worker registration and shutdown.
 
 Runs the full FastAPI lifespan with an isolated temp SQLite database to verify

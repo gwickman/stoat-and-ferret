@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """HLS segment generation service for preview playback.
 
 Produces HLS VOD segments from project timelines using FFmpeg with:

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for health check endpoints (UC-08).
 
 Validates the complete fixture chain: app creation -> DI -> ASGITransport

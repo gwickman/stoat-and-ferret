@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Integration test: event loop stays responsive during directory scan.
 
 Verifies that the event loop is NOT blocked during a scan by concurrently

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for MigrationService backup/rollback + audit logging (BL-266)."""
 
 from __future__ import annotations

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT runner harness for stoat-and-ferret.
 
 Orchestrates the full build-boot-test-teardown cycle for user acceptance testing.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Per-job terminal-state notifications for the ``/wait`` long-poll endpoint.
 
 This module owns the in-process registry of :class:`asyncio.Event` objects

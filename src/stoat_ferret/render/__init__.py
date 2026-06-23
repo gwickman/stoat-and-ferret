@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Render job infrastructure for batch video rendering."""
 
 from stoat_ferret.render.checkpoints import RenderCheckpointManager

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Contract tests verifying InMemory vs SQLite parity.
 
 These tests confirm that InMemory repositories produce the same

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Voice repair filter builders for FFmpeg.
 //!
 //! This module provides type-safe builders for noise reduction and click removal:

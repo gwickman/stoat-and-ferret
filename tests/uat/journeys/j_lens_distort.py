@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 709 — Lens Distort: apply lens distortion to a generator clip, assert lenscorrection.
 
 Exercises:

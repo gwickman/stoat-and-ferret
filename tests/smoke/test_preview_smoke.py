@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke test for preview lifecycle end-to-end (BL-393-AC-5).
 
 Exercises POST /preview/start → poll GET /api/v1/preview/{session_id}

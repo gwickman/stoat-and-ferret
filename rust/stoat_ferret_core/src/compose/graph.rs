@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Composition graph builder — the primary entry point for building
 //! complete FFmpeg filter graphs from multi-clip compositions.
 //!

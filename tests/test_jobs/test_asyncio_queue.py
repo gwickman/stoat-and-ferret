@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for AsyncioJobQueue.
 
 Verifies submit, status polling, completion, failure, and timeout behavior.

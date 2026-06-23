@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Chatbot scenario: uc_cap_split — split a clip at the current playhead frame.
 
 Exercises the full HTTP path:

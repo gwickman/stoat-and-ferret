@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """add_thumbnail_strips
 
 Revision ID: b2c3d4e5f6a7
@@ -34,9 +37,7 @@ def upgrade() -> None:
             created_at TEXT NOT NULL
         )
     """)
-    op.execute(
-        "CREATE INDEX idx_thumbnail_strips_video ON thumbnail_strips(video_id)"
-    )
+    op.execute("CREATE INDEX idx_thumbnail_strips_video ON thumbnail_strips(video_id)")
 
 
 def downgrade() -> None:

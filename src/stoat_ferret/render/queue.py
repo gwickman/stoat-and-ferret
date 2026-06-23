@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Persistent render queue with concurrency control.
 
 Provides FIFO job queuing with max_concurrent/max_depth limits

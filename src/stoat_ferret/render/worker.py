@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Render worker: command builder and background worker loop.
 
 CommandBuildError and build_command_for_job construct FFmpeg argument lists

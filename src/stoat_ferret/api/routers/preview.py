@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Preview session management and HLS content serving endpoints.
 
 Provides POST/GET/DELETE for preview session lifecycle plus

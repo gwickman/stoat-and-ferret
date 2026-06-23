@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Preview session manager with lifecycle coordination.
 
 Orchestrates session lifecycle by coordinating HLS generator, preview

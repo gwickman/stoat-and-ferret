@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 704 — Automation: verify automation lane batch panel visibility."""
 
 from __future__ import annotations

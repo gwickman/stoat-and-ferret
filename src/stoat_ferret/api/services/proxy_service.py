@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Proxy generation service for lower-resolution preview files.
 
 Orchestrates FFmpeg proxy transcoding as background jobs with progress

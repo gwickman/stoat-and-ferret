@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for render worker: command builder and worker loop.
 
 Covers command construction from valid render_plan JSON, input path

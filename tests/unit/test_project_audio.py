@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for project audio baseline (BL-422).
 
 Tests sample_rate and bit_depth fields across:

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Check that the committed gui/openapi.json matches the live FastAPI spec.
 
 Boots the FastAPI app, fetches /openapi.json, and compares against the

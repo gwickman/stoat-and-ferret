@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for health endpoint startup gate (BL-265).
 
 Verifies end-to-end startup gate behaviour with the real application stack:

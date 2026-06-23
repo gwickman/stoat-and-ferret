@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """FFmpeg-gated tests for chapter metadata embedding (BL-426).
 
 All tests require STOAT_TEST_FFMPEG=1 — they run real FFmpeg and ffprobe to

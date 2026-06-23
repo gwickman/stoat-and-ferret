@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Add delivery_profiles table for DeliveryProfile persistence (BL-425).
 
 Revision ID: g1h2i3j4k5l6
@@ -9,6 +12,7 @@ Create Date: 2026-06-08 00:00:00.000000
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -36,9 +40,7 @@ def upgrade() -> None:
         )
     )
     op.execute(
-        sa.text(
-            "CREATE INDEX IF NOT EXISTS idx_delivery_profiles_name ON delivery_profiles(name)"
-        )
+        sa.text("CREATE INDEX IF NOT EXISTS idx_delivery_profiles_name ON delivery_profiles(name)")
     )
 
 

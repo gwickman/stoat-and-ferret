@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for video library search, detail, thumbnail, and delete (UC-02).
 
 Validates pagination with limit/offset, FTS5 full-text search, single video

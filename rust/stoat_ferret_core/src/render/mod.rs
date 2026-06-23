@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Render plan builder for multi-clip composition.
 //!
 //! Provides `build_render_plan()` to decompose composition data into ordered

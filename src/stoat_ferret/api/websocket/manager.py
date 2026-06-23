@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """ConnectionManager for WebSocket connection lifecycle and broadcasting."""
 
 from __future__ import annotations

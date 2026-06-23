@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Chatbot scenario: UC-CAP-MASTER — delivery profile mastering with QC gate.
 
 Covers:

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Seed the 'Running Montage' sample project against a running stoat-and-ferret instance.
 
 Creates a complete sample project with 4 clips, 5 effects, and 1 transition

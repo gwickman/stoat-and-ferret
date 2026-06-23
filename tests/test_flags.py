@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for feature flag settings, startup audit, and /api/v1/flags (BL-268)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Clip validation logic with actionable error messages.
 //!
 //! This module provides comprehensive validation for video clips, including:

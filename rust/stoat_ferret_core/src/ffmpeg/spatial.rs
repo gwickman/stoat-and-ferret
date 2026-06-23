@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Spatial audio filter builders.
 //!
 //! [`PanBuilder`] generates FFmpeg stereo pan filters for static positioning

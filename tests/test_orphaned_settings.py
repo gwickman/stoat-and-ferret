@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for wiring orphaned settings (debug, ws_heartbeat_interval) to consumers."""
 
 from __future__ import annotations

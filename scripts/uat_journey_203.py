@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 203: Effects-Timeline.
 
 Validates effect application, editing, removal, timeline canvas rendering,

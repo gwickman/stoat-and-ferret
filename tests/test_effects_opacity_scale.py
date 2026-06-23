@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit and contract tests for OpacityBuilder and ScaleBuilder (BL-455)."""
 
 from __future__ import annotations

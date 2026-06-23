@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Preview session repository implementations for preview persistence.
 
 Provides Protocol, SQLite, and InMemory implementations following the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for InMemoryClientIdentityStore (Feature 002, BL-315).
 
 Covers store/retrieve/clear operations, timestamp tracking, metadata handling,

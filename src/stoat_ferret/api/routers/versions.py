@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Version endpoints for listing and restoring project versions."""
 
 from __future__ import annotations

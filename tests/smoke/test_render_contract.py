@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests verifying render_plan contract end-to-end (BL-371, BL-372).
 
 Validates:

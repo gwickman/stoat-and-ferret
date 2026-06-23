@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for PreviewCache LRU eviction, TTL expiry, and size tracking.
 
 Covers cache registration, LRU ordering, TTL cleanup, status reporting,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """System state snapshot endpoint (BL-275).
 
 Exposes ``GET /api/v1/system/state`` — a single-pass aggregate of the

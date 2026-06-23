@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Render executor with FFmpeg process management.
 
 Manages FFmpeg subprocess lifecycle with real-time progress parsing via

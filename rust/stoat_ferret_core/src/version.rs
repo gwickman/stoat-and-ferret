@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Deployment version metadata exposed to Python.
 //!
 //! The [`VersionInfo`] PyO3 class carries fields baked in at compile time by

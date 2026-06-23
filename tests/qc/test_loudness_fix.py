@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Regression test for BL-476: loudness/true-peak checks must produce non-null measurements.
 
 FFmpeg-gated. Skip when STOAT_TEST_FFMPEG is unset.

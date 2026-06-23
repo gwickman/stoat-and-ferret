@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Chatbot scenario stub: uc_cap_vspd.
 
 TODO: Implement full scenario for this capability.

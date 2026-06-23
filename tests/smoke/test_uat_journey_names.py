@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Regression test: JOURNEY_NAMES values match JOURNEY_NAME constants in journey scripts."""
 
 from __future__ import annotations

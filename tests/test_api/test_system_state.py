@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for GET /api/v1/system/state endpoint (BL-275)."""
 
 from __future__ import annotations

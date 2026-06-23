@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Render job data models for batch video rendering.
 
 Defines RenderJob, RenderStatus, OutputFormat, and QualityPreset types

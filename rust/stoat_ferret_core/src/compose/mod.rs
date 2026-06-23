@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Composition filter builders for multi-stream video layouts.
 //!
 //! This module provides functions to generate FFmpeg overlay and scale filter

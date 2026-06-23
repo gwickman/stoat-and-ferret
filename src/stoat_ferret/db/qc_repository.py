@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """QC report repository for persisting QCReport records."""
 
 from __future__ import annotations

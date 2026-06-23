@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! FFmpeg command building and argument construction.
 //!
 //! This module provides a type-safe builder for constructing FFmpeg commands

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for render WebSocket progress enrichment (BL-254) and
 frame streaming to Theater Mode (BL-255).
 

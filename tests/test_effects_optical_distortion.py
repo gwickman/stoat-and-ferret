@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for optical distortion effects (BL-453).
 
 Unit tests for LensDistortBuilder and ChromaticAberrationBuilder (builder validation,

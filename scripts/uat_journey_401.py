@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 401: Preview Playback (Phase 4).
 
 Validates the full preview playback workflow: start preview, wait for generation,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Contract tests for async PreviewRepository implementations.
 
 These tests run against both SQLitePreviewRepository and

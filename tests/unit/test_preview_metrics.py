@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for preview, proxy, and cache Prometheus metrics.
 
 Verifies metric definitions (names, labels, buckets) and that service

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Locust load test harness for stoat-ferret (BL-289).
 
 Three concurrent scenarios:

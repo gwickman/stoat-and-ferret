@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Single source of truth mapping UC-MEDIA-MPS-001 outcomes to QC check IDs.
 
 Machine-verifiable OCs and the check IDs that cover them.

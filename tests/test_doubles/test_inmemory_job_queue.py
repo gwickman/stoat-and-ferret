@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for InMemoryJobQueue.
 
 Verifies submit, status, completion, failure, and configurable outcomes.

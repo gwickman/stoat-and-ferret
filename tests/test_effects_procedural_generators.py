@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit and contract tests for procedural generator effects (BL-454).
 
 BL-454 ACs:

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for Phase 4 preview, proxy, cache, thumbnail, and waveform endpoints.
 
 Validates that all Phase 4 endpoints are reachable and return expected
