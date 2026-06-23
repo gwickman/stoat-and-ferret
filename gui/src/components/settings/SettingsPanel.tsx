@@ -60,6 +60,12 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
           </h2>
           <button
             type="button"
+            onMouseDown={(e) => {
+              // Prevent Chrome from giving the button pointer-focus, which
+              // would create a sticky aria-modal scope that zombies after DOM
+              // removal and blocks Tab navigation (click path of Playwright e2e).
+              e.preventDefault()
+            }}
             onClick={() => {
               previousFocusRef.current?.focus()
               onClose()
