@@ -15,3 +15,10 @@ repos:
         files: '\.(sh|bash|yml)$'
         stages: [commit]
         pass_filenames: true
+      - id: spdx-header-check
+        name: SPDX license header check
+        entry: python scripts/add_license_headers.py --check
+        language: system
+        files: '\.(py|rs)$'
+        pass_filenames: false
+        stages: [commit]
