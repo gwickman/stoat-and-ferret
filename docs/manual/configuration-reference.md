@@ -139,6 +139,21 @@ The FFmpeg `reverse` and `areverse` filters work by reading the entire clip segm
 - Values ≤ 0 are rejected at startup with a pydantic `ValidationError`.
 - This limit applies per-clip. If multiple reverse-effect clips are rendered concurrently, peak RAM usage multiplies accordingly.
 
+## AGPL Compliance
+
+The AGPL §13 source-offer affordance exposes source URL, version, and commit information via `GET /api/v1/source`. Operators serving modified instances over a network MUST set `STOAT_SOURCE_URL` to point at the corresponding source for the deployed commit.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_SOURCE_URL` | `str` | `https://github.com/gwickman/stoat-and-ferret` | URL of the corresponding source code for AGPL §13 compliance. Operators deploying modified instances MUST override to point at the actual deployed commit's source. |
+| `STOAT_BUILD_COMMIT` | `str` | `"unknown"` | Build commit SHA injected by the deploy pipeline. Returned verbatim in `GET /api/v1/source`. If not set, returns `"unknown"`. |
+
+**Security implications**
+
+- `STOAT_SOURCE_URL` accepts any string — no URL-format validation is applied at the API layer (clients validate). An operator who sets this to a non-reachable URL satisfies the API contract but may not satisfy the AGPLv3 §13 legal obligation. Review the value during deployment hardening to ensure it points at a publicly accessible source archive.
+- `STOAT_BUILD_COMMIT` is an informational field for operational traceability. It does not affect security posture. Omitting it (leaving `"unknown"`) reduces auditability but does not introduce a vulnerability.
+- The `/api/v1/source` endpoint is unauthenticated by design — AGPL §13 requires that the source offer be available to all network-served users. Do not add authentication guards to this route.
+
 ## See Also
 
 - [Setup — Configuration Reference](../setup/04_configuration.md) — full canonical reference for all `STOAT_*` variables (name, type, default, valid range, plain-language description). Use this document for security-focused guidance and that document for the comprehensive list.

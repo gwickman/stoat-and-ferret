@@ -46,6 +46,7 @@ from stoat_ferret.api.routers import (
     qc,
     render,
     schema,
+    source,
     system,
     testing,
     thumbnails,
@@ -672,6 +673,7 @@ def create_app(
     app.include_router(thumbnails.router)
     app.include_router(versions.router)
     app.include_router(waveform.router)
+    app.include_router(source.router)
     app.add_websocket_route("/ws", websocket_endpoint)
 
     # Add middleware (order matters - first added = outermost)

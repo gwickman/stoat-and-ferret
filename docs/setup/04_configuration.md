@@ -152,6 +152,21 @@ export STOAT_ALLOWED_SCAN_ROOTS='["/home/user/videos", "/mnt/media"]'
 | `STOAT_SYNTHETIC_MONITORING` | `bool` | `false` | Enable synthetic monitoring probes that emit periodic health/metric events. Probes are observable on the `/metrics` endpoint and via WebSocket; consider the resulting information-disclosure surface before enabling on internet-facing deployments. |
 | `STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS` | `int` | `60` | Interval in seconds between synthetic monitoring probe cycles (minimum: 1). Lower values produce more frequent probes at the cost of additional load. |
 
+### AGPL Compliance
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_SOURCE_URL` | `str` | `https://github.com/gwickman/stoat-and-ferret` | URL of the corresponding source code for AGPL §13 compliance. Operators deploying modified instances MUST override this to point at the actual deployed commit's source. |
+| `STOAT_BUILD_COMMIT` | `str` | `"unknown"` | Build commit SHA injected by the deploy pipeline. Returned verbatim in `GET /api/v1/source`. If not set, returns `"unknown"`. |
+
+**STOAT_SOURCE_URL** (string, default: `https://github.com/gwickman/stoat-and-ferret`)
+
+AGPL section 13 requires the operator to set STOAT_SOURCE_URL to the corresponding source for the deployed commit of any network-served modified instance. The default value points at the upstream repository and is not section-13-compliant for modified deployments.
+
+**STOAT_BUILD_COMMIT** (string, default: `"unknown"`)
+
+The commit SHA of the running build. Set by the deploy pipeline. Used in `GET /api/v1/source` response; `"unknown"` if unset.
+
 ## .env File Support
 
 The settings loader automatically reads a `.env` file from the project root if one exists. Variables in `.env` use the same names as environment variables:
