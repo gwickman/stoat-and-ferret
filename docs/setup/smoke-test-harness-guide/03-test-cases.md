@@ -683,6 +683,7 @@ Shows which endpoints are tested by which test file. Endpoints without smoke tes
 | `POST /api/v1/render/{id}/cancel` | test_render_api.py |
 | `POST /api/v1/render/{id}/retry` | test_render_api.py |
 | `GET /api/v1/system/state` | test_system_state_smoke.py |
+| `GET /api/v1/source` | test_source_api.py |
 
 ### Residual Coverage Gaps
 
