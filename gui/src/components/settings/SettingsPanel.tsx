@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import ShortcutEditor from './ShortcutEditor'
 import ThemeSelector from './ThemeSelector'
 
@@ -17,6 +17,17 @@ interface SettingsPanelProps {
  * panel resize chrome.
  */
 export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement
+    } else if (previousFocusRef.current) {
+      previousFocusRef.current.focus()
+      previousFocusRef.current = null
+    }
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const handleKey = (event: KeyboardEvent) => {
