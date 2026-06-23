@@ -16,11 +16,11 @@ interface SettingsPanelProps {
  * open. Mounted at z-50 over the workspace so it does not interfere with
  * panel resize chrome.
  *
- * When closed the dialog element stays in the DOM with the HTML `hidden`
- * attribute rather than being removed entirely. Chrome's aria-modal focus
- * scope is cleanly released when the element is marked hidden; removing the
- * element from DOM while a child had pointer-focus leaves a zombie scope that
- * blocks Tab navigation (focus-restoration.spec.ts:131).
+ * When closed, a hidden sentinel div (without role/aria-modal) stays in the
+ * DOM. Keeping a DOM node prevents the "remove focused element from DOM"
+ * path that leaves Chrome with a zombie aria-modal scope. Stripping
+ * role/aria-modal from the sentinel ensures Chrome processes the attribute
+ * removal and cleanly releases the focus scope before the next Tab event.
  */
 export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   useEffect(() => {
@@ -38,15 +38,7 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   }, [open, onClose])
 
   if (!open) {
-    return (
-      <div
-        hidden
-        data-testid="settings-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-panel-title"
-      />
-    )
+    return <div hidden data-testid="settings-panel" />
   }
 
   return (
