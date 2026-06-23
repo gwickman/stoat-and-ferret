@@ -299,3 +299,21 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 ```
 
 If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically. Journeys 604 and 605 always run regardless of other journey results. If journey 701 fails, journeys 702 and 703 are skipped. Journeys 704, 705, and 706 always run regardless of other journey results.
+
+## Manual GUI Verification Steps
+
+These steps require a running snf GUI in a headed environment and cannot be automated in headless CI.
+
+### Source Compliance Link (AGPL §13 Affordance)
+
+**Requires:** Running snf GUI (headed environment)
+
+1. Open the workspace shell in a browser.
+2. Look at the right side of the footer status bar.
+3. Verify a link with text **"Source"** is visible.
+4. Click the link — it should open the configured `STOAT_SOURCE_URL` in a new tab.
+   - Default: `https://github.com/gwickman/stoat-and-ferret`
+   - If `STOAT_SOURCE_URL` is set in the deployment environment, it should open that URL instead.
+5. To verify the fallback: if the API is unreachable, the link should still be present and point to the default URL.
+
+**data-testid:** `source-code-link` (usable with Playwright for automated headed UAT)
