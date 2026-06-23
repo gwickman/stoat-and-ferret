@@ -1,0 +1,7 @@
+{
+  "cla-path": "CLA.md",
+  "allow-organizations": [],
+  "allowlist": {
+    "users": ["gwickman"]
+  }
+}
