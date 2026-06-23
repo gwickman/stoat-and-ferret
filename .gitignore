@@ -256,3 +256,7 @@ videos/test-corpus/
 videos/test-corpus/**
 
 nul
+
+# Auto-dev artefacts belong in the external artifacts root, not the product repo.
+# This guard prevents recurrence of the deletion at commit 710b7bc7.
+docs/auto-dev/

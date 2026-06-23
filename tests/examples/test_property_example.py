@@ -9,8 +9,8 @@ Invariant-first approach:
   2. Express each property as a Hypothesis test with @given.
   3. Let Hypothesis find edge cases you wouldn't think to test manually.
 
-See docs/auto-dev/PROCESS/generic/02-REQUIREMENTS.md for guidance on when
-to include property tests in feature requirements.
+See the auto-dev-mcp templates root for guidance on when to include property
+tests in feature requirements.
 """
 
 from __future__ import annotations
