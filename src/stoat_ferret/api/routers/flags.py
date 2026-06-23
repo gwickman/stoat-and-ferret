@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Feature flags endpoint exposing STOAT_* boolean flag state (BL-268)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for render API quality_preset translation layer.
 
 Covers the QUALITY_PRESET_MAP constant, public-to-FFmpeg vocabulary translation,

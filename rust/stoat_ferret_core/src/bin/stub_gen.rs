@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Stub generator binary for creating Python type stubs.
 //!
 //! Run with `cargo run --bin stub_gen` to generate type stubs for the module.

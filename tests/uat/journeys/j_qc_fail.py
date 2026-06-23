@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 703 — QC Failure: verify QC failure state and re-master flow visibility.
 
 Asserts QC panel failure indicator and re-master button are visible when a render

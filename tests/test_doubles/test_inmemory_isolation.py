@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for deepcopy isolation in InMemory repositories.
 
 Verifies that mutating returned objects does not affect stored data.

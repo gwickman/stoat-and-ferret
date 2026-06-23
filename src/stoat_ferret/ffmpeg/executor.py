@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """FFmpeg executor implementations with recording and replay support.
 
 Provides a protocol-based abstraction for FFmpeg command execution with:

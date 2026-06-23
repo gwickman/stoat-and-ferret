@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Verify the seven Phase 6 metrics are exposed at GET /metrics (BL-288).
 
 These are *contract* checks for FR-003 / NFR-002. Latency benchmarks live

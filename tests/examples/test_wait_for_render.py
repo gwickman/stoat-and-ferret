@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for scripts/examples/wait-for-render.py.
 
 Verifies the 404 error guard added in v064-005 (BL-359-AC-2):

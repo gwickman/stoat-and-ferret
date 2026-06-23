@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 701 — Markers: create section markers and verify timeline display."""
 
 from __future__ import annotations

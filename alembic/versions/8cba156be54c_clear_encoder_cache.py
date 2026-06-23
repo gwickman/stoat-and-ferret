@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """clear_encoder_cache
 
 Revision ID: 8cba156be54c
@@ -5,17 +8,18 @@ Revises: e5b2c4f1a9d8
 Create Date: 2026-05-17 14:31:01.072375
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
-revision: str = '8cba156be54c'
-down_revision: Union[str, Sequence[str], None] = 'e5b2c4f1a9d8'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "8cba156be54c"
+down_revision: str | Sequence[str] | None = "e5b2c4f1a9d8"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -32,9 +36,7 @@ def upgrade() -> None:
     """
     bind = op.get_bind()
     result = bind.execute(
-        sa.text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='encoder_cache'"
-        )
+        sa.text("SELECT name FROM sqlite_master WHERE type='table' AND name='encoder_cache'")
     )
     if result.fetchone() is not None:
         op.execute("DELETE FROM encoder_cache")

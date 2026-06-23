@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Test fixture seed endpoints (BL-276).
 
 Exposes ``POST /api/v1/testing/seed`` and

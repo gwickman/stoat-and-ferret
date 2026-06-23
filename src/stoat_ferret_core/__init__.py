@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """stoat_ferret_core - Rust-powered video editing primitives.
 
 This module provides the Python interface to the stoat_ferret_core Rust library,

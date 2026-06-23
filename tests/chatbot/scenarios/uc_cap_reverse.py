@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Chatbot scenario: uc_cap_reverse — apply reverse effect to a clip.
 
 Exercises the full HTTP path:

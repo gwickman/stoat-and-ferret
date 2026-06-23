@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """AI-summary / example-prompt coverage for registered effects (BL-270).
 
 Every effect exposed via ``/api/v1/effects`` must carry a non-empty

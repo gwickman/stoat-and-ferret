@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Seed fixture API schemas (BL-276).
 
 Pydantic models for the ``POST /api/v1/testing/seed`` request/response

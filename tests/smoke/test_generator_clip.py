@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for generator clip API (BL-441).
 
 Verifies that generator clips can be created via the clips endpoint without

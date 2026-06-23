@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Type-safe drawtext filter builder for FFmpeg text overlays.
 //!
 //! This module provides a builder for constructing FFmpeg `drawtext` filters

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Application version endpoint backed by Rust VersionInfo (BL-267)."""
 
 from __future__ import annotations

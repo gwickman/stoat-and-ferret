@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Video effect filter builders.
 //!
 //! [`BlurBuilder`] generates FFmpeg gblur/dblur filters with optional automation.

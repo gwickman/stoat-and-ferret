@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for synthetic monitoring background task (BL-269).
 
 Confirms default behaviour (flag=false → no task, /metrics still served).

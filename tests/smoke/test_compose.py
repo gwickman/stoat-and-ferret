@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for layout preset discovery and application.
 
 Validates listing compose presets and applying layout presets through the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """v081 Video FX acceptance harness — gate verification for BL-450 through BL-455.
 
 Verifies all v081 video FX acceptance criteria are either:

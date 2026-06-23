@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for graceful degradation and shutdown of the preview subsystem.
 
 Covers:

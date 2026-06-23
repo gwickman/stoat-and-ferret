@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for the Rust ``ParameterSchema`` translator (BL-270).
 
 Exercises ``parameter_schemas_from_dict`` against both synthetic inputs and

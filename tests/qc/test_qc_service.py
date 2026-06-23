@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit, API, WebSocket, and contract tests for QCService and /qc endpoints (BL-424)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Frame rate representation using rational numbers.
 //!
 //! This module provides a [`FrameRate`] type that represents frame rates as

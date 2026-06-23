@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for AppVersionResponse and GET /api/v1/version (BL-267).
 
 The endpoint model is named ``AppVersionResponse`` to avoid an OpenAPI

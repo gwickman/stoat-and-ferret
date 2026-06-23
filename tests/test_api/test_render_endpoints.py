@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for render job CRUD and encoder endpoints.
 
 Covers all 6 CRUD endpoints, encoder GET/POST endpoints, DI fallback,

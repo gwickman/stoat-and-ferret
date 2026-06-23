@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for seed helpers on InMemory repositories.
 
 Verifies that seed() populates data correctly and with deepcopy isolation.

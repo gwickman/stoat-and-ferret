@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke test fixtures and async helpers.
 
 Provides shared infrastructure for API-level smoke tests exercising the full

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Python smoke tests for QC measurement parser PyO3 bindings (BL-423-AC-6)."""
 
 from __future__ import annotations

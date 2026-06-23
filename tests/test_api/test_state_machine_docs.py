@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for OpenAPI state machine documentation (BL-278).
 
 Verifies that the OpenAPI spec published to ``gui/openapi.json`` and the

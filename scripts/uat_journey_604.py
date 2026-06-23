@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 604: Keyboard Navigation (J604).
 
 Validates keyboard-only navigation through the application by wrapping the

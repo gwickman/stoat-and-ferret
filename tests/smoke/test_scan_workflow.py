@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for video scan workflow (UC-01) and job cancellation (UC-12).
 
 Validates the scan pipeline: POST scan -> poll job -> verify video metadata,

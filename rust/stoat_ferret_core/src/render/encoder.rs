@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Hardware encoder detection, selection, and encoding argument building.
 //!
 //! Parses FFmpeg `-encoders` output to detect available video encoders,

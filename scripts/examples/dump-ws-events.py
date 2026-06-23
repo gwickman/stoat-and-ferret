@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Dump stoat-and-ferret WebSocket events as newline-delimited JSON.
 
 Connects to ``ws://<host>:<port>/ws`` and prints each frame on its own line.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Per-OC assertion tests against the golden QC fixture.
 
 Tests run without FFmpeg — they load golden_qc_report.json and assert that

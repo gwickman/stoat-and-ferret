@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for ConnectionManager and event types."""
 
 from __future__ import annotations

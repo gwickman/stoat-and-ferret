@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Frame-rate conversion filter builder for FFmpeg.
 //!
 //! This module provides [`FramerateConvertBuilder`] for constructing FFmpeg

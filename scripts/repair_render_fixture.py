@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Repair malformed render_plan rows in the runtime database (data/stoat.db).
 
 Operates on the runtime DB at data/stoat.db, not the seed fixture

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """QCService orchestrating 12 analysis passes over rendered artifacts.
 
 Runs FFmpeg analysis filters, parses output via Rust bindings, compares

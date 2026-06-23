@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Regression test: every subprocess.run in UAT journeys has a timeout= argument."""
 
 from __future__ import annotations

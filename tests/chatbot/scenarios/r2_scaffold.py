@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Chatbot scenario runner hook for Release 2 scaffold.
 
 Delegates to uc_cap_master for the full delivery profile mastering scenario and

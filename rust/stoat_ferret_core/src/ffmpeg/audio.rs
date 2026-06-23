@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Audio mixing filter builders for FFmpeg.
 //!
 //! This module provides type-safe builders for constructing audio mixing filters:

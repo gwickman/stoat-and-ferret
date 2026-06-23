@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """FFmpeg integration module for video probing and processing."""
 
 from stoat_ferret.ffmpeg.async_executor import (

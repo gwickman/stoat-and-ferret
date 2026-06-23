@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for client identity token generation and validation (Feature 002, BL-315).
 
 Covers generate_client_id() and is_valid_client_id() from

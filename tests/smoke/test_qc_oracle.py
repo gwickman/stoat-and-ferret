@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for QC oracle worker path (BL-488).
 
 Verifies that QC assertions are populated when a render job completes with

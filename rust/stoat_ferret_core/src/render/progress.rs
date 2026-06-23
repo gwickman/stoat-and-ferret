@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! FFmpeg progress output parsing, progress calculation, and segment aggregation.
 //!
 //! Parses `-progress pipe:1` output for real-time progress tracking, calculates

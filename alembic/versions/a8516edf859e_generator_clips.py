@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """generator_clips
 
 Revision ID: a8516edf859e
@@ -36,15 +39,19 @@ def upgrade() -> None:
     absent when migrating from a clean initial schema in tests.
     """
     conn = op.get_bind()
-    existing_cols = {
-        row[1] for row in conn.execute(sa.text("PRAGMA table_info(clips)")).fetchall()
-    }
+    existing_cols = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(clips)")).fetchall()}
 
     # Columns that may or may not exist depending on whether schema.py ran first
     optional_cols = ["effects_json", "track_id", "timeline_start", "timeline_end"]
     base_cols = [
-        "id", "project_id", "source_video_id", "in_point", "out_point",
-        "timeline_position", "created_at", "updated_at",
+        "id",
+        "project_id",
+        "source_video_id",
+        "in_point",
+        "out_point",
+        "timeline_position",
+        "created_at",
+        "updated_at",
     ]
     select_parts = base_cols[:]
     for col in optional_cols:
@@ -53,7 +60,8 @@ def upgrade() -> None:
 
     insert_cols = base_cols + optional_cols + ["clip_type", "generator_params"]
 
-    op.execute(sa.text("""
+    op.execute(
+        sa.text("""
         CREATE TABLE clips_new (
             id TEXT NOT NULL,
             project_id TEXT NOT NULL,
@@ -73,11 +81,14 @@ def upgrade() -> None:
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             FOREIGN KEY (source_video_id) REFERENCES videos (id) ON DELETE RESTRICT
         )
-    """))
-    op.execute(sa.text(
-        f"INSERT INTO clips_new ({', '.join(insert_cols)}) "
-        f"SELECT {', '.join(select_parts)} FROM clips"
-    ))
+    """)
+    )
+    op.execute(
+        sa.text(
+            f"INSERT INTO clips_new ({', '.join(insert_cols)}) "
+            f"SELECT {', '.join(select_parts)} FROM clips"
+        )
+    )
     op.execute(sa.text("DROP INDEX IF EXISTS idx_clips_timeline"))
     op.execute(sa.text("DROP INDEX IF EXISTS idx_clips_project"))
     op.execute(sa.text("DROP TABLE clips"))
@@ -89,14 +100,18 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     conn = op.get_bind()
-    existing_cols = {
-        row[1] for row in conn.execute(sa.text("PRAGMA table_info(clips)")).fetchall()
-    }
+    existing_cols = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(clips)")).fetchall()}
 
     optional_cols = ["effects_json", "track_id", "timeline_start", "timeline_end"]
     base_cols = [
-        "id", "project_id", "source_video_id", "in_point", "out_point",
-        "timeline_position", "created_at", "updated_at",
+        "id",
+        "project_id",
+        "source_video_id",
+        "in_point",
+        "out_point",
+        "timeline_position",
+        "created_at",
+        "updated_at",
     ]
     select_parts = base_cols[:]
     for col in optional_cols:
@@ -107,7 +122,8 @@ def downgrade() -> None:
 
     insert_cols = base_cols + optional_cols
 
-    op.execute(sa.text("""
+    op.execute(
+        sa.text("""
         CREATE TABLE clips_old (
             id TEXT NOT NULL,
             project_id TEXT NOT NULL,
@@ -125,11 +141,14 @@ def downgrade() -> None:
             FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
             FOREIGN KEY (source_video_id) REFERENCES videos (id) ON DELETE RESTRICT
         )
-    """))
-    op.execute(sa.text(
-        f"INSERT INTO clips_old ({', '.join(insert_cols)}) "
-        f"SELECT {', '.join(select_parts)} FROM clips"
-    ))
+    """)
+    )
+    op.execute(
+        sa.text(
+            f"INSERT INTO clips_old ({', '.join(insert_cols)}) "
+            f"SELECT {', '.join(select_parts)} FROM clips"
+        )
+    )
     op.execute(sa.text("DROP INDEX IF EXISTS idx_clips_timeline"))
     op.execute(sa.text("DROP INDEX IF EXISTS idx_clips_project"))
     op.execute(sa.text("DROP TABLE clips"))

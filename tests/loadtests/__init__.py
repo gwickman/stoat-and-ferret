@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Load tests (BL-289).
 
 This package is excluded from the default pytest run (see ``pyproject.toml``

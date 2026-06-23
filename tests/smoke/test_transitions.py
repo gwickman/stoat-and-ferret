@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for transitions (UC-07).
 
 Validates applying a fade transition between two adjacent clips, exercising

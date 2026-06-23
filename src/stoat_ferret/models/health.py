@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Health status response models for liveness and readiness probes."""
 
 from __future__ import annotations

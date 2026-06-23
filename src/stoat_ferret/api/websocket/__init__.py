@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """WebSocket support for real-time event broadcasting."""
 
 from stoat_ferret.api.websocket.identity import (

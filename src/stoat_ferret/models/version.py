@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Pydantic model for the /api/v1/version endpoint response (BL-267)."""
 
 from __future__ import annotations

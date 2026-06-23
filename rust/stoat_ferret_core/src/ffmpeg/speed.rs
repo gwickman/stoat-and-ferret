@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Speed control filter builders for FFmpeg video and audio speed adjustment.
 //!
 //! This module provides [`SpeedControl`] for constructing FFmpeg `setpts` (video)

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Prometheus metrics for FFmpeg execution monitoring.
 
 Provides metrics for tracking FFmpeg command executions including:

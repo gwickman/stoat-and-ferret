@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Reverse filter builder for FFmpeg video and audio reversal.
 //!
 //! This module provides [`ReverseBuilder`] for constructing FFmpeg `reverse` (video)

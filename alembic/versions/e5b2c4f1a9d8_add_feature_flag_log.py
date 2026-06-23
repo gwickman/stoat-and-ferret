@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """add_feature_flag_log
 
 Revision ID: e5b2c4f1a9d8
@@ -32,8 +35,7 @@ def upgrade() -> None:
         )
     """)
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_feature_flag_log_logged_at "
-        "ON feature_flag_log(logged_at)"
+        "CREATE INDEX IF NOT EXISTS idx_feature_flag_log_logged_at ON feature_flag_log(logged_at)"
     )
 
 

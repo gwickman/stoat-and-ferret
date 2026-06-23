@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Preview cache with LRU eviction and TTL expiry.
 
 Manages preview segment storage with configurable size limits, LRU eviction

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! QC measurement parsers for FFmpeg analysis filter output.
 //!
 //! Provides typed parsers for ebur128/loudnorm (loudness), astats/volumedetect

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 502: Render Queue Journey.
 
 Validates render queue ordering and concurrency limits by submitting 5 render

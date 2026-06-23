@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Thumbnail strip API endpoints.
 
 Provides POST/GET endpoints for thumbnail strip sprite sheet generation,

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Synthetic monitoring background task (BL-269).
 
 Implements a FastAPI-lifespan-scoped asyncio task that periodically

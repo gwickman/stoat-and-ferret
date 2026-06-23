@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Filter simplification logic for preview quality levels.
 //!
 //! Provides functions to reduce filter graph complexity by removing expensive

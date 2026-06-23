@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for timeline CRUD operations.
 
 Validates creating a timeline with tracks, adding clips to tracks,

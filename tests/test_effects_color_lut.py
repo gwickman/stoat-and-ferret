@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for ColorLutBuilder and color_lut effect definition (BL-450)."""
 
 from __future__ import annotations

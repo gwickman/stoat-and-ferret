@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Timeline mathematics for frame-accurate video editing.
 //!
 //! This module provides types and functions for precise timeline calculations:

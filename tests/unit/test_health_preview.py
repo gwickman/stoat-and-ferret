@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for preview and proxy health check functions.
 
 Verifies _check_preview() and _check_proxy() return correct structure,

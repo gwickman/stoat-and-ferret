@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 705 — Reverse-Split: API-exercising journey for reverse effect and clip split.
 
 Exercises:

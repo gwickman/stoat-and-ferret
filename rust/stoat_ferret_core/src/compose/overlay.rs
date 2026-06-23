@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Overlay and scale filter builders for composition layouts.
 //!
 //! Converts [`LayoutPosition`] normalized coordinates into FFmpeg `overlay` and

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Validation tests for the Grafana SLI dashboard JSON (BL-290).
 
 These tests guarantee:

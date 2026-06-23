@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for WebSocket reconnect-with-replay behaviour (BL-274).
 
 Verifies the end-to-end reconnect scenario required by FR-001..FR-004:

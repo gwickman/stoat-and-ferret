@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Migration safety service wrapping Alembic with backup + audit (BL-266).
 
 Provides a service layer around `alembic upgrade` / `alembic downgrade` that:

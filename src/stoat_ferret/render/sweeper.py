@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Stale render job sweeper background task.
 
 Detects render jobs stuck in status='running' beyond the configured threshold

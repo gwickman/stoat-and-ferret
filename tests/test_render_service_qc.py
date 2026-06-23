@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for RenderService worker-path QC integration (BL-477, BL-488).
 
 Tests that _complete_job() invokes QCService when delivery_profile_id is

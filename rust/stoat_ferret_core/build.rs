@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Build script that embeds deployment metadata into the compiled crate.
 //!
 //! Emits two `cargo:rustc-env` directives so the library code can read them

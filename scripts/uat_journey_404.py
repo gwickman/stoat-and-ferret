@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 404: Timeline Sync (Phase 4).
 
 Validates timeline-player synchronization: play preview, verify playhead moves

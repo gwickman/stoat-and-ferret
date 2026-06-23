@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """add_audit_log
 
 Revision ID: 44c6bfb6188e
@@ -33,9 +36,7 @@ def upgrade() -> None:
     """)
 
     # Create index for efficient entity history queries
-    op.execute(
-        "CREATE INDEX idx_audit_log_entity ON audit_log(entity_id, timestamp)"
-    )
+    op.execute("CREATE INDEX idx_audit_log_entity ON audit_log(entity_id, timestamp)")
 
 
 def downgrade() -> None:

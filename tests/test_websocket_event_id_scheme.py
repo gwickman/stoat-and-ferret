@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for monotonic event_id generation in ``build_event`` (BL-273)."""
 
 from __future__ import annotations

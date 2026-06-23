@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for WebSocket progress callback wiring.
 
 Tests cover progress callback broadcasting, throttling behavior,

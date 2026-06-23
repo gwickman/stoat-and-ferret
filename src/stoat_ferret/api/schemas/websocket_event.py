@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Pydantic schema documenting the WebSocket event envelope (BL-278).
 
 This module is **documentation-only**: the live broadcast pipeline still

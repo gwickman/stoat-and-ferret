@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """UAT Journey 707 — Blur: apply gaussian blur to a generator clip, assert gblur filter string.
 
 Exercises:

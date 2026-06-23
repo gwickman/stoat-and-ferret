@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for render WebSocket events with throttled broadcasting.
 
 Covers EventType enum extension, dual-threshold throttling (time + progress delta),

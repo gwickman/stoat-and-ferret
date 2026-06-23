@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! FFmpeg filter expression builder.
 //!
 //! This module provides a type-safe expression builder for FFmpeg filter

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for ConvolutionReverbBuilder and the convolution_reverb effect definition."""
 
 from __future__ import annotations

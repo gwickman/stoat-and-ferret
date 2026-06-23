@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for SubBassBuilder and ducking_effect_schema (BL-442)."""
 
 from __future__ import annotations

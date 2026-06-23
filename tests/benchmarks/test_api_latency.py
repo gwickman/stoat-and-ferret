@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """API latency benchmarks (BL-288, FR-001 / FR-005).
 
 These benchmarks call live FastAPI handlers via :class:`TestClient` (no

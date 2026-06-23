@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Fixtures for the Phase 6 security audit probe suite (BL-286).
 
 Reuses the same in-memory test doubles wired through ``create_app`` that the

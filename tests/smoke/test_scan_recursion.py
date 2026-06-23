@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for scan recursion guard (BL-391).
 
 Verifies that POST /api/v1/videos/scan with recursive=true is rejected when the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for negative-path error handling across Phase 3 API surfaces.
 
 Validates that validation rules return correct HTTP error codes and meaningful

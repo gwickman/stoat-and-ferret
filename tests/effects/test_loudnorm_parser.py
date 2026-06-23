@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Non-FFmpeg-gated unit tests for LoudnormPassOneResult.from_stderr() parser (BL-428).
 
 These tests use captured stderr fixtures and do NOT require FFmpeg.

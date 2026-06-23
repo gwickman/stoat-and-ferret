@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Predefined layout presets for common composition patterns.
 //!
 //! [`LayoutPreset`] provides 7 preset configurations for PIP (picture-in-picture)

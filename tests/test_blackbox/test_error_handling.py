@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Black box tests for error handling through the REST API.
 
 Tests verify that validation errors, not-found errors, and bad requests

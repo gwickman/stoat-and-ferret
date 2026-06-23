@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Preview scale filter injection.
 //!
 //! Provides a function to append a resolution scale filter to a filter graph

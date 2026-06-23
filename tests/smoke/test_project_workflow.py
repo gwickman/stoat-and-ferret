@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for project CRUD (UC-03) and project deletion (UC-09).
 
 Validates creating, listing, retrieving, and deleting projects through the

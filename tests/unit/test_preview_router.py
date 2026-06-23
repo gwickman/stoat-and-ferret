@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Unit tests for preview router InvalidTransitionError handling.
 
 Verifies that seek_preview returns HTTP 409 Conflict with structured error

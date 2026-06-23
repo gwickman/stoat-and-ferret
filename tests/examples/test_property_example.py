@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Example property tests demonstrating invariant-first design.
 
 These tests show how to use Hypothesis for property-based testing with

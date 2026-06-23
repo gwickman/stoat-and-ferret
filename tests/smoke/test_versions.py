@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Smoke tests for project version listing, creation, and restore.
 
 Validates listing, creating, and restoring project versions through the

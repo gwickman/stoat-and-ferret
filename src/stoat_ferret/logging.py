@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Structured logging configuration for stoat-ferret.
 
 Provides a centralized logging configuration using structlog with support for

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Layout position with normalized coordinates and pixel conversion.
 //!
 //! [`LayoutPosition`] uses normalized coordinates (0.0-1.0) for resolution-independent

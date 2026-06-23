@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Proxy management API endpoints.
 
 Provides POST/GET/DELETE for single-video proxy lifecycle and

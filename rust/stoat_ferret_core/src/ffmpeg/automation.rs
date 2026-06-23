@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Grant Wickman
+
 //! Keyframe→expression compiler for automation envelopes.
 //!
 //! Provides [`py_compile_automation`] which converts an [`Automation`] (a list of

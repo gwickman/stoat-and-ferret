@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Contract tests for render output format and encoder detection.
 
 Validates that render commands produce valid output files in all 4 supported

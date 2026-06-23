@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Tests for FreezeFrameBuilder and FREEZE_FRAME effect definition (BL-449)."""
 
 from __future__ import annotations

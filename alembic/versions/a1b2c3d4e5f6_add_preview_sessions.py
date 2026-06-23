@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """add_preview_sessions
 
 Revision ID: a1b2c3d4e5f6
@@ -33,12 +36,8 @@ def upgrade() -> None:
             error_message TEXT
         )
     """)
-    op.execute(
-        "CREATE INDEX idx_preview_sessions_project ON preview_sessions(project_id)"
-    )
-    op.execute(
-        "CREATE INDEX idx_preview_sessions_expires ON preview_sessions(expires_at)"
-    )
+    op.execute("CREATE INDEX idx_preview_sessions_project ON preview_sessions(project_id)")
+    op.execute("CREATE INDEX idx_preview_sessions_expires ON preview_sessions(expires_at)")
 
 
 def downgrade() -> None:
