@@ -550,6 +550,33 @@ jobs:
             exit 1
           fi
 
+  stray-ref-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for stray Apache/MIT license references
+        run: |
+          # Find files with Apache/MIT refs, excluding build dirs and generated content
+          grep -ril "apache\|mit license\|MIT License" \
+            --include="*.md" --include="*.txt" --include="*.py" --include="*.rs" \
+            --exclude-dir=".venv" --exclude-dir="node_modules" --exclude-dir="target" \
+            --exclude-dir="__pycache__" \
+            . 2>/dev/null | sed 's|^\./||' | sort > /tmp/apache_mit_files.txt
+
+          # Load allowlist (strip comments and blank lines), sort
+          grep -v '^#' scripts/license_grep_allowlist.txt | grep -v '^$' | sort > /tmp/allowlist.txt
+
+          # Find stray files: in apache_mit_files but not in allowlist
+          comm -23 /tmp/apache_mit_files.txt /tmp/allowlist.txt > /tmp/stray_files.txt
+
+          if [ -s /tmp/stray_files.txt ]; then
+            echo "Stray Apache/MIT references found in files not in allowlist:"
+            cat /tmp/stray_files.txt
+            echo "Add intentional paths to scripts/license_grep_allowlist.txt"
+            exit 1
+          fi
+          echo "License reference check passed: all Apache/MIT matches are in the allowlist."
+
   ci-a11y:
     name: Accessibility Audit (axe-core + E2E)
     needs: changes
@@ -637,13 +664,17 @@ jobs:
 
   ci-status:
     runs-on: ubuntu-latest
-    needs: [changes, test, rust-coverage, frontend, e2e, ci-a11y, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build, nul-pattern-check, dep-license-check]
+    needs: [changes, test, rust-coverage, frontend, e2e, ci-a11y, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build, nul-pattern-check, dep-license-check, stray-ref-check]
     if: always()
     steps:
       - name: Check CI status
         run: |
           if [[ "${{ needs.dep-license-check.result }}" == "failure" ]]; then
             echo "Dependency license inventory check failed"
+            exit 1
+          fi
+          if [[ "${{ needs.stray-ref-check.result }}" == "failure" ]]; then
+            echo "Stray Apache/MIT license reference check failed"
             exit 1
           fi
           if [[ "${{ needs.nul-pattern-check.result }}" == "failure" ]]; then
