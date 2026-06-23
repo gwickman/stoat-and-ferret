@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import ShortcutEditor from './ShortcutEditor'
 import ThemeSelector from './ThemeSelector'
 
@@ -15,21 +15,14 @@ interface SettingsPanelProps {
  * Dismissed via the close button or by pressing Escape while the panel is
  * open. Mounted at z-50 over the workspace so it does not interfere with
  * panel resize chrome.
+ *
+ * When closed the dialog element stays in the DOM with the HTML `hidden`
+ * attribute rather than being removed entirely. Chrome's aria-modal focus
+ * scope is cleanly released when the element is marked hidden; removing the
+ * element from DOM while a child had pointer-focus leaves a zombie scope that
+ * blocks Tab navigation (focus-restoration.spec.ts:131).
  */
 export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
-  const previousFocusRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (open) {
-      previousFocusRef.current = document.activeElement as HTMLElement
-    } else {
-      // Restore focus after the modal unmounts. This effect fires after React
-      // removes the aria-modal element from the DOM, so Chrome's aria-modal
-      // focus scope is already released when .focus() is called.
-      previousFocusRef.current?.focus()
-    }
-  }, [open])
-
   useEffect(() => {
     if (!open) return
     const handleKey = (event: KeyboardEvent) => {
@@ -44,7 +37,17 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open) {
+    return (
+      <div
+        hidden
+        data-testid="settings-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-panel-title"
+      />
+    )
+  }
 
   return (
     <div
