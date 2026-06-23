@@ -1,6 +1,8 @@
 import React from 'react'
 import type { ConnectionState } from '../hooks/useWebSocket'
 
+const FALLBACK_SOURCE_URL = 'https://github.com/gwickman/stoat-and-ferret'
+
 const STATE_LABELS: Record<ConnectionState, string> = {
   connected: 'Connected',
   disconnected: 'Disconnected',
@@ -18,16 +20,16 @@ interface StatusBarProps {
 }
 
 export default function StatusBar({ connectionState }: StatusBarProps) {
-  const [sourceUrl, setSourceUrl] = React.useState<string>(
-    'https://github.com/gwickman/stoat-and-ferret'
-  )
+  const linkRef = React.useRef<HTMLAnchorElement>(null)
 
   React.useEffect(() => {
     fetch('/api/v1/source')
       .then((r) => r.json())
-      .then((d: { source_url: string }) => setSourceUrl(d.source_url))
+      .then((d: { source_url: string }) => {
+        if (linkRef.current) linkRef.current.setAttribute('href', d.source_url)
+      })
       .catch(() => {
-        // fallback remains default
+        // fallback href remains as set in JSX
       })
   }, [])
 
@@ -40,7 +42,8 @@ export default function StatusBar({ connectionState }: StatusBarProps) {
         WebSocket: {STATE_LABELS[connectionState]}
       </span>
       <a
-        href={sourceUrl}
+        ref={linkRef}
+        href={FALLBACK_SOURCE_URL}
         target="_blank"
         rel="noreferrer"
         data-testid="source-code-link"
