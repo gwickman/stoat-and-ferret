@@ -4,24 +4,26 @@
 
 from __future__ import annotations
 
-import subprocess
+import re
 from pathlib import Path
 
 ALLOWLIST = "scripts/license_grep_allowlist.txt"
-PATTERN = r"(^|[^[:alnum:]_])MIT([^[:alnum:]_]|$)"
+PYTHON_PATTERN = r"(?<![A-Za-z0-9_])MIT(?![A-Za-z0-9_])"
 
 
 def test_bare_mit_detected_in_synthetic_file(tmp_path: Path) -> None:
     """Detector finds an unallowlisted bare MIT reference."""
-    bad_file = tmp_path / "test_file.py"
-    bad_file.write_text('# This code is MIT licensed\nprint("hello")\n')
-    result = subprocess.run(
-        ["grep", "-E", "-i", "-l", PATTERN, str(bad_file)],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, "Pattern should match the synthetic file"
-    assert str(bad_file.name) in result.stdout or str(bad_file) in result.stdout
+    positive_cases = [
+        "MIT",
+        "MIT-licensed",
+        'license = { text = "MIT" }',
+    ]
+    for i, content in enumerate(positive_cases):
+        bad_file = tmp_path / f"test_file_{i}.py"
+        bad_file.write_text(content)
+        assert re.search(PYTHON_PATTERN, bad_file.read_text(), re.IGNORECASE) is not None, (
+            f"Pattern should match: {content!r}"
+        )
 
 
 def test_allowlist_excludes_legitimate_files() -> None:
@@ -35,12 +37,6 @@ def test_allowlist_excludes_legitimate_files() -> None:
 
 
 def test_pattern_rejects_permit_submit() -> None:
-    """POSIX ERE pattern does not match permit, submit, commit, or permitted."""
+    """Python re pattern does not match permit, submit, commit, or permitted."""
     for word in ("permit", "submit", "commit", "permitted"):
-        result = subprocess.run(
-            ["grep", "-E", "-i", PATTERN],
-            input=word,
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode != 0, f"Pattern should NOT match '{word}'"
+        assert re.search(PYTHON_PATTERN, word, re.IGNORECASE) is None, f"False positive: {word}"
