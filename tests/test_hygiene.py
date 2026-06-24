@@ -192,3 +192,19 @@ def test_root_changelog_has_no_version_headings() -> None:
     assert version_headings == [], (
         f"Root CHANGELOG.md contains stale version headings: {version_headings[:3]}"
     )
+
+
+def test_uat_baseline_failures_json_schema() -> None:
+    """baseline-uat-failures.json must be valid JSON with required fields per entry."""
+    import json
+
+    registry_path = Path("tests/fixtures/baseline-uat-failures.json")
+    assert registry_path.exists(), "baseline-uat-failures.json not found"
+    entries = json.loads(registry_path.read_text())
+    assert isinstance(entries, list), "Registry must be a JSON array"
+    for entry in entries:
+        assert isinstance(entry.get("journey_id"), int), f"journey_id must be int in entry: {entry}"
+        assert isinstance(entry.get("reason"), str), f"reason must be str in entry: {entry}"
+        assert isinstance(entry.get("tracking_reference"), str), (
+            f"tracking_reference must be str in entry: {entry}"
+        )
