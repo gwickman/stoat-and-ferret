@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import subprocess
 
 import pytest
 
@@ -164,3 +165,17 @@ def test_no_auto_dev_artifacts_in_product_tree_bites(tmp_path: pathlib.Path) -> 
     (auto_dev_dir / "IMPACT_ASSESSMENT.md").write_text("# test")
     violations = _auto_dev_artifacts_present(tmp_path)
     assert violations, "bite test: expected violations when docs/auto-dev/ recreated in tmp_path"
+
+
+def test_orchestration_artifacts_not_tracked() -> None:
+    """Orchestration runtime files must not be tracked in the git index."""
+    result = subprocess.run(
+        ["git", "ls-files", ".claude/scheduled_tasks.lock", "merge_result.txt"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, "git ls-files failed"
+    assert result.stdout.strip() == "", (
+        f"Orchestration artifacts are still tracked: {result.stdout.strip()}"
+    )

@@ -233,6 +233,10 @@ pytest_*.txt
 # Claude Code session metadata — worktrees are local-only scratch areas.
 .claude/worktrees/
 
+# Orchestration runtime artifacts
+.claude/*.lock
+merge_result*.txt
+
 # Test evidence artifacts — locally-generated per-run output from UAT and
 # chatbot-driven testing. Each top-level subdir is a single run (typically
 # timestamped YYYYMMDD_HHMMSS). Never tracked.
