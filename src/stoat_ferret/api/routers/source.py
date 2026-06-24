@@ -7,23 +7,33 @@ from __future__ import annotations
 import importlib.metadata
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from stoat_ferret.api.settings import get_settings
 
 router = APIRouter(prefix="/api/v1", tags=["compliance"])
 
 
-@router.get("/source")
-async def get_source() -> dict[str, str]:
+class SourceResponse(BaseModel):
+    """Typed response model for GET /api/v1/source (BL-539)."""
+
+    source_url: str
+    version: str
+    commit: str
+    license: str
+
+
+@router.get("/source", response_model=SourceResponse)
+async def get_source() -> SourceResponse:
     """Return source URL, version, commit, and license for AGPL §13 compliance.
 
     Returns:
-        JSON with source_url, version, commit, and license fields.
+        SourceResponse with source_url, version, commit, and license fields.
     """
     settings = get_settings()
-    return {
-        "source_url": settings.source_url,
-        "version": importlib.metadata.version("stoat-ferret"),
-        "commit": settings.build_commit,
-        "license": "AGPL-3.0-or-later",
-    }
+    return SourceResponse(
+        source_url=settings.source_url,
+        version=importlib.metadata.version("stoat-ferret"),
+        commit=settings.build_commit,
+        license="AGPL-3.0-or-later",
+    )

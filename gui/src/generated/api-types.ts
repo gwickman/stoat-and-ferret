@@ -2705,7 +2705,7 @@ export interface paths {
          * @description Return source URL, version, commit, and license for AGPL §13 compliance.
          *
          *     Returns:
-         *         JSON with source_url, version, commit, and license fields.
+         *         SourceResponse with source_url, version, commit, and license fields.
          */
         get: operations["get_source_api_v1_source_get"];
         put?: never;
@@ -4308,6 +4308,20 @@ export interface components {
              * @description Final stored name, always beginning with ``seeded_`` (INV-SEED-2). Useful for querying pass-through GET endpoints.
              */
             name: string;
+        };
+        /**
+         * SourceResponse
+         * @description Typed response model for GET /api/v1/source (BL-539).
+         */
+        SourceResponse: {
+            /** Source Url */
+            source_url: string;
+            /** Version */
+            version: string;
+            /** Commit */
+            commit: string;
+            /** License */
+            license: string;
         };
         /**
          * SystemState
@@ -7945,9 +7959,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["SourceResponse"];
                 };
             };
         };
