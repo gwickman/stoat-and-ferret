@@ -37,8 +37,19 @@ def test_missing_dep_exits_nonzero(tmp_path: Path) -> None:
 def test_current_pyproject_passes() -> None:
     """Checker exits 0 on current pyproject.toml and inventory."""
     result = subprocess.run(
-        ["uv", "run", "python", SCRIPT],
+        ["uv", "run", "python", SCRIPT, "--check"],
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, f"Check failed: {result.stdout}\n{result.stderr}"
+
+
+def test_no_arg_prints_usage() -> None:
+    """Invoking the script without --check prints a usage message and exits 0."""
+    result = subprocess.run(
+        ["uv", "run", "python", SCRIPT],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"Unexpected non-zero exit: {result.stderr}"
+    assert "Use --check" in result.stdout, f"Expected usage message in stdout: {result.stdout!r}"

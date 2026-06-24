@@ -19,6 +19,11 @@
 
 ## Python Direct Production Dependencies
 
+> **Automated enforcement scope:** The `scripts/check_dependency_licenses.py --check`
+> command enforces only `[project.dependencies]` from `pyproject.toml`.
+> Dependencies in `[project.optional-dependencies]` and `[dependency-groups]` are
+> NOT checked automatically and require manual review when changed.
+
 Source: `pyproject.toml` `[project.dependencies]`
 
 | name | version | declared license (SPDX) | conveyance | classification | AGPL-3.0-or-later compat | notice-required |
