@@ -4,6 +4,25 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v085 — Post-v084 Compliance and Hygiene Wave (2026-06-24)
+
+### Added
+
+- **C4 API documentation update**: `api-server-api.yaml` updated to AGPL-3.0-or-later; `/api/v1/source` endpoint and `SourceResponse` model documented in C4 YAML (BL-541, PR #642)
+- **CI stray-reference YAML scan**: Stray-reference grep extended to scan `*.yaml` and `*.yml` files (BL-541, PR #643)
+- **Gitignore orchestration guard assertion**: Test asserts orchestration guard patterns are present in `.gitignore` (BL-543, PR #645)
+
+### Fixed
+
+- **dep-checker test scope**: No-op test replaced with functional assertion; `test_no_arg_prints_usage` added; scope boundary documented (BL-542, PR #644)
+- **stray-MIT test portability**: `subprocess.run(["grep", ...])` replaced with Python `re` for Windows portability (BL-544, PR #646)
+
+### PRs
+
+#642, #643, #644, #645, #646
+
+---
+
 ## v084 — Post-v083 Compliance Hygiene Wave (2026-06-24)
 
 ### Added
