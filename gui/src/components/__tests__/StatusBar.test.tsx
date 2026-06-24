@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import StatusBar from '../StatusBar'
 
@@ -54,5 +54,58 @@ describe('Source compliance link', () => {
       const link = screen.getByTestId('source-code-link')
       expect(link.getAttribute('href')).toBe('https://github.com/gwickman/stoat-and-ferret')
     })
+  })
+})
+
+const FALLBACK = 'https://github.com/gwickman/stoat-and-ferret'
+
+async function renderWithSourceUrl(sourceUrl: unknown): Promise<HTMLElement> {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({ source_url: sourceUrl, version: '0.84.0', commit: 'abc', license: 'AGPL-3.0' }),
+      { status: 200 }
+    )
+  )
+  render(<StatusBar connectionState="connected" />)
+  await act(async () => {})
+  return screen.getByTestId('source-code-link')
+}
+
+describe('StatusBar URL scheme validation', () => {
+  it('rejects javascript: scheme', async () => {
+    const link = await renderWithSourceUrl('javascript:alert(1)')
+    expect(link.getAttribute('href')).toBe(FALLBACK)
+  })
+
+  it('rejects data: scheme', async () => {
+    const link = await renderWithSourceUrl('data:text/html,x')
+    expect(link.getAttribute('href')).toBe(FALLBACK)
+  })
+
+  it('rejects relative path', async () => {
+    const link = await renderWithSourceUrl('/relative/path')
+    expect(link.getAttribute('href')).toBe(FALLBACK)
+  })
+
+  it('rejects protocol-relative URL', async () => {
+    const link = await renderWithSourceUrl('//host/path')
+    expect(link.getAttribute('href')).toBe(FALLBACK)
+  })
+
+  it('rejects empty string', async () => {
+    const link = await renderWithSourceUrl('')
+    expect(link.getAttribute('href')).toBe(FALLBACK)
+  })
+
+  it('accepts valid https URL', async () => {
+    const url = 'https://github.com/gwickman/stoat-and-ferret'
+    const link = await renderWithSourceUrl(url)
+    expect(link.getAttribute('href')).toBe(url)
+  })
+
+  it('accepts valid http URL', async () => {
+    const url = 'http://internal.host/source'
+    const link = await renderWithSourceUrl(url)
+    expect(link.getAttribute('href')).toBe(url)
   })
 })

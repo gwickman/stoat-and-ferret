@@ -150,7 +150,7 @@ The AGPL §13 source-offer affordance exposes source URL, version, and commit in
 
 **Security implications**
 
-- `STOAT_SOURCE_URL` accepts any string — no URL-format validation is applied at the API layer (clients validate). An operator who sets this to a non-reachable URL satisfies the API contract but may not satisfy the AGPLv3 §13 legal obligation. Review the value during deployment hardening to ensure it points at a publicly accessible source archive.
+- `STOAT_SOURCE_URL` accepts any string — no URL-format validation is applied at the API layer. The GUI client accepts only absolute `http:`/`https:` URLs for this setting; any non-http(s), relative, or malformed value causes the StatusBar to display the default source link instead. An operator who sets this to a non-reachable URL satisfies the API contract but may not satisfy the AGPLv3 §13 legal obligation. Review the value during deployment hardening to ensure it points at a publicly accessible source archive.
 - `STOAT_BUILD_COMMIT` is an informational field for operational traceability. It does not affect security posture. Omitting it (leaving `"unknown"`) reduces auditability but does not introduce a vulnerability.
 - The `/api/v1/source` endpoint is unauthenticated by design — AGPL §13 requires that the source offer be available to all network-served users. Do not add authentication guards to this route.
 

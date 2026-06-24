@@ -3,6 +3,17 @@ import type { ConnectionState } from '../hooks/useWebSocket'
 
 const FALLBACK_SOURCE_URL = 'https://github.com/gwickman/stoat-and-ferret'
 
+function validateSourceUrl(url: unknown): string | null {
+  if (typeof url !== 'string' || url === '') return null
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+    return url
+  } catch {
+    return null
+  }
+}
+
 const STATE_LABELS: Record<ConnectionState, string> = {
   connected: 'Connected',
   disconnected: 'Disconnected',
@@ -25,8 +36,12 @@ export default function StatusBar({ connectionState }: StatusBarProps) {
   React.useEffect(() => {
     fetch('/api/v1/source')
       .then((r) => r.json())
-      .then((d: { source_url: string }) => {
-        if (linkRef.current) linkRef.current.setAttribute('href', d.source_url)
+      .then((d: { source_url: unknown }) => {
+        const safeUrl = validateSourceUrl(d.source_url)
+        if (safeUrl !== null && linkRef.current) {
+          linkRef.current.setAttribute('href', safeUrl)
+        }
+        // else: href stays at FALLBACK_SOURCE_URL (initial JSX value)
       })
       .catch(() => {
         // fallback href remains as set in JSX
