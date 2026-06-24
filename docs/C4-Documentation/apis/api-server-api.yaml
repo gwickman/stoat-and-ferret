@@ -11,7 +11,8 @@ info:
     logging (JSON or console) is initialised on application startup via configure_logging().
   version: "0.3.0"
   license:
-    name: MIT
+    name: AGPL-3.0-or-later
+    url: https://www.gnu.org/licenses/agpl-3.0.html
 
 servers:
   - url: http://localhost:8765
@@ -1190,6 +1191,22 @@ paths:
             text/plain:
               schema: { type: string }
 
+  # --- Compliance ---
+
+  /api/v1/source:
+    get:
+      summary: Get source offer compliance information
+      operationId: get_source_api_v1_source_get
+      tags:
+        - compliance
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceResponse'
+
 components:
   parameters:
     VideoId:
@@ -1794,3 +1811,25 @@ components:
                     type: string
                   message:
                     type: string
+
+    SourceResponse:
+      type: object
+      required:
+        - source_url
+        - version
+        - commit
+        - license
+      properties:
+        source_url:
+          type: string
+          title: Source Url
+        version:
+          type: string
+          title: Version
+        commit:
+          type: string
+          title: Commit
+        license:
+          type: string
+          title: License
+      title: SourceResponse
