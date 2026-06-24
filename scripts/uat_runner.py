@@ -162,11 +162,15 @@ def load_known_failures(
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
-        if not isinstance(data, dict) or "failures" not in data:
+        if isinstance(data, list):
+            failures_list = data
+        elif isinstance(data, dict) and "failures" in data:
+            failures_list = data["failures"]
+        else:
             raise ValueError("Registry must contain 'failures' key")
 
         failures_by_id: dict[int, dict[str, str]] = {}
-        for entry in data.get("failures", []):
+        for entry in failures_list:
             journey_id = entry.get("journey_id")
             if not isinstance(journey_id, int):
                 raise ValueError(f"journey_id must be integer, got {type(journey_id).__name__}")
