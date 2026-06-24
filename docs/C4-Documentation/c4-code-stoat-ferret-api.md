@@ -5,7 +5,7 @@
 - **Description**: FastAPI application factory, settings, and entry point for the stoat-and-ferret video editor API
 - **Location**: `src/stoat_ferret/api/`
 - **Language**: Python (async/await)
-- **Purpose**: Configure and wire together all API components including 16 routers, middleware, lifespan management, WebSocket support, Prometheus metrics, render/preview/proxy services, and static file serving
+- **Purpose**: Configure and wire together all API components including 17 routers, middleware, lifespan management, WebSocket support, Prometheus metrics, render/preview/proxy services, and static file serving
 - **Parent Component**: [API Gateway](./c4-component-api-gateway.md)
 
 ## Code Elements
@@ -20,7 +20,7 @@
   - Dependencies: `aiosqlite`, `get_settings`, `configure_logging`, `create_tables_async`, `AsyncSQLiteVideoRepository`, `ThumbnailService`, `WaveformService`, `ProxyService`, `RealFFmpegExecutor`, `ObservableFFmpegExecutor`, `RealAsyncFFmpegExecutor`, `AsyncioJobQueue`, `ConnectionManager`, `AuditLogger`, `AsyncSQLiteBatchRepository`, `SQLiteProxyRepository`, `RenderQueue`, `RenderExecutor`, `RenderCheckpointManager`, `RenderService`, `AsyncSQLiteRenderRepository`, `PreviewManager`, `PreviewCache`, `HLSGenerator`, `SQLitePreviewRepository`
 
 - `create_app(*, video_repository: AsyncVideoRepository | None, project_repository: AsyncProjectRepository | None, clip_repository: AsyncClipRepository | None, timeline_repository: AsyncTimelineRepository | None, version_repository: AsyncVersionRepository | None, batch_repository: AsyncBatchRepository | None, proxy_repository: AsyncProxyRepository | None, render_repository: AsyncRenderRepository | None, render_queue: RenderQueue | None, render_service: RenderService | None, job_queue: AsyncioJobQueue | None, ws_manager: ConnectionManager | None, effect_registry: EffectRegistry | None, ffmpeg_executor: FFmpegExecutor | None, audit_logger: AuditLogger | None, preview_manager: PreviewManager | None, preview_cache: PreviewCache | None, thumbnail_service: ThumbnailService | None, waveform_service: WaveformService | None, gui_static_path: str | Path | None, client_identity_store: ClientIdentityStore | None) -> FastAPI`
-  - Description: Application factory. Creates FastAPI app with 16 routers (health, videos, projects, jobs, effects, compose, audio, filesystem, timeline, batch, preview, proxy, render, thumbnails, versions, waveform), WebSocket route (/ws), 2 middleware layers (CorrelationId outermost, Metrics inner), Prometheus /metrics mount, optional frontend SPA at /gui, and custom OpenAPI schema injection for ProxyStatus/ProxyQuality enums. Full DI support for testing via keyword arguments. `client_identity_store` defaults to a new `InMemoryClientIdentityStore` if not provided; stored on `app.state.client_identity_store`. See [c4-code-websocket-identity.md](./c4-code-websocket-identity.md) for identity module details.
+  - Description: Application factory. Creates FastAPI app with 17 routers (health, videos, projects, jobs, effects, compose, audio, filesystem, timeline, batch, preview, proxy, render, thumbnails, versions, waveform, source), WebSocket route (/ws), 2 middleware layers (CorrelationId outermost, Metrics inner), Prometheus /metrics mount, optional frontend SPA at /gui, and custom OpenAPI schema injection for ProxyStatus/ProxyQuality enums. Full DI support for testing via keyword arguments. `client_identity_store` defaults to a new `InMemoryClientIdentityStore` if not provided; stored on `app.state.client_identity_store`. See [c4-code-websocket-identity.md](./c4-code-websocket-identity.md) for identity module details.
   - Location: `src/stoat_ferret/api/app.py:430`
   - Dependencies: All routers, middleware, settings, `ConnectionManager`, `prometheus_client`, `ClientIdentityStore`, `InMemoryClientIdentityStore`
 
@@ -77,6 +77,8 @@
     - `preview_cache_max_sessions: int` (default `5`, range 1-100)
     - `preview_cache_max_bytes: int` (default `1_073_741_824`)
     - `allowed_scan_roots: list[str]` (default `[]`)
+    - `source_url: str` (env `STOAT_SOURCE_URL`)
+    - `build_commit: str` (env `STOAT_BUILD_COMMIT`)
   - Properties:
     - `database_path_resolved -> Path` — returns database_path as a Path object
   - Dependencies: `pydantic_settings.BaseSettings`, `pydantic.Field`
@@ -85,7 +87,7 @@
 
 ### Internal Dependencies
 - `stoat_ferret.api.middleware` — CorrelationIdMiddleware, MetricsMiddleware
-- `stoat_ferret.api.routers` — health, videos, projects, jobs, effects, compose, audio, filesystem, timeline, batch, preview, proxy, render, thumbnails, versions, waveform
+- `stoat_ferret.api.routers` — health, videos, projects, jobs, effects, compose, audio, filesystem, timeline, batch, preview, proxy, render, thumbnails, versions, waveform, source
 - `stoat_ferret.api.routers.ws` — websocket_endpoint
 - `stoat_ferret.api.services` — ProxyService, make_proxy_handler, make_scan_handler, ThumbnailService, WaveformService
 - `stoat_ferret.api.websocket` — ConnectionManager
@@ -131,7 +133,7 @@ flowchart TB
     lifespan --> Settings
 
     subgraph "Registered Routers"
-        routers["health, videos, projects, jobs,<br/>effects, compose, audio, filesystem,<br/>timeline, batch, preview, proxy,<br/>render, thumbnails, versions, waveform"]
+        routers["health, videos, projects, jobs,<br/>effects, compose, audio, filesystem,<br/>timeline, batch, preview, proxy,<br/>render, thumbnails, versions, waveform,<br/>source"]
         middleware["CorrelationId +<br/>Metrics middleware"]
         ws_route["/ws endpoint"]
         metrics_app["/metrics Prometheus"]
