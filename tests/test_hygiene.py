@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import pathlib
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -178,4 +179,16 @@ def test_orchestration_artifacts_not_tracked() -> None:
     assert result.returncode == 0, "git ls-files failed"
     assert result.stdout.strip() == "", (
         f"Orchestration artifacts are still tracked: {result.stdout.strip()}"
+    )
+
+
+def test_root_changelog_has_no_version_headings() -> None:
+    """Root CHANGELOG.md must not contain ^## v section headings (redirect stub only)."""
+    changelog = Path("CHANGELOG.md")
+    if not changelog.exists():
+        return  # No CHANGELOG.md at root is also acceptable
+    content = changelog.read_text()
+    version_headings = [line for line in content.splitlines() if line.startswith("## v")]
+    assert version_headings == [], (
+        f"Root CHANGELOG.md contains stale version headings: {version_headings[:3]}"
     )
