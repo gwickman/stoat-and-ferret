@@ -2,7 +2,7 @@
 
 Stoat & Ferret is an AI-driven programmatic video editor built on a hybrid Python/Rust architecture. It provides a REST API for video library management, timeline-based clip editing, and an extensible FFmpeg effects system -- all designed for programmatic control by AI agents or developer tooling.
 
-**Version:** 0.3.0 | **License:** MIT | **Python:** >=3.10
+**Version:** 0.3.0 | **License:** AGPL-3.0 | **Python:** >=3.10
 
 ## Architecture at a Glance
 

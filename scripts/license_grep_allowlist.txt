@@ -29,3 +29,12 @@ NOTICE.md
 # Design docs reference historical Apache-2.0/MIT license state
 docs/design/03-release-03/01-roadmap.md
 docs/design/03-release-03/backlog/BL-DRAFT-bl516-tts.md
+
+# Capabilities and requirements doc discusses AGPL vs MIT license trade-offs
+docs/design/03-release-03/03-capabilities-and-requirements.md
+
+# Test fixtures for add_license_headers tests use MIT SPDX identifier to verify wrong headers are rejected
+tests/unit/test_add_license_headers.py
+
+# Stray-reference detector test file — contains MIT in the POSIX ERE pattern string under test
+tests/test_license_stray.py
