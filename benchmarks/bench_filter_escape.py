@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Benchmarks for FFmpeg filter text escaping: Rust vs Python.
 
 Compares escape_filter_text (Rust via PyO3) against a pure Python

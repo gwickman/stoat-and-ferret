@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 import json, sys
 
 action = sys.argv[1] if len(sys.argv) > 1 else "start_exploration"

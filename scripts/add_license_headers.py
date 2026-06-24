@@ -9,14 +9,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-PYTHON_ROOTS = ["src", "tests", "scripts", "alembic"]
-RUST_ROOTS = ["rust"]
-
-# Exclusion list — single source of truth shared by --write and --check modes
+# Exclusion list — single source of truth shared by --write and --check modes.
+# New entries require a documented rationale in a comment.
 EXCLUDE_PATHS: set[str] = {
-    "src/stoat_ferret_core/_core.pyi",
+    "src/stoat_ferret_core/_core.pyi",  # generated PyO3 stub; not distributed as source
 }
 
+# Safety-net directory exclusions (gitignored dirs are already absent from git ls-files output).
 EXCLUDE_DIRS: set[str] = {
     "target",
     ".venv",
@@ -48,16 +47,6 @@ def _get_repo_root() -> Path:
     return Path(result.stdout.strip())
 
 
-def _is_git_ignored(path: Path, repo_root: Path) -> bool:
-    """Return True if git considers the path ignored."""
-    result = subprocess.run(
-        ["git", "check-ignore", "-q", str(path)],
-        capture_output=True,
-        cwd=repo_root,
-    )
-    return result.returncode == 0
-
-
 def _is_excluded(path: Path, repo_root: Path) -> bool:
     """Return True if this file should be skipped."""
     rel = path.relative_to(repo_root).as_posix()
@@ -67,20 +56,26 @@ def _is_excluded(path: Path, repo_root: Path) -> bool:
 
 
 def _enumerate_files(repo_root: Path) -> list[Path]:
-    """Enumerate all .py and .rs files in scope."""
-    files: list[Path] = []
-    for root_name in PYTHON_ROOTS:
-        root_dir = repo_root / root_name
-        if root_dir.is_dir():
-            for p in root_dir.rglob("*.py"):
-                if not _is_excluded(p, repo_root) and not _is_git_ignored(p, repo_root):
-                    files.append(p)
-    for root_name in RUST_ROOTS:
-        root_dir = repo_root / root_name
-        if root_dir.is_dir():
-            for p in root_dir.rglob("*.rs"):
-                if not _is_excluded(p, repo_root) and not _is_git_ignored(p, repo_root):
-                    files.append(p)
+    """Enumerate all git-tracked .py and .rs files, applying EXCLUDE_PATHS filtering."""
+    result = subprocess.run(
+        ["git", "ls-files", "*.py", "*.rs"],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=repo_root,
+    )
+    if result.returncode == 128:
+        raise SystemExit("Error: not in a git repository")
+    if result.returncode != 0:
+        raise SystemExit(f"git ls-files failed: {result.stderr}")
+    files = []
+    for rel in result.stdout.splitlines():
+        rel = rel.strip()
+        if not rel:
+            continue
+        p = repo_root / rel
+        if not _is_excluded(p, repo_root):
+            files.append(p)
     return files
 
 
