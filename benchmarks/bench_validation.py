@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Benchmarks for path validation: Rust vs Python.
 
 Compares validate_path (Rust via PyO3) against a pure Python
