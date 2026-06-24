@@ -38,3 +38,6 @@ tests/unit/test_add_license_headers.py
 
 # Stray-reference detector test file — contains MIT in the POSIX ERE pattern string under test
 tests/test_license_stray.py
+
+# README.md release-notes section describes the "bare MIT token detection" feature (BL-538) — not a stray license ref
+README.md
