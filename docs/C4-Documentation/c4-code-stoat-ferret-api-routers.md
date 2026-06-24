@@ -132,6 +132,28 @@ Exposes `GET /api/v1/system/state` — a best-effort aggregate snapshot of in-me
 
 `get_system_state()` reads `app.state.render_repository` (an `AsyncRenderRepository`) to include active render jobs in the system state snapshot. Only RUNNING and QUEUED render jobs are fetched (not historical completed/failed jobs). Each render job is surfaced as a `JobSummary` with `job_type="render"`. The render repository is accessed via `getattr(app_state, "render_repository", None)` so the endpoint degrades gracefully when the render subsystem is unavailable (NFR-003).
 
+### Source Router (source.py)
+
+Provides AGPL §13 source-offer compliance endpoint under `/api/v1`.
+
+- **File**: `src/stoat_ferret/api/routers/source.py`
+- **Router**: `APIRouter(prefix="/api/v1", tags=["compliance"])` (line 14)
+
+#### Response Model
+
+- `SourceResponse(BaseModel)` (line 17)
+  - Description: Typed response model for `GET /api/v1/source` (BL-539). Fields: `source_url: str`, `version: str`, `commit: str`, `license: str`.
+  - Location: `src/stoat_ferret/api/routers/source.py:17`
+
+#### Endpoint
+
+- `async get_source() -> SourceResponse`
+  - Description: Returns source URL, version, commit, and license for AGPL §13 compliance. Reads `source_url` and `build_commit` from `Settings`; derives `version` from `importlib.metadata`; sets `license` to `"AGPL-3.0-or-later"`.
+  - Location: `src/stoat_ferret/api/routers/source.py:27`
+  - Route: `GET /api/v1/source`
+  - Response: `SourceResponse` with fields `{source_url, version, commit, license}`
+  - Tag: `compliance`
+
 ## Dependencies
 
 ### Internal Dependencies
