@@ -556,8 +556,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check for stray Apache/MIT license references
         run: |
-          # Find files with Apache/MIT refs, excluding build dirs and generated content
-          grep -ril "apache\|mit license\|MIT License" \
+          # Find files with Apache/MIT refs (including bare MIT via POSIX ERE boundary),
+          # excluding build dirs and generated content.
+          # Pattern: apache (any form) OR bare MIT token (not part of permit/submit/commit etc.)
+          grep -r -i -l -E '(apache|(^|[^[:alnum:]_])MIT([^[:alnum:]_]|$))' \
             --include="*.md" --include="*.txt" --include="*.py" --include="*.rs" \
             --exclude-dir=".venv" --exclude-dir="node_modules" --exclude-dir="target" \
             --exclude-dir="__pycache__" \
