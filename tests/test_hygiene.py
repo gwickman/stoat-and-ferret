@@ -182,6 +182,13 @@ def test_orchestration_artifacts_not_tracked() -> None:
     )
 
 
+def test_orchestration_gitignore_guards_present() -> None:
+    gitignore = Path(__file__).parent.parent / ".gitignore"
+    content = gitignore.read_text(encoding="utf-8")
+    assert ".claude/*.lock" in content, ".claude/*.lock pattern missing from .gitignore"
+    assert "merge_result*.txt" in content, "merge_result*.txt pattern missing from .gitignore"
+
+
 def test_root_changelog_has_no_version_headings() -> None:
     """Root CHANGELOG.md must not contain ^## v section headings (redirect stub only)."""
     changelog = Path("CHANGELOG.md")
