@@ -54,6 +54,7 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k <keyword> -v
 | v074 | `test_render_contract.py`: settings-absent 422 gate (BL-465); `test_clip_workflow.py`: GET /clips/{cid} and GET /clips/{cid}/effects (BL-409, BL-405); `test_versions.py`: body-less POST auto-snapshot (BL-404); `test_uat_runner.py`: timeout regression guard (BL-398) |
 | v079 | `tests/test_api/test_tone_synthesis.py` (BL-441): ToneSynthBuilder; `tests/test_api/test_loopable_beds.py` (BL-440): `build_loop_render_command` crossfade/seek; `tests/test_api/test_pitch_shift.py` (BL-443): `PitchShiftBuilder` formant/quality; `tests/test_api/test_sub_bass_ducking.py` (BL-442): `SubBassBuilder` + `ducking_effect_schema`; `tests/smoke/test_generator_clip.py` (BL-441 AC-4): generator clip API; `tests/smoke/test_qc_oracle.py` (BL-488): QC oracle delivery-profile assertions (FFmpeg-gated) |
 | v081 | `tests/smoke/test_effects.py`: 10 new video FX smoke tests — 8 clip-applicable effects (`test_v081_video_fx_effect`) and 2 generator effects (`test_v081_generator_fx_catalog_and_preview`) (BL-450, BL-452, BL-453, BL-454, BL-455) |
+| v084 | `tests/smoke/test_source_api.py` updated — asserts `GET /api/v1/source` returns the `SourceResponse` typed Pydantic model with four named string fields (`source_url`, `version`, `commit`, `license`) as non-null strings (BL-539) |
 
 See [docs/setup/smoke-test-harness-guide/smoke-test-key-files.md](../setup/smoke-test-harness-guide/smoke-test-key-files.md) for the full per-file inventory.
 
