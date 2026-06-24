@@ -45,3 +45,31 @@ def test_absent_build_commit_returns_unknown(
         assert resp.json()["commit"] == "unknown"
     finally:
         get_settings.cache_clear()
+
+
+def test_source_response_all_fields_non_null(client: TestClient) -> None:
+    """GET /api/v1/source returns all four required fields as non-empty strings (BL-539)."""
+    resp = client.get("/api/v1/source")
+    assert resp.status_code == 200
+    data = resp.json()
+    for field in ("source_url", "version", "commit", "license"):
+        assert isinstance(data.get(field), str), f"field '{field}' missing or not a string"
+        assert data[field], f"field '{field}' is empty"
+
+
+def test_source_openapi_required_fields(client: TestClient) -> None:
+    """OpenAPI schema for GET /api/v1/source has required array with all four fields (BL-539)."""
+    resp = client.get("/openapi.json")
+    schema = resp.json()
+    source_schema = schema["paths"]["/api/v1/source"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    ref = source_schema.get("$ref", "")
+    if ref:
+        component_name = ref.split("/")[-1]
+        component = schema["components"]["schemas"][component_name]
+        required = component.get("required", [])
+    else:
+        required = source_schema.get("required", [])
+    for field in ("source_url", "version", "commit", "license"):
+        assert field in required, f"'{field}' not in OpenAPI required array"

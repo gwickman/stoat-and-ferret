@@ -4314,7 +4314,7 @@
           "compliance"
         ],
         "summary": "Get Source",
-        "description": "Return source URL, version, commit, and license for AGPL \u00a713 compliance.\n\nReturns:\n    JSON with source_url, version, commit, and license fields.",
+        "description": "Return source URL, version, commit, and license for AGPL \u00a713 compliance.\n\nReturns:\n    SourceResponse with source_url, version, commit, and license fields.",
         "operationId": "get_source_api_v1_source_get",
         "responses": {
           "200": {
@@ -4322,11 +4322,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Get Source Api V1 Source Get"
+                  "$ref": "#/components/schemas/SourceResponse"
                 }
               }
             }
@@ -7211,6 +7207,35 @@
             "name": "seeded_demo_timeline"
           }
         ]
+      },
+      "SourceResponse": {
+        "properties": {
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          },
+          "license": {
+            "type": "string",
+            "title": "License"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_url",
+          "version",
+          "commit",
+          "license"
+        ],
+        "title": "SourceResponse",
+        "description": "Typed response model for GET /api/v1/source (BL-539)."
       },
       "SystemState": {
         "properties": {
