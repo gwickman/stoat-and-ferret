@@ -560,7 +560,7 @@ jobs:
           # excluding build dirs and generated content.
           # Pattern: apache (any form) OR bare MIT token (not part of permit/submit/commit etc.)
           grep -r -i -l -E '(apache|(^|[^[:alnum:]_])MIT([^[:alnum:]_]|$))' \
-            --include="*.md" --include="*.txt" --include="*.py" --include="*.rs" \
+            --include="*.md" --include="*.txt" --include="*.py" --include="*.rs" --include="*.yaml" --include="*.yml" \
             --exclude-dir=".venv" --exclude-dir="node_modules" --exclude-dir="target" \
             --exclude-dir="__pycache__" \
             . 2>/dev/null | sed 's|^\./||' | sort > /tmp/apache_mit_files.txt

@@ -41,3 +41,6 @@ tests/test_license_stray.py
 
 # README.md release-notes section describes the "bare MIT token detection" feature (BL-538) — not a stray license ref
 README.md
+
+# CI workflow references Apache/MIT in step names and comments for the stray-reference scan itself
+.github/workflows/ci.yml
