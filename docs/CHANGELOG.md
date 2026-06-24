@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v084 — Post-v083 Compliance Hygiene Wave (2026-06-24)
+
+### Added
+
+- **GUI URL validation**: Validate Source link URL scheme before assigning to GUI href in StatusBar — prevent `javascript:` and other unsafe schemes from reaching `<a href>` (BL-537, PR #630)
+- **Source endpoint typed response model**: `SourceResponse` Pydantic model added to `GET /api/v1/source` for strict schema validation and OpenAPI visibility (BL-539, PR #631)
+- **C4 docs source router coverage**: C4 code-level docs updated to include `source.py` compliance router and `STOAT_SOURCE_URL` / `STOAT_BUILD_COMMIT` settings introduced in v083 (BL-531, PR #632)
+- **Source contract smoke test**: Smoke test for `GET /api/v1/source` contract added to CI coverage (PR #633)
+- **Source contract harness guide**: Agent harness documentation updated with source contract verification steps (PR #634)
+- **SPDX header gate expanded**: `scripts/check_spdx_headers.sh` updated to scan all `git ls-files`-tracked `.py` and `.rs` files — removes the previous per-directory allowlist (BL-532, PR #635)
+- **Manifest-driven license checker**: `scripts/check_dependency_licenses.py` now derives its inventory from `pyproject.toml` rather than a hardcoded list; copyleft detection added (BL-533, PR #636)
+- **Bare MIT token detection**: POSIX ERE stray-reference grep extended to catch bare `MIT` license tokens missed by the prior allowlist approach (BL-538, PR #637)
+- **Orchestration artifacts removal**: Committed auto-dev orchestration artifacts removed from product repo; `.gitignore` guards added to prevent re-introduction (BL-534, PR #638)
+- **Root CHANGELOG redirect**: Stale `CHANGELOG.md` at repo root replaced with a redirect stub pointing to `docs/CHANGELOG.md` (BL-535, PR #639)
+- **UAT known-failures registry — Journey 204**: `baseline-uat-failures.json` now registers Journey 204 (export-render) as a known failure with reason and tracking reference; `uat_runner.py` updated to handle legacy dict format (BL-536, PR #640)
+
+### Deferred (pending discharge)
+
+- BL-536 AC-2: `uat_runner.py` exits 0 when only registered journeys fail — requires live headless UAT run
+- BL-536 AC-3: Confirmation UAT report lists zero unexpected failures — requires live headless UAT run
+
+### PRs
+
+#630, #631, #632, #633, #634, #635, #636, #637, #638, #639, #640
+
+---
+
 ## v083 — AGPL Relicense + Repo Hygiene (2026-06-23)
 
 ### License Change
