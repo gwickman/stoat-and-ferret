@@ -45,6 +45,7 @@ packages = ["src/stoat_ferret", "src/stoat_ferret_core"]
 
 [dependency-groups]
 dev = [
+    "tomli>=2.0; python_version < '3.11'",
     "pytest>=8.0",
     "pytest-cov>=4.0",
     "pytest-asyncio>=0.23",
