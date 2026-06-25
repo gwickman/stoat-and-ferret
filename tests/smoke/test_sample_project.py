@@ -160,10 +160,9 @@ async def test_sample_project_structure(
         else:
             assert len(clip_effects) == 0, f"Clip {i}: expected no effects, got {len(clip_effects)}"
 
-    # --- BL-551: Multi-clip render preflight rejection ---
-    # The sample project has 4 clips; BL-551 preflight rejects multi-clip renders
-    # with 422 MULTI_CLIP_NOT_SUPPORTED. Single-clip render queueing is covered by
-    # test_system_state_smoke.py which seeds a 1-clip project.
+    # --- BL-505: Multi-clip render now accepted via RenderGraphTranslator ---
+    # The sample project has 4 clips; BL-505 integrates the Rust translator so
+    # multi-clip renders are accepted (201) instead of rejected.
     render_resp = await client.post(
         "/api/v1/render",
         json={
@@ -171,9 +170,7 @@ async def test_sample_project_structure(
             "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
         },
     )
-    assert render_resp.status_code == 422
-    body = render_resp.json()
-    assert body["detail"]["code"] == "MULTI_CLIP_NOT_SUPPORTED"
+    assert render_resp.status_code == 201
 
 
 @pytest.fixture()
