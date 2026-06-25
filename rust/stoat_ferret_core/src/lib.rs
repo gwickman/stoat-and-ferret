@@ -16,7 +16,7 @@
 //! - [`compose`] - Overlay and scale filter builders for multi-stream composition
 //! - [`batch`] - Batch render progress aggregation
 //! - [`preview`] - Preview filter graph simplification
-//! - [`render`] - Render plan builder and settings validation
+//! - [`render`] - Render plan builder, settings validation, and graph translator
 //! - [`schema`] - Parameter schema translator for AI-facing effect discovery
 //! - [`version`] - Deployment version metadata (build timestamp, git SHA)
 

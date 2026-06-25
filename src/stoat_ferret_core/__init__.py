@@ -71,6 +71,7 @@ try:
         ChromaKeyBuilder,
         ChromaticAberrationBuilder,
         Clip,
+        ClipWithEffects,
         ClipValidationError,
         ColorKeyBuilder,
         ColorLutBuilder,
@@ -119,6 +120,8 @@ try:
         ProgressInfo,
         Region,
         RenderCommand,
+        RenderEffect,
+        RenderGraphTranslator,
         RenderSegment,
         RenderSettings,
         ReverseBuilder,
@@ -326,6 +329,9 @@ except ImportError:
     SanitizationError = RuntimeError  # type: ignore[misc,assignment]
     LayoutError = RuntimeError  # type: ignore[misc,assignment]
     VersionInfo = _not_built  # type: ignore[misc,assignment]
+    ClipWithEffects = _not_built  # type: ignore[misc,assignment]
+    RenderEffect = _not_built  # type: ignore[misc,assignment]
+    RenderGraphTranslator = _not_built  # type: ignore[misc,assignment]
 
 
 __all__ = [
@@ -485,4 +491,8 @@ __all__ = [
     "parse_silence_report",
     "parse_spectral_report",
     "parse_video_defect_report",
+    # Render graph translator
+    "ClipWithEffects",
+    "RenderEffect",
+    "RenderGraphTranslator",
 ]
