@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import re
 import shutil
 import subprocess
 import uuid
@@ -36,6 +38,7 @@ from stoat_ferret.api.schemas.render import (
     FormatListResponse,
     QualityPresetInfo,
     QueueStatusResponse,
+    RenderJobEvidenceResponse,
     RenderJobResponse,
     RenderListResponse,
     RenderPreviewRequest,
@@ -189,6 +192,21 @@ async def _get_delivery_profile_repository(request: Request) -> DeliveryProfileR
 
 
 # ---------- Helpers ----------
+
+
+_SK_OR_V1_PATTERN = re.compile(r"^sk-or-v1-")
+
+
+def _redact_command_args(args: list[str]) -> list[str]:
+    """Redact sk-or-v1-* API keys and STOAT_* env var values from command args."""
+    stoat_values = {v for k, v in os.environ.items() if k.startswith("STOAT_") and v}
+    redacted: list[str] = []
+    for arg in args:
+        if _SK_OR_V1_PATTERN.match(arg) or (arg and arg in stoat_values):
+            redacted.append("[REDACTED]")
+        else:
+            redacted.append(arg)
+    return redacted
 
 
 def _job_to_response(job: RenderJob) -> RenderJobResponse:
@@ -1022,7 +1040,74 @@ async def get_queue_status(
 
 # ---------- Render job endpoints ----------
 
-# Frame preview must be registered before /render/{job_id} to avoid path-param conflicts.
+# Sub-path endpoints (/evidence, /frame_preview.jpg) must be registered before
+# /render/{job_id} to avoid path-parameter conflicts with FastAPI's router.
+
+
+@router.get("/render/{job_id}/evidence", response_model=RenderJobEvidenceResponse)
+async def get_render_job_evidence(
+    job_id: str,
+    repo: RenderRepoDep,
+) -> RenderJobEvidenceResponse:
+    """Return full FFmpeg evidence for a completed render job.
+
+    Access is gated by the STOAT_RENDER_EVIDENCE_FULL_ACCESS environment variable.
+    When disabled (default), returns 403. When enabled, returns command_args,
+    exit_code, stderr_tail, output_path, output_size_bytes, and filter_script_path
+    with sensitive values redacted (sk-or-v1-* API keys, STOAT_* env var values).
+
+    Args:
+        job_id: The render job UUID.
+        repo: Render repository dependency.
+
+    Returns:
+        Full evidence response.
+
+    Raises:
+        HTTPException: 403 if STOAT_RENDER_EVIDENCE_FULL_ACCESS is not enabled,
+            404 if job or evidence not found.
+    """
+    settings = get_settings()
+    if not settings.render_evidence_full_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "EVIDENCE_ACCESS_DISABLED",
+                "message": (
+                    "Full evidence access is disabled. "
+                    "Set STOAT_RENDER_EVIDENCE_FULL_ACCESS=true to enable."
+                ),
+            },
+        )
+
+    job = await repo.get(job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Render job {job_id} not found"},
+        )
+
+    if job.evidence_json is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "EVIDENCE_NOT_FOUND",
+                "message": f"No evidence found for render job {job_id}",
+            },
+        )
+
+    evidence = json.loads(job.evidence_json)
+    raw_args: list[str] = evidence.get("command_args") or []
+
+    return RenderJobEvidenceResponse(
+        job_id=job_id,
+        command_args=_redact_command_args(raw_args),
+        exit_code=evidence.get("exit_code"),
+        stderr_tail=evidence.get("stderr_tail") or "",
+        output_path=evidence.get("output_path") or "",
+        output_size_bytes=evidence.get("output_size_bytes"),
+        filter_script_path=evidence.get("filter_script_path"),
+    )
 
 
 @router.get("/render/{job_id}/frame_preview.jpg")

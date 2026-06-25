@@ -304,6 +304,16 @@ class Settings(BaseSettings):
         description="Time-to-live for buffered replay messages in seconds.",
     )
 
+    # Render evidence access (BL-554)
+    render_evidence_full_access: bool = Field(
+        default=False,
+        description=(
+            "Enable the full render evidence endpoint (STOAT_RENDER_EVIDENCE_FULL_ACCESS). "
+            "When true, GET /render/{job_id}/evidence returns command_args, stderr_tail, "
+            "output_path, and filter_script_path. When false (default), the endpoint returns 403."
+        ),
+    )
+
     # AGPL §13 source-offer (BL-525)
     source_url: str = Field(
         default="https://github.com/gwickman/stoat-and-ferret",

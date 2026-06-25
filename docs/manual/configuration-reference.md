@@ -50,6 +50,20 @@ The render worker loop dequeues jobs from the render queue and drives them throu
 
 - Disabling `STOAT_RENDER_WORKER_ENABLED` is intended for test and UAT environments only. In production, leaving it `false` causes submitted render jobs to queue indefinitely without being processed.
 
+## Render Evidence Access
+
+The render evidence endpoint exposes FFmpeg execution details — command arguments, exit code, stderr tail, and output file path — for a completed render job. The endpoint is **disabled by default** because command arguments can contain API keys, bearer tokens, and STOAT_\* environment variable values that must not be visible to unauthenticated callers.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_RENDER_EVIDENCE_FULL_ACCESS` | `bool` | `false` | Enable the full render evidence endpoint (`GET /render/{job_id}/evidence`). When `false` (default), the endpoint returns 403. When `true`, it returns the FFmpeg command args, exit code, stderr tail, output path, and filter script path — with sensitive values redacted. |
+
+**Security implications**
+
+- Even with redaction in place (sk-or-v1-\* API keys and STOAT_\* env var values are replaced with `[REDACTED]`), enabling this endpoint exposes internal file paths, FFmpeg flags, and codec configuration to any caller who can reach the API. Enable only in trusted internal deployments or for operator-level debugging, and disable again after the debugging session.
+- The redaction covers values that exactly match a current `STOAT_*` environment variable at request time. Values injected via non-STOAT env vars or config files are **not** automatically redacted — review the full command before exposing this endpoint externally.
+- If a security incident involves a compromised render job or a leaked command argument, set this to `false` and restart the server to close the surface before investigating.
+
 ## Preview Cache
 
 Preview generation produces HLS segment files cached on local disk and indexed in memory. The four preview variables collectively bound disk consumption, session lifetime, and concurrent session count. They directly limit the resources a client can consume by repeatedly opening preview sessions.
