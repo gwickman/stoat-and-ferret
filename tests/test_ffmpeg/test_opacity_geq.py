@@ -56,11 +56,16 @@ def test_geq_parses_on_ffmpeg(tmp_path: Path) -> None:
     filter_str = _build_animated_opacity_filter()
     output = tmp_path / "out.mp4"
     result = _run_ffmpeg(
-        "-f", "lavfi",
-        "-i", "color=black:size=64x64:duration=3:rate=24",
-        "-vf", filter_str,
-        "-frames:v", "24",
-        "-y", str(output),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=black:size=64x64:duration=3:rate=24",
+        "-vf",
+        filter_str,
+        "-frames:v",
+        "24",
+        "-y",
+        str(output),
     )
     assert result.returncode == 0, (
         f"FFmpeg rejected geq opacity filter:\nfilter={filter_str!r}\n{result.stderr}"
@@ -78,24 +83,31 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
     filter_str = _build_animated_opacity_filter()
     output = tmp_path / "out.mp4"
     result = _run_ffmpeg(
-        "-f", "lavfi",
-        "-i", "color=red:size=64x64:duration=3:rate=24",
-        "-vf", filter_str,
-        "-y", str(output),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=red:size=64x64:duration=3:rate=24",
+        "-vf",
+        filter_str,
+        "-y",
+        str(output),
     )
-    assert result.returncode == 0, (
-        f"FFmpeg failed during alpha-change test:\n{result.stderr}"
-    )
+    assert result.returncode == 0, f"FFmpeg failed during alpha-change test:\n{result.stderr}"
 
     def _mean_alpha(t: float) -> float:
         """Extract mean alpha value at timestamp t via ffprobe."""
         frame_result = subprocess.run(
             [
-                "ffprobe", "-v", "quiet",
-                "-select_streams", "v:0",
-                "-read_intervals", f"{t}%+0.1",
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-select_streams",
+                "v:0",
+                "-read_intervals",
+                f"{t}%+0.1",
                 "-show_frames",
-                "-print_format", "json",
+                "-print_format",
+                "json",
                 str(output),
             ],
             capture_output=True,
@@ -114,11 +126,13 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
 
     subprocess.run(
         ["ffmpeg", "-ss", "0.2", "-i", str(output), "-frames:v", "1", "-y", str(early)],
-        capture_output=True, check=True
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["ffmpeg", "-ss", "1.8", "-i", str(output), "-frames:v", "1", "-y", str(late)],
-        capture_output=True, check=True
+        capture_output=True,
+        check=True,
     )
 
     early_size = early.stat().st_size
@@ -142,22 +156,26 @@ def test_geq_composition_survival(tmp_path: Path) -> None:
     output = tmp_path / "composed.mp4"
 
     # Two inputs: background (green) and foreground (red, animated opacity)
-    filter_complex = (
-        f"[0:v]format=rgba[bg];"
-        f"[1:v]{filter_str}[fg];"
-        f"[bg][fg]overlay=0:0[out]"
-    )
+    filter_complex = f"[0:v]format=rgba[bg];[1:v]{filter_str}[fg];[bg][fg]overlay=0:0[out]"
     result = _run_ffmpeg(
-        "-f", "lavfi", "-i", "color=green:size=64x64:duration=3:rate=24",
-        "-f", "lavfi", "-i", "color=red:size=64x64:duration=3:rate=24",
-        "-filter_complex", filter_complex,
-        "-map", "[out]",
-        "-frames:v", "72",
-        "-y", str(output),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=green:size=64x64:duration=3:rate=24",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=red:size=64x64:duration=3:rate=24",
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[out]",
+        "-frames:v",
+        "72",
+        "-y",
+        str(output),
     )
     assert result.returncode == 0, (
         f"FFmpeg overlay with geq animated opacity failed:\n{result.stderr}"
     )
-    assert output.exists() and output.stat().st_size > 0, (
-        "Composed output is empty"
-    )
+    assert output.exists() and output.stat().st_size > 0, "Composed output is empty"
