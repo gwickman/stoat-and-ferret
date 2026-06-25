@@ -23,6 +23,52 @@ pub(crate) fn escape_for_filter(expr: &str) -> String {
     expr.replace(',', r"\,")
 }
 
+/// Error type for path escaping failures in FFmpeg filter option values.
+#[derive(Debug)]
+pub enum PathEscapeError {
+    /// The path contains an apostrophe that cannot be safely escaped.
+    ApostropheInPath(String),
+}
+
+impl std::fmt::Display for PathEscapeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PathEscapeError::ApostropheInPath(path) => write!(
+                f,
+                "Path '{}' contains an apostrophe which cannot be safely escaped \
+                 for use in FFmpeg filter option values. Rename the file to remove \
+                 the apostrophe character.",
+                path
+            ),
+        }
+    }
+}
+
+impl std::error::Error for PathEscapeError {}
+
+/// Escape a file path for use as an FFmpeg filter option value (variant-4 policy).
+///
+/// Applies single-quoted colon-escape policy for Windows absolute paths:
+/// `C:\Users\file.cube` → `'C\:/Users/file.cube'`. Unix and relative paths
+/// pass through unchanged. Paths containing `'` are rejected.
+///
+/// Scope: filter-option values only (`lut3d=file=...`, `subtitles=filename=...`).
+/// Do NOT apply to subprocess argv paths (`-i <path>`, `-y <output>`).
+pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeError> {
+    if path.contains('\'') {
+        return Err(PathEscapeError::ApostropheInPath(path.to_string()));
+    }
+    let bytes = path.as_bytes();
+    let is_windows = bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic();
+    if is_windows {
+        let drive = &path[..1];
+        let rest = path[2..].replace('\\', "/");
+        Ok(format!("'{}\\:{}'", drive, rest))
+    } else {
+        Ok(path.to_string())
+    }
+}
+
 /// Gaussian or directional blur filter builder with optional automation envelope.
 ///
 /// Gaussian mode (`blur_type="gaussian"`) generates `gblur=sigma={sigma}`.
@@ -148,7 +194,10 @@ impl ColorLutBuilder {
 
     #[pyo3(name = "build")]
     pub fn py_build(&self) -> PyResult<Filter> {
-        Ok(Filter::new("lut3d").param("file", format!("{}.cube", self.preset)))
+        let file_path = format!("{}.cube", self.preset);
+        let escaped = emit_filter_option_path(&file_path)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(Filter::new("lut3d").param("file", escaped))
     }
 
     #[pyo3(name = "preset_name")]
@@ -1187,5 +1236,41 @@ mod tests {
         assert!(filter_str.contains("gv=0"));
         assert!(filter_str.contains("bh=0"));
         assert!(filter_str.contains("bv=0"));
+    }
+
+    // -- emit_filter_option_path --
+
+    #[test]
+    fn test_windows_path_emit() {
+        let result = emit_filter_option_path("C:\\Users\\foo\\bar.cube").unwrap();
+        assert_eq!(result, "'C\\:/Users/foo/bar.cube'");
+    }
+
+    #[test]
+    fn test_unix_path_unchanged() {
+        let result = emit_filter_option_path("/home/user/file.cube").unwrap();
+        assert_eq!(result, "/home/user/file.cube");
+    }
+
+    #[test]
+    fn test_apostrophe_in_path_rejected() {
+        let err = emit_filter_option_path("C:\\Users\\O'Brien\\file.cube").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("apostrophe"),
+            "error message should mention apostrophe: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_relative_path_unchanged() {
+        let result = emit_filter_option_path("identity.cube").unwrap();
+        assert_eq!(result, "identity.cube");
+    }
+
+    #[test]
+    fn test_windows_path_deep_nesting() {
+        let result = emit_filter_option_path("C:\\Users\\foo\\bar\\baz\\file.cube").unwrap();
+        assert_eq!(result, "'C\\:/Users/foo/bar/baz/file.cube'");
     }
 }
