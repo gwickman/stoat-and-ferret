@@ -152,17 +152,221 @@ Expected result:
 
 ### 8. Validate Output
 
-If render succeeds, the chatbot verifies:
+If render succeeds, the chatbot verifies output quality across five categories.
+If render fails, the chatbot verifies that failure is visible through API/UI, the error message
+is captured, and whether a retry path is appropriate.
 
-- output file exists
-- output is non-empty
-- format/container matches expectation
+#### 8.1 File Integrity
 
-If render fails, the chatbot verifies:
+Check that the output file exists, is non-zero in size, and contains a valid codec:
 
-- failure is visible through API/UI
-- error message is captured
-- retry path works if appropriate
+```bash
+# File exists and is non-empty
+test -s output.mp4 && echo "OK" || echo "MISSING OR EMPTY"
+
+# Validate container and codec via ffprobe
+ffprobe -v error -select_streams v:0 \
+  -show_entries stream=codec_name,width,height,r_frame_rate \
+  -of default=noprint_wrappers=1 output.mp4
+```
+
+Expected: `codec_name=h264` (or the requested encoder), valid dimensions, non-zero frame rate.
+A zero-byte file or `Invalid data found` from ffprobe indicates an FFmpeg failure even if the
+job status shows `completed`.
+
+#### 8.2 SSIM Analysis
+
+Compute the Structural Similarity Index (SSIM) between expected and actual frames. The threshold
+for pixel-accurate effects is ≥ 0.99.
+
+```python
+import subprocess, tempfile, os
+from pathlib import Path
+from skimage import io as skio
+from skimage.metrics import structural_similarity
+
+def extract_frame(video_path: str, timestamp_s: float, out_path: str) -> None:
+    subprocess.run(
+        ["ffmpeg", "-ss", str(timestamp_s), "-i", video_path,
+         "-frames:v", "1", "-y", out_path],
+        check=True, capture_output=True,
+    )
+
+def compute_ssim(img_a: str, img_b: str) -> float:
+    a = skio.imread(img_a, as_gray=True)
+    b = skio.imread(img_b, as_gray=True)
+    score, _ = structural_similarity(a, b, full=True)
+    return score
+
+ssim = compute_ssim("expected_frame.png", "actual_frame.png")
+assert ssim >= 0.99, f"SSIM too low: {ssim:.4f} — effect may not be applied"
+```
+
+#### 8.3 Effect Detection
+
+Use edge magnitude (Sobel filter) or mean luminance to verify that effects are applied.
+
+**Opacity gradient detection** (luminance-based):
+
+```python
+import numpy as np
+from skimage import io as skio, color
+
+img = skio.imread("actual_frame.png")
+gray = color.rgb2gray(img)
+mean_luminance = float(np.mean(gray))
+# For a fade-to-black effect at 50% opacity, mean luminance should be ~0.5× the source
+assert mean_luminance < 0.6, f"Unexpected mean luminance {mean_luminance:.3f}: fade may not be applied"
+```
+
+**Edge detection** (Sobel filter, verifies sharpening/blur contrast):
+
+```python
+from skimage.filters import sobel
+
+edges = sobel(gray)
+edge_magnitude = float(np.mean(edges))
+# Sharpening increases edge magnitude; blur decreases it
+assert edge_magnitude > 0.01, f"Low edge magnitude {edge_magnitude:.4f}: sobel response too weak"
+```
+
+#### 8.4 Command Logging
+
+Check the render evidence API for the FFmpeg command args, exit code, and stderr tail:
+
+```python
+import httpx
+
+resp = httpx.get(f"http://localhost:8765/api/v1/render/{job_id}/evidence")
+resp.raise_for_status()
+evidence = resp.json()
+
+# Verify the FFmpeg command was captured
+assert evidence["ffmpeg_command"], "No FFmpeg command recorded"
+assert evidence["exit_code"] == 0, f"FFmpeg exit code {evidence['exit_code']}: {evidence['stderr_tail']}"
+
+# Inspect the actual filter chain that was used
+ffmpeg_args = evidence["ffmpeg_command"]
+assert "yuv420p" in " ".join(ffmpeg_args), "Missing yuv420p — output may be incompatible with Windows players"
+```
+
+The evidence endpoint (`GET /render/{id}/evidence`) is populated by the render worker after
+FFmpeg execution and is persisted alongside the job record. It is the authoritative source for
+post-render diagnostics.
+
+#### 8.5 Workspace Hygiene
+
+Use `tempfile.mkdtemp` for test artifacts and clean up after verification. Never write temp
+files to `working/` without a `.gitignore` guard, and never commit temp files.
+
+```python
+import tempfile, shutil, os
+
+tmpdir = tempfile.mkdtemp(prefix="stoat-test-")
+try:
+    output_path = os.path.join(tmpdir, "output.mp4")
+    # ... render and verify using output_path ...
+finally:
+    shutil.rmtree(tmpdir, ignore_errors=True)
+```
+
+In CI environments, `tempfile.mkdtemp` resolves to `/tmp` on Linux/macOS and
+`%TEMP%` on Windows — both outside the repository tree. Never write test outputs
+to `working/` unless `working/.gitignore` explicitly excludes the file pattern.
+
+### 8a. Worked Example — 2-Clip SSIM Matrix
+
+This example tests a 2-clip render by extracting frames at 2 s and 4 s and computing pairwise
+SSIM against reference frames. It covers both the passing case and the failing case.
+
+```python
+import tempfile, shutil, os, subprocess
+import numpy as np
+from pathlib import Path
+from skimage import io as skio
+from skimage.metrics import structural_similarity
+
+TIMESTAMPS = [2.0, 4.0]  # seconds — one per clip
+
+def extract_frame(video: str, t: float, dest: str) -> None:
+    subprocess.run(
+        ["ffmpeg", "-ss", str(t), "-i", video, "-frames:v", "1", "-y", dest],
+        check=True, capture_output=True,
+    )
+
+def ssim_pair(a: str, b: str) -> float:
+    ia = skio.imread(a, as_gray=True)
+    ib = skio.imread(b, as_gray=True)
+    score, _ = structural_similarity(ia, ib, full=True)
+    return score
+
+tmpdir = tempfile.mkdtemp(prefix="stoat-test-")
+try:
+    actual = "render_output.mp4"
+    expected = "reference_output.mp4"
+
+    results = {}
+    for t in TIMESTAMPS:
+        a_frame = os.path.join(tmpdir, f"actual_{t}.png")
+        e_frame = os.path.join(tmpdir, f"expected_{t}.png")
+        extract_frame(actual, t, a_frame)
+        extract_frame(expected, t, e_frame)
+        results[t] = ssim_pair(e_frame, a_frame)
+
+    # Passing case: all SSIM scores at or above threshold
+    for t, score in results.items():
+        print(f"t={t}s SSIM={score:.4f} {'PASS' if score >= 0.99 else 'FAIL'}")
+        # PASS example:  t=2.0s SSIM=0.9972 PASS
+        # PASS example:  t=4.0s SSIM=0.9983 PASS
+
+    # Failing case: effect not applied (e.g. opacity gradient missing)
+    # t=2.0s SSIM=0.7431 FAIL  ← large difference: clip 1 effect absent
+    # t=4.0s SSIM=0.6892 FAIL  ← large difference: clip 2 effect absent
+
+    for t, score in results.items():
+        assert score >= 0.99, (
+            f"SSIM at t={t}s is {score:.4f} < 0.99 — "
+            "effect may not be applied or render is incorrect"
+        )
+finally:
+    shutil.rmtree(tmpdir, ignore_errors=True)
+```
+
+### Known Platform Behaviors
+
+These findings apply to all chatbot-driven or automated test sessions.
+
+#### Windows Media Foundation Compatibility
+
+The render pipeline appends `format=yuv420p` to every output filter chain. This ensures
+Windows Media Player, Edge, and other Windows Media Foundation consumers can decode the
+output. A file rendered without this conversion (e.g. `yuv444p`) plays correctly on
+Linux/macOS but fails silently or shows a blank frame on Windows.
+
+When validating output: check the evidence API for `yuv420p` in the FFmpeg command args.
+If the token is absent, the render pipeline has regressed.
+
+#### xfade Timebase Normalization
+
+Multi-clip renders with xfade transitions require all input clips to share the same timebase.
+The render pipeline normalizes this via `fps=30,settb=1/30` applied to every input stream
+before the xfade filter. Without this step, xfade may produce a 0-byte output or corrupt
+the duration of the transition.
+
+Symptom: output file exists but is 0 bytes or shorter than expected. Check the FFmpeg
+stderr tail in the evidence API for `[Parsed_xfade]` warnings.
+
+#### fontconfig on CI
+
+The ASS/subtitle filter requires a fontconfig database to resolve font names. On headless
+CI runners (Docker, GitHub Actions), fontconfig may not be initialized, causing the filter
+to fall back to a missing font or to fail entirely.
+
+Warning signs: `Cannot load font` in FFmpeg stderr, or subtitles rendered in a fallback
+monospace font instead of the requested typeface.
+
+Mitigation: set `FONTCONFIG_PATH` to a directory containing a valid `fonts.conf`, or
+pre-seed the fontconfig cache with `fc-cache -fv` during CI setup.
 
 ### 9. Summarize
 
