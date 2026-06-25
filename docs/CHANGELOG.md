@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v086 — Post-v085 Compliance Riders (2026-06-25)
+
+### Added
+
+- **C4 YAML alignment**: `api-server-api.yaml` updated to align with live OpenAPI on `/api/v1/source` route, `SourceResponse` schema, and `license_info` block; version metadata unified to `0.3.0` across C4 YAML surfaces (BL-546, BL-547, PR #648)
+- **Version metadata unification**: `app.py` now reads version via `importlib.metadata.version("stoat-ferret")` instead of a hardcoded literal; `test_version_surfaces_agree` test confirms all surfaces agree (BL-547, PR #648)
+- **Gitignore guard comment-bypass fix**: `_active_gitignore_lines()` helper added to `test_hygiene.py`; test now strips comments before scanning active patterns (BL-549, PR #649)
+- **CI stray-ref TOML extension**: CI stray-reference grep extended to scan `*.toml` files; `pyproject.toml`/`Cargo.toml` audited — 0 Apache/MIT hits (BL-550, PR #649)
+
+### Fixed
+
+- **uv subprocess portability**: `scripts/check_dependency_licenses.py` replaced `uv run pip-licenses` subprocess with `shutil.which("pip-licenses")` (AC-5 fallback path); Windows-portable across all CI environments (BL-548, PR #649)
+
+### PRs
+
+#648, #649
+
+### Resolved
+
+BL-546 (OpenAPI C4 YAML alignment), BL-547 (version metadata unification), BL-548 (subprocess portability), BL-549 (gitignore guard comment bypass), BL-550 (CI stray-ref TOML extension)
+
+---
+
 ## v085 — Post-v084 Compliance and Hygiene Wave (2026-06-24)
 
 ### Added
