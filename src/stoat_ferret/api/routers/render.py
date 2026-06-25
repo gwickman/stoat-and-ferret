@@ -518,32 +518,16 @@ async def create_render_job(
             detail={"code": "EMPTY_TIMELINE", "message": "Project has no timeline clips"},
         )
 
-    # Multi-clip preflight check (BL-551-AC-1): reject until multi-clip rewrite lands
-    if len(clips) > 1:
-        logger.info(
-            "render.preflight_reject",
-            project_id=project_id_str,
-            clip_count=len(clips),
-            reason="multi_clip_not_supported",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "MULTI_CLIP_NOT_SUPPORTED",
-                "message": "Multi-clip rendering not yet supported",
-            },
-        )
-
-    # Per-clip effects warning check (BL-551-AC-2): warn when effects will be silently ignored
+    # Per-clip effects warning check (BL-551-AC-2): warn when effects are not yet applied
     preflight_warnings: list[str] = []
-    if clips[0].effects:
+    if any(c.effects for c in clips):
         preflight_warnings.append(
-            "Per-clip effects detected; effects are not applied until BL-505C lands"
+            "Per-clip effects detected; effects will be applied in a future release"
         )
         logger.info(
             "render.preflight_warning",
             project_id=project_id_str,
-            clip_count=1,
+            clip_count=len(clips),
             warnings=preflight_warnings,
         )
 

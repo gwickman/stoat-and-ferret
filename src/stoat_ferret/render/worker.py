@@ -107,6 +107,64 @@ async def build_command_for_job(
     if not clips:
         raise CommandBuildError(f"Project {job.project_id} has no clips in timeline")
 
+    # --- Multi-clip path: use RenderGraphTranslator (BL-505) ---
+    if len(clips) > 1:
+        from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+
+        codec_mc: str = settings.get("codec", "libx264")
+        fps_mc: float = settings.get("fps", 30.0)
+        quality_preset_mc: str = settings.get("quality_preset", "standard")
+
+        multi_cmd: list[str] = ["ffmpeg"]
+        clip_videos = []
+        for clip in clips:
+            if clip.clip_type == "generator":
+                raise CommandBuildError(
+                    f"Project {job.project_id}: generator clip rendering not yet supported"
+                )
+            if clip.source_video_id is None:
+                raise CommandBuildError(f"File clip {clip.id} has no source_video_id")
+            vid = await video_repository.get(clip.source_video_id)
+            if vid is None or not vid.path:
+                raise CommandBuildError(
+                    f"Video {clip.source_video_id} not found for project {job.project_id}"
+                )
+            clip_videos.append(vid)
+            multi_cmd.extend(["-i", vid.path])
+
+        if ffmetadata_path:
+            multi_cmd.extend(["-i", ffmetadata_path])
+
+        cwe_list = []
+        for i, (clip, vid) in enumerate(zip(clips, clip_videos, strict=True)):
+            duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
+            if duration_secs <= 0:
+                raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
+            cwe_list.append(
+                ClipWithEffects(
+                    input_index=i,
+                    duration_secs=duration_secs,
+                    framerate=vid.frame_rate,
+                    effects=[RenderEffect.none()],
+                )
+            )
+
+        translator = RenderGraphTranslator()
+        filter_complex_str = translator.translate(cwe_list)
+
+        multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
+        multi_cmd.extend(["-c:v", codec_mc])
+        if codec_mc in ("libx264", "libx265") and quality_preset_mc in _QUALITY_CRF:
+            multi_cmd.extend(["-crf", _QUALITY_CRF[quality_preset_mc]])
+        multi_cmd.extend(["-r", str(fps_mc)])
+        multi_cmd.extend(["-progress", "pipe:1"])
+        if ffmetadata_path:
+            ffmeta_idx = len(clip_videos)
+            multi_cmd.extend(["-map_chapters", str(ffmeta_idx), "-map_metadata", str(ffmeta_idx)])
+        multi_cmd.append(job.output_path)
+        return multi_cmd
+
+    # --- Single-clip path ---
     first_clip = clips[0]
     if first_clip.clip_type == "generator":
         raise CommandBuildError(

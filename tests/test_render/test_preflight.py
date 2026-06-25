@@ -113,8 +113,8 @@ def test_single_clip_no_effects() -> None:
     assert body["warnings"] is None
 
 
-def test_multi_clip_rejected() -> None:
-    """Multi-clip project returns 422 with MULTI_CLIP_NOT_SUPPORTED code."""
+def test_multi_clip_accepted() -> None:
+    """Multi-clip project is now accepted (BL-505): RenderGraphTranslator integrated."""
     clips = [_make_clip(clip_id="clip-1"), _make_clip(clip_id="clip-2")]
     app = _build_app(clips)
     with TestClient(app) as client:
@@ -125,10 +125,7 @@ def test_multi_clip_rejected() -> None:
                 "render_plan": _RENDER_PLAN,
             },
         )
-    assert resp.status_code == 422
-    detail = resp.json()["detail"]
-    assert detail["code"] == "MULTI_CLIP_NOT_SUPPORTED"
-    assert "Multi-clip" in detail["message"]
+    assert resp.status_code == 201
 
 
 def test_single_clip_with_effects_warns() -> None:
