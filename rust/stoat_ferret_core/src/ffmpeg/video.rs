@@ -23,6 +23,31 @@ pub(crate) fn escape_for_filter(expr: &str) -> String {
     expr.replace(',', r"\,")
 }
 
+/// Translate automation expression's lowercase `t` (time) to uppercase `T` for geq.
+///
+/// FFmpeg's geq filter uses `T` for the current timestamp, while all other
+/// filter expression contexts (hue, scale, enable=) use lowercase `t`.
+/// `py_compile_automation` produces lowercase `t`; this function upgrades it.
+///
+/// Replaces only standalone `t` (not `t` embedded in identifiers like `lt`, `gt`,
+/// `between`, `ifnot`). A `t` is "standalone" when neither its preceding nor
+/// following character is an ASCII letter or underscore.
+fn automation_expr_to_uppercase_t(expr: &str) -> String {
+    let chars: Vec<char> = expr.chars().collect();
+    let mut result = String::with_capacity(expr.len());
+    for (i, &ch) in chars.iter().enumerate() {
+        if ch == 't' {
+            let prev_ident = i > 0 && (chars[i - 1].is_ascii_alphabetic() || chars[i - 1] == '_');
+            let next_ident =
+                i + 1 < chars.len() && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_');
+            result.push(if !prev_ident && !next_ident { 'T' } else { 't' });
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 /// Error type for path escaping failures in FFmpeg filter option values.
 #[derive(Debug)]
 pub enum PathEscapeError {
@@ -248,9 +273,10 @@ impl OpacityBuilder {
             None => Ok(Filter::new("format=rgba,colorchannelmixer").param("aa", self.opacity)),
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
-                let escaped = escape_for_filter(&expr);
+                let expr_t = automation_expr_to_uppercase_t(&expr);
+                let escaped = escape_for_filter(&expr_t);
                 Ok(Filter::new(format!(
-                    "format=rgba,colorchannelmixer=aa='{}':eval=frame",
+                    "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{}*255'",
                     escaped
                 )))
             }
@@ -803,7 +829,7 @@ mod tests {
     }
 
     #[test]
-    fn test_opacity_build_with_automation_contains_eval_frame() {
+    fn test_opacity_build_with_automation_uses_geq() {
         let auto = Automation {
             default: 0.5,
             keyframes: vec![
@@ -824,12 +850,81 @@ mod tests {
             .py_with_automation(auto);
         let filter_str = builder.py_build().unwrap().to_string();
         assert!(
-            filter_str.contains("eval=frame"),
-            "expected eval=frame in: {filter_str}"
+            filter_str.contains("geq"),
+            "expected geq in: {filter_str}"
         );
         assert!(
-            filter_str.contains("colorchannelmixer"),
-            "expected colorchannelmixer in: {filter_str}"
+            filter_str.contains("*255"),
+            "expected alpha scaling *255 in: {filter_str}"
+        );
+        assert!(
+            !filter_str.contains("colorchannelmixer"),
+            "colorchannelmixer must not appear for animated opacity: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_geq_filter_structure() {
+        let auto = Automation {
+            default: 0.0,
+            keyframes: vec![
+                super::super::automation::Keyframe {
+                    t: 0.0,
+                    value: 0.0,
+                    curve: "Linear".to_string(),
+                },
+                super::super::automation::Keyframe {
+                    t: 1.0,
+                    value: 1.0,
+                    curve: "Linear".to_string(),
+                },
+            ],
+        };
+        let builder = OpacityBuilder::py_new(0.5).unwrap().py_with_automation(auto);
+        let filter_str = builder.py_build().unwrap().to_string();
+        assert!(
+            filter_str.starts_with("format=rgba,geq="),
+            "expected geq prefix in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("r='r(X,Y)'"),
+            "expected r='r(X,Y)' in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("g='g(X,Y)'"),
+            "expected g='g(X,Y)' in: {filter_str}"
+        );
+        assert!(
+            filter_str.contains("b='b(X,Y)'"),
+            "expected b='b(X,Y)' in: {filter_str}"
+        );
+        assert!(filter_str.contains("a='"), "expected a=' in: {filter_str}");
+        assert!(
+            filter_str.contains("*255'"),
+            "expected *255' at end of alpha expr in: {filter_str}"
+        );
+    }
+
+    #[test]
+    fn test_automation_expr_to_uppercase_t_standalone() {
+        assert_eq!(automation_expr_to_uppercase_t("t/5"), "T/5");
+        assert_eq!(automation_expr_to_uppercase_t("t"), "T");
+    }
+
+    #[test]
+    fn test_automation_expr_to_uppercase_t_preserves_identifiers() {
+        // t in lt, gt, between, ifnot must not be replaced
+        assert_eq!(
+            automation_expr_to_uppercase_t("if(lt(t,5),t/5,1)"),
+            "if(lt(T,5),T/5,1)"
+        );
+        assert_eq!(
+            automation_expr_to_uppercase_t("gt(t,0)"),
+            "gt(T,0)"
+        );
+        assert_eq!(
+            automation_expr_to_uppercase_t("between(t,3,5)"),
+            "between(T,3,5)"
         );
     }
 

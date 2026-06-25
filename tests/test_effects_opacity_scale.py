@@ -62,8 +62,8 @@ def test_opacity_with_automation_stores_envelope() -> None:
     assert builder is not None
 
 
-def test_opacity_with_automation_build_contains_eval_frame() -> None:
-    """OpacityBuilder with automation produces eval=frame filter string (FR-001-AC-2)."""
+def test_opacity_with_automation_build_uses_geq() -> None:
+    """OpacityBuilder with automation produces geq filter (BL-502 — replaces colorchannelmixer)."""
     auto = Automation(
         default=0.5,
         keyframes=[
@@ -73,8 +73,11 @@ def test_opacity_with_automation_build_contains_eval_frame() -> None:
     )
     builder = OpacityBuilder(1.0).with_automation(auto)
     result = str(builder.build())
-    assert "eval=frame" in result, f"Expected eval=frame in: {result}"
-    assert "colorchannelmixer" in result, f"Expected colorchannelmixer in: {result}"
+    assert "geq" in result, f"Expected geq in: {result}"
+    assert "*255" in result, f"Expected alpha scaling *255 in: {result}"
+    assert "colorchannelmixer" not in result, (
+        f"colorchannelmixer must not appear for animated opacity: {result}"
+    )
 
 
 def test_opacity_automation_expression_timing() -> None:
