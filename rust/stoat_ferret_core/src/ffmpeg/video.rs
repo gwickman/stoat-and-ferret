@@ -849,10 +849,7 @@ mod tests {
             .unwrap()
             .py_with_automation(auto);
         let filter_str = builder.py_build().unwrap().to_string();
-        assert!(
-            filter_str.contains("geq"),
-            "expected geq in: {filter_str}"
-        );
+        assert!(filter_str.contains("geq"), "expected geq in: {filter_str}");
         assert!(
             filter_str.contains("*255"),
             "expected alpha scaling *255 in: {filter_str}"
@@ -880,7 +877,9 @@ mod tests {
                 },
             ],
         };
-        let builder = OpacityBuilder::py_new(0.5).unwrap().py_with_automation(auto);
+        let builder = OpacityBuilder::py_new(0.5)
+            .unwrap()
+            .py_with_automation(auto);
         let filter_str = builder.py_build().unwrap().to_string();
         assert!(
             filter_str.starts_with("format=rgba,geq="),
@@ -918,10 +917,7 @@ mod tests {
             automation_expr_to_uppercase_t("if(lt(t,5),t/5,1)"),
             "if(lt(T,5),T/5,1)"
         );
-        assert_eq!(
-            automation_expr_to_uppercase_t("gt(t,0)"),
-            "gt(T,0)"
-        );
+        assert_eq!(automation_expr_to_uppercase_t("gt(t,0)"), "gt(T,0)");
         assert_eq!(
             automation_expr_to_uppercase_t("between(t,3,5)"),
             "between(T,3,5)"
