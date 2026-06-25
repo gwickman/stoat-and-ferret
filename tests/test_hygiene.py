@@ -182,11 +182,28 @@ def test_orchestration_artifacts_not_tracked() -> None:
     )
 
 
+def _active_gitignore_lines(content: str) -> list[str]:
+    result = []
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            result.append(stripped)
+    return result
+
+
+def test_active_gitignore_lines_helper() -> None:
+    assert _active_gitignore_lines("# comment\n\n# another\n") == []
+    assert _active_gitignore_lines(".claude/*.lock\n# comment\n") == [".claude/*.lock"]
+    assert ".claude/*.lock" not in _active_gitignore_lines("# .claude/*.lock\n# merge_result*.txt")
+    assert ".claude/*.lock" in _active_gitignore_lines(".claude/*.lock\nmerge_result*.txt")
+
+
 def test_orchestration_gitignore_guards_present() -> None:
     gitignore = Path(__file__).parent.parent / ".gitignore"
     content = gitignore.read_text(encoding="utf-8")
-    assert ".claude/*.lock" in content, ".claude/*.lock pattern missing from .gitignore"
-    assert "merge_result*.txt" in content, "merge_result*.txt pattern missing from .gitignore"
+    active = _active_gitignore_lines(content)
+    assert ".claude/*.lock" in active, ".claude/*.lock missing or commented out in .gitignore"
+    assert "merge_result*.txt" in active, "merge_result*.txt missing or commented out in .gitignore"
 
 
 def test_root_changelog_has_no_version_headings() -> None:
