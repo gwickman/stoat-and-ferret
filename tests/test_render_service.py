@@ -102,6 +102,7 @@ def _build_service(
         connection_manager=ws,
         settings=settings,
     )
+    service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
     return service, repo, ws, executor
 
 
@@ -1027,6 +1028,7 @@ class TestRenderWorkerIntegration:
                 connection_manager=ws,
                 settings=Settings(render_retry_count=0),
             )
+        service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
 
         plan_json = _make_plan_json()
         raw_job = RenderJob.create(
@@ -1161,6 +1163,7 @@ class TestRenderWorkerErrors:
                 connection_manager=ws,
                 settings=Settings(render_retry_count=2),
             )
+        service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
 
         raw_job = RenderJob.create(
             project_id="proj-retry",
@@ -1405,6 +1408,7 @@ async def test_worker_loop_integration() -> None:
             connection_manager=ws,
             settings=Settings(render_retry_count=0),
         )
+    service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
 
     plan_json = _make_plan_json()
     raw_job = RenderJob.create(

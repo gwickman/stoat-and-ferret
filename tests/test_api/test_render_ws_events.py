@@ -433,6 +433,7 @@ class TestQueueStatusEvents:
             ws.broadcast.reset_mock()  # type: ignore[union-attr]
 
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
             event_types = _get_event_types(ws)
@@ -615,6 +616,7 @@ class TestFullEventSequence:
             # Dequeue and run
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
             events = _get_broadcast_events(ws)
@@ -859,6 +861,7 @@ class TestTerminalEventPayloadStatus:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
             events = _get_broadcast_events(ws)
@@ -974,6 +977,7 @@ class TestRestWsStatusAgreement:
             )
             await repo.update_status(job.id, RenderStatus.RUNNING)
             executor.execute = AsyncMock(return_value=True)  # type: ignore[method-assign]
+            service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
             await service.run_job(job, ["ffmpeg"])
 
             # Simulate REST GET immediately after WS event.

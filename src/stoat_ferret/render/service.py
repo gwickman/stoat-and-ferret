@@ -414,7 +414,18 @@ class RenderService:
         render_elapsed = time.monotonic() - render_start
 
         if success:
-            await self._complete_job(job, render_elapsed)
+            # Verify output file exists and has non-zero size (BL-551-AC-3)
+            if not self._output_file_ok(job.output_path):
+                log.error(
+                    "render_worker.zero_byte_output",
+                    job_id=job_id,
+                    output_path=str(job.output_path),
+                )
+                await self._handle_failure(
+                    job, "Output file missing or zero-byte after FFmpeg completion"
+                )
+            else:
+                await self._complete_job(job, render_elapsed)
         else:
             # Check if job was cancelled
             current = await self._repo.get(job_id)
@@ -423,6 +434,12 @@ class RenderService:
                 return
 
             await self._handle_failure(job, "FFmpeg process failed")
+
+    def _output_file_ok(self, output_path: str | None) -> bool:
+        if not output_path:
+            return False
+        p = Path(output_path)
+        return p.exists() and p.stat().st_size > 0
 
     async def cancel_job(self, job_id: str) -> bool:
         """Cancel a render job.

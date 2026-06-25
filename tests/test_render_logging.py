@@ -118,6 +118,7 @@ def _build_service(
         connection_manager=ws,
         settings=settings,
     )
+    service._output_file_ok = MagicMock(return_value=True)  # type: ignore[method-assign]
     return service, repo, ws, executor
 
 

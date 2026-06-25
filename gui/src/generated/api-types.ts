@@ -4166,6 +4166,8 @@ export interface components {
              * @default false
              */
             partial_file_detected: boolean;
+            /** Warnings */
+            warnings?: string[] | null;
         };
         /**
          * RenderListResponse

@@ -500,6 +500,35 @@ async def create_render_job(
             detail={"code": "EMPTY_TIMELINE", "message": "Project has no timeline clips"},
         )
 
+    # Multi-clip preflight check (BL-551-AC-1): reject until multi-clip rewrite lands
+    if len(clips) > 1:
+        logger.info(
+            "render.preflight_reject",
+            project_id=project_id_str,
+            clip_count=len(clips),
+            reason="multi_clip_not_supported",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "MULTI_CLIP_NOT_SUPPORTED",
+                "message": "Multi-clip rendering not yet supported",
+            },
+        )
+
+    # Per-clip effects warning check (BL-551-AC-2): warn when effects will be silently ignored
+    preflight_warnings: list[str] = []
+    if clips[0].effects:
+        preflight_warnings.append(
+            "Per-clip effects detected; effects are not applied until BL-505C lands"
+        )
+        logger.info(
+            "render.preflight_warning",
+            project_id=project_id_str,
+            clip_count=1,
+            warnings=preflight_warnings,
+        )
+
     Path(settings.render_output_dir).mkdir(parents=True, exist_ok=True)
     job_token = str(uuid.uuid4()).replace("-", "")[:12]
     output_path = str(
@@ -555,7 +584,10 @@ async def create_render_job(
             except FileNotFoundError:
                 pass  # artifact not present in noop/test mode without real render
 
-    return _job_to_response(job)
+    response = _job_to_response(job)
+    if preflight_warnings:
+        response.warnings = preflight_warnings
+    return response
 
 
 # ---------- Encoder endpoints ----------
