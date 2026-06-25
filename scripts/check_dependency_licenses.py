@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -52,7 +53,7 @@ def parse_project_deps(pyproject_path: str = "pyproject.toml") -> list[str]:
 def get_installed_packages() -> dict[str, str]:
     """Return {name_lower: license} for installed Python packages via pip-licenses."""
     result = subprocess.run(
-        ["uv", "run", "pip-licenses", "--format=json"],
+        [shutil.which("pip-licenses"), "--format=json"],
         capture_output=True,
         text=True,
         check=True,
@@ -106,9 +107,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    should_check = (
-        args.check or args.pyproject_path is not None or args.inventory_path is not None
-    )
+    should_check = args.check or args.pyproject_path is not None or args.inventory_path is not None
     if not should_check:
         print("Use --check to validate the inventory.")
         return 0
@@ -156,13 +155,15 @@ def main() -> int:
     copyleft_errors: list[str] = []
     for dep_name in dep_names:
         installed_license = installed.get(_normalize(dep_name))
-        if installed_license and _COPYLEFT_PATTERN.search(installed_license):
-            # Dep is acknowledged if its name appears anywhere in the inventory document.
-            if dep_name.lower() not in inventory_content.lower():
-                copyleft_errors.append(
-                    f"Dep '{dep_name}' has copyleft/unknown license '{installed_license}'"
-                    f" not acknowledged in {inventory_path}."
-                )
+        if (
+            installed_license
+            and _COPYLEFT_PATTERN.search(installed_license)
+            and dep_name.lower() not in inventory_content.lower()
+        ):
+            copyleft_errors.append(
+                f"Dep '{dep_name}' has copyleft/unknown license '{installed_license}'"
+                f" not acknowledged in {inventory_path}."
+            )
 
     if copyleft_errors:
         print(f"ERROR: {len(copyleft_errors)} copyleft/unknown issue(s) found:", file=sys.stderr)

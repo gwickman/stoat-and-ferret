@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -20,9 +21,7 @@ def test_missing_dep_exits_nonzero(tmp_path: Path) -> None:
     inventory.write_text("# Dependency License Inventory\n\n(empty)\n")
     result = subprocess.run(
         [
-            "uv",
-            "run",
-            "python",
+            sys.executable,
             SCRIPT,
             "--pyproject-path",
             str(pyproject),
@@ -39,13 +38,13 @@ def test_missing_dep_exits_nonzero(tmp_path: Path) -> None:
 def test_current_pyproject_passes() -> None:
     """Checker exits 0 on current pyproject.toml and inventory (requires pip-licenses)."""
     probe = subprocess.run(
-        ["uv", "run", "pip-licenses", "--version"],
+        [sys.executable, "-m", "pip_licenses", "--version"],
         capture_output=True,
     )
     if probe.returncode != 0:
         pytest.skip("pip-licenses not installed; dep-license-check CI job covers this case")
     result = subprocess.run(
-        ["uv", "run", "python", SCRIPT, "--check"],
+        [sys.executable, SCRIPT, "--check"],
         capture_output=True,
         text=True,
     )
@@ -55,7 +54,7 @@ def test_current_pyproject_passes() -> None:
 def test_no_arg_prints_usage() -> None:
     """Invoking the script without --check prints a usage message and exits 0."""
     result = subprocess.run(
-        ["uv", "run", "python", SCRIPT],
+        [sys.executable, SCRIPT],
         capture_output=True,
         text=True,
     )
