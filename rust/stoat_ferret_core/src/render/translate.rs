@@ -413,7 +413,9 @@ mod tests {
         // Verify format=yuv420p is last before [final] for Windows MF compatibility
         let clips = vec![clip(0, 3.0, 30.0), clip(1, 3.0, 30.0)];
         let result = RenderGraphTranslator.translate(clips).unwrap();
-        let fmt_pos = result.rfind("format=yuv420p").expect("format=yuv420p not found");
+        let fmt_pos = result
+            .rfind("format=yuv420p")
+            .expect("format=yuv420p not found");
         let final_pos = result.find("[final]").expect("[final] not found");
         assert!(
             fmt_pos < final_pos,
