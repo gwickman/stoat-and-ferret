@@ -318,7 +318,7 @@ All structured log calls follow the pattern `logger.info("event_name", key=value
 | `schema.*` | Infrastructure | Schema consistency checks | `schema.unknown_resource` |
 | `preview.*` | Domain | Preview workflow WebSocket events | `preview.generating`, `preview.ready`, `preview.error` |
 | `proxy.*` | Domain | Proxy workflow WebSocket events | `proxy.ready` |
-| `render.*` | Domain | Render workflow events (endpoint-level) | `render.validation_failed` |
+| `render.*` | Domain | Render workflow events: endpoint validation, preflight checks, evidence persistence | `render.validation_failed`, `render.preflight_warning`, `render.preflight_reject`, `render.evidence_persisted` |
 | `render_worker.*` | Domain | Render worker operational events (command building, segment handling, worker lifecycle) | `render_worker.multi_segment_truncated` |
 | `testing.*` | Domain (gated) | Testing/debug operations behind feature flag | `testing.seed.created`, `testing.seed.forbidden` |
 | `qc.*` | Domain | QC analysis pass lifecycle events | `qc.started`, `qc.check_completed`, `qc.completed` |
@@ -343,6 +343,16 @@ New namespaces must be declared in this section before the namespace is first us
 3. Use the namespace in code only after the FRAMEWORK_CONTEXT.md update is merged.
 
 Ad-hoc event names without an approved namespace are not permitted. No new namespaces were introduced in v046; the taxonomy above describes all namespaces verified in production code as of 2026-04-29.
+
+**Pre-registered `render.*` events (v087 — registered before implementation, no code exemplar yet):**
+
+The following events are declared here per the declaration-before-use rule. They are emitted by Features 004–006 of the render-observability theme (BL-551, BL-554). The registration must merge to main before any implementation PR fires these events.
+
+| Event | When fired | Applicable payload fields |
+|-------|-----------|--------------------------|
+| `render.preflight_warning` | Preflight validation passes but the project contains features not fully supported by the current worker (e.g., per-clip effects on a single-clip project). Render proceeds with warnings. | `job_id`, `clip_count`, `warnings: list[str]` |
+| `render.preflight_reject` | Preflight validation rejects the render request (e.g., multi-clip project with N>1 clips — current worker only processes clips[0]). HTTP 422 is returned. | `job_id`, `clip_count`, `reason: str` |
+| `render.evidence_persisted` | After FFmpeg execution completes and render evidence (command_args, exit_code, stderr_tail, output_size_bytes, filter_script_path) is persisted to the database. | `job_id`, `exit_code: int`, `output_size_bytes: int`, `has_filter_script: bool` |
 
 **Code exemplars:**
 
@@ -398,7 +408,7 @@ No split files required.
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-05-20 |
+| Last Updated | 2026-06-25 |
 | Next Quarterly Review | 2026-08-04 |
-| Updated By | v067 / feature-executor (encoder-cache-doc) |
-| Source Version/Design Reference | comms/outbox/versions/design/v067/source-intent-ledger.json |
+| Updated By | v087 / feature-executor (event-namespace-registration) |
+| Source Version/Design Reference | comms/outbox/versions/design/v087/source-intent-ledger.json |
