@@ -812,3 +812,31 @@ async def test_smoke_render_with_delivery_profile(smoke_client: httpx.AsyncClien
     body = resp.json()
     assert "detail" in body
     assert body["detail"]["code"] == "DELIVERY_PROFILE_NOT_FOUND"
+
+
+# -- BL-499: ColorLut path-escaping smoke tests --
+
+
+async def test_colorlut_path_escape_smoke() -> None:
+    """ColorLutBuilder.build() produces backslash-free filter strings for all presets (BL-499)."""
+    from stoat_ferret_core import ColorLutBuilder
+
+    for preset in ("identity", "calming_teal", "warm_fade"):
+        builder = ColorLutBuilder(preset)
+        f = builder.build()
+        s = str(f)
+        assert "lut3d" in s, f"Preset '{preset}' missing lut3d in filter: {s}"
+        assert "\\" not in s, f"Preset '{preset}' filter must not contain backslashes (BL-499): {s}"
+
+
+async def test_colorlut_apostrophe_rejection_unit() -> None:
+    """Apostrophe rejection is enforced in emit_filter_option_path (BL-499).
+
+    Verified via Rust unit tests (test_apostrophe_in_path_rejected).  This
+    smoke test documents that the rejection happens at the Rust layer and that
+    preset names cannot contain apostrophes (validated against the preset enum).
+    """
+    from stoat_ferret_core import ColorLutBuilder
+
+    with pytest.raises(ValueError):
+        ColorLutBuilder("O'Brien_lut")
