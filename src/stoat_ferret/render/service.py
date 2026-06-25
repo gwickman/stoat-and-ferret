@@ -413,6 +413,12 @@ class RenderService:
 
         render_elapsed = time.monotonic() - render_start
 
+        # Persist evidence collected by the executor (BL-554)
+        evidence = self._executor.pop_evidence(job_id)
+        if evidence is not None:
+            with suppress(Exception):
+                await self._repo.update_evidence(job_id, json.dumps(evidence))
+
         if success:
             # Verify output file exists and has non-zero size (BL-551-AC-3)
             if not self._output_file_ok(job.output_path):

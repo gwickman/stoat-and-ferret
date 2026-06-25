@@ -62,29 +62,33 @@ pytestmark = pytest.mark.timeout(30)
 SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
     {
         # _alter_videos_add_auxiliary_columns (sync) — BL-408
-        ("src/stoat_ferret/db/schema.py", 430),
+        ("src/stoat_ferret/db/schema.py", 435),
         # _alter_render_jobs_add_partial_columns (sync) — BL-415
-        ("src/stoat_ferret/db/schema.py", 444),
+        ("src/stoat_ferret/db/schema.py", 449),
+        # _alter_render_jobs_add_evidence_columns (sync) — BL-554
+        ("src/stoat_ferret/db/schema.py", 463),
         # _alter_projects_add_audio_mix_column (sync)
-        ("src/stoat_ferret/db/schema.py", 458),
+        ("src/stoat_ferret/db/schema.py", 477),
         # _alter_projects_add_audio_baseline_columns (sync) — BL-422
-        ("src/stoat_ferret/db/schema.py", 472),
+        ("src/stoat_ferret/db/schema.py", 491),
         # _alter_clips_add_timeline_columns (sync)
-        ("src/stoat_ferret/db/schema.py", 488),
+        ("src/stoat_ferret/db/schema.py", 507),
         # _alter_clips_add_generator_columns (sync) — BL-441
-        ("src/stoat_ferret/db/schema.py", 505),
+        ("src/stoat_ferret/db/schema.py", 524),
         # _alter_videos_add_auxiliary_columns_async — BL-408
-        ("src/stoat_ferret/db/schema.py", 580),
+        ("src/stoat_ferret/db/schema.py", 600),
         # _alter_projects_add_audio_mix_column_async
-        ("src/stoat_ferret/db/schema.py", 596),
+        ("src/stoat_ferret/db/schema.py", 616),
         # _alter_projects_add_audio_baseline_columns_async — BL-422
-        ("src/stoat_ferret/db/schema.py", 612),
+        ("src/stoat_ferret/db/schema.py", 632),
         # _alter_clips_add_timeline_columns_async
-        ("src/stoat_ferret/db/schema.py", 628),
+        ("src/stoat_ferret/db/schema.py", 648),
         # _alter_clips_add_generator_columns_async — BL-441
-        ("src/stoat_ferret/db/schema.py", 645),
+        ("src/stoat_ferret/db/schema.py", 665),
         # _alter_render_jobs_add_partial_columns_async (async) — BL-415
-        ("src/stoat_ferret/db/schema.py", 661),
+        ("src/stoat_ferret/db/schema.py", 681),
+        # _alter_render_jobs_add_evidence_columns_async (async) — BL-554
+        ("src/stoat_ferret/db/schema.py", 697),
         ("src/stoat_ferret/api/services/migrations.py", 437),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound

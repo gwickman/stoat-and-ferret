@@ -112,6 +112,7 @@ class RenderJob:
     updated_at: datetime
     completed_at: datetime | None
     partial_file_detected: bool = False
+    evidence_json: str | None = None
 
     @staticmethod
     def create(
