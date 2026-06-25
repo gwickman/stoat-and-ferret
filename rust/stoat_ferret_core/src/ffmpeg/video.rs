@@ -59,8 +59,7 @@ pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeEr
         return Err(PathEscapeError::ApostropheInPath(path.to_string()));
     }
     let bytes = path.as_bytes();
-    let is_windows =
-        bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic();
+    let is_windows = bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic();
     if is_windows {
         let drive = &path[..1];
         let rest = path[2..].replace('\\', "/");
