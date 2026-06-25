@@ -31,6 +31,7 @@ pub mod command;
 pub mod encoder;
 pub mod plan;
 pub mod progress;
+pub mod translate;
 
 /// Registers render types and functions with the Python module.
 pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
@@ -76,5 +77,11 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
         progress::py_aggregate_segment_progress,
         m
     )?)?;
+
+    // Render graph translator types
+    m.add_class::<translate::RenderEffect>()?;
+    m.add_class::<translate::ClipWithEffects>()?;
+    m.add_class::<translate::RenderGraphTranslator>()?;
+
     Ok(())
 }

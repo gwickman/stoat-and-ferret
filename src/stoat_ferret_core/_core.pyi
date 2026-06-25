@@ -4365,3 +4365,111 @@ class ChromaticAberrationBuilder:
             A Filter with ``rgbashift=rh={rx}:rv={ry}:gh={gx}:gv={gy}:bh={bx}:bv={by}``.
         """
         ...
+
+# ========== Render Graph Translator ==========
+
+class RenderEffect:
+    """An effect applied to a single render clip.
+
+    Use the static factory methods to construct effect variants:
+
+    - ``RenderEffect.none()`` — no-op, clip passes through unmodified.
+    - ``RenderEffect.animated_alpha(start, end)`` — linear alpha fade over clip duration.
+    """
+
+    @staticmethod
+    def none() -> RenderEffect:
+        """Creates a no-op effect (clip passes through unmodified)."""
+        ...
+
+    @staticmethod
+    def animated_alpha(start: float, end: float) -> RenderEffect:
+        """Creates an animated alpha effect that fades from start to end over the clip duration.
+
+        Args:
+            start: Starting alpha in [0.0, 1.0] (0.0 = transparent).
+            end: Ending alpha in [0.0, 1.0] (1.0 = opaque).
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class ClipWithEffects:
+    """A render clip together with its per-clip effects.
+
+    ``input_index`` maps to the FFmpeg ``-i`` input argument position.
+    ``duration_secs`` is the clip's playback duration in seconds.
+    ``framerate`` is the clip's native frame rate; all clips are normalised to
+    30 fps by the translator regardless of this value.
+    """
+
+    @property
+    def input_index(self) -> int:
+        """Zero-based FFmpeg input index."""
+        ...
+
+    @property
+    def duration_secs(self) -> float:
+        """Clip duration in seconds."""
+        ...
+
+    @property
+    def framerate(self) -> float:
+        """Native frame rate of the clip."""
+        ...
+
+    def __new__(
+        cls,
+        input_index: int,
+        duration_secs: float,
+        framerate: float,
+        effects: list[RenderEffect],
+    ) -> ClipWithEffects:
+        """Creates a new ClipWithEffects.
+
+        Args:
+            input_index: Zero-based FFmpeg input index.
+            duration_secs: Clip duration in seconds. Must be > 0.
+            framerate: Native frame rate of the clip.
+            effects: List of RenderEffect to apply to this clip.
+
+        Raises:
+            ValueError: If duration_secs is not > 0.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class RenderGraphTranslator:
+    """Translates a multi-clip render graph into an FFmpeg filter_complex string.
+
+    The produced string uses ``[final]`` as the terminal output label and can be
+    passed directly to FFmpeg's ``-filter_complex`` argument.
+
+    Filter stages:
+
+    1. Per-clip fps/settb normalization to 30 fps.
+    2. Per-clip effect sub-chains (always before xfade/overlay).
+    3. xfade transitions between adjacent clips (multi-clip only).
+    4. ``format=yuv420p`` terminal (Windows Media Foundation compatibility).
+    """
+
+    def __new__(cls) -> RenderGraphTranslator:
+        """Creates a new RenderGraphTranslator."""
+        ...
+
+    def translate(self, clips: list[ClipWithEffects]) -> str:
+        """Translates a list of clips with effects into an FFmpeg filter_complex string.
+
+        Args:
+            clips: List of ClipWithEffects describing the render timeline.
+
+        Returns:
+            A semicolon-separated FFmpeg filter_complex string ending with ``[final]``.
+
+        Raises:
+            ValueError: If clips is empty or any clip has a non-positive duration.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
