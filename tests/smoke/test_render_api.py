@@ -875,3 +875,142 @@ async def test_opacity_static_uses_colorchannelmixer_smoke() -> None:
     s = str(f)
     assert "colorchannelmixer" in s, f"Static opacity must use colorchannelmixer: {s}"
     assert "geq" not in s, f"geq must not appear for static opacity: {s}"
+
+
+# -- BL-551: Preflight validation smoke tests --
+# Note: multi-clip accepted (BL-505) is covered in test_sample_project.py.
+
+
+async def test_preflight_single_clip_with_effects_warns(smoke_client: httpx.AsyncClient) -> None:
+    """Single-clip project with per-clip effects returns 201 + non-empty warnings (BL-551)."""
+    project_id = await _create_project(smoke_client, "Preflight Effects Warn Smoke")
+
+    clips_resp = await smoke_client.get(f"/api/v1/projects/{project_id}/clips")
+    assert clips_resp.status_code == 200
+    clips = clips_resp.json()["clips"]
+    assert len(clips) == 1
+    clip_id = clips[0]["id"]
+
+    effect_resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "video_fade",
+            "parameters": {"fade_type": "in", "start_time": 0.0, "duration": 1.0},
+        },
+    )
+    assert effect_resp.status_code == 201
+
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["warnings"] is not None, "Single-clip with effects must return warnings"
+    assert len(body["warnings"]) > 0, "warnings list must be non-empty for clip with effects"
+
+
+# -- BL-554: Evidence API smoke tests --
+
+
+@pytest.fixture()
+async def smoke_client_evidence(tmp_path: Path) -> httpx.AsyncClient:
+    """Async httpx client with STOAT_RENDER_EVIDENCE_FULL_ACCESS=true for evidence tests."""
+    from stoat_ferret.api.app import create_app as _create_app
+    from stoat_ferret.api.app import lifespan as _lifespan
+
+    db_path = tmp_path / "evidence_smoke_test.db"
+
+    orig_db = os.environ.get("STOAT_DATABASE_PATH")
+    orig_thumb = os.environ.get("STOAT_THUMBNAIL_DIR")
+    orig_evidence = os.environ.get("STOAT_RENDER_EVIDENCE_FULL_ACCESS")
+
+    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    os.environ["STOAT_RENDER_EVIDENCE_FULL_ACCESS"] = "true"
+    get_settings.cache_clear()
+
+    app = _create_app()
+
+    async with (
+        _lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
+        yield client
+
+    for key, orig in [
+        ("STOAT_DATABASE_PATH", orig_db),
+        ("STOAT_THUMBNAIL_DIR", orig_thumb),
+        ("STOAT_RENDER_EVIDENCE_FULL_ACCESS", orig_evidence),
+    ]:
+        if orig is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = orig
+
+    get_settings.cache_clear()
+
+
+async def test_evidence_endpoint_requires_access_flag(smoke_client: httpx.AsyncClient) -> None:
+    """GET /render/{job_id}/evidence returns 403 when evidence access flag is unset (BL-554)."""
+    project_id = await _create_project(smoke_client, "Evidence Access Flag Smoke")
+    create_resp = await smoke_client.post(
+        "/api/v1/render",
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 5.0, "settings": {}}),
+        },
+    )
+    assert create_resp.status_code == 201
+    job_id = create_resp.json()["id"]
+
+    resp = await smoke_client.get(f"/api/v1/render/{job_id}/evidence")
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["detail"]["code"] == "EVIDENCE_ACCESS_DISABLED"
+
+
+async def test_evidence_endpoint_200_when_enabled(
+    smoke_client_evidence: httpx.AsyncClient,
+) -> None:
+    """GET /render/{job_id}/evidence returns 200 with injected evidence when enabled (BL-554)."""
+    project_id = await _create_project(smoke_client_evidence, "Evidence Enabled Smoke")
+    create_resp = await smoke_client_evidence.post(
+        "/api/v1/render",
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 5.0, "settings": {}}),
+        },
+    )
+    assert create_resp.status_code == 201
+    job_id = create_resp.json()["id"]
+
+    # Inject synthetic evidence (no real FFmpeg in smoke tests)
+    transport: httpx.ASGITransport = smoke_client_evidence._transport  # type: ignore[assignment]
+    render_repo = transport.app.state.render_repository  # type: ignore[union-attr]
+    fake_evidence = json.dumps(
+        {
+            "command_args": ["ffmpeg", "-i", "input.mp4", "-c:v", "libx264", "/renders/out.mp4"],
+            "exit_code": 0,
+            "stderr_tail": "frame=150 fps=30 q=28.0 size=1024kB",
+            "output_path": "/renders/out.mp4",
+            "output_size_bytes": 1048576,
+            "filter_script_path": None,
+        }
+    )
+    await render_repo.update_evidence(job_id, fake_evidence)
+
+    resp = await smoke_client_evidence.get(f"/api/v1/render/{job_id}/evidence")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["job_id"] == job_id
+    assert body["exit_code"] == 0
+    assert body["output_size_bytes"] == 1048576
+    assert isinstance(body["command_args"], list)
+    assert len(body["command_args"]) > 0
