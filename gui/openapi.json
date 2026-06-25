@@ -3,6 +3,10 @@
   "info": {
     "title": "stoat-and-ferret",
     "description": "AI-driven video editor API. For AI agent integration patterns (discovery, schema learning, execute, batch, reconnection) see `docs/manual/ai-integration-patterns.md`.",
+    "license": {
+      "name": "AGPL-3.0-or-later",
+      "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+    },
     "version": "0.3.0"
   },
   "paths": {

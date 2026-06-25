@@ -1195,7 +1195,12 @@ paths:
 
   /api/v1/source:
     get:
-      summary: Get source offer compliance information
+      summary: Get Source
+      description: |-
+        Return source URL, version, commit, and license for AGPL §13 compliance.
+
+        Returns:
+            SourceResponse with source_url, version, commit, and license fields.
       operationId: get_source_api_v1_source_get
       tags:
         - compliance
@@ -1814,6 +1819,7 @@ components:
 
     SourceResponse:
       type: object
+      description: "Typed response model for GET /api/v1/source (BL-539)."
       required:
         - source_url
         - version
