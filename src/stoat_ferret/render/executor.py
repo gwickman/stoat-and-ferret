@@ -15,6 +15,7 @@ import json
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -66,6 +67,7 @@ class RenderExecutor:
         self._temp_files: dict[str, list[Path]] = {}
         self._job_start_times: dict[str, float] = {}
         self._job_durations_us: dict[str, int] = {}
+        self._job_evidence: dict[str, dict[str, Any]] = {}
 
     def register_temp_file(self, job_id: str, path: Path) -> None:
         """Register a temp file for cleanup when the job terminates.
@@ -133,8 +135,9 @@ class RenderExecutor:
         )
         self._active_processes[job_id] = process
 
+        stderr_lines: list[bytes] = []
         try:
-            success = await asyncio.wait_for(
+            success, stderr_lines = await asyncio.wait_for(
                 self._run_process(job_id, process, total_duration_us),
                 timeout=self._timeout_seconds,
             )
@@ -145,6 +148,7 @@ class RenderExecutor:
                 elapsed=round(time.monotonic() - start, 2),
             )
             await self._kill_process(job_id, process)
+            self._persist_evidence(job, command, process.returncode, stderr_lines)
             return False
         finally:
             self._active_processes.pop(job_id, None)
@@ -160,6 +164,7 @@ class RenderExecutor:
             elapsed_seconds=round(elapsed, 2),
             returncode=process.returncode,
         )
+        self._persist_evidence(job, command, process.returncode, stderr_lines)
         return success
 
     async def cancel(self, job_id: str) -> bool:
@@ -272,7 +277,7 @@ class RenderExecutor:
         job_id: str,
         process: asyncio.subprocess.Process,
         total_duration_us: int,
-    ) -> bool:
+    ) -> tuple[bool, list[bytes]]:
         """Read FFmpeg output and parse progress until process exits.
 
         Args:
@@ -281,7 +286,8 @@ class RenderExecutor:
             total_duration_us: Total expected duration for progress calculation.
 
         Returns:
-            True if FFmpeg exited with return code 0.
+            Tuple of (success, stderr_lines) where success is True when
+            FFmpeg exited with return code 0.
         """
         stdout_chunks: list[bytes] = []
         stderr_lines: list[bytes] = []
@@ -342,7 +348,7 @@ class RenderExecutor:
                     returncode=process.returncode,
                 )
 
-        return success
+        return success, stderr_lines
 
     async def _parse_and_report_progress(
         self,
@@ -439,6 +445,73 @@ class RenderExecutor:
             return str(plan_data.get("settings", {}).get("codec", "unknown"))
         except (json.JSONDecodeError, AttributeError):
             return "unknown"
+
+    def pop_evidence(self, job_id: str) -> dict[str, Any] | None:
+        """Return and remove the collected evidence dict for a job.
+
+        Called by the render service after execute() returns to persist
+        evidence to the repository. Returns None if no evidence was collected
+        (e.g., the job was never started).
+
+        Args:
+            job_id: The render job ID.
+
+        Returns:
+            Evidence dict or None.
+        """
+        return self._job_evidence.pop(job_id, None)
+
+    def _persist_evidence(
+        self,
+        job: RenderJob,
+        command: list[str],
+        returncode: int | None,
+        stderr_lines: list[bytes],
+    ) -> None:
+        """Build evidence dict, store it, and fire render.evidence_persisted event.
+
+        Args:
+            job: The render job.
+            command: Full FFmpeg command that was executed.
+            returncode: Process exit code (None on timeout/kill).
+            stderr_lines: Raw stderr bytes collected during execution.
+        """
+        _STDERR_MAX_BYTES = 16 * 1024
+        _STDERR_MAX_LINES = 100
+
+        tail_lines = stderr_lines[-_STDERR_MAX_LINES:]
+        raw = b"".join(tail_lines)
+        if len(raw) > _STDERR_MAX_BYTES:
+            raw = raw[-_STDERR_MAX_BYTES:]
+        stderr_tail = raw.decode("utf-8", errors="replace")
+
+        output_size_bytes: int | None = None
+        if job.output_path:
+            p = Path(job.output_path)
+            try:
+                if p.exists():
+                    output_size_bytes = p.stat().st_size
+            except OSError:
+                pass
+
+        filter_script_path: str | None = None
+        registered = self._temp_files.get(job.id, [])
+        for p in registered:
+            if p.suffix in (".txt", ".filter"):
+                filter_script_path = str(p)
+                break
+
+        evidence: dict[str, Any] = {
+            "command_args": command,
+            "exit_code": returncode,
+            "stderr_tail": stderr_tail,
+            "output_path": job.output_path,
+            "output_size_bytes": output_size_bytes,
+            "filter_script_path": filter_script_path,
+        }
+        self._job_evidence[job.id] = evidence
+
+        logger.info("render.evidence_persisted", job_id=job.id, exit_code=returncode, output_size_bytes=output_size_bytes, stderr_bytes=len(raw))  # noqa: E501
 
     def _cleanup_temp_files(self, job_id: str) -> None:
         """Remove registered temp files for a job.

@@ -391,6 +391,11 @@ RENDER_JOBS_PARTIAL_COLUMNS = [
     ("partial_file_detected", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
+# Columns to add to render_jobs table for render evidence (BL-554).
+RENDER_JOBS_EVIDENCE_COLUMNS = [
+    ("evidence_json", "TEXT"),
+]
+
 
 # Columns to add to clips table for timeline positioning.
 # Each entry is (column_name, column_type).
@@ -440,6 +445,20 @@ def _alter_render_jobs_add_partial_columns(conn: sqlite3.Connection) -> None:
         conn: SQLite database connection.
     """
     for col, col_type in RENDER_JOBS_PARTIAL_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
+def _alter_render_jobs_add_evidence_columns(conn: sqlite3.Connection) -> None:
+    """Add evidence_json column to render_jobs table idempotently (BL-554).
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in RENDER_JOBS_EVIDENCE_COLUMNS:
         try:
             conn.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError as e:
@@ -566,6 +585,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     _alter_projects_add_audio_mix_column(conn)
     _alter_projects_add_audio_baseline_columns(conn)
     _alter_render_jobs_add_partial_columns(conn)
+    _alter_render_jobs_add_evidence_columns(conn)
     conn.commit()
 
 
@@ -664,6 +684,22 @@ async def _alter_render_jobs_add_partial_columns_async(
                 raise
 
 
+async def _alter_render_jobs_add_evidence_columns_async(
+    db: aiosqlite.Connection,
+) -> None:
+    """Add evidence_json column to render_jobs table idempotently (async, BL-554).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in RENDER_JOBS_EVIDENCE_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
 async def create_tables_async(db: aiosqlite.Connection) -> None:
     """Create all database tables and indexes asynchronously.
 
@@ -720,4 +756,5 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await _alter_projects_add_audio_mix_column_async(db)
     await _alter_projects_add_audio_baseline_columns_async(db)
     await _alter_render_jobs_add_partial_columns_async(db)
+    await _alter_render_jobs_add_evidence_columns_async(db)
     await db.commit()
