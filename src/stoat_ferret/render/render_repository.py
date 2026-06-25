@@ -426,7 +426,7 @@ class AsyncSQLiteRenderRepository:
                 datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None
             ),
             partial_file_detected=bool(row["partial_file_detected"]),
-            evidence_json=row.get("evidence_json"),
+            evidence_json=row["evidence_json"],
         )
 
 

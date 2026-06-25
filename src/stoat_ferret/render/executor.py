@@ -511,7 +511,13 @@ class RenderExecutor:
         }
         self._job_evidence[job.id] = evidence
 
-        logger.info("render.evidence_persisted", job_id=job.id, exit_code=returncode, output_size_bytes=output_size_bytes, stderr_bytes=len(raw))  # noqa: E501
+        logger.info(
+            "render.evidence_persisted",
+            job_id=job.id,
+            exit_code=returncode,
+            output_size_bytes=output_size_bytes,
+            stderr_bytes=len(raw),
+        )
 
     def _cleanup_temp_files(self, job_id: str) -> None:
         """Remove registered temp files for a job.
