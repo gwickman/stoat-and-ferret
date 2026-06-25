@@ -160,3 +160,23 @@ class RenderPreviewResponse(BaseModel):
     """Response containing a preview FFmpeg command string."""
 
     command: str = Field(..., description="Complete FFmpeg command string")
+
+
+class RenderJobEvidenceResponse(BaseModel):
+    """Full evidence response for GET /render/{job_id}/evidence.
+
+    Gated by STOAT_RENDER_EVIDENCE_FULL_ACCESS. Sensitive values in
+    command_args are redacted (sk-or-v1-* API keys, STOAT_* env var values).
+    """
+
+    job_id: str = Field(..., description="The render job ID")
+    command_args: list[str] = Field(
+        ..., description="FFmpeg command arguments with sensitive values redacted"
+    )
+    exit_code: int | None = Field(None, description="FFmpeg process exit code")
+    stderr_tail: str = Field(..., description="Last 100 lines or 16 KB of FFmpeg stderr output")
+    output_path: str = Field(..., description="Path to the rendered output file")
+    output_size_bytes: int | None = Field(None, description="Output file size in bytes")
+    filter_script_path: str | None = Field(
+        None, description="Path to the filter_complex_script file if used"
+    )

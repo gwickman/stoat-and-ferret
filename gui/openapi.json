@@ -3473,6 +3473,49 @@
         }
       }
     },
+    "/api/v1/render/{job_id}/evidence": {
+      "get": {
+        "tags": [
+          "render"
+        ],
+        "summary": "Get Render Job Evidence",
+        "description": "Return full FFmpeg evidence for a completed render job.\n\nAccess is gated by the STOAT_RENDER_EVIDENCE_FULL_ACCESS environment variable.\nWhen disabled (default), returns 403. When enabled, returns command_args,\nexit_code, stderr_tail, output_path, output_size_bytes, and filter_script_path\nwith sensitive values redacted (sk-or-v1-* API keys, STOAT_* env var values).\n\nArgs:\n    job_id: The render job UUID.\n    repo: Render repository dependency.\n\nReturns:\n    Full evidence response.\n\nRaises:\n    HTTPException: 403 if STOAT_RENDER_EVIDENCE_FULL_ACCESS is not enabled,\n        404 if job or evidence not found.",
+        "operationId": "get_render_job_evidence_api_v1_render__job_id__evidence_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderJobEvidenceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/render/{job_id}/frame_preview.jpg": {
       "get": {
         "tags": [
@@ -6929,6 +6972,78 @@
         ],
         "title": "QueueStatusResponse",
         "description": "Render queue status with capacity, disk space, and throughput metrics."
+      },
+      "RenderJobEvidenceResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "The render job ID"
+          },
+          "command_args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Command Args",
+            "description": "FFmpeg command arguments with sensitive values redacted"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code",
+            "description": "FFmpeg process exit code"
+          },
+          "stderr_tail": {
+            "type": "string",
+            "title": "Stderr Tail",
+            "description": "Last 100 lines or 16 KB of FFmpeg stderr output"
+          },
+          "output_path": {
+            "type": "string",
+            "title": "Output Path",
+            "description": "Path to the rendered output file"
+          },
+          "output_size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Size Bytes",
+            "description": "Output file size in bytes"
+          },
+          "filter_script_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filter Script Path",
+            "description": "Path to the filter_complex_script file if used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "command_args",
+          "stderr_tail",
+          "output_path"
+        ],
+        "title": "RenderJobEvidenceResponse",
+        "description": "Full evidence response for GET /render/{job_id}/evidence.\n\nGated by STOAT_RENDER_EVIDENCE_FULL_ACCESS. Sensitive values in\ncommand_args are redacted (sk-or-v1-* API keys, STOAT_* env var values)."
       },
       "RenderJobResponse": {
         "properties": {

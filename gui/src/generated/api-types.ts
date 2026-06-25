@@ -2158,6 +2158,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/render/{job_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Render Job Evidence
+         * @description Return full FFmpeg evidence for a completed render job.
+         *
+         *     Access is gated by the STOAT_RENDER_EVIDENCE_FULL_ACCESS environment variable.
+         *     When disabled (default), returns 403. When enabled, returns command_args,
+         *     exit_code, stderr_tail, output_path, output_size_bytes, and filter_script_path
+         *     with sensitive values redacted (sk-or-v1-* API keys, STOAT_* env var values).
+         *
+         *     Args:
+         *         job_id: The render job UUID.
+         *         repo: Render repository dependency.
+         *
+         *     Returns:
+         *         Full evidence response.
+         *
+         *     Raises:
+         *         HTTPException: 403 if STOAT_RENDER_EVIDENCE_FULL_ACCESS is not enabled,
+         *             404 if job or evidence not found.
+         */
+        get: operations["get_render_job_evidence_api_v1_render__job_id__evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/render/{job_id}/frame_preview.jpg": {
         parameters: {
             query?: never;
@@ -4125,6 +4161,50 @@ export interface components {
              * @description Jobs failed since midnight UTC
              */
             failed_today: number;
+        };
+        /**
+         * RenderJobEvidenceResponse
+         * @description Full evidence response for GET /render/{job_id}/evidence.
+         *
+         *     Gated by STOAT_RENDER_EVIDENCE_FULL_ACCESS. Sensitive values in
+         *     command_args are redacted (sk-or-v1-* API keys, STOAT_* env var values).
+         */
+        RenderJobEvidenceResponse: {
+            /**
+             * Job Id
+             * @description The render job ID
+             */
+            job_id: string;
+            /**
+             * Command Args
+             * @description FFmpeg command arguments with sensitive values redacted
+             */
+            command_args: string[];
+            /**
+             * Exit Code
+             * @description FFmpeg process exit code
+             */
+            exit_code?: number | null;
+            /**
+             * Stderr Tail
+             * @description Last 100 lines or 16 KB of FFmpeg stderr output
+             */
+            stderr_tail: string;
+            /**
+             * Output Path
+             * @description Path to the rendered output file
+             */
+            output_path: string;
+            /**
+             * Output Size Bytes
+             * @description Output file size in bytes
+             */
+            output_size_bytes?: number | null;
+            /**
+             * Filter Script Path
+             * @description Path to the filter_complex_script file if used
+             */
+            filter_script_path?: string | null;
         };
         /**
          * RenderJobResponse
@@ -7356,6 +7436,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QueueStatusResponse"];
+                };
+            };
+        };
+    };
+    get_render_job_evidence_api_v1_render__job_id__evidence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderJobEvidenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
