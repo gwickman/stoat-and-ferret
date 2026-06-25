@@ -159,14 +159,10 @@ async def test_running_render_job_included_in_active_jobs(
                 f"Expected job_type='render', got {render_entries[0]['job_type']!r}"
             )
 
-            # Cancel to reach terminal state; 409 is acceptable — job may have
-            # raced to FAILED between active_jobs observation and this request
+            # Cancel to reach terminal state
             cancel_resp = await smoke_client.post(f"/api/v1/render/{job_id}/cancel")
-            assert cancel_resp.status_code in (200, 409), (
-                f"Expected cancel 200 or 409 (terminal race), got {cancel_resp.status_code}"
-            )
-            if cancel_resp.status_code == 200:
-                assert cancel_resp.json()["status"] == "cancelled"
+            assert cancel_resp.status_code == 200
+            assert cancel_resp.json()["status"] == "cancelled"
 
     # Terminal render job must not appear in active_jobs
     state_resp = await smoke_client.get("/api/v1/system/state")
