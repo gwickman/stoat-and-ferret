@@ -6,7 +6,12 @@
   },
   {
     "journey_id": 204,
-    "reason": "Pre-existing HTTP 500 during boot-phase seed setup (forced reseed). Confirmed present in June 13 UAT report (>=10 days before v083 merged). Root cause pending traceback confirmation; registered here to suppress false-positive UAT failure signals.",
-    "tracking_reference": "BL-536"
+    "reason": "BL-551 preflight rejects multi-clip renders with 422 MULTI_CLIP_NOT_SUPPORTED. J204 seeds the Running Montage sample project (4 clips) and calls the render API directly, which now fails. Previously failed with HTTP 500 during forced reseed (BL-536). The seed journey is intentionally multi-clip; discharge requires either a single-clip seed variant or BL-505 multi-clip render support.",
+    "tracking_reference": "BL-551"
+  },
+  {
+    "journey_id": 501,
+    "reason": "BL-551 preflight rejects multi-clip renders with 422 MULTI_CLIP_NOT_SUPPORTED. J501 auto-selects the first project (Running Montage, 4 clips seeded by J204) via the Timeline page and submits a render through the UI, which returns 422, so the modal does not close and Step 10 fails. Discharge: update J501 to seed its own single-clip project before rendering, or gate on BL-505 multi-clip support.",
+    "tracking_reference": "BL-551"
   }
 ]

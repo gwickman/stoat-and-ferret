@@ -58,6 +58,7 @@ class RenderJobResponse(BaseModel):
     updated_at: datetime
     completed_at: datetime | None = None
     partial_file_detected: bool = False
+    warnings: list[str] | None = None
 
 
 class RenderListResponse(BaseModel):

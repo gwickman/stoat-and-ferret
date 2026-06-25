@@ -160,11 +160,10 @@ async def test_sample_project_structure(
         else:
             assert len(clip_effects) == 0, f"Clip {i}: expected no effects, got {len(clip_effects)}"
 
-    # --- BL-239: Render job queueing ---
-    # Asserts status=="queued" only — the render background worker
-    # (RenderQueue.dequeue) is not wired to FastAPI lifespan, so jobs remain
-    # queued indefinitely in test mode. Output file existence is not asserted.
-    # See BL-239 design investigation (comms/outbox/versions/design/v034/).
+    # --- BL-551: Multi-clip render preflight rejection ---
+    # The sample project has 4 clips; BL-551 preflight rejects multi-clip renders
+    # with 422 MULTI_CLIP_NOT_SUPPORTED. Single-clip render queueing is covered by
+    # test_system_state_smoke.py which seeds a 1-clip project.
     render_resp = await client.post(
         "/api/v1/render",
         json={
@@ -172,10 +171,9 @@ async def test_sample_project_structure(
             "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
         },
     )
-    assert render_resp.status_code == 201
-    render_data = render_resp.json()
-    assert render_data["status"] == "queued"
-    assert render_data["id"]  # non-empty string
+    assert render_resp.status_code == 422
+    body = render_resp.json()
+    assert body["detail"]["code"] == "MULTI_CLIP_NOT_SUPPORTED"
 
 
 @pytest.fixture()

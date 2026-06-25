@@ -7001,6 +7001,20 @@
             "type": "boolean",
             "title": "Partial File Detected",
             "default": false
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warnings"
           }
         },
         "type": "object",
