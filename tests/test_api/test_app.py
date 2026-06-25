@@ -86,6 +86,15 @@ def test_openapi_spec_export_produces_valid_dict() -> None:
     assert len(spec["components"]["schemas"]) > 0
 
 
+@pytest.mark.api
+def test_version_surfaces_agree(client: TestClient) -> None:
+    """All three version surfaces agree after version-metadata-unification (BL-547)."""
+    source = client.get("/api/v1/source").json()
+    ver = client.get("/api/v1/version").json()
+    app_openapi = client.app.openapi()
+    assert source["version"] == ver["app_version"] == app_openapi["info"]["version"]
+
+
 def test_openapi_spec_export_script(tmp_path: Path) -> None:
     """export_openapi() writes valid JSON matching app.openapi()."""
     from scripts.export_openapi import export_openapi

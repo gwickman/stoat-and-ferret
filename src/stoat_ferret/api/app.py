@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.metadata
 import inspect
 import logging
 import os
@@ -577,7 +578,11 @@ def create_app(
             "execute, batch, reconnection) see "
             "`docs/manual/ai-integration-patterns.md`."
         ),
-        version="0.3.0",
+        version=importlib.metadata.version("stoat-ferret"),
+        license_info={
+            "name": "AGPL-3.0-or-later",
+            "url": "https://www.gnu.org/licenses/agpl-3.0.html",
+        },
         lifespan=lifespan,
         debug=settings.debug,
     )
