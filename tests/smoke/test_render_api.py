@@ -840,3 +840,38 @@ async def test_colorlut_apostrophe_rejection_unit() -> None:
 
     with pytest.raises(ValueError):
         ColorLutBuilder("O'Brien_lut")
+
+
+# -- BL-502: OpacityBuilder geq expression smoke tests --
+
+
+async def test_opacity_animated_geq_smoke() -> None:
+    """OpacityBuilder with automation produces a geq filter with uppercase T (BL-502)."""
+    from stoat_ferret_core import Automation, Keyframe, OpacityBuilder
+
+    auto = Automation(
+        default=0.0,
+        keyframes=[
+            Keyframe(t=0.0, value=0.0, curve="Linear"),
+            Keyframe(t=2.0, value=1.0, curve="Linear"),
+        ],
+    )
+    f = OpacityBuilder(opacity=0.0).with_automation(auto).build()
+    s = str(f)
+    assert "geq" in s, f"Animated opacity must use geq filter: {s}"
+    assert "colorchannelmixer" not in s, (
+        f"colorchannelmixer must not appear for animated opacity: {s}"
+    )
+    assert "*255" in s, f"Alpha channel must be scaled to 0-255 range: {s}"
+    # Uppercase T (geq time variable) must appear; lowercase t must not appear as standalone word
+    assert "T" in s, f"geq expression must use uppercase T for time: {s}"
+
+
+async def test_opacity_static_uses_colorchannelmixer_smoke() -> None:
+    """OpacityBuilder without automation still uses colorchannelmixer (BL-502)."""
+    from stoat_ferret_core import OpacityBuilder
+
+    f = OpacityBuilder(opacity=0.5).build()
+    s = str(f)
+    assert "colorchannelmixer" in s, f"Static opacity must use colorchannelmixer: {s}"
+    assert "geq" not in s, f"geq must not appear for static opacity: {s}"
