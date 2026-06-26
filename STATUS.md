@@ -1,55 +1,47 @@
 # Project Status — stoat-and-ferret
 
-**Current version:** v081 (Release 2, Wave 5 — Video FX)
-**Status:** Completed 2026-06-13
+**Current version:** v088 (R3 Wave 2 — Multi-Clip Render Pipeline + Tooling Hygiene)
+**Status:** Completed 2026-06-26
 
-## v081 Summary
+## v088 Summary
 
-Release 2, Wave 5 delivers 11 video effects across three themes: automated video FX (blur, sharpen, opacity, scale, color grading), compositing and stylization (chromakey, colorkey, lens distortion, generators), and test coverage with smoke tests and acceptance harness updates.
+R3 Wave 2 delivers the multi-clip rendering pipeline (BL-505 Layers 1–3): EffectDefinition metadata, Rust `RenderGraphTranslator` tuple API, render worker wired to translator, and `ValueKind`/`emit_filter_value` dispatch. Includes smoke test coverage for multi-clip render, harness guide update, and four tooling hygiene items (UAT registry, Windows smoke docs, pip-licenses skip guard, C4 drift test upgrade).
 
 ### Delivered
 
 | Theme | Feature | Status | PR |
 |-------|---------|--------|----|
-| automated-video-fx | automation-dispatch-refactor | ✓ | #594 |
-| automated-video-fx | blur-sharpen-effects | ✓ | #595 |
-| automated-video-fx | opacity-scale-animation | ✓ | #596 |
-| automated-video-fx | color-lut-grading | ✓ | #597 |
-| compositing-and-stylization | keying-blend-compositing | ✓ | #598 |
-| compositing-and-stylization | optical-distortion | ✓ | #599 |
-| compositing-and-stylization | procedural-generators | ✓ | #600 |
-| test-coverage-and-release-acceptance | video-fx-smoke-tests | ✓ | #601 |
-| test-coverage-and-release-acceptance | smoke-harness-guide-update | ✓ | #602 |
-| test-coverage-and-release-acceptance | uat-journeys | ✓ | #603 |
-| test-coverage-and-release-acceptance | acceptance-harness | ✓ | #604 |
+| render-pipeline-effects | effectdef-metadata-and-rust-translator | ✓ | #662 |
+| render-pipeline-effects | wire-worker-to-translator | ✓ | #662 |
+| render-pipeline-effects | value-kind-escape-dispatch | ✓ | #663 |
+| smoke-test-coverage | smoke-update-multi-clip-effects | ✓ | #664 |
+| smoke-test-coverage | update-smoke-harness-guide | ✓ | #665 |
+| tooling-test-hygiene | register-uat-known-failures | ✓ | #666 |
+| tooling-test-hygiene | document-windows-smoke-command | ✓ | #667 |
+| tooling-test-hygiene | fix-dep-license-skip-guard | ✓ | #668 |
+| tooling-test-hygiene | upgrade-c4-drift-test | ✓ | #669 |
 
 ### Test Results
 
-- **Test count:** ~3199 passed (3069 baseline → +130)
+- **Test count:** ≥3276 passed (3273 baseline + new tests from render pipeline + smoke coverage)
 - **Regressions:** 0
-- **FFmpeg-gated (deferred_post_merge):** BL-450 ACs 3-4, BL-451 AC-4, BL-452 AC-4, BL-453 AC-4, BL-454 AC-4, BL-455 AC-4
+- **FFmpeg-gated (deferred_post_merge):** BL-553-AC-4 (2-clip SSIM render), BL-505 full render path
+- **UAT-gated (deferred_post_merge):** BL-558-AC-5 (headless UAT confirmation), BL-559-AC-3 (Windows sandbox)
 
 ### Key Capabilities Added
 
-- **automation_filter_template** — generic `automation_filter_template` on EffectDefinition; `build_automation_filter_string` dispatcher supports all automatable effects
-- **BlurBuilder** — gaussian blur (`gblur`) and directional blur (`dblur`) with automatable radius parameter; `automation=True` on effect definition
-- **SharpenBuilder** — unsharp mask sharpening with automation support
-- **OpacityBuilder** — keyframed opacity envelopes with full automation contract support
-- **ScaleBuilder** — video scaling with automatable width/height parameters and envelope keyframes
-- **ColorLutBuilder** — 3D LUT-based color grading; 3 bundled presets (`identity`, `calming_teal`, `warm_fade`)
-- **ChromaKeyBuilder** — chroma key compositing with configurable thresholds and similarity tolerance
-- **ColorKeyBuilder** — color-range keying for selective color removal
-- **LensDistortBuilder** — barrel and pincushion distortion correction via `lenscorrection` filter; k1/k2 coefficients
-- **GradientGeneratorBuilder** — procedural gradient generation using `gradients` lavfi source
-- **NoiseGeneratorBuilder** — procedural noise generation using `cellauto` lavfi source
-- **Effect registry expansion** — 27 → 33 effects (+6 effect types, +4 builders with automation support)
-- **blend_mode schema** — added to `build_composition_graph` for advanced compositing control
+- **EffectDefinition metadata** — `label`, `description`, `category` fields populated for all 34 registered effects; `create_default_registry()` updated
+- **RenderGraphTranslator tuple API** — `translate()` now returns `(filter_complex_str, input_paths: list[str])`; `_core.pyi` stub updated
+- **Render worker wired to translator** — `build_command_for_job` multi-clip path fetches per-clip effects from DB, validates against registry, unpacks translator output into `-i` args
+- **ValueKind enum** — 7 variants (`Expression`, `Path`, `KneeString`, `EnumLiteral`, `Numeric`, `Boolean`, `Text`) in `ffmpeg/video.rs`; `emit_filter_value` canonical dispatch; `BlurBuilder`, `OpacityBuilder`, `ScaleBuilder` migrated
+- **Multi-clip smoke tests** — 5 new tests in `test_render_contract.py` (4 static, 1 FFmpeg-gated); `test_render_cancel` race fixed
+- **UAT known-failures registry** — J502 and J504 registered in `baseline-uat-failures.json`; runner exits 0 for pre-existing HTTP 422 failures
+- **Windows smoke command** — `UV_NO_CACHE=1` documented in `smoke-test-harness.md` and `AGENTS.md`
+- **pip-licenses skip guard** — OR semantics across module entry point + console script shim; None guard in `check_dependency_licenses.py`
+- **C4 drift test** — upgraded to `create_app().openapi()` live-spec comparison; catches app.py drift that stale JSON missed
 
 ### Deferred (FFmpeg/UAT-gated)
 
-- BL-450 ACs 3-4: blur effect FFmpeg contract tests
-- BL-451 AC-4: sharpen effect UAT discharge
-- BL-452 AC-4: opacity-scale automation FFmpeg contract
-- BL-453 AC-4: color LUT grading FFmpeg contract
-- BL-454 AC-4: keying blend compositing FFmpeg contract
-- BL-455 AC-4: optical-distortion and generator FFmpeg contract
+- BL-553-AC-4: POST 2-clip project with blur + render + SSIM > 0.99 check (requires `STOAT_TEST_FFMPEG=1`)
+- BL-558-AC-5: Headless UAT confirmation after J502/J504 registry entries (requires live headed UAT run)
+- BL-559-AC-3: Windows sandbox smoke command verification (requires restricted Windows environment)
