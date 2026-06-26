@@ -317,3 +317,260 @@ These steps require a running snf GUI in a headed environment and cannot be auto
 5. To verify the fallback: if the API is unreachable, the link should still be present and point to the default URL.
 
 **data-testid:** `source-code-link` (usable with Playwright for automated headed UAT)
+
+## v087 UAT Journeys (Multi-Clip Render, Preflight Validation, Evidence API)
+
+These journeys validate the v087 feature set: multi-clip rendering via `RenderGraphTranslator` (BL-505), preflight validation warnings (BL-551), and the evidence API (BL-554). They are API-level journeys exercised via `curl` or the smoke test harness — not browser journeys. Browser-specific steps are marked as deferred.
+
+### J-MULTICL-01: Multi-Clip Render — API Acceptance
+
+**Feature:** BL-505 — RenderGraphTranslator integration
+
+**Pre-conditions:**
+- Server running on `http://localhost:8765`
+- At least one video file has been scanned into the library (needed for `source_video_id`)
+
+**Steps:**
+
+1. Create a project:
+   ```bash
+   curl -s -X POST http://localhost:8765/api/v1/projects \
+     -H 'Content-Type: application/json' \
+     -d '{"name": "Multi-Clip UAT"}' | jq .
+   ```
+   Note the returned `id` as `PROJECT_ID`.
+
+2. Add two clips to the project (replace `VIDEO_ID` with a valid `source_video_id` from `GET /api/v1/library`):
+   ```bash
+   # Clip 1 — timeline_position=0
+   curl -s -X POST "http://localhost:8765/api/v1/projects/$PROJECT_ID/clips" \
+     -H 'Content-Type: application/json' \
+     -d '{"source_video_id": "VIDEO_ID", "in_point": 0, "out_point": 90, "timeline_position": 0}' | jq .
+
+   # Clip 2 — timeline_position=90
+   curl -s -X POST "http://localhost:8765/api/v1/projects/$PROJECT_ID/clips" \
+     -H 'Content-Type: application/json' \
+     -d '{"source_video_id": "VIDEO_ID", "in_point": 0, "out_point": 90, "timeline_position": 90}' | jq .
+   ```
+
+3. Submit a render job:
+   ```bash
+   curl -s -X POST http://localhost:8765/api/v1/render \
+     -H 'Content-Type: application/json' \
+     -d "{\"project_id\": \"$PROJECT_ID\", \"render_plan\": \"{\\\"total_duration\\\": 6.0, \\\"settings\\\": {}}\"}" | jq .
+   ```
+
+**Expected outcome:**
+- HTTP **201** — multi-clip projects are accepted (BL-505 removed the previous single-clip restriction)
+- Response body includes `"status": "queued"` or `"running"`
+- `warnings` field is `null` or absent when no per-clip effects are set
+
+**Note on previous behavior:** Before BL-505, a multi-clip project was rejected at `POST /render` with HTTP 422 and error code `MULTI_CLIP_NOT_SUPPORTED`. That rejection no longer exists. If you observe a 422 with that code, the BL-505 integration did not deploy correctly.
+
+---
+
+### J-MULTICL-02: Multi-Clip Render — SSIM Visual Verification (FFmpeg-gated, deferred)
+
+**Feature:** BL-505 — render output content verification
+
+**Pre-conditions:** FFmpeg available (`STOAT_TEST_FFMPEG=1`); real video source files accessible to the server.
+
+**Steps:**
+
+1. Complete J-MULTICL-01 and poll until `status == "completed"`:
+   ```bash
+   curl -s "http://localhost:8765/api/v1/render/$JOB_ID" | jq .status
+   ```
+
+2. Read `output_path` from the job response.
+
+3. Extract a frame from the first clip's time region and the second clip's time region:
+   ```bash
+   ffmpeg -ss 1.5 -i "$OUTPUT_PATH" -vframes 1 -q:v 2 /tmp/frame_clip1.jpg
+   ffmpeg -ss 4.5 -i "$OUTPUT_PATH" -vframes 1 -q:v 2 /tmp/frame_clip2.jpg
+   ```
+
+4. Visually verify that `frame_clip1.jpg` shows content from the first source clip and `frame_clip2.jpg` shows content from the second source clip.
+
+**Expected outcome:**
+- Frame at ~1.5 s shows clip 1 source content
+- Frame at ~4.5 s shows clip 2 source content
+- Total output duration is approximately 6.0 s
+
+**Discharge status:** Deferred — requires FFmpeg and real video sources. Discharge via `STOAT_TEST_FFMPEG=1` smoke run post-release.
+
+---
+
+### J-PREFLIGHT-01: Preflight — Multi-Clip Project Accepted (Post-BL-505)
+
+**Feature:** BL-551 preflight layer + BL-505
+
+Prior to BL-505, `POST /render` rejected multi-clip projects with HTTP 422 `MULTI_CLIP_NOT_SUPPORTED`. After BL-505 the rejection is gone; the preflight layer no longer blocks on clip count.
+
+**Steps:** See J-MULTICL-01. Submit a project with 2+ clips.
+
+**Expected outcome:** HTTP **201**, not 422.
+
+---
+
+### J-PREFLIGHT-02: Preflight — Single-Clip with Per-Clip Effects Returns Warnings
+
+**Feature:** BL-551-AC-2
+
+**Pre-conditions:** Server running; a project with exactly one clip exists.
+
+**Steps:**
+
+1. Create a project and add one clip (see J-MULTICL-01 steps 1–2, but add only one clip).
+
+2. Add a per-clip effect:
+   ```bash
+   curl -s -X POST "http://localhost:8765/api/v1/projects/$PROJECT_ID/clips/$CLIP_ID/effects" \
+     -H 'Content-Type: application/json' \
+     -d '{"effect_type": "video_fade", "parameters": {"fade_type": "in", "start_time": 0.0, "duration": 1.0}}' | jq .
+   ```
+
+3. Submit a render job:
+   ```bash
+   curl -s -X POST http://localhost:8765/api/v1/render \
+     -H 'Content-Type: application/json' \
+     -d "{\"project_id\": \"$PROJECT_ID\", \"render_plan\": \"{\\\"total_duration\\\": 5.0, \\\"settings\\\": {}}\"}" \
+     | jq '{status, warnings}'
+   ```
+
+**Expected outcome:**
+- HTTP **201**
+- `warnings` array is non-empty; message contains `"Per-clip effects detected; effects will be applied in a future release"`
+
+---
+
+### J-PREFLIGHT-03: Preflight — Zero-Byte FFmpeg Output Marks Job FAILED (FFmpeg-gated, deferred)
+
+**Feature:** BL-551-AC-3
+
+**Pre-conditions:** FFmpeg available (`STOAT_TEST_FFMPEG=1`); a source file that causes FFmpeg to produce zero-byte output (e.g., a truncated or header-only file).
+
+**Steps:**
+
+1. Scan a corrupted/truncated video file into the library.
+
+2. Add it as a clip to a project and submit a render job.
+
+3. Poll the job until it reaches a terminal state:
+   ```bash
+   curl -s "http://localhost:8765/api/v1/render/$JOB_ID" | jq '{status, error_message}'
+   ```
+
+**Expected outcome:**
+- `status: "failed"`
+- `error_message` describes the zero-byte output condition
+
+**Discharge status:** Deferred — requires FFmpeg and a controlled corrupted-input scenario. Discharge via `STOAT_TEST_FFMPEG=1` post-release.
+
+---
+
+### J-EVIDENCE-01: Evidence API — Access Denied Without Flag
+
+**Feature:** BL-554
+
+**Pre-conditions:** Server running with `STOAT_RENDER_EVIDENCE_FULL_ACCESS` unset or `false` (the default).
+
+**Steps:**
+
+1. Submit a render job (see J-MULTICL-01 steps 1–3).
+
+2. Call the evidence endpoint:
+   ```bash
+   curl -s "http://localhost:8765/api/v1/render/$JOB_ID/evidence" | jq .
+   ```
+
+**Expected outcome:**
+- HTTP **403**
+- Response body:
+  ```json
+  {
+    "detail": {
+      "code": "EVIDENCE_ACCESS_DISABLED",
+      "message": "Full evidence access is disabled. Set STOAT_RENDER_EVIDENCE_FULL_ACCESS=true to enable."
+    }
+  }
+  ```
+
+---
+
+### J-EVIDENCE-02: Evidence API — Full Evidence When Flag Enabled (FFmpeg-gated)
+
+**Feature:** BL-554
+
+**Pre-conditions:** Server started with `STOAT_RENDER_EVIDENCE_FULL_ACCESS=true`. FFmpeg available for render completion.
+
+**Steps:**
+
+1. Start the server with the evidence flag:
+   ```bash
+   STOAT_RENDER_EVIDENCE_FULL_ACCESS=true uv run python -m stoat_ferret.api.app
+   ```
+
+2. Create a project, add a clip, and submit a render job.
+
+3. Poll `GET /api/v1/render/{job_id}` until `status == "completed"`.
+
+4. Fetch the evidence:
+   ```bash
+   curl -s "http://localhost:8765/api/v1/render/$JOB_ID/evidence" | jq .
+   ```
+
+**Expected outcome:**
+- HTTP **200**
+- Response includes all fields: `job_id`, `command_args` (list), `exit_code` (integer), `stderr_tail` (string), `output_path` (string), `output_size_bytes` (integer or null), `filter_script_path` (string or null)
+- `exit_code` is `0` for a successful render
+
+**Discharge status:** Requires FFmpeg for a real completed render. Smoke test `test_evidence_endpoint_200_when_enabled` provides partial headless coverage with synthetic evidence.
+
+---
+
+### J-EVIDENCE-03: Evidence API — Sensitive Values Are Redacted
+
+**Feature:** BL-554 — command_args redaction
+
+**Pre-conditions:** Server running with `STOAT_RENDER_EVIDENCE_FULL_ACCESS=true`. A render job has completed and evidence has been persisted.
+
+**Steps:**
+
+1. Start the server with the evidence flag and any `STOAT_*` env vars you want to verify are redacted (e.g., a fake `STOAT_SECRET_VALUE=super-secret`).
+
+2. Submit and complete a render job.
+
+3. Fetch evidence:
+   ```bash
+   curl -s "http://localhost:8765/api/v1/render/$JOB_ID/evidence" | jq .command_args
+   ```
+
+4. Verify the output:
+   - Scan `command_args` for any `sk-or-v1-*` token patterns — all must be replaced with `"[REDACTED]"`
+   - Scan `command_args` for the literal value of any `STOAT_*` env vars — all must be replaced with `"[REDACTED]"`
+
+**Expected outcome:** No raw API keys or `STOAT_*` env var values appear in `command_args`. Each redacted position contains the string `"[REDACTED]"`.
+
+---
+
+### J-EVIDENCE-04: GUI Evidence Inspector (Windows Headed — Deferred)
+
+**Feature:** BL-554 — GUI integration
+
+**Discharge status:** Deferred — requires Windows headed browser environment.
+
+**Discharge procedure:** Manual UAT on Windows post-release. Navigate to the Render page (`/gui/render`), open a completed job's details panel, and verify the Evidence tab is populated with `command_args`, `exit_code`, `stderr_tail`, `output_path`, and `output_size_bytes`.
+
+---
+
+## Deferred UAT Items (v087)
+
+The following UAT scenarios require a Windows headed environment or FFmpeg and are deferred to the post-v087 discharge window:
+
+| Journey | Reason | Discharge Procedure |
+|---------|--------|---------------------|
+| J-EVIDENCE-04 (GUI evidence inspector) | Requires Windows headed browser | Manual UAT on Windows post-release |
+| J-MULTICL-02 (SSIM visual verification) | Requires FFmpeg + real video sources | `STOAT_TEST_FFMPEG=1` smoke run post-release |
+| J-PREFLIGHT-03 (zero-byte output detection) | Requires FFmpeg + controlled corrupted input | `STOAT_TEST_FFMPEG=1` with truncated source file |
+| J-EVIDENCE-02 (full evidence with real FFmpeg) | Requires FFmpeg for completed render | `STOAT_TEST_FFMPEG=1` smoke run post-release |
