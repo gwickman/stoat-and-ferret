@@ -43,3 +43,39 @@ def test_registry_has_builtin_effects() -> None:
     """Guards against silent removals from the default registry."""
     registry = create_default_registry()
     assert len(registry.list_all()) == 34
+
+
+def test_value_kind_per_option_populated_for_migrated_builders() -> None:
+    """BL-555-AC-5: blur/opacity/scale EffectDefinitions carry value_kind_per_option."""
+    registry = create_default_registry()
+    effects = dict(registry.list_all())
+
+    blur = effects["blur"]
+    assert blur.value_kind_per_option == {"sigma": "numeric"}, (
+        f"blur missing expected value_kind_per_option: {blur.value_kind_per_option}"
+    )
+
+    opacity = effects["opacity"]
+    assert opacity.value_kind_per_option == {"opacity": "numeric"}, (
+        f"opacity missing expected value_kind_per_option: {opacity.value_kind_per_option}"
+    )
+
+    scale = effects["scale"]
+    assert scale.value_kind_per_option == {"scale": "numeric"}, (
+        f"scale missing expected value_kind_per_option: {scale.value_kind_per_option}"
+    )
+
+
+def test_requires_path_escape_implies_path_kind_entry() -> None:
+    """Hygiene: every builder with requires_path_escape=True must have a 'path' entry
+    in value_kind_per_option (guards against silent escape policy drift)."""
+    registry = create_default_registry()
+    violations = []
+    for effect_type, definition in registry.list_all():
+        if definition.requires_path_escape:
+            has_path_kind = any(v == "path" for v in definition.value_kind_per_option.values())
+            if not has_path_kind:
+                violations.append(effect_type)
+    assert not violations, (
+        f"Effects with requires_path_escape=True but no 'path' value_kind entry: {violations}"
+    )

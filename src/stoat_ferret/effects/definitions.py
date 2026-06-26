@@ -1899,6 +1899,7 @@ BLUR = EffectDefinition(
     example_prompt="Add a soft gaussian blur with radius 3 to this clip.",
     automatable=frozenset({"sigma"}),
     automation_filter_template="gblur=sigma='{expr}':eval=frame",
+    value_kind_per_option={"sigma": "numeric"},
 )
 
 
@@ -2002,6 +2003,7 @@ OPACITY_EFFECT = EffectDefinition(
     example_prompt="Fade this clip from transparent to fully opaque over 2 seconds.",
     automatable=frozenset({"opacity"}),
     automation_filter_template="format=rgba,colorchannelmixer=aa='{expr}':eval=frame",
+    value_kind_per_option={"opacity": "numeric"},
 )
 
 
@@ -2057,6 +2059,7 @@ SCALE_EFFECT = EffectDefinition(
     example_prompt="Apply a slow zoom from 1.0 to 1.2 scale over 5 seconds.",
     automatable=frozenset({"scale"}),
     automation_filter_template="scale=trunc(iw*('{expr}')/2)*2:trunc(ih*('{expr}')/2)*2:eval=frame",
+    value_kind_per_option={"scale": "numeric"},
 )
 
 

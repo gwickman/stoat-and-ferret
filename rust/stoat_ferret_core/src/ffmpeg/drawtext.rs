@@ -36,7 +36,7 @@ use super::filter::Filter;
 ///
 /// The drawtext filter uses `%` for text expansion (e.g., `%{localtime}`),
 /// so literal percent signs must be doubled.
-fn escape_drawtext(input: &str) -> String {
+pub(crate) fn escape_drawtext(input: &str) -> String {
     let mut result = String::with_capacity(input.len() * 2);
     for c in input.chars() {
         match c {
