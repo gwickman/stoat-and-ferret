@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,6 +12,18 @@ from pathlib import Path
 import pytest
 
 SCRIPT = "scripts/check_dependency_licenses.py"
+
+
+def _pip_licenses_available() -> bool:
+    # Path 1: module entry point
+    result = subprocess.run(
+        [sys.executable, "-m", "pip_licenses", "--version"],
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        return True
+    # Path 2: console script shim
+    return shutil.which("pip-licenses") is not None
 
 
 def test_missing_dep_exits_nonzero(tmp_path: Path) -> None:
@@ -37,11 +50,7 @@ def test_missing_dep_exits_nonzero(tmp_path: Path) -> None:
 
 def test_current_pyproject_passes() -> None:
     """Checker exits 0 on current pyproject.toml and inventory (requires pip-licenses)."""
-    probe = subprocess.run(
-        [sys.executable, "-m", "pip_licenses", "--version"],
-        capture_output=True,
-    )
-    if probe.returncode != 0:
+    if not _pip_licenses_available():
         pytest.skip("pip-licenses not installed; dep-license-check CI job covers this case")
     result = subprocess.run(
         [sys.executable, SCRIPT, "--check"],

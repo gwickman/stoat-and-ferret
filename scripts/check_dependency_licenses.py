@@ -52,8 +52,15 @@ def parse_project_deps(pyproject_path: str = "pyproject.toml") -> list[str]:
 
 def get_installed_packages() -> dict[str, str]:
     """Return {name_lower: license} for installed Python packages via pip-licenses."""
+    pip_licenses_path = shutil.which("pip-licenses")
+    if pip_licenses_path is None:
+        print(
+            "Error: pip-licenses not found. Install with: pip install pip-licenses",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     result = subprocess.run(
-        [shutil.which("pip-licenses"), "--format=json"],
+        [pip_licenses_path, "--format=json"],
         capture_output=True,
         text=True,
         check=True,
