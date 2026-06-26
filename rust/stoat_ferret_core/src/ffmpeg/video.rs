@@ -19,6 +19,9 @@ use super::filter::Filter;
 /// filter's argument list.  Automation expressions like `if(lt(t,0),0,1)`
 /// contain bare commas that break FFmpeg parsing when embedded as option
 /// values.  Replace each `,` with `\,` before format! substitution.
+///
+/// Retained for non-migrated builders (BL-508/509/510); do not remove.
+#[allow(dead_code)]
 pub(crate) fn escape_for_filter(expr: &str) -> String {
     expr.replace(',', r"\,")
 }
@@ -94,6 +97,117 @@ pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeEr
     }
 }
 
+/// Error type for filter value escaping failures.
+#[derive(Debug)]
+pub(crate) enum EscapeError {
+    /// The value contains an apostrophe character that is not permitted.
+    ForbiddenChar,
+    /// A KneeString has non-monotonic coordinate values.
+    NonMonotonicKnee,
+    /// Path escaping failed (delegated from emit_filter_option_path).
+    PathEscapeFailure(PathEscapeError),
+}
+
+impl std::fmt::Display for EscapeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EscapeError::ForbiddenChar => {
+                write!(f, "value contains a forbidden apostrophe character")
+            }
+            EscapeError::NonMonotonicKnee => {
+                write!(f, "knee string has non-monotonic coordinate values")
+            }
+            EscapeError::PathEscapeFailure(e) => write!(f, "path escape failed: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for EscapeError {}
+
+impl From<PathEscapeError> for EscapeError {
+    fn from(e: PathEscapeError) -> Self {
+        EscapeError::PathEscapeFailure(e)
+    }
+}
+
+/// Canonical value-kind taxonomy for FFmpeg filter option escape dispatch.
+///
+/// Variants beyond `Expression` are used by `emit_filter_value` dispatch arms
+/// and by tests; they serve as forward-looking slots for BL-508/509/510 builders.
+#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
+pub(crate) enum ValueKind {
+    /// Automation expressions — single-quote wrap + reject embedded `'`.
+    Expression,
+    /// File paths in filter options — delegate to emit_filter_option_path.
+    Path,
+    /// Tone curve descriptions — single-quote wrap + monotonic x/y validator.
+    KneeString,
+    /// Fixed set strings — pass through unchanged.
+    EnumLiteral,
+    /// Numeric scalar values — pass through unchanged.
+    Numeric,
+    /// Boolean flags — pass through unchanged.
+    Boolean,
+    /// Drawtext content — delegate to escape_drawtext.
+    Text,
+}
+
+/// Validates that a KneeString has strictly increasing x values and non-decreasing y values.
+///
+/// Knee strings have the format "x0/y0 x1/y1 ..." (space-separated x/y pairs).
+fn validate_knee_string(s: &str) -> Result<(), EscapeError> {
+    let mut prev_x: Option<f64> = None;
+    let mut prev_y: Option<f64> = None;
+    for pair in s.split_whitespace() {
+        let mut parts = pair.splitn(2, '/');
+        let x_str = parts.next().ok_or(EscapeError::NonMonotonicKnee)?;
+        let y_str = parts.next().ok_or(EscapeError::NonMonotonicKnee)?;
+        let x: f64 = x_str.parse().map_err(|_| EscapeError::NonMonotonicKnee)?;
+        let y: f64 = y_str.parse().map_err(|_| EscapeError::NonMonotonicKnee)?;
+        if let Some(px) = prev_x {
+            if x <= px {
+                return Err(EscapeError::NonMonotonicKnee);
+            }
+        }
+        if let Some(py) = prev_y {
+            if y < py {
+                return Err(EscapeError::NonMonotonicKnee);
+            }
+        }
+        prev_x = Some(x);
+        prev_y = Some(y);
+    }
+    Ok(())
+}
+
+/// Dispatch escape policy per ValueKind.
+///
+/// - `Expression`: single-quote wrap + reject embedded `'`
+/// - `Path`: delegate to `emit_filter_option_path`
+/// - `KneeString`: single-quote wrap + validate monotonic x/y
+/// - `EnumLiteral`, `Numeric`, `Boolean`: pass through unchanged
+/// - `Text`: delegate to `escape_drawtext`
+pub(crate) fn emit_filter_value(kind: ValueKind, value: &str) -> Result<String, EscapeError> {
+    match kind {
+        ValueKind::Expression => {
+            if value.contains('\'') {
+                return Err(EscapeError::ForbiddenChar);
+            }
+            Ok(format!("'{value}'"))
+        }
+        ValueKind::Path => emit_filter_option_path(value).map_err(EscapeError::from),
+        ValueKind::KneeString => {
+            validate_knee_string(value)?;
+            Ok(format!("'{value}'"))
+        }
+        ValueKind::EnumLiteral | ValueKind::Numeric | ValueKind::Boolean => {
+            Ok(value.to_string())
+        }
+        ValueKind::Text => Ok(super::drawtext::escape_drawtext(value)),
+    }
+}
+
 /// Gaussian or directional blur filter builder with optional automation envelope.
 ///
 /// Gaussian mode (`blur_type="gaussian"`) generates `gblur=sigma={sigma}`.
@@ -150,8 +264,9 @@ impl BlurBuilder {
             },
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
-                let escaped = escape_for_filter(&expr);
-                Ok(Filter::new(format!("gblur=sigma='{}':eval=frame", escaped)))
+                let value = emit_filter_value(ValueKind::Expression, &expr)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                Ok(Filter::new(format!("gblur=sigma={}:eval=frame", value)))
             }
         }
     }
@@ -274,10 +389,12 @@ impl OpacityBuilder {
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
                 let expr_t = automation_expr_to_uppercase_t(&expr);
-                let escaped = escape_for_filter(&expr_t);
+                let alpha = format!("{}*255", expr_t);
+                let value = emit_filter_value(ValueKind::Expression, &alpha)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(Filter::new(format!(
-                    "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{}*255'",
-                    escaped
+                    "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a={}",
+                    value
                 )))
             }
         }
@@ -330,10 +447,11 @@ impl ScaleBuilder {
             }
             Some(auto) => {
                 let expr = py_compile_automation(auto)?;
-                let escaped = escape_for_filter(&expr);
+                let value = emit_filter_value(ValueKind::Expression, &expr)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(Filter::new(format!(
-                    "scale=trunc(iw*('{}')/2)*2:trunc(ih*('{}')/2)*2:eval=frame",
-                    escaped, escaped
+                    "scale=trunc(iw*({})/2)*2:trunc(ih*({})/2)*2:eval=frame",
+                    value, value
                 )))
             }
         }
@@ -1363,5 +1481,83 @@ mod tests {
     fn test_windows_path_deep_nesting() {
         let result = emit_filter_option_path("C:\\Users\\foo\\bar\\baz\\file.cube").unwrap();
         assert_eq!(result, "'C\\:/Users/foo/bar/baz/file.cube'");
+    }
+
+    // --- emit_filter_value contract tests ---
+
+    #[test]
+    fn expression_wraps_in_quotes() {
+        assert_eq!(
+            emit_filter_value(ValueKind::Expression, "1+2").unwrap(),
+            "'1+2'"
+        );
+    }
+
+    #[test]
+    fn expression_rejects_apostrophe() {
+        assert!(emit_filter_value(ValueKind::Expression, "it's").is_err());
+    }
+
+    #[test]
+    fn expression_empty_string() {
+        assert_eq!(
+            emit_filter_value(ValueKind::Expression, "").unwrap(),
+            "''"
+        );
+    }
+
+    #[test]
+    fn path_delegates_to_emit_filter_option_path_unix() {
+        let result = emit_filter_value(ValueKind::Path, "/home/user/file.cube").unwrap();
+        assert_eq!(result, "/home/user/file.cube");
+    }
+
+    #[test]
+    fn path_rejects_apostrophe() {
+        assert!(emit_filter_value(ValueKind::Path, "file's.cube").is_err());
+    }
+
+    #[test]
+    fn knee_string_valid_monotonic() {
+        let result = emit_filter_value(ValueKind::KneeString, "0/0 0.5/0.5 1/1").unwrap();
+        assert_eq!(result, "'0/0 0.5/0.5 1/1'");
+    }
+
+    #[test]
+    fn knee_string_rejects_non_monotonic() {
+        assert!(emit_filter_value(ValueKind::KneeString, "0.9/0.1 1/0").is_err());
+    }
+
+    #[test]
+    fn numeric_pass_through() {
+        assert_eq!(
+            emit_filter_value(ValueKind::Numeric, "0.5").unwrap(),
+            "0.5"
+        );
+    }
+
+    #[test]
+    fn enum_literal_pass_through() {
+        assert_eq!(
+            emit_filter_value(ValueKind::EnumLiteral, "fade").unwrap(),
+            "fade"
+        );
+    }
+
+    #[test]
+    fn boolean_pass_through() {
+        assert_eq!(
+            emit_filter_value(ValueKind::Boolean, "true").unwrap(),
+            "true"
+        );
+    }
+
+    #[test]
+    fn text_escapes_drawtext_chars() {
+        let result = emit_filter_value(ValueKind::Text, "Hello: World").unwrap();
+        assert!(
+            result.contains("\\:"),
+            "expected colon escaped in: {result}"
+        );
     }
 }
