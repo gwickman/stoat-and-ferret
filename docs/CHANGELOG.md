@@ -4,6 +4,34 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v087 — Release 3 Waves 0–1 (2026-06-26)
+
+### Added
+
+- **ColorLUT path escaping**: `emit_filter_option_path` helper in `rust/stoat_ferret_core/src/ffmpeg/video.rs` enforces single-quoted colon-escape (variant 4) for Windows paths in ColorLUT FFmpeg filter args; policy verified across 5×4 matrix of operators and path types (BL-499, PR #650)
+- **Animated opacity via geq**: Opacity builder emits `geq` expression for animation-mode projects instead of `colorchannelmixer`; Rust unit tests cover animation-mode detection and expression format (BL-502, PR #651)
+- **Event namespace registration**: `render.*` namespace declared in `docs/design/FRAMEWORK_CONTEXT.md` and `AGENTS.md`; declaration-before-use process codified (BL-551, PR #652)
+- **Preflight validation**: POST `/render` validates clip count and effect compatibility before enqueueing jobs; `render.preflight_reject` (422) and `render.preflight_warning` structured events fired at HTTP layer; preflight test suite added (BL-551, PRs #652 #653)
+- **Render evidence persistence**: `evidence_json` column added to `render_jobs` via Alembic migration; `RenderExecutor.pop_evidence()` captures command args, exit code, stderr tail, output path, output size, and filter script path; evidence saved to repository after job completes (BL-554, PRs #655 #656)
+- **Evidence API**: `GET /render/{job_id}/evidence` returns structured execution evidence; gated behind `STOAT_RENDER_EVIDENCE_FULL_ACCESS`; command args redacted (sk-or-v1-* tokens, STOAT_* env var values) before response; OpenAPI schema and TypeScript types regenerated (BL-554, PR #656)
+- **RenderGraphTranslator**: Rust `translate.rs` module converts `RenderGraph` to an FFmpeg filter-chain; integrated into render worker and preview path; PyO3 bindings and stubs added (BL-505, PR #657)
+- **Chatbot testing workflow**: `docs/design/chatbot-driven-testing/example-workflow.md` documents end-to-end testing approach with SSIM, Sobel edge magnitude, mean luminance validation, and workspace hygiene steps; integrity test suite added (BL-506, PR #658)
+- **UAT journey workflows**: UAT journeys for multi-clip render, preflight validation, evidence API, and render-graph translator documented and smoke-tested (PRs #659 #660)
+
+### PRs
+
+#650, #651, #652, #653, #654, #655, #656, #657, #658, #659, #660
+
+### Resolved
+
+BL-499 (ColorLUT path escaping), BL-551 (render preflight validation and event namespace)
+
+### Partially resolved
+
+BL-502 (animated opacity via geq — FFmpeg discharge pending), BL-505 (RenderGraphTranslator — AC-5 pending v088), BL-506 (chatbot testing workflow — AC-2–6 pending v088), BL-554 (render evidence persistence and API — AC-5 pending v088)
+
+---
+
 ## v086 — Post-v085 Compliance Riders (2026-06-25)
 
 ### Added
