@@ -35,6 +35,21 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -v
 STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k <keyword> -v
 ```
 
+## Windows-Specific Invocation
+
+On Windows sandbox environments, the standard smoke command may fail for two reasons:
+
+1. **UV cache access denied.** `uv run` attempts to write to the UV cache, which may be blocked in restricted environments. Set `UV_NO_CACHE=1` to bypass cache writes entirely.
+2. **Coverage gate rejection.** Running only `tests/smoke/` collects less than the global 80% coverage threshold. Use `--no-cov` to suppress coverage for smoke-only runs.
+
+Combined command for Windows:
+
+```bash
+UV_NO_CACHE=1 uv run pytest tests/smoke/ -v --timeout=120 --no-cov
+```
+
+If `%TEMP%` is also restricted, add `PYTEST_TMPDIR=<writable-path>` to redirect pytest's temp directory.
+
 ## Test Categories
 
 | Category | FFmpeg required | Description |

@@ -137,6 +137,8 @@ uv run ruff format --check src/ tests/
 uv run mypy src/
 uv run pytest tests/ --cov=src --cov-fail-under=80
 uv run pytest tests/smoke/ -v --timeout=120 --no-cov
+# Windows sandbox: UV_NO_CACHE=1 uv run pytest tests/smoke/ -v --timeout=120 --no-cov
+# See docs/manual/smoke-test-harness.md for details
 ```
 
 ### Smoke Test Harness
