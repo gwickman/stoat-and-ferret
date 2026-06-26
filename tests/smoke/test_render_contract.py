@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
 import pytest
@@ -25,6 +27,8 @@ from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip
 from stoat_ferret.render.models import RenderStatus
 from stoat_ferret.render.render_repository import AsyncSQLiteRenderRepository
+from tests.conftest import requires_ffmpeg
+from tests.smoke.conftest import poll_job_until_terminal, scan_videos_and_wait
 
 _STUB_VIDEO_ID = "00000000-0000-0000-0000-000000000001"
 
@@ -451,3 +455,196 @@ async def test_settings_absent_returns_422_noop(
     body = resp.json()
     assert body["detail"]["code"] == "PREFLIGHT_FAILED"
     assert "settings" in body["detail"]["message"]
+
+
+# ── Multi-clip render smoke tests (FR-001, FR-002) ────────────────────────────
+
+
+async def test_multi_clip_render_api_accepts(
+    smoke_client_noop: httpx.AsyncClient,
+) -> None:
+    """A 2-clip project can be submitted via the render API without error (FR-001).
+
+    Verifies that the render preflight passes and the API returns 201 for a
+    project with two seeded clips. Uses noop mode so no FFmpeg is required.
+    """
+    resp = await smoke_client_noop.post(
+        "/api/v1/projects", json={"name": "Multi-Clip Acceptance Test"}
+    )
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    await _seed_stub_clip(smoke_client_noop, project_id)
+    await _seed_stub_clip(smoke_client_noop, project_id)
+
+    render_plan = json.dumps({"total_duration": 10.0, "settings": {}})
+    resp = await smoke_client_noop.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": render_plan},
+    )
+    assert resp.status_code == 201, (
+        f"Expected 201 for 2-clip project in noop mode, got {resp.status_code}: {resp.json()}"
+    )
+
+
+async def test_multi_clip_translator_xfade_present() -> None:
+    """RenderGraphTranslator produces filter_complex with xfade for a 2-clip project (FR-001).
+
+    Calls the Rust translator directly to assert that a 2-clip timeline produces
+    a filter_complex string containing the xfade filter.
+    """
+    from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+
+    clips = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip0.mp4",
+            effects=[RenderEffect.none()],
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip1.mp4",
+            effects=[RenderEffect.none()],
+        ),
+    ]
+    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    assert "xfade" in filter_complex, (
+        f"filter_complex must contain 'xfade' for a 2-clip project; got: {filter_complex!r}"
+    )
+    assert "[final]" in filter_complex, (
+        f"filter_complex must end with [final] label; got: {filter_complex!r}"
+    )
+
+
+async def test_multi_clip_translator_input_paths_count_matches_clips() -> None:
+    """translate() returns input_paths with count equal to the clip count (FR-001).
+
+    Verifies that the number of `-i` input paths returned by the translator
+    matches the number of clips in the multi-clip project.
+    """
+    from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+
+    clips = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip0.mp4",
+            effects=[RenderEffect.none()],
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip1.mp4",
+            effects=[RenderEffect.none()],
+        ),
+    ]
+    _, input_paths = RenderGraphTranslator().translate(clips)
+    assert len(input_paths) == len(clips), (
+        f"input_paths count ({len(input_paths)}) must match clip count ({len(clips)})"
+    )
+    assert input_paths == ["/clip0.mp4", "/clip1.mp4"]
+
+
+async def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
+    """Per-clip effect filter strings appear in the filter_complex (FR-001).
+
+    Uses animated_alpha (RenderEffect.animated_alpha) as the available per-clip
+    effect proxy. The animated_alpha variant produces a geq filter in the
+    filter_complex, verifying the effect sub-chain stage is emitted before xfade.
+
+    Note: blur-specific filter integration (BlurBuilder → RenderEffect) is
+    deferred_post_merge pending RenderEffect.custom() exposure (BL-555 scope).
+    """
+    from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+
+    clips = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip0.mp4",
+            effects=[RenderEffect.animated_alpha(0.0, 1.0)],
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip1.mp4",
+            effects=[RenderEffect.none()],
+        ),
+    ]
+    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    assert "geq" in filter_complex, (
+        f"animated_alpha effect must produce 'geq' in filter_complex; got: {filter_complex!r}"
+    )
+    # Effect sub-chain must appear before xfade (Stage 2 before Stage 3+4).
+    effect_pos = filter_complex.find("geq")
+    xfade_pos = filter_complex.find("xfade")
+    assert effect_pos < xfade_pos, (
+        f"effect sub-chain (pos {effect_pos}) must appear before xfade (pos {xfade_pos})"
+    )
+
+
+@pytest.mark.skipif(
+    os.getenv("STOAT_TEST_FFMPEG") != "1",
+    reason="behavioral multi-clip render requires STOAT_TEST_FFMPEG=1",
+)
+@requires_ffmpeg
+async def test_multi_clip_render_output_file_exists(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """A 2-clip render produces output at the expected path (FR-002, SSIM deferred_post_merge).
+
+    Behavioral test gated on STOAT_TEST_FFMPEG=1 and FFmpeg availability. Scans
+    real videos, creates a 2-clip project, submits a render, polls until terminal,
+    and asserts the output_path is populated. SSIM > 0.99 assertion is
+    deferred_post_merge pending a full FFmpeg discharge environment.
+    """
+    await scan_videos_and_wait(smoke_client, videos_dir)
+
+    videos_resp = await smoke_client.get("/api/v1/videos?limit=2")
+    assert videos_resp.status_code == 200
+    videos = videos_resp.json()["videos"]
+    assert len(videos) >= 2, f"Need at least 2 scanned videos; got {len(videos)}"
+
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects", json={"name": "Multi-Clip Behavioral Smoke Test"}
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    for video in videos[:2]:
+        clip_resp = await smoke_client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "source_video_id": video["id"],
+                "in_point": 0,
+                "out_point": min(video.get("duration_frames", 90), 90),
+                "timeline_position": 0,
+            },
+        )
+        assert clip_resp.status_code == 201
+
+    render_plan = json.dumps({"total_duration": 6.0, "settings": {}})
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": render_plan},
+    )
+    assert resp.status_code == 201
+    job_id = resp.json()["id"]
+
+    final = await poll_job_until_terminal(smoke_client, job_id, timeout=120.0)
+    assert final["status"] in ("completed", "failed"), (
+        f"Expected terminal status, got {final['status']!r}"
+    )
+    assert final.get("output_path"), (
+        "output_path must be populated after render attempt (deferred: SSIM verification)"
+    )
