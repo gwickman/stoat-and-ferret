@@ -301,12 +301,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Noop mode handles all jobs inline in service.submit(); the render worker
     # polls list_by_status(QUEUED) and would race the noop path to RUNNING.
     if settings.render_worker_enabled and settings.render_mode != "noop":
+        if not getattr(app.state, "effect_registry", None):
+            from stoat_ferret.effects.definitions import create_default_registry
+
+            app.state.effect_registry = create_default_registry()
         render_worker = RenderWorkerLoop(
             service=render_service,
             queue=render_queue,
             clip_repository=clip_repository,
             video_repository=repo,
             markers_repository=app.state.markers_repository,
+            effect_registry=app.state.effect_registry,
         )
         render_worker_task = asyncio.create_task(render_worker.run())
         app.state.render_worker_task = render_worker_task
