@@ -201,9 +201,7 @@ pub(crate) fn emit_filter_value(kind: ValueKind, value: &str) -> Result<String, 
             validate_knee_string(value)?;
             Ok(format!("'{value}'"))
         }
-        ValueKind::EnumLiteral | ValueKind::Numeric | ValueKind::Boolean => {
-            Ok(value.to_string())
-        }
+        ValueKind::EnumLiteral | ValueKind::Numeric | ValueKind::Boolean => Ok(value.to_string()),
         ValueKind::Text => Ok(super::drawtext::escape_drawtext(value)),
     }
 }
@@ -1500,10 +1498,7 @@ mod tests {
 
     #[test]
     fn expression_empty_string() {
-        assert_eq!(
-            emit_filter_value(ValueKind::Expression, "").unwrap(),
-            "''"
-        );
+        assert_eq!(emit_filter_value(ValueKind::Expression, "").unwrap(), "''");
     }
 
     #[test]
@@ -1530,10 +1525,7 @@ mod tests {
 
     #[test]
     fn numeric_pass_through() {
-        assert_eq!(
-            emit_filter_value(ValueKind::Numeric, "0.5").unwrap(),
-            "0.5"
-        );
+        assert_eq!(emit_filter_value(ValueKind::Numeric, "0.5").unwrap(), "0.5");
     }
 
     #[test]
