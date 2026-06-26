@@ -10,15 +10,25 @@ from pathlib import Path
 
 import yaml
 
+from stoat_ferret.api.app import create_app
+
 OPENAPI_JSON = Path(__file__).parent.parent / "gui" / "openapi.json"
 C4_YAML = (
     Path(__file__).parent.parent / "docs" / "C4-Documentation" / "apis" / "api-server-api.yaml"
 )
 
 
+def _get_live_spec() -> dict:
+    app = create_app(gui_static_path=Path("/nonexistent"))
+    return app.openapi()
+
+
 def test_c4_yaml_source_route_drift() -> None:
     """C4 YAML and live OpenAPI agree on all 4 /api/v1/source surfaces."""
-    spec = json.loads(OPENAPI_JSON.read_text(encoding="utf-8"))
+    spec = _get_live_spec()
+
+    static = json.loads(OPENAPI_JSON.read_text(encoding="utf-8"))
+    assert static == spec, "gui/openapi.json is stale — run scripts/export_openapi.py"
     c4 = yaml.safe_load(C4_YAML.read_text(encoding="utf-8"))
 
     live_route = spec["paths"]["/api/v1/source"]["get"]
