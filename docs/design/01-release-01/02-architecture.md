@@ -1141,12 +1141,20 @@ Effects are defined using `EffectDefinition` dataclasses in Python, with each de
 ```python
 @dataclass(frozen=True)
 class EffectDefinition:
-    name: str                           # Human-readable name
-    description: str                    # What the effect does
-    parameter_schema: dict[str, object] # JSON Schema for parameters
-    ai_hints: dict[str, str]            # Per-parameter AI guidance
-    preview_fn: Callable[[], str]       # Calls Rust builder for sample output
-    build_fn: Callable[[dict], str]     # Dispatches to Rust builder with user params
+    name: str                                 # Human-readable name
+    description: str                          # What the effect does
+    parameter_schema: dict[str, object]       # JSON Schema for parameters
+    ai_hints: dict[str, str]                  # Per-parameter AI guidance
+    preview_fn: Callable[[], str]             # Calls Rust builder for sample output
+    build_fn: Callable[[dict], str]           # Dispatches to Rust builder with user params
+    # Routing metadata (v088, BL-552)
+    stream_kind: str = ""                     # FFmpeg stream kind ("v", "a", "")
+    arity: int = 1                            # Number of input streams consumed
+    chain_safe: bool = True                   # Safe to chain with other effects
+    timebase_mutating: bool = False           # Changes stream timebase
+    timeline_T_capable: bool = False          # Filter supports FFmpeg T flag for enable=
+    requires_path_escape: bool = False        # Option values need path escaping
+    value_kind_per_option: dict[str, str] = {} # ValueKind per option for escape dispatch
 ```
 
 **Registered effects (v007):**

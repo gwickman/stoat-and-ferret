@@ -79,6 +79,7 @@ pub fn register(m: &Bound<PyModule>) -> PyResult<()> {
     )?)?;
 
     // Render graph translator types
+    m.add_class::<translate::RenderTransition>()?;
     m.add_class::<translate::RenderEffect>()?;
     m.add_class::<translate::ClipWithEffects>()?;
     m.add_class::<translate::RenderGraphTranslator>()?;

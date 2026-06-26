@@ -14,7 +14,7 @@
 ### Effect Definitions (definitions.py)
 
 **Dataclass:**
-- `EffectDefinition`: frozen dataclass with name, description, parameter_schema (dict), ai_hints (dict), preview_fn (Callable[[], str]), build_fn (Callable[[dict], str])
+- `EffectDefinition`: frozen dataclass with name, description, parameter_schema (dict), ai_hints (dict), preview_fn (Callable[[], str]), build_fn (Callable[[dict], str]); plus 7 routing-metadata fields: stream_kind (str), arity (int), chain_safe (bool), timebase_mutating (bool), timeline_T_capable (bool), requires_path_escape (bool), value_kind_per_option (dict[str, str])
 
 **Built-in Effect Definitions:**
 - `TEXT_OVERLAY`: text overlays with font size, color, position, margin, font parameters

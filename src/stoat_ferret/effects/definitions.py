@@ -77,6 +77,15 @@ class EffectDefinition:
         build_fn: Callable that receives parameter dict and returns FFmpeg filter string.
         ai_summary: One-sentence natural-language summary for AI agent discovery.
         example_prompt: Example natural-language prompt that would invoke this effect.
+        stream_kind: FFmpeg stream kind this effect applies to (e.g. "v", "a", "").
+        arity: Number of input streams this effect consumes (default 1).
+        chain_safe: Whether this effect can be chained with other effects in a single graph.
+        timebase_mutating: Whether this effect changes the stream timebase.
+        timeline_T_capable: Whether this effect supports the FFmpeg T (timeline) flag for
+            enable expressions. When True and a window is present, the translator emits
+            :enable='between(t,start_s,end_s)' instead of split/trim/concat.
+        requires_path_escape: Whether this effect requires path escaping for option values.
+        value_kind_per_option: Maps option names to their ValueKind string for escape dispatch.
     """
 
     name: str
@@ -89,6 +98,13 @@ class EffectDefinition:
     example_prompt: str = ""
     automatable: frozenset[str] = field(default_factory=frozenset)
     automation_filter_template: str | None = None
+    stream_kind: str = ""
+    arity: int = 1
+    chain_safe: bool = True
+    timebase_mutating: bool = False
+    timeline_T_capable: bool = False
+    requires_path_escape: bool = False
+    value_kind_per_option: dict[str, str] = field(default_factory=dict)
 
 
 def _text_overlay_preview() -> str:
