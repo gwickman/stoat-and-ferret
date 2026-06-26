@@ -92,6 +92,12 @@ The test harness has three tiers:
 | `tests/smoke/test_effects.py` | `test_all_effects_have_automatable_parameters` (BL-481): every effect in `GET /effects` includes a list `automatable_parameters` field for agent discoverability. `test_preview_accepts_automation_envelope` (BL-482): `POST /effects/preview` accepts a volume keyframe automation envelope and returns 200 (verifies the preview endpoint honours `eval=frame` volume automation). |
 | `tests/smoke/test_qc_api.py` | `test_smoke_render_qc_worker_path` (BL-477): end-to-end worker-path test — creates a delivery profile, submits a noop render job, and asserts that `GET /api/v1/render/{job_id}/qc` returns 200 with a stored QCReport, confirming QC runs through `RenderService._complete_job` without FFmpeg. |
 
+### Phase 9 — v088 Multi-Clip Render Smoke Tests
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_render_contract.py` | Multi-clip render pipeline coverage (v088): 4 static tests verify a 2-clip project is accepted by the noop render API (`test_multi_clip_render_api_accepts`), that `xfade` and `[final]` appear in the generated `filter_complex` (`test_multi_clip_translator_xfade_present`), that `len(input_paths)` equals the clip count (`test_multi_clip_translator_input_paths_count_matches_clips`), and that a per-clip animated_alpha effect proxy appears in the filter graph (`test_multi_clip_per_clip_effect_appears_in_filter_complex`). All 4 static tests run in CI without FFmpeg. One behavioral test — `test_multi_clip_render_output_file_exists` — verifies the output file is written to disk and is gated by `STOAT_TEST_FFMPEG=1`. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
