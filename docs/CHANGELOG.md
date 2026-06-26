@@ -4,6 +4,44 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v088 — R3 Wave 2 (2026-06-26)
+
+### Added
+
+- **EffectDefinition metadata fields**: `stream_kind`, `arity`, `chain_safe`, `timebase_mutating`, `timeline_T_capable`, `requires_path_escape`, `value_kind_per_option` added to `EffectDefinition` in `src/stoat_ferret/effects/definitions.py`; hygiene test cross-checks `timeline_T_capable` flags against FFmpeg `-filters` T flag (BL-552, PR #662)
+- **Rust RenderGraphTranslator**: Rust translator at `rust/stoat_ferret_core/src/render/translate.rs` converts a clips+effects+transitions structure to an FFmpeg `filter_complex` string and ordered `-i` input paths; supports timeline-T windowed `enable=` expressions and split/trim/concat fallback; rejects N>100 clips; PyO3 bindings and `_core.pyi` stubs updated (BL-552, PR #662)
+- **Worker multi-clip integration**: `src/stoat_ferret/render/worker.py` iterates all clips, fetches per-clip effects from the database, calls the Rust translator, and assembles the final FFmpeg command from translator output instead of the legacy `settings.filter_graph` path; render evidence fields (`exit_code`, `output_size_bytes`, `command_args`) populated after job completes (BL-553, PRs #663 #664)
+- **Per-value-kind escape policy**: `ValueKind` enum (Expression, Path, KneeString, EnumLiteral, Numeric, Boolean, Text) and `emit_filter_value` dispatch function in `rust/stoat_ferret_core/src/ffmpeg/video.rs`; BlurBuilder, OpacityBuilder, ScaleBuilder migrated to use dispatch; `value_kind_per_option` dict populated for migrated builders; 11 contract tests added (BL-555, PR #665)
+- **UAT known-failures registry — Journeys 502 and 504**: `tests/fixtures/baseline-uat-failures.json` registers J502 and J504 (HTTP 422 pre-existing condition); `uat_runner.py` exits 0 when only registered journeys fail (BL-558, PR #668)
+- **Windows smoke documentation**: `docs/manual/smoke-test-harness.md` gains a Windows-specific invocation section documenting `UV_NO_CACHE=1 uv run pytest tests/smoke/ -v --timeout=120 --no-cov`; `AGENTS.md` Quality Gates section references the `UV_NO_CACHE=1` variant (BL-559, PR #668)
+- **Multi-clip smoke tests and harness guide**: Smoke tests for multi-clip render with effects added; `docs/manual/smoke-test-harness.md` updated with v088 coverage (PRs #666 #667)
+
+### Fixed
+
+- **Dependency-license test skip guard**: `tests/test_dependency_licenses.py` skip guard now checks both resolution paths (`python -m pip_licenses` AND `shutil.which("pip-licenses")`); `scripts/check_dependency_licenses.py` emits a clear error when `pip-licenses` is absent instead of a TypeError (BL-560, PR #668)
+- **C4 drift test live-spec comparison**: `tests/test_c4_yaml_drift.py` upgraded to compare the C4 YAML against `create_app().openapi()` (live in-process spec) instead of the committed static `gui/openapi.json`, catching app.py drift that static-JSON comparison misses (BL-561, PR #669)
+
+### Deferred (pending discharge)
+
+- BL-553 AC-4: SSIM integration test for 2-clip render — requires FFmpeg (`STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render/ -k ssim`)
+- BL-555 AC-3: 4 named builders (HueRotationBuilder, CurvesBuilder, VignetteBuilder, BurnedSubtitleBuilder) absent at HEAD; will be migrated when those builders ship (BL-508/509/510/519)
+- BL-558 AC-5: Headless UAT confirmation run — requires live browser session
+- BL-559 AC-3: Windows sandbox smoke execution verification
+
+### PRs
+
+#662, #663, #664, #665, #666, #667, #668, #669
+
+### Resolved
+
+BL-552 (EffectDefinition metadata + Rust RenderGraphTranslator), BL-555 (per-value-kind escape policy — AC-3 weakened), BL-558 (UAT failure registry J502/J504 — AC-5 deferred), BL-559 (Windows smoke documentation — AC-3 deferred), BL-560 (dep-license skip guard fix), BL-561 (C4 drift test live-spec upgrade)
+
+### Partially resolved
+
+BL-553 (worker multi-clip integration — AC-4 FFmpeg-deferred)
+
+---
+
 ## v087 — Release 3 Waves 0–1 (2026-06-26)
 
 ### Added
