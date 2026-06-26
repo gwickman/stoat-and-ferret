@@ -881,7 +881,9 @@ async def test_opacity_static_uses_colorchannelmixer_smoke() -> None:
 # Note: multi-clip accepted (BL-505) is covered in test_sample_project.py.
 
 
-async def test_preflight_single_clip_with_effects_no_warning(smoke_client: httpx.AsyncClient) -> None:
+async def test_preflight_single_clip_with_effects_no_warning(
+    smoke_client: httpx.AsyncClient,
+) -> None:
     """Single-clip project with per-clip effects returns 201 and no warnings (BL-553).
 
     BL-553 removed the 'effects will be applied in a future release' placeholder warning
