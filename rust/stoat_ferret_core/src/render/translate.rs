@@ -114,10 +114,16 @@ impl std::fmt::Display for TranslateError {
                 write!(f, "clip {i} has an empty source_path")
             }
             TranslateError::InvalidTransitionDuration(i) => {
-                write!(f, "clip {i} outgoing_transition has non-positive duration_secs")
+                write!(
+                    f,
+                    "clip {i} outgoing_transition has non-positive duration_secs"
+                )
             }
             TranslateError::InvalidTransitionType(i, t) => {
-                write!(f, "clip {i} outgoing_transition has unknown transition_type '{t}'")
+                write!(
+                    f,
+                    "clip {i} outgoing_transition has unknown transition_type '{t}'"
+                )
             }
         }
     }
@@ -471,12 +477,12 @@ impl RenderGraphTranslator {
                 parts.push(format!("{next_label}fps=30,settb=1/30{pinned_next}"));
 
                 // Determine xfade parameters from outgoing_transition (clip k-1).
-                let (transition_type, duration) =
-                    if let Some(t) = &clips[k - 1].outgoing_transition {
-                        (t.transition_type.as_str(), t.duration_secs)
-                    } else {
-                        ("fade", 1.0)
-                    };
+                let (transition_type, duration) = if let Some(t) = &clips[k - 1].outgoing_transition
+                {
+                    (t.transition_type.as_str(), t.duration_secs)
+                } else {
+                    ("fade", 1.0)
+                };
 
                 parts.push(format!(
                     "{pinned_current}{pinned_next}xfade=transition={transition_type}:duration={duration}{xf_label}"
@@ -668,9 +674,8 @@ mod tests {
 
     #[test]
     fn test_too_many_clips_returns_error() {
-        let clips: Vec<ClipWithEffects> = (0..101)
-            .map(|i| clip(i, 1.0, 30.0, "/clip.mp4"))
-            .collect();
+        let clips: Vec<ClipWithEffects> =
+            (0..101).map(|i| clip(i, 1.0, 30.0, "/clip.mp4")).collect();
         let result = RenderGraphTranslator.translate(clips);
         assert!(
             matches!(result, Err(TranslateError::TooManyClips(101))),
@@ -784,9 +789,8 @@ mod tests {
 
     #[test]
     fn test_100_clips_is_accepted() {
-        let clips: Vec<ClipWithEffects> = (0..100)
-            .map(|i| clip(i, 1.0, 30.0, "/clip.mp4"))
-            .collect();
+        let clips: Vec<ClipWithEffects> =
+            (0..100).map(|i| clip(i, 1.0, 30.0, "/clip.mp4")).collect();
         let result = RenderGraphTranslator.translate(clips);
         assert!(result.is_ok(), "100 clips should be accepted");
     }
