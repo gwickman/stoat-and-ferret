@@ -23,6 +23,7 @@ import structlog
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.markers_repository import MarkerRepository
+from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.service import RenderService, generate_ffmetadata
@@ -63,6 +64,7 @@ async def build_command_for_job(
     clip_repository: AsyncClipRepository,
     video_repository: AsyncVideoRepository,
     ffmetadata_path: str | None = None,
+    effect_registry: EffectRegistry | None = None,
 ) -> list[str]:
     """Build an FFmpeg argument list for a render job.
 
@@ -75,6 +77,7 @@ async def build_command_for_job(
         clip_repository: Async clip repository for project clip lookup.
         video_repository: Async video repository for video path lookup.
         ffmetadata_path: Optional path to an ffmetadata file for chapter embedding.
+        effect_registry: Optional registry for resolving per-clip effect types to filter strings.
 
     Returns:
         A list of strings representing the full FFmpeg command
@@ -130,27 +133,47 @@ async def build_command_for_job(
                     f"Video {clip.source_video_id} not found for project {job.project_id}"
                 )
             clip_videos.append(vid)
-            multi_cmd.extend(["-i", vid.path])
-
-        if ffmetadata_path:
-            multi_cmd.extend(["-i", ffmetadata_path])
 
         cwe_list = []
         for i, (clip, vid) in enumerate(zip(clips, clip_videos, strict=True)):
             duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
             if duration_secs <= 0:
                 raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
+            render_effects: list[RenderEffect] = []
+            if effect_registry and clip.effects:
+                for effect_data in clip.effects:
+                    effect_type = effect_data.get("effect_type", "")
+                    defn = effect_registry.get(effect_type)
+                    if defn is None:
+                        logger.warning(
+                            "render_worker.unknown_effect_type",
+                            effect_type=effect_type,
+                            clip_id=clip.id,
+                        )
+                    # Effects are fetched from DB and validated against the registry.
+                    # Raw filter string injection requires RenderEffect.custom() which is
+                    # not yet exposed by the Rust translator (BL-555 scope).
+                    # Fall through to none() below regardless of lookup result.
+            if not render_effects:
+                render_effects.append(RenderEffect.none())
             cwe_list.append(
                 ClipWithEffects(
                     input_index=i,
                     duration_secs=duration_secs,
                     framerate=vid.frame_rate,
-                    effects=[RenderEffect.none()],
+                    source_path=vid.path,
+                    effects=render_effects,
                 )
             )
 
         translator = RenderGraphTranslator()
-        filter_complex_str = translator.translate(cwe_list)
+        filter_complex_str, input_paths = translator.translate(cwe_list)
+
+        for path in input_paths:
+            multi_cmd.extend(["-i", path])
+
+        if ffmetadata_path:
+            multi_cmd.extend(["-i", ffmetadata_path])
 
         multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
         multi_cmd.extend(["-c:v", codec_mc])
@@ -159,7 +182,7 @@ async def build_command_for_job(
         multi_cmd.extend(["-r", str(fps_mc)])
         multi_cmd.extend(["-progress", "pipe:1"])
         if ffmetadata_path:
-            ffmeta_idx = len(clip_videos)
+            ffmeta_idx = len(input_paths)
             multi_cmd.extend(["-map_chapters", str(ffmeta_idx), "-map_metadata", str(ffmeta_idx)])
         multi_cmd.append(job.output_path)
         return multi_cmd
@@ -261,6 +284,7 @@ class RenderWorkerLoop:
         clip_repository: Repository for project clip lookups.
         video_repository: Repository for video path lookups.
         markers_repository: Optional repository for project marker lookups (chapter embedding).
+        effect_registry: Optional registry for resolving per-clip effect types to filter strings.
     """
 
     def __init__(
@@ -271,12 +295,14 @@ class RenderWorkerLoop:
         clip_repository: AsyncClipRepository,
         video_repository: AsyncVideoRepository,
         markers_repository: MarkerRepository | None = None,
+        effect_registry: EffectRegistry | None = None,
     ) -> None:
         self.service = service
         self.queue = queue
         self.clip_repository = clip_repository
         self.video_repository = video_repository
         self.markers_repository = markers_repository
+        self.effect_registry = effect_registry
         self.logger = structlog.get_logger(__name__)
 
     async def run(self) -> None:
@@ -322,7 +348,11 @@ class RenderWorkerLoop:
                     tmp_path = Path(tmp.name)
 
             command = await build_command_for_job(
-                job, self.clip_repository, self.video_repository, ffmetadata_path
+                job,
+                self.clip_repository,
+                self.video_repository,
+                ffmetadata_path,
+                self.effect_registry,
             )
             await self.service.run_job(job, command)
         finally:

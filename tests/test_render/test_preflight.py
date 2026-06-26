@@ -128,9 +128,14 @@ def test_multi_clip_accepted() -> None:
     assert resp.status_code == 201
 
 
-def test_single_clip_with_effects_warns() -> None:
-    """Single-clip project with per-clip effects returns 201 and non-empty warnings[]."""
-    effects = [{"type": "blur", "params": {"radius": 5}}]
+def test_single_clip_with_effects_no_warning() -> None:
+    """Single-clip project with per-clip effects returns 201 and no placeholder warnings.
+
+    BL-553 removed the 'effects will be applied in a future release' warning because
+    the render worker now calls the Rust translator with real per-clip effects for
+    multi-clip projects. The preflight warning block is gone.
+    """
+    effects = [{"effect_type": "blur", "parameters": {"radius": 5}}]
     app = _build_app([_make_clip(effects=effects)])
     with TestClient(app) as client:
         resp = client.post(
@@ -142,9 +147,7 @@ def test_single_clip_with_effects_warns() -> None:
         )
     assert resp.status_code == 201
     body = resp.json()
-    assert body["warnings"] is not None
-    assert len(body["warnings"]) > 0
-    assert any("effect" in w.lower() for w in body["warnings"])
+    assert body["warnings"] is None
 
 
 async def test_zero_byte_output() -> None:

@@ -4394,6 +4394,45 @@ class RenderEffect:
 
     def __repr__(self) -> str: ...
 
+class RenderTransition:
+    """An outgoing transition from one clip to the next (used by the xfade filter).
+
+    Set ``outgoing_transition`` on a ``ClipWithEffects`` to specify the transition
+    to the following clip.  The last clip in the list should have ``None``.
+    """
+
+    @property
+    def transition_type(self) -> str:
+        """FFmpeg xfade transition type (e.g. ``"fade"``, ``"wipeleft"``)."""
+        ...
+
+    @transition_type.setter
+    def transition_type(self, value: str) -> None: ...
+    @property
+    def duration_secs(self) -> float:
+        """Transition duration in seconds (must be > 0)."""
+        ...
+
+    @duration_secs.setter
+    def duration_secs(self, value: float) -> None: ...
+    def __new__(
+        cls,
+        transition_type: str,
+        duration_secs: float,
+    ) -> RenderTransition:
+        """Creates a new RenderTransition.
+
+        Args:
+            transition_type: FFmpeg xfade transition type (e.g. ``"fade"``).
+            duration_secs: Transition duration in seconds. Must be > 0.
+
+        Raises:
+            ValueError: If duration_secs is not > 0 or transition_type is unknown.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
 class ClipWithEffects:
     """A render clip together with its per-clip effects.
 
@@ -4401,6 +4440,9 @@ class ClipWithEffects:
     ``duration_secs`` is the clip's playback duration in seconds.
     ``framerate`` is the clip's native frame rate; all clips are normalised to
     30 fps by the translator regardless of this value.
+    ``source_path`` is the filesystem path to the source video file.
+    ``outgoing_transition`` specifies the xfade transition to the next clip,
+    or ``None`` for the last clip in the list.
     """
 
     @property
@@ -4418,12 +4460,19 @@ class ClipWithEffects:
         """Native frame rate of the clip."""
         ...
 
+    @property
+    def source_path(self) -> str:
+        """Filesystem path to the source video file."""
+        ...
+
     def __new__(
         cls,
         input_index: int,
         duration_secs: float,
         framerate: float,
+        source_path: str,
         effects: list[RenderEffect],
+        outgoing_transition: RenderTransition | None = None,
     ) -> ClipWithEffects:
         """Creates a new ClipWithEffects.
 
@@ -4431,7 +4480,9 @@ class ClipWithEffects:
             input_index: Zero-based FFmpeg input index.
             duration_secs: Clip duration in seconds. Must be > 0.
             framerate: Native frame rate of the clip.
+            source_path: Filesystem path to the source video file.
             effects: List of RenderEffect to apply to this clip.
+            outgoing_transition: Transition to the next clip, or None for the last clip.
 
         Raises:
             ValueError: If duration_secs is not > 0.
@@ -4441,34 +4492,39 @@ class ClipWithEffects:
     def __repr__(self) -> str: ...
 
 class RenderGraphTranslator:
-    """Translates a multi-clip render graph into an FFmpeg filter_complex string.
+    """Translates a multi-clip render graph into an FFmpeg filter_complex string
+    plus an ordered list of ``-i`` input paths.
 
-    The produced string uses ``[final]`` as the terminal output label and can be
-    passed directly to FFmpeg's ``-filter_complex`` argument.
+    The produced filter_complex string uses ``[final]`` as the terminal output
+    label and can be passed directly to FFmpeg's ``-filter_complex`` argument.
 
     Filter stages:
 
     1. Per-clip fps/settb normalization to 30 fps.
     2. Per-clip effect sub-chains (always before xfade/overlay).
-    3. xfade transitions between adjacent clips (multi-clip only).
-    4. ``format=yuv420p`` terminal (Windows Media Foundation compatibility).
+    3. fps/settb re-pin at every sub-chain boundary feeding xfade.
+    4. xfade transitions between adjacent clips (multi-clip only).
+    5. ``format=yuv420p`` terminal (Windows Media Foundation compatibility).
     """
 
     def __new__(cls) -> RenderGraphTranslator:
         """Creates a new RenderGraphTranslator."""
         ...
 
-    def translate(self, clips: list[ClipWithEffects]) -> str:
-        """Translates a list of clips with effects into an FFmpeg filter_complex string.
+    def translate(self, clips: list[ClipWithEffects]) -> tuple[str, list[str]]:
+        """Translates a list of clips with effects into a (filter_complex, input_paths) tuple.
 
         Args:
             clips: List of ClipWithEffects describing the render timeline.
 
         Returns:
-            A semicolon-separated FFmpeg filter_complex string ending with ``[final]``.
+            A 2-tuple of (filter_complex_string, input_paths_list) where
+            filter_complex_string is a semicolon-separated FFmpeg filter_complex
+            ending with ``[final]``, and input_paths_list is the ordered list of
+            source video paths for ``-i`` arguments.
 
         Raises:
-            ValueError: If clips is empty or any clip has a non-positive duration.
+            ValueError: If clips is empty, exceeds 100, or contains invalid data.
         """
         ...
 

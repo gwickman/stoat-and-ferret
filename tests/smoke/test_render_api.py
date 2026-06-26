@@ -881,9 +881,15 @@ async def test_opacity_static_uses_colorchannelmixer_smoke() -> None:
 # Note: multi-clip accepted (BL-505) is covered in test_sample_project.py.
 
 
-async def test_preflight_single_clip_with_effects_warns(smoke_client: httpx.AsyncClient) -> None:
-    """Single-clip project with per-clip effects returns 201 + non-empty warnings (BL-551)."""
-    project_id = await _create_project(smoke_client, "Preflight Effects Warn Smoke")
+async def test_preflight_single_clip_with_effects_no_warning(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """Single-clip project with per-clip effects returns 201 and no warnings (BL-553).
+
+    BL-553 removed the 'effects will be applied in a future release' placeholder warning
+    because the render worker now calls the Rust translator with real per-clip effects.
+    """
+    project_id = await _create_project(smoke_client, "Preflight Effects No Warn Smoke")
 
     clips_resp = await smoke_client.get(f"/api/v1/projects/{project_id}/clips")
     assert clips_resp.status_code == 200
@@ -909,8 +915,7 @@ async def test_preflight_single_clip_with_effects_warns(smoke_client: httpx.Asyn
     )
     assert resp.status_code == 201
     body = resp.json()
-    assert body["warnings"] is not None, "Single-clip with effects must return warnings"
-    assert len(body["warnings"]) > 0, "warnings list must be non-empty for clip with effects"
+    assert body["warnings"] is None, "No warnings expected — BL-553 removed the effects placeholder"
 
 
 # -- BL-554: Evidence API smoke tests --

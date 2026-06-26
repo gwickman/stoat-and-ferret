@@ -413,9 +413,9 @@ Prior to BL-505, `POST /render` rejected multi-clip projects with HTTP 422 `MULT
 
 ---
 
-### J-PREFLIGHT-02: Preflight — Single-Clip with Per-Clip Effects Returns Warnings
+### J-PREFLIGHT-02: Preflight — Single-Clip with Per-Clip Effects Accepted (BL-553)
 
-**Feature:** BL-551-AC-2
+**Feature:** BL-551-AC-2, BL-553
 
 **Pre-conditions:** Server running; a project with exactly one clip exists.
 
@@ -427,7 +427,7 @@ Prior to BL-505, `POST /render` rejected multi-clip projects with HTTP 422 `MULT
    ```bash
    curl -s -X POST "http://localhost:8765/api/v1/projects/$PROJECT_ID/clips/$CLIP_ID/effects" \
      -H 'Content-Type: application/json' \
-     -d '{"effect_type": "video_fade", "parameters": {"fade_type": "in", "start_time": 0.0, "duration": 1.0}}' | jq .
+     -d '{"effect_type": "blur", "parameters": {"radius": 5}}' | jq .
    ```
 
 3. Submit a render job:
@@ -435,12 +435,15 @@ Prior to BL-505, `POST /render` rejected multi-clip projects with HTTP 422 `MULT
    curl -s -X POST http://localhost:8765/api/v1/render \
      -H 'Content-Type: application/json' \
      -d "{\"project_id\": \"$PROJECT_ID\", \"render_plan\": \"{\\\"total_duration\\\": 5.0, \\\"settings\\\": {}}\"}" \
-     | jq '{status, warnings}'
+     | jq '{status}'
    ```
 
 **Expected outcome:**
 - HTTP **201**
-- `warnings` array is non-empty; message contains `"Per-clip effects detected; effects will be applied in a future release"`
+- No `"Per-clip effects detected; effects will be applied in a future release"` warning (BL-553 removed this placeholder — per-clip effects are now applied via the Rust translator for multi-clip projects)
+- Single-clip projects use the `settings.filter_graph` path; multi-clip projects use the translator
+
+**Note on v087 behavior:** Before BL-553, the render router emitted a preflight warning whenever a clip had effects. That warning was removed in v088 (BL-553) because the render worker now calls the Rust translator with real per-clip effects for multi-clip projects.
 
 ---
 

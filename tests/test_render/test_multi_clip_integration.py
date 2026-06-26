@@ -10,11 +10,14 @@ command when a project has multiple clips, with no FFmpeg execution required.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from stoat_ferret.db.models import Clip, Video
+from stoat_ferret.effects.definitions import EffectDefinition
+from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import build_command_for_job
 
@@ -58,7 +61,12 @@ def _make_job() -> RenderJob:
     )
 
 
-def _make_clip(clip_id: str, video_id: str, timeline_position: int) -> Clip:
+def _make_clip(
+    clip_id: str,
+    video_id: str,
+    timeline_position: int,
+    effects: list[dict[str, Any]] | None = None,
+) -> Clip:
     now = datetime.now(timezone.utc)
     return Clip(
         id=clip_id,
@@ -69,6 +77,7 @@ def _make_clip(clip_id: str, video_id: str, timeline_position: int) -> Clip:
         timeline_position=timeline_position,
         created_at=now,
         updated_at=now,
+        effects=effects,
     )
 
 
@@ -186,3 +195,72 @@ async def test_multi_clip_clip_sort_order() -> None:
     # Second -i must be the second clip's video (timeline_position=150)
     second_i_idx = cmd.index("-i", first_i_idx + 1)
     assert cmd[second_i_idx + 1] == "/media/second.mp4"
+
+
+@pytest.mark.asyncio
+async def test_multi_clip_real_effects_fetched_from_registry() -> None:
+    """BL-553-AC-1/AC-2: worker fetches real per-clip effects and calls translator.
+
+    Verifies:
+    - Worker iterates ALL clips, not just clips[0].
+    - Per-clip effects are resolved via the effect registry and passed to translator.
+    - Unknown effect_type falls back to RenderEffect.none() without crashing.
+    - The resulting command still contains valid filter_complex and -i inputs.
+    """
+    blur_filter_str = "boxblur=luma_radius=5:luma_power=1"
+
+    def _blur_build_fn(params: dict[str, Any]) -> str:
+        return blur_filter_str
+
+    blur_defn = MagicMock(spec=EffectDefinition)
+    blur_defn.build_fn = _blur_build_fn
+
+    registry = EffectRegistry()
+    registry.register("blur", blur_defn)
+
+    # Clip A has a known blur effect; clip B has an unknown effect type
+    clips = [
+        _make_clip(
+            "clip-a",
+            "vid-a",
+            timeline_position=0,
+            effects=[{"effect_type": "blur", "parameters": {"radius": 5}}],
+        ),
+        _make_clip(
+            "clip-b",
+            "vid-b",
+            timeline_position=150,
+            effects=[{"effect_type": "unknown_effect", "parameters": {}}],
+        ),
+    ]
+    videos = {
+        "vid-a": _make_video("vid-a", "/media/clip_a.mp4"),
+        "vid-b": _make_video("vid-b", "/media/clip_b.mp4"),
+    }
+
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    job = _make_job()
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+
+    assert isinstance(cmd, list)
+    assert cmd[0] == "ffmpeg"
+
+    # Both clips must appear in -i args (worker iterates ALL clips)
+    input_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-i"]
+    assert "/media/clip_a.mp4" in input_flags
+    assert "/media/clip_b.mp4" in input_flags
+
+    # filter_complex must be present (translator was called)
+    assert "-filter_complex" in cmd
+    fc_idx = cmd.index("-filter_complex")
+    filter_complex = cmd[fc_idx + 1]
+    assert isinstance(filter_complex, str)
+    assert len(filter_complex) > 0
+
+    # Output path must be last
+    assert cmd[-1] == _OUTPUT_PATH

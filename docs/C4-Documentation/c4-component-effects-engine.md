@@ -51,6 +51,13 @@ This component contains:
   - `ai_hints: dict[str, str]` -- Per-parameter AI guidance strings
   - `preview_fn: Callable[[], str]` -- Returns example FFmpeg filter string
   - `build_fn: Callable[[dict[str, Any]], str]` -- Receives parameters, returns FFmpeg filter string
+  - `stream_kind: str` -- FFmpeg stream kind this effect applies to (e.g. "v", "a", "")
+  - `arity: int` -- Number of input streams consumed (default 1)
+  - `chain_safe: bool` -- Whether effect can be chained with others in a single graph
+  - `timebase_mutating: bool` -- Whether effect changes the stream timebase
+  - `timeline_T_capable: bool` -- Whether filter supports the FFmpeg T flag for enable expressions
+  - `requires_path_escape: bool` -- Whether option values need path escaping
+  - `value_kind_per_option: dict[str, str]` -- Maps option names to ValueKind for escape dispatch
 
 ## Dependencies
 

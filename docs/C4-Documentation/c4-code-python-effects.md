@@ -97,6 +97,13 @@ classDiagram
         +ai_hints: dict
         +preview_fn: Callable
         +build_fn: Callable
+        +stream_kind: str
+        +arity: int
+        +chain_safe: bool
+        +timebase_mutating: bool
+        +timeline_T_capable: bool
+        +requires_path_escape: bool
+        +value_kind_per_option: dict
     }
 
     class EffectValidationError {

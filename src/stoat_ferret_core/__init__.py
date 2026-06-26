@@ -124,6 +124,7 @@ try:
         RenderGraphTranslator,
         RenderSegment,
         RenderSettings,
+        RenderTransition,
         ReverseBuilder,
         SanitizationError,
         ScaleBuilder,
@@ -332,6 +333,7 @@ except ImportError:
     ClipWithEffects = _not_built  # type: ignore[misc,assignment]
     RenderEffect = _not_built  # type: ignore[misc,assignment]
     RenderGraphTranslator = _not_built  # type: ignore[misc,assignment]
+    RenderTransition = _not_built  # type: ignore[misc,assignment]
 
 
 __all__ = [
@@ -495,4 +497,5 @@ __all__ = [
     "ClipWithEffects",
     "RenderEffect",
     "RenderGraphTranslator",
+    "RenderTransition",
 ]

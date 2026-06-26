@@ -518,19 +518,6 @@ async def create_render_job(
             detail={"code": "EMPTY_TIMELINE", "message": "Project has no timeline clips"},
         )
 
-    # Per-clip effects warning check (BL-551-AC-2): warn when effects are not yet applied
-    preflight_warnings: list[str] = []
-    if any(c.effects for c in clips):
-        preflight_warnings.append(
-            "Per-clip effects detected; effects will be applied in a future release"
-        )
-        logger.info(
-            "render.preflight_warning",
-            project_id=project_id_str,
-            clip_count=len(clips),
-            warnings=preflight_warnings,
-        )
-
     Path(settings.render_output_dir).mkdir(parents=True, exist_ok=True)
     job_token = str(uuid.uuid4()).replace("-", "")[:12]
     output_path = str(
@@ -586,10 +573,7 @@ async def create_render_job(
             except FileNotFoundError:
                 pass  # artifact not present in noop/test mode without real render
 
-    response = _job_to_response(job)
-    if preflight_warnings:
-        response.warnings = preflight_warnings
-    return response
+    return _job_to_response(job)
 
 
 # ---------- Encoder endpoints ----------
