@@ -33,6 +33,7 @@ pub mod qc;
 pub mod render;
 pub mod sanitize;
 pub mod schema;
+pub mod shapes;
 pub mod timeline;
 pub mod version;
 
@@ -164,6 +165,12 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::video::CurvesBuilder>()?;
     m.add_class::<ffmpeg::video::VignetteBuilder>()?;
     m.add_class::<ffmpeg::video::HueRotationBuilder>()?;
+
+    // Register shape generators
+    m.add_class::<shapes::SpiralGenerator>()?;
+    m.add_class::<shapes::RadialBurstGenerator>()?;
+    m.add_class::<shapes::CheckerboardGenerator>()?;
+    m.add_class::<shapes::ConcentricRingsGenerator>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;

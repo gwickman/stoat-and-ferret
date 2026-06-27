@@ -2,7 +2,9 @@
 # Copyright (C) 2026 Grant Wickman
 
 """Unit and contract tests for procedural generator effects (BL-454), ZoompanBuilder (BL-507),
-CurvesBuilder (BL-508), VignetteBuilder (BL-509), and HueRotationBuilder (BL-510).
+CurvesBuilder (BL-508), VignetteBuilder (BL-509), HueRotationBuilder (BL-510),
+and shape generators (BL-513): SpiralGenerator, RadialBurstGenerator,
+CheckerboardGenerator, ConcentricRingsGenerator.
 
 BL-454 ACs:
 - AC-1: GradientGeneratorBuilder generates a gradient clip with configurable colors.
@@ -43,6 +45,7 @@ BL-510 ACs:
 from __future__ import annotations
 
 import os
+import pathlib
 
 import pytest
 
@@ -560,3 +563,96 @@ def test_hue_rotation_build_fn() -> None:
     s = HUE_ROTATION.build_fn({"h_expr": "2*PI*t/3"})
     assert "hue=H=" in s, f"Expected hue=H= in: {s}"
     assert "2*PI*t/3" in s, f"Expected expression in: {s}"
+
+
+# ===========================================================================
+# BL-513: Shape Generators
+# ===========================================================================
+
+
+def test_shape_builders_import() -> None:
+    """All 4 shape generators are importable from stoat_ferret_core (BL-513 AC-1)."""
+    from stoat_ferret_core import (
+        CheckerboardGenerator,
+        ConcentricRingsGenerator,
+        RadialBurstGenerator,
+        SpiralGenerator,
+    )
+
+    assert CheckerboardGenerator is not None
+    assert ConcentricRingsGenerator is not None
+    assert RadialBurstGenerator is not None
+    assert SpiralGenerator is not None
+
+
+def test_spiral_render_to_file(tmp_path: pathlib.Path) -> None:
+    """SpiralGenerator.render_to_file writes a valid PNG (BL-513 AC-5)."""
+    from stoat_ferret_core import SpiralGenerator
+
+    out = tmp_path / "spiral.png"
+    gen = SpiralGenerator(3.0, 2.0)
+    gen.render_to_file(str(out), 64, 64)
+    assert out.exists(), "spiral.png was not created"
+    assert out.stat().st_size > 0, "spiral.png is empty"
+
+
+def test_radial_burst_render_to_file(tmp_path: pathlib.Path) -> None:
+    """RadialBurstGenerator.render_to_file writes a valid PNG (BL-513 AC-5)."""
+    from stoat_ferret_core import RadialBurstGenerator
+
+    out = tmp_path / "radial.png"
+    gen = RadialBurstGenerator(12, 0.4)
+    gen.render_to_file(str(out), 64, 64)
+    assert out.exists(), "radial.png was not created"
+    assert out.stat().st_size > 0, "radial.png is empty"
+
+
+def test_checkerboard_render_to_file(tmp_path: pathlib.Path) -> None:
+    """CheckerboardGenerator.render_to_file writes a valid PNG (BL-513 AC-5)."""
+    from stoat_ferret_core import CheckerboardGenerator
+
+    out = tmp_path / "checker.png"
+    gen = CheckerboardGenerator(8)
+    gen.render_to_file(str(out), 64, 64)
+    assert out.exists(), "checker.png was not created"
+    assert out.stat().st_size > 0, "checker.png is empty"
+
+
+def test_concentric_rings_render_to_file(tmp_path: pathlib.Path) -> None:
+    """ConcentricRingsGenerator.render_to_file writes a valid PNG (BL-513 AC-5)."""
+    from stoat_ferret_core import ConcentricRingsGenerator
+
+    out = tmp_path / "rings.png"
+    gen = ConcentricRingsGenerator(8, 0.4)
+    gen.render_to_file(str(out), 64, 64)
+    assert out.exists(), "rings.png was not created"
+    assert out.stat().st_size > 0, "rings.png is empty"
+
+
+def test_shape_generators_invalid_params() -> None:
+    """Shape generators raise ValueError for out-of-range parameters (BL-513 AC-2)."""
+    from stoat_ferret_core import (
+        CheckerboardGenerator,
+        ConcentricRingsGenerator,
+        RadialBurstGenerator,
+        SpiralGenerator,
+    )
+
+    with pytest.raises(ValueError):
+        CheckerboardGenerator(0)
+    with pytest.raises(ValueError):
+        ConcentricRingsGenerator(0, 0.4)
+    with pytest.raises(ValueError):
+        ConcentricRingsGenerator(8, 0.0)
+    with pytest.raises(ValueError):
+        ConcentricRingsGenerator(8, 1.0)
+    with pytest.raises(ValueError):
+        RadialBurstGenerator(0, 0.4)
+    with pytest.raises(ValueError):
+        RadialBurstGenerator(12, 0.0)
+    with pytest.raises(ValueError):
+        RadialBurstGenerator(12, 1.0)
+    with pytest.raises(ValueError):
+        SpiralGenerator(0.0, 2.0)
+    with pytest.raises(ValueError):
+        SpiralGenerator(3.0, 0.0)

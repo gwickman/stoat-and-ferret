@@ -68,6 +68,7 @@ try:
         BatchJobStatus,
         BatchProgress,
         BlurBuilder,
+        CheckerboardGenerator,
         ChromaKeyBuilder,
         ChromaticAberrationBuilder,
         Clip,
@@ -77,6 +78,7 @@ try:
         ColorLutBuilder,
         CommandError,
         CompositionClip,
+        ConcentricRingsGenerator,
         ConvolutionReverbBuilder,
         CurveKind,
         CurvesBuilder,
@@ -120,6 +122,7 @@ try:
         Position,
         PreviewQuality,
         ProgressInfo,
+        RadialBurstGenerator,
         Region,
         RenderCommand,
         RenderEffect,
@@ -136,6 +139,7 @@ try:
         SpectralReport,
         SpeedControl,
         SpeedSegment,
+        SpiralGenerator,
         SubBassBuilder,
         TimeRange,
         TimeStretchBuilder,
@@ -255,12 +259,15 @@ except ImportError:
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
     GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
+    CheckerboardGenerator = _not_built  # type: ignore[misc,assignment]
     ChromaticAberrationBuilder = _not_built  # type: ignore[misc,assignment]
+    ConcentricRingsGenerator = _not_built  # type: ignore[misc,assignment]
     CurvesBuilder = _not_built  # type: ignore[misc,assignment]
     VignetteBuilder = _not_built  # type: ignore[misc,assignment]
     ZoompanBuilder = _not_built  # type: ignore[misc,assignment]
     HueRotationBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
+    SpiralGenerator = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
     ChromaKeyBuilder = _not_built  # type: ignore[misc,assignment]
@@ -268,6 +275,7 @@ except ImportError:
     ColorLutBuilder = _not_built  # type: ignore[misc,assignment]
     PanBuilder = _not_built  # type: ignore[misc,assignment]
     PitchShiftBuilder = _not_built  # type: ignore[misc,assignment]
+    RadialBurstGenerator = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
     SubBassBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
@@ -394,6 +402,11 @@ __all__ = [
     "LoudnormBuilder",
     "MultibandCompressorBuilder",
     "ParametricEqBuilder",
+    # Shape generators
+    "CheckerboardGenerator",
+    "ConcentricRingsGenerator",
+    "RadialBurstGenerator",
+    "SpiralGenerator",
     # Video effect builders
     "BlurBuilder",
     "ChromaticAberrationBuilder",
