@@ -2872,6 +2872,70 @@ VIGNETTE = EffectDefinition(
 )
 
 
+def _hue_rotation_preview() -> str:
+    """Generate a filter preview for hue rotation with a default expression."""
+    from stoat_ferret_core import HueRotationBuilder
+
+    return str(HueRotationBuilder("2*PI*t/3").build())
+
+
+def _build_hue_rotation(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for hue rotation / colour cycling effect.
+
+    Args:
+        parameters: Effect parameters including h_expr.
+
+    Returns:
+        FFmpeg hue filter string.
+    """
+    from stoat_ferret_core import HueRotationBuilder
+
+    h_expr = str(parameters.get("h_expr", "2*PI*t/3"))
+    return str(HueRotationBuilder(h_expr).build())
+
+
+HUE_ROTATION = EffectDefinition(
+    name="Hue Rotation",
+    description=(
+        "Colour cycling / hue rotation via FFmpeg hue filter. "
+        "Accepts an FFmpeg time expression for H= (e.g. '2*PI*t/3'). "
+        "Comma-bearing expressions are supported via single-quote wrap (no \\, escape). "
+        "Timeline-T capable — windowed application supported."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "h_expr": {
+                "type": "string",
+                "description": (
+                    "FFmpeg time expression for the H= hue-angle option "
+                    "(e.g. '2*PI*t/3'). Must not contain single-quote characters."
+                ),
+            },
+        },
+        "required": ["h_expr"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "h_expr": (
+            "FFmpeg expression for hue angle in radians "
+            "(e.g. '2*PI*t/3' for a full colour cycle every 3 seconds). "
+            "Commas allowed inside expressions; single quotes not permitted."
+        ),
+    },
+    preview_fn=_hue_rotation_preview,
+    build_fn=_build_hue_rotation,
+    ai_summary=(
+        "Hue rotation / colour cycling via FFmpeg hue filter. "
+        "Single-quote wrap policy; no BL-502 comma-escape rules."
+    ),
+    example_prompt="Add a hue rotation effect that cycles through colours every 3 seconds.",
+    stream_kind="video",
+    timeline_T_capable=True,
+    requires_path_escape=False,
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2918,4 +2982,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("zoompan", ZOOMPAN)
     registry.register("curves", CURVES)
     registry.register("vignette", VIGNETTE)
+    registry.register("hue_rotation", HUE_ROTATION)
     return registry

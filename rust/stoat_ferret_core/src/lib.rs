@@ -163,6 +163,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::video::ZoompanBuilder>()?;
     m.add_class::<ffmpeg::video::CurvesBuilder>()?;
     m.add_class::<ffmpeg::video::VignetteBuilder>()?;
+    m.add_class::<ffmpeg::video::HueRotationBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;

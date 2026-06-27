@@ -91,6 +91,7 @@ EXPECTED_EFFECT_TYPES = {
     "zoompan",
     "curves",
     "vignette",
+    "hue_rotation",
 }
 
 # ---- Registry unit tests ----
