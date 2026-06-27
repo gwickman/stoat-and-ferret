@@ -145,6 +145,7 @@ try:
         VariableSpeedBuilder,
         VersionInfo,
         VideoDefectReport,
+        VignetteBuilder,
         VolumeBuilder,
         XfadeBuilder,
         ZoompanBuilder,
@@ -255,6 +256,7 @@ except ImportError:
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
     ChromaticAberrationBuilder = _not_built  # type: ignore[misc,assignment]
     CurvesBuilder = _not_built  # type: ignore[misc,assignment]
+    VignetteBuilder = _not_built  # type: ignore[misc,assignment]
     ZoompanBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
@@ -395,6 +397,7 @@ __all__ = [
     "ChromaticAberrationBuilder",
     "CurvesBuilder",
     "GradientGeneratorBuilder",
+    "VignetteBuilder",
     "ZoompanBuilder",
     "LensDistortBuilder",
     "SharpenBuilder",

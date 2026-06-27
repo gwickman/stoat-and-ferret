@@ -931,6 +931,113 @@ impl CurvesBuilder {
     }
 }
 
+const VALID_VIGNETTE_POSITIONS: &[&str] = &[
+    "centre",
+    "top_left",
+    "top_right",
+    "bottom_left",
+    "bottom_right",
+];
+
+/// Resolve a vignette position enum to an (x0, y0) expression string pair.
+///
+/// Applies integer offsets arithmetically. The base expressions use FFmpeg
+/// width/height variables (`w`, `h`). Offsets of zero are omitted for clarity.
+fn resolve_vignette_position(position: &str, x_offset: i32, y_offset: i32) -> (String, String) {
+    fn with_offset(base: &str, offset: i32) -> String {
+        if offset == 0 {
+            base.to_string()
+        } else if offset > 0 {
+            format!("{base}+{offset}")
+        } else {
+            format!("{base}{offset}") // offset is negative, includes the '-' sign
+        }
+    }
+    match position {
+        "centre" => (with_offset("w/2", x_offset), with_offset("h/2", y_offset)),
+        "top_left" => (with_offset("0", x_offset), with_offset("0", y_offset)),
+        "top_right" => (with_offset("w", x_offset), with_offset("0", y_offset)),
+        "bottom_left" => (with_offset("0", x_offset), with_offset("h", y_offset)),
+        "bottom_right" => (with_offset("w", x_offset), with_offset("h", y_offset)),
+        _ => ("w/2".to_string(), "h/2".to_string()), // unreachable after py_new validation
+    }
+}
+
+/// Cinematic corner-darkening vignette effect builder. timeline_T_capable=True.
+///
+/// Uses the AC-2 position-enum surface. Accepts a position enum that resolves
+/// to x0/y0 expression strings internally — no raw FFmpeg expressions exposed.
+/// The FFmpeg `vignette` filter has the T flag; windowed application is supported.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct VignetteBuilder {
+    position: String,
+    x_offset: i32,
+    y_offset: i32,
+    angle: f64,
+    mode: String,
+    eval_mode: String,
+}
+
+#[pymethods]
+impl VignetteBuilder {
+    #[new]
+    #[pyo3(signature = (position, x_offset=0, y_offset=0, angle=0.628, mode="forward", eval_mode="init"))]
+    pub fn py_new(
+        position: &str,
+        x_offset: i32,
+        y_offset: i32,
+        angle: f64,
+        mode: &str,
+        eval_mode: &str,
+    ) -> PyResult<Self> {
+        if !VALID_VIGNETTE_POSITIONS.contains(&position) {
+            return Err(PyValueError::new_err(format!(
+                "Invalid position: '{position}'. Must be one of: {}",
+                VALID_VIGNETTE_POSITIONS.join(", ")
+            )));
+        }
+        let half_pi = std::f64::consts::FRAC_PI_2;
+        if angle < 0.0 || angle > half_pi {
+            return Err(PyValueError::new_err(format!(
+                "angle must be in [0, PI/2] (≈{half_pi:.6}); got {angle}"
+            )));
+        }
+        match mode {
+            "forward" | "backward" => {}
+            _ => {
+                return Err(PyValueError::new_err(
+                    "mode must be 'forward' or 'backward'",
+                ))
+            }
+        }
+        match eval_mode {
+            "init" | "frame" => {}
+            _ => return Err(PyValueError::new_err("eval_mode must be 'init' or 'frame'")),
+        }
+        Ok(Self {
+            position: position.to_string(),
+            x_offset,
+            y_offset,
+            angle,
+            mode: mode.to_string(),
+            eval_mode: eval_mode.to_string(),
+        })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        let (x0, y0) = resolve_vignette_position(&self.position, self.x_offset, self.y_offset);
+        Ok(Filter::new(format!(
+            "vignette=angle={angle}:x0={x0}:y0={y0}:mode={mode}:eval={eval_mode}",
+            angle = self.angle,
+            mode = self.mode,
+            eval_mode = self.eval_mode,
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1954,6 +2061,84 @@ mod tests {
         assert!(
             !s.contains("enable="),
             "expected no enable= in static mode: {s}"
+        );
+    }
+
+    // -- VignetteBuilder --
+
+    #[test]
+    fn test_vignette_default_emit() {
+        let b = VignetteBuilder::py_new("centre", 0, 0, 0.628, "forward", "init").unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.starts_with("vignette="),
+            "expected vignette= prefix in: {s}"
+        );
+        assert!(s.contains("x0=w/2"), "expected x0=w/2 in: {s}");
+        assert!(s.contains("y0=h/2"), "expected y0=h/2 in: {s}");
+        assert!(s.contains("mode=forward"), "expected mode=forward in: {s}");
+        assert!(s.contains("eval=init"), "expected eval=init in: {s}");
+    }
+
+    #[test]
+    fn test_vignette_backward_mode() {
+        let b = VignetteBuilder::py_new("centre", 0, 0, 0.628, "backward", "init").unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.contains("mode=backward"),
+            "expected mode=backward in: {s}"
+        );
+    }
+
+    #[test]
+    fn test_vignette_invalid_angle() {
+        // angle > PI/2 should be rejected
+        assert!(VignetteBuilder::py_new("centre", 0, 0, 2.0, "forward", "init").is_err());
+        // angle < 0 should be rejected
+        assert!(VignetteBuilder::py_new("centre", 0, 0, -0.1, "forward", "init").is_err());
+    }
+
+    #[test]
+    fn test_vignette_invalid_position() {
+        assert!(VignetteBuilder::py_new("middle", 0, 0, 0.628, "forward", "init").is_err());
+        assert!(VignetteBuilder::py_new("", 0, 0, 0.628, "forward", "init").is_err());
+    }
+
+    #[test]
+    fn test_vignette_corner_positions() {
+        let corners = [
+            ("top_left", "0", "0"),
+            ("top_right", "w", "0"),
+            ("bottom_left", "0", "h"),
+            ("bottom_right", "w", "h"),
+        ];
+        for (pos, expected_x, expected_y) in corners {
+            let b = VignetteBuilder::py_new(pos, 0, 0, 0.628, "forward", "init").unwrap();
+            let s = b.py_build().unwrap().to_string();
+            assert!(
+                s.contains(&format!("x0={expected_x}")),
+                "position={pos}: expected x0={expected_x} in: {s}"
+            );
+            assert!(
+                s.contains(&format!("y0={expected_y}")),
+                "position={pos}: expected y0={expected_y} in: {s}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_vignette_eval_frame_differs_from_init() {
+        let b_init = VignetteBuilder::py_new("centre", 0, 0, 0.628, "forward", "init").unwrap();
+        let b_frame = VignetteBuilder::py_new("centre", 0, 0, 0.628, "forward", "frame").unwrap();
+        let s_init = b_init.py_build().unwrap().to_string();
+        let s_frame = b_frame.py_build().unwrap().to_string();
+        assert_ne!(
+            s_init, s_frame,
+            "init and frame eval modes should produce different strings"
+        );
+        assert!(
+            s_frame.contains("eval=frame"),
+            "expected eval=frame in frame mode: {s_frame}"
         );
     }
 }

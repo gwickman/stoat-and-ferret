@@ -52,6 +52,7 @@ from stoat_ferret_core import (
     TimeStretchBuilder,
     TransitionType,
     VariableSpeedBuilder,
+    VignetteBuilder,
     VolumeBuilder,
     XfadeBuilder,
     ZoompanBuilder,
@@ -2775,6 +2776,102 @@ CURVES = EffectDefinition(
 )
 
 
+def _vignette_preview() -> str:
+    """Generate a filter preview for vignette with default parameters."""
+    return str(VignetteBuilder(position="centre").build())
+
+
+def _build_vignette(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for vignette corner-darkening effect.
+
+    Args:
+        parameters: Effect parameters including position, x_offset, y_offset,
+            angle, mode, and eval_mode.
+
+    Returns:
+        FFmpeg vignette filter string.
+    """
+    position = parameters.get("position", "centre")
+    x_offset = int(parameters.get("x_offset", 0))
+    y_offset = int(parameters.get("y_offset", 0))
+    angle = float(parameters.get("angle", 0.628))
+    mode = str(parameters.get("mode", "forward"))
+    eval_mode = str(parameters.get("eval_mode", "init"))
+    builder = VignetteBuilder(
+        position=str(position),
+        x_offset=x_offset,
+        y_offset=y_offset,
+        angle=angle,
+        mode=mode,
+        eval_mode=eval_mode,
+    )
+    return str(builder.build())
+
+
+VIGNETTE = EffectDefinition(
+    name="Vignette",
+    description=(
+        "Cinematic corner-darkening effect using FFmpeg vignette filter. "
+        "Accepts a position enum (centre, top_left, top_right, bottom_left, bottom_right) "
+        "plus numeric x_offset/y_offset. Timeline-T capable — windowed application supported."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "position": {
+                "type": "string",
+                "enum": ["centre", "top_left", "top_right", "bottom_left", "bottom_right"],
+                "description": "Vignette centre position on the frame.",
+            },
+            "x_offset": {
+                "type": "integer",
+                "description": "Integer pixel offset added to the resolved x0 coordinate.",
+            },
+            "y_offset": {
+                "type": "integer",
+                "description": "Integer pixel offset added to the resolved y0 coordinate.",
+            },
+            "angle": {
+                "type": "number",
+                "description": "Vignette angle in radians; range [0, PI/2]. Default PI/5 (≈0.628).",
+            },
+            "mode": {
+                "type": "string",
+                "enum": ["forward", "backward"],
+                "description": "forward darkens corners; backward lightens corners.",
+            },
+            "eval_mode": {
+                "type": "string",
+                "enum": ["init", "frame"],
+                "description": "init evaluates once at stream start; frame re-evaluates per frame.",
+            },
+        },
+        "required": ["position"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "position": (
+            "Where to centre the vignette: centre, top_left, top_right, bottom_left, bottom_right."
+        ),
+        "x_offset": "Integer pixel offset from the resolved x position.",
+        "y_offset": "Integer pixel offset from the resolved y position.",
+        "angle": "Vignette angle in radians [0, PI/2]. Larger = wider dark border.",
+        "mode": "forward (default) darkens corners; backward inverts to lighten corners.",
+        "eval_mode": "init (default) or frame. Use frame for per-frame angle animation.",
+    },
+    preview_fn=_vignette_preview,
+    build_fn=_build_vignette,
+    ai_summary=(
+        "Cinematic corner-darkening vignette via FFmpeg vignette filter. "
+        "Position enum surface; AC-1 raw x0/y0 expressions deferred to a future version."
+    ),
+    example_prompt="Add a cinematic vignette effect centred on the frame.",
+    stream_kind="video",
+    timeline_T_capable=True,
+    requires_path_escape=False,
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2820,4 +2917,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("chromatic_aberration", CHROMATIC_ABERRATION_EFFECT)
     registry.register("zoompan", ZOOMPAN)
     registry.register("curves", CURVES)
+    registry.register("vignette", VIGNETTE)
     return registry
