@@ -25,6 +25,7 @@ from stoat_ferret_core import (
     ColorKeyBuilder,
     ColorLutBuilder,
     ConvolutionReverbBuilder,
+    CurvesBuilder,
     DeesserBuilder,
     DeplosiveBuilder,
     DrawtextBuilder,
@@ -2665,6 +2666,115 @@ ZOOMPAN = EffectDefinition(
 )
 
 
+def _curves_preview() -> str:
+    """Generate a filter preview for curves with default parameters."""
+    return str(CurvesBuilder(preset="vintage").build())
+
+
+def _build_curves(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for curves colour grading effect.
+
+    Args:
+        parameters: Effect parameters. Either 'preset' (string) or one or more of
+            'master', 'red', 'green', 'blue', 'all' (KneeString values).
+
+    Returns:
+        FFmpeg curves filter string.
+    """
+    preset = parameters.get("preset")
+    master = parameters.get("master")
+    red = parameters.get("red")
+    green = parameters.get("green")
+    blue = parameters.get("blue")
+    all_ = parameters.get("all")
+    builder = CurvesBuilder(
+        preset=str(preset) if preset is not None else None,
+        master=str(master) if master is not None else None,
+        red=str(red) if red is not None else None,
+        green=str(green) if green is not None else None,
+        blue=str(blue) if blue is not None else None,
+        all=str(all_) if all_ is not None else None,
+    )
+    return str(builder.build())
+
+
+CURVES = EffectDefinition(
+    name="Curves",
+    description=(
+        "Colour grading using FFmpeg curves filter. "
+        "Supports preset-based grading (vintage, cross_process, darker, etc.) "
+        "or per-channel knee-string grading (red/green/blue/master/all channels). "
+        "The two modes are mutually exclusive. Timeline-T capable."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "preset": {
+                "type": "string",
+                "enum": [
+                    "none",
+                    "color_negative",
+                    "cross_process",
+                    "darker",
+                    "increase_contrast",
+                    "lighter",
+                    "linear_contrast",
+                    "medium_contrast",
+                    "negative",
+                    "strong_contrast",
+                    "vintage",
+                ],
+                "description": "Named colour curves preset.",
+            },
+            "master": {
+                "type": "string",
+                "description": "Master channel knee string (e.g. '0/0 0.5/0.4 1/1').",
+            },
+            "red": {
+                "type": "string",
+                "description": "Red channel knee string.",
+            },
+            "green": {
+                "type": "string",
+                "description": "Green channel knee string.",
+            },
+            "blue": {
+                "type": "string",
+                "description": "Blue channel knee string.",
+            },
+            "all": {
+                "type": "string",
+                "description": "All-channels knee string.",
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "preset": (
+            "Named preset: none, color_negative, cross_process, darker, increase_contrast, "
+            "lighter, linear_contrast, medium_contrast, negative, strong_contrast, vintage. "
+            "Cannot be combined with per-channel knee strings."
+        ),
+        "red": "Red channel knee string e.g. '0/0 0.5/0.4 1/1'. Pairs are x/y with monotonic x.",
+        "green": "Green channel knee string e.g. '0/0 0.5/0.5 1/1'.",
+        "blue": "Blue channel knee string e.g. '0/0 0.5/0.6 1/1'.",
+        "master": "Master (all-channel) knee string.",
+        "all": "All-channels knee string (alternative to per-channel fields).",
+    },
+    preview_fn=_curves_preview,
+    build_fn=_build_curves,
+    ai_summary=(
+        "Colour grading via FFmpeg curves: preset-based (vintage, cross_process, etc.) "
+        "or per-channel knee-string grading."
+    ),
+    example_prompt="Apply a vintage colour grade to this clip.",
+    stream_kind="video",
+    timeline_T_capable=True,
+    requires_path_escape=False,
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2709,4 +2819,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("noise_generator", NOISE_GENERATOR)
     registry.register("chromatic_aberration", CHROMATIC_ABERRATION_EFFECT)
     registry.register("zoompan", ZOOMPAN)
+    registry.register("curves", CURVES)
     return registry

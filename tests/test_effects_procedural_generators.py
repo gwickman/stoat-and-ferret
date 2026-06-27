@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""Unit and contract tests for procedural generator effects (BL-454) and ZoompanBuilder (BL-507).
+"""Unit and contract tests for procedural generator effects (BL-454), ZoompanBuilder (BL-507),
+and CurvesBuilder (BL-508).
 
 BL-454 ACs:
 - AC-1: GradientGeneratorBuilder generates a gradient clip with configurable colors.
@@ -16,6 +17,14 @@ BL-507 ACs:
 - AC-3 (deferred): Negative-control test — without pin, render fails. STOAT_TEST_FFMPEG=1.
 - AC-4: Graph-boundary scope boundary in BL-507 description (not BL-507 code).
 - AC-5: ZOOMPAN EffectDefinition has timeline_T_capable=False.
+
+BL-508 ACs:
+- AC-1: CurvesBuilder(preset="vintage") produces curves=preset=vintage.
+- AC-2: CurvesBuilder per-channel knee produces quoted curves= string.
+- AC-3: Invalid preset raises ValueError.
+- AC-4: Mutual exclusion (preset + channel) raises ValueError.
+- AC-5: CURVES.timeline_T_capable is True.
+- AC-6: "curves" registered in default registry.
 """
 
 from __future__ import annotations
@@ -25,12 +34,18 @@ import os
 import pytest
 
 from stoat_ferret.effects.definitions import (
+    CURVES,
     GRADIENT_GENERATOR,
     NOISE_GENERATOR,
     ZOOMPAN,
     create_default_registry,
 )
-from stoat_ferret_core import GradientGeneratorBuilder, NoiseGeneratorBuilder, ZoompanBuilder
+from stoat_ferret_core import (
+    CurvesBuilder,
+    GradientGeneratorBuilder,
+    NoiseGeneratorBuilder,
+    ZoompanBuilder,
+)
 
 # ---- GradientGeneratorBuilder unit tests (AC-1) ----
 
@@ -338,3 +353,57 @@ def test_zoompan_build_fn() -> None:
     assert "zoompan=" in s, f"Expected zoompan= in build output: {s}"
     assert "fps=25" in s, f"Expected fps=25 in build output: {s}"
     assert "settb=1/25" in s, f"Expected settb=1/25 in build output: {s}"
+
+
+# ---- CurvesBuilder unit tests (BL-508) ----
+
+
+def test_curves_builder_preset_builds() -> None:
+    """CurvesBuilder(preset='vintage') produces curves=preset=vintage (BL-508-AC-1)."""
+    s = str(CurvesBuilder(preset="vintage").build())
+    assert "curves=preset=vintage" in s, f"Expected curves=preset=vintage in: {s}"
+
+
+def test_curves_builder_per_channel_builds() -> None:
+    """CurvesBuilder per-channel knee produces quoted curves= string (BL-508-AC-2)."""
+    s = str(CurvesBuilder(red="0/0 0.5/0.4 1/1").build())
+    assert "curves=" in s, f"Expected curves= in: {s}"
+    assert "red=" in s, f"Expected red= in: {s}"
+    assert "0/0 0.5/0.4 1/1" in s, f"Expected knee points in: {s}"
+
+
+def test_curves_builder_invalid_preset() -> None:
+    """CurvesBuilder with an unknown preset raises ValueError (BL-508-AC-3)."""
+    with pytest.raises(ValueError, match="preset"):
+        CurvesBuilder(preset="unknown_preset")
+
+
+def test_curves_builder_mutual_exclusion() -> None:
+    """CurvesBuilder(preset=..., red=...) raises ValueError (BL-508-AC-4)."""
+    with pytest.raises(ValueError, match="preset"):
+        CurvesBuilder(preset="vintage", red="0/0 1/1")
+
+
+def test_curves_effect_definition_timeline_t_capable_true() -> None:
+    """CURVES EffectDefinition has timeline_T_capable=True (BL-508-AC-5)."""
+    assert CURVES.timeline_T_capable is True
+
+
+def test_curves_registered_in_default_registry() -> None:
+    """'curves' is registered in the default effect registry (BL-508-AC-6)."""
+    registry = create_default_registry()
+    definition = registry.get("curves")
+    assert definition is not None
+    assert definition is CURVES
+
+
+def test_curves_preview_fn() -> None:
+    """CURVES.preview_fn() produces a curves= filter string."""
+    s = CURVES.preview_fn()
+    assert "curves=" in s, f"Expected curves= in preview: {s}"
+
+
+def test_curves_build_fn_preset() -> None:
+    """CURVES.build_fn({'preset': 'cross_process'}) produces curves=preset=cross_process."""
+    s = CURVES.build_fn({"preset": "cross_process"})
+    assert "curves=preset=cross_process" in s, f"Expected curves=preset=cross_process in: {s}"

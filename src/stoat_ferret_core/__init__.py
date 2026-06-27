@@ -79,6 +79,7 @@ try:
         CompositionClip,
         ConvolutionReverbBuilder,
         CurveKind,
+        CurvesBuilder,
         DeesserBuilder,
         DeplosiveBuilder,
         DrawtextBuilder,
@@ -253,6 +254,7 @@ except ImportError:
     GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
     ChromaticAberrationBuilder = _not_built  # type: ignore[misc,assignment]
+    CurvesBuilder = _not_built  # type: ignore[misc,assignment]
     ZoompanBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
@@ -391,6 +393,7 @@ __all__ = [
     # Video effect builders
     "BlurBuilder",
     "ChromaticAberrationBuilder",
+    "CurvesBuilder",
     "GradientGeneratorBuilder",
     "ZoompanBuilder",
     "LensDistortBuilder",

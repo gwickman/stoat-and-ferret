@@ -77,21 +77,8 @@ def test_timeline_T_capable_agrees_with_ffmpeg_T_flag() -> None:
     )
 
 
-def test_no_v088_builder_has_timeline_T_capable_true() -> None:
-    """Sanity guard: no v088 builder sets timeline_T_capable=True.
-
-    This test documents the v088 scope constraint: all existing EffectDefinitions
-    default to timeline_T_capable=False. If a future version adds a T-capable
-    builder, this test will fail as a reminder to update the hygiene test coverage.
-    """
+def test_wave3a_t_capable_builders_curves_only() -> None:
+    """Feature 002: first T-capable Wave 3a builder; assert exactly curves."""
     registry = create_default_registry()
-    all_effects = registry.list_all()
-
-    t_capable = [
-        effect_type for effect_type, definition in all_effects if definition.timeline_T_capable
-    ]
-
-    assert not t_capable, (
-        f"Unexpected timeline_T_capable=True builders in v088 scope: {t_capable}\n"
-        "If this is intentional, update this test and ensure the FFmpeg T flag check runs."
-    )
+    t_capable = [etype for etype, defn in registry.list_all() if defn.timeline_T_capable]
+    assert sorted(t_capable) == ["curves"]
