@@ -90,6 +90,7 @@ EXPECTED_EFFECT_TYPES = {
     "noise_generator",
     "zoompan",
     "curves",
+    "vignette",
 }
 
 # ---- Registry unit tests ----

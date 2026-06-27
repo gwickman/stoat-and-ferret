@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Grant Wickman
 
 """Unit and contract tests for procedural generator effects (BL-454), ZoompanBuilder (BL-507),
-and CurvesBuilder (BL-508).
+CurvesBuilder (BL-508), and VignetteBuilder (BL-509).
 
 BL-454 ACs:
 - AC-1: GradientGeneratorBuilder generates a gradient clip with configurable colors.
@@ -25,6 +25,13 @@ BL-508 ACs:
 - AC-4: Mutual exclusion (preset + channel) raises ValueError.
 - AC-5: CURVES.timeline_T_capable is True.
 - AC-6: "curves" registered in default registry.
+
+BL-509 ACs:
+- AC-1 (narrowed to AC-2): VignetteBuilder exists in video.rs with position enum.
+- AC-2: Position enum resolves to x0/y0 expression strings (AC-2 surface).
+- AC-3: VignetteBuilder emits vignette=angle:x0:y0:mode:eval format.
+- AC-4: Three contract tests: centre default, backward mode, init vs frame eval.
+- AC-5: VIGNETTE EffectDefinition with timeline_T_capable=True.
 """
 
 from __future__ import annotations
@@ -37,6 +44,7 @@ from stoat_ferret.effects.definitions import (
     CURVES,
     GRADIENT_GENERATOR,
     NOISE_GENERATOR,
+    VIGNETTE,
     ZOOMPAN,
     create_default_registry,
 )
@@ -44,6 +52,7 @@ from stoat_ferret_core import (
     CurvesBuilder,
     GradientGeneratorBuilder,
     NoiseGeneratorBuilder,
+    VignetteBuilder,
     ZoompanBuilder,
 )
 
@@ -407,3 +416,82 @@ def test_curves_build_fn_preset() -> None:
     """CURVES.build_fn({'preset': 'cross_process'}) produces curves=preset=cross_process."""
     s = CURVES.build_fn({"preset": "cross_process"})
     assert "curves=preset=cross_process" in s, f"Expected curves=preset=cross_process in: {s}"
+
+
+# ---- VignetteBuilder unit tests (BL-509) ----
+
+
+def test_vignette_centre_default() -> None:
+    """VignetteBuilder(position='centre') produces symmetric x0=w/2, y0=h/2 (BL-509-AC-2/3)."""
+    s = str(VignetteBuilder(position="centre").build())
+    assert "vignette=" in s, f"Expected vignette= in: {s}"
+    assert "x0=w/2" in s, f"Expected x0=w/2 in: {s}"
+    assert "y0=h/2" in s, f"Expected y0=h/2 in: {s}"
+    assert "mode=forward" in s, f"Expected mode=forward in: {s}"
+    assert "eval=init" in s, f"Expected eval=init in: {s}"
+
+
+def test_vignette_corner_position() -> None:
+    """VignetteBuilder with corner positions resolves to correct x0/y0 (BL-509-AC-2)."""
+    b = VignetteBuilder(position="top_left")
+    s = str(b.build())
+    assert "x0=0" in s, f"Expected x0=0 in top_left output: {s}"
+    assert "y0=0" in s, f"Expected y0=0 in top_left output: {s}"
+
+    b2 = VignetteBuilder(position="bottom_right")
+    s2 = str(b2.build())
+    assert "x0=w" in s2, f"Expected x0=w in bottom_right output: {s2}"
+    assert "y0=h" in s2, f"Expected y0=h in bottom_right output: {s2}"
+
+
+def test_vignette_backward_mode() -> None:
+    """VignetteBuilder(mode='backward') emits mode=backward (BL-509-AC-3/4)."""
+    s = str(VignetteBuilder(position="centre", mode="backward").build())
+    assert "mode=backward" in s, f"Expected mode=backward in: {s}"
+
+
+def test_vignette_eval_frame_differs_from_init() -> None:
+    """eval_mode='frame' produces a different emit than 'init' (BL-509-AC-4)."""
+    s_init = str(VignetteBuilder(position="centre", angle=0.5, eval_mode="init").build())
+    s_frame = str(VignetteBuilder(position="centre", angle=0.5, eval_mode="frame").build())
+    assert s_init != s_frame, "init and frame eval modes must produce different strings"
+    assert "eval=frame" in s_frame, f"Expected eval=frame in frame-mode output: {s_frame}"
+    assert "eval=init" in s_init, f"Expected eval=init in init-mode output: {s_init}"
+
+
+def test_vignette_invalid_angle() -> None:
+    """VignetteBuilder rejects angle outside [0, PI/2] with ValueError (BL-509-AC-2)."""
+    with pytest.raises(ValueError):
+        VignetteBuilder(position="centre", angle=2.0)
+
+
+def test_vignette_invalid_position() -> None:
+    """VignetteBuilder rejects unknown position strings with ValueError (BL-509-AC-2)."""
+    with pytest.raises(ValueError):
+        VignetteBuilder(position="middle")
+
+
+def test_vignette_effect_definition_timeline_t_capable_true() -> None:
+    """VIGNETTE EffectDefinition has timeline_T_capable=True (BL-509-AC-5)."""
+    assert VIGNETTE.timeline_T_capable is True
+
+
+def test_vignette_registered_in_default_registry() -> None:
+    """'vignette' is registered in the default effect registry (BL-509-AC-5)."""
+    registry = create_default_registry()
+    definition = registry.get("vignette")
+    assert definition is not None
+    assert definition is VIGNETTE
+
+
+def test_vignette_preview_fn() -> None:
+    """VIGNETTE.preview_fn() produces a vignette= filter string."""
+    s = VIGNETTE.preview_fn()
+    assert "vignette=" in s, f"Expected vignette= in preview: {s}"
+
+
+def test_vignette_build_fn_centre() -> None:
+    """VIGNETTE.build_fn({'position': 'centre'}) produces vignette= with x0=w/2."""
+    s = VIGNETTE.build_fn({"position": "centre"})
+    assert "vignette=" in s, f"Expected vignette= in: {s}"
+    assert "x0=w/2" in s, f"Expected x0=w/2 in: {s}"

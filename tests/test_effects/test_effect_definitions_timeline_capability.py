@@ -77,8 +77,8 @@ def test_timeline_T_capable_agrees_with_ffmpeg_T_flag() -> None:
     )
 
 
-def test_wave3a_t_capable_builders_curves_only() -> None:
-    """Feature 002: first T-capable Wave 3a builder; assert exactly curves."""
+def test_wave3a_t_capable_builders_curves_and_vignette() -> None:
+    """Feature 003: second T-capable Wave 3a builder; assert exactly curves and vignette."""
     registry = create_default_registry()
     t_capable = [etype for etype, defn in registry.list_all() if defn.timeline_T_capable]
-    assert sorted(t_capable) == ["curves"]
+    assert sorted(t_capable) == ["curves", "vignette"]

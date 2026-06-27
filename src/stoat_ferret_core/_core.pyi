@@ -4455,6 +4455,53 @@ class CurvesBuilder:
         """
         ...
 
+class VignetteBuilder:
+    """Cinematic corner-darkening vignette effect builder. timeline_T_capable=True.
+
+    Uses the AC-2 position-enum surface. The position enum resolves to x0/y0
+    expression strings internally — no raw FFmpeg expression strings exposed to
+    Python callers. The FFmpeg ``vignette`` filter has the T flag.
+    """
+
+    def __new__(
+        cls,
+        position: str,
+        x_offset: int = 0,
+        y_offset: int = 0,
+        angle: float = 0.628,
+        mode: str = "forward",
+        eval_mode: str = "init",
+    ) -> VignetteBuilder:
+        """Create a new VignetteBuilder.
+
+        Args:
+            position: One of ``centre``, ``top_left``, ``top_right``,
+                ``bottom_left``, ``bottom_right``.
+            x_offset: Integer pixel offset added to resolved x0 position.
+            y_offset: Integer pixel offset added to resolved y0 position.
+            angle: Vignette angle in radians; range [0, PI/2]. Default PI/5 (≈0.628).
+            mode: One of ``forward`` (darken corners) or ``backward`` (lighten corners).
+            eval_mode: One of ``init`` (evaluate once at stream start) or
+                ``frame`` (re-evaluate per frame).
+
+        Raises:
+            ValueError: If position is not one of the five allowed values.
+            ValueError: If angle is outside [0, PI/2].
+            ValueError: If mode is not ``forward`` or ``backward``.
+            ValueError: If eval_mode is not ``init`` or ``frame``.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the vignette filter.
+
+        Returns:
+            A Filter with
+            ``vignette=angle=<a>:x0=<x>:y0=<y>:mode=<m>:eval=<e>``
+            where x0/y0 are resolved from the position enum and offsets.
+        """
+        ...
+
 # ========== Render Graph Translator ==========
 
 class RenderEffect:
