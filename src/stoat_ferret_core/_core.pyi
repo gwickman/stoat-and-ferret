@@ -4699,3 +4699,124 @@ class RenderGraphTranslator:
         ...
 
     def __repr__(self) -> str: ...
+
+# ========== Shape Generators ==========
+
+class CheckerboardGenerator:
+    """Procedural checkerboard pattern generator. Outputs RGBA PNG."""
+
+    def __new__(cls, square_size: int) -> CheckerboardGenerator:
+        """Create a CheckerboardGenerator.
+
+        Args:
+            square_size: Side length of each square in pixels. Must be > 0.
+
+        Raises:
+            ValueError: If square_size is 0.
+        """
+        ...
+
+    def render_to_file(self, output_path: str, width: int, height: int) -> None:
+        """Render the checkerboard to an RGBA PNG at the given path.
+
+        Args:
+            output_path: Destination file path (parent directories are created).
+            width: Image width in pixels. Must be > 0.
+            height: Image height in pixels. Must be > 0.
+
+        Raises:
+            ValueError: If width or height is 0, or if the file cannot be written.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class ConcentricRingsGenerator:
+    """Procedural concentric rings pattern generator. Outputs RGBA PNG."""
+
+    def __new__(cls, ring_count: int, ring_width: float) -> ConcentricRingsGenerator:
+        """Create a ConcentricRingsGenerator.
+
+        Args:
+            ring_count: Number of rings. Must be > 0.
+            ring_width: Fractional width of each white ring band, in (0, 1).
+
+        Raises:
+            ValueError: If ring_count is 0 or ring_width is not in (0, 1).
+        """
+        ...
+
+    def render_to_file(self, output_path: str, width: int, height: int) -> None:
+        """Render the concentric rings to an RGBA PNG at the given path.
+
+        Args:
+            output_path: Destination file path (parent directories are created).
+            width: Image width in pixels. Must be > 0.
+            height: Image height in pixels. Must be > 0.
+
+        Raises:
+            ValueError: If width or height is 0, or if the file cannot be written.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class RadialBurstGenerator:
+    """Procedural radial burst (sunburst) pattern generator. Outputs RGBA PNG."""
+
+    def __new__(cls, ray_count: int, ray_width: float) -> RadialBurstGenerator:
+        """Create a RadialBurstGenerator.
+
+        Args:
+            ray_count: Number of rays. Must be > 0.
+            ray_width: Fractional angular width of each ray, in (0, 1).
+
+        Raises:
+            ValueError: If ray_count is 0 or ray_width is not in (0, 1).
+        """
+        ...
+
+    def render_to_file(self, output_path: str, width: int, height: int) -> None:
+        """Render the radial burst to an RGBA PNG at the given path.
+
+        Args:
+            output_path: Destination file path (parent directories are created).
+            width: Image width in pixels. Must be > 0.
+            height: Image height in pixels. Must be > 0.
+
+        Raises:
+            ValueError: If width or height is 0, or if the file cannot be written.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class SpiralGenerator:
+    """Procedural Archimedean spiral pattern generator. Outputs RGBA PNG."""
+
+    def __new__(cls, turn_count: float, thickness: float) -> SpiralGenerator:
+        """Create a SpiralGenerator.
+
+        Args:
+            turn_count: Number of spiral turns. Must be > 0.
+            thickness: Band thickness in pixels. Must be > 0.
+
+        Raises:
+            ValueError: If turn_count or thickness is not > 0.
+        """
+        ...
+
+    def render_to_file(self, output_path: str, width: int, height: int) -> None:
+        """Render the spiral to an RGBA PNG at the given path.
+
+        Args:
+            output_path: Destination file path (parent directories are created).
+            width: Image width in pixels. Must be > 0.
+            height: Image height in pixels. Must be > 0.
+
+        Raises:
+            ValueError: If width or height is 0, or if the file cannot be written.
+        """
+        ...
+
+    def __repr__(self) -> str: ...
