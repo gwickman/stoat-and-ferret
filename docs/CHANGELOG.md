@@ -4,6 +4,37 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v089 — Release 3, Wave 3a + Wave 4: FFmpeg Filter Builders & Procedural Shape Generators
+
+**Added:**
+- ZoompanBuilder: Ken Burns slow-zoom and pan effects with fps/settb pinning
+- CurvesBuilder: Colour grading with preset and per-channel KneeString modes
+- VignetteBuilder: Cinematic corner-darkening with position-enum surface
+- HueRotationBuilder: Hue cycling with single-quote expression wrapping
+- Procedural Shape Generators: Spiral, RadialBurst, Checkerboard, ConcentricRings (new `shapes/` Rust module)
+- Wave 3a smoke test coverage: 8 new smoke tests for FFmpeg builders and effects
+- Timeline-T window verification: EffectDefinition.timeline_T_capable field and hygiene test suite
+
+**Fixed:**
+- (None — all new features, no bug fixes in v089)
+
+**Deferred:**
+- ZoompanBuilder negative-control FFmpeg test (BL-507-AC-3): Requires FFmpeg availability; discharge plan documented
+- Timeline-T dispatcher and fallback rendering (BL-512-AC-2/AC-4): Blocked by BL-505 (multi-clip render graph)
+- Shape generator snf-managed asset path (BL-513-AC-4): Blocked by BL-511 (asset path API); using temp-dir placeholder
+
+**PRs:** #671–#678 (8 merged)
+
+**Resolved:**
+- BL-507: ZoompanBuilder implementation
+- BL-508: CurvesBuilder implementation
+- BL-509: VignetteBuilder implementation
+- BL-510: HueRotationBuilder implementation
+- BL-512: Timeline-T window parameter verification
+- BL-513: Procedural shape generators
+
+---
+
 ## v088 — R3 Wave 2 (2026-06-26)
 
 ### Added
