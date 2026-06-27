@@ -77,8 +77,11 @@ def test_timeline_T_capable_agrees_with_ffmpeg_T_flag() -> None:
     )
 
 
-def test_wave3a_t_capable_builders_curves_and_vignette() -> None:
-    """Feature 003: second T-capable Wave 3a builder; assert exactly curves and vignette."""
+def test_wave3a_t_capable_builders_curves_hue_rotation_vignette() -> None:
+    """Feature 004: final T-capable Wave 3a builders; assert exactly curves, hue_rotation, vignette.
+
+    Finalizes the Wave 3a T-capable assertion (BL-510).
+    """
     registry = create_default_registry()
     t_capable = [etype for etype, defn in registry.list_all() if defn.timeline_T_capable]
-    assert sorted(t_capable) == ["curves", "vignette"]
+    assert sorted(t_capable) == ["curves", "hue_rotation", "vignette"]

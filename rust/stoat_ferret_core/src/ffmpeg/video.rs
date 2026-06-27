@@ -1038,6 +1038,35 @@ impl VignetteBuilder {
     }
 }
 
+/// Hue rotation / colour cycling effect builder. timeline_T_capable=True.
+///
+/// Emits `hue=H='<h_expr>'`. Single-quote wrap is the complete escaping
+/// strategy for the H= expression (PoC-4 verified). No backslash-comma
+/// escape is applied — commas inside single quotes pass through unchanged.
+/// Delegates to `emit_filter_value(ValueKind::Expression, ...)` for wrap
+/// and apostrophe rejection.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct HueRotationBuilder {
+    h_expr: String,
+}
+
+#[pymethods]
+impl HueRotationBuilder {
+    #[new]
+    pub fn py_new(h_expr: String) -> PyResult<Self> {
+        Ok(Self { h_expr })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        let h = emit_filter_value(ValueKind::Expression, &self.h_expr)
+            .map_err(|_| PyValueError::new_err("Expression must not contain single quotes"))?;
+        Ok(Filter::new(format!("hue=H={h}")))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2139,6 +2168,49 @@ mod tests {
         assert!(
             s_frame.contains("eval=frame"),
             "expected eval=frame in frame mode: {s_frame}"
+        );
+    }
+
+    // -- HueRotationBuilder --
+
+    #[test]
+    fn test_hue_single_quote_wrap() {
+        let b = HueRotationBuilder::py_new("2*PI*t/3".to_string()).unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.contains("hue=H='2*PI*t/3'"),
+            "expected single-quote wrap in: {s}"
+        );
+    }
+
+    #[test]
+    fn test_hue_comma_bearing_expression() {
+        let b = HueRotationBuilder::py_new("if(lt(t,1),0,PI)".to_string()).unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.contains("hue=H='if(lt(t,1),0,PI)'"),
+            "expected unescaped commas inside single quotes in: {s}"
+        );
+    }
+
+    #[test]
+    fn test_hue_no_comma_escape() {
+        let b = HueRotationBuilder::py_new("if(lt(t,1),0,PI)".to_string()).unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            !s.contains(r"\,"),
+            "expected NO backslash-comma escape in: {s}"
+        );
+    }
+
+    #[test]
+    fn test_hue_apostrophe_rejection() {
+        let result = HueRotationBuilder::py_new("0'PI".to_string())
+            .unwrap()
+            .py_build();
+        assert!(
+            result.is_err(),
+            "expected error for apostrophe in expression"
         );
     }
 }

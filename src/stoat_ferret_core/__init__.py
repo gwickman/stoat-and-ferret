@@ -98,6 +98,7 @@ try:
         FramerateMode,
         FreezeFrameBuilder,
         GradientGeneratorBuilder,
+        HueRotationBuilder,
         Keyframe,
         LayoutError,
         LayoutPosition,
@@ -258,6 +259,7 @@ except ImportError:
     CurvesBuilder = _not_built  # type: ignore[misc,assignment]
     VignetteBuilder = _not_built  # type: ignore[misc,assignment]
     ZoompanBuilder = _not_built  # type: ignore[misc,assignment]
+    HueRotationBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
@@ -397,6 +399,7 @@ __all__ = [
     "ChromaticAberrationBuilder",
     "CurvesBuilder",
     "GradientGeneratorBuilder",
+    "HueRotationBuilder",
     "VignetteBuilder",
     "ZoompanBuilder",
     "LensDistortBuilder",

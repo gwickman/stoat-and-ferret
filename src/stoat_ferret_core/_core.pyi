@@ -4502,6 +4502,40 @@ class VignetteBuilder:
         """
         ...
 
+class HueRotationBuilder:
+    """Hue rotation / colour cycling effect builder. timeline_T_capable=True.
+
+    Delegates to ``emit_filter_value(ValueKind::Expression, ...)``.
+    Single-quote wrap is the complete escaping strategy. Comma-bearing
+    expressions pass through unescaped (PoC-4 verified). No backslash-comma
+    escaping is applied. The FFmpeg ``hue`` filter has the T flag.
+    """
+
+    def __new__(cls, h_expr: str) -> HueRotationBuilder:
+        """Create a new HueRotationBuilder.
+
+        Args:
+            h_expr: FFmpeg time expression for the H= option (e.g. ``2*PI*t/3``).
+                May contain commas (they are preserved inside single quotes).
+                Must not contain single-quote characters.
+
+        Raises:
+            ValueError: If h_expr contains a single-quote character.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the hue rotation filter.
+
+        Returns:
+            A Filter with ``hue=H='<h_expr>'``. Single-quote wrapped;
+            no backslash-comma escaping applied.
+
+        Raises:
+            ValueError: If h_expr contains a single-quote character.
+        """
+        ...
+
 # ========== Render Graph Translator ==========
 
 class RenderEffect:

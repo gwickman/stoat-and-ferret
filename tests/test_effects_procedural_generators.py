@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Grant Wickman
 
 """Unit and contract tests for procedural generator effects (BL-454), ZoompanBuilder (BL-507),
-CurvesBuilder (BL-508), and VignetteBuilder (BL-509).
+CurvesBuilder (BL-508), VignetteBuilder (BL-509), and HueRotationBuilder (BL-510).
 
 BL-454 ACs:
 - AC-1: GradientGeneratorBuilder generates a gradient clip with configurable colors.
@@ -32,6 +32,12 @@ BL-509 ACs:
 - AC-3: VignetteBuilder emits vignette=angle:x0:y0:mode:eval format.
 - AC-4: Three contract tests: centre default, backward mode, init vs frame eval.
 - AC-5: VIGNETTE EffectDefinition with timeline_T_capable=True.
+
+BL-510 ACs:
+- AC-1: HueRotationBuilder emits hue=H='<expr>' — single-quote wrap, no comma escape.
+- AC-2: Comma-bearing expression if(lt(t,1),0,PI) passes through unescaped.
+- AC-3: Implementation in video.rs; no BL-502 reference.
+- AC-4: Apostrophe in h_expr raises ValueError at build time.
 """
 
 from __future__ import annotations
@@ -43,6 +49,7 @@ import pytest
 from stoat_ferret.effects.definitions import (
     CURVES,
     GRADIENT_GENERATOR,
+    HUE_ROTATION,
     NOISE_GENERATOR,
     VIGNETTE,
     ZOOMPAN,
@@ -51,6 +58,7 @@ from stoat_ferret.effects.definitions import (
 from stoat_ferret_core import (
     CurvesBuilder,
     GradientGeneratorBuilder,
+    HueRotationBuilder,
     NoiseGeneratorBuilder,
     VignetteBuilder,
     ZoompanBuilder,
@@ -495,3 +503,60 @@ def test_vignette_build_fn_centre() -> None:
     s = VIGNETTE.build_fn({"position": "centre"})
     assert "vignette=" in s, f"Expected vignette= in: {s}"
     assert "x0=w/2" in s, f"Expected x0=w/2 in: {s}"
+
+
+# ---- HueRotationBuilder unit tests (BL-510) ----
+
+
+def test_hue_rotation_single_quote_wrap() -> None:
+    """HueRotationBuilder wraps h_expr in single quotes: hue=H='...' (BL-510-AC-1)."""
+    s = str(HueRotationBuilder("2*PI*t/3").build())
+    assert "hue=H='2*PI*t/3'" in s, f"Expected single-quote wrap in: {s}"
+
+
+def test_hue_rotation_comma_bearing_expression() -> None:
+    """Comma-bearing expression passes through unescaped inside single quotes (BL-510-AC-2)."""
+    s = str(HueRotationBuilder("if(lt(t,1),0,PI)").build())
+    assert "hue=H='if(lt(t,1),0,PI)'" in s, (
+        f"Expected unescaped commas inside single quotes in: {s}"
+    )
+
+
+def test_hue_rotation_no_comma_escape() -> None:
+    """No backslash-comma escape appears in hue=H= output (BL-510-AC-2)."""
+    s = str(HueRotationBuilder("if(lt(t,1),0,PI)").build())
+    assert r"\," not in s, f"Expected NO backslash-comma escape in: {s}"
+
+
+def test_hue_rotation_apostrophe_rejection() -> None:
+    """h_expr containing a single quote raises ValueError at build time (BL-510-AC-4)."""
+    import pytest
+
+    with pytest.raises(ValueError, match="single quote"):
+        HueRotationBuilder("0'PI").build()
+
+
+def test_hue_rotation_effect_definition_timeline_t_capable_true() -> None:
+    """HUE_ROTATION EffectDefinition has timeline_T_capable=True (BL-510-AC-1)."""
+    assert HUE_ROTATION.timeline_T_capable is True
+
+
+def test_hue_rotation_registered_in_default_registry() -> None:
+    """'hue_rotation' is registered in the default effect registry (BL-510)."""
+    registry = create_default_registry()
+    definition = registry.get("hue_rotation")
+    assert definition is not None
+    assert definition is HUE_ROTATION
+
+
+def test_hue_rotation_preview_fn() -> None:
+    """HUE_ROTATION.preview_fn() produces a hue= filter string."""
+    s = HUE_ROTATION.preview_fn()
+    assert "hue=" in s, f"Expected hue= in preview: {s}"
+
+
+def test_hue_rotation_build_fn() -> None:
+    """HUE_ROTATION.build_fn({'h_expr': '2*PI*t/3'}) produces hue=H= filter string."""
+    s = HUE_ROTATION.build_fn({"h_expr": "2*PI*t/3"})
+    assert "hue=H=" in s, f"Expected hue=H= in: {s}"
+    assert "2*PI*t/3" in s, f"Expected expression in: {s}"
