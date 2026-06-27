@@ -4408,6 +4408,53 @@ class ZoompanBuilder:
         """
         ...
 
+class CurvesBuilder:
+    """Colour grading filter builder with preset and per-channel KneeString modes.
+
+    Supports preset-based grading (``curves=preset=vintage``) and per-channel
+    knee-string grading (``curves=red='0/0 0.5/0.4 1/1'``). The two modes are
+    mutually exclusive. Timeline-T capable — the ``curves`` filter has the FFmpeg
+    T flag. Static-only for v089: no per-knee time animation.
+    """
+
+    def __new__(
+        cls,
+        preset: str | None = None,
+        master: str | None = None,
+        red: str | None = None,
+        green: str | None = None,
+        blue: str | None = None,
+        all: str | None = None,
+    ) -> CurvesBuilder:
+        """Create a new CurvesBuilder.
+
+        Args:
+            preset: One of ``none``, ``color_negative``, ``cross_process``, ``darker``,
+                ``increase_contrast``, ``lighter``, ``linear_contrast``, ``medium_contrast``,
+                ``negative``, ``strong_contrast``, ``vintage``. Mutually exclusive with
+                per-channel fields.
+            master: Master channel knee string (e.g. ``"0/0 0.5/0.4 1/1"``).
+            red: Red channel knee string.
+            green: Green channel knee string.
+            blue: Blue channel knee string.
+            all: All-channels knee string.
+
+        Raises:
+            ValueError: If preset and any channel field are both set (mutual exclusion).
+            ValueError: If preset value is not one of the 11 recognised values.
+            ValueError: If neither preset nor any channel field is set (no-op guard).
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the curves filter.
+
+        Returns:
+            A Filter with ``curves=preset=<p>`` (preset mode) or
+            ``curves=<channel>='<knee>'`` (per-channel mode).
+        """
+        ...
+
 # ========== Render Graph Translator ==========
 
 class RenderEffect:

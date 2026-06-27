@@ -89,6 +89,7 @@ EXPECTED_EFFECT_TYPES = {
     "gradient_generator",
     "noise_generator",
     "zoompan",
+    "curves",
 }
 
 # ---- Registry unit tests ----

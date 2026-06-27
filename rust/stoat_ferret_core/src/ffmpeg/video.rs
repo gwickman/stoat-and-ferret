@@ -829,6 +829,108 @@ impl ZoompanBuilder {
     }
 }
 
+const VALID_CURVE_PRESETS: &[&str] = &[
+    "none",
+    "color_negative",
+    "cross_process",
+    "darker",
+    "increase_contrast",
+    "lighter",
+    "linear_contrast",
+    "medium_contrast",
+    "negative",
+    "strong_contrast",
+    "vintage",
+];
+
+/// Colour grading filter builder with preset and per-channel KneeString modes.
+///
+/// Supports preset-based grading (`curves=preset=vintage`) and per-channel
+/// knee-string grading (`curves=red='0/0 0.5/0.4 1/1'`). The two modes are
+/// mutually exclusive. Timeline-T capable — the `curves` filter has the FFmpeg
+/// T flag. Static-only for v089: no per-knee time animation.
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct CurvesBuilder {
+    preset: Option<String>,
+    master: Option<String>,
+    red: Option<String>,
+    green: Option<String>,
+    blue: Option<String>,
+    all: Option<String>,
+}
+
+#[pymethods]
+impl CurvesBuilder {
+    #[new]
+    #[pyo3(signature = (preset=None, master=None, red=None, green=None, blue=None, all=None))]
+    pub fn py_new(
+        preset: Option<String>,
+        master: Option<String>,
+        red: Option<String>,
+        green: Option<String>,
+        blue: Option<String>,
+        all: Option<String>,
+    ) -> PyResult<Self> {
+        let has_channel =
+            master.is_some() || red.is_some() || green.is_some() || blue.is_some() || all.is_some();
+
+        if preset.is_some() && has_channel {
+            return Err(PyValueError::new_err(
+                "Cannot combine preset mode with per-channel knee strings",
+            ));
+        }
+
+        if let Some(ref p) = preset {
+            if !VALID_CURVE_PRESETS.contains(&p.as_str()) {
+                return Err(PyValueError::new_err(format!(
+                    "Unknown curves preset: {p}. Valid presets: {}",
+                    VALID_CURVE_PRESETS.join(", ")
+                )));
+            }
+        }
+
+        if preset.is_none() && !has_channel {
+            return Err(PyValueError::new_err(
+                "Must set either preset or at least one channel knee string",
+            ));
+        }
+
+        Ok(Self {
+            preset,
+            master,
+            red,
+            green,
+            blue,
+            all,
+        })
+    }
+
+    #[pyo3(name = "build")]
+    pub fn py_build(&self) -> PyResult<Filter> {
+        if let Some(ref p) = self.preset {
+            return Ok(Filter::new(format!("curves=preset={p}")));
+        }
+
+        let mut f = Filter::new("curves");
+        for (name, val_opt) in [
+            ("master", &self.master),
+            ("red", &self.red),
+            ("green", &self.green),
+            ("blue", &self.blue),
+            ("all", &self.all),
+        ] {
+            if let Some(val) = val_opt {
+                let quoted = emit_filter_value(ValueKind::KneeString, val)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                f = f.param(name, quoted);
+            }
+        }
+        Ok(f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1767,5 +1869,91 @@ mod tests {
         // Deferred post-merge: run with STOAT_TEST_FFMPEG=1.
         // Verifies that zoompan without fps/settb pin produces 0 bytes (BL-507-AC-3).
         // PoC confirmed: without pin, exit -22 "Invalid argument", 0 output bytes.
+    }
+
+    // -- CurvesBuilder --
+
+    #[test]
+    fn test_curves_preset_vintage() {
+        let b = CurvesBuilder::py_new(Some("vintage".to_string()), None, None, None, None, None)
+            .unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.contains("curves=preset=vintage"),
+            "expected curves=preset=vintage in: {s}"
+        );
+    }
+
+    #[test]
+    fn test_curves_per_channel_knee() {
+        let b = CurvesBuilder::py_new(
+            None,
+            None,
+            Some("0/0 0.5/0.4 1/1".to_string()),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.contains("curves=red='0/0 0.5/0.4 1/1'"),
+            "expected curves=red='0/0 0.5/0.4 1/1' in: {s}"
+        );
+    }
+
+    #[test]
+    fn test_curves_no_op_error() {
+        assert!(CurvesBuilder::py_new(None, None, None, None, None, None).is_err());
+    }
+
+    #[test]
+    fn test_curves_mutual_exclusion_error() {
+        assert!(CurvesBuilder::py_new(
+            Some("vintage".to_string()),
+            None,
+            Some("0/0 1/1".to_string()),
+            None,
+            None,
+            None,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_curves_knee_non_monotonic_error() {
+        let b = CurvesBuilder::py_new(
+            None,
+            None,
+            Some("0/0 0.5/0.6 0.3/0.4 1/1".to_string()),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        assert!(b.py_build().is_err());
+    }
+
+    #[test]
+    fn test_curves_preset_static_only() {
+        // CurvesBuilder has no with_automation method — static-only in v089.
+        let b = CurvesBuilder::py_new(
+            Some("cross_process".to_string()),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        let s = b.py_build().unwrap().to_string();
+        assert!(
+            s.starts_with("curves=preset="),
+            "expected curves=preset= prefix in: {s}"
+        );
+        assert!(
+            !s.contains("enable="),
+            "expected no enable= in static mode: {s}"
+        );
     }
 }
