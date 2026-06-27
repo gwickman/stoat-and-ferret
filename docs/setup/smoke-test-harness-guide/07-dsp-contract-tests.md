@@ -80,3 +80,32 @@ To test with a lower limit:
 ```bash
 STOAT_REVERSE_MAX_DURATION_S=5.0 STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_effects.py::test_smoke_reverse_effect -v
 ```
+
+### v089 Wave 3a Effect Types
+
+v089 (Wave 3a) adds 4 new effect types, expanding `EXPECTED_EFFECT_TYPES` from 34 to 38 entries. The smoke tests for these types live in `tests/smoke/test_effects.py`.
+
+| Effect Type | Smoke Tests | timeline_T_capable | FFmpeg Required |
+|---|---|---|---|
+| `zoompan` | `test_zoompan_in_effect_catalog`, `test_zoompan_preview_generation` | False | Yes (preview generation) |
+| `curves` | `test_curves_in_effect_catalog`, `test_curves_preview_generation` | True | Yes (preview generation) |
+| `vignette` | `test_vignette_in_effect_catalog`, `test_vignette_preview_generation` | True | Yes (preview generation) |
+| `hue_rotation` | `test_hue_rotation_in_effect_catalog`, `test_hue_rotation_preview_generation` | True | Yes (preview generation) |
+
+The catalog tests (`test_*_in_effect_catalog`) do not require FFmpeg — they validate API catalog registration only. The preview generation tests (`test_*_preview_generation`) exercise the full filter-string generation path and require a real video file in `videos/demo/`.
+
+#### timeline_T_capable=True Behavior
+
+`timeline_T_capable=True` on an `EffectDefinition` means the effect builder supports FFmpeg's `enable=` timeline windowing when a `WindowSpec` is provided on the effect. When windowed, these effects emit an `enable='between(t,<start>,<end>)'` expression that activates the effect only within the specified time window — without splitting the clip.
+
+Three Wave 3a builders have `timeline_T_capable=True`: **curves**, **vignette**, and **hue_rotation**.
+
+`zoompan` is `timeline_T_capable=False`. Windowed zoompan application routes through the split/trim/concat fallback (BL-512, pending).
+
+#### Wave 3a smoke discharge command
+
+```bash
+uv run pytest tests/smoke/test_effects.py -k "zoompan or curves or vignette or hue_rotation" -v --no-cov
+```
+
+The catalog tests run without FFmpeg. The preview generation tests require `videos/demo/` to be present — they will fail (not skip) if the directory is missing.
