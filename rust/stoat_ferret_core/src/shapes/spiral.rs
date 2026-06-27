@@ -108,8 +108,11 @@ mod tests {
 
     #[test]
     fn test_spiral_pixel_hash() {
-        // Pinned on 2026-06-27 (Windows x86_64). Defends against accidental math regressions.
-        // On x86_64 (Windows/Linux/macOS), f32 IEEE 754 ops give bit-identical results.
+        // f32 atan2 produces different bit patterns on macOS vs Windows/Linux x86_64.
+        // Two platform-pinned hashes defend against math regressions on each platform.
+        #[cfg(target_os = "macos")]
+        const PINNED: &str = "34980b40efd3ea62f76691ab108cdc7c8f5233dc34710d2cd092ec37eddd89a8";
+        #[cfg(not(target_os = "macos"))]
         const PINNED: &str = "9f789efb7ae4d2b7aca55be8c79708914759ce02d5a9b12d70f1301c4c2c89c3";
         let gen = SpiralGenerator::py_new(3.0, 2.0).unwrap();
         let img = gen.generate(64, 64);
