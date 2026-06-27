@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""Unit and contract tests for procedural generator effects (BL-454).
+"""Unit and contract tests for procedural generator effects (BL-454) and ZoompanBuilder (BL-507).
 
 BL-454 ACs:
 - AC-1: GradientGeneratorBuilder generates a gradient clip with configurable colors.
@@ -9,6 +9,13 @@ BL-454 ACs:
 - AC-3: Both generators render for their configured duration.
 - AC-4 (deferred): Renders without error verified by contract test against real FFmpeg.
     Discharge: STOAT_TEST_FFMPEG=1 pytest tests/test_effects_procedural_generators.py -k contract
+
+BL-507 ACs:
+- AC-1: ZoompanBuilder emits BOTH fps= AND settb= after zoompan params.
+- AC-2: Struct docstring and EffectDefinition description contain "fixed-canvas".
+- AC-3 (deferred): Negative-control test — without pin, render fails. STOAT_TEST_FFMPEG=1.
+- AC-4: Graph-boundary scope boundary in BL-507 description (not BL-507 code).
+- AC-5: ZOOMPAN EffectDefinition has timeline_T_capable=False.
 """
 
 from __future__ import annotations
@@ -20,9 +27,10 @@ import pytest
 from stoat_ferret.effects.definitions import (
     GRADIENT_GENERATOR,
     NOISE_GENERATOR,
+    ZOOMPAN,
     create_default_registry,
 )
-from stoat_ferret_core import GradientGeneratorBuilder, NoiseGeneratorBuilder
+from stoat_ferret_core import GradientGeneratorBuilder, NoiseGeneratorBuilder, ZoompanBuilder
 
 # ---- GradientGeneratorBuilder unit tests (AC-1) ----
 
@@ -243,3 +251,90 @@ def test_noise_generator_ffmpeg_contract(tmp_path):  # type: ignore[no-untyped-d
     )
     assert result.returncode == 0, f"FFmpeg noise contract failed. stderr={result.stderr.decode()}"
     assert output.exists(), "Output file was not created"
+
+
+# ---- ZoompanBuilder unit tests (BL-507) ----
+
+
+def test_zoompan_builder_builds() -> None:
+    """ZoompanBuilder.build() returns a non-empty Filter string (BL-507-AC-1)."""
+    b = ZoompanBuilder("1.5", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)", 125, 1920, 1080, 30)
+    s = str(b.build())
+    assert s, "Expected non-empty filter string"
+    assert "zoompan=" in s, f"Expected zoompan= in: {s}"
+    assert "fps=30" in s, f"Expected fps=30 in: {s}"
+    assert "settb=1/30" in s, f"Expected settb=1/30 in: {s}"
+
+
+def test_zoompan_builder_invalid_z_expr() -> None:
+    """ZoompanBuilder rejects z_expr containing apostrophe (BL-507-AC-1)."""
+    with pytest.raises(ValueError):
+        ZoompanBuilder("it's", "0", "0", 1, 100, 100, 30)
+
+
+def test_zoompan_builder_zero_dimension() -> None:
+    """ZoompanBuilder rejects width=0 (BL-507-AC-1)."""
+    with pytest.raises(ValueError):
+        ZoompanBuilder("1.5", "0", "0", 1, 0, 100, 30)
+
+
+def test_zoompan_builder_zero_height() -> None:
+    """ZoompanBuilder rejects height=0."""
+    with pytest.raises(ValueError):
+        ZoompanBuilder("1.5", "0", "0", 1, 100, 0, 30)
+
+
+def test_zoompan_builder_zero_fps() -> None:
+    """ZoompanBuilder rejects fps=0."""
+    with pytest.raises(ValueError):
+        ZoompanBuilder("1.5", "0", "0", 1, 100, 100, 0)
+
+
+def test_zoompan_builder_zero_d() -> None:
+    """ZoompanBuilder rejects d=0."""
+    with pytest.raises(ValueError):
+        ZoompanBuilder("1.5", "0", "0", 0, 100, 100, 30)
+
+
+def test_zoompan_effect_definition_timeline_t_capable_false() -> None:
+    """ZOOMPAN EffectDefinition has timeline_T_capable=False (BL-507-AC-5)."""
+    assert ZOOMPAN.timeline_T_capable is False
+
+
+def test_zoompan_effect_definition_description_fixed_canvas() -> None:
+    """ZOOMPAN description contains 'fixed-canvas' scope statement (BL-507-AC-2)."""
+    assert "fixed-canvas" in ZOOMPAN.description.lower() or "fixed-canvas" in ZOOMPAN.description
+
+
+def test_zoompan_registered_in_default_registry() -> None:
+    """zoompan is registered in the default effect registry."""
+    registry = create_default_registry()
+    definition = registry.get("zoompan")
+    assert definition is not None
+    assert definition is ZOOMPAN
+
+
+def test_zoompan_preview_fn() -> None:
+    """ZOOMPAN.preview_fn() produces a zoompan= filter string."""
+    s = ZOOMPAN.preview_fn()
+    assert "zoompan=" in s, f"Expected zoompan= in preview: {s}"
+    assert "fps=" in s, f"Expected fps= in preview: {s}"
+    assert "settb=" in s, f"Expected settb= in preview: {s}"
+
+
+def test_zoompan_build_fn() -> None:
+    """ZOOMPAN.build_fn() produces a zoompan= filter string with custom params."""
+    s = ZOOMPAN.build_fn(
+        {
+            "z_expr": "1.2",
+            "x_expr": "0",
+            "y_expr": "0",
+            "d": 60,
+            "width": 640,
+            "height": 480,
+            "fps": 25,
+        }
+    )
+    assert "zoompan=" in s, f"Expected zoompan= in build output: {s}"
+    assert "fps=25" in s, f"Expected fps=25 in build output: {s}"
+    assert "settb=1/25" in s, f"Expected settb=1/25 in build output: {s}"

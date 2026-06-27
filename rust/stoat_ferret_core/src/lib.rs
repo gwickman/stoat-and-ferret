@@ -160,6 +160,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::video::GradientGeneratorBuilder>()?;
     m.add_class::<ffmpeg::video::NoiseGeneratorBuilder>()?;
     m.add_class::<ffmpeg::video::ChromaticAberrationBuilder>()?;
+    m.add_class::<ffmpeg::video::ZoompanBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
