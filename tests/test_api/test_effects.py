@@ -88,6 +88,7 @@ EXPECTED_EFFECT_TYPES = {
     "chromatic_aberration",
     "gradient_generator",
     "noise_generator",
+    "zoompan",
 }
 
 # ---- Registry unit tests ----

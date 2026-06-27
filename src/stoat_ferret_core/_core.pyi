@@ -4366,6 +4366,48 @@ class ChromaticAberrationBuilder:
         """
         ...
 
+class ZoompanBuilder:
+    """Fixed-canvas pan/zoom builder for Ken Burns slow-zoom effect. NOT timeline-T capable.
+
+    Emits ``zoompan=z={z_expr}:x={x_expr}:y={y_expr}:d={d}:s={w}x{h},fps={fps},settb=1/{fps}``.
+    The fps/settb pin is mandatory — without it zoompan causes timebase-mismatch failures at xfade.
+    NOT a duplicate of SCALE_EFFECT (which changes stream dimensions).
+    """
+
+    def __new__(
+        cls,
+        z_expr: str,
+        x_expr: str,
+        y_expr: str,
+        d: int,
+        width: int,
+        height: int,
+        fps: int,
+    ) -> ZoompanBuilder:
+        """Create a new ZoompanBuilder.
+
+        Args:
+            z_expr: Zoom expression (e.g. ``"1.5"`` for 1.5x zoom). No apostrophes.
+            x_expr: X-pan expression (e.g. ``"iw/2-(iw/zoom/2)"``). No apostrophes.
+            y_expr: Y-pan expression (e.g. ``"ih/2-(ih/zoom/2)"``). No apostrophes.
+            d: Duration in frames (must be > 0).
+            width: Output canvas width in pixels (must be > 0).
+            height: Output canvas height in pixels (must be > 0).
+            fps: Output frame rate (must be > 0); also used in settb pin.
+
+        Raises:
+            ValueError: If any expression contains an apostrophe, or if width/height/fps/d is 0.
+        """
+        ...
+
+    def build(self) -> Filter:
+        """Build the zoompan+fps+settb filter chain.
+
+        Returns:
+            A Filter with ``zoompan=z={z}:x={x}:y={y}:d={d}:s={w}x{h},fps={fps},settb=1/{fps}``.
+        """
+        ...
+
 # ========== Render Graph Translator ==========
 
 class RenderEffect:

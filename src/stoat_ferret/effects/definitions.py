@@ -53,6 +53,7 @@ from stoat_ferret_core import (
     VariableSpeedBuilder,
     VolumeBuilder,
     XfadeBuilder,
+    ZoompanBuilder,
 )
 
 if TYPE_CHECKING:
@@ -2557,6 +2558,113 @@ NOISE_GENERATOR = EffectDefinition(
 )
 
 
+def _zoompan_preview() -> str:
+    """Generate a filter preview for zoompan with default parameters."""
+    b = ZoompanBuilder("1.5", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)", 125, 1920, 1080, 30)
+    return str(b.build())
+
+
+def _build_zoompan(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for zoompan effect.
+
+    Args:
+        parameters: Effect parameters with required 'z_expr', 'x_expr', 'y_expr',
+            'd', 'width', 'height', 'fps' keys.
+
+    Returns:
+        FFmpeg zoompan+fps+settb filter chain string.
+    """
+    z_expr = str(parameters.get("z_expr", "1.5"))
+    x_expr = str(parameters.get("x_expr", "iw/2-(iw/zoom/2)"))
+    y_expr = str(parameters.get("y_expr", "ih/2-(ih/zoom/2)"))
+    d = int(parameters.get("d", 125))
+    width = int(parameters.get("width", 1920))
+    height = int(parameters.get("height", 1080))
+    fps = int(parameters.get("fps", 30))
+    return str(ZoompanBuilder(z_expr, x_expr, y_expr, d, width, height, fps).build())
+
+
+ZOOMPAN = EffectDefinition(
+    name="Zoom Pan",
+    description=(
+        "Fixed-canvas Ken Burns slow-zoom / pan effect. "
+        "Emits a zoompan filter with a mandatory fps/settb pin chain. "
+        "NOT for stream-dimension slow-zoom (see scale automation at definitions.py:2031). "
+        "NOT timeline-T capable — windowed application routes through "
+        "the split/trim/concat fallback."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "z_expr": {
+                "type": "string",
+                "default": "1.5",
+                "description": "Zoom expression (e.g. '1.5' for 1.5x zoom). No apostrophes.",
+            },
+            "x_expr": {
+                "type": "string",
+                "default": "iw/2-(iw/zoom/2)",
+                "description": "X-pan expression. No apostrophes.",
+            },
+            "y_expr": {
+                "type": "string",
+                "default": "ih/2-(ih/zoom/2)",
+                "description": "Y-pan expression. No apostrophes.",
+            },
+            "d": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 125,
+                "description": "Duration in frames (must be > 0).",
+            },
+            "width": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1920,
+                "description": "Output canvas width in pixels.",
+            },
+            "height": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1080,
+                "description": "Output canvas height in pixels.",
+            },
+            "fps": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 30,
+                "description": "Output frame rate (also used in settb pin).",
+            },
+        },
+        "required": ["z_expr", "x_expr", "y_expr", "d", "width", "height", "fps"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "z_expr": (
+            "Zoom expression (e.g. '1.5' for static 1.5x zoom, "
+            "or 'if(lte(zoom,1.5),zoom+0.002,zoom)' for animated zoom). "
+            "No apostrophes allowed."
+        ),
+        "x_expr": "X-pan expression (e.g. 'iw/2-(iw/zoom/2)' to centre-pan). No apostrophes.",
+        "y_expr": "Y-pan expression (e.g. 'ih/2-(ih/zoom/2)' to centre-pan). No apostrophes.",
+        "d": "Duration in frames. At 30 fps, 125 frames = ~4 seconds.",
+        "width": "Canvas width in pixels. Default 1920 for HD.",
+        "height": "Canvas height in pixels. Default 1080 for HD.",
+        "fps": "Output frame rate. Must match the project frame rate. Default 30.",
+    },
+    preview_fn=_zoompan_preview,
+    build_fn=_build_zoompan,
+    ai_summary=(
+        "Ken Burns pan/zoom effect with mandatory fps/settb pin. "
+        "Fixed-canvas only — not for stream-dimension slow-zoom."
+    ),
+    example_prompt="Apply a slow Ken Burns zoom from 1.0x to 1.5x centred on the clip.",
+    stream_kind="video",
+    timeline_T_capable=False,
+    requires_path_escape=False,
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2600,4 +2708,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("gradient_generator", GRADIENT_GENERATOR)
     registry.register("noise_generator", NOISE_GENERATOR)
     registry.register("chromatic_aberration", CHROMATIC_ABERRATION_EFFECT)
+    registry.register("zoompan", ZOOMPAN)
     return registry

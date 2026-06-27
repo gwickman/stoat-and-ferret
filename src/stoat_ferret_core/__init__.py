@@ -146,6 +146,7 @@ try:
         VideoDefectReport,
         VolumeBuilder,
         XfadeBuilder,
+        ZoompanBuilder,
         aggregate_segment_progress,
         build_composition_graph,
         build_encoding_args,
@@ -252,6 +253,7 @@ except ImportError:
     GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
     ChromaticAberrationBuilder = _not_built  # type: ignore[misc,assignment]
+    ZoompanBuilder = _not_built  # type: ignore[misc,assignment]
     SharpenBuilder = _not_built  # type: ignore[misc,assignment]
     OpacityBuilder = _not_built  # type: ignore[misc,assignment]
     ScaleBuilder = _not_built  # type: ignore[misc,assignment]
@@ -390,6 +392,7 @@ __all__ = [
     "BlurBuilder",
     "ChromaticAberrationBuilder",
     "GradientGeneratorBuilder",
+    "ZoompanBuilder",
     "LensDistortBuilder",
     "SharpenBuilder",
     "OpacityBuilder",
