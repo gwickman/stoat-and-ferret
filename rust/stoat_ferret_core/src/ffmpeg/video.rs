@@ -777,7 +777,11 @@ impl ZoompanBuilder {
         height: u32,
         fps: u32,
     ) -> PyResult<Self> {
-        for (name, expr) in [("z_expr", &z_expr), ("x_expr", &x_expr), ("y_expr", &y_expr)] {
+        for (name, expr) in [
+            ("z_expr", &z_expr),
+            ("x_expr", &x_expr),
+            ("y_expr", &y_expr),
+        ] {
             if expr.contains('\'') {
                 return Err(PyValueError::new_err(format!(
                     "{name} contains a forbidden apostrophe character"
@@ -1681,7 +1685,10 @@ mod tests {
         )
         .unwrap();
         let s = b.py_build().unwrap().to_string();
-        assert!(s.starts_with("zoompan="), "expected zoompan= prefix in: {s}");
+        assert!(
+            s.starts_with("zoompan="),
+            "expected zoompan= prefix in: {s}"
+        );
     }
 
     #[test]
