@@ -814,3 +814,115 @@ async def test_smoke_freeze_frame_effect(
     assert resp.status_code == 201
     effect = resp.json()
     assert effect["effect_type"] == "freeze_frame"
+
+
+# ---------------------------------------------------------------------------
+# Wave 3a smoke tests (Impact-A): zoompan, curves, vignette, hue_rotation
+# ---------------------------------------------------------------------------
+
+
+async def test_zoompan_in_effect_catalog(smoke_client: httpx.AsyncClient) -> None:
+    """zoompan effect is in GET /effects catalog."""
+    resp = await smoke_client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    assert "zoompan" in effects_by_type
+
+
+async def test_curves_in_effect_catalog(smoke_client: httpx.AsyncClient) -> None:
+    """curves effect is in GET /effects catalog."""
+    resp = await smoke_client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    assert "curves" in effects_by_type
+
+
+async def test_vignette_in_effect_catalog(smoke_client: httpx.AsyncClient) -> None:
+    """vignette effect is in GET /effects catalog."""
+    resp = await smoke_client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    assert "vignette" in effects_by_type
+
+
+async def test_hue_rotation_in_effect_catalog(smoke_client: httpx.AsyncClient) -> None:
+    """hue_rotation effect is in GET /effects catalog."""
+    resp = await smoke_client.get("/api/v1/effects")
+    assert resp.status_code == 200
+    effects_by_type = {e["effect_type"]: e for e in resp.json()["effects"]}
+    assert "hue_rotation" in effects_by_type
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_zoompan_preview_generation(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Apply zoompan to a clip via API and assert 201."""
+    project_id, clip_id = await _setup_project_with_clip(
+        smoke_client, videos_dir, "Wave 3a Zoompan Smoke"
+    )
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "zoompan",
+            "parameters": {
+                "z_expr": "1.5",
+                "x_expr": "0",
+                "y_expr": "0",
+                "d": 90,
+                "width": 1920,
+                "height": 1080,
+                "fps": 30,
+            },
+        },
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_curves_preview_generation(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Apply curves (preset=vintage) to a clip via API and assert 201."""
+    project_id, clip_id = await _setup_project_with_clip(
+        smoke_client, videos_dir, "Wave 3a Curves Smoke"
+    )
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={"effect_type": "curves", "parameters": {"preset": "vintage"}},
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_vignette_preview_generation(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Apply vignette (position=centre) to a clip via API and assert 201."""
+    project_id, clip_id = await _setup_project_with_clip(
+        smoke_client, videos_dir, "Wave 3a Vignette Smoke"
+    )
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={"effect_type": "vignette", "parameters": {"position": "centre"}},
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_hue_rotation_preview_generation(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Apply hue_rotation to a clip via API and assert 201."""
+    project_id, clip_id = await _setup_project_with_clip(
+        smoke_client, videos_dir, "Wave 3a Hue Rotation Smoke"
+    )
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={"effect_type": "hue_rotation", "parameters": {"h_expr": "PI/4"}},
+    )
+    assert resp.status_code == 201
