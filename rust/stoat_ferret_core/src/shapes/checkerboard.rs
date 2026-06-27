@@ -77,7 +77,10 @@ mod tests {
         let start = std::time::Instant::now();
         let _ = gen.generate(1080, 1080);
         let elapsed = start.elapsed().as_millis();
-        assert!(elapsed < 100, "generation exceeded 100ms budget: {elapsed}ms");
+        assert!(
+            elapsed < 100,
+            "generation exceeded 100ms budget: {elapsed}ms"
+        );
     }
 
     #[test]
@@ -88,10 +91,20 @@ mod tests {
         let gen = CheckerboardGenerator::py_new(8).unwrap();
         let img = gen.generate(64, 64);
         let hash = hash_raw(&img);
-        assert_eq!(hash, PINNED, "checkerboard pixel buffer hash mismatch — math regression?");
+        assert_eq!(
+            hash, PINNED,
+            "checkerboard pixel buffer hash mismatch — math regression?"
+        );
         // With 8x8 squares and 64x64 image: exactly half the pixels are white
-        let white_count = img.pixels().filter(|&&p| p == Rgba([255, 255, 255, 255])).count();
-        assert_eq!(white_count, 64 * 64 / 2, "checker must be exactly half white");
+        let white_count = img
+            .pixels()
+            .filter(|&&p| p == Rgba([255, 255, 255, 255]))
+            .count();
+        assert_eq!(
+            white_count,
+            64 * 64 / 2,
+            "checker must be exactly half white"
+        );
     }
 
     #[test]

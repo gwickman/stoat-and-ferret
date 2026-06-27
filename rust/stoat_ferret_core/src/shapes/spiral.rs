@@ -100,7 +100,10 @@ mod tests {
         let start = std::time::Instant::now();
         let _ = gen.generate(1080, 1080);
         let elapsed = start.elapsed().as_millis();
-        assert!(elapsed < 100, "generation exceeded 100ms budget: {elapsed}ms");
+        assert!(
+            elapsed < 100,
+            "generation exceeded 100ms budget: {elapsed}ms"
+        );
     }
 
     #[test]
@@ -111,7 +114,10 @@ mod tests {
         let gen = SpiralGenerator::py_new(3.0, 2.0).unwrap();
         let img = gen.generate(64, 64);
         let hash = hash_raw(&img);
-        assert_eq!(hash, PINNED, "spiral pixel buffer hash mismatch — math regression?");
+        assert_eq!(
+            hash, PINNED,
+            "spiral pixel buffer hash mismatch — math regression?"
+        );
     }
 
     #[test]

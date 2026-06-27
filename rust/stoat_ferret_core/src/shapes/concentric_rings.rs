@@ -94,7 +94,10 @@ mod tests {
         let start = std::time::Instant::now();
         let _ = gen.generate(1080, 1080);
         let elapsed = start.elapsed().as_millis();
-        assert!(elapsed < 100, "generation exceeded 100ms budget: {elapsed}ms");
+        assert!(
+            elapsed < 100,
+            "generation exceeded 100ms budget: {elapsed}ms"
+        );
     }
 
     #[test]
@@ -104,7 +107,10 @@ mod tests {
         let gen = ConcentricRingsGenerator::py_new(8, 0.4).unwrap();
         let img = gen.generate(64, 64);
         let hash = hash_raw(&img);
-        assert_eq!(hash, PINNED, "concentric rings pixel buffer hash mismatch — math regression?");
+        assert_eq!(
+            hash, PINNED,
+            "concentric rings pixel buffer hash mismatch — math regression?"
+        );
     }
 
     #[test]
