@@ -20,6 +20,7 @@ dependencies = [
     "jsonschema>=4.26.0",
     "pillow>=10.0",
     "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.32",
 ]
 
 [project.optional-dependencies]

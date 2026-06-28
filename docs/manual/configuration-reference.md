@@ -10,6 +10,22 @@ This guide covers the 13 variables that previously carried a documentation drift
 - **Authority:** The Pydantic `Settings` model in `src/stoat_ferret/api/settings.py` is the single source of truth for variable names, types, defaults, and validation ranges. This document explains the **operational and security** consequences of those settings; it does not redefine them.
 - **Process rule:** When a new `STOAT_*` variable is added to `Settings`, both this file and `docs/setup/04_configuration.md` must be updated in the same backlog item, and the audit drift baseline (`KNOWN_UNDOCUMENTED_SETTINGS_VARS` in `tests/security/test_audit.py`) must remain empty. The authoritative process rule lives in [`AGENTS.md` § Documentation Standards](../../AGENTS.md#documentation-standards) — refer to that section rather than restating the rule here.
 
+## Asset Library
+
+The asset library (`/api/v1/assets`) stores user-uploaded files (PNG and JPEG in v090) by content hash and returns stable UUIDs for cross-project reference. Two settings govern storage location and upload size.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_ASSETS_DIR` | `Path` | `working/assets` | Directory for storing uploaded user asset files. Created automatically if it does not exist. Relative paths are resolved from the working directory. Files are stored under content-hash-derived names (`<sha256hex>.<ext>`) for deduplication. |
+| `STOAT_ASSETS_MAX_SIZE_BYTES` | `int` | `104857600` | Maximum upload size in bytes for `POST /api/v1/assets` (default 100 MB). Uploads exceeding this limit are rejected with HTTP 413 before any disk write. Valid range: 1 to any positive integer. |
+
+**Security implications**
+
+- `STOAT_ASSETS_DIR` must be accessible to the server process and should reside **outside** the project repository root. Placing it inside the repo root risks committing uploaded binary files if `git add -A` is run without a well-configured `.gitignore`. For production, use a path on a dedicated data volume.
+- All filesystem operations resolve the destination path under `STOAT_ASSETS_DIR` using `Path.resolve()` and verify the result starts with the resolved root before any write. Path traversal attempts (`../`, absolute paths, symlink chains) are rejected with HTTP 422 at the service layer — the check runs before any I/O.
+- `STOAT_ASSETS_MAX_SIZE_BYTES` is the primary denial-of-service guard for the upload endpoint. An internet-facing deployment without authentication should keep this at the default or lower. Raising it on an unauthenticated API increases the potential for disk-exhaustion attacks via repeated large uploads.
+- File type validation uses Pillow `Image.open()` magic-bytes sniffing rather than the caller-supplied MIME extension. A renamed TIFF or HEIC file is rejected (HTTP 415) even if the extension says `.png`. This prevents storing files that downstream FFmpeg builds may not support.
+
 ## Batch Rendering
 
 Batch rendering exposes the `/api/v1/batch/*` routes that accept multi-job render requests. Disabling batch rendering removes the routes entirely; misconfigured limits expose CPU and FFmpeg process pressure.

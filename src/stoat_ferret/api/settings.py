@@ -314,6 +314,24 @@ class Settings(BaseSettings):
         ),
     )
 
+    # Asset library (BL-515)
+    assets_dir: Path = Field(
+        default=Path("working/assets"),
+        description=(
+            "Directory for storing uploaded asset files (STOAT_ASSETS_DIR). "
+            "Created automatically if it does not exist. Relative paths are "
+            "resolved from the working directory."
+        ),
+    )
+    assets_max_size_bytes: int = Field(
+        default=100 * 1024 * 1024,
+        ge=1,
+        description=(
+            "Maximum upload size in bytes for the asset library "
+            "(STOAT_ASSETS_MAX_SIZE_BYTES). Default 104857600 (100 MB)."
+        ),
+    )
+
     # AGPL §13 source-offer (BL-525)
     source_url: str = Field(
         default="https://github.com/gwickman/stoat-and-ferret",

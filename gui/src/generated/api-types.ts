@@ -4,6 +4,79 @@
  */
 
 export interface paths {
+    "/api/v1/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Assets
+         * @description List active (non-deleted) assets with optional kind filter.
+         */
+        get: operations["list_assets_api_v1_assets_get"];
+        put?: never;
+        /**
+         * Upload Asset
+         * @description Upload an asset file (multipart/form-data).
+         *
+         *     - Validates content via Pillow magic-bytes sniff (image kind only in v090).
+         *     - Enforces STOAT_ASSETS_MAX_SIZE_BYTES.
+         *     - Deduplicates by content hash; re-upload of a soft-deleted asset restores it.
+         *     - File is stored under STOAT_ASSETS_DIR as <sha256hex>.<ext>.
+         */
+        post: operations["upload_asset_api_v1_assets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{asset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Asset
+         * @description Get asset metadata by UUID. Soft-deleted assets return 404.
+         */
+        get: operations["get_asset_api_v1_assets__asset_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Asset
+         * @description Soft-delete an asset. The physical file is not removed.
+         */
+        delete: operations["delete_asset_api_v1_assets__asset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{asset_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Asset
+         * @description Download the raw file for an asset. Soft-deleted assets return 404.
+         */
+        get: operations["download_asset_api_v1_assets__asset_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -2825,6 +2898,86 @@ export interface components {
             database_version: string;
         };
         /**
+         * AssetListResponse
+         * @description Paginated list of assets.
+         */
+        AssetListResponse: {
+            /**
+             * Items
+             * @description Page of asset records.
+             */
+            items: components["schemas"]["AssetRead"][];
+            /**
+             * Offset
+             * @description Pagination offset used in this response.
+             */
+            offset: number;
+            /**
+             * Limit
+             * @description Page size used in this response.
+             */
+            limit: number;
+            /**
+             * Total
+             * @description Total count of matching active assets.
+             */
+            total: number;
+        };
+        /**
+         * AssetRead
+         * @description Public asset metadata returned by the API.
+         *
+         *     The server-side file_path is intentionally excluded.
+         */
+        AssetRead: {
+            /**
+             * Id
+             * @description Asset UUID.
+             */
+            id: string;
+            /**
+             * Original Filename
+             * @description Filename as provided at upload time.
+             */
+            original_filename: string;
+            /**
+             * Content Hash
+             * @description SHA-256 hex digest of the file content.
+             */
+            content_hash: string;
+            /**
+             * Mime Type
+             * @description MIME type detected from magic bytes.
+             */
+            mime_type: string;
+            /**
+             * Kind
+             * @description Asset kind.
+             * @enum {string}
+             */
+            kind: "image" | "audio" | "subtitle" | "font" | "lut";
+            /**
+             * Size Bytes
+             * @description File size in bytes.
+             */
+            size_bytes: number;
+            /**
+             * Deleted At
+             * @description ISO 8601 UTC timestamp of soft deletion, if deleted.
+             */
+            deleted_at?: string | null;
+            /**
+             * Created At
+             * @description ISO 8601 UTC creation timestamp.
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * @description ISO 8601 UTC last-update timestamp.
+             */
+            updated_at: string;
+        };
+        /**
          * AudioMixRequest
          * @description Request schema for audio mix configuration.
          *
@@ -2954,6 +3107,14 @@ export interface components {
             jobs_queued: number;
             /** Status */
             status: string;
+        };
+        /** Body_upload_asset_api_v1_assets_post */
+        Body_upload_asset_api_v1_assets_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
         };
         /**
          * ClipCreate
@@ -5012,6 +5173,168 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_assets_api_v1_assets_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by asset kind. */
+                kind?: string | null;
+                /** @description Pagination offset. */
+                offset?: number;
+                /** @description Page size. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_asset_api_v1_assets_post: {
+        parameters: {
+            query?: {
+                kind?: "image" | "audio" | "subtitle" | "font" | "lut";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_asset_api_v1_assets_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_asset_api_v1_assets__asset_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_asset_api_v1_assets__asset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_asset_api_v1_assets__asset_id__file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     liveness_health_live_get: {
         parameters: {
             query?: never;

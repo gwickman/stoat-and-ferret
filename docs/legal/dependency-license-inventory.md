@@ -36,6 +36,7 @@ Source: `pyproject.toml` `[project.dependencies]`
 | `prometheus-client` | 0.24.1 | Apache-2.0 AND BSD-2-Clause | wheel | permissive | compatible | no |
 | `pydantic-settings` | 2.12.0 | MIT | wheel | permissive | compatible | no |
 | `python-dotenv` | 1.2.2 | BSD-3-Clause | wheel | permissive | compatible | no |
+| `python-multipart` | 0.0.32 | Apache-2.0 | wheel | permissive | compatible | no |
 | `structlog` | 25.5.0 | MIT OR Apache-2.0 | wheel | permissive | compatible | no |
 | `uvicorn` | 0.40.0 | BSD-3-Clause | wheel | permissive | compatible | no |
 
