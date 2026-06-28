@@ -124,7 +124,10 @@ impl std::fmt::Display for EscapeError {
                 write!(f, "knee string has non-monotonic coordinate values")
             }
             EscapeError::NonFiniteKneeCoord(v) => {
-                write!(f, "knee string coordinate is non-finite (NaN or infinity): {v}")
+                write!(
+                    f,
+                    "knee string coordinate is non-finite (NaN or infinity): {v}"
+                )
             }
             EscapeError::KneeCoordOutOfRange(v) => {
                 write!(f, "knee coordinate out of range [0,1]: {v}")
