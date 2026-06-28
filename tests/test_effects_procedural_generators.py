@@ -724,8 +724,7 @@ def _read_png_rgba_row(path: pathlib.Path, row: int = 0) -> list[tuple[int, int,
                 ]
             else:
                 result_row = [
-                    (row_raw[i], row_raw[i + 1], row_raw[i + 2], 255)
-                    for i in range(0, stride, 3)
+                    (row_raw[i], row_raw[i + 1], row_raw[i + 2], 255) for i in range(0, stride, 3)
                 ]
             break
         prev = row_raw
@@ -780,9 +779,7 @@ def test_generic_procedural_radial(tmp_path: pathlib.Path) -> None:
     row_top = _read_png_rgba_row(out, row=0)
     corner_r = row_top[0][0]
 
-    assert center_r < corner_r, (
-        f"center R={center_r} should be < corner R={corner_r}"
-    )
+    assert center_r < corner_r, f"center R={center_r} should be < corner R={corner_r}"
 
 
 def test_generic_procedural_spiral_deterministic(tmp_path: pathlib.Path) -> None:
