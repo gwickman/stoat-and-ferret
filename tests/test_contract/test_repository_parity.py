@@ -34,6 +34,7 @@ from stoat_ferret.db.project_repository import (
 from stoat_ferret.db.schema import (
     AUDIT_LOG_INDEX,
     AUDIT_LOG_TABLE,
+    CLIPS_IMAGE_COLUMNS,
     CLIPS_PROJECT_INDEX,
     CLIPS_TABLE,
     CLIPS_TIMELINE_COLUMNS,
@@ -66,6 +67,8 @@ async def create_all_tables(conn: aiosqlite.Connection) -> None:
     await conn.execute(CLIPS_TIMELINE_INDEX)
     # Apply migrations for columns added after initial schema
     for col, col_type in CLIPS_TIMELINE_COLUMNS:
+        await conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+    for col, col_type in CLIPS_IMAGE_COLUMNS:
         await conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
     for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
         await conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")

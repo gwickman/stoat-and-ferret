@@ -125,8 +125,8 @@ class AsyncSQLiteClipRepository:
                 INSERT INTO clips (id, project_id, source_video_id, in_point, out_point,
                                   timeline_position, effects_json, created_at, updated_at,
                                   track_id, timeline_start, timeline_end,
-                                  clip_type, generator_params)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  clip_type, generator_params, source_asset_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     clip.id,
@@ -143,6 +143,7 @@ class AsyncSQLiteClipRepository:
                     clip.timeline_end,
                     clip.clip_type,
                     generator_params_json,
+                    clip.source_asset_id,
                 ),
             )
             await self._conn.commit()
@@ -205,8 +206,8 @@ class AsyncSQLiteClipRepository:
             INSERT INTO clips (id, project_id, source_video_id, in_point, out_point,
                                timeline_position, effects_json, created_at, updated_at,
                                track_id, timeline_start, timeline_end,
-                               clip_type, generator_params)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               clip_type, generator_params, source_asset_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         def _params(clip: Clip) -> tuple[Any, ...]:
@@ -229,6 +230,7 @@ class AsyncSQLiteClipRepository:
                 clip.timeline_end,
                 clip.clip_type,
                 gen_json,
+                clip.source_asset_id,
             )
 
         try:
@@ -270,6 +272,7 @@ class AsyncSQLiteClipRepository:
             track_id=row_dict.get("track_id"),
             timeline_start=row_dict.get("timeline_start"),
             timeline_end=row_dict.get("timeline_end"),
+            source_asset_id=row_dict.get("source_asset_id"),
         )
 
 

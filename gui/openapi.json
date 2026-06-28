@@ -5042,7 +5042,8 @@
             "type": "string",
             "enum": [
               "file",
-              "generator"
+              "generator",
+              "image"
             ],
             "title": "Clip Type",
             "default": "file"
@@ -5057,6 +5058,17 @@
               }
             ],
             "title": "Source Video Id"
+          },
+          "source_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Asset Id"
           },
           "generator_params": {
             "anyOf": [
@@ -5084,6 +5096,28 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Timeline Position"
+          },
+          "timeline_start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Start"
+          },
+          "timeline_end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline End"
           }
         },
         "additionalProperties": false,
@@ -5094,7 +5128,7 @@
           "timeline_position"
         ],
         "title": "ClipCreate",
-        "description": "Create clip request.\n\nSupports both file clips (source_video_id required) and generator clips\n(generator_params required, source_video_id must be null)."
+        "description": "Create clip request.\n\nSupports file clips (source_video_id required), generator clips\n(generator_params required, source_video_id must be null), and image\nclips (source_asset_id required, timeline_end required)."
       },
       "ClipEffectsResponse": {
         "properties": {
@@ -5153,6 +5187,17 @@
               }
             ],
             "title": "Source Video Id"
+          },
+          "source_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Asset Id"
           },
           "clip_type": {
             "type": "string",

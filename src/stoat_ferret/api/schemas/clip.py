@@ -14,18 +14,22 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class ClipCreate(BaseModel):
     """Create clip request.
 
-    Supports both file clips (source_video_id required) and generator clips
-    (generator_params required, source_video_id must be null).
+    Supports file clips (source_video_id required), generator clips
+    (generator_params required, source_video_id must be null), and image
+    clips (source_asset_id required, timeline_end required).
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    clip_type: Literal["file", "generator"] = "file"
+    clip_type: Literal["file", "generator", "image"] = "file"
     source_video_id: str | None = None
+    source_asset_id: str | None = None
     generator_params: dict[str, Any] | None = None
     in_point: int = Field(..., ge=0)
     out_point: int = Field(..., ge=0)
     timeline_position: int = Field(..., ge=0)
+    timeline_start: float | None = None
+    timeline_end: float | None = None
 
     @model_validator(mode="after")
     def validate_clip_type_fields(self) -> ClipCreate:
@@ -35,11 +39,25 @@ class ClipCreate(BaseModel):
                 raise ValueError("source_video_id is required for file clips")
             if self.generator_params is not None:
                 raise ValueError("generator_params must be null for file clips")
+            if self.source_asset_id is not None:
+                raise ValueError("source_asset_id must be null for file clips")
         elif self.clip_type == "generator":
             if self.generator_params is None:
                 raise ValueError("generator_params is required for generator clips")
             if self.source_video_id is not None:
                 raise ValueError("source_video_id must be null for generator clips")
+            if self.source_asset_id is not None:
+                raise ValueError("source_asset_id must be null for generator clips")
+        elif self.clip_type == "image":
+            if self.source_asset_id is None:
+                raise ValueError("source_asset_id is required for image clips")
+            if self.source_video_id is not None:
+                raise ValueError("source_video_id must be null for image clips")
+            if self.timeline_end is None:
+                raise ValueError("timeline_end is required for image clips")
+            timeline_start = self.timeline_start if self.timeline_start is not None else 0.0
+            if self.timeline_end <= timeline_start:
+                raise ValueError("timeline_end must be greater than timeline_start for image clips")
         return self
 
 
@@ -61,6 +79,7 @@ class ClipResponse(BaseModel):
     id: str
     project_id: str
     source_video_id: str | None
+    source_asset_id: str | None = None
     clip_type: str
     generator_params: dict[str, Any] | None = None
     in_point: int

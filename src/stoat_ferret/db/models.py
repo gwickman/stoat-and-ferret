@@ -354,6 +354,7 @@ class Clip:
     track_id: str | None = field(default=None)
     timeline_start: float | None = field(default=None)
     timeline_end: float | None = field(default=None)
+    source_asset_id: str | None = field(default=None)
 
     @staticmethod
     def new_id() -> str:
