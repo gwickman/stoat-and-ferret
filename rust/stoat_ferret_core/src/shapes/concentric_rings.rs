@@ -24,6 +24,9 @@ impl ConcentricRingsGenerator {
         if ring_count == 0 {
             return Err(PyValueError::new_err("ring_count must be > 0"));
         }
+        if !ring_width.is_finite() {
+            return Err(PyValueError::new_err("ring_width must be finite"));
+        }
         if ring_width <= 0.0 || ring_width >= 1.0 {
             return Err(PyValueError::new_err("ring_width must be in (0, 1)"));
         }

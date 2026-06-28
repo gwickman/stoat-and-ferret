@@ -25,6 +25,9 @@ impl RadialBurstGenerator {
         if ray_count == 0 {
             return Err(PyValueError::new_err("ray_count must be > 0"));
         }
+        if !ray_width.is_finite() {
+            return Err(PyValueError::new_err("ray_width must be finite"));
+        }
         if ray_width <= 0.0 || ray_width >= 1.0 {
             return Err(PyValueError::new_err("ray_width must be in (0, 1)"));
         }
