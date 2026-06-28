@@ -15,6 +15,13 @@ repos:
         files: '\.(sh|bash|yml)$'
         stages: [commit]
         pass_filenames: true
+      - id: rust-fmt-check
+        name: Rust format check
+        entry: bash -c 'cd rust/stoat_ferret_core && cargo fmt --check'
+        language: system
+        files: '\.rs$'
+        stages: [commit]
+        pass_filenames: false
       - id: spdx-header-check
         name: SPDX license header check
         entry: python scripts/add_license_headers.py --check
