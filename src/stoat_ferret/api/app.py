@@ -31,6 +31,7 @@ from stoat_ferret.api.lifespan import record_feature_flags, run_startup_migratio
 from stoat_ferret.api.middleware.correlation import CorrelationIdMiddleware
 from stoat_ferret.api.middleware.metrics import MetricsMiddleware
 from stoat_ferret.api.routers import (
+    assets,
     audio,
     batch,
     compose,
@@ -72,6 +73,7 @@ from stoat_ferret.api.services.waveform import WaveformService
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.identity import ClientIdentityStore, InMemoryClientIdentityStore
 from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.asset_repository import AsyncSQLiteAssetRepository
 from stoat_ferret.db.async_repository import (
     AsyncSQLiteVideoRepository,
     AsyncVideoRepository,
@@ -216,6 +218,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Create markers repository (Phase 10: after DB open, before AuditLogger dependents)
     app.state.markers_repository = AsyncSQLiteMarkerRepository(app.state.db)
+
+    # Create asset repository (Phase 10: after DB open, before Phase 11 services)
+    app.state.asset_repository = AsyncSQLiteAssetRepository(app.state.db)
 
     # Phase 11 — QCService (after Phase 10 repositories, before Phase 12 worker)
     from stoat_ferret.db.qc_repository import AsyncSQLiteQCReportRepository
@@ -537,6 +542,7 @@ def create_app(
     client_identity_store: ClientIdentityStore | None = None,
     qc_service: QCService | None = None,
     delivery_profile_repository: object | None = None,
+    asset_repository: AsyncSQLiteAssetRepository | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -570,6 +576,7 @@ def create_app(
             Stored on ``app.state.client_identity_store`` for access by future features.
         qc_service: Optional QCService for dependency injection in tests.
         delivery_profile_repository: Optional delivery profile repository for DI in tests.
+        asset_repository: Optional asset repository for dependency injection in tests.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -659,6 +666,10 @@ def create_app(
     if delivery_profile_repository is not None:
         app.state.delivery_profile_repository = delivery_profile_repository
 
+    if asset_repository is not None:
+        app.state.asset_repository = asset_repository
+
+    app.include_router(assets.router)
     app.include_router(health.router)
     app.include_router(version.router)
     app.include_router(flags.router)

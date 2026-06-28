@@ -10,6 +10,262 @@
     "version": "0.3.0"
   },
   "paths": {
+    "/api/v1/assets": {
+      "post": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Upload Asset",
+        "description": "Upload an asset file (multipart/form-data).\n\n- Validates content via Pillow magic-bytes sniff (image kind only in v090).\n- Enforces STOAT_ASSETS_MAX_SIZE_BYTES.\n- Deduplicates by content hash; re-upload of a soft-deleted asset restores it.\n- File is stored under STOAT_ASSETS_DIR as <sha256hex>.<ext>.",
+        "operationId": "upload_asset_api_v1_assets_post",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "image",
+                "audio",
+                "subtitle",
+                "font",
+                "lut"
+              ],
+              "type": "string",
+              "default": "image",
+              "title": "Kind"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_asset_api_v1_assets_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "List Assets",
+        "description": "List active (non-deleted) assets with optional kind filter.",
+        "operationId": "list_assets_api_v1_assets_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by asset kind.",
+              "title": "Kind"
+            },
+            "description": "Filter by asset kind."
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Pagination offset.",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Pagination offset."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Page size.",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Page size."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{asset_id}": {
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Get Asset",
+        "description": "Get asset metadata by UUID. Soft-deleted assets return 404.",
+        "operationId": "get_asset_api_v1_assets__asset_id__get",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Delete Asset",
+        "description": "Soft-delete an asset. The physical file is not removed.",
+        "operationId": "delete_asset_api_v1_assets__asset_id__delete",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{asset_id}/file": {
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Download Asset",
+        "description": "Download the raw file for an asset. Soft-deleted assets return 404.",
+        "operationId": "download_asset_api_v1_assets__asset_id__file_get",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/live": {
       "get": {
         "tags": [
@@ -4448,6 +4704,118 @@
         "title": "AppVersionResponse",
         "description": "Deployment version metadata returned by GET /api/v1/version.\n\nNamed ``AppVersionResponse`` rather than ``VersionResponse`` to avoid\nan OpenAPI schema-name collision with the pre-existing project\nsnapshot model at ``stoat_ferret.api.schemas.version.VersionResponse``.\n\nThe response is assembled from three sources:\n\n- ``app_version`` comes from the FastAPI application version string.\n- ``core_version``, ``build_timestamp``, and ``git_sha`` come from the\n  Rust :class:`stoat_ferret_core.VersionInfo` class populated at compile\n  time by ``build.rs``. ``git_sha`` is the Rust core compile-time SHA and\n  may lag the running Python code after Python-only releases. The literal\n  string ``\"unknown\"`` is used when the build system did not capture a SHA.\n- ``app_sha`` is the runtime-resolved git SHA captured once at startup\n  by ``_get_git_sha()`` in ``app.py``. It reflects the actual running code\n  at the time the process started, making it reliable for Python-only\n  releases that do not recompile Rust. Returns ``\"unknown\"`` when git is\n  unavailable (e.g. Docker deployments without git installed and no\n  ``GIT_SHA`` env var set). Both ``git_sha`` and ``app_sha`` are present\n  simultaneously so agents can compare them to detect divergence.\n- ``python_version`` is the running interpreter version (``sys.version_info``).\n- ``database_version`` is the current ``alembic_version.version_num``\n  revision hash (e.g., ``\"1e895699ad50\"``) or the literal ``\"none\"`` when\n  the table is empty or missing.\n\n**SHA semantics summary:**\n\n- ``git_sha``: Rust core compile-time SHA (may be weeks behind Python HEAD\n  after Python-only releases \u2014 does not reflect Python changes).\n- ``app_sha``: Runtime-resolved SHA (reflects the deployed Python code at\n  startup \u2014 authoritative for Python-only release identification).\n- ``build_timestamp``: Rust core compile timestamp (same staleness risk as\n  ``git_sha`` after Python-only releases).\n\nAn agent that needs to verify it is testing the current Python HEAD should\ncompare ``app_sha`` against the known target commit, not ``git_sha``."
       },
+      "AssetListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssetRead"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "Page of asset records."
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "Pagination offset used in this response."
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "Page size used in this response."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total count of matching active assets."
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "offset",
+          "limit",
+          "total"
+        ],
+        "title": "AssetListResponse",
+        "description": "Paginated list of assets."
+      },
+      "AssetRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Asset UUID."
+          },
+          "original_filename": {
+            "type": "string",
+            "title": "Original Filename",
+            "description": "Filename as provided at upload time."
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash",
+            "description": "SHA-256 hex digest of the file content."
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type detected from magic bytes."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "audio",
+              "subtitle",
+              "font",
+              "lut"
+            ],
+            "title": "Kind",
+            "description": "Asset kind."
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes",
+            "description": "File size in bytes."
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At",
+            "description": "ISO 8601 UTC timestamp of soft deletion, if deleted."
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 UTC creation timestamp."
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "ISO 8601 UTC last-update timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "original_filename",
+          "content_hash",
+          "mime_type",
+          "kind",
+          "size_bytes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AssetRead",
+        "description": "Public asset metadata returned by the API.\n\nThe server-side file_path is intentionally excluded."
+      },
       "AudioMixRequest": {
         "properties": {
           "tracks": {
@@ -4653,6 +5021,20 @@
         ],
         "title": "BatchResponse",
         "description": "Response returned when a batch render is submitted.\n\nContains the batch identifier, number of jobs queued, and status."
+      },
+      "Body_upload_asset_api_v1_assets_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_asset_api_v1_assets_post"
       },
       "ClipCreate": {
         "properties": {

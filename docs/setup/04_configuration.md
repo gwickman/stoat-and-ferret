@@ -39,6 +39,13 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 |----------|------|---------|-------------|
 | `STOAT_THUMBNAIL_DIR` | `str` | `data/thumbnails` | Directory for storing generated video thumbnails. Created automatically if it does not exist. |
 
+### Asset Library
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_ASSETS_DIR` | `Path` | `working/assets` | Directory for storing uploaded user asset files. Created automatically if it does not exist. Relative paths are resolved from the working directory. Supports PNG and JPEG uploads (v090 scope). |
+| `STOAT_ASSETS_MAX_SIZE_BYTES` | `int` | `104857600` | Maximum upload size in bytes for the asset library endpoint (`POST /api/v1/assets`). Default is 100 MB (104857600 bytes). Uploads exceeding this limit are rejected with HTTP 413. Valid range: 1 to any positive integer. |
+
 ### Frontend
 
 | Variable | Type | Default | Description |
