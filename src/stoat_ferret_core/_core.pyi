@@ -4820,3 +4820,51 @@ class SpiralGenerator:
         ...
 
     def __repr__(self) -> str: ...
+
+class GenericProceduralImageBuilder:
+    """Procedural image builder using a bespoke recursive-descent expression parser.
+
+    Evaluates a user-supplied expression per pixel and saves RGBA or grayscale PNG output.
+    The expression is parsed at construction for fail-fast error reporting.
+    """
+
+    def __new__(
+        cls,
+        expression: str,
+        width: int,
+        height: int,
+        output_format: str | None = None,
+        at_time: float | None = None,
+    ) -> GenericProceduralImageBuilder:
+        """Create a GenericProceduralImageBuilder.
+
+        Args:
+            expression: Formula in x, y, t returning value in [0, 1]. Supports
+                +, -, *, /, %, ^ (power), and functions: sin, cos, tan, atan2,
+                hypot, sqrt, exp, log, abs, floor, ceil, pow, mod,
+                if(cond, then, else). Variables x and y are normalised to [0, 1].
+                t is the time value.
+            width: Output image width in pixels. Must be > 0.
+            height: Output image height in pixels. Must be > 0.
+            output_format: "rgba" (default) or "grayscale".
+            at_time: The t value for single-frame render. Defaults to 0.0.
+
+        Raises:
+            ValueError: If expression is invalid, dimensions are 0, or
+                output_format is not "rgba" or "grayscale".
+        """
+        ...
+
+    def synthesise(self, output_path: str) -> None:
+        """Render and save the procedural image to a PNG file.
+
+        Args:
+            output_path: Destination file path (parent directories are created).
+
+        Raises:
+            ValueError: If render times out, eval budget exceeded, or file
+                cannot be written.
+        """
+        ...
+
+    def __repr__(self) -> str: ...

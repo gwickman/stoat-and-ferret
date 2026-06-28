@@ -656,3 +656,175 @@ def test_shape_generators_invalid_params() -> None:
         SpiralGenerator(0.0, 2.0)
     with pytest.raises(ValueError):
         SpiralGenerator(3.0, 0.0)
+
+
+# ===========================================================================
+# BL-514: GenericProceduralImageBuilder
+# ===========================================================================
+
+
+def _read_png_rgba_row(path: pathlib.Path, row: int = 0) -> list[tuple[int, int, int, int]]:
+    """Read RGBA pixels from a specific row of a PNG file using stdlib only."""
+    import struct
+    import zlib
+
+    data = path.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG file"
+    pos = 8
+    idat_chunks: list[bytes] = []
+    width = height = 0
+    color_type = 0
+    while pos < len(data):
+        length = struct.unpack(">I", data[pos : pos + 4])[0]
+        chunk_type = data[pos + 4 : pos + 8]
+        chunk_data = data[pos + 8 : pos + 8 + length]
+        if chunk_type == b"IHDR":
+            width, height = struct.unpack(">II", chunk_data[:8])
+            color_type = chunk_data[9]
+        elif chunk_type == b"IDAT":
+            idat_chunks.append(chunk_data)
+        elif chunk_type == b"IEND":
+            break
+        pos += 12 + length
+
+    raw = zlib.decompress(b"".join(idat_chunks))
+    bpp = 4 if color_type == 6 else 3  # RGBA vs RGB
+    stride = width * bpp
+    prev = bytearray(stride)
+    result_row: list[tuple[int, int, int, int]] = []
+    p = 0
+    for r in range(height):
+        filt = raw[p]
+        row_raw = bytearray(raw[p + 1 : p + 1 + stride])
+        p += 1 + stride
+        if filt == 1:  # Sub
+            for i in range(bpp, stride):
+                row_raw[i] = (row_raw[i] + row_raw[i - bpp]) & 0xFF
+        elif filt == 2:  # Up
+            for i in range(stride):
+                row_raw[i] = (row_raw[i] + prev[i]) & 0xFF
+        elif filt == 3:  # Average
+            for i in range(stride):
+                a = row_raw[i - bpp] if i >= bpp else 0
+                row_raw[i] = (row_raw[i] + (a + prev[i]) // 2) & 0xFF
+        elif filt == 4:  # Paeth
+            for i in range(stride):
+                a = row_raw[i - bpp] if i >= bpp else 0
+                b2 = prev[i]
+                c = prev[i - bpp] if i >= bpp else 0
+                p_val = a + b2 - c
+                pa, pb, pc = abs(p_val - a), abs(p_val - b2), abs(p_val - c)
+                pr = a if pa <= pb and pa <= pc else (b2 if pb <= pc else c)
+                row_raw[i] = (row_raw[i] + pr) & 0xFF
+        if r == row:
+            if bpp == 4:
+                result_row = [
+                    (row_raw[i], row_raw[i + 1], row_raw[i + 2], row_raw[i + 3])
+                    for i in range(0, stride, 4)
+                ]
+            else:
+                result_row = [
+                    (row_raw[i], row_raw[i + 1], row_raw[i + 2], 255)
+                    for i in range(0, stride, 3)
+                ]
+            break
+        prev = row_raw
+    return result_row
+
+
+def test_generic_procedural_import() -> None:
+    """GenericProceduralImageBuilder is importable from stoat_ferret_core (BL-514 AC-1)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    assert GenericProceduralImageBuilder is not None
+
+
+def test_generic_procedural_stub_presence() -> None:
+    """GenericProceduralImageBuilder appears in _core.pyi (BL-514 AC-6)."""
+    import pathlib
+
+    stub = pathlib.Path("src/stoat_ferret_core/_core.pyi").read_text()
+    assert "GenericProceduralImageBuilder" in stub, (
+        "_core.pyi missing GenericProceduralImageBuilder"
+    )
+
+
+def test_generic_procedural_linear_gradient(tmp_path: pathlib.Path) -> None:
+    """expression='x' at 64x64: first column ≈ 0, last column ≈ 255 (BL-514 AC-5 contract 1)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    out = tmp_path / "gradient.png"
+    GenericProceduralImageBuilder("x", 64, 64).synthesise(str(out))
+    assert out.exists() and out.stat().st_size > 0
+
+    row = _read_png_rgba_row(out, row=0)
+    first_r = row[0][0]
+    last_r = row[-1][0]
+    assert first_r < 10, f"first pixel R={first_r}, expected ~0"
+    assert last_r > 245, f"last pixel R={last_r}, expected ~255"
+
+
+def test_generic_procedural_radial(tmp_path: pathlib.Path) -> None:
+    """expression='hypot(x-0.5,y-0.5)': center pixel < corner pixel (BL-514 AC-5 contract 2)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    out = tmp_path / "radial.png"
+    GenericProceduralImageBuilder("hypot(x-0.5,y-0.5)", 64, 64).synthesise(str(out))
+    assert out.exists() and out.stat().st_size > 0
+
+    # Read row 32 (middle row) to get center pixel at col 32
+    row_mid = _read_png_rgba_row(out, row=32)
+    center_r = row_mid[32][0]
+
+    # Read row 0 to get corner pixel at col 0
+    row_top = _read_png_rgba_row(out, row=0)
+    corner_r = row_top[0][0]
+
+    assert center_r < corner_r, (
+        f"center R={center_r} should be < corner R={corner_r}"
+    )
+
+
+def test_generic_procedural_spiral_deterministic(tmp_path: pathlib.Path) -> None:
+    """Animated spiral at t=0.5 produces identical bytes on two renders (BL-514 AC-5 contract 3)."""
+    import hashlib
+
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    SPIRAL_EXPR = "sin(atan2(y-0.5,x-0.5)*4+t*6.28)*0.5+0.5"
+    out1 = tmp_path / "spiral1.png"
+    out2 = tmp_path / "spiral2.png"
+    GenericProceduralImageBuilder(SPIRAL_EXPR, 64, 64, at_time=0.5).synthesise(str(out1))
+    GenericProceduralImageBuilder(SPIRAL_EXPR, 64, 64, at_time=0.5).synthesise(str(out2))
+
+    h1 = hashlib.sha256(out1.read_bytes()).hexdigest()
+    h2 = hashlib.sha256(out2.read_bytes()).hexdigest()
+    assert h1 == h2, f"spiral render not deterministic: {h1} vs {h2}"
+
+
+def test_generic_procedural_invalid_expression() -> None:
+    """Invalid expression raises ValueError at construction time (BL-514 AC-2)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    with pytest.raises(ValueError):
+        GenericProceduralImageBuilder("foo_bar", 64, 64)
+
+
+def test_generic_procedural_zero_dimension() -> None:
+    """Zero width or height raises ValueError (BL-514 AC-2)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    with pytest.raises(ValueError):
+        GenericProceduralImageBuilder("x", 0, 64)
+    with pytest.raises(ValueError):
+        GenericProceduralImageBuilder("x", 64, 0)
+
+
+@pytest.mark.timeout(2.0)
+def test_generic_procedural_performance(tmp_path: pathlib.Path) -> None:
+    """256x256 render completes within 2000ms (BL-514 AC-4, informational)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    out = tmp_path / "perf.png"
+    GenericProceduralImageBuilder("sin(x*6.28)*cos(y*6.28)", 256, 256).synthesise(str(out))
+    assert out.exists() and out.stat().st_size > 0

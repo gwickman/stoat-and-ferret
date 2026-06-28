@@ -171,6 +171,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<shapes::RadialBurstGenerator>()?;
     m.add_class::<shapes::CheckerboardGenerator>()?;
     m.add_class::<shapes::ConcentricRingsGenerator>()?;
+    m.add_class::<shapes::GenericProceduralImageBuilder>()?;
 
     // Register transition builders
     m.add_class::<ffmpeg::transitions::TransitionType>()?;
