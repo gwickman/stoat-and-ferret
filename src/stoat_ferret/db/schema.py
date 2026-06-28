@@ -411,6 +411,11 @@ CLIPS_GENERATOR_COLUMNS = [
     ("generator_params", "TEXT"),
 ]
 
+# Columns to add to clips table for image clip support (BL-511).
+CLIPS_IMAGE_COLUMNS = [
+    ("source_asset_id", "TEXT"),
+]
+
 
 # Columns to add to projects table for audio mix.
 PROJECTS_AUDIO_MIX_COLUMNS = [
@@ -527,6 +532,20 @@ def _alter_clips_add_generator_columns(conn: sqlite3.Connection) -> None:
                 raise
 
 
+def _alter_clips_add_image_columns(conn: sqlite3.Connection) -> None:
+    """Add source_asset_id column to clips table idempotently (BL-511).
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in CLIPS_IMAGE_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
 
@@ -582,6 +601,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_clips_add_generator_columns(conn)
+    _alter_clips_add_image_columns(conn)
     _alter_projects_add_audio_mix_column(conn)
     _alter_projects_add_audio_baseline_columns(conn)
     _alter_render_jobs_add_partial_columns(conn)
@@ -661,6 +681,20 @@ async def _alter_clips_add_generator_columns_async(db: aiosqlite.Connection) -> 
         db: aiosqlite database connection.
     """
     for col, col_type in CLIPS_GENERATOR_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
+async def _alter_clips_add_image_columns_async(db: aiosqlite.Connection) -> None:
+    """Add source_asset_id column to clips table idempotently (async, BL-511).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in CLIPS_IMAGE_COLUMNS:
         try:
             await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError as e:
@@ -753,6 +787,7 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_clips_add_generator_columns_async(db)
+    await _alter_clips_add_image_columns_async(db)
     await _alter_projects_add_audio_mix_column_async(db)
     await _alter_projects_add_audio_baseline_columns_async(db)
     await _alter_render_jobs_add_partial_columns_async(db)

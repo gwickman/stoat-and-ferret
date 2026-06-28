@@ -370,6 +370,24 @@ async def add_clip(
             created_at=now,
             updated_at=now,
         )
+    elif request.clip_type == "image":
+        # Image clips reference an asset; no video lookup or Rust validation needed.
+        # Render path (-loop 1 -i <image_path>) is deferred for v090 scope.
+        # deferred_ac: BL-511-AC-3 — render path (-loop 1 -i), deferred for v090 scope
+        clip = Clip(
+            id=Clip.new_id(),
+            project_id=project_id,
+            source_video_id=None,
+            clip_type="image",
+            source_asset_id=request.source_asset_id,
+            in_point=request.in_point,
+            out_point=request.out_point,
+            timeline_position=request.timeline_position,
+            timeline_start=request.timeline_start,
+            timeline_end=request.timeline_end,
+            created_at=now,
+            updated_at=now,
+        )
     else:
         # File clips require a valid source video
         video = await video_repo.get(request.source_video_id)  # type: ignore[arg-type]

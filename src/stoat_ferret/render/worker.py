@@ -125,6 +125,11 @@ async def build_command_for_job(
                 raise CommandBuildError(
                     f"Project {job.project_id}: generator clip rendering not yet supported"
                 )
+            # deferred_ac: BL-511-AC-3 — render path (-loop 1 -i), deferred for v090 scope
+            if clip.clip_type == "image":
+                raise CommandBuildError(
+                    f"Project {job.project_id}: image clip rendering not yet supported"
+                )
             if clip.source_video_id is None:
                 raise CommandBuildError(f"File clip {clip.id} has no source_video_id")
             vid = await video_repository.get(clip.source_video_id)
@@ -193,6 +198,9 @@ async def build_command_for_job(
         raise CommandBuildError(
             f"Project {job.project_id}: generator clip rendering not yet supported"
         )
+    # deferred_ac: BL-511-AC-3 — render path (-loop 1 -i), deferred for v090 scope
+    if first_clip.clip_type == "image":
+        raise CommandBuildError(f"Project {job.project_id}: image clip rendering not yet supported")
     video_id = first_clip.source_video_id
     if video_id is None:
         raise CommandBuildError(f"File clip {first_clip.id} has no source_video_id")

@@ -610,6 +610,213 @@ def test_get_clip_effects_not_found(client: TestClient) -> None:
 
 
 @pytest.mark.api
+async def test_add_image_clip_success(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Image clip with source_asset_id and timeline_end returns 201."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-abc123",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["clip_type"] == "image"
+    assert data["source_asset_id"] == "asset-abc123"
+    assert data["source_video_id"] is None
+
+
+@pytest.mark.api
+async def test_add_image_clip_missing_source_asset_id(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Image clip without source_asset_id returns 422 (FR-002-AC-1)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+async def test_add_image_clip_with_source_video_id_rejected(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Image clip with source_video_id set returns 422 (cross-field rejection)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-abc123",
+            "source_video_id": "video-xyz",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+async def test_add_image_clip_missing_timeline_end(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Image clip without timeline_end returns 422 (FR-003-AC-1)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-abc123",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+async def test_file_clip_regression_guard(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """File clip creation still works after clip_type Literal extension (regression guard)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    video = make_test_video()
+    await video_repository.add(video)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "file",
+            "source_video_id": video.id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["clip_type"] == "file"
+    assert data["source_video_id"] == video.id
+    assert data["source_asset_id"] is None
+
+
+@pytest.mark.api
+async def test_add_image_clip_source_asset_id_not_null_for_non_image(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """File clip with source_asset_id set returns 422 (cross-field rejection)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    video = make_test_video()
+    await video_repository.add(video)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "file",
+            "source_video_id": video.id,
+            "source_asset_id": "asset-abc123",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.api
 async def test_get_clip_allow_header(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
