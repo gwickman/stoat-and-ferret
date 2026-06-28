@@ -213,9 +213,7 @@ impl Parser {
     }
 
     fn peek(&self) -> &Token {
-        self.tokens
-            .get(self.pos)
-            .unwrap_or(&Token::Eof)
+        self.tokens.get(self.pos).unwrap_or(&Token::Eof)
     }
 
     fn advance(&mut self) -> Token {
@@ -447,13 +445,7 @@ pub fn parse(expr: &str) -> Result<Expr, ParseError> {
 ///
 /// Returns `EvalError::BudgetExceeded` when budget reaches 0.
 /// Pow exponent is clamped to [-100, 100] to prevent overflow.
-pub fn eval(
-    expr: &Expr,
-    x: f64,
-    y: f64,
-    t: f64,
-    budget: &mut usize,
-) -> Result<f64, EvalError> {
+pub fn eval(expr: &Expr, x: f64, y: f64, t: f64, budget: &mut usize) -> Result<f64, EvalError> {
     if *budget == 0 {
         return Err(EvalError::BudgetExceeded);
     }
@@ -494,71 +486,171 @@ pub fn eval(
                 }
             }
         }
-        Expr::FnCall(fn_name, args) => {
-            match fn_name {
-                FnName::Sin => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.sin())
-                }
-                FnName::Cos => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.cos())
-                }
-                FnName::Tan => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.tan())
-                }
-                FnName::Sqrt => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.sqrt())
-                }
-                FnName::Exp => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.exp())
-                }
-                FnName::Log => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.ln())
-                }
-                FnName::Abs => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.abs())
-                }
-                FnName::Floor => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.floor())
-                }
-                FnName::Ceil => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.ceil())
-                }
-                FnName::Atan2 => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    let b = eval(args.get(1).ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.atan2(b))
-                }
-                FnName::Hypot => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    let b = eval(args.get(1).ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    Ok(a.hypot(b))
-                }
-                FnName::Pow => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    let b = eval(args.get(1).ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    let b_clamped = b.clamp(-100.0, 100.0);
-                    Ok(a.powf(b_clamped))
-                }
-                FnName::Mod => {
-                    let a = eval(args.first().ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    let b = eval(args.get(1).ok_or(EvalError::BudgetExceeded)?, x, y, t, budget)?;
-                    if b == 0.0 {
-                        Ok(0.0)
-                    } else {
-                        Ok(a % b)
-                    }
+        Expr::FnCall(fn_name, args) => match fn_name {
+            FnName::Sin => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.sin())
+            }
+            FnName::Cos => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.cos())
+            }
+            FnName::Tan => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.tan())
+            }
+            FnName::Sqrt => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.sqrt())
+            }
+            FnName::Exp => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.exp())
+            }
+            FnName::Log => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.ln())
+            }
+            FnName::Abs => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.abs())
+            }
+            FnName::Floor => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.floor())
+            }
+            FnName::Ceil => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.ceil())
+            }
+            FnName::Atan2 => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                let b = eval(
+                    args.get(1).ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.atan2(b))
+            }
+            FnName::Hypot => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                let b = eval(
+                    args.get(1).ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                Ok(a.hypot(b))
+            }
+            FnName::Pow => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                let b = eval(
+                    args.get(1).ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                let b_clamped = b.clamp(-100.0, 100.0);
+                Ok(a.powf(b_clamped))
+            }
+            FnName::Mod => {
+                let a = eval(
+                    args.first().ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                let b = eval(
+                    args.get(1).ok_or(EvalError::BudgetExceeded)?,
+                    x,
+                    y,
+                    t,
+                    budget,
+                )?;
+                if b == 0.0 {
+                    Ok(0.0)
+                } else {
+                    Ok(a % b)
                 }
             }
-        }
+        },
         Expr::IfExpr(cond, then_e, else_e) => {
             let c = eval(cond, x, y, t, budget)?;
             if c != 0.0 {
@@ -614,15 +706,18 @@ mod tests {
         let mut b = 100usize;
         let v = eval(&e, 0.0, 0.0, 0.0, &mut b).unwrap();
         // With clamp to 100: 2^100 ≈ 1.27e30, not infinity
-        assert!(v.is_finite(), "pow should not overflow with clamped exponent, got {v}");
+        assert!(
+            v.is_finite(),
+            "pow should not overflow with clamped exponent, got {v}"
+        );
         assert!(v < 2.0_f64.powi(101), "exponent not clamped: {v}");
     }
 
     #[test]
     fn test_max_depth_exceeded() {
         // 33 levels of nesting via parentheses
-        let expr = "((((((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))))))"
-            .to_string();
+        let expr =
+            "((((((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))))))".to_string();
         let result = parse(&expr);
         assert!(
             matches!(result, Err(ParseError::MaxDepthExceeded)),

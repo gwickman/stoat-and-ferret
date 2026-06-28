@@ -96,8 +96,7 @@ impl GenericProceduralImageBuilder {
 
         match self.output_format {
             OutputFormat::Rgba => {
-                let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
-                    ImageBuffer::new(w, h);
+                let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(w, h);
                 for py in 0..h {
                     // Per-row timeout check
                     if start.elapsed() > timeout {
@@ -110,10 +109,9 @@ impl GenericProceduralImageBuilder {
                     for px in 0..w {
                         let x = px as f64 / w_norm;
                         let mut budget = 10_000usize;
-                        let v = eval(&self.parsed, x, y, t, &mut budget)
-                            .map_err(|e| {
-                                PyValueError::new_err(format!("eval error at ({px},{py}): {e}"))
-                            })?;
+                        let v = eval(&self.parsed, x, y, t, &mut budget).map_err(|e| {
+                            PyValueError::new_err(format!("eval error at ({px},{py}): {e}"))
+                        })?;
                         let byte = (v.clamp(0.0, 1.0) * 255.0).round() as u8;
                         img.put_pixel(px, py, Rgba([byte, byte, byte, 255]));
                     }
@@ -122,8 +120,7 @@ impl GenericProceduralImageBuilder {
                     .map_err(|e| PyValueError::new_err(format!("cannot write PNG: {e}")))?;
             }
             OutputFormat::Grayscale => {
-                let mut img: ImageBuffer<Luma<u8>, Vec<u8>> =
-                    ImageBuffer::new(w, h);
+                let mut img: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::new(w, h);
                 for py in 0..h {
                     if start.elapsed() > timeout {
                         return Err(PyValueError::new_err(format!(
@@ -135,10 +132,9 @@ impl GenericProceduralImageBuilder {
                     for px in 0..w {
                         let x = px as f64 / w_norm;
                         let mut budget = 10_000usize;
-                        let v = eval(&self.parsed, x, y, t, &mut budget)
-                            .map_err(|e| {
-                                PyValueError::new_err(format!("eval error at ({px},{py}): {e}"))
-                            })?;
+                        let v = eval(&self.parsed, x, y, t, &mut budget).map_err(|e| {
+                            PyValueError::new_err(format!("eval error at ({px},{py}): {e}"))
+                        })?;
                         let byte = (v.clamp(0.0, 1.0) * 255.0).round() as u8;
                         img.put_pixel(px, py, Luma([byte]));
                     }
@@ -171,7 +167,9 @@ mod tests {
     use super::*;
 
     fn tmp_path(name: &str) -> std::path::PathBuf {
-        std::env::temp_dir().join("snf_generic_procedural").join(name)
+        std::env::temp_dir()
+            .join("snf_generic_procedural")
+            .join(name)
     }
 
     fn ensure_dir(p: &std::path::Path) {
@@ -188,10 +186,7 @@ mod tests {
         let start = std::time::Instant::now();
         builder.py_synthesise(out.to_str().unwrap()).unwrap();
         let elapsed = start.elapsed().as_millis();
-        assert!(
-            elapsed < 2000,
-            "render exceeded 2000ms budget: {elapsed}ms"
-        );
+        assert!(elapsed < 2000, "render exceeded 2000ms budget: {elapsed}ms");
     }
 
     #[test]
@@ -211,17 +206,12 @@ mod tests {
         builder.py_synthesise(out2.to_str().unwrap()).unwrap();
         let img1 = image::open(&out1).unwrap().to_rgba8();
         let img2 = image::open(&out2).unwrap().to_rgba8();
-        assert_eq!(
-            img1.as_raw(),
-            img2.as_raw(),
-            "render is not deterministic"
-        );
+        assert_eq!(img1.as_raw(), img2.as_raw(), "render is not deterministic");
     }
 
     #[test]
     fn test_render_linear_gradient() {
-        let builder =
-            GenericProceduralImageBuilder::py_new("x", 64, 64, None, None).unwrap();
+        let builder = GenericProceduralImageBuilder::py_new("x", 64, 64, None, None).unwrap();
         let out = tmp_path("gradient.png");
         ensure_dir(&out);
         builder.py_synthesise(out.to_str().unwrap()).unwrap();
@@ -264,8 +254,7 @@ mod tests {
 
     #[test]
     fn test_invalid_output_format_error() {
-        let r =
-            GenericProceduralImageBuilder::py_new("x", 64, 64, Some("invalid_format"), None);
+        let r = GenericProceduralImageBuilder::py_new("x", 64, 64, Some("invalid_format"), None);
         assert!(r.is_err());
     }
 
