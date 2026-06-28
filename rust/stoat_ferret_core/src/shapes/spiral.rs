@@ -22,8 +22,14 @@ pub struct SpiralGenerator {
 impl SpiralGenerator {
     #[new]
     pub fn py_new(turn_count: f32, thickness: f32) -> PyResult<Self> {
+        if !turn_count.is_finite() {
+            return Err(PyValueError::new_err("turn_count must be finite"));
+        }
         if turn_count <= 0.0 {
             return Err(PyValueError::new_err("turn_count must be > 0"));
+        }
+        if !thickness.is_finite() {
+            return Err(PyValueError::new_err("thickness must be finite"));
         }
         if thickness <= 0.0 {
             return Err(PyValueError::new_err("thickness must be > 0"));

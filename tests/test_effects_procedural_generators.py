@@ -44,6 +44,7 @@ BL-510 ACs:
 
 from __future__ import annotations
 
+import math
 import os
 import pathlib
 
@@ -825,3 +826,134 @@ def test_generic_procedural_performance(tmp_path: pathlib.Path) -> None:
     out = tmp_path / "perf.png"
     GenericProceduralImageBuilder("sin(x*6.28)*cos(y*6.28)", 256, 256).synthesise(str(out))
     assert out.exists() and out.stat().st_size > 0
+
+
+# ===========================================================================
+# BL-569: CurvesBuilder — IEEE 754 NaN/infinity validation
+# ===========================================================================
+
+
+def test_curves_nan_in_knee_string() -> None:
+    """CurvesBuilder rejects NaN in knee string (BL-569)."""
+    with pytest.raises(ValueError, match=r"non-finite|NaN"):
+        CurvesBuilder(red="NaN/0 1/1").build()
+
+
+def test_curves_inf_in_knee_string_y() -> None:
+    """CurvesBuilder rejects infinity in knee string (BL-569)."""
+    with pytest.raises(ValueError):
+        CurvesBuilder(red="0/0 inf/1").build()
+
+
+def test_curves_inf_in_knee_string_x() -> None:
+    """CurvesBuilder rejects infinity in x coordinate of knee string (BL-569)."""
+    with pytest.raises(ValueError):
+        CurvesBuilder(red="inf/0 1/1").build()
+
+
+def test_curves_out_of_range_x() -> None:
+    """CurvesBuilder rejects out-of-range coordinates in knee string (BL-569)."""
+    with pytest.raises(ValueError, match=r"out of range|\[0,1\]"):
+        CurvesBuilder(red="-1/0 2/1").build()
+
+
+def test_curves_empty_knee_string() -> None:
+    """CurvesBuilder rejects empty knee string (BL-569 FR-005)."""
+    with pytest.raises(ValueError):
+        CurvesBuilder(red="").build()
+
+
+def test_curves_valid_two_points() -> None:
+    """CurvesBuilder accepts valid two-point knee string (BL-569 regression guard)."""
+    CurvesBuilder(red="0/0 1/1").build()
+
+
+def test_curves_valid_three_points() -> None:
+    """CurvesBuilder accepts valid three-point knee string (BL-569 regression guard)."""
+    CurvesBuilder(red="0/0 0.5/0.4 1/1").build()
+
+
+# ===========================================================================
+# BL-570: VignetteBuilder — IEEE 754 NaN/infinity validation
+# ===========================================================================
+
+
+def test_vignette_nan_angle() -> None:
+    """VignetteBuilder rejects NaN angle (BL-570)."""
+    with pytest.raises(ValueError, match=r"NaN|not finite"):
+        VignetteBuilder("centre", angle=float("nan"))
+
+
+def test_vignette_positive_inf_angle() -> None:
+    """VignetteBuilder rejects +inf angle (BL-570)."""
+    with pytest.raises(ValueError):
+        VignetteBuilder("centre", angle=float("inf"))
+
+
+def test_vignette_negative_inf_angle() -> None:
+    """VignetteBuilder rejects -inf angle (BL-570)."""
+    with pytest.raises(ValueError):
+        VignetteBuilder("centre", angle=float("-inf"))
+
+
+def test_vignette_zero_angle() -> None:
+    """VignetteBuilder accepts angle=0.0 (BL-570 regression guard)."""
+    VignetteBuilder("centre", angle=0.0)
+
+
+def test_vignette_half_pi_angle() -> None:
+    """VignetteBuilder accepts angle=pi/2 (BL-570 regression guard)."""
+    VignetteBuilder("centre", angle=math.pi / 2)
+
+
+# ===========================================================================
+# BL-572: Shape generators — IEEE 754 NaN/infinity validation
+# ===========================================================================
+
+
+def test_concentric_rings_nan_ring_width() -> None:
+    """ConcentricRingsGenerator rejects NaN ring_width (BL-572)."""
+    from stoat_ferret_core import ConcentricRingsGenerator
+
+    with pytest.raises(ValueError):
+        ConcentricRingsGenerator(8, float("nan"))
+
+
+def test_radial_burst_nan_ring_width() -> None:
+    """RadialBurstGenerator rejects NaN ray_width (BL-572)."""
+    from stoat_ferret_core import RadialBurstGenerator
+
+    with pytest.raises(ValueError):
+        RadialBurstGenerator(12, float("nan"))
+
+
+def test_spiral_nan_turn_count() -> None:
+    """SpiralGenerator rejects NaN turn_count (BL-572)."""
+    from stoat_ferret_core import SpiralGenerator
+
+    with pytest.raises(ValueError):
+        SpiralGenerator(float("nan"), 2.0)
+
+
+def test_spiral_inf_turn_count() -> None:
+    """SpiralGenerator rejects infinite turn_count (BL-572)."""
+    from stoat_ferret_core import SpiralGenerator
+
+    with pytest.raises(ValueError):
+        SpiralGenerator(float("inf"), 2.0)
+
+
+def test_spiral_nan_thickness() -> None:
+    """SpiralGenerator rejects NaN thickness (BL-572)."""
+    from stoat_ferret_core import SpiralGenerator
+
+    with pytest.raises(ValueError):
+        SpiralGenerator(3.0, float("nan"))
+
+
+def test_spiral_inf_thickness() -> None:
+    """SpiralGenerator rejects infinite thickness (BL-572)."""
+    from stoat_ferret_core import SpiralGenerator
+
+    with pytest.raises(ValueError):
+        SpiralGenerator(3.0, float("inf"))

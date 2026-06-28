@@ -104,6 +104,12 @@ pub(crate) enum EscapeError {
     ForbiddenChar,
     /// A KneeString has non-monotonic coordinate values.
     NonMonotonicKnee,
+    /// A KneeString coordinate is NaN or infinite.
+    NonFiniteKneeCoord(f64),
+    /// A KneeString coordinate is outside [0, 1].
+    KneeCoordOutOfRange(f64),
+    /// A KneeString contains no valid points.
+    EmptyKneeString,
     /// Path escaping failed (delegated from emit_filter_option_path).
     PathEscapeFailure(PathEscapeError),
 }
@@ -116,6 +122,15 @@ impl std::fmt::Display for EscapeError {
             }
             EscapeError::NonMonotonicKnee => {
                 write!(f, "knee string has non-monotonic coordinate values")
+            }
+            EscapeError::NonFiniteKneeCoord(v) => {
+                write!(f, "knee string coordinate is non-finite (NaN or infinity): {v}")
+            }
+            EscapeError::KneeCoordOutOfRange(v) => {
+                write!(f, "knee coordinate out of range [0,1]: {v}")
+            }
+            EscapeError::EmptyKneeString => {
+                write!(f, "knee string must contain at least one point")
             }
             EscapeError::PathEscapeFailure(e) => write!(f, "path escape failed: {e}"),
         }
@@ -159,12 +174,25 @@ pub(crate) enum ValueKind {
 fn validate_knee_string(s: &str) -> Result<(), EscapeError> {
     let mut prev_x: Option<f64> = None;
     let mut prev_y: Option<f64> = None;
+    let mut point_count = 0usize;
     for pair in s.split_whitespace() {
         let mut parts = pair.splitn(2, '/');
         let x_str = parts.next().ok_or(EscapeError::NonMonotonicKnee)?;
         let y_str = parts.next().ok_or(EscapeError::NonMonotonicKnee)?;
         let x: f64 = x_str.parse().map_err(|_| EscapeError::NonMonotonicKnee)?;
         let y: f64 = y_str.parse().map_err(|_| EscapeError::NonMonotonicKnee)?;
+        if !x.is_finite() {
+            return Err(EscapeError::NonFiniteKneeCoord(x));
+        }
+        if !y.is_finite() {
+            return Err(EscapeError::NonFiniteKneeCoord(y));
+        }
+        if !(0.0..=1.0).contains(&x) {
+            return Err(EscapeError::KneeCoordOutOfRange(x));
+        }
+        if !(0.0..=1.0).contains(&y) {
+            return Err(EscapeError::KneeCoordOutOfRange(y));
+        }
         if let Some(px) = prev_x {
             if x <= px {
                 return Err(EscapeError::NonMonotonicKnee);
@@ -177,6 +205,10 @@ fn validate_knee_string(s: &str) -> Result<(), EscapeError> {
         }
         prev_x = Some(x);
         prev_y = Some(y);
+        point_count += 1;
+    }
+    if point_count == 0 {
+        return Err(EscapeError::EmptyKneeString);
     }
     Ok(())
 }
@@ -999,6 +1031,11 @@ impl VignetteBuilder {
             )));
         }
         let half_pi = std::f64::consts::FRAC_PI_2;
+        if !angle.is_finite() {
+            return Err(PyValueError::new_err(format!(
+                "angle must be finite (not NaN or infinity): got {angle}"
+            )));
+        }
         if angle < 0.0 || angle > half_pi {
             return Err(PyValueError::new_err(format!(
                 "angle must be in [0, PI/2] (≈{half_pi:.6}); got {angle}"
