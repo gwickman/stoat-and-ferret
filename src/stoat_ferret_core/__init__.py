@@ -99,6 +99,7 @@ try:
         FramerateConvertBuilder,
         FramerateMode,
         FreezeFrameBuilder,
+        GenericProceduralImageBuilder,
         GradientGeneratorBuilder,
         HueRotationBuilder,
         Keyframe,
@@ -257,6 +258,7 @@ except ImportError:
     NoiseGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
+    GenericProceduralImageBuilder = _not_built  # type: ignore[misc,assignment]
     GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     LensDistortBuilder = _not_built  # type: ignore[misc,assignment]
     CheckerboardGenerator = _not_built  # type: ignore[misc,assignment]
@@ -405,6 +407,7 @@ __all__ = [
     # Shape generators
     "CheckerboardGenerator",
     "ConcentricRingsGenerator",
+    "GenericProceduralImageBuilder",
     "RadialBurstGenerator",
     "SpiralGenerator",
     # Video effect builders

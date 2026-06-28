@@ -5,10 +5,13 @@
 
 pub mod checkerboard;
 pub mod concentric_rings;
+pub mod generic_procedural;
+pub mod procedural_parser;
 pub mod radial_burst;
 pub mod spiral;
 
 pub use checkerboard::CheckerboardGenerator;
 pub use concentric_rings::ConcentricRingsGenerator;
+pub use generic_procedural::GenericProceduralImageBuilder;
 pub use radial_burst::RadialBurstGenerator;
 pub use spiral::SpiralGenerator;
