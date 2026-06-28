@@ -829,13 +829,17 @@ impl ZoompanBuilder {
             }
         }
         if width < 0 {
-            return Err(PyValueError::new_err(format!("width must be > 0, got {width}")));
+            return Err(PyValueError::new_err(format!(
+                "width must be > 0, got {width}"
+            )));
         }
         if width == 0 {
             return Err(PyValueError::new_err("width must be > 0"));
         }
         if height < 0 {
-            return Err(PyValueError::new_err(format!("height must be > 0, got {height}")));
+            return Err(PyValueError::new_err(format!(
+                "height must be > 0, got {height}"
+            )));
         }
         if height == 0 {
             return Err(PyValueError::new_err("height must be > 0"));
