@@ -794,10 +794,10 @@ pub struct ZoompanBuilder {
     z_expr: String,
     x_expr: String,
     y_expr: String,
-    d: u32,
-    width: u32,
-    height: u32,
-    fps: u32,
+    d: i64,
+    width: i64,
+    height: i64,
+    fps: i64,
 }
 
 #[pymethods]
@@ -807,10 +807,10 @@ impl ZoompanBuilder {
         z_expr: String,
         x_expr: String,
         y_expr: String,
-        d: u32,
-        width: u32,
-        height: u32,
-        fps: u32,
+        d: i64,
+        width: i64,
+        height: i64,
+        fps: i64,
     ) -> PyResult<Self> {
         for (name, expr) in [
             ("z_expr", &z_expr),
@@ -822,15 +822,36 @@ impl ZoompanBuilder {
                     "{name} contains a forbidden apostrophe character"
                 )));
             }
+            if expr.trim().is_empty() {
+                return Err(PyValueError::new_err(format!(
+                    "{name} must not be empty or whitespace-only"
+                )));
+            }
+        }
+        if width < 0 {
+            return Err(PyValueError::new_err(format!(
+                "width must be > 0, got {width}"
+            )));
         }
         if width == 0 {
             return Err(PyValueError::new_err("width must be > 0"));
         }
+        if height < 0 {
+            return Err(PyValueError::new_err(format!(
+                "height must be > 0, got {height}"
+            )));
+        }
         if height == 0 {
             return Err(PyValueError::new_err("height must be > 0"));
         }
+        if fps < 0 {
+            return Err(PyValueError::new_err(format!("fps must be > 0, got {fps}")));
+        }
         if fps == 0 {
             return Err(PyValueError::new_err("fps must be > 0"));
+        }
+        if d < 0 {
+            return Err(PyValueError::new_err(format!("d must be > 0, got {d}")));
         }
         if d == 0 {
             return Err(PyValueError::new_err("d must be > 0"));
@@ -1096,6 +1117,11 @@ pub struct HueRotationBuilder {
 impl HueRotationBuilder {
     #[new]
     pub fn py_new(h_expr: String) -> PyResult<Self> {
+        if h_expr.trim().is_empty() {
+            return Err(PyValueError::new_err(
+                "h_expr must not be empty or whitespace-only",
+            ));
+        }
         Ok(Self { h_expr })
     }
 
@@ -2252,5 +2278,119 @@ mod tests {
             result.is_err(),
             "expected error for apostrophe in expression"
         );
+    }
+
+    // -- HueRotationBuilder empty/whitespace guards (BL-567) --
+
+    #[test]
+    fn test_hue_empty_expr_rejected() {
+        assert!(HueRotationBuilder::py_new("".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_hue_whitespace_expr_rejected() {
+        assert!(HueRotationBuilder::py_new("   ".to_string()).is_err());
+    }
+
+    // -- ZoompanBuilder empty/whitespace expression guards (BL-567) --
+
+    #[test]
+    fn test_zoompan_empty_z_expr_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "".to_string(),
+            "0".to_string(),
+            "0".to_string(),
+            1,
+            100,
+            100,
+            30
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_zoompan_whitespace_x_expr_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "1".to_string(),
+            "  ".to_string(),
+            "0".to_string(),
+            1,
+            100,
+            100,
+            30
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_zoompan_empty_y_expr_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "1".to_string(),
+            "0".to_string(),
+            "".to_string(),
+            1,
+            100,
+            100,
+            30
+        )
+        .is_err());
+    }
+
+    // -- ZoompanBuilder negative integer guards (BL-568) --
+
+    #[test]
+    fn test_zoompan_negative_width_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "1".to_string(),
+            "0".to_string(),
+            "0".to_string(),
+            1,
+            -1,
+            100,
+            30
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_zoompan_negative_height_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "1".to_string(),
+            "0".to_string(),
+            "0".to_string(),
+            1,
+            100,
+            -1,
+            30
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_zoompan_negative_fps_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "1".to_string(),
+            "0".to_string(),
+            "0".to_string(),
+            1,
+            100,
+            100,
+            -1
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_zoompan_negative_d_rejected() {
+        assert!(ZoompanBuilder::py_new(
+            "1".to_string(),
+            "0".to_string(),
+            "0".to_string(),
+            -1,
+            100,
+            100,
+            30
+        )
+        .is_err());
     }
 }

@@ -957,3 +957,64 @@ def test_spiral_inf_thickness() -> None:
 
     with pytest.raises(ValueError):
         SpiralGenerator(3.0, float("inf"))
+
+
+# ---- BL-567: HueRotationBuilder empty/whitespace expression guards ----
+
+
+class TestHueRotationEmptyExpression:
+    def test_empty_expression_raises(self) -> None:
+        with pytest.raises(ValueError):
+            HueRotationBuilder("").build()
+
+    def test_whitespace_expression_raises(self) -> None:
+        with pytest.raises(ValueError):
+            HueRotationBuilder("   ").build()
+
+    def test_valid_expression_succeeds(self) -> None:
+        HueRotationBuilder("2*PI*t").build()  # must not raise
+
+
+# ---- BL-567: ZoompanBuilder empty/whitespace expression guards ----
+
+
+class TestZoompanEmptyExpression:
+    def test_empty_z_expr_raises(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("", "0", "0", 1, 100, 100, 30).build()
+
+    def test_empty_x_expr_raises(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "", "0", 1, 100, 100, 30).build()
+
+    def test_empty_y_expr_raises(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "0", "", 1, 100, 100, 30).build()
+
+
+# ---- BL-568: ZoompanBuilder negative integers raise ValueError (not OverflowError) ----
+
+
+class TestZoompanNegativeInteger:
+    def test_negative_width_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "0", "0", 1, -1, 100, 30)
+
+    def test_negative_height_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "0", "0", 1, 100, -1, 30)
+
+    def test_negative_fps_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "0", "0", 1, 100, 100, -1)
+
+    def test_negative_d_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "0", "0", -1, 100, 100, 30)
+
+    def test_zero_width_still_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            ZoompanBuilder("1.0", "0", "0", 1, 0, 100, 30)
+
+    def test_valid_positive_integers_succeed(self) -> None:
+        ZoompanBuilder("1.0", "0", "0", 1, 100, 100, 30).build()  # must not raise
