@@ -251,6 +251,16 @@ See `docs/design/FRAMEWORK_CONTEXT.md` §3, Database Migrations for the pattern,
 
 **Phase-7-managed table exception:** `encoder_cache` is created by `create_tables_async()` at Phase 7, not by Alembic. Any migration referencing `encoder_cache` must include a `sqlite_master` existence check before operating on the table. See `docs/design/FRAMEWORK_CONTEXT.md` §3, Phase-7-Managed Tables for the required guard pattern and canonical example.
 
+### Schema Lockstep Rule
+
+Every Alembic migration that adds or modifies a table or column must also update **all three** of the following files in the same commit:
+
+1. `src/stoat_ferret/db/schema.py` — `create_tables_async()` raw SQL DDL that recreates the table structure.
+2. `tests/test_contract/test_repository_parity.py` — contract test asserting the new column is present and has the expected type.
+3. `tests/security/test_audit.py` — SQL allowlist. Line numbers shift when columns are added; stale line numbers fail the security audit probe.
+
+**Why three files?** `create_tables_async` is used by tests and is the authoritative schema for fresh installs; the contract test enforces parity; the allowlist is line-number-sensitive. Discovering any of these in CI requires an additional 5–10 minute run. Check all three before the first push.
+
 ---
 
 ## Structured Event Naming
@@ -349,6 +359,26 @@ cache[key] = value
 
 This applies to all PyO3-bound enum types.
 
+### Per-Module Coverage Gate
+
+When a Rust type or function is **only callable through the PyO3 boundary** (no internal Rust callers), Python tests cover the PyO3 surface contract but may not drive enough Rust-internal code paths to satisfy the project's per-module coverage gate (>95%).
+
+Fix: add a `#[cfg(test)] mod tests` block that calls constructors and validators directly from Rust.
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reject_nan() {
+        assert!(MyBuilder::py_new(f64::NAN).is_err());
+    }
+}
+```
+
+**Rule of thumb:** Python tests pin the PyO3 surface contract (argument passing, error types, return shapes). Rust unit tests pin Rust invariants (validation ordering, guard conditions). Both are needed when the PyO3 entry point is the only public entry to a module.
+
 ### Example: Complete Type with Bindings
 
 ```rust
@@ -397,8 +427,10 @@ uv run ruff check src/ tests/
 uv run ruff format --check src/ tests/
 uv run mypy src/
 uv run pytest
-cd rust/stoat_ferret_core && cargo clippy -- -D warnings && cargo test
+cd rust/stoat_ferret_core && cargo fmt --check && cargo clippy -- -D warnings && cargo test
 ```
+
+> **Rust format! string length:** Long `format!` error strings that exceed the project's 100-character line limit cause `cargo fmt --check` failures in CI. Break them at authoring time — `cargo fmt` is free; a CI re-run costs 5–10 minutes. Run `cargo fmt --check` locally before the first push.
 
 Fix any failures before proceeding.
 
