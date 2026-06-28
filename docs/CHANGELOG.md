@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v090 — Asset Library, Image Clips, Rust Builder Validation Hardening (2026-06-28)
+
+### Added
+
+- **User Asset Library REST API** (BL-515, PRs #680 #681): Five endpoints for managing uploaded image/font assets — `POST /api/v1/assets` (multipart upload with Pillow magic-bytes validation, SHA-256 deduplication, 413/415/422 enforcement), `GET /api/v1/assets` (paginated list with kind filter), `GET /api/v1/assets/{id}` (metadata), `GET /api/v1/assets/{id}/file` (binary download), `DELETE /api/v1/assets/{id}` (soft-delete). Settings: `STOAT_ASSETS_DIR`, `STOAT_ASSETS_MAX_SIZE_BYTES`. Alembic migration with `CREATE TABLE IF NOT EXISTS` guard.
+- **Image clip support** (BL-511, PR #682): `clip_type=image` added to `ClipCreate` schema with `source_asset_id` cross-field validation. Image clips persist to the database with `timeline_start`/`timeline_end` constraints enforced. Render path deferred to v091+.
+- **Generic procedural image builder** (BL-514, PR #683): `GenericProceduralImageBuilder` PyO3 class backed by a Rust recursive-descent expression parser. Supports arithmetic, trigonometry, conditionals, and per-pixel `(x, y, t)` evaluation. Safety bounds: parse-depth limit 32, eval budget 10k ops/pixel, pow clamp ±100, per-row timeout.
+- **Procedural shape generators** (BL-513): `ConcentricRingsGenerator`, `RadialBurstGenerator`, `SpiralGenerator` — IEEE 754 finiteness guards added in v090 (BL-572).
+- **IEEE 754 validation for builders** (BL-569 / BL-570 / BL-572, PR #684): `!is_finite()` guards in `CurvesBuilder` knee-string validation, `VignetteBuilder`, and three shape generators. Three new `EscapeError` variants: `NonFiniteKneeCoord`, `KneeCoordOutOfRange`, `EmptyKneeString`.
+- **Empty-expression guards for FFmpeg builders** (BL-567 / BL-568, PR #686): `HueRotationBuilder` and `ZoompanBuilder` now reject empty/whitespace-only expression strings at construction time (`ValueError`). `ZoompanBuilder` integer parameters `d`/`width`/`height`/`fps` promoted from `u32` to `i64` so negative values raise `ValueError` (not `OverflowError`).
+- **UAT runner J501→J204 dependency** (BL-571, PR #685): `JOURNEY_DEPS[501] = [204]` wired so J501 skips when the asset-library smoke journey (J204) has not passed.
+
+### Known Limitations
+
+- **Image clip render path** (BL-511-AC-3 / AC-7): The FFmpeg `-loop 1 -i <image_path>` render path is explicitly out of v090 scope. A `deferred_ac` guard in `worker.py` raises `CommandBuildError` if an image clip is encountered at render time. Discharge planned for a future version after asset-lookup integration is complete.
+- **BL-515-AC-14**: Referential integrity guard (DELETE protection when an image clip references the asset) is deferred pending BL-511 render path completion.
+
+### PRs
+
+#680, #681, #682, #683, #684, #685, #686
+
+### Resolved
+
+BL-515 (user asset library), BL-511 (image clip schema — render path deferred), BL-514 (generic procedural image builder), BL-572 (ConcentricRings/RadialBurst/Spiral IEEE 754 guards), BL-569 (CurvesBuilder IEEE 754 guards), BL-570 (VignetteBuilder IEEE 754 guards), BL-567 (HueRotation empty-expression guard), BL-568 (Zoompan u32→i64 promotion), BL-571 (UAT runner J501→J204 dependency)
+
+---
+
 ## v089 — Release 3, Wave 3a + Wave 4: FFmpeg Filter Builders & Procedural Shape Generators
 
 **Added:**
