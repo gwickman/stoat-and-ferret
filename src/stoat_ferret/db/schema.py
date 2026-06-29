@@ -28,6 +28,7 @@ TABLE_ENCODER_CACHE = "encoder_cache"
 TABLE_MARKERS = "project_markers"
 TABLE_QC_REPORTS = "qc_reports"
 TABLE_DELIVERY_PROFILES = "delivery_profiles"
+TABLE_DUCKING_PAIRS = "ducking_pair"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -376,6 +377,30 @@ DELIVERY_PROFILES_NAME_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_delivery_profiles_name ON delivery_profiles(name);
 """
 
+DUCKING_PAIR_TABLE = """
+CREATE TABLE IF NOT EXISTS ducking_pair (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    ducked_track_id TEXT NOT NULL,
+    sidechain_track_id TEXT NOT NULL,
+    threshold REAL DEFAULT 0.02,
+    ratio REAL DEFAULT 8,
+    attack_ms REAL DEFAULT 20,
+    release_ms REAL DEFAULT 300,
+    apply_pre_volume INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(ducked_track_id) REFERENCES tracks(id),
+    FOREIGN KEY(sidechain_track_id) REFERENCES tracks(id),
+    CONSTRAINT ck_ducking_pair_diff_tracks CHECK(ducked_track_id != sidechain_track_id)
+)
+"""
+
+DUCKING_PAIR_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_ducking_pair_project ON ducking_pair(project_id);
+"""
+
 # Columns to add to videos table for auxiliary stream metadata.
 # Each entry is (column_name, column_type).
 VIDEOS_AUXILIARY_COLUMNS = [
@@ -414,6 +439,14 @@ CLIPS_GENERATOR_COLUMNS = [
 # Columns to add to clips table for image clip support (BL-511).
 CLIPS_IMAGE_COLUMNS = [
     ("source_asset_id", "TEXT"),
+]
+
+# Columns to add to tracks table for multi-track audio support (BL-517).
+# Each entry is (column_name, column_type).
+TRACKS_AUDIO_COLUMNS = [
+    ("kind", "TEXT"),
+    ("volume_envelope", "TEXT"),
+    ("weight", "REAL DEFAULT 1.0"),
 ]
 
 
@@ -546,6 +579,20 @@ def _alter_clips_add_image_columns(conn: sqlite3.Connection) -> None:
                 raise
 
 
+def _alter_tracks_add_audio_columns_sync(conn: sqlite3.Connection) -> None:
+    """Add kind, volume_envelope, weight columns to tracks table idempotently (BL-517).
+
+    Args:
+        conn: SQLite database connection.
+    """
+    for col, col_type in TRACKS_AUDIO_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE tracks ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all database tables and indexes.
 
@@ -598,6 +645,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(QC_REPORTS_JOB_INDEX)
     cursor.execute(DELIVERY_PROFILES_TABLE)
     cursor.execute(DELIVERY_PROFILES_NAME_INDEX)
+    cursor.execute(DUCKING_PAIR_TABLE)
+    cursor.execute(DUCKING_PAIR_PROJECT_INDEX)
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_clips_add_generator_columns(conn)
@@ -606,6 +655,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     _alter_projects_add_audio_baseline_columns(conn)
     _alter_render_jobs_add_partial_columns(conn)
     _alter_render_jobs_add_evidence_columns(conn)
+    _alter_tracks_add_audio_columns_sync(conn)
     conn.commit()
 
 
@@ -734,6 +784,20 @@ async def _alter_render_jobs_add_evidence_columns_async(
                 raise
 
 
+async def _alter_tracks_add_audio_columns_async(db: aiosqlite.Connection) -> None:
+    """Add kind, volume_envelope, weight columns to tracks table idempotently (async, BL-517).
+
+    Args:
+        db: aiosqlite database connection.
+    """
+    for col, col_type in TRACKS_AUDIO_COLUMNS:
+        try:
+            await db.execute(f"ALTER TABLE tracks ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+
 async def create_tables_async(db: aiosqlite.Connection) -> None:
     """Create all database tables and indexes asynchronously.
 
@@ -784,6 +848,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(QC_REPORTS_JOB_INDEX)
     await db.execute(DELIVERY_PROFILES_TABLE)
     await db.execute(DELIVERY_PROFILES_NAME_INDEX)
+    await db.execute(DUCKING_PAIR_TABLE)
+    await db.execute(DUCKING_PAIR_PROJECT_INDEX)
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_clips_add_generator_columns_async(db)
@@ -792,4 +858,5 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await _alter_projects_add_audio_baseline_columns_async(db)
     await _alter_render_jobs_add_partial_columns_async(db)
     await _alter_render_jobs_add_evidence_columns_async(db)
+    await _alter_tracks_add_audio_columns_async(db)
     await db.commit()

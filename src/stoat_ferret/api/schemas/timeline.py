@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -18,6 +20,19 @@ class TrackCreate(BaseModel):
     z_index: int | None = None
     muted: bool = False
     locked: bool = False
+    kind: Literal["music", "voice", "binaural", "sfx", "generic"] | None = Field(
+        default=None,
+        description="Audio sub-type; NULL for video/text tracks",
+    )
+    volume_envelope: str | None = Field(
+        default=None,
+        description="Volume expression string; NULL = unity gain",
+    )
+    weight: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="amix weighting factor",
+    )
 
 
 class TrackResponse(BaseModel):
@@ -32,6 +47,9 @@ class TrackResponse(BaseModel):
     z_index: int
     muted: bool
     locked: bool
+    kind: str | None = None
+    volume_envelope: str | None = None
+    weight: float = 1.0
     clips: list[TimelineClipResponse] = []
 
 

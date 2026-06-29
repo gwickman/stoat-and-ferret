@@ -203,6 +203,9 @@ def test_tracks_table_has_correct_columns(db_conn: sqlite3.Connection) -> None:
         "z_index",
         "muted",
         "locked",
+        "kind",
+        "volume_envelope",
+        "weight",
     }
     assert columns == expected_columns
 

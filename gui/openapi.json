@@ -2291,6 +2291,259 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/ducking_pairs": {
+      "post": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "Create Ducking Pair",
+        "description": "Create a ducking pair configuration for a project.\n\nArgs:\n    project_id: The owning project identifier.\n    request: DuckingPair create request.\n    project_repo: Project repository dependency.\n    ducking_pair_repo: DuckingPair repository dependency.\n\nReturns:\n    Created ducking pair response.\n\nRaises:\n    HTTPException: 404 if project not found, 422 if validation fails.",
+        "operationId": "create_ducking_pair_api_v1_projects__project_id__ducking_pairs_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuckingPairCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuckingPairResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "List Ducking Pairs",
+        "description": "List all ducking pairs for a project.\n\nArgs:\n    project_id: The owning project identifier.\n    project_repo: Project repository dependency.\n    ducking_pair_repo: DuckingPair repository dependency.\n\nReturns:\n    List of ducking pair responses.\n\nRaises:\n    HTTPException: 404 if project not found.",
+        "operationId": "list_ducking_pairs_api_v1_projects__project_id__ducking_pairs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DuckingPairResponse"
+                  },
+                  "title": "Response List Ducking Pairs Api V1 Projects  Project Id  Ducking Pairs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/ducking_pairs/{pair_id}": {
+      "get": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "Get Ducking Pair",
+        "description": "Get a ducking pair by its ID.\n\nArgs:\n    project_id: The owning project identifier.\n    pair_id: The ducking pair identifier.\n    project_repo: Project repository dependency.\n    ducking_pair_repo: DuckingPair repository dependency.\n\nReturns:\n    Ducking pair response.\n\nRaises:\n    HTTPException: 404 if project or pair not found.",
+        "operationId": "get_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "pair_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pair Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuckingPairResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "Update Ducking Pair",
+        "description": "Update mutable fields of a ducking pair.\n\nducked_track_id and sidechain_track_id are immutable after creation;\npassing them returns HTTP 422.\n\nArgs:\n    project_id: The owning project identifier.\n    pair_id: The ducking pair identifier.\n    request: DuckingPair update request.\n    project_repo: Project repository dependency.\n    ducking_pair_repo: DuckingPair repository dependency.\n\nReturns:\n    Updated ducking pair response.\n\nRaises:\n    HTTPException: 404 if project or pair not found.",
+        "operationId": "update_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "pair_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pair Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuckingPairUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuckingPairResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "audio"
+        ],
+        "summary": "Delete Ducking Pair",
+        "description": "Delete a ducking pair.\n\nDeletion removes the ducking configuration only; no cascade to tracks or clips.\n\nArgs:\n    project_id: The owning project identifier.\n    pair_id: The ducking pair identifier.\n    project_repo: Project repository dependency.\n    ducking_pair_repo: DuckingPair repository dependency.\n\nRaises:\n    HTTPException: 404 if project or pair not found.",
+        "operationId": "delete_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "pair_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pair Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/filesystem/directories": {
       "get": {
         "tags": [
@@ -5638,6 +5891,203 @@
         "title": "DirectoryListResponse",
         "description": "Paginated response for a directory listing request.\n\nContains the parent path, list of subdirectories within it,\nand pagination metadata."
       },
+      "DuckingPairCreate": {
+        "properties": {
+          "ducked_track_id": {
+            "type": "string",
+            "title": "Ducked Track Id",
+            "description": "Track whose gain is reduced"
+          },
+          "sidechain_track_id": {
+            "type": "string",
+            "title": "Sidechain Track Id",
+            "description": "Trigger track, passed through clean into amix"
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.00097563,
+            "title": "Threshold",
+            "description": "sidechaincompress threshold (0.00097563\u20131.0)",
+            "default": 0.02
+          },
+          "ratio": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Ratio",
+            "description": "Compression ratio (1\u201320)",
+            "default": 8.0
+          },
+          "attack_ms": {
+            "type": "number",
+            "maximum": 2000.0,
+            "minimum": 0.01,
+            "title": "Attack Ms",
+            "description": "Attack time in milliseconds (0.01\u20132000)",
+            "default": 20.0
+          },
+          "release_ms": {
+            "type": "number",
+            "maximum": 9000.0,
+            "minimum": 0.01,
+            "title": "Release Ms",
+            "description": "Release time in milliseconds (0.01\u20139000)",
+            "default": 300.0
+          },
+          "apply_pre_volume": {
+            "type": "boolean",
+            "title": "Apply Pre Volume",
+            "description": "Whether volume envelope wraps before (True) or after (False) compressor",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ducked_track_id",
+          "sidechain_track_id"
+        ],
+        "title": "DuckingPairCreate",
+        "description": "Create a ducking pair configuration (BL-517).\n\nducked_track_id and sidechain_track_id must differ; enforced by\nmodel_validator at the Pydantic layer (and again at DB via CHECK constraint)."
+      },
+      "DuckingPairResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "ducked_track_id": {
+            "type": "string",
+            "title": "Ducked Track Id"
+          },
+          "sidechain_track_id": {
+            "type": "string",
+            "title": "Sidechain Track Id"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "ratio": {
+            "type": "number",
+            "title": "Ratio"
+          },
+          "attack_ms": {
+            "type": "number",
+            "title": "Attack Ms"
+          },
+          "release_ms": {
+            "type": "number",
+            "title": "Release Ms"
+          },
+          "apply_pre_volume": {
+            "type": "boolean",
+            "title": "Apply Pre Volume"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "ducked_track_id",
+          "sidechain_track_id",
+          "threshold",
+          "ratio",
+          "attack_ms",
+          "release_ms",
+          "apply_pre_volume",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DuckingPairResponse",
+        "description": "Response schema for a ducking pair configuration."
+      },
+      "DuckingPairUpdate": {
+        "properties": {
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.00097563
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "ratio": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 20.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ratio"
+          },
+          "attack_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.01
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Ms"
+          },
+          "release_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 9000.0,
+                "minimum": 0.01
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Ms"
+          },
+          "apply_pre_volume": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apply Pre Volume"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DuckingPairUpdate",
+        "description": "Update mutable ducking pair parameters.\n\nducked_track_id and sidechain_track_id are immutable after creation and\nare excluded; passing them returns HTTP 422 (extra='forbid')."
+      },
       "EffectApplyRequest": {
         "properties": {
           "effect_type": {
@@ -8218,6 +8668,44 @@
             "type": "boolean",
             "title": "Locked",
             "default": false
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "music",
+                  "voice",
+                  "binaural",
+                  "sfx",
+                  "generic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "Audio sub-type; NULL for video/text tracks"
+          },
+          "volume_envelope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Envelope",
+            "description": "Volume expression string; NULL = unity gain"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Weight",
+            "description": "amix weighting factor",
+            "default": 1.0
           }
         },
         "additionalProperties": false,
@@ -8258,6 +8746,33 @@
           "locked": {
             "type": "boolean",
             "title": "Locked"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "volume_envelope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Envelope"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "default": 1.0
           },
           "clips": {
             "items": {

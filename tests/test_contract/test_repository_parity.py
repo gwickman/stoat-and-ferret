@@ -26,7 +26,11 @@ from stoat_ferret.db.clip_repository import (
     AsyncInMemoryClipRepository,
     AsyncSQLiteClipRepository,
 )
-from stoat_ferret.db.models import Clip, Project, Video
+from stoat_ferret.db.ducking_pair_repository import (
+    AsyncInMemoryDuckingPairRepository,
+    AsyncSQLiteDuckingPairRepository,
+)
+from stoat_ferret.db.models import Clip, DuckingPair, Project, Track, Video
 from stoat_ferret.db.project_repository import (
     AsyncInMemoryProjectRepository,
     AsyncSQLiteProjectRepository,
@@ -39,9 +43,14 @@ from stoat_ferret.db.schema import (
     CLIPS_TABLE,
     CLIPS_TIMELINE_COLUMNS,
     CLIPS_TIMELINE_INDEX,
+    DUCKING_PAIR_PROJECT_INDEX,
+    DUCKING_PAIR_TABLE,
     PROJECTS_AUDIO_BASELINE_COLUMNS,
     PROJECTS_AUDIO_MIX_COLUMNS,
     PROJECTS_TABLE,
+    TRACKS_AUDIO_COLUMNS,
+    TRACKS_PROJECT_INDEX,
+    TRACKS_TABLE,
     VIDEOS_FTS,
     VIDEOS_FTS_DELETE_TRIGGER,
     VIDEOS_FTS_INSERT_TRIGGER,
@@ -65,6 +74,10 @@ async def create_all_tables(conn: aiosqlite.Connection) -> None:
     await conn.execute(CLIPS_TABLE)
     await conn.execute(CLIPS_PROJECT_INDEX)
     await conn.execute(CLIPS_TIMELINE_INDEX)
+    await conn.execute(TRACKS_TABLE)
+    await conn.execute(TRACKS_PROJECT_INDEX)
+    await conn.execute(DUCKING_PAIR_TABLE)
+    await conn.execute(DUCKING_PAIR_PROJECT_INDEX)
     # Apply migrations for columns added after initial schema
     for col, col_type in CLIPS_TIMELINE_COLUMNS:
         await conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
@@ -74,6 +87,8 @@ async def create_all_tables(conn: aiosqlite.Connection) -> None:
         await conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
     for col, col_type in PROJECTS_AUDIO_BASELINE_COLUMNS:
         await conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
+    for col, col_type in TRACKS_AUDIO_COLUMNS:
+        await conn.execute(f"ALTER TABLE tracks ADD COLUMN {col} {col_type}")
     await conn.commit()
 
 
@@ -316,3 +331,178 @@ class TestClipParity:
         assert len(mem_list) == len(sql_list) == 2
         assert mem_list[0].timeline_position == sql_list[0].timeline_position == 0
         assert mem_list[1].timeline_position == sql_list[1].timeline_position == 100
+
+
+def make_track(**kwargs: object) -> Track:
+    """Create a test track with default values."""
+    defaults: dict[str, object] = {
+        "id": Track.new_id(),
+        "project_id": "project-1",
+        "track_type": "audio",
+        "label": "Test Track",
+        "z_index": 0,
+        "muted": False,
+        "locked": False,
+        "kind": None,
+        "volume_envelope": None,
+        "weight": 1.0,
+    }
+    defaults.update(kwargs)
+    return Track(**defaults)  # type: ignore[arg-type]
+
+
+def make_ducking_pair(**kwargs: object) -> DuckingPair:
+    """Create a test ducking pair with default values."""
+    now = datetime.now(timezone.utc)
+    defaults: dict[str, object] = {
+        "id": DuckingPair.new_id(),
+        "project_id": "project-1",
+        "ducked_track_id": "track-music",
+        "sidechain_track_id": "track-voice",
+        "threshold": 0.02,
+        "ratio": 8.0,
+        "attack_ms": 20.0,
+        "release_ms": 300.0,
+        "apply_pre_volume": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+    defaults.update(kwargs)
+    return DuckingPair(**defaults)  # type: ignore[arg-type]
+
+
+@pytest.mark.contract
+class TestDuckingPairParity:
+    """Verify InMemory and SQLite DuckingPair repos produce identical results (BL-517)."""
+
+    async def _seed_project_and_tracks(self, conn: aiosqlite.Connection) -> None:
+        """Insert FK-required project and two tracks into the SQLite DB."""
+        await conn.execute(
+            "INSERT INTO projects VALUES "
+            "('project-1','Test',1920,1080,30,NULL,'2024-01-01','2024-01-01',NULL,48000,24)"
+        )
+        await conn.execute(
+            "INSERT INTO tracks (id, project_id, track_type, label, z_index, muted, locked) "
+            "VALUES ('track-music','project-1','audio','Music',0,0,0)"
+        )
+        await conn.execute(
+            "INSERT INTO tracks (id, project_id, track_type, label, z_index, muted, locked) "
+            "VALUES ('track-voice','project-1','audio','Voice',1,0,0)"
+        )
+        await conn.commit()
+
+    async def test_create_get_parity(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """Both implementations return equivalent results for create+get."""
+        await self._seed_project_and_tracks(sqlite_conn)
+        mem = AsyncInMemoryDuckingPairRepository()
+        sql = AsyncSQLiteDuckingPairRepository(sqlite_conn)
+        pair = make_ducking_pair()
+
+        await mem.create(pair)
+        await sql.create(pair)
+
+        mem_result = await mem.get(pair.id)
+        sql_result = await sql.get(pair.id)
+
+        assert mem_result is not None
+        assert sql_result is not None
+        assert mem_result.id == sql_result.id
+        assert mem_result.ducked_track_id == sql_result.ducked_track_id == "track-music"
+        assert mem_result.sidechain_track_id == sql_result.sidechain_track_id == "track-voice"
+        assert mem_result.threshold == sql_result.threshold == pytest.approx(0.02)
+        assert mem_result.ratio == sql_result.ratio == pytest.approx(8.0)
+
+    async def test_list_by_project_parity(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """Both implementations list pairs for a project in created_at order."""
+        await self._seed_project_and_tracks(sqlite_conn)
+        mem = AsyncInMemoryDuckingPairRepository()
+        sql = AsyncSQLiteDuckingPairRepository(sqlite_conn)
+
+        p1 = make_ducking_pair(id=DuckingPair.new_id())
+        p2 = make_ducking_pair(id=DuckingPair.new_id())
+
+        for repo in [mem, sql]:
+            await repo.create(p1)
+            await repo.create(p2)
+
+        mem_list = await mem.list_by_project("project-1")
+        sql_list = await sql.list_by_project("project-1")
+
+        assert len(mem_list) == len(sql_list) == 2
+
+    async def test_update_parity(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """Both implementations reflect mutable field updates identically."""
+        await self._seed_project_and_tracks(sqlite_conn)
+        mem = AsyncInMemoryDuckingPairRepository()
+        sql = AsyncSQLiteDuckingPairRepository(sqlite_conn)
+        pair = make_ducking_pair()
+
+        await mem.create(pair)
+        await sql.create(pair)
+
+        now = datetime.now(timezone.utc)
+        updated = DuckingPair(
+            id=pair.id,
+            project_id=pair.project_id,
+            ducked_track_id=pair.ducked_track_id,
+            sidechain_track_id=pair.sidechain_track_id,
+            threshold=0.05,
+            ratio=4.0,
+            attack_ms=pair.attack_ms,
+            release_ms=pair.release_ms,
+            apply_pre_volume=True,
+            created_at=pair.created_at,
+            updated_at=now,
+        )
+
+        mem_result = await mem.update(updated)
+        sql_result = await sql.update(updated)
+
+        assert mem_result.threshold == sql_result.threshold == pytest.approx(0.05)
+        assert mem_result.ratio == sql_result.ratio == pytest.approx(4.0)
+        assert mem_result.apply_pre_volume == sql_result.apply_pre_volume is True
+
+    async def test_delete_parity(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """Both implementations handle delete identically."""
+        await self._seed_project_and_tracks(sqlite_conn)
+        mem = AsyncInMemoryDuckingPairRepository()
+        sql = AsyncSQLiteDuckingPairRepository(sqlite_conn)
+        pair = make_ducking_pair()
+
+        await mem.create(pair)
+        await sql.create(pair)
+
+        assert await mem.delete(pair.id) is True
+        assert await sql.delete(pair.id) is True
+        assert await mem.get(pair.id) is None
+        assert await sql.get(pair.id) is None
+
+    async def test_track_audio_columns_present(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """Track table has kind, volume_envelope, weight columns from BL-517 migration."""
+        cursor = await sqlite_conn.execute("PRAGMA table_info(tracks)")
+        rows = await cursor.fetchall()
+        col_names = {row[1] for row in rows}
+        assert "kind" in col_names, "tracks.kind column missing"
+        assert "volume_envelope" in col_names, "tracks.volume_envelope column missing"
+        assert "weight" in col_names, "tracks.weight column missing"
+
+    async def test_ducking_pair_table_columns(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """ducking_pair table exists with all required columns."""
+        cursor = await sqlite_conn.execute("PRAGMA table_info(ducking_pair)")
+        rows = await cursor.fetchall()
+        col_names = {row[1] for row in rows}
+        required = {
+            "id",
+            "project_id",
+            "ducked_track_id",
+            "sidechain_track_id",
+            "threshold",
+            "ratio",
+            "attack_ms",
+            "release_ms",
+            "apply_pre_volume",
+            "created_at",
+            "updated_at",
+        }
+        missing = required - col_names
+        assert not missing, f"ducking_pair table missing columns: {missing}"

@@ -222,6 +222,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create asset repository (Phase 10: after DB open, before Phase 11 services)
     app.state.asset_repository = AsyncSQLiteAssetRepository(app.state.db)
 
+    # Create ducking pair repository (Phase 10: after DB open, before Phase 11 services, BL-517)
+    from stoat_ferret.db.ducking_pair_repository import AsyncSQLiteDuckingPairRepository
+
+    app.state.ducking_pair_repository = AsyncSQLiteDuckingPairRepository(app.state.db)
+
     # Phase 11 — QCService (after Phase 10 repositories, before Phase 12 worker)
     from stoat_ferret.db.qc_repository import AsyncSQLiteQCReportRepository
 

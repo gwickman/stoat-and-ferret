@@ -315,6 +315,8 @@ class Track:
 
     Represents a video, audio, or text track that clips are assigned to.
     Tracks define the layering order (z_index) and can be muted or locked.
+    Audio tracks may carry kind, volume_envelope, and weight for multi-track
+    mixing (BL-517).
     """
 
     id: str
@@ -324,10 +326,40 @@ class Track:
     z_index: int = 0
     muted: bool = False
     locked: bool = False
+    kind: str | None = None  # music|voice|binaural|sfx|generic; NULL for non-audio tracks
+    volume_envelope: str | None = None  # expression string; NULL = unity gain
+    weight: float = 1.0  # amix weight; >= 0.0
 
     @staticmethod
     def new_id() -> str:
         """Generate a new unique ID for a track."""
+        return str(uuid.uuid4())
+
+
+@dataclass
+class DuckingPair:
+    """Voice-triggered music ducking configuration for a project (BL-517).
+
+    Captures which audio track is ducked (ducked_track_id) and which track
+    triggers the ducking (sidechain_track_id). ducked_track_id and
+    sidechain_track_id are immutable after creation.
+    """
+
+    id: str
+    project_id: str
+    ducked_track_id: str
+    sidechain_track_id: str
+    created_at: datetime
+    updated_at: datetime
+    threshold: float = 0.02
+    ratio: float = 8.0
+    attack_ms: float = 20.0
+    release_ms: float = 300.0
+    apply_pre_volume: bool = False
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a ducking pair."""
         return str(uuid.uuid4())
 
 
