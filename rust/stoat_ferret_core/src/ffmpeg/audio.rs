@@ -1864,7 +1864,9 @@ mod multi_track_mixer_tests {
         mixer.add_track(0, None, 1.0).unwrap();
         mixer.add_track(1, None, 1.0).unwrap();
         // ducked_idx=5 is out of range for 2 tracks
-        mixer.add_ducking_pair(5, 1, 0.02, 8.0, 20.0, 300.0, false).unwrap();
+        mixer
+            .add_ducking_pair(5, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
         assert!(mixer.build().is_err());
     }
 
@@ -1874,7 +1876,9 @@ mod multi_track_mixer_tests {
         mixer.add_track(0, None, 1.0).unwrap();
         mixer.add_track(1, None, 1.0).unwrap();
         // sidechain_idx=5 is out of range for 2 tracks
-        mixer.add_ducking_pair(0, 5, 0.02, 8.0, 20.0, 300.0, false).unwrap();
+        mixer
+            .add_ducking_pair(0, 5, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
         assert!(mixer.build().is_err());
     }
 
