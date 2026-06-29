@@ -150,6 +150,7 @@ describe('TimelinePage', () => {
           z_index: 0,
           muted: false,
           locked: false,
+          weight: 1.0,
           clips: [],
         },
       ],

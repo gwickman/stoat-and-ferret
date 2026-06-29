@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import stoat_ferret_core as sfc
 from stoat_ferret.api.schemas.audio import DuckingPairCreate, DuckingPairUpdate
 from stoat_ferret.db.ducking_pair_repository import AsyncDuckingPairRepository
-from stoat_ferret.db.models import DuckingPair
+from stoat_ferret.db.models import DuckingPair, Track
 
 
 class DuckingPairService:
@@ -100,3 +101,59 @@ class DuckingPairService:
     async def delete(self, pair_id: str) -> bool:
         """Delete a ducking pair by its ID."""
         return await self._repository.delete(pair_id)
+
+
+def assemble_multi_track_mixer(
+    tracks: list[Track],
+    ducking_pairs: list[DuckingPair],
+) -> str:
+    """Build an FFmpeg filter_complex string for multi-track audio mixing.
+
+    Maps project tracks to stream indices in the order supplied. Only tracks
+    with ``track_type == "audio"`` are admitted; non-audio tracks are skipped
+    silently. Ducking pairs are resolved by track ID to stream indices inside
+    the filtered list.
+
+    Args:
+        tracks: Ordered list of Track objects from the project.
+        ducking_pairs: DuckingPair rows for the project; may be empty.
+
+    Returns:
+        FFmpeg filter_complex string produced by MultiTrackAudioMixer.build().
+
+    Raises:
+        ValueError: If a DuckingPair references a track ID not in the audio
+            track list, or if MultiTrackAudioMixer.build() returns an error.
+    """
+    audio_tracks = [t for t in tracks if t.track_type == "audio"]
+    id_to_idx = {t.id: i for i, t in enumerate(audio_tracks)}
+
+    mixer = sfc.MultiTrackAudioMixer()
+    for idx, track in enumerate(audio_tracks):
+        mixer.add_track(idx, track.volume_envelope, track.weight)
+
+    for pair in ducking_pairs:
+        ducked_idx = id_to_idx.get(pair.ducked_track_id)
+        sidechain_idx = id_to_idx.get(pair.sidechain_track_id)
+        if ducked_idx is None:
+            raise ValueError(
+                f"DuckingPair {pair.id}: ducked_track_id {pair.ducked_track_id!r} "
+                "not found in audio tracks"
+            )
+        if sidechain_idx is None:
+            raise ValueError(
+                f"DuckingPair {pair.id}: sidechain_track_id {pair.sidechain_track_id!r} "
+                "not found in audio tracks"
+            )
+        mixer.add_ducking_pair(
+            ducked_idx,
+            sidechain_idx,
+            pair.threshold,
+            pair.ratio,
+            pair.attack_ms,
+            pair.release_ms,
+            pair.apply_pre_volume,
+        )
+
+    result: str = mixer.build()
+    return result

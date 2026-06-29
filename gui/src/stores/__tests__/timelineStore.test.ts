@@ -12,6 +12,7 @@ const mockTimeline = {
       z_index: 0,
       muted: false,
       locked: false,
+      weight: 1.0,
       clips: [
         {
           id: 'clip-1',

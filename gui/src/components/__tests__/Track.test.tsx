@@ -13,6 +13,7 @@ const makeTrack = (overrides: Partial<TrackType> = {}): TrackType => ({
   z_index: 0,
   muted: false,
   locked: false,
+  weight: 1.0,
   clips: [],
   ...overrides,
 })

@@ -127,6 +127,7 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::audio::TrackAudioConfig>()?;
     m.add_class::<ffmpeg::audio::AudioMixSpec>()?;
     m.add_class::<ffmpeg::audio::SubBassBuilder>()?;
+    m.add_class::<ffmpeg::audio::MultiTrackAudioMixer>()?;
     m.add_function(wrap_pyfunction!(
         ffmpeg::audio::py_ducking_effect_schema,
         m

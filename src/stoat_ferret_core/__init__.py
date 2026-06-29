@@ -112,6 +112,7 @@ try:
         LoudnessReport,
         LoudnormBuilder,
         MultibandCompressorBuilder,
+        MultiTrackAudioMixer,
         NoiseGeneratorBuilder,
         NoiseReductionBuilder,
         OpacityBuilder,
@@ -255,6 +256,7 @@ except ImportError:
     LimiterBuilder = _not_built  # type: ignore[misc,assignment]
     LoudnormBuilder = _not_built  # type: ignore[misc,assignment]
     MultibandCompressorBuilder = _not_built  # type: ignore[misc,assignment]
+    MultiTrackAudioMixer = _not_built  # type: ignore[misc,assignment]
     NoiseGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
@@ -389,6 +391,7 @@ __all__ = [
     "DuckingPattern",
     "TrackAudioConfig",
     "AudioMixSpec",
+    "MultiTrackAudioMixer",
     # Voice repair builders
     "NoiseReductionBuilder",
     "DeesserBuilder",

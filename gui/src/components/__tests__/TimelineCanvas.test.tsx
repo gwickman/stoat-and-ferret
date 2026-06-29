@@ -12,6 +12,7 @@ const makeTracks = (count: number): Track[] =>
     z_index: i,
     muted: false,
     locked: false,
+    weight: 1.0,
     clips: [],
   }))
 
