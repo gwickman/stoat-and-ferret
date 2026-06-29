@@ -1296,6 +1296,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/ducking_pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ducking Pairs
+         * @description List all ducking pairs for a project.
+         *
+         *     Args:
+         *         project_id: The owning project identifier.
+         *         project_repo: Project repository dependency.
+         *         ducking_pair_repo: DuckingPair repository dependency.
+         *
+         *     Returns:
+         *         List of ducking pair responses.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project not found.
+         */
+        get: operations["list_ducking_pairs_api_v1_projects__project_id__ducking_pairs_get"];
+        put?: never;
+        /**
+         * Create Ducking Pair
+         * @description Create a ducking pair configuration for a project.
+         *
+         *     Args:
+         *         project_id: The owning project identifier.
+         *         request: DuckingPair create request.
+         *         project_repo: Project repository dependency.
+         *         ducking_pair_repo: DuckingPair repository dependency.
+         *
+         *     Returns:
+         *         Created ducking pair response.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project not found, 422 if validation fails.
+         */
+        post: operations["create_ducking_pair_api_v1_projects__project_id__ducking_pairs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/ducking_pairs/{pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ducking Pair
+         * @description Get a ducking pair by its ID.
+         *
+         *     Args:
+         *         project_id: The owning project identifier.
+         *         pair_id: The ducking pair identifier.
+         *         project_repo: Project repository dependency.
+         *         ducking_pair_repo: DuckingPair repository dependency.
+         *
+         *     Returns:
+         *         Ducking pair response.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project or pair not found.
+         */
+        get: operations["get_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Ducking Pair
+         * @description Delete a ducking pair.
+         *
+         *     Deletion removes the ducking configuration only; no cascade to tracks or clips.
+         *
+         *     Args:
+         *         project_id: The owning project identifier.
+         *         pair_id: The ducking pair identifier.
+         *         project_repo: Project repository dependency.
+         *         ducking_pair_repo: DuckingPair repository dependency.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project or pair not found.
+         */
+        delete: operations["delete_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Ducking Pair
+         * @description Update mutable fields of a ducking pair.
+         *
+         *     ducked_track_id and sidechain_track_id are immutable after creation;
+         *     passing them returns HTTP 422.
+         *
+         *     Args:
+         *         project_id: The owning project identifier.
+         *         pair_id: The ducking pair identifier.
+         *         request: DuckingPair update request.
+         *         project_repo: Project repository dependency.
+         *         ducking_pair_repo: DuckingPair repository dependency.
+         *
+         *     Returns:
+         *         Updated ducking pair response.
+         *
+         *     Raises:
+         *         HTTPException: 404 if project or pair not found.
+         */
+        patch: operations["update_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__patch"];
+        trace?: never;
+    };
     "/api/v1/filesystem/directories": {
         parameters: {
             query?: never;
@@ -3402,6 +3516,108 @@ export interface components {
             offset: number;
         };
         /**
+         * DuckingPairCreate
+         * @description Create a ducking pair configuration (BL-517).
+         *
+         *     ducked_track_id and sidechain_track_id must differ; enforced by
+         *     model_validator at the Pydantic layer (and again at DB via CHECK constraint).
+         */
+        DuckingPairCreate: {
+            /**
+             * Ducked Track Id
+             * @description Track whose gain is reduced
+             */
+            ducked_track_id: string;
+            /**
+             * Sidechain Track Id
+             * @description Trigger track, passed through clean into amix
+             */
+            sidechain_track_id: string;
+            /**
+             * Threshold
+             * @description sidechaincompress threshold (0.00097563–1.0)
+             * @default 0.02
+             */
+            threshold: number;
+            /**
+             * Ratio
+             * @description Compression ratio (1–20)
+             * @default 8
+             */
+            ratio: number;
+            /**
+             * Attack Ms
+             * @description Attack time in milliseconds (0.01–2000)
+             * @default 20
+             */
+            attack_ms: number;
+            /**
+             * Release Ms
+             * @description Release time in milliseconds (0.01–9000)
+             * @default 300
+             */
+            release_ms: number;
+            /**
+             * Apply Pre Volume
+             * @description Whether volume envelope wraps before (True) or after (False) compressor
+             * @default false
+             */
+            apply_pre_volume: boolean;
+        };
+        /**
+         * DuckingPairResponse
+         * @description Response schema for a ducking pair configuration.
+         */
+        DuckingPairResponse: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /** Ducked Track Id */
+            ducked_track_id: string;
+            /** Sidechain Track Id */
+            sidechain_track_id: string;
+            /** Threshold */
+            threshold: number;
+            /** Ratio */
+            ratio: number;
+            /** Attack Ms */
+            attack_ms: number;
+            /** Release Ms */
+            release_ms: number;
+            /** Apply Pre Volume */
+            apply_pre_volume: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * DuckingPairUpdate
+         * @description Update mutable ducking pair parameters.
+         *
+         *     ducked_track_id and sidechain_track_id are immutable after creation and
+         *     are excluded; passing them returns HTTP 422 (extra='forbid').
+         */
+        DuckingPairUpdate: {
+            /** Threshold */
+            threshold?: number | null;
+            /** Ratio */
+            ratio?: number | null;
+            /** Attack Ms */
+            attack_ms?: number | null;
+            /** Release Ms */
+            release_ms?: number | null;
+            /** Apply Pre Volume */
+            apply_pre_volume?: boolean | null;
+        };
+        /**
          * EffectApplyRequest
          * @description Request schema for applying an effect to a clip.
          */
@@ -4795,6 +5011,22 @@ export interface components {
              * @default false
              */
             locked: boolean;
+            /**
+             * Kind
+             * @description Audio sub-type; NULL for video/text tracks
+             */
+            kind?: ("music" | "voice" | "binaural" | "sfx" | "generic") | null;
+            /**
+             * Volume Envelope
+             * @description Volume expression string; NULL = unity gain
+             */
+            volume_envelope?: string | null;
+            /**
+             * Weight
+             * @description amix weighting factor
+             * @default 1
+             */
+            weight: number;
         };
         /**
          * TrackResponse
@@ -4815,6 +5047,15 @@ export interface components {
             muted: boolean;
             /** Locked */
             locked: boolean;
+            /** Kind */
+            kind?: string | null;
+            /** Volume Envelope */
+            volume_envelope?: string | null;
+            /**
+             * Weight
+             * @default 1
+             */
+            weight: number;
             /**
              * Clips
              * @default []
@@ -6758,6 +6999,170 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AudioMixResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_ducking_pairs_api_v1_projects__project_id__ducking_pairs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuckingPairResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ducking_pair_api_v1_projects__project_id__ducking_pairs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuckingPairCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuckingPairResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuckingPairResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuckingPairUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuckingPairResponse"];
                 };
             };
             /** @description Validation Error */

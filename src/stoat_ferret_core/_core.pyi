@@ -4868,3 +4868,50 @@ class GenericProceduralImageBuilder:
         ...
 
     def __repr__(self) -> str: ...
+
+class MultiTrackAudioMixer:
+    r"""
+    Multi-track audio mixer with per-track volume automation and sidechaincompress ducking.
+
+    Builds an FFmpeg `filter_complex` string for mixing up to 4 audio tracks with
+    optional voice-triggered ducking via `sidechaincompress`. Per the BL-517 design:
+
+    - Each input stream gets `aformat=channel_layouts=stereo` to preserve binaural tracks.
+    - The sidechain trigger is split with `asplit=2`; one branch compresses the ducked
+      track; the other passes through cleanly into the final `amix`.
+    - Weights and `duration=longest` are emitted on the final `amix`.
+
+    # Examples
+
+    ```
+    use stoat_ferret_core::ffmpeg::audio::MultiTrackAudioMixer;
+
+    let mut mixer = MultiTrackAudioMixer::new();
+    mixer.add_track(0, None, 1.0).unwrap(); // music
+    mixer.add_track(1, None, 1.0).unwrap(); // voice
+    mixer.add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false).unwrap();
+    let graph = mixer.build().unwrap();
+    assert!(graph.contains("sidechaincompress"));
+    assert!(graph.contains("amix=inputs=2"));
+    ```
+    """
+
+    def __new__(cls) -> MultiTrackAudioMixer: ...
+    def add_track(
+        self,
+        stream_idx: int,
+        volume_envelope: str | None,
+        weight: float,
+    ) -> None: ...
+    def add_ducking_pair(
+        self,
+        ducked_idx: int,
+        sidechain_idx: int,
+        threshold: float,
+        ratio: float,
+        attack_ms: float,
+        release_ms: float,
+        apply_pre_volume: bool,
+    ) -> None: ...
+    def build(self) -> str: ...
+    def __repr__(self) -> str: ...

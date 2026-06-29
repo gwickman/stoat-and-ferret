@@ -1315,6 +1315,613 @@ pub fn py_ducking_effect_schema() -> Vec<ParameterSchema> {
     ]
 }
 
+// ========== MultiTrackAudioMixer ==========
+
+/// Per-track input configuration for [`MultiTrackAudioMixer`].
+#[derive(Debug, Clone)]
+pub struct TrackInput {
+    /// 0-based FFmpeg audio stream index.
+    pub stream_idx: usize,
+    /// Optional volume expression; `None` = unity gain.
+    pub volume_envelope: Option<String>,
+    /// amix weight for this track.
+    pub weight: f64,
+}
+
+/// Per-pair ducking configuration for [`MultiTrackAudioMixer`].
+#[derive(Debug, Clone)]
+pub struct DuckingPairConfig {
+    /// Index into [`MultiTrackAudioMixer`] inputs of the track to duck.
+    pub ducked_idx: usize,
+    /// Index into [`MultiTrackAudioMixer`] inputs of the sidechain trigger.
+    pub sidechain_idx: usize,
+    /// sidechaincompress threshold (0.00097563–1.0).
+    pub threshold: f64,
+    /// Compression ratio (1–20).
+    pub ratio: f64,
+    /// Attack time in milliseconds (0.01–2000).
+    pub attack_ms: f64,
+    /// Release time in milliseconds (0.01–9000).
+    pub release_ms: f64,
+    /// If `true`, apply volume envelope before compressor; otherwise after.
+    pub apply_pre_volume: bool,
+}
+
+/// Multi-track audio mixer with per-track volume automation and sidechaincompress ducking.
+///
+/// Builds an FFmpeg `filter_complex` string for mixing up to 4 audio tracks with
+/// optional voice-triggered ducking via `sidechaincompress`. Per the BL-517 design:
+///
+/// - Each input stream gets `aformat=channel_layouts=stereo` to preserve binaural tracks.
+/// - The sidechain trigger is split with `asplit=2`; one branch compresses the ducked
+///   track; the other passes through cleanly into the final `amix`.
+/// - Weights and `duration=longest` are emitted on the final `amix`.
+///
+/// # Examples
+///
+/// ```
+/// use stoat_ferret_core::ffmpeg::audio::MultiTrackAudioMixer;
+///
+/// let mut mixer = MultiTrackAudioMixer::new();
+/// mixer.add_track(0, None, 1.0).unwrap(); // music
+/// mixer.add_track(1, None, 1.0).unwrap(); // voice
+/// mixer.add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false).unwrap();
+/// let graph = mixer.build().unwrap();
+/// assert!(graph.contains("sidechaincompress"));
+/// assert!(graph.contains("amix=inputs=2"));
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct MultiTrackAudioMixer {
+    inputs: Vec<TrackInput>,
+    ducking_pairs: Vec<DuckingPairConfig>,
+}
+
+impl Default for MultiTrackAudioMixer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MultiTrackAudioMixer {
+    /// Creates a new empty `MultiTrackAudioMixer`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            inputs: Vec::new(),
+            ducking_pairs: Vec::new(),
+        }
+    }
+
+    /// Adds a track input. Maximum 4 tracks.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if more than 4 tracks are added or weight is negative.
+    pub fn add_track(
+        &mut self,
+        stream_idx: usize,
+        volume_envelope: Option<String>,
+        weight: f64,
+    ) -> Result<(), String> {
+        if self.inputs.len() >= 4 {
+            return Err(format!(
+                "MultiTrackAudioMixer supports at most 4 tracks, already have {}",
+                self.inputs.len()
+            ));
+        }
+        if weight < 0.0 {
+            return Err(format!("weight must be >= 0.0, got {weight}"));
+        }
+        self.inputs.push(TrackInput {
+            stream_idx,
+            volume_envelope,
+            weight,
+        });
+        Ok(())
+    }
+
+    /// Adds a ducking pair. Validates no self-reference and parameter ranges.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `ducked_idx == sidechain_idx` or any parameter is out of range.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_ducking_pair(
+        &mut self,
+        ducked_idx: usize,
+        sidechain_idx: usize,
+        threshold: f64,
+        ratio: f64,
+        attack_ms: f64,
+        release_ms: f64,
+        apply_pre_volume: bool,
+    ) -> Result<(), String> {
+        if ducked_idx == sidechain_idx {
+            return Err(format!(
+                "ducked_idx and sidechain_idx must differ, both = {ducked_idx}"
+            ));
+        }
+        if !(0.000_975_63..=1.0).contains(&threshold) {
+            return Err(format!("threshold must be 0.00097563-1.0, got {threshold}"));
+        }
+        if !(1.0..=20.0).contains(&ratio) {
+            return Err(format!("ratio must be 1-20, got {ratio}"));
+        }
+        if !(0.01..=2000.0).contains(&attack_ms) {
+            return Err(format!("attack_ms must be 0.01-2000, got {attack_ms}"));
+        }
+        if !(0.01..=9000.0).contains(&release_ms) {
+            return Err(format!("release_ms must be 0.01-9000, got {release_ms}"));
+        }
+        self.ducking_pairs.push(DuckingPairConfig {
+            ducked_idx,
+            sidechain_idx,
+            threshold,
+            ratio,
+            attack_ms,
+            release_ms,
+            apply_pre_volume,
+        });
+        Ok(())
+    }
+
+    /// Builds the FFmpeg `filter_complex` string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no tracks have been added or pair indices are out of bounds.
+    pub fn build(&self) -> Result<String, String> {
+        let n = self.inputs.len();
+        if n == 0 {
+            return Err("MultiTrackAudioMixer needs at least 1 track".to_string());
+        }
+        for dp in &self.ducking_pairs {
+            if dp.ducked_idx >= n {
+                return Err(format!(
+                    "ducked_idx {} out of range for {} tracks",
+                    dp.ducked_idx, n
+                ));
+            }
+            if dp.sidechain_idx >= n {
+                return Err(format!(
+                    "sidechain_idx {} out of range for {} tracks",
+                    dp.sidechain_idx, n
+                ));
+            }
+        }
+
+        let mut parts: Vec<String> = Vec::new();
+        let mut labels: Vec<String> = (0..n).map(|i| format!("track{i}")).collect();
+
+        // Step 1: aformat=channel_layouts=stereo per input (preserves binaural).
+        for (i, input) in self.inputs.iter().enumerate() {
+            parts.push(format!(
+                "[{}:a]aformat=channel_layouts=stereo[{}]",
+                input.stream_idx, labels[i]
+            ));
+        }
+
+        // Step 2: Pre-ducking volume envelopes.
+        // Applied to tracks that are NOT ducked, and to ducked tracks with apply_pre_volume=true.
+        for (i, input) in self.inputs.iter().enumerate() {
+            if let Some(ref expr) = input.volume_envelope {
+                let deferred = self
+                    .ducking_pairs
+                    .iter()
+                    .any(|dp| dp.ducked_idx == i && !dp.apply_pre_volume);
+                if !deferred {
+                    let new_label = format!("track{i}_vol");
+                    parts.push(format!(
+                        "[{}]volume='{}':eval=frame[{}]",
+                        labels[i], expr, new_label
+                    ));
+                    labels[i] = new_label;
+                }
+            }
+        }
+
+        // Step 3: Process ducking pairs (asplit + sidechaincompress).
+        for (pair_idx, dp) in self.ducking_pairs.iter().enumerate() {
+            let sc_label = labels[dp.sidechain_idx].clone();
+            let ducked_label = labels[dp.ducked_idx].clone();
+
+            let sc_clean = format!("sc{pair_idx}_clean");
+            let sc_trigger = format!("sc{pair_idx}_trigger");
+            parts.push(format!("[{sc_label}]asplit=2[{sc_clean}][{sc_trigger}]"));
+            labels[dp.sidechain_idx] = sc_clean;
+
+            let ducked_out = format!("sc{pair_idx}_ducked");
+            parts.push(format!(
+                "[{ducked_label}][{sc_trigger}]sidechaincompress=\
+                threshold={}:ratio={}:attack={}:release={}[{ducked_out}]",
+                format_duration_value(dp.threshold),
+                format_duration_value(dp.ratio),
+                format_duration_value(dp.attack_ms),
+                format_duration_value(dp.release_ms),
+            ));
+            labels[dp.ducked_idx] = ducked_out;
+        }
+
+        // Step 4: Post-ducking volume envelopes (ducked tracks with apply_pre_volume=false).
+        for (i, input) in self.inputs.iter().enumerate() {
+            if let Some(ref expr) = input.volume_envelope {
+                let apply_post = self
+                    .ducking_pairs
+                    .iter()
+                    .any(|dp| dp.ducked_idx == i && !dp.apply_pre_volume);
+                if apply_post {
+                    let new_label = format!("track{i}_vol");
+                    parts.push(format!(
+                        "[{}]volume='{}':eval=frame[{}]",
+                        labels[i], expr, new_label
+                    ));
+                    labels[i] = new_label;
+                }
+            }
+        }
+
+        // Step 5: Final amix with all tracks' current labels and weights.
+        let amix_inputs: Vec<String> = labels.iter().map(|l| format!("[{l}]")).collect();
+        let weights: Vec<String> = self
+            .inputs
+            .iter()
+            .map(|t| format_duration_value(t.weight))
+            .collect();
+
+        parts.push(format!(
+            "{}amix=inputs={}:weights={}:duration=longest",
+            amix_inputs.join(""),
+            n,
+            weights.join(" ")
+        ));
+
+        Ok(parts.join(";"))
+    }
+}
+
+// ========== MultiTrackAudioMixer PyO3 bindings ==========
+
+#[pymethods]
+impl MultiTrackAudioMixer {
+    /// Creates a new empty MultiTrackAudioMixer.
+    #[new]
+    fn py_new() -> PyResult<Self> {
+        Ok(Self::new())
+    }
+
+    /// Adds a track input to the mixer.
+    ///
+    /// Args:
+    ///     stream_idx: 0-based FFmpeg audio stream index (e.g. 0 for first -i input).
+    ///     volume_envelope: Optional volume expression evaluated per frame (None = unity gain).
+    ///     weight: amix weight for this track (>= 0.0).
+    ///
+    /// Raises:
+    ///     ValueError: If more than 4 tracks are added or weight is negative.
+    #[pyo3(name = "add_track")]
+    fn py_add_track(
+        &mut self,
+        stream_idx: usize,
+        volume_envelope: Option<String>,
+        weight: f64,
+    ) -> PyResult<()> {
+        self.add_track(stream_idx, volume_envelope, weight)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Adds a ducking pair (voice-triggered music reduction).
+    ///
+    /// Args:
+    ///     ducked_idx: Index of the track to duck (0-based, within added tracks).
+    ///     sidechain_idx: Index of the trigger track (0-based, within added tracks).
+    ///     threshold: Detection threshold (0.00097563–1.0).
+    ///     ratio: Compression ratio (1–20).
+    ///     attack_ms: Attack time in milliseconds (0.01–2000).
+    ///     release_ms: Release time in milliseconds (0.01–9000).
+    ///     apply_pre_volume: If True, apply volume envelope before compressor.
+    ///
+    /// Raises:
+    ///     ValueError: If ducked_idx == sidechain_idx or any parameter is out of range.
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(name = "add_ducking_pair")]
+    fn py_add_ducking_pair(
+        &mut self,
+        ducked_idx: usize,
+        sidechain_idx: usize,
+        threshold: f64,
+        ratio: f64,
+        attack_ms: f64,
+        release_ms: f64,
+        apply_pre_volume: bool,
+    ) -> PyResult<()> {
+        self.add_ducking_pair(
+            ducked_idx,
+            sidechain_idx,
+            threshold,
+            ratio,
+            attack_ms,
+            release_ms,
+            apply_pre_volume,
+        )
+        .map_err(PyValueError::new_err)
+    }
+
+    /// Builds the FFmpeg filter_complex string for multi-track audio mixing.
+    ///
+    /// Returns:
+    ///     FFmpeg filter_complex string with aformat, optional volume, sidechaincompress,
+    ///     and amix.
+    ///
+    /// Raises:
+    ///     ValueError: If no tracks have been added or ducking pair indices are out of range.
+    #[pyo3(name = "build")]
+    fn py_build(&self) -> PyResult<String> {
+        self.build().map_err(PyValueError::new_err)
+    }
+
+    /// Returns a string representation of the mixer.
+    fn __repr__(&self) -> String {
+        format!(
+            "MultiTrackAudioMixer(tracks={}, pairs={})",
+            self.inputs.len(),
+            self.ducking_pairs.len()
+        )
+    }
+}
+
+// ========== MultiTrackAudioMixer unit tests ==========
+
+#[cfg(test)]
+mod multi_track_mixer_tests {
+    use super::*;
+
+    #[test]
+    fn rejects_equal_ducked_and_sidechain_idx() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        assert!(mixer
+            .add_ducking_pair(0, 0, 0.02, 8.0, 20.0, 300.0, false)
+            .is_err());
+    }
+
+    #[test]
+    fn rejects_threshold_out_of_range() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.0, 8.0, 20.0, 300.0, false)
+            .is_err());
+        assert!(mixer
+            .add_ducking_pair(0, 1, 1.1, 8.0, 20.0, 300.0, false)
+            .is_err());
+    }
+
+    #[test]
+    fn rejects_ratio_out_of_range() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.02, 0.5, 20.0, 300.0, false)
+            .is_err());
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.02, 21.0, 20.0, 300.0, false)
+            .is_err());
+    }
+
+    #[test]
+    fn rejects_attack_ms_out_of_range() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 0.0, 300.0, false)
+            .is_err());
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 2001.0, 300.0, false)
+            .is_err());
+    }
+
+    #[test]
+    fn rejects_release_ms_out_of_range() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 0.0, false)
+            .is_err());
+        assert!(mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 9001.0, false)
+            .is_err());
+    }
+
+    #[test]
+    fn rejects_more_than_four_tracks() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        for i in 0..4 {
+            mixer.add_track(i, None, 1.0).unwrap();
+        }
+        assert!(mixer.add_track(4, None, 1.0).is_err());
+    }
+
+    #[test]
+    fn build_single_track_no_ducking() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        let result = mixer.build().unwrap();
+        assert!(
+            result.contains("aformat=channel_layouts=stereo"),
+            "{result}"
+        );
+        assert!(result.contains("amix=inputs=1"), "{result}");
+        assert!(result.contains("weights=1"), "{result}");
+        assert!(result.contains("duration=longest"), "{result}");
+    }
+
+    #[test]
+    fn build_two_tracks_with_ducking_default_params() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        let result = mixer.build().unwrap();
+        assert!(
+            result.contains("aformat=channel_layouts=stereo"),
+            "{result}"
+        );
+        assert!(result.contains("asplit=2"), "{result}");
+        assert!(result.contains("sidechaincompress"), "{result}");
+        assert!(result.contains("threshold=0.02"), "{result}");
+        assert!(result.contains("ratio=8"), "{result}");
+        assert!(result.contains("attack=20"), "{result}");
+        assert!(result.contains("release=300"), "{result}");
+        assert!(result.contains("amix=inputs=2"), "{result}");
+        assert!(result.contains("duration=longest"), "{result}");
+    }
+
+    #[test]
+    fn build_three_tracks_with_ducking() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        mixer.add_track(2, None, 1.0).unwrap();
+        mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        let result = mixer.build().unwrap();
+        assert!(result.contains("amix=inputs=3"), "{result}");
+        assert!(result.contains("sidechaincompress"), "{result}");
+    }
+
+    #[test]
+    fn build_aformat_appears_before_sidechaincompress() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        let result = mixer.build().unwrap();
+        let af_pos = result.find("aformat=channel_layouts=stereo").unwrap();
+        let sc_pos = result.find("sidechaincompress").unwrap();
+        assert!(
+            af_pos < sc_pos,
+            "aformat must precede sidechaincompress in:\n{result}"
+        );
+    }
+
+    #[test]
+    fn build_with_volume_envelope_pre_volume() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer
+            .add_track(0, Some("0.5+0.5*sin(t)".to_string()), 1.0)
+            .unwrap();
+        let result = mixer.build().unwrap();
+        assert!(result.contains("volume="), "{result}");
+        assert!(result.contains("eval=frame"), "{result}");
+    }
+
+    #[test]
+    fn build_empty_returns_error() {
+        let mixer = MultiTrackAudioMixer::new();
+        assert!(mixer.build().is_err());
+    }
+
+    #[test]
+    fn pyo3_rejects_equal_idx() {
+        pyo3::prepare_freethreaded_python();
+        pyo3::Python::with_gil(|_py| {
+            let mut mixer = MultiTrackAudioMixer::new();
+            mixer.add_track(0, None, 1.0).unwrap();
+            mixer.add_track(1, None, 1.0).unwrap();
+            let result = mixer.add_ducking_pair(1, 1, 0.02, 8.0, 20.0, 300.0, false);
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn rejects_negative_weight() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        assert!(mixer.add_track(0, None, -0.1).is_err());
+    }
+
+    #[test]
+    fn default_creates_empty_mixer() {
+        let mixer = MultiTrackAudioMixer::default();
+        assert!(mixer.build().is_err(), "empty mixer should error on build");
+    }
+
+    #[test]
+    fn build_rejects_ducked_idx_out_of_range() {
+        // add_ducking_pair doesn't validate indices against track count; build() must
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        // ducked_idx=5 is out of range for 2 tracks
+        mixer
+            .add_ducking_pair(5, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        assert!(mixer.build().is_err());
+    }
+
+    #[test]
+    fn build_rejects_sidechain_idx_out_of_range() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        // sidechain_idx=5 is out of range for 2 tracks
+        mixer
+            .add_ducking_pair(0, 5, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        assert!(mixer.build().is_err());
+    }
+
+    #[test]
+    fn build_applies_post_ducking_volume_envelope() {
+        // apply_pre_volume=false defers the envelope to after sidechaincompress
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer
+            .add_track(0, Some("0.5+0.5*sin(t)".to_string()), 1.0)
+            .unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        let result = mixer.build().unwrap();
+        // The envelope must appear AFTER sidechaincompress, not before
+        let sc_pos = result.find("sidechaincompress").unwrap();
+        let vol_pos = result.find("volume=").unwrap();
+        assert!(
+            vol_pos > sc_pos,
+            "post-ducking envelope must follow sidechaincompress:\n{result}"
+        );
+    }
+
+    #[test]
+    fn pyo3_wrappers_comprehensive() {
+        pyo3::prepare_freethreaded_python();
+        pyo3::Python::with_gil(|_py| {
+            let mut mixer = MultiTrackAudioMixer::py_new().unwrap();
+            mixer.py_add_track(0, None, 1.0).unwrap();
+            mixer.py_add_track(1, None, 0.8).unwrap();
+            mixer
+                .py_add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+                .unwrap();
+            let result = mixer.py_build().unwrap();
+            assert!(result.contains("sidechaincompress"));
+            let repr = mixer.__repr__();
+            assert!(repr.contains("tracks=2"));
+            assert!(repr.contains("pairs=1"));
+        });
+    }
+}
+
 // ========== SubBassBuilder unit tests ==========
 
 #[cfg(test)]

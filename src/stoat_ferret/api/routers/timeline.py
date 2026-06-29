@@ -154,6 +154,9 @@ def _build_timeline_response(
                 z_index=track.z_index,
                 muted=track.muted,
                 locked=track.locked,
+                kind=track.kind,
+                volume_envelope=track.volume_envelope,
+                weight=track.weight,
                 clips=track_clips,
             )
         )
@@ -254,6 +257,9 @@ async def put_timeline(
             z_index=td.z_index if td.z_index is not None else i,
             muted=td.muted,
             locked=td.locked,
+            kind=td.kind,
+            volume_envelope=td.volume_envelope,
+            weight=td.weight,
         )
         await timeline_repo.create_track(track)
         new_tracks.append(track)
@@ -838,6 +844,9 @@ async def delete_transition(
                 z_index=track.z_index,
                 muted=track.muted,
                 locked=track.locked,
+                kind=track.kind,
+                volume_envelope=track.volume_envelope,
+                weight=track.weight,
                 clips=track_clips,
             )
         )

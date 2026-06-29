@@ -133,8 +133,11 @@ class AsyncSQLiteTimelineRepository:
         try:
             await self._conn.execute(
                 """
-                INSERT INTO tracks (id, project_id, track_type, label, z_index, muted, locked)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tracks (
+                    id, project_id, track_type, label, z_index, muted, locked,
+                    kind, volume_envelope, weight
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     track.id,
@@ -144,6 +147,9 @@ class AsyncSQLiteTimelineRepository:
                     track.z_index,
                     int(track.muted),
                     int(track.locked),
+                    track.kind,
+                    track.volume_envelope,
+                    track.weight,
                 ),
             )
             await self._conn.commit()
@@ -170,13 +176,17 @@ class AsyncSQLiteTimelineRepository:
         """Update an existing track."""
         cursor = await self._conn.execute(
             """
-            UPDATE tracks SET label = ?, muted = ?, locked = ?
+            UPDATE tracks SET label = ?, muted = ?, locked = ?,
+                kind = ?, volume_envelope = ?, weight = ?
             WHERE id = ?
             """,
             (
                 track.label,
                 int(track.muted),
                 int(track.locked),
+                track.kind,
+                track.volume_envelope,
+                track.weight,
                 track.id,
             ),
         )
@@ -222,6 +232,7 @@ class AsyncSQLiteTimelineRepository:
 
     def _row_to_track(self, row: Any) -> Track:
         """Convert a database row to a Track object."""
+        row_dict = dict(row)
         return Track(
             id=row["id"],
             project_id=row["project_id"],
@@ -230,6 +241,9 @@ class AsyncSQLiteTimelineRepository:
             z_index=row["z_index"],
             muted=bool(row["muted"]),
             locked=bool(row["locked"]),
+            kind=row_dict.get("kind"),
+            volume_envelope=row_dict.get("volume_envelope"),
+            weight=float(row_dict.get("weight") or 1.0),
         )
 
     def _row_to_clip(self, row: Any) -> Clip:
