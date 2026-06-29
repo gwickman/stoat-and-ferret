@@ -1410,6 +1410,157 @@ export interface paths {
         patch: operations["update_ducking_pair_api_v1_projects__project_id__ducking_pairs__pair_id__patch"];
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/tts_cues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List TTS cues for a project
+         * @description List all TTS cues for a project.
+         *
+         *     Args:
+         *         project_id: The project UUID.
+         *         repo: TTS cue repository (injected).
+         *
+         *     Returns:
+         *         Ordered list of TTS cues (by start_s, then created_at).
+         */
+        get: operations["list_tts_cues_api_v1_projects__project_id__tts_cues_get"];
+        put?: never;
+        /**
+         * Create a TTS cue
+         * @description Create a TTS narration cue on a voice track.
+         *
+         *     Args:
+         *         project_id: The project UUID.
+         *         body: TTS cue creation parameters.
+         *         repo: TTS cue repository (injected).
+         *         request: The incoming HTTP request.
+         *
+         *     Returns:
+         *         The created TTS cue.
+         */
+        post: operations["create_tts_cue_api_v1_projects__project_id__tts_cues_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/tts_cues/{cue_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a TTS cue
+         * @description Get a single TTS cue by ID.
+         *
+         *     Args:
+         *         project_id: The project UUID.
+         *         cue_id: The TTS cue UUID.
+         *         repo: TTS cue repository (injected).
+         *
+         *     Returns:
+         *         The requested TTS cue.
+         */
+        get: operations["get_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a TTS cue
+         * @description Delete a TTS cue.
+         *
+         *     Args:
+         *         project_id: The project UUID.
+         *         cue_id: The TTS cue UUID.
+         *         repo: TTS cue repository (injected).
+         */
+        delete: operations["delete_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a TTS cue
+         * @description Update a TTS cue.
+         *
+         *     Updating text, voice, or backend recalculates cache_key and resets
+         *     status to pending, generated_asset_id to None, error to None.
+         *
+         *     Args:
+         *         project_id: The project UUID.
+         *         cue_id: The TTS cue UUID.
+         *         body: Fields to update.
+         *         repo: TTS cue repository (injected).
+         *         request: The incoming HTTP request.
+         *
+         *     Returns:
+         *         The updated TTS cue.
+         */
+        patch: operations["update_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/tts_cues/{cue_id}/synthesise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dispatch TTS synthesis for a cue
+         * @description Dispatch TTS synthesis for a cue (Feature 004 implementation; stub returning 202).
+         *
+         *     Args:
+         *         project_id: The project UUID.
+         *         cue_id: The TTS cue UUID.
+         *         repo: TTS cue repository (injected).
+         *
+         *     Returns:
+         *         Accepted acknowledgement with cue ID.
+         */
+        post: operations["synthesise_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__synthesise_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tts/voices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List available TTS voices
+         * @description Return available TTS voices per backend.
+         *
+         *     Piper voices are discovered from the filesystem (blocking I/O runs in executor).
+         *     Kokoro voices are a static list (real API query implemented in Feature 004).
+         *
+         *     Args:
+         *         request: The incoming HTTP request (provides settings access).
+         *
+         *     Returns:
+         *         List of available voices across all configured backends.
+         */
+        get: operations["list_tts_voices_api_v1_tts_voices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/filesystem/directories": {
         parameters: {
             query?: never;
@@ -5110,6 +5261,162 @@ export interface components {
             /** Clips */
             clips: components["schemas"]["AdjustedClipPosition"][];
         };
+        /**
+         * TtsCueCreate
+         * @description Request schema for creating a TTS cue.
+         */
+        TtsCueCreate: {
+            /**
+             * Project Id
+             * Format: uuid
+             * @description Project UUID
+             */
+            project_id: string;
+            /**
+             * Track Id
+             * @description Voice track ID (must reference a track with kind=voice)
+             */
+            track_id: string;
+            /**
+             * Start S
+             * @description Timeline placement in seconds
+             */
+            start_s: number;
+            /**
+             * Text
+             * @description Text to synthesise
+             */
+            text: string;
+            /**
+             * Voice
+             * @description Voice identifier
+             */
+            voice: string;
+            /**
+             * Backend
+             * @description TTS backend
+             * @default piper_local
+             * @enum {string}
+             */
+            backend: "piper_local" | "openrouter_kokoro" | "openrouter_commercial";
+            /**
+             * Gain Db
+             * @description Gain in dB (-60.0 to 6.0)
+             * @default 0
+             */
+            gain_db: number;
+            /**
+             * Pan
+             * @description Pan (-1.0 left to 1.0 right)
+             * @default 0
+             */
+            pan: number;
+        };
+        /**
+         * TtsCueListResponse
+         * @description Response schema for a list of TTS cues.
+         */
+        TtsCueListResponse: {
+            /** Items */
+            items: components["schemas"]["TtsCueResponse"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * TtsCueResponse
+         * @description Response schema for a TTS cue.
+         */
+        TtsCueResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Track Id */
+            track_id: string;
+            /** Start S */
+            start_s: number;
+            /** Text */
+            text: string;
+            /** Voice */
+            voice: string;
+            /**
+             * Backend
+             * @enum {string}
+             */
+            backend: "piper_local" | "openrouter_kokoro" | "openrouter_commercial";
+            /** Gain Db */
+            gain_db: number;
+            /** Pan */
+            pan: number;
+            /** Cache Key */
+            cache_key: string;
+            /** Generated Asset Id */
+            generated_asset_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "synthesising" | "ready" | "failed";
+            /** Error */
+            error?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TtsCueUpdate
+         * @description Request schema for updating a TTS cue (all fields optional).
+         */
+        TtsCueUpdate: {
+            /**
+             * Track Id
+             * @description Voice track ID; must reference a track with kind=voice
+             */
+            track_id?: string | null;
+            /**
+             * Start S
+             * @description Timeline placement in seconds
+             */
+            start_s?: number | null;
+            /**
+             * Text
+             * @description Text to synthesise
+             */
+            text?: string | null;
+            /**
+             * Voice
+             * @description Voice identifier
+             */
+            voice?: string | null;
+            /**
+             * Backend
+             * @description TTS backend
+             */
+            backend?: ("piper_local" | "openrouter_kokoro" | "openrouter_commercial") | null;
+            /**
+             * Gain Db
+             * @description Gain in dB (-60.0 to 6.0)
+             */
+            gain_db?: number | null;
+            /**
+             * Pan
+             * @description Pan (-1.0 left to 1.0 right)
+             */
+            pan?: number | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -5253,6 +5560,31 @@ export interface components {
             total: number;
             /** Query */
             query: string;
+        };
+        /**
+         * VoiceInfo
+         * @description Information about an available TTS voice.
+         */
+        VoiceInfo: {
+            /** Voice Id */
+            voice_id: string;
+            /**
+             * Backend
+             * @enum {string}
+             */
+            backend: "piper_local" | "openrouter_kokoro" | "openrouter_commercial";
+            /** Language */
+            language?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * VoicesResponse
+         * @description Response schema for available TTS voices.
+         */
+        VoicesResponse: {
+            /** Voices */
+            voices: components["schemas"]["VoiceInfo"][];
         };
         /**
          * WaveformGenerateRequest
@@ -7172,6 +7504,224 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tts_cues_api_v1_projects__project_id__tts_cues_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TtsCueListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_tts_cue_api_v1_projects__project_id__tts_cues_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TtsCueCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TtsCueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                cue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TtsCueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                cue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                cue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TtsCueUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TtsCueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesise_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__synthesise_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                cue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tts_voices_api_v1_tts_voices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoicesResponse"];
                 };
             };
         };

@@ -160,6 +160,17 @@ export STOAT_ALLOWED_SCAN_ROOTS='["/home/user/videos", "/mnt/media"]'
 | `STOAT_SYNTHETIC_MONITORING` | `bool` | `false` | Enable synthetic monitoring probes that emit periodic health/metric events. Probes are observable on the `/metrics` endpoint and via WebSocket; consider the resulting information-disclosure surface before enabling on internet-facing deployments. |
 | `STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS` | `int` | `60` | Interval in seconds between synthetic monitoring probe cycles (minimum: 1). Lower values produce more frequent probes at the cost of additional load. |
 
+### TTS Narration
+
+Text-to-speech narration for wellness and explainer content (BL-516). Supports a local Piper backend (default, no network required) and cloud Kokoro backends via OpenRouter.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_OPENROUTER_API_KEY` | `str \| None` | unset | OpenRouter API key. Required when `STOAT_TTS_DEFAULT_BACKEND` is `openrouter_kokoro` or `openrouter_commercial`. Leave unset to use only the Piper local backend. |
+| `STOAT_TTS_DEFAULT_BACKEND` | `str` | `piper_local` | Default TTS synthesis backend. One of: `piper_local` (GPL-3.0, local Piper subprocess, no API key required), `openrouter_kokoro` (Apache 2.0, Kokoro via OpenRouter, requires API key), `openrouter_commercial` (commercial voice via OpenRouter, requires API key). |
+| `STOAT_TTS_PIPER_MODELS_DIR` | `str` | `data/piper_models` | Directory where Piper ONNX voice model files are cached. Piper downloads models on first use; this directory must be writable by the server process. |
+| `STOAT_TTS_CACHE_DIR` | `str` | `data/tts_cache` | Directory for caching synthesised TTS audio files. Files are keyed by `sha256(text::voice::backend)` so repeated synthesis of the same text is served from cache. **Changing this path orphans existing cached audio** — clear the old path manually to reclaim disk space. |
+
 ### AGPL Compliance
 
 | Variable | Type | Default | Description |

@@ -332,6 +332,46 @@ class Settings(BaseSettings):
         ),
     )
 
+    # TTS narration (BL-516)
+    openrouter_api_key: str | None = Field(
+        default=None,
+        description=(
+            "OpenRouter API key for Kokoro TTS backends "
+            "(STOAT_OPENROUTER_API_KEY). Required when tts_default_backend is "
+            "openrouter_kokoro or openrouter_commercial. Leave unset to use only "
+            "the Piper local backend."
+        ),
+    )
+    tts_default_backend: Literal["piper_local", "openrouter_kokoro", "openrouter_commercial"] = (
+        Field(
+            default="piper_local",
+            description=(
+                "Default TTS synthesis backend (STOAT_TTS_DEFAULT_BACKEND). "
+                "piper_local: GPL-3.0 Piper subprocess, no network required. "
+                "openrouter_kokoro: Apache 2.0 Kokoro via OpenRouter API (requires API key). "
+                "openrouter_commercial: commercial voice via OpenRouter "
+                "(requires API key + privacy gate)."
+            ),
+        )
+    )
+    tts_piper_models_dir: str = Field(
+        default="data/piper_models",
+        description=(
+            "Directory where Piper ONNX voice model files are cached "
+            "(STOAT_TTS_PIPER_MODELS_DIR). Piper downloads models on first use; "
+            "this directory must be writable."
+        ),
+    )
+    tts_cache_dir: str = Field(
+        default="data/tts_cache",
+        description=(
+            "Directory for caching synthesised TTS audio files "
+            "(STOAT_TTS_CACHE_DIR). Files are keyed by sha256(text::voice::backend). "
+            "Changing this path orphans existing cached audio — clear the old path "
+            "manually to reclaim disk space."
+        ),
+    )
+
     # AGPL §13 source-offer (BL-525)
     source_url: str = Field(
         default="https://github.com/gwickman/stoat-and-ferret",

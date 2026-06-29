@@ -169,6 +169,24 @@ The FFmpeg `reverse` and `areverse` filters work by reading the entire clip segm
 - Values ≤ 0 are rejected at startup with a pydantic `ValidationError`.
 - This limit applies per-clip. If multiple reverse-effect clips are rendered concurrently, peak RAM usage multiplies accordingly.
 
+## TTS Narration
+
+TTS narration synthesises speech audio from text cues placed on voice tracks. The feature supports a local Piper backend (default, no network required) and optional Kokoro cloud backends via OpenRouter.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_OPENROUTER_API_KEY` | `str \| None` | unset | OpenRouter API key for Kokoro TTS backends. Required when `STOAT_TTS_DEFAULT_BACKEND` is `openrouter_kokoro` or `openrouter_commercial`. Leave unset to use only the Piper local backend. |
+| `STOAT_TTS_DEFAULT_BACKEND` | `str` | `piper_local` | Default TTS synthesis backend. One of: `piper_local` (GPL-3.0, local Piper subprocess), `openrouter_kokoro` (Apache 2.0, Kokoro via OpenRouter API), `openrouter_commercial` (commercial voice via OpenRouter). |
+| `STOAT_TTS_PIPER_MODELS_DIR` | `str` | `data/piper_models` | Directory for Piper ONNX voice model files. Models are downloaded on first use; this directory must be writable by the server process. |
+| `STOAT_TTS_CACHE_DIR` | `str` | `data/tts_cache` | Directory for caching synthesised audio files keyed by `sha256(text::voice::backend)`. **Changing this path orphans existing cached audio** — clear the old directory manually to reclaim disk space. |
+
+**Security implications**
+
+- `STOAT_OPENROUTER_API_KEY` is transmitted in the `Authorization: Bearer` header on every Kokoro API request. It is **not** redacted in application logs by default. Treat it as a secret credential — do not set it in a `.env` file committed to version control. Prefer setting it via the environment or a secrets manager.
+- The Piper local backend (`piper_local`) invokes Piper as a subprocess using `subprocess.run`. The model path and voice arguments are derived from server-side configuration, not caller-supplied values, so the injection surface is bounded to operator-controlled paths.
+- `STOAT_TTS_CACHE_DIR` caches synthesised audio keyed by content hash. Cached files are not access-controlled beyond filesystem permissions. On multi-tenant deployments, ensure the cache directory is not world-readable. Files are never deleted automatically — operators must manage cache growth.
+- Kokoro 429 (rate-limited) and 400 (bad request) errors are surfaced as render-job errors with clear messages. There is **no silent fallback** to a different backend on API error — configure alerts on render failures if Kokoro availability is a concern.
+
 ## AGPL Compliance
 
 The AGPL §13 source-offer affordance exposes source URL, version, and commit information via `GET /api/v1/source`. Operators serving modified instances over a network MUST set `STOAT_SOURCE_URL` to point at the corresponding source for the deployed commit.

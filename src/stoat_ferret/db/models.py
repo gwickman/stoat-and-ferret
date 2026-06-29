@@ -451,6 +451,37 @@ class Project:
 
 
 @dataclass
+class TtsCue:
+    """TTS narration cue placed on a voice track timeline (BL-516).
+
+    Each cue synthesises text audio via a backend and places it at start_s
+    on a voice track. cache_key = sha256(text::voice::backend); recalculated
+    atomically with status→pending on any text/voice/backend change.
+    """
+
+    id: str
+    project_id: str
+    track_id: str
+    start_s: float
+    text: str
+    voice: str
+    cache_key: str
+    created_at: datetime
+    updated_at: datetime
+    backend: str = "piper_local"
+    gain_db: float = 0.0
+    pan: float = 0.0
+    generated_asset_id: str | None = None
+    status: str = "pending"
+    error: str | None = None
+
+    @staticmethod
+    def new_id() -> str:
+        """Generate a new unique ID for a TTS cue."""
+        return str(uuid.uuid4())
+
+
+@dataclass
 class AuditEntry:
     """Audit log entry for tracking data modifications.
 

@@ -51,6 +51,8 @@ from stoat_ferret.db.schema import (
     TRACKS_AUDIO_COLUMNS,
     TRACKS_PROJECT_INDEX,
     TRACKS_TABLE,
+    TTS_CUE_PROJECT_INDEX,
+    TTS_CUE_TABLE,
     VIDEOS_FTS,
     VIDEOS_FTS_DELETE_TRIGGER,
     VIDEOS_FTS_INSERT_TRIGGER,
@@ -78,6 +80,8 @@ async def create_all_tables(conn: aiosqlite.Connection) -> None:
     await conn.execute(TRACKS_PROJECT_INDEX)
     await conn.execute(DUCKING_PAIR_TABLE)
     await conn.execute(DUCKING_PAIR_PROJECT_INDEX)
+    await conn.execute(TTS_CUE_TABLE)
+    await conn.execute(TTS_CUE_PROJECT_INDEX)
     # Apply migrations for columns added after initial schema
     for col, col_type in CLIPS_TIMELINE_COLUMNS:
         await conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
@@ -506,3 +510,28 @@ class TestDuckingPairParity:
         }
         missing = required - col_names
         assert not missing, f"ducking_pair table missing columns: {missing}"
+
+    async def test_tts_cue_table_columns(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """tts_cue table exists with all required columns (BL-516)."""
+        cursor = await sqlite_conn.execute("PRAGMA table_info(tts_cue)")
+        rows = await cursor.fetchall()
+        col_names = {row[1] for row in rows}
+        required = {
+            "id",
+            "project_id",
+            "track_id",
+            "start_s",
+            "text",
+            "voice",
+            "backend",
+            "gain_db",
+            "pan",
+            "cache_key",
+            "generated_asset_id",
+            "status",
+            "error",
+            "created_at",
+            "updated_at",
+        }
+        missing = required - col_names
+        assert not missing, f"tts_cue table missing columns: {missing}"

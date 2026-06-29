@@ -29,6 +29,7 @@ TABLE_MARKERS = "project_markers"
 TABLE_QC_REPORTS = "qc_reports"
 TABLE_DELIVERY_PROFILES = "delivery_profiles"
 TABLE_DUCKING_PAIRS = "ducking_pair"
+TABLE_TTS_CUE = "tts_cue"
 
 VIDEOS_TABLE = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -401,6 +402,32 @@ DUCKING_PAIR_PROJECT_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_ducking_pair_project ON ducking_pair(project_id);
 """
 
+TTS_CUE_TABLE = """
+CREATE TABLE IF NOT EXISTS tts_cue (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    track_id TEXT NOT NULL,
+    start_s REAL NOT NULL,
+    text TEXT NOT NULL,
+    voice TEXT NOT NULL,
+    backend TEXT NOT NULL DEFAULT 'piper_local',
+    gain_db REAL NOT NULL DEFAULT 0.0,
+    pan REAL NOT NULL DEFAULT 0.0,
+    cache_key TEXT NOT NULL,
+    generated_asset_id TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(track_id) REFERENCES tracks(id)
+)
+"""
+
+TTS_CUE_PROJECT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_tts_cue_project ON tts_cue(project_id);
+"""
+
 # Columns to add to videos table for auxiliary stream metadata.
 # Each entry is (column_name, column_type).
 VIDEOS_AUXILIARY_COLUMNS = [
@@ -647,6 +674,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute(DELIVERY_PROFILES_NAME_INDEX)
     cursor.execute(DUCKING_PAIR_TABLE)
     cursor.execute(DUCKING_PAIR_PROJECT_INDEX)
+    cursor.execute(TTS_CUE_TABLE)
+    cursor.execute(TTS_CUE_PROJECT_INDEX)
     _alter_videos_add_auxiliary_columns(conn)
     _alter_clips_add_timeline_columns(conn)
     _alter_clips_add_generator_columns(conn)
@@ -850,6 +879,8 @@ async def create_tables_async(db: aiosqlite.Connection) -> None:
     await db.execute(DELIVERY_PROFILES_NAME_INDEX)
     await db.execute(DUCKING_PAIR_TABLE)
     await db.execute(DUCKING_PAIR_PROJECT_INDEX)
+    await db.execute(TTS_CUE_TABLE)
+    await db.execute(TTS_CUE_PROJECT_INDEX)
     await _alter_videos_add_auxiliary_columns_async(db)
     await _alter_clips_add_timeline_columns_async(db)
     await _alter_clips_add_generator_columns_async(db)

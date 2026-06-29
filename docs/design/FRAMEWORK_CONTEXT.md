@@ -322,6 +322,8 @@ All structured log calls follow the pattern `logger.info("event_name", key=value
 | `render_worker.*` | Domain | Render worker operational events (command building, segment handling, worker lifecycle) | `render_worker.multi_segment_truncated` |
 | `testing.*` | Domain (gated) | Testing/debug operations behind feature flag | `testing.seed.created`, `testing.seed.forbidden` |
 | `qc.*` | Domain | QC analysis pass lifecycle events | `qc.started`, `qc.check_completed`, `qc.completed` |
+| `asset.*` | Domain | Asset library upload, delete, dedup, restore lifecycle events | `asset.uploaded`, `asset.deleted`, `asset.deduplicated` |
+| `tts.*` | Domain | TTS synthesis lifecycle events | `tts.synthesis_started`, `tts.synthesis_complete`, `tts.synthesis_failed` |
 | (no namespace) | Domain background | High-volume background job lifecycle events | `batch_submitted`, `job_completed`, `scan_video_added`, `thumbnail_strip_generation_queued` |
 
 **Namespace boundaries:**
