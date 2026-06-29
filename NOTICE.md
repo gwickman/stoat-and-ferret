@@ -18,18 +18,19 @@ A full transitive dependency scan was performed as part of the v083 release
 No dependencies requiring a separate notice entry were identified in the declared
 transitive dependency graph.
 
-## piper-tts Finding
+## piper-tts Finding (updated v091)
 
-piper-tts (GPL-3.0-or-later, https://github.com/OHF-Voice/piper1-gpl) was found
-in the scan environment (`uv run pip-licenses` reports `piper-tts 1.4.2
-GPL-3.0-or-later`) but is **not found in the transitive dependency graph** as of
-the v083 scan. `pip show piper-tts` confirms `Required-by:` is empty — no declared
-snf package depends on it. It is installed in the system Python environment, not via
-the snf dependency graph.
+piper-tts (GPL-3.0-or-later, https://github.com/OHF-Voice/piper1-gpl) is invoked
+by stoat-and-ferret as an **external subprocess** by the TTS synthesis service
+introduced in v091 (BL-516). It is NOT imported as a Python package and is NOT
+declared as a wheel-level dependency in `pyproject.toml`.
 
-stoat-and-ferret does **not** convey piper-tts as a wheel-level dependency in its
-declared package graph. This finding is recorded in docs/legal/dependency-license-inventory.md
-§ Risk 1.
+stoat-and-ferret does **not** convey piper-tts as a wheel-level dependency.
+The GPL-3.0-or-later license does not propagate to stoat-and-ferret via this
+subprocess invocation pattern. Operators who install piper-tts independently
+must comply with GPL-3.0-or-later terms for that installation.
+
+This finding is recorded in docs/legal/dependency-license-inventory.md § Risk 1.
 
 ## PyMuPDF Finding
 

@@ -49,3 +49,4 @@ README.md
 docs/setup/04_configuration.md
 docs/manual/configuration-reference.md
 src/stoat_ferret/api/settings.py
+src/stoat_ferret/api/services/tts_service.py

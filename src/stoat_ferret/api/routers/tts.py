@@ -285,25 +285,44 @@ async def synthesise_tts_cue(
     project_id: UUID,
     cue_id: UUID,
     repo: TtsCueRepoDep,
+    request: Request,
 ) -> dict[str, str]:
-    """Dispatch TTS synthesis for a cue (Feature 004 implementation; stub returning 202).
+    """Dispatch TTS synthesis for a cue.
+
+    Idempotent: concurrent calls while already synthesising return 202 without
+    spawning a duplicate task. A previously failed cue is reset to pending on re-call.
 
     Args:
         project_id: The project UUID.
         cue_id: The TTS cue UUID.
         repo: TTS cue repository (injected).
+        request: The incoming HTTP request (provides TtsService access).
 
     Returns:
-        Accepted acknowledgement with cue ID.
+        Accepted acknowledgement with cue ID and dispatch status.
     """
+    from stoat_ferret.api.services.tts_service import TtsService
+
     cue = await repo.get(str(cue_id))
     if cue is None or cue.project_id != str(project_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "TTS_CUE_NOT_FOUND", "message": f"TTS cue {cue_id} not found"},
         )
-    logger.info("tts.synthesis_stub_accepted", cue_id=str(cue_id))
-    return {"status": "accepted", "cue_id": str(cue_id)}
+
+    tts_service: TtsService | None = getattr(request.app.state, "tts_service", None)
+    if tts_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "TTS_SERVICE_UNAVAILABLE",
+                "message": "TTS service not initialised",
+            },
+        )
+
+    dispatched = await tts_service.synthesise_cue(str(cue_id))
+    dispatch_status = "dispatched" if dispatched else "already_synthesising"
+    return {"status": dispatch_status, "cue_id": str(cue_id)}
 
 
 @router.get(

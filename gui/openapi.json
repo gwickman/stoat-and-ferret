@@ -2807,7 +2807,7 @@
           "tts"
         ],
         "summary": "Dispatch TTS synthesis for a cue",
-        "description": "Dispatch TTS synthesis for a cue (Feature 004 implementation; stub returning 202).\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    repo: TTS cue repository (injected).\n\nReturns:\n    Accepted acknowledgement with cue ID.",
+        "description": "Dispatch TTS synthesis for a cue.\n\nIdempotent: concurrent calls while already synthesising return 202 without\nspawning a duplicate task. A previously failed cue is reset to pending on re-call.\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    repo: TTS cue repository (injected).\n    request: The incoming HTTP request (provides TtsService access).\n\nReturns:\n    Accepted acknowledgement with cue ID and dispatch status.",
         "operationId": "synthesise_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__synthesise_post",
         "parameters": [
           {
