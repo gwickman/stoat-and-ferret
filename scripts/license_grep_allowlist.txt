@@ -44,3 +44,8 @@ README.md
 
 # CI workflow references Apache/MIT in step names and comments for the stray-reference scan itself
 .github/workflows/ci.yml
+
+# TTS backend descriptions reference Apache 2.0 (Kokoro/OpenRouter) and GPL-3.0 (Piper) backend licenses — BL-516
+docs/setup/04_configuration.md
+docs/manual/configuration-reference.md
+src/stoat_ferret/api/settings.py
