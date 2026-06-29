@@ -53,6 +53,7 @@ from stoat_ferret.api.routers import (
     testing,
     thumbnails,
     timeline,
+    tts,
     version,
     versions,
     videos,
@@ -226,6 +227,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from stoat_ferret.db.ducking_pair_repository import AsyncSQLiteDuckingPairRepository
 
     app.state.ducking_pair_repository = AsyncSQLiteDuckingPairRepository(app.state.db)
+
+    # Create TTS cue repository (Phase 10: after DB open, before Phase 11 services, BL-516)
+    from stoat_ferret.db.tts_cue_repository import AsyncSQLiteTtsCueRepository
+
+    app.state.tts_cue_repository = AsyncSQLiteTtsCueRepository(app.state.db)
 
     # Phase 11 — QCService (after Phase 10 repositories, before Phase 12 worker)
     from stoat_ferret.db.qc_repository import AsyncSQLiteQCReportRepository
@@ -687,6 +693,7 @@ def create_app(
     app.include_router(effects.router)
     app.include_router(compose.router)
     app.include_router(audio.router)
+    app.include_router(tts.router)
     app.include_router(filesystem.router)
     app.include_router(timeline.router)
     app.include_router(batch.router)

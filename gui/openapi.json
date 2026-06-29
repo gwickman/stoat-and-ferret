@@ -2544,6 +2544,343 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/tts_cues": {
+      "post": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "Create a TTS cue",
+        "description": "Create a TTS narration cue on a voice track.\n\nArgs:\n    project_id: The project UUID.\n    body: TTS cue creation parameters.\n    repo: TTS cue repository (injected).\n    request: The incoming HTTP request.\n\nReturns:\n    The created TTS cue.",
+        "operationId": "create_tts_cue_api_v1_projects__project_id__tts_cues_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TtsCueCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TtsCueResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "List TTS cues for a project",
+        "description": "List all TTS cues for a project.\n\nArgs:\n    project_id: The project UUID.\n    repo: TTS cue repository (injected).\n\nReturns:\n    Ordered list of TTS cues (by start_s, then created_at).",
+        "operationId": "list_tts_cues_api_v1_projects__project_id__tts_cues_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TtsCueListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/tts_cues/{cue_id}": {
+      "get": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "Get a TTS cue",
+        "description": "Get a single TTS cue by ID.\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    repo: TTS cue repository (injected).\n\nReturns:\n    The requested TTS cue.",
+        "operationId": "get_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "cue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Cue Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TtsCueResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "Update a TTS cue",
+        "description": "Update a TTS cue.\n\nUpdating text, voice, or backend recalculates cache_key and resets\nstatus to pending, generated_asset_id to None, error to None.\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    body: Fields to update.\n    repo: TTS cue repository (injected).\n    request: The incoming HTTP request.\n\nReturns:\n    The updated TTS cue.",
+        "operationId": "update_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "cue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Cue Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TtsCueUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TtsCueResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "Delete a TTS cue",
+        "description": "Delete a TTS cue.\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    repo: TTS cue repository (injected).",
+        "operationId": "delete_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "cue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Cue Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/tts_cues/{cue_id}/synthesise": {
+      "post": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "Dispatch TTS synthesis for a cue",
+        "description": "Dispatch TTS synthesis for a cue (Feature 004 implementation; stub returning 202).\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    repo: TTS cue repository (injected).\n\nReturns:\n    Accepted acknowledgement with cue ID.",
+        "operationId": "synthesise_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__synthesise_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "cue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Cue Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Synthesise Tts Cue Api V1 Projects  Project Id  Tts Cues  Cue Id  Synthesise Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tts/voices": {
+      "get": {
+        "tags": [
+          "tts"
+        ],
+        "summary": "List available TTS voices",
+        "description": "Return available TTS voices per backend.\n\nPiper voices are discovered from the filesystem (blocking I/O runs in executor).\nKokoro voices are a static list (real API query implemented in Feature 004).\n\nArgs:\n    request: The incoming HTTP request (provides settings access).\n\nReturns:\n    List of available voices across all configured backends.",
+        "operationId": "list_tts_voices_api_v1_tts_voices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoicesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/filesystem/directories": {
       "get": {
         "tags": [
@@ -8899,6 +9236,313 @@
         "title": "TransitionResponse",
         "description": "Transition response with computed offsets."
       },
+      "TtsCueCreate": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id",
+            "description": "Project UUID"
+          },
+          "track_id": {
+            "type": "string",
+            "title": "Track Id",
+            "description": "Voice track ID (must reference a track with kind=voice)"
+          },
+          "start_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Start S",
+            "description": "Timeline placement in seconds"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Text to synthesise"
+          },
+          "voice": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Voice",
+            "description": "Voice identifier"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "piper_local",
+              "openrouter_kokoro",
+              "openrouter_commercial"
+            ],
+            "title": "Backend",
+            "description": "TTS backend",
+            "default": "piper_local"
+          },
+          "gain_db": {
+            "type": "number",
+            "maximum": 6.0,
+            "minimum": -60.0,
+            "title": "Gain Db",
+            "description": "Gain in dB (-60.0 to 6.0)",
+            "default": 0.0
+          },
+          "pan": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Pan",
+            "description": "Pan (-1.0 left to 1.0 right)",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "track_id",
+          "start_s",
+          "text",
+          "voice"
+        ],
+        "title": "TtsCueCreate",
+        "description": "Request schema for creating a TTS cue."
+      },
+      "TtsCueListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TtsCueResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "TtsCueListResponse",
+        "description": "Response schema for a list of TTS cues."
+      },
+      "TtsCueResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id"
+          },
+          "track_id": {
+            "type": "string",
+            "title": "Track Id"
+          },
+          "start_s": {
+            "type": "number",
+            "title": "Start S"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "voice": {
+            "type": "string",
+            "title": "Voice"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "piper_local",
+              "openrouter_kokoro",
+              "openrouter_commercial"
+            ],
+            "title": "Backend"
+          },
+          "gain_db": {
+            "type": "number",
+            "title": "Gain Db"
+          },
+          "pan": {
+            "type": "number",
+            "title": "Pan"
+          },
+          "cache_key": {
+            "type": "string",
+            "title": "Cache Key"
+          },
+          "generated_asset_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated Asset Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "synthesising",
+              "ready",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "track_id",
+          "start_s",
+          "text",
+          "voice",
+          "backend",
+          "gain_db",
+          "pan",
+          "cache_key",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TtsCueResponse",
+        "description": "Response schema for a TTS cue."
+      },
+      "TtsCueUpdate": {
+        "properties": {
+          "track_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Id",
+            "description": "Voice track ID; must reference a track with kind=voice"
+          },
+          "start_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start S",
+            "description": "Timeline placement in seconds"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Text to synthesise"
+          },
+          "voice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice",
+            "description": "Voice identifier"
+          },
+          "backend": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "piper_local",
+                  "openrouter_kokoro",
+                  "openrouter_commercial"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backend",
+            "description": "TTS backend"
+          },
+          "gain_db": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 6.0,
+                "minimum": -60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gain Db",
+            "description": "Gain in dB (-60.0 to 6.0)"
+          },
+          "pan": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": -1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pan",
+            "description": "Pan (-1.0 left to 1.0 right)"
+          }
+        },
+        "type": "object",
+        "title": "TtsCueUpdate",
+        "description": "Request schema for updating a TTS cue (all fields optional)."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -9175,6 +9819,69 @@
         ],
         "title": "VideoSearchResponse",
         "description": "Search results response.\n\nContains search results along with the query that was executed."
+      },
+      "VoiceInfo": {
+        "properties": {
+          "voice_id": {
+            "type": "string",
+            "title": "Voice Id"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "piper_local",
+              "openrouter_kokoro",
+              "openrouter_commercial"
+            ],
+            "title": "Backend"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "voice_id",
+          "backend"
+        ],
+        "title": "VoiceInfo",
+        "description": "Information about an available TTS voice."
+      },
+      "VoicesResponse": {
+        "properties": {
+          "voices": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceInfo"
+            },
+            "type": "array",
+            "title": "Voices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "voices"
+        ],
+        "title": "VoicesResponse",
+        "description": "Response schema for available TTS voices."
       },
       "WaveformGenerateRequest": {
         "properties": {

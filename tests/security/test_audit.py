@@ -62,41 +62,41 @@ pytestmark = pytest.mark.timeout(30)
 SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
     {
         # _alter_videos_add_auxiliary_columns (sync) — BL-408
-        ("src/stoat_ferret/db/schema.py", 473),
+        ("src/stoat_ferret/db/schema.py", 500),
         # _alter_render_jobs_add_partial_columns (sync) — BL-415
-        ("src/stoat_ferret/db/schema.py", 487),
+        ("src/stoat_ferret/db/schema.py", 514),
         # _alter_render_jobs_add_evidence_columns (sync) — BL-554
-        ("src/stoat_ferret/db/schema.py", 501),
+        ("src/stoat_ferret/db/schema.py", 528),
         # _alter_projects_add_audio_mix_column (sync)
-        ("src/stoat_ferret/db/schema.py", 515),
+        ("src/stoat_ferret/db/schema.py", 542),
         # _alter_projects_add_audio_baseline_columns (sync) — BL-422
-        ("src/stoat_ferret/db/schema.py", 529),
+        ("src/stoat_ferret/db/schema.py", 556),
         # _alter_clips_add_timeline_columns (sync)
-        ("src/stoat_ferret/db/schema.py", 545),
+        ("src/stoat_ferret/db/schema.py", 572),
         # _alter_clips_add_generator_columns (sync) — BL-441
-        ("src/stoat_ferret/db/schema.py", 562),
+        ("src/stoat_ferret/db/schema.py", 589),
         # _alter_clips_add_image_columns (sync) — BL-511
-        ("src/stoat_ferret/db/schema.py", 576),
+        ("src/stoat_ferret/db/schema.py", 603),
         # _alter_tracks_add_audio_columns_sync (sync) — BL-517
-        ("src/stoat_ferret/db/schema.py", 590),
+        ("src/stoat_ferret/db/schema.py", 617),
         # _alter_videos_add_auxiliary_columns_async — BL-408
-        ("src/stoat_ferret/db/schema.py", 670),
+        ("src/stoat_ferret/db/schema.py", 699),
         # _alter_projects_add_audio_mix_column_async
-        ("src/stoat_ferret/db/schema.py", 686),
+        ("src/stoat_ferret/db/schema.py", 715),
         # _alter_projects_add_audio_baseline_columns_async — BL-422
-        ("src/stoat_ferret/db/schema.py", 702),
+        ("src/stoat_ferret/db/schema.py", 731),
         # _alter_clips_add_timeline_columns_async
-        ("src/stoat_ferret/db/schema.py", 718),
+        ("src/stoat_ferret/db/schema.py", 747),
         # _alter_clips_add_generator_columns_async — BL-441
-        ("src/stoat_ferret/db/schema.py", 735),
+        ("src/stoat_ferret/db/schema.py", 764),
         # _alter_clips_add_image_columns_async — BL-511
-        ("src/stoat_ferret/db/schema.py", 749),
+        ("src/stoat_ferret/db/schema.py", 778),
         # _alter_render_jobs_add_partial_columns_async (async) — BL-415
-        ("src/stoat_ferret/db/schema.py", 765),
+        ("src/stoat_ferret/db/schema.py", 794),
         # _alter_render_jobs_add_evidence_columns_async (async) — BL-554
-        ("src/stoat_ferret/db/schema.py", 781),
+        ("src/stoat_ferret/db/schema.py", 810),
         # _alter_tracks_add_audio_columns_async (async) — BL-517
-        ("src/stoat_ferret/db/schema.py", 795),
+        ("src/stoat_ferret/db/schema.py", 824),
         ("src/stoat_ferret/api/services/migrations.py", 437),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound
