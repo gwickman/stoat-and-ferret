@@ -145,7 +145,7 @@ per NFR-002. No resolution action required for snf licensing.
 
 ## Risks
 
-### Risk 1: piper-tts (GPL-3.0-or-later) — Conveyance Status Unclear
+### Risk 1: piper-tts (GPL-3.0-or-later) — Resolved: subprocess-only, not conveyed (v091)
 
 | Field | Value |
 |-------|-------|
@@ -154,22 +154,17 @@ per NFR-002. No resolution action required for snf licensing.
 | URL | http://github.com/OHF-voice/piper1-gpl |
 | Classification | strong-copyleft |
 | AGPL-3.0-or-later compat | compatible (GPL-3.0+ and AGPL-3.0 are mutually compatible under the GNU terms) |
-| notice-required | **yes** — if conveyed |
-| Status | **TBD** — conveyance status requires operator verification |
+| notice-required | **no** — not conveyed as a wheel-level dependency |
+| Status | **RESOLVED (v091)** — subprocess-only invocation; GPL-3.0 does not propagate |
 
-**Finding**: `piper-tts 1.4.2` is present in the scanned snf environment. However:
-- It is NOT listed in `pyproject.toml` or `Cargo.toml` as a direct dependency.
-- `pip show piper-tts` shows `Required-by:` is empty — no declared snf package depends on it.
-- It is installed in the system Python environment (`C:\Users\grant\AppData\Local\Programs\Python\Python312`), not as a transitive dep of any snf package.
+**Resolution (v091, BL-516)**: stoat-and-ferret invokes piper-tts as an **external
+subprocess** via `src/stoat_ferret/api/services/tts_service.py` (PiperBackend class).
+It is NOT imported as a Python package and NOT declared in `pyproject.toml` or
+`Cargo.toml`. Operators install piper-tts independently; the GPL-3.0-or-later license
+does not propagate to stoat-and-ferret through this subprocess boundary.
 
-**Design assertion**: BL-527-AC-3 asserts snf "conveys Piper as a wheel-level dependency."
-This assertion is based on prior research (BL-DRAFT-bl516-tts.md). The current transitive
-scan does NOT confirm piper-tts as a snf transitive dependency from declared deps.
-
-**Proposed resolution**: Operator must verify whether snf intends to convey piper-tts:
-- If YES: add piper-tts as an explicit optional dependency in pyproject.toml and add it to NOTICE.md.
-- If NO: document that piper-tts is NOT conveyed by snf in NOTICE.md and remove it from scope.
-- Either way: record the final finding in NOTICE.md (BL-527-AC-3).
+BL-527-AC-3 assertion ("conveys Piper as a wheel-level dependency") is resolved:
+snf does NOT convey piper-tts as a wheel-level dependency. NOTICE.md updated accordingly.
 
 ### Risk 2: PyMuPDF (AGPL-3.0-or-later OR Artifex-Commercial) — Notice Required if Conveyed
 
@@ -199,5 +194,6 @@ This inventory covers:
 - All Node.js packages (436 packages scanned, notable licenses listed)
 - All notable transitive Python deps with non-permissive licenses from full environment scan
 
-No deps are flagged `incompatible` with AGPL-3.0-or-later. Two deps (`piper-tts`, `PyMuPDF`)
-are flagged `TBD` pending operator resolution on conveyance status.
+No deps are flagged `incompatible` with AGPL-3.0-or-later. `piper-tts` Risk 1 is resolved
+(v091, subprocess-only, not conveyed). `PyMuPDF` (Risk 2) remains `TBD` pending operator
+resolution on conveyance status.

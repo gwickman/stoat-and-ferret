@@ -233,6 +233,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.tts_cue_repository = AsyncSQLiteTtsCueRepository(app.state.db)
 
+    # Phase 11 — TtsService (after Phase 10 tts_cue_repository, before Phase 12 worker, BL-516)
+    from stoat_ferret.api.services.tts_service import TtsService
+
+    app.state.tts_service = TtsService(
+        repository=app.state.tts_cue_repository,
+        settings=settings,
+    )
+
     # Phase 11 — QCService (after Phase 10 repositories, before Phase 12 worker)
     from stoat_ferret.db.qc_repository import AsyncSQLiteQCReportRepository
 
@@ -500,6 +508,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
     await asyncio.wait({worker_task}, timeout=15.0)
     logger.info("job_worker_stopped")
+
+    # Shutdown: cancel active TTS synthesis tasks (BL-516)
+    tts_svc: object | None = getattr(app.state, "tts_service", None)
+    if tts_svc is not None:
+        from stoat_ferret.api.services.tts_service import TtsService as _TtsService
+
+        if isinstance(tts_svc, _TtsService):
+            await tts_svc.shutdown()
 
     sync_conn.close()
     await app.state.db.close()
