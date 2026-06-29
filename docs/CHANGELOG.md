@@ -4,6 +4,28 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v091 — Multi-track Audio Mixer + TTS Narration (2026-06-29)
+
+### Added
+
+- **Multi-track audio mixer with per-track volume automation and voice-triggered ducking** (BL-517, PR #689): `MultiTrackAudioMixer` Rust builder assembles FFmpeg `asplit`/`sidechaincompress`/`amix` pipeline from per-track volume envelopes; wellness contract enforces clamp, monotonicity, and coverage invariants.
+- **Configurable TTS narration** (BL-516, PRs #690 #691 #692): TTS cue CRUD API, Piper (local) and Kokoro (cloud) backend services with SHA-256 audio cache; TTS renderer integration with `adelay` injection and voice-track preflight.
+
+### Known Limitations
+
+- **BL-517-AC-8** (quiet-window test): `test_music_unchanged_during_silence` deferred post-merge; sidechaincompress mechanism guarantees property physically but automated test not yet authored.
+- **BL-516-AC-4 / FR-002-AC-2** (speech energy placement): End-to-end energy measurement at `cue.start_s` deferred post-merge; requires real TTS audio + FFmpeg + ffprobe energy envelope verification.
+
+### PRs
+
+#689, #690, #691, #692
+
+### Resolved
+
+BL-517 (multi-track audio mixer — AC-8 deferred), BL-516 (TTS narration — AC-4/FR-002-AC-2 deferred)
+
+---
+
 ## v090 — Asset Library, Image Clips, Rust Builder Validation Hardening (2026-06-28)
 
 ### Added
