@@ -15,8 +15,9 @@ import asyncio
 import contextlib
 import json
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -27,6 +28,10 @@ from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.service import RenderService, generate_ffmetadata
+
+if TYPE_CHECKING:
+    from stoat_ferret.api.services.tts_service import TtsService
+    from stoat_ferret.db.tts_cue_repository import AsyncTtsCueRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -49,6 +54,18 @@ class CommandBuildError(Exception):
     """
 
 
+@dataclass
+class TtsCueAudioInput:
+    """Resolved TTS cue ready for audio injection into the render command."""
+
+    cue_id: str
+    audio_path: str
+    track_id: str
+    start_s: float
+    weight: float
+    volume_envelope: str | None
+
+
 def _extract_metadata_title(render_plan_json: str) -> str | None:
     """Extract the metadata title from render plan settings, or None if absent."""
     try:
@@ -59,12 +76,105 @@ def _extract_metadata_title(render_plan_json: str) -> str | None:
         return None
 
 
+def _build_tts_audio_filter(
+    tts_inputs: list[TtsCueAudioInput],
+    base_stream_offset: int,
+) -> tuple[str, str]:
+    """Build FFmpeg filter_complex segment for TTS audio injection.
+
+    Each stream gets adelay=X|X (stereo ms delay) + aformat for channel layout
+    compatibility. Multiple streams are mixed via amix with per-stream weights.
+
+    Returns:
+        (filter_segment, output_label) — filter_segment is appended to the
+        enclosing filter_complex string; output_label is the audio stream to -map.
+    """
+    parts = []
+    labels = []
+    for i, inp in enumerate(tts_inputs):
+        stream_idx = base_stream_offset + i
+        delay_ms = int(inp.start_s * 1000)
+        label = f"[tts{i}]"
+        parts.append(
+            f"[{stream_idx}:a]adelay={delay_ms}|{delay_ms},aformat=channel_layouts=stereo{label}"
+        )
+        labels.append(label)
+
+    if len(labels) == 1:
+        return parts[0], labels[0]
+
+    weights = " ".join(str(inp.weight) for inp in tts_inputs)
+    mix_inputs = "".join(labels)
+    mix_label = "[tts_mix]"
+    amix = f"{mix_inputs}amix=inputs={len(labels)}:weights={weights}:duration=longest{mix_label}"
+    return ";".join(parts) + ";" + amix, mix_label
+
+
+async def _run_tts_preflight(
+    project_id: str,
+    tts_service: Any,
+    tts_repo: Any,
+) -> list[TtsCueAudioInput]:
+    """Ensure all TTS cues for the project are synthesised before rendering.
+
+    For pending cues: dispatches synthesis and waits up to 15 s (LRN-406).
+    For synthesising cues: waits for the in-flight task up to 15 s.
+    For failed cues: raises CommandBuildError immediately.
+    For ready cues: returns TtsCueAudioInput records for audio injection.
+
+    Returns:
+        Empty list if the project has no TTS cues; otherwise a list of
+        TtsCueAudioInput, one per cue, ordered by start_s.
+
+    Raises:
+        CommandBuildError: If any cue fails synthesis or times out.
+    """
+    cues = await tts_repo.list_by_project(project_id)
+    if not cues:
+        return []
+
+    for cue in cues:
+        if cue.status == "failed":
+            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
+        if cue.status in ("pending", "synthesising"):
+            if cue.status == "pending":
+                await tts_service.synthesise_cue(cue.id)
+            task = tts_service._active_tasks.get(cue.id)
+            if task is not None:
+                done, _ = await asyncio.wait({task}, timeout=15.0)
+                if not done:
+                    raise CommandBuildError(f"TTS synthesis timeout for cue {cue.id}")
+
+    # Re-fetch to get final status after all tasks have completed
+    cues = await tts_repo.list_by_project(project_id)
+    result: list[TtsCueAudioInput] = []
+    for cue in cues:
+        if cue.status == "failed":
+            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
+        if cue.status != "ready":
+            raise CommandBuildError(
+                f"TTS synthesis not ready for cue {cue.id}: status={cue.status}"
+            )
+        result.append(
+            TtsCueAudioInput(
+                cue_id=cue.id,
+                audio_path=cue.generated_asset_id,
+                track_id=cue.track_id,
+                start_s=cue.start_s,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        )
+    return result
+
+
 async def build_command_for_job(
     job: RenderJob,
     clip_repository: AsyncClipRepository,
     video_repository: AsyncVideoRepository,
     ffmetadata_path: str | None = None,
     effect_registry: EffectRegistry | None = None,
+    tts_inputs: list[TtsCueAudioInput] | None = None,
 ) -> list[str]:
     """Build an FFmpeg argument list for a render job.
 
@@ -78,6 +188,7 @@ async def build_command_for_job(
         video_repository: Async video repository for video path lookup.
         ffmetadata_path: Optional path to an ffmetadata file for chapter embedding.
         effect_registry: Optional registry for resolving per-clip effect types to filter strings.
+        tts_inputs: Optional pre-synthesised TTS cue audio inputs for voice track injection.
 
     Returns:
         A list of strings representing the full FFmpeg command
@@ -180,7 +291,25 @@ async def build_command_for_job(
         if ffmetadata_path:
             multi_cmd.extend(["-i", ffmetadata_path])
 
-        multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
+        if tts_inputs:
+            tts_base = len(input_paths) + (1 if ffmetadata_path else 0)
+            for inp in tts_inputs:
+                multi_cmd.extend(["-i", inp.audio_path])
+            tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
+            combined_filter = filter_complex_str + ";" + tts_filter_seg
+            multi_cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_filter,
+                    "-map",
+                    "[final]",
+                    "-map",
+                    tts_audio_label,
+                ]
+            )
+        else:
+            multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
+
         multi_cmd.extend(["-c:v", codec_mc])
         if codec_mc in ("libx264", "libx265") and quality_preset_mc in _QUALITY_CRF:
             multi_cmd.extend(["-crf", _QUALITY_CRF[quality_preset_mc]])
@@ -247,14 +376,33 @@ async def build_command_for_job(
     if ffmetadata_path:
         cmd.extend(["-i", ffmetadata_path])
 
+    # TTS audio inputs: must follow other -i flags, before output options
+    tts_base_single: int = 0
+    if tts_inputs:
+        tts_base_single = 1 + (1 if ffmetadata_path else 0)
+        for inp in tts_inputs:
+            cmd.extend(["-i", inp.audio_path])
+
     # Segment timing
     cmd.extend(["-ss", str(timeline_start), "-t", str(seg_duration)])
 
-    # Video filter: use explicit filter_graph if provided, else scale from dimensions
-    if filter_graph:
-        cmd.extend(["-vf", filter_graph])
-    elif width and height:
-        cmd.extend(["-vf", f"scale={width}:{height}"])
+    # Video + TTS audio filter: merge into filter_complex when TTS is active to avoid
+    # -vf / -filter_complex conflict on the same stream.
+    if tts_inputs:
+        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
+        if filter_graph:
+            combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg}"
+            cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+        elif width and height:
+            combined = f"[0:v]scale={width}:{height}[vout];{tts_filter_seg}"
+            cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+        else:
+            cmd.extend(["-filter_complex", tts_filter_seg, "-map", "0:v", "-map", tts_audio_label])
+    else:
+        if filter_graph:
+            cmd.extend(["-vf", filter_graph])
+        elif width and height:
+            cmd.extend(["-vf", f"scale={width}:{height}"])
 
     # Video codec
     cmd.extend(["-c:v", codec])
@@ -293,6 +441,8 @@ class RenderWorkerLoop:
         video_repository: Repository for video path lookups.
         markers_repository: Optional repository for project marker lookups (chapter embedding).
         effect_registry: Optional registry for resolving per-clip effect types to filter strings.
+        tts_service: Optional TTS service for pre-render synthesis preflight.
+        tts_cue_repository: Optional TTS cue repository for preflight status checks.
     """
 
     def __init__(
@@ -304,6 +454,8 @@ class RenderWorkerLoop:
         video_repository: AsyncVideoRepository,
         markers_repository: MarkerRepository | None = None,
         effect_registry: EffectRegistry | None = None,
+        tts_service: TtsService | None = None,
+        tts_cue_repository: AsyncTtsCueRepository | None = None,
     ) -> None:
         self.service = service
         self.queue = queue
@@ -311,6 +463,8 @@ class RenderWorkerLoop:
         self.video_repository = video_repository
         self.markers_repository = markers_repository
         self.effect_registry = effect_registry
+        self.tts_service = tts_service
+        self.tts_cue_repository = tts_cue_repository
         self.logger = structlog.get_logger(__name__)
 
     async def run(self) -> None:
@@ -355,12 +509,23 @@ class RenderWorkerLoop:
                     ffmetadata_path = tmp.name
                     tmp_path = Path(tmp.name)
 
+            tts_inputs: list[TtsCueAudioInput] | None = None
+            if self.tts_service is not None and self.tts_cue_repository is not None:
+                tts_inputs = await _run_tts_preflight(
+                    job.project_id,
+                    self.tts_service,
+                    self.tts_cue_repository,
+                )
+                if not tts_inputs:
+                    tts_inputs = None
+
             command = await build_command_for_job(
                 job,
                 self.clip_repository,
                 self.video_repository,
                 ffmetadata_path,
                 self.effect_registry,
+                tts_inputs,
             )
             await self.service.run_job(job, command)
         finally:

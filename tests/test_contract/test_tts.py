@@ -480,3 +480,194 @@ class TestTtsService:
         service = self._make_service(repo, cache_dir=str(tmp_path))
         with pytest.raises(RuntimeError, match="Unknown TTS backend"):
             await service._run_backend("text", "voice", "unknown_backend")
+
+
+# ---------------------------------------------------------------------------
+# TTS renderer preflight (_run_tts_preflight)
+# ---------------------------------------------------------------------------
+
+
+class TestTtsRendererPreflight:
+    async def test_no_tts_cues_returns_empty(self) -> None:
+        from stoat_ferret.render.worker import _run_tts_preflight
+
+        repo = AsyncInMemoryTtsCueRepository()
+        service = MagicMock()
+        result = await _run_tts_preflight("proj-001", service, repo)
+        assert result == []
+
+    async def test_failed_cue_raises_render_error(self) -> None:
+        from stoat_ferret.render.worker import CommandBuildError, _run_tts_preflight
+
+        repo = AsyncInMemoryTtsCueRepository()
+        cue = _make_cue(status="pending")
+        await repo.create(cue)
+        await repo.update_status(cue.id, "failed", error="backend exploded")
+        service = MagicMock()
+
+        with pytest.raises(CommandBuildError, match="TTS synthesis failed.*backend exploded"):
+            await _run_tts_preflight("proj-001", service, repo)
+
+    async def test_synthesising_timeout_raises_render_error(self) -> None:
+        from stoat_ferret.render.worker import CommandBuildError, _run_tts_preflight
+
+        repo = AsyncInMemoryTtsCueRepository()
+        cue = _make_cue(status="synthesising")
+        await repo.create(cue)
+
+        task_mock = MagicMock(spec=asyncio.Task)
+        service = MagicMock()
+        service._active_tasks = {cue.id: task_mock}
+        service.synthesise_cue = MagicMock(return_value=None)
+
+        # Simulate asyncio.wait returning empty done set (timeout)
+        with (
+            patch(
+                "stoat_ferret.render.worker.asyncio.wait",
+                return_value=(set(), {task_mock}),
+            ),
+            pytest.raises(CommandBuildError, match="TTS synthesis timeout"),
+        ):
+            await _run_tts_preflight("proj-001", service, repo)
+
+    async def test_ready_cue_returns_audio_input(self, tmp_path: Path) -> None:
+        from stoat_ferret.render.worker import TtsCueAudioInput, _run_tts_preflight
+
+        repo = AsyncInMemoryTtsCueRepository()
+        cue = _make_cue(status="pending")
+        await repo.create(cue)
+        audio_path = str(tmp_path / "tts_audio.wav")
+        await repo.update_status(cue.id, "ready", generated_asset_id=audio_path)
+
+        service = MagicMock()
+        service._active_tasks = {}
+
+        result = await _run_tts_preflight("proj-001", service, repo)
+
+        assert len(result) == 1
+        assert isinstance(result[0], TtsCueAudioInput)
+        assert result[0].cue_id == cue.id
+        assert result[0].audio_path == audio_path
+        assert result[0].start_s == 0.0
+        assert result[0].weight == 1.0
+
+    async def test_format_mismatch_error_propagated(self) -> None:
+        from stoat_ferret.render.worker import CommandBuildError, _run_tts_preflight
+
+        repo = AsyncInMemoryTtsCueRepository()
+        cue = _make_cue(status="pending")
+        await repo.create(cue)
+        await repo.update_status(
+            cue.id,
+            "failed",
+            error="TTS output format mismatch: expected channels=2 sample_rate=48000",
+        )
+        service = MagicMock()
+
+        with pytest.raises(CommandBuildError, match="format mismatch"):
+            await _run_tts_preflight("proj-001", service, repo)
+
+
+# ---------------------------------------------------------------------------
+# TTS audio filter builder (_build_tts_audio_filter)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildTtsAudioFilter:
+    def _inp(self, cue_id: str, start_s: float, weight: float = 1.0) -> Any:
+        from stoat_ferret.render.worker import TtsCueAudioInput
+
+        return TtsCueAudioInput(
+            cue_id=cue_id,
+            audio_path=f"/tmp/{cue_id}.wav",
+            track_id="track-001",
+            start_s=start_s,
+            weight=weight,
+            volume_envelope=None,
+        )
+
+    def test_single_stream_no_amix(self) -> None:
+        from stoat_ferret.render.worker import _build_tts_audio_filter
+
+        filt, label = _build_tts_audio_filter([self._inp("c1", 1.5)], base_stream_offset=2)
+        assert "[2:a]adelay=1500|1500" in filt
+        assert label == "[tts0]"
+        assert "amix" not in filt
+
+    def test_multiple_streams_use_amix(self) -> None:
+        from stoat_ferret.render.worker import _build_tts_audio_filter
+
+        inputs = [self._inp("c1", 0.0), self._inp("c2", 2.0)]
+        filt, label = _build_tts_audio_filter(inputs, base_stream_offset=1)
+        assert "[1:a]adelay=0|0" in filt
+        assert "[2:a]adelay=2000|2000" in filt
+        assert "amix=inputs=2" in filt
+        assert label == "[tts_mix]"
+
+    def test_delay_rounded_to_ms(self) -> None:
+        from stoat_ferret.render.worker import _build_tts_audio_filter
+
+        filt, _ = _build_tts_audio_filter([self._inp("c1", 1.0009)], base_stream_offset=0)
+        # int(1.0009 * 1000) == 1000
+        assert "adelay=1000|1000" in filt
+
+    @pytest.mark.skipif(
+        not __import__("shutil").which("ffmpeg"),
+        reason="ffmpeg not available",
+    )
+    def test_filter_accepted_by_ffmpeg(self, tmp_path: Path) -> None:
+        """Integration: FFmpeg accepts the generated filter_complex for audio adelay."""
+        import struct
+        import subprocess
+
+        from stoat_ferret.render.worker import TtsCueAudioInput, _build_tts_audio_filter
+
+        # Write a minimal 48kHz stereo WAV
+        wav_path = tmp_path / "input.wav"
+        num_channels, sample_rate, bps, num_samples = 2, 48000, 16, 4800
+        byte_rate = sample_rate * num_channels * bps // 8
+        block_align = num_channels * bps // 8
+        data_size = num_samples * block_align
+        header = struct.pack(
+            "<4sI4s4sIHHIIHH4sI",
+            b"RIFF",
+            36 + data_size,
+            b"WAVE",
+            b"fmt ",
+            16,
+            1,
+            num_channels,
+            sample_rate,
+            byte_rate,
+            block_align,
+            bps,
+            b"data",
+            data_size,
+        )
+        wav_path.write_bytes(header + bytes(data_size))
+
+        inp = TtsCueAudioInput(
+            cue_id="c1",
+            audio_path=str(wav_path),
+            track_id="t1",
+            start_s=0.5,
+            weight=1.0,
+            volume_envelope=None,
+        )
+        filt, label = _build_tts_audio_filter([inp], base_stream_offset=0)
+        out_path = tmp_path / "out.wav"
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                str(wav_path),
+                "-filter_complex",
+                filt,
+                "-map",
+                label,
+                str(out_path),
+            ],
+            capture_output=True,
+        )
+        assert result.returncode == 0, result.stderr.decode()
+        assert out_path.exists()

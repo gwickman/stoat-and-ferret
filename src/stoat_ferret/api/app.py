@@ -336,6 +336,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             video_repository=repo,
             markers_repository=app.state.markers_repository,
             effect_registry=app.state.effect_registry,
+            tts_service=getattr(app.state, "tts_service", None),
+            tts_cue_repository=getattr(app.state, "tts_cue_repository", None),
         )
         render_worker_task = asyncio.create_task(render_worker.run())
         app.state.render_worker_task = render_worker_task
