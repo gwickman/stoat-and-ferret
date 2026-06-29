@@ -1844,6 +1844,18 @@ mod multi_track_mixer_tests {
             assert!(result.is_err());
         });
     }
+
+    #[test]
+    fn rejects_negative_weight() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        assert!(mixer.add_track(0, None, -0.1).is_err());
+    }
+
+    #[test]
+    fn default_creates_empty_mixer() {
+        let mixer = MultiTrackAudioMixer::default();
+        assert!(mixer.build().is_err(), "empty mixer should error on build");
+    }
 }
 
 // ========== SubBassBuilder unit tests ==========
