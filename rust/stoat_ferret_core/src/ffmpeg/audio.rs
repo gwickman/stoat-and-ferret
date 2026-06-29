@@ -1856,6 +1856,24 @@ mod multi_track_mixer_tests {
         let mixer = MultiTrackAudioMixer::default();
         assert!(mixer.build().is_err(), "empty mixer should error on build");
     }
+
+    #[test]
+    fn pyo3_wrappers_comprehensive() {
+        pyo3::prepare_freethreaded_python();
+        pyo3::Python::with_gil(|_py| {
+            let mut mixer = MultiTrackAudioMixer::py_new().unwrap();
+            mixer.py_add_track(0, None, 1.0).unwrap();
+            mixer.py_add_track(1, None, 0.8).unwrap();
+            mixer
+                .py_add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+                .unwrap();
+            let result = mixer.py_build().unwrap();
+            assert!(result.contains("sidechaincompress"));
+            let repr = mixer.__repr__();
+            assert!(repr.contains("tracks=2"));
+            assert!(repr.contains("pairs=1"));
+        });
+    }
 }
 
 // ========== SubBassBuilder unit tests ==========
