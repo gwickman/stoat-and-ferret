@@ -1858,6 +1858,48 @@ mod multi_track_mixer_tests {
     }
 
     #[test]
+    fn build_rejects_ducked_idx_out_of_range() {
+        // add_ducking_pair doesn't validate indices against track count; build() must
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        // ducked_idx=5 is out of range for 2 tracks
+        mixer.add_ducking_pair(5, 1, 0.02, 8.0, 20.0, 300.0, false).unwrap();
+        assert!(mixer.build().is_err());
+    }
+
+    #[test]
+    fn build_rejects_sidechain_idx_out_of_range() {
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer.add_track(0, None, 1.0).unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        // sidechain_idx=5 is out of range for 2 tracks
+        mixer.add_ducking_pair(0, 5, 0.02, 8.0, 20.0, 300.0, false).unwrap();
+        assert!(mixer.build().is_err());
+    }
+
+    #[test]
+    fn build_applies_post_ducking_volume_envelope() {
+        // apply_pre_volume=false defers the envelope to after sidechaincompress
+        let mut mixer = MultiTrackAudioMixer::new();
+        mixer
+            .add_track(0, Some("0.5+0.5*sin(t)".to_string()), 1.0)
+            .unwrap();
+        mixer.add_track(1, None, 1.0).unwrap();
+        mixer
+            .add_ducking_pair(0, 1, 0.02, 8.0, 20.0, 300.0, false)
+            .unwrap();
+        let result = mixer.build().unwrap();
+        // The envelope must appear AFTER sidechaincompress, not before
+        let sc_pos = result.find("sidechaincompress").unwrap();
+        let vol_pos = result.find("volume=").unwrap();
+        assert!(
+            vol_pos > sc_pos,
+            "post-ducking envelope must follow sidechaincompress:\n{result}"
+        );
+    }
+
+    #[test]
     fn pyo3_wrappers_comprehensive() {
         pyo3::prepare_freethreaded_python();
         pyo3::Python::with_gil(|_py| {

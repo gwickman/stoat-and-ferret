@@ -4869,7 +4869,6 @@ class GenericProceduralImageBuilder:
 
     def __repr__(self) -> str: ...
 
-@typing.final
 class MultiTrackAudioMixer:
     r"""
     Multi-track audio mixer with per-track volume automation and sidechaincompress ducking.
@@ -4900,19 +4899,19 @@ class MultiTrackAudioMixer:
     def __new__(cls) -> MultiTrackAudioMixer: ...
     def add_track(
         self,
-        stream_idx: builtins.int,
-        volume_envelope: typing.Optional[builtins.str],
-        weight: builtins.float,
+        stream_idx: int,
+        volume_envelope: str | None,
+        weight: float,
     ) -> None: ...
     def add_ducking_pair(
         self,
-        ducked_idx: builtins.int,
-        sidechain_idx: builtins.int,
-        threshold: builtins.float,
-        ratio: builtins.float,
-        attack_ms: builtins.float,
-        release_ms: builtins.float,
-        apply_pre_volume: builtins.bool,
+        ducked_idx: int,
+        sidechain_idx: int,
+        threshold: float,
+        ratio: float,
+        attack_ms: float,
+        release_ms: float,
+        apply_pre_volume: bool,
     ) -> None: ...
-    def build(self) -> builtins.str: ...
-    def __repr__(self) -> builtins.str: ...
+    def build(self) -> str: ...
+    def __repr__(self) -> str: ...
