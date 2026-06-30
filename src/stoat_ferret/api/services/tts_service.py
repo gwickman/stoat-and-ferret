@@ -333,6 +333,10 @@ class TtsService:
         # Check cache before synthesis
         cached_path = self._cache.hit(cue.cache_key)
         if cached_path is not None:
+            # TODO(future-bl): Register TTS audio as a real asset-library entry (UUID,
+            # content_hash, mime_type, kind, size_bytes) rather than storing the cache
+            # path as a string here. Until then, audio_path in TtsCueResponse exposes
+            # this as a plain string.
             await self._repo.update_status(cue_id, "ready", generated_asset_id=str(cached_path))
             logger.info(
                 "tts.synthesis_complete",

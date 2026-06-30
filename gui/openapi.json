@@ -9377,17 +9377,16 @@
             "type": "string",
             "title": "Cache Key"
           },
-          "generated_asset_id": {
+          "audio_path": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Generated Asset Id"
+            "title": "Audio Path"
           },
           "status": {
             "type": "string",
