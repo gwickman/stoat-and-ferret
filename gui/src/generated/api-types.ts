@@ -1515,15 +1515,19 @@ export interface paths {
         put?: never;
         /**
          * Dispatch TTS synthesis for a cue
-         * @description Dispatch TTS synthesis for a cue (Feature 004 implementation; stub returning 202).
+         * @description Dispatch TTS synthesis for a cue.
+         *
+         *     Idempotent: concurrent calls while already synthesising return 202 without
+         *     spawning a duplicate task. A previously failed cue is reset to pending on re-call.
          *
          *     Args:
          *         project_id: The project UUID.
          *         cue_id: The TTS cue UUID.
          *         repo: TTS cue repository (injected).
+         *         request: The incoming HTTP request (provides TtsService access).
          *
          *     Returns:
-         *         Accepted acknowledgement with cue ID.
+         *         Accepted acknowledgement with cue ID and dispatch status.
          */
         post: operations["synthesise_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__synthesise_post"];
         delete?: never;
@@ -5356,8 +5360,8 @@ export interface components {
             pan: number;
             /** Cache Key */
             cache_key: string;
-            /** Generated Asset Id */
-            generated_asset_id?: string | null;
+            /** Audio Path */
+            audio_path?: string | null;
             /**
              * Status
              * @enum {string}

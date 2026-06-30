@@ -137,7 +137,7 @@ class TtsCueResponse(BaseModel):
     gain_db: float
     pan: float
     cache_key: str
-    generated_asset_id: UUID | None = None
+    audio_path: str | None = None
     status: TtsStatus
     error: str | None = None
     created_at: datetime

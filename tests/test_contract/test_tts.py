@@ -4,6 +4,7 @@
 """Behavioral wellness contract tests for TTS synthesis service (BL-516).
 
 Unit tests cover: TtsCache, PiperBackend, KokoroBackend, TtsService.
+HTTP-layer tests cover TtsCueResponse schema (BL-577).
 All tests run without FFmpeg, Piper, or real network calls.
 """
 
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,7 +20,9 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+from fastapi import FastAPI
 
+from stoat_ferret.api.routers.tts import router as tts_router
 from stoat_ferret.api.services.tts_service import (
     KokoroBackend,
     TtsCache,
@@ -671,3 +675,90 @@ class TestBuildTtsAudioFilter:
         )
         assert result.returncode == 0, result.stderr.decode()
         assert out_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# TtsCueResponse HTTP-layer schema contract (BL-577)
+# ---------------------------------------------------------------------------
+
+_HTTP_PROJECT_ID = "11111111-1111-1111-1111-111111111111"
+_HTTP_CUE_ID_READY = "22222222-2222-2222-2222-222222222222"
+_HTTP_CUE_ID_PENDING = "33333333-3333-3333-3333-333333333333"
+
+
+def _make_http_cue(
+    cue_id: str,
+    *,
+    status: str = "pending",
+    generated_asset_id: str | None = None,
+) -> TtsCue:
+    return TtsCue(
+        id=cue_id,
+        project_id=_HTTP_PROJECT_ID,
+        track_id="track-001",
+        start_s=0.0,
+        text="hello",
+        voice="en_US-ryan-medium",
+        backend="piper_local",
+        cache_key="abc123",
+        generated_asset_id=generated_asset_id,
+        status=status,
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+
+
+class TestTtsCueResponseSchema:
+    """HTTP-layer tests verifying audio_path replaces generated_asset_id (BL-577)."""
+
+    @pytest.fixture
+    async def http_client(
+        self,
+    ) -> AsyncGenerator[tuple[httpx.AsyncClient, AsyncInMemoryTtsCueRepository], None]:
+        app = FastAPI()
+        app.include_router(tts_router)
+        repo = AsyncInMemoryTtsCueRepository()
+        app.state.tts_cue_repository = repo
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client:
+            yield client, repo
+
+    async def test_ready_cue_returns_audio_path_string(
+        self,
+        http_client: tuple[httpx.AsyncClient, AsyncInMemoryTtsCueRepository],
+    ) -> None:
+        """GET ready cue returns 200 with audio_path as string (AC FR-001-AC-2)."""
+        client, repo = http_client
+        cue = _make_http_cue(
+            _HTTP_CUE_ID_READY,
+            status="ready",
+            generated_asset_id="data/tts_cache/test.wav",
+        )
+        await repo.create(cue)
+
+        resp = await client.get(
+            f"/api/v1/projects/{_HTTP_PROJECT_ID}/tts_cues/{_HTTP_CUE_ID_READY}"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["audio_path"] == "data/tts_cache/test.wav"
+        assert "generated_asset_id" not in data
+
+    async def test_pending_cue_returns_null_audio_path(
+        self,
+        http_client: tuple[httpx.AsyncClient, AsyncInMemoryTtsCueRepository],
+    ) -> None:
+        """GET pending cue returns 200 with audio_path null (AC FR-001-AC-5)."""
+        client, repo = http_client
+        cue = _make_http_cue(_HTTP_CUE_ID_PENDING, status="pending")
+        await repo.create(cue)
+
+        resp = await client.get(
+            f"/api/v1/projects/{_HTTP_PROJECT_ID}/tts_cues/{_HTTP_CUE_ID_PENDING}"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["audio_path"] is None

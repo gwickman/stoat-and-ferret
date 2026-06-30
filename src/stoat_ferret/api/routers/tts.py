@@ -429,7 +429,7 @@ def _cue_to_response(cue: TtsCue) -> TtsCueResponse:
         gain_db=cue.gain_db,
         pan=cue.pan,
         cache_key=cue.cache_key,
-        generated_asset_id=UUID(cue.generated_asset_id) if cue.generated_asset_id else None,
+        audio_path=cue.generated_asset_id,
         status=cue.status,  # type: ignore[arg-type]
         error=cue.error,
         created_at=cue.created_at,
