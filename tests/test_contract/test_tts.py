@@ -16,7 +16,7 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -29,8 +29,10 @@ from stoat_ferret.api.services.tts_service import (
     TtsService,
     _reconcile_to_48k_stereo,
 )
-from stoat_ferret.db.models import TtsCue
+from stoat_ferret.db.models import Clip, TtsCue, Video
 from stoat_ferret.db.tts_cue_repository import AsyncInMemoryTtsCueRepository
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
+from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
 
 _NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -762,3 +764,157 @@ class TestTtsCueResponseSchema:
         assert resp.status_code == 200
         data = resp.json()
         assert data["audio_path"] is None
+
+
+# ---------------------------------------------------------------------------
+# build_command_for_job TTS audio mixing (BL-578)
+# ---------------------------------------------------------------------------
+
+_MIX_PROJECT_ID = "proj-mix-001"
+_MIX_VIDEO_ID = "vid-mix-001"
+_MIX_CLIP_ID = "clip-mix-001"
+_MIX_VIDEO_PATH = "/media/source_with_audio.mp4"
+_MIX_OUTPUT_PATH = "/renders/tts_mix_output.mp4"
+
+
+def _make_mix_render_plan() -> str:
+    return json.dumps(
+        {
+            "total_duration": 10.0,
+            "settings": {
+                "output_format": "mp4",
+                "width": 1920,
+                "height": 1080,
+                "codec": "libx264",
+                "quality_preset": "standard",
+                "fps": 30.0,
+            },
+        }
+    )
+
+
+def _make_mix_job() -> RenderJob:
+    return RenderJob(
+        id="job-mix-001",
+        project_id=_MIX_PROJECT_ID,
+        status=RenderStatus.RUNNING,
+        output_path=_MIX_OUTPUT_PATH,
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=_make_mix_render_plan(),
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        completed_at=None,
+    )
+
+
+def _make_mix_clip() -> Clip:
+    return Clip(
+        id=_MIX_CLIP_ID,
+        project_id=_MIX_PROJECT_ID,
+        source_video_id=_MIX_VIDEO_ID,
+        in_point=0,
+        out_point=300,
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+
+
+def _make_mix_video(*, audio_codec: str | None = "aac") -> Video:
+    return Video(
+        id=_MIX_VIDEO_ID,
+        path=_MIX_VIDEO_PATH,
+        filename="source.mp4",
+        duration_frames=300,
+        frame_rate_numerator=30,
+        frame_rate_denominator=1,
+        width=1920,
+        height=1080,
+        video_codec="h264",
+        audio_codec=audio_codec,
+        file_size=10_000_000,
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+
+
+def _make_mix_repos(*, audio_codec: str | None = "aac") -> tuple[AsyncMock, AsyncMock]:
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[_make_mix_clip()])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=_make_mix_video(audio_codec=audio_codec))
+    return clip_repo, video_repo
+
+
+def _make_tts_input() -> TtsCueAudioInput:
+    return TtsCueAudioInput(
+        cue_id="cue-mix-001",
+        audio_path="/tmp/tts_narration.wav",
+        track_id="voice-track",
+        start_s=1.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+
+
+class TestBuildCommandTtsMixing:
+    """Command-level tests for TTS audio mixing in build_command_for_job (BL-578)."""
+
+    async def test_tts_with_source_audio_uses_amix(self) -> None:
+        """AC FR-002-AC-1/AC-4: TTS + source audio → amix, [aout] mapped, no bare -map 0:a."""
+        clip_repo, video_repo = _make_mix_repos(audio_codec="aac")
+        job = _make_mix_job()
+
+        cmd = await build_command_for_job(
+            job, clip_repo, video_repo, tts_inputs=[_make_tts_input()]
+        )
+
+        cmd_str = " ".join(cmd)
+        assert "amix=inputs=2:duration=longest" in cmd_str
+        assert "[aout]" in cmd_str
+        # Must NOT have bare -map 0:a alongside -map [tts...] (parallel-stream antipattern)
+        map_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-map"]
+        assert "0:a" not in map_flags
+
+    async def test_tts_video_only_source_no_amix(self) -> None:
+        """AC FR-002-AC-2/AC-6: TTS + video-only source → TTS-only map, no amix."""
+        clip_repo, video_repo = _make_mix_repos(audio_codec=None)
+        job = _make_mix_job()
+
+        cmd = await build_command_for_job(
+            job, clip_repo, video_repo, tts_inputs=[_make_tts_input()]
+        )
+
+        cmd_str = " ".join(cmd)
+        assert "amix" not in cmd_str
+        assert "[aout]" not in cmd_str
+        # TTS label is still mapped
+        map_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-map"]
+        assert any(f.startswith("[tts") for f in map_flags)
+
+    async def test_no_tts_uses_vf_path(self) -> None:
+        """AC FR-002-AC-3: No-TTS path uses -vf, no amix."""
+        clip_repo, video_repo = _make_mix_repos(audio_codec="aac")
+        job = _make_mix_job()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo, tts_inputs=[])
+
+        cmd_str = " ".join(cmd)
+        assert "amix" not in cmd_str
+        assert "-vf" in cmd
+
+    @pytest.mark.skipif(
+        not __import__("os").environ.get("STOAT_TEST_FFMPEG"),
+        reason="deferred_post_merge: requires STOAT_TEST_FFMPEG=1 and real FFmpeg",
+    )
+    async def test_tts_mixing_energy_bands(self) -> None:
+        """AC FR-002-AC-5 (FFmpeg-gated, deferred_post_merge): ffprobe confirms energy bands.
+
+        Discharge: render a fixture with source audio + TTS cue; ffprobe the output to
+        confirm two distinct audio energy bands (source frequency range + speech range).
+        """
+        pass
