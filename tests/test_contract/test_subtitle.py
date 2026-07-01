@@ -1,15 +1,23 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""Contract tests for SubtitleScriptBuilder (BL-518) and BurnedSubtitleBuilder (BL-519)."""
+"""Contract tests for SubtitleScriptBuilder (BL-518), BurnedSubtitleBuilder (BL-519),
+and soft subtitle embedding (BL-520)."""
 
 from __future__ import annotations
 
 import os
 import subprocess
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 
+from stoat_ferret.api.schemas.render import SoftSubtitleSpec, bcp47_to_iso639
+from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
 from stoat_ferret_core import (
     BurnedSubtitleBuilder,
     BurnedSubtitleSpec,
@@ -17,6 +25,97 @@ from stoat_ferret_core import (
     SubtitleScriptBuilder,
     SubtitleScriptSpec,
 )
+
+# ---------------------------------------------------------------------------
+# Shared fixtures for BL-520 worker tests
+# ---------------------------------------------------------------------------
+
+_NOW = datetime.now().isoformat()
+_SOFT_SUB_VIDEO_PATH = "/data/projects/clip1.mp4"
+_SOFT_EN_ASSET_ID = uuid.UUID("00000000-0000-0000-0000-000000000011")
+_SOFT_ES_ASSET_ID = uuid.UUID("00000000-0000-0000-0000-000000000012")
+
+
+@dataclass
+class _FakeAsset:
+    id: str
+    original_filename: str = "fake.srt"
+    content_hash: str = "abc"
+    mime_type: str = "application/x-subrip"
+    kind: str = "subtitle"
+    size_bytes: int = 1024
+    file_path: str = "/data/assets/en.srt"
+    created_at: str = _NOW
+    updated_at: str = _NOW
+    deleted_at: str | None = field(default=None)
+
+
+@dataclass
+class _FakeVideo:
+    id: str = "vid-sub-001"
+    path: str = _SOFT_SUB_VIDEO_PATH
+    filename: str = "clip1.mp4"
+    duration_frames: int = 300
+    frame_rate: float = 30.0
+    frame_rate_numerator: int = 30
+    frame_rate_denominator: int = 1
+    width: int = 1920
+    height: int = 1080
+    video_codec: str = "h264"
+    audio_codec: str | None = "aac"
+    file_size: int = 10_000_000
+    created_at: str = _NOW
+    updated_at: str = _NOW
+
+
+@dataclass
+class _FakeClip:
+    id: str = "clip-sub-001"
+    project_id: str = "proj-sub-001"
+    source_video_id: str = "vid-sub-001"
+    clip_type: str = "file"
+    in_point: int = 0
+    out_point: int = 300
+    effects: list[Any] = field(default_factory=list)
+
+
+@dataclass
+class _FakeRenderJob:
+    id: str = "job-sub-001"
+    project_id: str = "proj-sub-001"
+    output_path: str = "/out/result.mp4"
+    output_format: str = "mp4"
+    render_plan: str = (
+        '{"settings": {"soft_subtitles": ['
+        '{"source_asset_id": "00000000-0000-0000-0000-000000000011",'
+        ' "language": "en", "is_default": true},'
+        '{"source_asset_id": "00000000-0000-0000-0000-000000000012",'
+        ' "language": "es-ES"}'
+        ']}, "total_duration": 10.0}'
+    )
+    quality_preset: str = "standard"
+
+
+def _make_soft_sub_repos() -> tuple[AsyncMock, AsyncMock]:
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[_FakeClip()])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=_FakeVideo())
+    return clip_repo, video_repo
+
+
+def _make_soft_sub_asset_repo() -> AsyncMock:
+    asset_repo = AsyncMock()
+
+    async def _get_by_id(asset_id: str) -> _FakeAsset | None:
+        if asset_id == str(_SOFT_EN_ASSET_ID):
+            return _FakeAsset(id=asset_id, file_path="/data/assets/en.srt")
+        if asset_id == str(_SOFT_ES_ASSET_ID):
+            return _FakeAsset(id=asset_id, file_path="/data/assets/es.srt")
+        return None
+
+    asset_repo.get_by_id = _get_by_id
+    return asset_repo
 
 
 class TestScriptEntry:
@@ -298,4 +397,195 @@ def test_burned_subtitle_srt_render() -> None:
 )
 def test_burned_subtitle_force_style_escape_render() -> None:
     """force_style escape render test; deferred post-merge discharge (BL-519-AC-7)."""
+    pass
+
+
+# ---- SoftSubtitleSpec (BL-520) ----
+
+
+class TestSoftSubtitleSpec:
+    def test_en_validates_iso639(self) -> None:
+        spec = SoftSubtitleSpec(
+            source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            language="en",
+        )
+        assert bcp47_to_iso639(spec.language) == "eng"
+
+    def test_region_tag_normalized_es_es(self) -> None:
+        spec = SoftSubtitleSpec(
+            source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            language="es-ES",
+        )
+        assert bcp47_to_iso639(spec.language) == "spa"
+
+    def test_region_tag_normalized_zh_hant(self) -> None:
+        spec = SoftSubtitleSpec(
+            source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            language="zh-Hant",
+        )
+        assert bcp47_to_iso639(spec.language) == "zho"
+
+    def test_unsupported_language_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="Unsupported BCP-47"):
+            SoftSubtitleSpec(
+                source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                language="xx",
+            )
+
+    def test_unsupported_language_includes_supported_list(self) -> None:
+        with pytest.raises(ValueError, match="en"):
+            SoftSubtitleSpec(
+                source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                language="xx",
+            )
+
+    def test_is_default_false_by_default(self) -> None:
+        spec = SoftSubtitleSpec(
+            source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            language="fr",
+        )
+        assert spec.is_default is False
+
+    def test_is_default_set_true(self) -> None:
+        spec = SoftSubtitleSpec(
+            source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            language="de",
+            is_default=True,
+        )
+        assert spec.is_default is True
+
+    def test_all_ten_languages_accepted(self) -> None:
+        langs = ["en", "es", "fr", "de", "it", "ja", "zh", "pt", "ru", "ar"]
+        for lang in langs:
+            spec = SoftSubtitleSpec(
+                source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                language=lang,
+            )
+            iso = bcp47_to_iso639(spec.language)
+            assert len(iso) == 3, f"Expected 3-letter code for {lang}, got {iso!r}"
+
+
+class TestWorkerSoftSubtitleCommand:
+    """Command-level tests for soft subtitle embedding in build_command_for_job (BL-520)."""
+
+    async def test_soft_subtitles_included_in_command(self) -> None:
+        """AC FR-006-AC-1/AC-3: soft_subtitles → -c:s mov_text and language metadata."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        asset_repo = _make_soft_sub_asset_repo()
+        job = _FakeRenderJob()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
+
+        assert "-c:s" in cmd
+        assert "mov_text" in cmd
+        assert "-metadata:s:s:0" in cmd
+        assert "language=eng" in cmd
+        assert "-metadata:s:s:1" in cmd
+        assert "language=spa" in cmd
+
+    async def test_first_subtitle_is_default(self) -> None:
+        """AC FR-006-AC-3: is_default=True → -disposition:s:0 default."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        asset_repo = _make_soft_sub_asset_repo()
+        job = _FakeRenderJob()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
+
+        # First subtitle has is_default=True in the render_plan
+        assert "-disposition:s:0" in cmd
+        assert "default" in cmd
+
+    async def test_subtitle_inputs_after_source_in_command(self) -> None:
+        """AC FR-006-AC-3/AC-5: subtitle -i inputs appear after source -i."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        asset_repo = _make_soft_sub_asset_repo()
+        job = _FakeRenderJob()
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
+
+        # Source video is first -i; subtitle files appear as additional -i flags
+        input_args = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-i"]
+        assert input_args[0] == _SOFT_SUB_VIDEO_PATH
+        assert "/data/assets/en.srt" in input_args
+        assert "/data/assets/es.srt" in input_args
+        # Subtitle inputs must be at the END of the -i chain
+        en_idx = input_args.index("/data/assets/en.srt")
+        es_idx = input_args.index("/data/assets/es.srt")
+        assert en_idx > 0  # not the source video
+        assert es_idx > en_idx  # es comes after en
+
+    async def test_subtitle_inputs_after_tts_inputs(self) -> None:
+        """AC FR-006-AC-3: subtitle -i inputs appear AFTER TTS -i inputs (Risk 005)."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        asset_repo = _make_soft_sub_asset_repo()
+        job = _FakeRenderJob()
+        tts_input = TtsCueAudioInput(
+            cue_id="cue-001",
+            audio_path="/tmp/tts.wav",
+            track_id="voice",
+            start_s=0.0,
+            weight=1.0,
+            volume_envelope=None,
+        )
+
+        cmd = await build_command_for_job(
+            job, clip_repo, video_repo, tts_inputs=[tts_input], asset_repository=asset_repo
+        )
+
+        input_args = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-i"]
+        tts_idx = input_args.index("/tmp/tts.wav")
+        en_idx = input_args.index("/data/assets/en.srt")
+        # Subtitle inputs must come AFTER TTS inputs
+        assert en_idx > tts_idx
+
+    async def test_non_mp4_mkv_container_raises(self) -> None:
+        """AC FR-006-AC-4: non-mp4/non-mkv container with soft_subtitles raises ValueError."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        asset_repo = _make_soft_sub_asset_repo()
+        job = _FakeRenderJob(
+            output_format="webm",
+            output_path="/out/result.webm",
+        )
+
+        with pytest.raises(ValueError, match="mp4 or mkv"):
+            await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
+
+    async def test_mkv_container_uses_srt_codec(self) -> None:
+        """AC FR-006-AC-4: mkv container uses -c:s srt instead of mov_text."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        asset_repo = _make_soft_sub_asset_repo()
+        job = _FakeRenderJob(
+            output_format="mkv",
+            output_path="/out/result.mkv",
+        )
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
+        cmd_str = " ".join(cmd)
+
+        assert "-c:s" in cmd
+        assert "srt" in cmd
+        assert "mov_text" not in cmd_str
+
+    async def test_no_soft_subtitles_no_c_s_flag(self) -> None:
+        """Regression: no soft_subtitles → no -c:s flag emitted."""
+        clip_repo, video_repo = _make_soft_sub_repos()
+        job = _FakeRenderJob(
+            render_plan='{"settings": {}, "total_duration": 10.0}',
+        )
+
+        cmd = await build_command_for_job(job, clip_repo, video_repo)
+        assert "-c:s" not in cmd
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_soft_subtitle_ffprobe_streams() -> None:
+    """AC BL-520-AC-6 (FFmpeg-gated, deferred_post_merge): ffprobe asserts subtitle streams.
+
+    Discharge: render with 2 soft subtitle tracks (en + es), ffprobe the output to
+    confirm 2 subtitle streams with language metadata 'eng' and 'spa'.
+    First track has disposition:default=1.
+    """
     pass
