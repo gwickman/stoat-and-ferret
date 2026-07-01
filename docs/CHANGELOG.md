@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v092 — Release 3 Wave 7 + Wave D + v091 TTS P1 Repair Riders (2026-07-01)
+
+### Fixed
+- BL-577: TTS GET /tts_cues returning HTTP 500 — `generated_asset_id` UUID coercion removed; field renamed to `audio_path: str | None` in `TtsCueResponse` (PR #694)
+- BL-578: TTS render dropped source video audio — `amix` filter now preserves source audio stream alongside TTS in single-clip TTS renders (PR #695)
+
+### Changed
+- BL-556: `docs/STATUS.md` is now the sole canonical status file; root `STATUS.md` replaced with a one-line redirect stub (PR #696)
+
+### Added
+- BL-518: `SubtitleScriptBuilder` — timed drawtext caption chains with `enable='between(t,start,end)'` expressions (PR #697)
+- BL-519: `BurnedSubtitleBuilder` — SRT/ASS sidecar burn-in via FFmpeg `subtitles=` and `ass=` filters (PR #698)
+- BL-520: Soft subtitle embedding — MP4/MKV native subtitle tracks via `SoftSubtitleSpec` in `RenderPlanSettings` (PR #699)
+
+---
+
 ## v091 — Multi-track Audio Mixer + TTS Narration (2026-06-29)
 
 ### Added
