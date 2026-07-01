@@ -4,4 +4,4 @@
 
 [Alpha] AI-driven video editor with hybrid Python/Rust architecture - not production ready.
 
-**v091 (R3 Wave 5+6):** Multi-track audio mixer (`MultiTrackAudioMixer` Rust builder) with per-track volume automation and voice-triggered music ducking via sidechaincompress (BL-517, PR #689); configurable TTS narration with Piper local and Kokoro cloud backends, SHA-256 audio cache, and pre-render `adelay` injection (BL-516, PRs #690–#692). See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
+**v092 (R3 Wave 7 + Wave D + TTS P1 Riders):** Subtitle builders — `SubtitleScriptBuilder` (timed drawtext caption chains), `BurnedSubtitleBuilder` (SRT/ASS sidecar burn-in via FFmpeg subtitles/ass filters), soft subtitle embedding (`SoftSubtitleSpec` in `RenderPlanSettings` for MP4/MKV native tracks with BCP-47 → ISO-639 mapping); TTS P1 hotfixes — `TtsCueResponse.audio_path` schema repair (BL-577), source-audio amix preservation in TTS renders (BL-578); `docs/STATUS.md` consolidated as sole canonical status file (BL-556). (PRs #694–#700.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
