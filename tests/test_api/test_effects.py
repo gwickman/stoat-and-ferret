@@ -92,6 +92,7 @@ EXPECTED_EFFECT_TYPES = {
     "curves",
     "vignette",
     "hue_rotation",
+    "subtitle_script",
 }
 
 # ---- Registry unit tests ----

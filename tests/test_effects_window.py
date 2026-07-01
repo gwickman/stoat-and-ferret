@@ -272,7 +272,7 @@ def test_all_effects_unchanged_with_window_none() -> None:
     """
     registry = create_default_registry()
     all_effects = registry.list_all()
-    assert len(all_effects) == 38, f"Expected 38 effects, got {len(all_effects)}"
+    assert len(all_effects) == 39, f"Expected 39 effects, got {len(all_effects)}"
 
     for effect_type, definition in all_effects:
         # Build the baseline (no-window) filter string via preview_fn
@@ -280,7 +280,10 @@ def test_all_effects_unchanged_with_window_none() -> None:
         # preview_fn is the reference; build_fn with empty params mirrors the same path
         # (no window appended since we don't call apply_effect_to_clip here)
         assert isinstance(baseline, str), f"{effect_type}: preview_fn returned non-string"
-        assert "enable=" not in baseline or effect_type == "mock_enable_effect", (
+        # subtitle_script uses enable= internally (it emits N timed drawtext filters);
+        # it is intentionally excluded from range-window gating (timeline_T_capable=False).
+        _enable_exempt = {"mock_enable_effect", "subtitle_script"}
+        assert "enable=" not in baseline or effect_type in _enable_exempt, (
             f"{effect_type}: preview_fn already contains 'enable=' — "
             "this effect would conflict with range-window. "
             "Update the implementation plan's conflict guard to account for this."

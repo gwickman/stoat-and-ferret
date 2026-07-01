@@ -135,6 +135,7 @@ try:
         ReverseBuilder,
         SanitizationError,
         ScaleBuilder,
+        ScriptEntry,
         SharpenBuilder,
         SilenceRegion,
         SilenceReport,
@@ -143,6 +144,8 @@ try:
         SpeedSegment,
         SpiralGenerator,
         SubBassBuilder,
+        SubtitleScriptBuilder,
+        SubtitleScriptSpec,
         TimeRange,
         TimeStretchBuilder,
         TrackAudioConfig,
@@ -282,6 +285,9 @@ except ImportError:
     RadialBurstGenerator = _not_built  # type: ignore[misc,assignment]
     ParametricEqBuilder = _not_built  # type: ignore[misc,assignment]
     SubBassBuilder = _not_built  # type: ignore[misc,assignment]
+    ScriptEntry = _not_built  # type: ignore[misc,assignment]
+    SubtitleScriptSpec = _not_built  # type: ignore[misc,assignment]
+    SubtitleScriptBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     ducking_effect_schema = _not_built
     Automation = _not_built  # type: ignore[misc,assignment]
@@ -529,4 +535,8 @@ __all__ = [
     "RenderEffect",
     "RenderGraphTranslator",
     "RenderTransition",
+    # Subtitle builders
+    "ScriptEntry",
+    "SubtitleScriptSpec",
+    "SubtitleScriptBuilder",
 ]

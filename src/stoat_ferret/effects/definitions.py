@@ -46,9 +46,12 @@ from stoat_ferret_core import (
     ParametricEqBuilder,
     ReverseBuilder,
     ScaleBuilder,
+    ScriptEntry,
     SharpenBuilder,
     SpeedControl,
     SpeedSegment,
+    SubtitleScriptBuilder,
+    SubtitleScriptSpec,
     TimeStretchBuilder,
     TransitionType,
     VariableSpeedBuilder,
@@ -2936,6 +2939,129 @@ HUE_ROTATION = EffectDefinition(
 )
 
 
+def _subtitle_script_preview() -> str:
+    """Generate a filter preview for subtitle_script with default parameters."""
+    entries = [ScriptEntry(0.0, 2.0, "Sample caption")]
+    spec = SubtitleScriptSpec(entries=entries)
+    return SubtitleScriptBuilder.build(spec)
+
+
+def _build_subtitle_script(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg drawtext chain for timed subtitle captions.
+
+    Args:
+        parameters: Effect parameters with required 'entries' key.
+
+    Returns:
+        Comma-separated drawtext filter chain with enable= expressions.
+    """
+    raw_entries = parameters.get("entries", [])
+    entries = [
+        ScriptEntry(
+            float(e["start_s"]),
+            float(e["end_s"]),
+            str(e["text"]),
+        )
+        for e in raw_entries
+    ]
+    spec = SubtitleScriptSpec(
+        entries=entries,
+        position=str(parameters.get("position", "bottom")),
+        font_size=int(parameters.get("font_size", 24)),
+        font_color=str(parameters.get("font_color", "white")),
+        font_file=parameters.get("font_file") or None,
+    )
+    return SubtitleScriptBuilder.build(spec)
+
+
+SUBTITLE_SCRIPT = EffectDefinition(
+    name="Subtitle Script",
+    description=(
+        "Add timed captions to a video from a list of (start_s, end_s, text) entries. "
+        "Each entry emits a drawtext filter with enable='between(t,s,e)' for time-windowed "
+        "display. Style is uniform across all captions (position, font_size, font_color)."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "entries": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "start_s": {
+                            "type": "number",
+                            "description": "Caption start time in seconds.",
+                        },
+                        "end_s": {
+                            "type": "number",
+                            "description": "Caption end time in seconds.",
+                        },
+                        "text": {"type": "string", "description": "Caption text."},
+                    },
+                    "required": ["start_s", "end_s", "text"],
+                    "additionalProperties": False,
+                },
+                "minItems": 1,
+                "description": "List of timed caption entries.",
+            },
+            "position": {
+                "type": "string",
+                "enum": ["bottom", "top", "center"],
+                "default": "bottom",
+                "description": "Screen position for all captions.",
+            },
+            "font_size": {
+                "type": "integer",
+                "minimum": 6,
+                "maximum": 256,
+                "default": 24,
+                "description": "Font size in pixels, applied to all captions.",
+            },
+            "font_color": {
+                "type": "string",
+                "default": "white",
+                "description": "Font color name or hex value, applied to all captions.",
+            },
+            "font_file": {
+                "type": "string",
+                "description": "Absolute path to a font file. Omit to use fontconfig fallback.",
+            },
+        },
+        "required": ["entries"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "entries": (
+            "List of caption entries. Each entry needs start_s (float), "
+            "end_s (float), and text (str). "
+            "Entries can overlap in time — each has its own enable= expression."
+        ),
+        "position": (
+            "'bottom' (default) places captions near the lower edge; "
+            "'top' near upper edge; 'center' in the middle."
+        ),
+        "font_size": "Caption font size in pixels. Typical range 18-48 for video.",
+        "font_color": (
+            "Color name (white, yellow) or hex (#FFFFFF). White is most readable on video."
+        ),
+        "font_file": (
+            "Optional: absolute path to a .ttf/.otf font file. Leave unset for system fontconfig."
+        ),
+    },
+    preview_fn=_subtitle_script_preview,
+    build_fn=_build_subtitle_script,
+    ai_summary=(
+        "Burn timed caption text onto a video clip using a list of (start_s, end_s, text) entries. "
+        "Ideal for affirmation, wellness, and subtitle-style overlays."
+    ),
+    example_prompt="Add captions: 'Breathe in' at 0-3s, 'Hold' at 3-6s, 'Release' at 6-9s.",
+    stream_kind="video",
+    timeline_T_capable=False,
+    requires_path_escape=False,
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -2983,4 +3109,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("curves", CURVES)
     registry.register("vignette", VIGNETTE)
     registry.register("hue_rotation", HUE_ROTATION)
+    registry.register("subtitle_script", SUBTITLE_SCRIPT)
     return registry
