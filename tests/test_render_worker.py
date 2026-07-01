@@ -726,7 +726,7 @@ class TestWorkerLoop:
             with pytest.raises(asyncio.CancelledError):
                 await loop.run()
 
-        mock_build.assert_called_once_with(job, clip_repo, video_repo, None, None, None)
+        mock_build.assert_called_once_with(job, clip_repo, video_repo, None, None, None, None)
 
     @pytest.mark.asyncio
     async def test_run_job_called_with_built_command(self) -> None:

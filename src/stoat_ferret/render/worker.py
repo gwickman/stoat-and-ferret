@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
+from stoat_ferret.api.schemas.render import RenderPlanSettings, SoftSubtitleSpec, bcp47_to_iso639
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.markers_repository import MarkerRepository
@@ -31,6 +32,7 @@ from stoat_ferret.render.service import RenderService, generate_ffmetadata
 
 if TYPE_CHECKING:
     from stoat_ferret.api.services.tts_service import TtsService
+    from stoat_ferret.db.asset_repository import AsyncAssetRepository
     from stoat_ferret.db.tts_cue_repository import AsyncTtsCueRepository
 
 logger = structlog.get_logger(__name__)
@@ -168,6 +170,50 @@ async def _run_tts_preflight(
     return result
 
 
+async def _resolve_subtitle_asset_path(
+    spec: SoftSubtitleSpec,
+    asset_repository: AsyncAssetRepository | None,
+) -> str:
+    """Resolve a SoftSubtitleSpec's source_asset_id to its stored file_path.
+
+    Raises:
+        CommandBuildError: If asset_repository is not provided, the asset is not
+            found, or the asset has been soft-deleted.
+    """
+    if asset_repository is None:
+        raise CommandBuildError(
+            f"Cannot resolve subtitle asset {spec.source_asset_id}: no asset_repository provided"
+        )
+    asset = await asset_repository.get_by_id(str(spec.source_asset_id))
+    if asset is None or asset.deleted_at is not None:
+        raise CommandBuildError(f"Subtitle asset {spec.source_asset_id} not found in asset library")
+    return asset.file_path
+
+
+def _add_soft_subtitle_output_flags(
+    cmd: list[str],
+    output_format: str,
+    soft_subtitles: list[SoftSubtitleSpec],
+) -> None:
+    """Append -c:s, -metadata:s:s:N language=, and -disposition:s:N flags.
+
+    Raises:
+        ValueError: If the container does not support subtitle embedding.
+    """
+    fmt = str(output_format).lower()
+    if fmt == "mp4":
+        cmd.extend(["-c:s", "mov_text"])
+    elif fmt in ("mkv", "matroska"):
+        cmd.extend(["-c:s", "srt"])
+    else:
+        raise ValueError(f"Soft subtitles require mp4 or mkv container, got: {output_format!r}")
+    for idx, spec in enumerate(soft_subtitles):
+        iso639 = bcp47_to_iso639(spec.language)
+        cmd.extend([f"-metadata:s:s:{idx}", f"language={iso639}"])
+        if spec.is_default:
+            cmd.extend([f"-disposition:s:{idx}", "default"])
+
+
 async def build_command_for_job(
     job: RenderJob,
     clip_repository: AsyncClipRepository,
@@ -175,6 +221,7 @@ async def build_command_for_job(
     ffmetadata_path: str | None = None,
     effect_registry: EffectRegistry | None = None,
     tts_inputs: list[TtsCueAudioInput] | None = None,
+    asset_repository: AsyncAssetRepository | None = None,
 ) -> list[str]:
     """Build an FFmpeg argument list for a render job.
 
@@ -189,6 +236,7 @@ async def build_command_for_job(
         ffmetadata_path: Optional path to an ffmetadata file for chapter embedding.
         effect_registry: Optional registry for resolving per-clip effect types to filter strings.
         tts_inputs: Optional pre-synthesised TTS cue audio inputs for voice track injection.
+        asset_repository: Optional asset repository for resolving soft subtitle asset paths.
 
     Returns:
         A list of strings representing the full FFmpeg command
@@ -215,6 +263,9 @@ async def build_command_for_job(
     settings: dict[str, Any] = plan["settings"]
     total_duration: float = plan["total_duration"]
     segments: list[dict[str, Any]] = plan.get("segments", [])
+
+    # --- Parse render settings (soft_subtitles and future render-time options) ---
+    render_settings = RenderPlanSettings.model_validate(settings)
 
     # --- Resolve input path via repositories ---
     clips = await clip_repository.list_by_project(job.project_id)
@@ -310,6 +361,12 @@ async def build_command_for_job(
         else:
             multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
 
+        # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
+        if render_settings.soft_subtitles:
+            for spec in render_settings.soft_subtitles:
+                sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
+                multi_cmd.extend(["-i", sub_path])
+
         multi_cmd.extend(["-c:v", codec_mc])
         if codec_mc in ("libx264", "libx265") and quality_preset_mc in _QUALITY_CRF:
             multi_cmd.extend(["-crf", _QUALITY_CRF[quality_preset_mc]])
@@ -318,6 +375,10 @@ async def build_command_for_job(
         if ffmetadata_path:
             ffmeta_idx = len(input_paths)
             multi_cmd.extend(["-map_chapters", str(ffmeta_idx), "-map_metadata", str(ffmeta_idx)])
+        if render_settings.soft_subtitles:
+            _add_soft_subtitle_output_flags(
+                multi_cmd, job.output_format, render_settings.soft_subtitles
+            )
         multi_cmd.append(job.output_path)
         return multi_cmd
 
@@ -382,6 +443,13 @@ async def build_command_for_job(
         tts_base_single = 1 + (1 if ffmetadata_path else 0)
         for inp in tts_inputs:
             cmd.extend(["-i", inp.audio_path])
+
+    # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
+    # subtitle_base = 1 (source) + ffmetadata_offset + tts_count
+    if render_settings.soft_subtitles:
+        for spec in render_settings.soft_subtitles:
+            sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
+            cmd.extend(["-i", sub_path])
 
     # Segment timing
     cmd.extend(["-ss", str(timeline_start), "-t", str(seg_duration)])
@@ -452,6 +520,10 @@ async def build_command_for_job(
     if ffmetadata_path:
         cmd.extend(["-map_chapters", "1", "-map_metadata", "1"])
 
+    # Soft subtitle codec, per-stream language metadata, and default disposition
+    if render_settings.soft_subtitles:
+        _add_soft_subtitle_output_flags(cmd, job.output_format, render_settings.soft_subtitles)
+
     # Output path (must be last)
     cmd.append(job.output_path)
 
@@ -487,6 +559,7 @@ class RenderWorkerLoop:
         effect_registry: EffectRegistry | None = None,
         tts_service: TtsService | None = None,
         tts_cue_repository: AsyncTtsCueRepository | None = None,
+        asset_repository: AsyncAssetRepository | None = None,
     ) -> None:
         self.service = service
         self.queue = queue
@@ -496,6 +569,7 @@ class RenderWorkerLoop:
         self.effect_registry = effect_registry
         self.tts_service = tts_service
         self.tts_cue_repository = tts_cue_repository
+        self.asset_repository = asset_repository
         self.logger = structlog.get_logger(__name__)
 
     async def run(self) -> None:
@@ -557,6 +631,7 @@ class RenderWorkerLoop:
                 ffmetadata_path,
                 self.effect_registry,
                 tts_inputs,
+                self.asset_repository,
             )
             await self.service.run_job(job, command)
         finally:

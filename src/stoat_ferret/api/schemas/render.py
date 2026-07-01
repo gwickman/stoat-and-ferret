@@ -8,7 +8,65 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# Hand-pinned BCP-47 base → ISO-639-2/B dict (10 languages; no external babel dependency)
+_BCP47_TO_ISO639_2B: dict[str, str] = {
+    "en": "eng",
+    "es": "spa",
+    "fr": "fra",
+    "de": "deu",
+    "it": "ita",
+    "ja": "jpn",
+    "zh": "zho",
+    "pt": "por",
+    "ru": "rus",
+    "ar": "ara",
+}
+
+
+class SoftSubtitleSpec(BaseModel):
+    """A single soft subtitle track to embed in the output MP4."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    source_asset_id: uuid.UUID
+    language: str
+    is_default: bool = False
+
+    @field_validator("language", mode="before")
+    @classmethod
+    def validate_language(cls, v: str) -> str:
+        """Normalize BCP-47 region subtag and validate against supported set."""
+        base = v.split("-")[0].lower()
+        if base not in _BCP47_TO_ISO639_2B:
+            supported = ", ".join(sorted(_BCP47_TO_ISO639_2B.keys()))
+            raise ValueError(
+                f"Unsupported BCP-47 language tag: {v!r}. Supported base tags: {supported}"
+            )
+        return v
+
+
+class RenderPlanSettings(BaseModel):
+    """Parsed from render_plan.settings JSON string.
+
+    New render-time options go here — NOT as top-level CreateRenderRequest fields
+    because CreateRenderRequest uses ConfigDict(extra='forbid').
+    """
+
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+
+    quality_preset: str = "standard"
+    soft_subtitles: list[SoftSubtitleSpec] = []
+
+
+def bcp47_to_iso639(language: str) -> str:
+    """Translate a validated BCP-47 tag to ISO-639-2/B.
+
+    KeyError is impossible after SoftSubtitleSpec.validate_language passes.
+    """
+    base = language.split("-")[0].lower()
+    return _BCP47_TO_ISO639_2B[base]
 
 
 class CreateRenderRequest(BaseModel):

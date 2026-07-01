@@ -80,6 +80,37 @@ The `render_plan` field is a JSON-encoded string. Required key inside the JSON: 
 
 The default value `'{"settings": {}}'` is valid and passes preflight — the router injects project dimensions, codec, and quality preset into `settings` automatically.
 
+#### Soft Subtitles (MP4 / MKV)
+
+To embed a user-toggleable subtitle track in the rendered output, include `soft_subtitles` in `render_plan.settings`. `soft_subtitles` is a JSON array of `SoftSubtitleSpec` objects, each referencing an uploaded subtitle asset (SRT or ASS; upload via the Asset Library endpoint first).
+
+```json
+{
+  "render_plan": "{\"settings\": {\"soft_subtitles\": [{\"source_asset_id\": \"<subtitle-asset-uuid>\", \"language\": \"en\", \"is_default\": true}, {\"source_asset_id\": \"<another-uuid>\", \"language\": \"es\"}]}}"
+}
+```
+
+`SoftSubtitleSpec` fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `source_asset_id` | UUID | Yes | UUID of an uploaded subtitle asset (kind=subtitle) |
+| `language` | string | Yes | BCP-47 language tag (see supported set below) |
+| `is_default` | boolean | No (false) | Whether the track is the default subtitle track |
+
+Supported BCP-47 language tags (base tags; region subtags like `es-ES` are accepted and normalized):
+`en` (English), `es` (Spanish), `fr` (French), `de` (German), `it` (Italian), `ja` (Japanese), `zh` (Chinese), `pt` (Portuguese), `ru` (Russian), `ar` (Arabic).
+
+Language tags are translated to ISO-639-2/B at render time (`en` → `eng`, `es` → `spa`, etc.).
+Unsupported language tags return `422`.
+
+**Container constraints:**
+- `mp4` output: uses `-c:s mov_text` (note: `mov_text` flattens ASS rich styles to plain text).
+- `mkv` output: uses `-c:s srt`.
+- `webm` and `mov` outputs with non-empty `soft_subtitles` are rejected.
+
+**`CreateRenderRequest` constraint:** `soft_subtitles` goes in `render_plan.settings`, NOT as a new top-level field in `CreateRenderRequest` (which uses `extra=forbid`).
+
 #### Delivery Profile (optional)
 
 `CreateRenderRequest` accepts an optional `delivery_profile` field (string). When set, the render produces every output format declared in the profile and applies the profile's loudness and true-peak targets to the QC pass.
