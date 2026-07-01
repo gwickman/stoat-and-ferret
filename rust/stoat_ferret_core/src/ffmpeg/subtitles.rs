@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Grant Wickman
 
-//! Subtitle effect builders for drawtext caption chains.
+//! Subtitle effect builders for drawtext caption chains and sidecar burn-in.
 //!
 //! Provides [`SubtitleScriptBuilder`] which emits N `drawtext` filters
-//! chained with `enable='between(t,s,e)'` expressions for timed captions.
+//! chained with `enable='between(t,s,e)'` expressions for timed captions,
+//! and [`BurnedSubtitleBuilder`] which wraps the FFmpeg `subtitles` (SRT)
+//! and `ass` (ASS) filters for sidecar file burn-in.
+
+use std::collections::HashMap;
 
 use pyo3::prelude::*;
 
 use crate::ffmpeg::drawtext::escape_drawtext;
+use crate::ffmpeg::video::emit_filter_option_path;
 
 /// Entry in a subtitle script: time window + caption text.
 #[pyclass]
@@ -127,6 +132,104 @@ fn position_to_xy(position: &str) -> (String, String) {
         "center" => ("(w-text_w)/2".to_string(), "(h-text_h)/2".to_string()),
         // Unreachable: SubtitleScriptSpec::py_new rejects unknown positions.
         _ => ("(w-text_w)/2".to_string(), "h-text_h-10".to_string()),
+    }
+}
+
+/// Escape a force_style value for embedding in a subtitles filter option.
+///
+/// FFmpeg `force_style` is a comma-separated `KEY=VALUE` list. Internal commas
+/// in values must be escaped as `\,` to prevent the filter parser from treating
+/// them as list separators.
+///
+/// This escape is distinct from:
+/// - `emit_filter_option_path()` (handles colon-escaped path values for `filename=`)
+/// - `escape_drawtext()` (handles text escape for drawtext filter values)
+pub(crate) fn escape_force_style(value: &str) -> String {
+    value.replace(',', r"\,")
+}
+
+/// Spec for burning subtitles from an SRT or ASS sidecar file.
+///
+/// Exactly one of `source_path` or `inline_text` must be provided.
+/// `force_style` applies only to SRT files; it is silently ignored when
+/// `source_path` points to an ASS file (ASS styles are inline).
+#[pyclass]
+#[derive(Clone)]
+pub struct BurnedSubtitleSpec {
+    #[pyo3(get)]
+    pub source_path: Option<String>,
+    #[pyo3(get)]
+    pub inline_text: Option<String>,
+    #[pyo3(get)]
+    pub force_style: Option<HashMap<String, String>>,
+}
+
+#[pymethods]
+impl BurnedSubtitleSpec {
+    #[new]
+    #[pyo3(signature = (source_path=None, inline_text=None, force_style=None))]
+    pub fn py_new(
+        source_path: Option<String>,
+        inline_text: Option<String>,
+        force_style: Option<HashMap<String, String>>,
+    ) -> Self {
+        BurnedSubtitleSpec {
+            source_path,
+            inline_text,
+            force_style,
+        }
+    }
+}
+
+/// BurnedSubtitleBuilder: wraps FFmpeg `subtitles` (SRT) and `ass` (ASS) filters.
+///
+/// - SRT: emits `subtitles=filename=<escaped-path>[:force_style='<escaped-style>']`
+/// - ASS: emits `ass=filename=<escaped-path>` (no force_style; styles are inline)
+///
+/// Path escape follows BL-499 policy via `emit_filter_option_path()`.
+/// Force-style escape (commas only) via `escape_force_style()`.
+#[pyclass]
+pub struct BurnedSubtitleBuilder;
+
+#[pymethods]
+impl BurnedSubtitleBuilder {
+    #[staticmethod]
+    pub fn build(spec: &BurnedSubtitleSpec) -> PyResult<String> {
+        let path = match &spec.source_path {
+            Some(p) => p.clone(),
+            None => match &spec.inline_text {
+                Some(t) => t.clone(),
+                None => {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "source_path or inline_text must be provided",
+                    ))
+                }
+            },
+        };
+
+        let is_ass = path.to_lowercase().ends_with(".ass");
+        let escaped_path = emit_filter_option_path(&path)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        if is_ass {
+            // ASS styles are embedded inline; force_style has no effect.
+            Ok(format!("ass=filename={}", escaped_path))
+        } else {
+            let base = format!("subtitles=filename={}", escaped_path);
+            match &spec.force_style {
+                None => Ok(base),
+                Some(style_dict) => {
+                    // Sort pairs for deterministic output.
+                    let mut style_pairs: Vec<String> = style_dict
+                        .iter()
+                        .map(|(k, v)| format!("{}={}", k, escape_force_style(v)))
+                        .collect();
+                    style_pairs.sort();
+                    let escaped_style = style_pairs.join(",");
+                    Ok(format!("{}:force_style='{}'", base, escaped_style))
+                }
+            }
+        }
     }
 }
 
@@ -279,5 +382,96 @@ mod tests {
         let (x, y) = position_to_xy("center");
         assert_eq!(x, "(w-text_w)/2");
         assert_eq!(y, "(h-text_h)/2");
+    }
+
+    // -- BurnedSubtitleBuilder --
+
+    fn make_srt_spec(path: &str) -> BurnedSubtitleSpec {
+        BurnedSubtitleSpec::py_new(Some(path.to_string()), None, None)
+    }
+
+    fn make_ass_spec(path: &str) -> BurnedSubtitleSpec {
+        BurnedSubtitleSpec::py_new(Some(path.to_string()), None, None)
+    }
+
+    #[test]
+    fn test_escape_force_style_no_comma() {
+        assert_eq!(escape_force_style("Fontsize=32"), "Fontsize=32");
+    }
+
+    #[test]
+    fn test_escape_force_style_comma_in_value() {
+        assert_eq!(
+            escape_force_style("Fontname=Arial,Bold"),
+            r"Fontname=Arial\,Bold"
+        );
+    }
+
+    #[test]
+    fn test_escape_force_style_multiple_commas() {
+        assert_eq!(escape_force_style("a,b,c"), r"a\,b\,c");
+    }
+
+    #[test]
+    fn test_burned_subtitle_srt_basic() {
+        let spec = make_srt_spec("/tmp/test.srt");
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        assert!(result.starts_with("subtitles=filename="));
+        assert!(result.contains("test.srt"));
+        assert!(!result.contains("force_style"));
+    }
+
+    #[test]
+    fn test_burned_subtitle_ass_no_force_style() {
+        let spec = make_ass_spec("/tmp/test.ass");
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        assert!(result.starts_with("ass=filename="));
+        assert!(result.contains("test.ass"));
+        assert!(!result.contains("force_style"));
+    }
+
+    #[test]
+    fn test_burned_subtitle_srt_with_force_style() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Fontsize".to_string(), "32".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        assert!(result.contains(":force_style='"));
+        assert!(result.contains("Fontsize=32"));
+    }
+
+    #[test]
+    fn test_burned_subtitle_force_style_comma_escaped() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Fontname".to_string(), "Arial,Bold".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        // Comma in value must be escaped as \,
+        assert!(result.contains(r"Arial\,Bold"));
+    }
+
+    #[test]
+    fn test_burned_subtitle_ass_ignores_force_style() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Fontsize".to_string(), "32".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.ass".to_string()), None, Some(style));
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        // ASS does not emit force_style
+        assert!(result.starts_with("ass=filename="));
+        assert!(!result.contains("force_style"));
+    }
+
+    #[test]
+    fn test_burned_subtitle_no_source_or_inline_error() {
+        let spec = BurnedSubtitleSpec::py_new(None, None, None);
+        assert!(BurnedSubtitleBuilder::build(&spec).is_err());
+    }
+
+    #[test]
+    fn test_burned_subtitle_inline_text_used_as_path() {
+        let spec = BurnedSubtitleSpec::py_new(None, Some("/tmp/inline.srt".to_string()), None);
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        assert!(result.starts_with("subtitles=filename="));
+        assert!(result.contains("inline.srt"));
     }
 }

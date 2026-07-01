@@ -93,6 +93,7 @@ EXPECTED_EFFECT_TYPES = {
     "vignette",
     "hue_rotation",
     "subtitle_script",
+    "burned_subtitle",
 }
 
 # ---- Registry unit tests ----

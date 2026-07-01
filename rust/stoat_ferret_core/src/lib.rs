@@ -106,6 +106,8 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<ffmpeg::subtitles::ScriptEntry>()?;
     m.add_class::<ffmpeg::subtitles::SubtitleScriptSpec>()?;
     m.add_class::<ffmpeg::subtitles::SubtitleScriptBuilder>()?;
+    m.add_class::<ffmpeg::subtitles::BurnedSubtitleSpec>()?;
+    m.add_class::<ffmpeg::subtitles::BurnedSubtitleBuilder>()?;
 
     // Register speed control builder
     m.add_class::<ffmpeg::speed::SpeedControl>()?;

@@ -20,6 +20,8 @@ from stoat_ferret_core import (
     AfadeBuilder,
     AmixBuilder,
     BlurBuilder,
+    BurnedSubtitleBuilder,
+    BurnedSubtitleSpec,
     ChromaKeyBuilder,
     ChromaticAberrationBuilder,
     ColorKeyBuilder,
@@ -3062,6 +3064,85 @@ SUBTITLE_SCRIPT = EffectDefinition(
 )
 
 
+def _burned_subtitle_preview() -> str:
+    """Generate a filter preview for burned_subtitle with a default SRT path."""
+    spec = BurnedSubtitleSpec(source_path="/path/to/subtitle.srt")
+    return BurnedSubtitleBuilder.build(spec)
+
+
+def _build_burned_subtitle(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for SRT/ASS subtitle burn-in.
+
+    Args:
+        parameters: Effect parameters with 'source_path' and/or 'inline_text',
+                    and optional 'force_style' dict.
+    """
+    spec = BurnedSubtitleSpec(
+        source_path=parameters.get("source_path") or None,
+        inline_text=parameters.get("inline_text") or None,
+        force_style=parameters.get("force_style") or None,
+    )
+    return BurnedSubtitleBuilder.build(spec)
+
+
+BURNED_SUBTITLE_BUILDER = EffectDefinition(
+    name="Burned Subtitle",
+    description=(
+        "Burn subtitle text from an SRT or ASS sidecar file directly onto the video frames. "
+        "SRT files use the FFmpeg 'subtitles' filter; ASS files use the 'ass' filter. "
+        "Optional force_style overrides (Fontname, Fontsize, PrimaryColour, etc.) apply "
+        "to SRT only — ASS files embed styles inline."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "source_path": {
+                "type": "string",
+                "description": "Absolute path to an SRT or ASS subtitle file.",
+            },
+            "inline_text": {
+                "type": "string",
+                "description": ("Alternative: pre-resolved path to a subtitle file."),
+            },
+            "force_style": {
+                "type": "object",
+                "description": (
+                    "Optional KEY=VALUE style overrides for SRT rendering "
+                    "(Fontname, Fontsize, PrimaryColour, Outline, etc.)."
+                ),
+            },
+        },
+        "anyOf": [
+            {"required": ["source_path"]},
+            {"required": ["inline_text"]},
+        ],
+    },
+    ai_hints={
+        "source_path": (
+            "Absolute path to an SRT or ASS subtitle sidecar file. "
+            "Format auto-detected by extension (.srt → subtitles filter, .ass → ass filter)."
+        ),
+        "inline_text": ("Alternative to source_path: pre-resolved path to a subtitle file."),
+        "force_style": (
+            "Optional SRT-only style overrides as a dict: "
+            "{'Fontname': 'Arial', 'Fontsize': '32', 'PrimaryColour': '&Hffffff&'}. "
+            "Ignored for ASS files (ASS styles are embedded inline)."
+        ),
+    },
+    preview_fn=_burned_subtitle_preview,
+    build_fn=_build_burned_subtitle,
+    ai_summary=(
+        "Burn SRT or ASS subtitle text directly onto video frames. "
+        "SRT supports optional force_style overrides; ASS uses its own inline styles."
+    ),
+    example_prompt="Burn English subtitles from subtitles_en.srt onto the video with Fontsize=28.",
+    stream_kind="video",
+    timeline_T_capable=False,
+    requires_path_escape=True,
+    value_kind_per_option={"source_path": "path", "inline_text": "path"},
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -3110,4 +3191,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("vignette", VIGNETTE)
     registry.register("hue_rotation", HUE_ROTATION)
     registry.register("subtitle_script", SUBTITLE_SCRIPT)
+    registry.register("burned_subtitle", BURNED_SUBTITLE_BUILDER)
     return registry

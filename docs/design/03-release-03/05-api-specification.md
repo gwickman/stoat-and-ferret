@@ -402,7 +402,7 @@ These all use the existing `POST /projects/{p}/clips/{c}/effects` endpoint. Thei
 | `procedural_shape` | BL-513 | shape (Spiral/RadialBurst/Checkerboard/ConcentricRings), shape-specific params, size |
 | `procedural_image` | BL-514 | expression, width, height, output_format, at_time |
 | `subtitle_script` | BL-518 | entries (list of {start_s, end_s, text}), position (bottom/top/center, spec-level), font_size (spec-level), font_color (spec-level), optional font_file |
-| `burned_subtitle` | BL-519 | source_asset_id (SRT or ASS), style overrides |
+| `burned_subtitle` | BL-519 | source_path (SRT or ASS file path), optional inline_text (pre-resolved path), optional force_style dict (SRT only: Fontname, Fontsize, PrimaryColour, etc.); path escape via emit_filter_option_path (BL-499 policy) |
 | ~~`tts_narration`~~ | ~~BL-516~~ | **REMOVED — TTS is modelled as a TtsCue on an audio track, NOT a per-clip effect.** See the TTS section above. |
 
 Each ships with a registry entry including a `preview_fn` (returning the emitted filter string for `/effects/preview`) and a `build_fn` (called by the render-graph translator).
