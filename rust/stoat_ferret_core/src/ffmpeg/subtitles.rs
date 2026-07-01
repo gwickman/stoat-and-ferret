@@ -122,23 +122,11 @@ impl SubtitleScriptBuilder {
 
 fn position_to_xy(position: &str) -> (String, String) {
     match position {
-        "bottom" => (
-            "(w-text_w)/2".to_string(),
-            "h-text_h-10".to_string(),
-        ),
-        "top" => (
-            "(w-text_w)/2".to_string(),
-            "10".to_string(),
-        ),
-        "center" => (
-            "(w-text_w)/2".to_string(),
-            "(h-text_h)/2".to_string(),
-        ),
+        "bottom" => ("(w-text_w)/2".to_string(), "h-text_h-10".to_string()),
+        "top" => ("(w-text_w)/2".to_string(), "10".to_string()),
+        "center" => ("(w-text_w)/2".to_string(), "(h-text_h)/2".to_string()),
         // Unreachable: SubtitleScriptSpec::py_new rejects unknown positions.
-        _ => (
-            "(w-text_w)/2".to_string(),
-            "h-text_h-10".to_string(),
-        ),
+        _ => ("(w-text_w)/2".to_string(), "h-text_h-10".to_string()),
     }
 }
 
@@ -151,14 +139,8 @@ mod tests {
     }
 
     fn make_spec(entries: Vec<ScriptEntry>, position: &str) -> SubtitleScriptSpec {
-        SubtitleScriptSpec::py_new(
-            entries,
-            position.to_string(),
-            24,
-            "white".to_string(),
-            None,
-        )
-        .unwrap()
+        SubtitleScriptSpec::py_new(entries, position.to_string(), 24, "white".to_string(), None)
+            .unwrap()
     }
 
     #[test]
@@ -182,10 +164,14 @@ mod tests {
     #[test]
     fn test_subtitle_script_spec_rejects_unknown_position() {
         let entry = make_entry(0.0, 1.0, "hi");
-        assert!(
-            SubtitleScriptSpec::py_new(vec![entry], "left".to_string(), 24, "white".to_string(), None)
-                .is_err()
-        );
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "left".to_string(),
+            24,
+            "white".to_string(),
+            None
+        )
+        .is_err());
     }
 
     #[test]
