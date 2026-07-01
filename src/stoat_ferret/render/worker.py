@@ -390,14 +390,45 @@ async def build_command_for_job(
     # -vf / -filter_complex conflict on the same stream.
     if tts_inputs:
         tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
-        if filter_graph:
-            combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg}"
-            cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
-        elif width and height:
-            combined = f"[0:v]scale={width}:{height}[vout];{tts_filter_seg}"
-            cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+        if video.audio_codec is not None:
+            # Source video has audio — mix with TTS narration into [aout]
+            mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+            if filter_graph:
+                combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg};{mix_seg}"
+                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", "[aout]"])
+            elif width and height:
+                combined = f"[0:v]scale={width}:{height}[vout];{tts_filter_seg};{mix_seg}"
+                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", "[aout]"])
+            else:
+                cmd.extend(
+                    [
+                        "-filter_complex",
+                        f"{tts_filter_seg};{mix_seg}",
+                        "-map",
+                        "0:v",
+                        "-map",
+                        "[aout]",
+                    ]
+                )
         else:
-            cmd.extend(["-filter_complex", tts_filter_seg, "-map", "0:v", "-map", tts_audio_label])
+            # Video-only source — TTS audio only (existing behavior)
+            if filter_graph:
+                combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg}"
+                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+            elif width and height:
+                combined = f"[0:v]scale={width}:{height}[vout];{tts_filter_seg}"
+                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+            else:
+                cmd.extend(
+                    [
+                        "-filter_complex",
+                        tts_filter_seg,
+                        "-map",
+                        "0:v",
+                        "-map",
+                        tts_audio_label,
+                    ]
+                )
     else:
         if filter_graph:
             cmd.extend(["-vf", filter_graph])
