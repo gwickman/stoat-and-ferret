@@ -4946,3 +4946,22 @@ class SubtitleScriptBuilder:
 
     @staticmethod
     def build(spec: SubtitleScriptSpec) -> str: ...
+
+class BurnedSubtitleSpec:
+    """Spec for burning subtitles from an SRT or ASS sidecar file."""
+
+    source_path: str | None
+    inline_text: str | None
+    force_style: dict[str, str] | None
+    def __new__(
+        cls,
+        source_path: str | None = None,
+        inline_text: str | None = None,
+        force_style: dict[str, str] | None = None,
+    ) -> BurnedSubtitleSpec: ...
+
+class BurnedSubtitleBuilder:
+    """Wraps FFmpeg subtitles (SRT) and ass (ASS) filters for sidecar burn-in."""
+
+    @staticmethod
+    def build(spec: BurnedSubtitleSpec) -> str: ...

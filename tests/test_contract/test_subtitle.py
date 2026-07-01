@@ -1,15 +1,22 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""Contract tests for SubtitleScriptBuilder (BL-518)."""
+"""Contract tests for SubtitleScriptBuilder (BL-518) and BurnedSubtitleBuilder (BL-519)."""
 
 from __future__ import annotations
 
 import os
+import subprocess
 
 import pytest
 
-from stoat_ferret_core import ScriptEntry, SubtitleScriptBuilder, SubtitleScriptSpec
+from stoat_ferret_core import (
+    BurnedSubtitleBuilder,
+    BurnedSubtitleSpec,
+    ScriptEntry,
+    SubtitleScriptBuilder,
+    SubtitleScriptSpec,
+)
 
 
 class TestScriptEntry:
@@ -162,4 +169,133 @@ class TestSubtitleScriptBuilder:
 )
 def test_subtitle_script_builder_ffmpeg_contract() -> None:
     """Render 10s clip with 3 captions; deferred to post-merge discharge."""
+    pass
+
+
+# ---- BurnedSubtitleBuilder (BL-519) ----
+
+
+class TestBurnedSubtitleSpec:
+    def test_defaults_all_none(self) -> None:
+        spec = BurnedSubtitleSpec()
+        assert spec.source_path is None
+        assert spec.inline_text is None
+        assert spec.force_style is None
+
+    def test_source_path_set(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/test.srt")
+        assert spec.source_path == "/tmp/test.srt"
+
+    def test_inline_text_set(self) -> None:
+        spec = BurnedSubtitleSpec(inline_text="/tmp/inline.srt")
+        assert spec.inline_text == "/tmp/inline.srt"
+
+    def test_force_style_set(self) -> None:
+        spec = BurnedSubtitleSpec(
+            source_path="/tmp/test.srt",
+            force_style={"Fontsize": "32"},
+        )
+        assert spec.force_style == {"Fontsize": "32"}
+
+
+class TestBurnedSubtitleBuilder:
+    def test_srt_basic(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/test.srt")
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result.startswith("subtitles=filename=")
+        assert "test.srt" in result
+
+    def test_ass_no_force_style(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/test.ass")
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result.startswith("ass=filename=")
+        assert "test.ass" in result
+        assert "force_style" not in result
+
+    def test_srt_with_force_style(self) -> None:
+        spec = BurnedSubtitleSpec(
+            source_path="/tmp/test.srt",
+            force_style={"Fontsize": "32", "PrimaryColour": "&Hffffff&"},
+        )
+        result = BurnedSubtitleBuilder.build(spec)
+        assert ":force_style='" in result
+        assert "Fontsize=32" in result
+        assert "PrimaryColour=&Hffffff&" in result
+
+    def test_srt_force_style_comma_in_value_escaped(self) -> None:
+        spec = BurnedSubtitleSpec(
+            source_path="/tmp/test.srt",
+            force_style={"Fontname": "Arial,Bold"},
+        )
+        result = BurnedSubtitleBuilder.build(spec)
+        # Comma within a value must be escaped as \,
+        assert r"Arial\,Bold" in result
+
+    def test_ass_ignores_force_style(self) -> None:
+        spec = BurnedSubtitleSpec(
+            source_path="/tmp/test.ass",
+            force_style={"Fontsize": "32"},
+        )
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result.startswith("ass=filename=")
+        assert "force_style" not in result
+
+    def test_no_source_or_inline_raises(self) -> None:
+        spec = BurnedSubtitleSpec()
+        with pytest.raises(ValueError):
+            BurnedSubtitleBuilder.build(spec)
+
+    def test_inline_text_used_as_path(self) -> None:
+        spec = BurnedSubtitleSpec(inline_text="/tmp/via_inline.srt")
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result.startswith("subtitles=filename=")
+        assert "via_inline.srt" in result
+
+    def test_srt_no_force_style_no_colon(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/test.srt")
+        result = BurnedSubtitleBuilder.build(spec)
+        # Without force_style there is no trailing :force_style= clause
+        assert ":force_style=" not in result
+
+    def test_force_style_single_quotes_wrap(self) -> None:
+        spec = BurnedSubtitleSpec(
+            source_path="/tmp/test.srt",
+            force_style={"Fontsize": "28"},
+        )
+        result = BurnedSubtitleBuilder.build(spec)
+        # force_style value is wrapped in single quotes per FFmpeg requirement
+        assert ":force_style='Fontsize=28'" in result
+
+
+def test_ci_bundle_guard_subtitle_filters() -> None:
+    """Assert subtitles and ass filters are present in the bundled FFmpeg."""
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-filters"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except FileNotFoundError:
+        pytest.skip("ffmpeg not found on PATH; CI bundled FFmpeg required")
+    output = proc.stdout + proc.stderr
+    assert "subtitles" in output, "subtitles filter missing from bundled FFmpeg"
+    assert " ass " in output, "ass filter missing from bundled FFmpeg"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_burned_subtitle_srt_render() -> None:
+    """Burn 5s SRT onto color=blue; deferred post-merge discharge (BL-519-AC-6)."""
+    pass
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_burned_subtitle_force_style_escape_render() -> None:
+    """force_style escape render test; deferred post-merge discharge (BL-519-AC-7)."""
     pass

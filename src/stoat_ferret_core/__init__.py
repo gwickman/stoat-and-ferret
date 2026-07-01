@@ -68,6 +68,8 @@ try:
         BatchJobStatus,
         BatchProgress,
         BlurBuilder,
+        BurnedSubtitleBuilder,
+        BurnedSubtitleSpec,
         CheckerboardGenerator,
         ChromaKeyBuilder,
         ChromaticAberrationBuilder,
@@ -288,6 +290,8 @@ except ImportError:
     ScriptEntry = _not_built  # type: ignore[misc,assignment]
     SubtitleScriptSpec = _not_built  # type: ignore[misc,assignment]
     SubtitleScriptBuilder = _not_built  # type: ignore[misc,assignment]
+    BurnedSubtitleSpec = _not_built  # type: ignore[misc,assignment]
+    BurnedSubtitleBuilder = _not_built  # type: ignore[misc,assignment]
     TimeStretchBuilder = _not_built  # type: ignore[misc,assignment]
     ducking_effect_schema = _not_built
     Automation = _not_built  # type: ignore[misc,assignment]
@@ -539,4 +543,6 @@ __all__ = [
     "ScriptEntry",
     "SubtitleScriptSpec",
     "SubtitleScriptBuilder",
+    "BurnedSubtitleSpec",
+    "BurnedSubtitleBuilder",
 ]
