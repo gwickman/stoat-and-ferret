@@ -42,7 +42,7 @@ def test_all_effects_have_nonempty_example_prompt() -> None:
 def test_registry_has_builtin_effects() -> None:
     """Guards against silent removals from the default registry."""
     registry = create_default_registry()
-    assert len(registry.list_all()) == 38
+    assert len(registry.list_all()) == 39
 
 
 def test_value_kind_per_option_populated_for_migrated_builders() -> None:

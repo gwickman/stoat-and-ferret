@@ -4915,3 +4915,34 @@ class MultiTrackAudioMixer:
     ) -> None: ...
     def build(self) -> str: ...
     def __repr__(self) -> str: ...
+
+class ScriptEntry:
+    """Entry in a subtitle script: time window + caption text."""
+
+    start_s: float
+    end_s: float
+    text: str
+    def __new__(cls, start_s: float, end_s: float, text: str) -> ScriptEntry: ...
+
+class SubtitleScriptSpec:
+    """Uniform-style spec for a subtitle script (N timed captions)."""
+
+    entries: list[ScriptEntry]
+    position: str
+    font_size: int
+    font_color: str
+    font_file: str | None
+    def __new__(
+        cls,
+        entries: list[ScriptEntry],
+        position: str = "bottom",
+        font_size: int = 24,
+        font_color: str = "white",
+        font_file: str | None = None,
+    ) -> SubtitleScriptSpec: ...
+
+class SubtitleScriptBuilder:
+    """Emits N drawtext filters chained with enable= expressions for timed captions."""
+
+    @staticmethod
+    def build(spec: SubtitleScriptSpec) -> str: ...

@@ -73,6 +73,7 @@ pub mod mastering;
 pub mod reverse;
 pub mod spatial;
 pub mod speed;
+pub mod subtitles;
 pub mod transitions;
 pub mod video;
 pub mod voice_repair;

@@ -102,6 +102,11 @@ fn _core(m: &Bound<PyModule>) -> PyResult<()> {
     // Register drawtext builder
     m.add_class::<ffmpeg::drawtext::DrawtextBuilder>()?;
 
+    // Register subtitle builders
+    m.add_class::<ffmpeg::subtitles::ScriptEntry>()?;
+    m.add_class::<ffmpeg::subtitles::SubtitleScriptSpec>()?;
+    m.add_class::<ffmpeg::subtitles::SubtitleScriptBuilder>()?;
+
     // Register speed control builder
     m.add_class::<ffmpeg::speed::SpeedControl>()?;
 
