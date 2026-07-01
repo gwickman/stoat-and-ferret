@@ -362,10 +362,18 @@ async def build_command_for_job(
             multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
 
         # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
+        # subtitle_base = len(clips) + ffmetadata_offset + tts_count
         if render_settings.soft_subtitles:
+            subtitle_base_mc = (
+                len(input_paths)
+                + (1 if ffmetadata_path else 0)
+                + (len(tts_inputs) if tts_inputs else 0)
+            )
             for spec in render_settings.soft_subtitles:
                 sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
                 multi_cmd.extend(["-i", sub_path])
+            for idx, _ in enumerate(render_settings.soft_subtitles):
+                multi_cmd.extend(["-map", f"{subtitle_base_mc + idx}:s"])
 
         multi_cmd.extend(["-c:v", codec_mc])
         if codec_mc in ("libx264", "libx265") and quality_preset_mc in _QUALITY_CRF:
@@ -502,6 +510,19 @@ async def build_command_for_job(
             cmd.extend(["-vf", filter_graph])
         elif width and height:
             cmd.extend(["-vf", f"scale={width}:{height}"])
+
+    # Soft subtitle stream mapping (BL-583): emit -map <N>:s for each subtitle input.
+    # Subtitle inputs follow source (0), optional ffmetadata, and TTS inputs.
+    if render_settings.soft_subtitles:
+        subtitle_base = 1 + (1 if ffmetadata_path else 0) + (len(tts_inputs) if tts_inputs else 0)
+        if not tts_inputs:
+            # No TTS active — explicit video/audio maps required before subtitle maps
+            # (FFmpeg auto-selection is superseded when any explicit -map is present)
+            cmd.extend(["-map", "0:v"])
+            if video.audio_codec is not None:
+                cmd.extend(["-map", "0:a"])
+        for idx, _ in enumerate(render_settings.soft_subtitles):
+            cmd.extend(["-map", f"{subtitle_base + idx}:s"])
 
     # Video codec
     cmd.extend(["-c:v", codec])
