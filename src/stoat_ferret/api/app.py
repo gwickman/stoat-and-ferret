@@ -89,6 +89,7 @@ from stoat_ferret.db.proxy_repository import AsyncProxyRepository, SQLiteProxyRe
 from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.db.thumbnail_strip_repository import SQLiteThumbnailStripRepository
 from stoat_ferret.db.timeline_repository import AsyncTimelineRepository
+from stoat_ferret.db.tts_cue_repository import AsyncTtsCueRepository
 from stoat_ferret.db.version_repository import AsyncVersionRepository
 from stoat_ferret.db.waveform_repository import SQLiteWaveformRepository
 from stoat_ferret.effects.registry import EffectRegistry
@@ -573,6 +574,7 @@ def create_app(
     qc_service: QCService | None = None,
     delivery_profile_repository: object | None = None,
     asset_repository: AsyncSQLiteAssetRepository | None = None,
+    tts_cue_repository: AsyncTtsCueRepository | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
 
@@ -607,6 +609,7 @@ def create_app(
         qc_service: Optional QCService for dependency injection in tests.
         delivery_profile_repository: Optional delivery profile repository for DI in tests.
         asset_repository: Optional asset repository for dependency injection in tests.
+        tts_cue_repository: Optional TTS cue repository for dependency injection in tests.
 
     Returns:
         Configured FastAPI application instance with lifespan management.
@@ -698,6 +701,9 @@ def create_app(
 
     if asset_repository is not None:
         app.state.asset_repository = asset_repository
+
+    if tts_cue_repository is not None:
+        app.state.tts_cue_repository = tts_cue_repository
 
     app.include_router(assets.router)
     app.include_router(health.router)
