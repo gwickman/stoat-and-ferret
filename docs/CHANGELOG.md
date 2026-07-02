@@ -4,6 +4,52 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v093 — Render Correctness Hotfixes, API Test Coverage, Documentation & Rust Quality (2026-07-02)
+
+### Fixed
+
+- BL-583: Soft subtitle stream map corrected — subtitle filter input mapping repaired for multi-stream renders; `test_soft_subtitle_ffprobe_streams` FFmpeg-gated (AC-6 deferred) (PR #701)
+- BL-574: Image-clip asset validation — `source_asset_id` now validated at clip-creation time, guarding against missing or deleted asset references before render time (PR #702)
+- BL-579: TrackCreate finite validation — all numeric fields on `TrackCreate` now validated as finite IEEE 754 values; non-finite inputs raise `ValueError` at construction time (PR #703)
+
+### Added
+
+- BL-580: TTS HTTP layer tests — CRUD test suite for `POST /tts_cues`, `GET /tts_cues`, `GET /tts_cues/{id}`, `PATCH /tts_cues/{id}`, `DELETE /tts_cues/{id}` endpoints (PR #704)
+- BL-581: DuckingPair HTTP layer tests — CRUD test suite for `POST /ducking_pairs`, `GET /ducking_pairs`, `PATCH /ducking_pairs/{id}`, `DELETE /ducking_pairs/{id}` endpoints; AC-4 weakened — SQLite FK integration test pending (PR #705)
+- BL-588: Ducking quiet-window test discharge — `test_music_unchanged_during_silence` authored, discharging BL-517-AC-8 (PR #707)
+- BL-589: TTS speech energy placement test — energy-placement test suite for TTS cue `start_s` positioning; ACs 2, 3, 6 FFmpeg-gated (deferred) (PR #708)
+- BL-575: `WrongArity` variant added to `ProceduralParserError` Rust enum — distinguishes argument-count mismatches from syntax errors; PyO3 bindings updated (PR #713)
+- BL-555: `BurnedSubtitleBuilder` migrated to `emit_filter_value` dispatch — replaces ad-hoc string formatting with the shared `emit_filter_value` dispatch function; 11 new contract tests; AC-5 gated pending BL-505B (PR #714)
+
+### Changed
+
+- BL-587: `generated_asset_id` drift repair — stale `generated_asset_id` field removed from `TtsCueResponse` and related schemas following the v092 rename to `audio_path` (PR #709)
+- BL-565: UAT baseline cleanup — stale J204/J501 entries removed from `tests/fixtures/baseline-uat-failures.json`; AC-3 UAT-gated pending headed browser run (PR #710)
+- BL-576: Smoke skip messages updated to reference `BL-515-AC-14` as the authoritative tracking item (PR #711)
+- Feature 004: `docs/manual/smoke-test-key-files.md` updated with v090–v092 module additions (PR #712)
+
+### Deferred (pending discharge)
+
+- BL-583-AC-6: `test_soft_subtitle_ffprobe_streams` — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_contract/test_subtitle.py::test_soft_subtitle_ffprobe_streams`
+- BL-589-AC-2/AC-3/AC-6: `TestTtsSpeechEnergyPlacementFFmpeg` — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_contract/test_tts.py::TestTtsSpeechEnergyPlacementFFmpeg`
+- BL-581-AC-4: SQLite FK integration test for DuckingPair track FK constraint — `test_create_ducking_pair_invalid_track_returns_422` using real SQLite fixture
+- BL-565-AC-3: Headed UAT confirmation run verifying J204/J501 are absent from Playwright results
+- BL-555-AC-5: BL-505B cross-check — discharges automatically when BL-505B lands
+
+### PRs
+
+#701, #702, #703, #704, #705, #707, #708, #709, #710, #711, #712, #713, #714
+
+### Resolved
+
+BL-583 (subtitle stream map — AC-6 FFmpeg-deferred), BL-574 (image-clip asset validation), BL-579 (TrackCreate finite validation), BL-580 (TTS HTTP tests), BL-588 (ducking quiet-window discharge), BL-589 (TTS speech energy placement — ACs 2/3/6 FFmpeg-deferred), BL-587 (generated_asset_id drift), BL-576 (smoke skip message update), BL-575 (WrongArity variant)
+
+### Partially resolved
+
+BL-581 (DuckingPair HTTP tests — AC-4 weakened), BL-565 (UAT baseline cleanup — AC-3 UAT-deferred), BL-555 (emit_filter_value migration — AC-5 BL-505B-gated)
+
+---
+
 ## v092 — Release 3 Wave 7 + Wave D + v091 TTS P1 Repair Riders (2026-07-01)
 
 ### Fixed
