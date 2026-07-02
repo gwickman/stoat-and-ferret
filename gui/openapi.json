@@ -974,7 +974,7 @@
           "projects"
         ],
         "summary": "Add Clip",
-        "description": "Add clip to project.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Clip creation request.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n    video_repo: Video repository dependency.\n\nReturns:\n    Created clip details.\n\nRaises:\n    HTTPException: 404 if project or video not found, 400 if validation fails.",
+        "description": "Add clip to project.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Clip creation request.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n    video_repo: Video repository dependency.\n    asset_repo: Asset repository dependency.\n\nReturns:\n    Created clip details.\n\nRaises:\n    HTTPException: 404 if project, video, or asset not found, 400 if validation fails,\n        422 if asset kind does not match 'image'.",
         "operationId": "add_clip_api_v1_projects__project_id__clips_post",
         "parameters": [
           {
