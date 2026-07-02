@@ -7,7 +7,7 @@ Tests the full asset lifecycle against a running FastAPI application via
 httpx.AsyncClient: upload → list → metadata → download → soft-delete.
 
 Also covers content-hash deduplication, referenced-clip delete-protection
-(skipped until BL-511 is merged), and security rejections (oversize, MIME
+(skipped until BL-515-AC-14 lands), and security rejections (oversize, MIME
 magic-bytes mismatch, traversal).
 
 FFmpeg-independent — STOAT_TEST_FFMPEG not required.
@@ -248,16 +248,18 @@ async def test_asset_delete_protection_with_clip(
 ) -> None:
     """Asset referenced by an image clip cannot be soft-deleted (AC-14).
 
-    Skipped until BL-511 (clip_type=image) is merged and the FK constraint
-    between clips.source_asset_id and assets.id is live.
+    Skipped until BL-515-AC-14 (asset FK delete-protection) is implemented
+    and the FK constraint between clips.source_asset_id and assets.id is live.
     """
     schema_resp = await asset_smoke_client.get("/openapi.json")
     if schema_resp.status_code == 200 and "source_asset_id" not in schema_resp.text:
-        pytest.skip("clip_type=image not in schema — BL-511 not yet merged")
+        pytest.skip("source_asset_id missing from OpenAPI schema; image-clip contract unavailable")
 
     # Test body: create asset, reference it from an image clip, attempt delete.
-    # Intentionally not implemented until BL-511 is merged.
-    pytest.skip("clip_type=image not in schema — BL-511 not yet merged")
+    # Placeholder until BL-515-AC-14 (asset FK delete-protection) lands.
+    pytest.skip(
+        "asset FK delete-protection blocked by BL-515-AC-14; remove this skip when that AC lands"
+    )
 
 
 # ---------------------------------------------------------------------------
