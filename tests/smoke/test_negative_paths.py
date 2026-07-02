@@ -249,3 +249,126 @@ async def test_video_delete_blocked_when_clip_references_it(
     resp = await smoke_client.delete(f"/api/v1/videos/{video_id}")
     assert resp.status_code == 409
     assert resp.json()["detail"]["code"] == "FK_CONSTRAINT_VIOLATION"
+
+
+async def _ensure_stub_deleted_asset(client: httpx.AsyncClient) -> str:
+    """Insert a stub image asset row with deleted_at set and return its ID."""
+    transport: httpx.ASGITransport = client._transport  # type: ignore[assignment]
+    db = transport.app.state.db  # type: ignore[union-attr]
+    asset_id = str(uuid.uuid4())
+    now_str = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT INTO assets "
+        "(id, original_filename, content_hash, mime_type, kind, size_bytes, "
+        "file_path, deleted_at, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            asset_id,
+            "stub_image.png",
+            f"fakehash-{asset_id}",
+            "image/png",
+            "image",
+            100,
+            f"/stub/{asset_id}.png",
+            now_str,
+            now_str,
+            now_str,
+        ),
+    )
+    await db.commit()
+    return asset_id
+
+
+async def test_image_clip_nonexistent_asset(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """Image clip with non-existent source_asset_id returns 404 ASSET_NOT_FOUND (BL-574-AC-1)."""
+    client = smoke_client
+
+    resp = await client.post("/api/v1/projects", json={"name": "NE Asset Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    fake_asset_id = str(uuid.uuid4())
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": fake_asset_id,
+            "in_point": 0,
+            "out_point": 90,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 3.0,
+        },
+    )
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["detail"]["code"] == "ASSET_NOT_FOUND"
+
+
+async def test_image_clip_soft_deleted_asset(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """Image clip referencing a soft-deleted asset returns 404 ASSET_NOT_FOUND (BL-574-AC-2)."""
+    client = smoke_client
+
+    resp = await client.post("/api/v1/projects", json={"name": "Soft-Delete Asset Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    asset_id = await _ensure_stub_deleted_asset(client)
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": asset_id,
+            "in_point": 0,
+            "out_point": 90,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 3.0,
+        },
+    )
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["detail"]["code"] == "ASSET_NOT_FOUND"
+
+
+async def test_track_create_infinite_weight(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """PUT timeline with out-of-range weight returns HTTP 422 (BL-579-AC-1).
+
+    JSON cannot represent float('inf') natively; uses weight=11.0 which exceeds
+    the le=10.0 upper bound added by BL-579 alongside weight_must_be_finite.
+    """
+    client = smoke_client
+
+    resp = await client.post("/api/v1/projects", json={"name": "Infinite Weight Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "audio", "label": "Music", "weight": 11.0}],
+    )
+    assert resp.status_code == 422
+
+
+async def test_track_create_nan_volume_envelope(
+    smoke_client: httpx.AsyncClient,
+) -> None:
+    """PUT timeline with volume_envelope='nan' returns HTTP 422 (BL-579-AC-2)."""
+    client = smoke_client
+
+    resp = await client.post("/api/v1/projects", json={"name": "NaN Envelope Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "audio", "label": "Music", "volume_envelope": "nan"}],
+    )
+    assert resp.status_code == 422
