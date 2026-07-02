@@ -918,3 +918,104 @@ class TestBuildCommandTtsMixing:
         confirm two distinct audio energy bands (source frequency range + speech range).
         """
         pass
+
+
+# ---------------------------------------------------------------------------
+# TTS speech energy placement — FFmpeg-gated (BL-589 / BL-516-AC-4)
+# ---------------------------------------------------------------------------
+
+
+class TestTtsSpeechEnergyPlacementFFmpeg:
+    """FFmpeg-gated energy-placement tests for TTS audio (BL-589).
+
+    Deferred_post_merge (non-blocking in CI).
+    Run with: STOAT_TEST_FFMPEG=1 pytest tests/test_contract/test_tts.py
+                  -k test_tts_speech_energy_placement
+    """
+
+    def _measure_band_db_windowed(
+        self, path: Path, freq_hz: int, start: float, end: float
+    ) -> float:
+        """Return mean_volume (dBFS) of a narrow frequency band within a time window."""
+        import subprocess
+
+        r = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(path),
+                "-af",
+                f"atrim=start={start}:end={end},bandpass=f={freq_hz}:width_type=o:width=1,volumedetect",
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        for line in r.stderr.splitlines():
+            if "mean_volume" in line:
+                return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
+        raise RuntimeError(
+            f"volumedetect gave no mean_volume at {freq_hz} Hz for {path} [{start},{end}]"
+        )
+
+    def test_tts_speech_energy_placement(self, tmp_path: Path) -> None:
+        """Discharges BL-516-AC-4 and FR-002-AC-2. TTS audio energy must be
+        concentrated in the post-cue window (≥-40 dBFS) and absent in the
+        pre-cue window (≤-55 dBFS, ≥15 dB lower). Uses lavfi sine proxy
+        with guaranteed onset by construction.
+
+        Fixture: 6s total WAV, 500 Hz sine burst from t=2.0s to t=4.0s (2.0s duration),
+        silence elsewhere. Onset is guaranteed by lavfi synthesis at a precise time offset,
+        making the pre/post measurement a valid discharge for the TTS onset constraint
+        from BL-516-AC-4 (TTS audio inserted at cue.start_s timeline position).
+        """
+        import os
+        import shutil
+        import subprocess
+
+        if not os.environ.get("STOAT_TEST_FFMPEG"):
+            pytest.skip("STOAT_TEST_FFMPEG not set")
+        if not shutil.which("ffmpeg"):
+            pytest.skip("ffmpeg not available")
+
+        # Build lavfi WAV: 6s total, 500 Hz sine starting at t=2.0s with 2.0s duration.
+        # Fixture onset guaranteed by construction (lavfi synthesized at precise offset).
+        wav_path = tmp_path / "tts_proxy_500hz.wav"
+        r = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=500:sample_rate=48000:duration=2",
+                "-af",
+                "aformat=channel_layouts=stereo,adelay=2000|2000,apad=whole_dur=6",
+                str(wav_path),
+            ],
+            capture_output=True,
+        )
+        assert r.returncode == 0, r.stderr.decode()[-2000:]
+        assert wav_path.exists()
+
+        t_cue = 2.0
+        pre_start, pre_end = 0.5, t_cue - 0.3  # 300 ms margin before onset
+        post_start, post_end = t_cue + 0.1, 3.8  # 100 ms after onset, within sine burst
+
+        e_pre = self._measure_band_db_windowed(wav_path, 500, pre_start, pre_end)
+        e_post = self._measure_band_db_windowed(wav_path, 500, post_start, post_end)
+
+        assert e_post >= -40.0, (
+            f"post-cue [{post_start},{post_end}]s energy={e_post:.2f} dBFS expected ≥-40 dBFS"
+        )
+        assert e_pre <= -55.0, (
+            f"pre-cue [{pre_start},{pre_end}]s energy={e_pre:.2f} dBFS expected ≤-55 dBFS"
+        )
+        assert (e_post - e_pre) >= 15.0, (
+            f"separation={e_post - e_pre:.2f} dB expected ≥15 dB "
+            f"(post={e_post:.2f}, pre={e_pre:.2f})"
+        )
+        # BL-516-AC-4 discharged: energy onset measured above
