@@ -1221,6 +1221,106 @@ def test_delete_transition_project_not_found(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# TrackCreate field validation (BL-579)
+# ---------------------------------------------------------------------------
+
+
+from pydantic import ValidationError  # noqa: E402
+
+from stoat_ferret.api.schemas.timeline import TrackCreate  # noqa: E402
+
+
+def test_weight_rejects_inf() -> None:
+    """TrackCreate.weight rejects float('inf')."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", weight=float("inf"))
+
+
+def test_weight_rejects_neg_inf() -> None:
+    """TrackCreate.weight rejects float('-inf')."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", weight=float("-inf"))
+
+
+def test_weight_rejects_nan() -> None:
+    """TrackCreate.weight rejects float('nan')."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", weight=float("nan"))
+
+
+def test_weight_rejects_large_overflow() -> None:
+    """TrackCreate.weight rejects 1e309 (overflows to inf)."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", weight=1e309)
+
+
+def test_weight_rejects_string_infinity() -> None:
+    """TrackCreate.weight rejects 'Infinity' string (Pydantic coerces to inf)."""
+    with pytest.raises(ValidationError):
+        TrackCreate.model_validate({"track_type": "audio", "label": "A", "weight": "Infinity"})
+
+
+def test_weight_zero_valid() -> None:
+    """TrackCreate.weight=0.0 (mute) is valid."""
+    t = TrackCreate(track_type="audio", label="A", weight=0.0)
+    assert t.weight == 0.0
+
+
+def test_weight_one_valid() -> None:
+    """TrackCreate.weight=1.0 (unity) is valid."""
+    t = TrackCreate(track_type="audio", label="A", weight=1.0)
+    assert t.weight == 1.0
+
+
+def test_volume_envelope_rejects_nan() -> None:
+    """TrackCreate.volume_envelope rejects 'nan'."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", volume_envelope="nan")
+
+
+def test_volume_envelope_rejects_nan_uppercase() -> None:
+    """TrackCreate.volume_envelope rejects 'NaN' (case-insensitive)."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", volume_envelope="NaN")
+
+
+def test_volume_envelope_rejects_inf() -> None:
+    """TrackCreate.volume_envelope rejects 'inf'."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", volume_envelope="inf")
+
+
+def test_volume_envelope_rejects_plus_inf() -> None:
+    """TrackCreate.volume_envelope rejects '+inf'."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", volume_envelope="+inf")
+
+
+def test_volume_envelope_rejects_minus_inf() -> None:
+    """TrackCreate.volume_envelope rejects '-inf'."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", volume_envelope="-inf")
+
+
+def test_volume_envelope_rejects_infinity() -> None:
+    """TrackCreate.volume_envelope rejects 'infinity' (case-insensitive)."""
+    with pytest.raises(ValidationError):
+        TrackCreate(track_type="audio", label="A", volume_envelope="Infinity")
+
+
+def test_volume_envelope_accepts_expression() -> None:
+    """TrackCreate.volume_envelope accepts valid FFmpeg expression."""
+    t = TrackCreate(track_type="audio", label="A", volume_envelope="0.5+0.5*sin(t)")
+    assert t.volume_envelope == "0.5+0.5*sin(t)"
+
+
+def test_volume_envelope_none_valid() -> None:
+    """TrackCreate.volume_envelope=None is valid."""
+    t = TrackCreate(track_type="audio", label="A", volume_envelope=None)
+    assert t.volume_envelope is None
+
+
+# ---------------------------------------------------------------------------
 # Black box transition workflow
 # ---------------------------------------------------------------------------
 
