@@ -5,16 +5,6 @@
     "tracking_reference": "BL-480"
   },
   {
-    "journey_id": 204,
-    "reason": "BL-551 preflight rejects multi-clip renders with 422 MULTI_CLIP_NOT_SUPPORTED. J204 seeds the Running Montage sample project (4 clips) and calls the render API directly, which now fails. Previously failed with HTTP 500 during forced reseed (BL-536). The seed journey is intentionally multi-clip; discharge requires either a single-clip seed variant or BL-505 multi-clip render support.",
-    "tracking_reference": "BL-551"
-  },
-  {
-    "journey_id": 501,
-    "reason": "BL-551 preflight rejects multi-clip renders with 422 MULTI_CLIP_NOT_SUPPORTED. J501 auto-selects the first project (Running Montage, 4 clips seeded by J204) via the Timeline page and submits a render through the UI, which returns 422, so the modal does not close and Step 10 fails. Discharge: update J501 to seed its own single-clip project before rendering, or gate on BL-505 multi-clip support.",
-    "tracking_reference": "BL-551"
-  },
-  {
     "journey_id": 502,
     "reason": "J502 fails with HTTP 422 on POST /api/v1/render in headless UAT: preset translation fires but job_created event never emitted. Root cause pending investigation. Discharge: BL-553 wiring of real effects + headed UAT run.",
     "tracking_reference": "BL-558"
