@@ -98,6 +98,14 @@ The test harness has three tiers:
 |------|-------------------|
 | `tests/smoke/test_render_contract.py` | Multi-clip render pipeline coverage (v088): 4 static tests verify a 2-clip project is accepted by the noop render API (`test_multi_clip_render_api_accepts`), that `xfade` and `[final]` appear in the generated `filter_complex` (`test_multi_clip_translator_xfade_present`), that `len(input_paths)` equals the clip count (`test_multi_clip_translator_input_paths_count_matches_clips`), and that a per-clip animated_alpha effect proxy appears in the filter graph (`test_multi_clip_per_clip_effect_appears_in_filter_complex`). All 4 static tests run in CI without FFmpeg. One behavioral test — `test_multi_clip_render_output_file_exists` — verifies the output file is written to disk and is gated by `STOAT_TEST_FFMPEG=1`. |
 
+### Phase 10 — v090–v092 Asset Library, Generator Clips, and Auxiliary Streams
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_asset_api.py` | Asset library lifecycle (BL-515, v090): upload → list → metadata → download → soft-delete. Covers content-hash deduplication, MIME magic-bytes rejection, and path-traversal rejection. `test_asset_delete_protection_with_clip` is skipped pending BL-515-AC-14 — the skip message references `BL-515-AC-14` as the tracking item. Image clip creation references assets via `src/stoat_ferret/api/routers/assets.py`; image clip schema fields (source_asset_id, timeline_end) live in `src/stoat_ferret/api/schemas/clip.py`. All tests run without FFmpeg. |
+| `tests/smoke/test_generator_clip.py` | Generator clip API (BL-441, v079): `POST /api/v1/projects/{id}/clips` with `clip_type='generator'` accepts FFmpeg `aevalsrc` generator parameters and returns 201. |
+| `tests/smoke/test_video_auxiliary_streams.py` | Auxiliary stream counts (BL-408, v074): verifies audio and subtitle stream counts match the source container using real corpus video files. Gated by `STOAT_TEST_FFMPEG=1`. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
@@ -105,6 +113,14 @@ The test harness has three tiers:
 | File | What it tells you |
 |------|-------------------|
 | `tests/test_contract/test_render_contract.py` | Render output format validation (mp4/webm/mov/mkv), encoder detection, multi-segment concat, WebSocket progress schema, and frame streaming endpoint (BL-254, BL-255) |
+
+### Contract Tests (v091–v092) — TTS, Multi-Track Audio, and Subtitles
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/test_contract/test_tts.py` | TTS synthesis service wellness contract (BL-516, v091): covers TtsCache, PiperBackend, KokoroBackend, and TtsService. All tests run without FFmpeg, Piper, or real network calls. Also covers HTTP-layer TtsCueResponse schema (BL-577). Source: `src/stoat_ferret/api/routers/tts.py` (REST endpoint) and `src/stoat_ferret/api/services/tts_service.py` (backend service). |
+| `tests/test_contract/test_audio.py` | Multi-track audio mixer wellness contract (BL-517, v091): unit tests verify the assembled filter string structure (no FFmpeg required); `@requires_ffmpeg` tests run the filter and assert audio properties. Covers music-unchanged-during-silence discharge (BL-517-AC-8). Source: `src/stoat_ferret/api/services/audio_service.py`. |
+| `tests/test_contract/test_subtitle.py` | Subtitle builder contract tests (BL-518/519/520/583, v092): SubtitleScriptBuilder timed drawtext chains (BL-518), BurnedSubtitleBuilder SRT/ASS sidecar burn-in (BL-519), soft subtitle MP4/MKV embedding (BL-520), and soft-subtitle `-map` index fix (BL-583). Builders are implemented in Rust at `rust/stoat_ferret_core/src/ffmpeg/subtitles.rs`. Most tests run without FFmpeg; two ffprobe assertion tests are gated by `STOAT_TEST_FFMPEG=1`. |
 
 ### Contract Test Patterns
 
