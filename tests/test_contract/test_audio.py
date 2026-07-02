@@ -10,6 +10,7 @@ FFmpeg tests (marked requires_ffmpeg) run the filter and assert audio properties
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -260,6 +261,32 @@ class TestMultiTrackMixerFFmpeg:
                 return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
         raise RuntimeError(f"volumedetect gave no mean_volume at {freq_hz} Hz for {path}")
 
+    def _measure_band_db_windowed(
+        self, path: Path, freq_hz: int, start: float, end: float
+    ) -> float:
+        """Return mean_volume (dBFS) of a narrow frequency band within a time window."""
+        r = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(path),
+                "-af",
+                f"atrim=start={start}:end={end},bandpass=f={freq_hz}:width_type=o:width=1,volumedetect",
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        for line in r.stderr.splitlines():
+            if "mean_volume" in line:
+                return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
+        raise RuntimeError(
+            f"volumedetect gave no mean_volume at {freq_hz} Hz for {path} [{start},{end}]"
+        )
+
     def test_music_ducked_during_voice(self, tmp_path: Path) -> None:
         """Music 200 Hz band must be ≥6 dB quieter when voice is active (AC-8).
 
@@ -329,6 +356,117 @@ class TestMultiTrackMixerFFmpeg:
             f"Expected ≥6 dB ducking attenuation at 200 Hz; "
             f"baseline={rms_baseline:.1f} dB, ducked={rms_ducked:.1f} dB, diff={diff:.1f} dB"
         )
+
+    def test_music_unchanged_during_silence(self, tmp_path: Path) -> None:
+        """Discharges BL-517-AC-8. Music carrier (200 Hz) energy should be unchanged
+        (≤0.5 dB delta) during voice-silent windows regardless of whether ducking is active.
+
+        Silence-window complement to test_music_ducked_during_voice (AC-7). The
+        sidechaincompress should only attenuate music when the sidechain trigger (voice) is
+        active; during silent windows, music energy must be unchanged.
+        """
+        if not os.environ.get("STOAT_TEST_FFMPEG"):
+            pytest.skip("STOAT_TEST_FFMPEG not set")
+
+        # Build a 6-second voice burst: 1500 Hz from t=2.0s to t=3.5s, silent elsewhere.
+        # adelay shifts the 1.5s tone by 2000 ms; apad extends to 6 s with silence.
+        voice_burst = tmp_path / "voice_burst.wav"
+        r = self._ffmpeg(
+            tmp_path,
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=1500:duration=1.5",
+                "-filter_complex",
+                "[0:a]adelay=2000|2000[delayed];[delayed]apad=whole_dur=6[out]",
+                "-map",
+                "[out]",
+                "-c:a",
+                "pcm_s16le",
+                str(voice_burst),
+            ],
+        )
+        assert r.returncode == 0, r.stderr.decode()[-2000:]
+
+        all_tracks = [_track("music", "music"), _track("voice", "voice")]
+        # release_ms=200: post-voice window starts at 3.5 + 0.200 + 0.100 = 3.8 s
+        release_ms = 200.0
+        voice_end = 3.5
+        post_start = voice_end + (release_ms + 100.0) / 1000.0
+
+        pair = _pair(
+            "p1",
+            "music",
+            "voice",
+            threshold=0.02,
+            ratio=8.0,
+            attack_ms=50.0,
+            release_ms=release_ms,
+        )
+
+        # Render with ducking active
+        fc_ducked = assemble_multi_track_mixer(all_tracks, [pair])
+        ducked = tmp_path / "ducked_silence.wav"
+        r = self._ffmpeg(
+            tmp_path,
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=200:duration=6",
+                "-i",
+                str(voice_burst),
+                "-filter_complex",
+                fc_ducked,
+                "-c:a",
+                "pcm_s16le",
+                str(ducked),
+            ],
+        )
+        assert r.returncode == 0, r.stderr.decode()[-2000:]
+
+        # Render without ducking (same tracks, no ducking pair)
+        fc_noduck = assemble_multi_track_mixer(all_tracks, [])
+        noduck = tmp_path / "noduck_silence.wav"
+        r = self._ffmpeg(
+            tmp_path,
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=200:duration=6",
+                "-i",
+                str(voice_burst),
+                "-filter_complex",
+                fc_noduck,
+                "-c:a",
+                "pcm_s16le",
+                str(noduck),
+            ],
+        )
+        assert r.returncode == 0, r.stderr.decode()[-2000:]
+
+        # Measure 200 Hz band energy in voice-silent windows for both renders.
+        # pre-voice:  [0.2, 1.5] s — before voice onset at 2.0 s.
+        # post-voice: [post_start, 5.5] s — after compressor release tail (release_ms + 100 ms).
+        e_ducked_pre = self._measure_band_db_windowed(ducked, 200, 0.2, 1.5)
+        e_noduck_pre = self._measure_band_db_windowed(noduck, 200, 0.2, 1.5)
+        e_ducked_post = self._measure_band_db_windowed(ducked, 200, post_start, 5.5)
+        e_noduck_post = self._measure_band_db_windowed(noduck, 200, post_start, 5.5)
+
+        pre_delta = abs(e_ducked_pre - e_noduck_pre)
+        post_delta = abs(e_ducked_post - e_noduck_post)
+
+        assert pre_delta <= 0.5, (
+            f"Pre-voice [0.2, 1.5]s: ducked={e_ducked_pre:.2f} dBFS, "
+            f"noduck={e_noduck_pre:.2f} dBFS, delta={pre_delta:.2f} dB — expected ≤0.5 dB"
+        )
+        assert post_delta <= 0.5, (
+            f"Post-voice [{post_start:.1f}, 5.5]s: ducked={e_ducked_post:.2f} dBFS, "
+            f"noduck={e_noduck_post:.2f} dBFS, delta={post_delta:.2f} dB — expected ≤0.5 dB"
+        )
+        # FR-004-AC-1 worker-path discharge is a separate future AC; covers helper/contract path.
 
     def test_binaural_lr_channels_distinct(self, tmp_path: Path) -> None:
         """Binaural L (440 Hz) and R (448 Hz) must both be audible after mixing (AC-5)."""
