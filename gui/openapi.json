@@ -9039,6 +9039,7 @@
           },
           "weight": {
             "type": "number",
+            "maximum": 10.0,
             "minimum": 0.0,
             "title": "Weight",
             "description": "amix weighting factor",
