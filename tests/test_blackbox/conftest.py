@@ -23,6 +23,7 @@ from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.jobs.queue import InMemoryJobQueue
 from tests.factories import make_test_video
+from tests.test_api.conftest import InMemoryAssetRepository
 
 
 @pytest.fixture
@@ -52,11 +53,18 @@ def job_queue(video_repository: AsyncInMemoryVideoRepository) -> InMemoryJobQueu
 
 
 @pytest.fixture
+def asset_repository() -> InMemoryAssetRepository:
+    """Empty in-memory asset repository."""
+    return InMemoryAssetRepository()
+
+
+@pytest.fixture
 def app(
     video_repository: AsyncInMemoryVideoRepository,
     project_repository: AsyncInMemoryProjectRepository,
     clip_repository: AsyncInMemoryClipRepository,
     job_queue: InMemoryJobQueue,
+    asset_repository: InMemoryAssetRepository,
 ) -> FastAPI:
     """Create app with injected in-memory test doubles."""
     return create_app(
@@ -64,6 +72,7 @@ def app(
         project_repository=project_repository,
         clip_repository=clip_repository,
         job_queue=job_queue,
+        asset_repository=asset_repository,
     )
 
 

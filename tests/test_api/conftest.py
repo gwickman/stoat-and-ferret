@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
@@ -14,6 +15,7 @@ from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
 from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
+from stoat_ferret.db.asset_repository import AssetRecord
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.batch_repository import InMemoryBatchRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
@@ -24,6 +26,64 @@ from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 from stoat_ferret.jobs.queue import InMemoryJobQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
 from tests.factories import ProjectFactory, make_test_video
+
+
+class InMemoryAssetRepository:
+    """Dict-backed implementation of AsyncAssetRepository for tests."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, AssetRecord] = {}
+
+    async def insert(self, asset: AssetRecord) -> AssetRecord:
+        self._store[asset.id] = asset
+        return asset
+
+    async def get_by_id(self, asset_id: str) -> AssetRecord | None:
+        return self._store.get(asset_id)
+
+    async def get_by_content_hash(self, content_hash: str) -> AssetRecord | None:
+        for r in self._store.values():
+            if r.content_hash == content_hash:
+                return r
+        return None
+
+    async def list_assets(
+        self,
+        kind: str | None,
+        tags: list[str] | None,
+        offset: int,
+        limit: int,
+    ) -> list[AssetRecord]:
+        items = [r for r in self._store.values() if r.deleted_at is None]
+        if kind is not None:
+            items = [r for r in items if r.kind == kind]
+        items.sort(key=lambda r: r.created_at, reverse=True)
+        return items[offset : offset + limit]
+
+    async def soft_delete(self, asset_id: str) -> bool:
+        r = self._store.get(asset_id)
+        if r is None or r.deleted_at is not None:
+            return False
+        r.deleted_at = datetime.now(timezone.utc).isoformat()
+        return True
+
+    async def restore(self, asset_id: str) -> AssetRecord | None:
+        r = self._store.get(asset_id)
+        if r is None:
+            return None
+        r.deleted_at = None
+        r.updated_at = datetime.now(timezone.utc).isoformat()
+        return r
+
+
+@pytest.fixture
+def asset_repository() -> InMemoryAssetRepository:
+    """Create in-memory asset repository for testing.
+
+    Returns:
+        Empty in-memory asset repository.
+    """
+    return InMemoryAssetRepository()
 
 
 @pytest.fixture
@@ -132,6 +192,7 @@ def app(
     proxy_repository: InMemoryProxyRepository,
     render_repository: InMemoryRenderRepository,
     job_queue: InMemoryJobQueue,
+    asset_repository: InMemoryAssetRepository,
 ) -> FastAPI:
     """Create test application with injected in-memory repositories.
 
@@ -147,6 +208,7 @@ def app(
         proxy_repository: In-memory proxy repository for testing.
         render_repository: In-memory render repository for testing.
         job_queue: In-memory job queue for testing.
+        asset_repository: In-memory asset repository for testing.
 
     Returns:
         Configured FastAPI application for testing.
@@ -161,6 +223,7 @@ def app(
         proxy_repository=proxy_repository,
         render_repository=render_repository,
         job_queue=job_queue,
+        asset_repository=asset_repository,
     )
 
 

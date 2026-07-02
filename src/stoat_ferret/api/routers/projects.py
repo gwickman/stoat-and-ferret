@@ -26,6 +26,7 @@ from stoat_ferret.api.schemas.project import (
 )
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.asset_repository import AsyncAssetRepository, AsyncSQLiteAssetRepository
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip, ClipValidationError, Project
@@ -93,10 +94,29 @@ async def get_video_repository(request: Request) -> AsyncVideoRepository:
     return AsyncSQLiteVideoRepository(request.app.state.db)
 
 
+async def get_asset_repository(request: Request) -> AsyncAssetRepository:
+    """Get asset repository from app state.
+
+    Returns an injected repository if one was provided to create_app(),
+    otherwise constructs a SQLite repository from the database connection.
+
+    Args:
+        request: The FastAPI request object.
+
+    Returns:
+        Async asset repository instance.
+    """
+    repo: AsyncAssetRepository | None = getattr(request.app.state, "asset_repository", None)
+    if repo is not None:
+        return repo
+    return AsyncSQLiteAssetRepository(request.app.state.db)
+
+
 # Type aliases for dependencies
 ProjectRepoDep = Annotated[AsyncProjectRepository, Depends(get_project_repository)]
 ClipRepoDep = Annotated[AsyncClipRepository, Depends(get_clip_repository)]
 VideoRepoDep = Annotated[AsyncVideoRepository, Depends(get_video_repository)]
+AssetRepoDep = Annotated[AsyncAssetRepository, Depends(get_asset_repository)]
 
 
 @router.get("", response_model=ProjectListResponse)
@@ -331,6 +351,7 @@ async def add_clip(
     project_repo: ProjectRepoDep,
     clip_repo: ClipRepoDep,
     video_repo: VideoRepoDep,
+    asset_repo: AssetRepoDep,
 ) -> ClipResponse:
     """Add clip to project.
 
@@ -340,12 +361,14 @@ async def add_clip(
         project_repo: Project repository dependency.
         clip_repo: Clip repository dependency.
         video_repo: Video repository dependency.
+        asset_repo: Asset repository dependency.
 
     Returns:
         Created clip details.
 
     Raises:
-        HTTPException: 404 if project or video not found, 400 if validation fails.
+        HTTPException: 404 if project, video, or asset not found, 400 if validation fails,
+            422 if asset kind does not match 'image'.
     """
     project = await project_repo.get(project_id)
     if project is None:
@@ -371,7 +394,28 @@ async def add_clip(
             updated_at=now,
         )
     elif request.clip_type == "image":
-        # Image clips reference an asset; no video lookup or Rust validation needed.
+        # No FK constraint on source_asset_id in schema.py:414-417 and :535-544 (plain TEXT);
+        # this API-layer check is the only protection until a future migration adds the FK.
+        asset = await asset_repo.get_by_id(request.source_asset_id)  # type: ignore[arg-type]
+        if asset is None or asset.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "ASSET_NOT_FOUND",
+                    "message": f"Asset '{request.source_asset_id}' not found",
+                },
+            )
+        if asset.kind != "image":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "ASSET_KIND_MISMATCH",
+                    "message": (
+                        f"Asset '{request.source_asset_id}' has kind '{asset.kind}',"
+                        " expected 'image'"
+                    ),
+                },
+            )
         # Render path (-loop 1 -i <image_path>) is deferred for v090 scope.
         # deferred_ac: BL-511-AC-3 — render path (-loop 1 -i), deferred for v090 scope
         clip = Clip(

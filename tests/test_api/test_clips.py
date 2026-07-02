@@ -10,10 +10,12 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
+from stoat_ferret.db.asset_repository import AssetRecord
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from tests.test_api.conftest import InMemoryAssetRepository
 from tests.test_repository_contract import make_test_video
 
 
@@ -613,8 +615,61 @@ def test_get_clip_effects_not_found(client: TestClient) -> None:
 async def test_add_image_clip_success(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
+    asset_repository: InMemoryAssetRepository,
 ) -> None:
-    """Image clip with source_asset_id and timeline_end returns 201."""
+    """Image clip with a seeded image asset returns 201."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    now_iso = now.isoformat()
+    asset = AssetRecord(
+        id="asset-real-img",
+        original_filename="test.png",
+        content_hash="deadbeef" * 8,
+        mime_type="image/png",
+        kind="image",
+        size_bytes=1024,
+        file_path="/tmp/test.png",
+        deleted_at=None,
+        created_at=now_iso,
+        updated_at=now_iso,
+    )
+    await asset_repository.insert(asset)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-real-img",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["clip_type"] == "image"
+    assert data["source_asset_id"] == "asset-real-img"
+    assert data["source_video_id"] is None
+
+
+@pytest.mark.api
+async def test_add_image_clip_asset_not_found(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """Image clip with a non-existent source_asset_id returns 404 ASSET_NOT_FOUND."""
     now = datetime.now(timezone.utc)
     project = Project(
         id="proj-1",
@@ -631,7 +686,7 @@ async def test_add_image_clip_success(
         "/api/v1/projects/proj-1/clips",
         json={
             "clip_type": "image",
-            "source_asset_id": "asset-abc123",
+            "source_asset_id": "asset-does-not-exist",
             "in_point": 0,
             "out_point": 100,
             "timeline_position": 0,
@@ -639,11 +694,113 @@ async def test_add_image_clip_success(
             "timeline_end": 5.0,
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == 404
     data = response.json()
-    assert data["clip_type"] == "image"
-    assert data["source_asset_id"] == "asset-abc123"
-    assert data["source_video_id"] is None
+    assert data["detail"]["code"] == "ASSET_NOT_FOUND"
+    assert "asset-does-not-exist" in data["detail"]["message"]
+
+
+@pytest.mark.api
+async def test_add_image_clip_soft_deleted_asset(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    asset_repository: InMemoryAssetRepository,
+) -> None:
+    """Image clip referencing a soft-deleted asset returns 404 ASSET_NOT_FOUND."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    now_iso = now.isoformat()
+    deleted_asset = AssetRecord(
+        id="asset-deleted",
+        original_filename="deleted.png",
+        content_hash="cafebabe" * 8,
+        mime_type="image/png",
+        kind="image",
+        size_bytes=512,
+        file_path="/tmp/deleted.png",
+        deleted_at=now_iso,
+        created_at=now_iso,
+        updated_at=now_iso,
+    )
+    await asset_repository.insert(deleted_asset)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-deleted",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "ASSET_NOT_FOUND"
+
+
+@pytest.mark.api
+async def test_add_image_clip_asset_kind_mismatch(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    asset_repository: InMemoryAssetRepository,
+) -> None:
+    """Image clip referencing an asset with kind != 'image' returns 422 ASSET_KIND_MISMATCH."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    now_iso = now.isoformat()
+    audio_asset = AssetRecord(
+        id="asset-audio-1",
+        original_filename="track.mp3",
+        content_hash="beefdead" * 8,
+        mime_type="audio/mpeg",
+        kind="audio",
+        size_bytes=2048,
+        file_path="/tmp/track.mp3",
+        deleted_at=None,
+        created_at=now_iso,
+        updated_at=now_iso,
+    )
+    await asset_repository.insert(audio_asset)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-audio-1",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "ASSET_KIND_MISMATCH"
+    assert "audio" in data["detail"]["message"]
 
 
 @pytest.mark.api
