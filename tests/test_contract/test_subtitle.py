@@ -819,3 +819,33 @@ def test_soft_subtitle_ffprobe_streams() -> None:
             s for s in subtitle_streams if s.get("disposition", {}).get("default", 0) == 1
         ]
         assert len(default_subs) >= 1, "Expected at least 1 default subtitle stream"
+
+
+# ---------------------------------------------------------------------------
+# BL-555-AC-3 / BL-555-AC-4 — emit_filter_value dispatch contract tests
+# ---------------------------------------------------------------------------
+
+
+class TestBurnedSubtitleBuilderEmitFilterValueDispatch:
+    """AC-3/AC-4 (BL-555): BurnedSubtitleBuilder uses emit_filter_value dispatch."""
+
+    def test_srt_path_passes_through_unchanged_on_unix(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/test.srt")
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result == "subtitles=filename=/tmp/test.srt"
+
+    def test_ass_path_passes_through_unchanged_on_unix(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/test.ass")
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result == "ass=filename=/tmp/test.ass"
+
+    def test_path_with_space_accepted_on_unix(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/my captions.srt")
+        result = BurnedSubtitleBuilder.build(spec)
+        assert result.startswith("subtitles=filename=")
+        assert "my captions.srt" in result
+
+    def test_path_with_apostrophe_raises_value_error(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/O'Brien.srt")
+        with pytest.raises(ValueError):
+            BurnedSubtitleBuilder.build(spec)

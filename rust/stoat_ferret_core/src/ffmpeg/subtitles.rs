@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use pyo3::prelude::*;
 
 use crate::ffmpeg::drawtext::escape_drawtext;
-use crate::ffmpeg::video::emit_filter_option_path;
+use crate::ffmpeg::video::{emit_filter_value, ValueKind};
 
 /// Entry in a subtitle script: time window + caption text.
 #[pyclass]
@@ -208,7 +208,7 @@ impl BurnedSubtitleBuilder {
         };
 
         let is_ass = path.to_lowercase().ends_with(".ass");
-        let escaped_path = emit_filter_option_path(&path)
+        let escaped_path = emit_filter_value(ValueKind::Path, &path)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
         if is_ass {
