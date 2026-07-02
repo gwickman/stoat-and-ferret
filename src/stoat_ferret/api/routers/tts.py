@@ -198,7 +198,7 @@ async def update_tts_cue(
     """Update a TTS cue.
 
     Updating text, voice, or backend recalculates cache_key and resets
-    status to pending, generated_asset_id to None, error to None.
+    status to pending, audio_path to None, error to None.
 
     Args:
         project_id: The project UUID.
