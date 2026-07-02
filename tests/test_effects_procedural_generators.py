@@ -829,6 +829,43 @@ def test_generic_procedural_performance(tmp_path: pathlib.Path) -> None:
 
 
 # ===========================================================================
+# BL-575: WrongArity — procedural parser arity errors
+# ===========================================================================
+
+
+def test_arity_sin_zero_args() -> None:
+    """sin() with zero args raises ValueError at parse time (BL-575 AC-3)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    with pytest.raises(ValueError, match=r"sin.*1.*0"):
+        GenericProceduralImageBuilder("sin()", 64, 64)
+
+
+def test_arity_sin_two_args() -> None:
+    """sin(x, y) with two args raises ValueError at parse time (BL-575 AC-4)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    with pytest.raises(ValueError, match=r"sin.*1.*2"):
+        GenericProceduralImageBuilder("sin(x,y)", 64, 64)
+
+
+def test_arity_atan2_one_arg() -> None:
+    """atan2(x) with one arg raises ValueError at parse time (BL-575 AC-5)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    with pytest.raises(ValueError, match=r"atan2.*2.*1"):
+        GenericProceduralImageBuilder("atan2(x)", 64, 64)
+
+
+def test_arity_if_two_args() -> None:
+    """if(x, y) with two args raises ValueError at parse time (BL-575 AC-6)."""
+    from stoat_ferret_core import GenericProceduralImageBuilder
+
+    with pytest.raises(ValueError):
+        GenericProceduralImageBuilder("if(x,y)", 64, 64)
+
+
+# ===========================================================================
 # BL-569: CurvesBuilder — IEEE 754 NaN/infinity validation
 # ===========================================================================
 

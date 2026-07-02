@@ -167,6 +167,11 @@ pub enum ParseError {
     UnknownIdent(String),
     MaxDepthExceeded,
     UnexpectedEnd,
+    WrongArity {
+        fn_name: String,
+        expected_arity: usize,
+        got_arity: usize,
+    },
 }
 
 impl fmt::Display for ParseError {
@@ -176,6 +181,14 @@ impl fmt::Display for ParseError {
             ParseError::UnknownIdent(s) => write!(f, "unknown identifier: {s}"),
             ParseError::MaxDepthExceeded => write!(f, "expression depth limit exceeded (max 32)"),
             ParseError::UnexpectedEnd => write!(f, "unexpected end of expression"),
+            ParseError::WrongArity {
+                fn_name,
+                expected_arity,
+                got_arity,
+            } => write!(
+                f,
+                "function '{fn_name}' expects {expected_arity} argument(s), got {got_arity}"
+            ),
         }
     }
 }
@@ -420,6 +433,19 @@ impl Parser {
             other => {
                 return Err(ParseError::UnexpectedToken(format!("{other:?}")));
             }
+        }
+
+        let expected_arity: usize = match &fn_name {
+            FnName::Sin | FnName::Cos | FnName::Tan | FnName::Sqrt | FnName::Exp
+            | FnName::Log | FnName::Abs | FnName::Floor | FnName::Ceil => 1,
+            FnName::Atan2 | FnName::Hypot | FnName::Pow | FnName::Mod => 2,
+        };
+        if args.len() != expected_arity {
+            return Err(ParseError::WrongArity {
+                fn_name: name,
+                expected_arity,
+                got_arity: args.len(),
+            });
         }
 
         Ok(Expr::FnCall(fn_name, args))
