@@ -315,7 +315,7 @@ NEW. Creates a TTS cue.
   "gain_db": 0.0,
   "pan": 0.0,
   "cache_key": "sha256-hex",
-  "generated_asset_id": null,
+  "audio_path": null,
   "status": "pending",
   "error": null,
   "created_at": "...",

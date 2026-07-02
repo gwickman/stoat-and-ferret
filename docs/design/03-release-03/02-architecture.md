@@ -276,7 +276,7 @@ class TtsCue(BaseModel):
     gain_db: float = 0.0
     pan: float = 0.0
     cache_key: str                 # derived hash(text, voice, backend); used by render preflight
-    generated_asset_id: UUID | None = None    # populated when synth succeeds
+    audio_path: str | None = None             # path to generated TTS audio file
     status: Literal["pending", "synthesising", "ready", "failed"] = "pending"
     error: str | None = None
     created_at: datetime
@@ -288,12 +288,12 @@ A project has zero or more TtsCues. Each cue references a voice track (via `trac
 **Synthesis lifecycle:**
 
 1. User creates a cue: `POST /projects/{p}/tts_cues` with text/voice/backend/start_s/track_id.
-2. Render preflight (BL-505A) iterates project cues; for any cue without a `generated_asset_id`, calls the TTS service.
-3. TTS service hashes (text, voice, backend) → cache_key. If cached asset exists, set `generated_asset_id` and `status=ready`. Otherwise:
+2. Render preflight (BL-505A) iterates project cues; for any cue without an `audio_path`, calls the TTS service.
+3. TTS service hashes (text, voice, backend) → cache_key. If cached asset exists, set `audio_path` and `status=ready`. Otherwise:
    - Spawn provider (Piper subprocess OR OpenRouter HTTP call).
    - Apply format reconciliation: upsample 22-24 kHz → 48 kHz, pan mono → stereo via existing snf DSP.
    - Upload result as a new asset (kind=audio) via the asset library.
-   - Update cue with `generated_asset_id` and `status=ready`.
+   - Update cue with `audio_path` and `status=ready`.
 4. Renderer (BL-505B) reads cues + tracks; emits per-cue input via `-i <asset_path>` with an `adelay=<start_s*1000>|<start_s*1000>` filter to place the cue on the timeline.
 
 **Provider abstraction:**

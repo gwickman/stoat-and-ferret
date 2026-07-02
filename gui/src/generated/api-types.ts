@@ -548,12 +548,14 @@ export interface paths {
          *         project_repo: Project repository dependency.
          *         clip_repo: Clip repository dependency.
          *         video_repo: Video repository dependency.
+         *         asset_repo: Asset repository dependency.
          *
          *     Returns:
          *         Created clip details.
          *
          *     Raises:
-         *         HTTPException: 404 if project or video not found, 400 if validation fails.
+         *         HTTPException: 404 if project, video, or asset not found, 400 if validation fails,
+         *             422 if asset kind does not match 'image'.
          */
         post: operations["add_clip_api_v1_projects__project_id__clips_post"];
         delete?: never;
@@ -1489,7 +1491,7 @@ export interface paths {
          * @description Update a TTS cue.
          *
          *     Updating text, voice, or backend recalculates cache_key and resets
-         *     status to pending, generated_asset_id to None, error to None.
+         *     status to pending, audio_path to None, error to None.
          *
          *     Args:
          *         project_id: The project UUID.

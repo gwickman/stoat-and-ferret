@@ -2698,7 +2698,7 @@
           "tts"
         ],
         "summary": "Update a TTS cue",
-        "description": "Update a TTS cue.\n\nUpdating text, voice, or backend recalculates cache_key and resets\nstatus to pending, generated_asset_id to None, error to None.\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    body: Fields to update.\n    repo: TTS cue repository (injected).\n    request: The incoming HTTP request.\n\nReturns:\n    The updated TTS cue.",
+        "description": "Update a TTS cue.\n\nUpdating text, voice, or backend recalculates cache_key and resets\nstatus to pending, audio_path to None, error to None.\n\nArgs:\n    project_id: The project UUID.\n    cue_id: The TTS cue UUID.\n    body: Fields to update.\n    repo: TTS cue repository (injected).\n    request: The incoming HTTP request.\n\nReturns:\n    The updated TTS cue.",
         "operationId": "update_tts_cue_api_v1_projects__project_id__tts_cues__cue_id__patch",
         "parameters": [
           {
