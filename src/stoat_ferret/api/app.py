@@ -82,6 +82,7 @@ from stoat_ferret.db.async_repository import (
 from stoat_ferret.db.audit import AuditLogger
 from stoat_ferret.db.batch_repository import AsyncBatchRepository, AsyncSQLiteBatchRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
+from stoat_ferret.db.ducking_pair_repository import AsyncDuckingPairRepository
 from stoat_ferret.db.markers_repository import AsyncSQLiteMarkerRepository
 from stoat_ferret.db.models import ProxyQuality, ProxyStatus
 from stoat_ferret.db.project_repository import AsyncProjectRepository
@@ -574,6 +575,7 @@ def create_app(
     qc_service: QCService | None = None,
     delivery_profile_repository: object | None = None,
     asset_repository: AsyncSQLiteAssetRepository | None = None,
+    ducking_pair_repository: AsyncDuckingPairRepository | None = None,
     tts_cue_repository: AsyncTtsCueRepository | None = None,
 ) -> FastAPI:
     """Create and configure FastAPI application.
@@ -609,6 +611,7 @@ def create_app(
         qc_service: Optional QCService for dependency injection in tests.
         delivery_profile_repository: Optional delivery profile repository for DI in tests.
         asset_repository: Optional asset repository for dependency injection in tests.
+        ducking_pair_repository: Optional ducking pair repository for dependency injection in tests.
         tts_cue_repository: Optional TTS cue repository for dependency injection in tests.
 
     Returns:
@@ -701,6 +704,9 @@ def create_app(
 
     if asset_repository is not None:
         app.state.asset_repository = asset_repository
+
+    if ducking_pair_repository is not None:
+        app.state.ducking_pair_repository = ducking_pair_repository
 
     if tts_cue_repository is not None:
         app.state.tts_cue_repository = tts_cue_repository
