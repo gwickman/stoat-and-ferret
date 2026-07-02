@@ -436,8 +436,15 @@ impl Parser {
         }
 
         let expected_arity: usize = match &fn_name {
-            FnName::Sin | FnName::Cos | FnName::Tan | FnName::Sqrt | FnName::Exp
-            | FnName::Log | FnName::Abs | FnName::Floor | FnName::Ceil => 1,
+            FnName::Sin
+            | FnName::Cos
+            | FnName::Tan
+            | FnName::Sqrt
+            | FnName::Exp
+            | FnName::Log
+            | FnName::Abs
+            | FnName::Floor
+            | FnName::Ceil => 1,
             FnName::Atan2 | FnName::Hypot | FnName::Pow | FnName::Mod => 2,
         };
         if args.len() != expected_arity {
