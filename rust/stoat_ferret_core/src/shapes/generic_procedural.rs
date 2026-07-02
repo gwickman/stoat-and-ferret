@@ -55,8 +55,15 @@ impl GenericProceduralImageBuilder {
                 )));
             }
         };
-        let parsed = parse(expression).map_err(|e: ParseError| {
-            PyValueError::new_err(format!("expression parse error: {e}"))
+        let parsed = parse(expression).map_err(|e: ParseError| match e {
+            ParseError::WrongArity {
+                fn_name,
+                expected_arity,
+                got_arity,
+            } => PyValueError::new_err(format!(
+                "function '{fn_name}' expects {expected_arity} argument(s), got {got_arity}"
+            )),
+            _ => PyValueError::new_err(format!("expression parse error: {e}")),
         })?;
         Ok(Self {
             expression: expression.to_string(),
