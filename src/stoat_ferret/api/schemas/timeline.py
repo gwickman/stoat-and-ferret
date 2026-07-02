@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TrackCreate(BaseModel):
@@ -31,8 +32,33 @@ class TrackCreate(BaseModel):
     weight: float = Field(
         default=1.0,
         ge=0.0,
+        # le=10.0: 10x unity gain is the practical ceiling for amix weights;
+        # ge=0.0 alone does not exclude inf (IEEE 754: inf >= 0.0 is True).
+        le=10.0,
         description="amix weighting factor",
     )
+
+    @field_validator("weight")
+    @classmethod
+    def weight_must_be_finite(cls, v: float) -> float:
+        """Reject non-finite float values for weight.
+
+        Pattern: same as src/stoat_ferret/api/schemas/effect.py:129-137.
+        """
+        if not math.isfinite(v):
+            raise ValueError("weight must be a finite number")
+        return v
+
+    @field_validator("volume_envelope")
+    @classmethod
+    def volume_envelope_must_not_be_nonfinite_literal(cls, v: str | None) -> str | None:
+        """Reject standalone non-finite literal tokens in volume_envelope."""
+        if v is None:
+            return v
+        _NONFINITE_LITERALS = {"nan", "inf", "+inf", "-inf", "infinity", "-nan"}
+        if v.strip().lower() in _NONFINITE_LITERALS:
+            raise ValueError("volume_envelope must not be a non-finite literal token")
+        return v
 
 
 class TrackResponse(BaseModel):
