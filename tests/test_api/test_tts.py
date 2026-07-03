@@ -146,6 +146,72 @@ def test_list_voices_returns_200(client: TestClient) -> None:
     assert "voices" in resp.json()
 
 
+async def test_patch_tts_cue_text_resets_status_and_audio_path(
+    tts_repo: AsyncInMemoryTtsCueRepository,
+    tts_app: FastAPI,
+) -> None:
+    """BL-592 (FR-001-AC-1): PATCHing text resets status to pending and audio_path to None."""
+    with (
+        patch(
+            "stoat_ferret.api.routers.tts._validate_voice_track",
+            new_callable=AsyncMock,
+        ),
+        TestClient(tts_app) as c,
+    ):
+        tts_app.state._settings = Settings()
+
+        created = _post_cue(c)
+        cue_id = created["id"]
+
+        await tts_repo.update_status(
+            cue_id,
+            "ready",
+            generated_asset_id="/cache/audio.wav",
+        )
+
+        resp = c.patch(
+            f"/api/v1/projects/{_PROJECT_ID}/tts_cues/{cue_id}",
+            json={"text": "Updated text"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "pending"
+        assert body["audio_path"] is None
+
+
+async def test_patch_tts_cue_voice_resets_status_and_audio_path(
+    tts_repo: AsyncInMemoryTtsCueRepository,
+    tts_app: FastAPI,
+) -> None:
+    """BL-592 (FR-002-AC-1): PATCHing voice resets status to pending and audio_path to None."""
+    with (
+        patch(
+            "stoat_ferret.api.routers.tts._validate_voice_track",
+            new_callable=AsyncMock,
+        ),
+        TestClient(tts_app) as c,
+    ):
+        tts_app.state._settings = Settings()
+
+        created = _post_cue(c)
+        cue_id = created["id"]
+
+        await tts_repo.update_status(
+            cue_id,
+            "ready",
+            generated_asset_id="/cache/audio.wav",
+        )
+
+        resp = c.patch(
+            f"/api/v1/projects/{_PROJECT_ID}/tts_cues/{cue_id}",
+            json={"voice": "en_US-lessac-medium"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "pending"
+        assert body["audio_path"] is None
+
+
 async def test_audio_path_field_maps_generated_asset_id(
     tts_repo: AsyncInMemoryTtsCueRepository,
     tts_app: FastAPI,
