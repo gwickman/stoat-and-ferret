@@ -67,7 +67,7 @@ async def _validate_voice_track(request: Request, track_id: str) -> None:
     row = await cursor.fetchone()
     if row is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "TRACK_NOT_FOUND",
                 "message": f"Track '{track_id}' does not exist",
@@ -75,7 +75,7 @@ async def _validate_voice_track(request: Request, track_id: str) -> None:
         )
     if dict(row).get("kind") != "voice":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "INVALID_TRACK_KIND",
                 "message": "TTS cues require a voice track",

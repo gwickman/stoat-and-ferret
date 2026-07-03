@@ -407,7 +407,7 @@ async def add_clip(
             )
         if asset.kind != "image":
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "code": "ASSET_KIND_MISMATCH",
                     "message": (
@@ -574,7 +574,7 @@ async def split_clip(
 
     if body.split_frame <= clip.in_point or body.split_frame >= clip.out_point:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "invalid_split_frame",
                 "valid_range": [clip.in_point + 1, clip.out_point - 1],
