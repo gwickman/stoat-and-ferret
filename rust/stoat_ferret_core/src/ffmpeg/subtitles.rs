@@ -139,17 +139,44 @@ fn position_to_xy(position: &str) -> (String, String) {
     }
 }
 
+/// Error variants for `escape_force_style` and key validation in `BurnedSubtitleBuilder`.
+#[derive(Debug)]
+pub(crate) enum ForceStyleError {
+    ApostropheInValue(String),
+    InvalidKeyChar { key: String, ch: char },
+}
+
+impl std::fmt::Display for ForceStyleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ApostropheInValue(v) => {
+                write!(f, "force_style value contains a bare single-quote: {v:?}")
+            }
+            Self::InvalidKeyChar { key, ch } => {
+                write!(
+                    f,
+                    "force_style key {key:?} contains invalid character {ch:?}"
+                )
+            }
+        }
+    }
+}
+
 /// Escape a force_style value for embedding in a subtitles filter option.
 ///
 /// FFmpeg `force_style` is a comma-separated `KEY=VALUE` list. Internal commas
 /// in values must be escaped as `\,` to prevent the filter parser from treating
-/// them as list separators.
+/// them as list separators. Bare single-quotes are rejected because they would
+/// break out of the outer single-quoted block that `BurnedSubtitleBuilder` emits.
 ///
 /// This escape is distinct from:
 /// - `emit_filter_option_path()` (handles colon-escaped path values for `filename=`)
 /// - `escape_drawtext()` (handles text escape for drawtext filter values)
-pub(crate) fn escape_force_style(value: &str) -> String {
-    value.replace(',', r"\,")
+pub(crate) fn escape_force_style(value: &str) -> Result<String, ForceStyleError> {
+    if value.contains('\'') {
+        return Err(ForceStyleError::ApostropheInValue(value.to_owned()));
+    }
+    Ok(value.replace(',', r"\,"))
 }
 
 /// Spec for burning subtitles from an SRT or ASS sidecar file.
@@ -223,11 +250,24 @@ impl BurnedSubtitleBuilder {
             match &spec.force_style {
                 None => Ok(base),
                 Some(style_dict) => {
-                    // Sort pairs for deterministic output.
-                    let mut style_pairs: Vec<String> = style_dict
-                        .iter()
-                        .map(|(k, v)| format!("{}={}", k, escape_force_style(v)))
-                        .collect();
+                    // Validate keys and escape values; sort pairs for deterministic output.
+                    let mut style_pairs: Vec<String> = Vec::with_capacity(style_dict.len());
+                    for (key, value) in style_dict {
+                        for ch in ['\'', ',', '=', ':'] {
+                            if key.contains(ch) {
+                                return Err(pyo3::exceptions::PyValueError::new_err(
+                                    ForceStyleError::InvalidKeyChar {
+                                        key: key.clone(),
+                                        ch,
+                                    }
+                                    .to_string(),
+                                ));
+                            }
+                        }
+                        let escaped = escape_force_style(value)
+                            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                        style_pairs.push(format!("{}={}", key, escaped));
+                    }
                     style_pairs.sort();
                     let escaped_style = style_pairs.join(",");
                     Ok(format!("{}:force_style='{}'", base, escaped_style))
@@ -447,20 +487,20 @@ mod tests {
 
     #[test]
     fn test_escape_force_style_no_comma() {
-        assert_eq!(escape_force_style("Fontsize=32"), "Fontsize=32");
+        assert_eq!(escape_force_style("Fontsize=32").unwrap(), "Fontsize=32");
     }
 
     #[test]
     fn test_escape_force_style_comma_in_value() {
         assert_eq!(
-            escape_force_style("Fontname=Arial,Bold"),
+            escape_force_style("Fontname=Arial,Bold").unwrap(),
             r"Fontname=Arial\,Bold"
         );
     }
 
     #[test]
     fn test_escape_force_style_multiple_commas() {
-        assert_eq!(escape_force_style("a,b,c"), r"a\,b\,c");
+        assert_eq!(escape_force_style("a,b,c").unwrap(), r"a\,b\,c");
     }
 
     #[test]
@@ -499,6 +539,77 @@ mod tests {
         let result = BurnedSubtitleBuilder::build(&spec).unwrap();
         // Comma in value must be escaped as \,
         assert!(result.contains(r"Arial\,Bold"));
+    }
+
+    #[test]
+    fn test_escape_force_style_single_quote_rejected() {
+        assert!(escape_force_style("Arial':BorderStyle=4").is_err());
+    }
+
+    #[test]
+    fn test_escape_force_style_single_quote_err_message() {
+        let err = escape_force_style("Arial':BorderStyle=4").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("single-quote"),
+            "expected 'single-quote' in error message, got: {msg}"
+        );
+        assert!(
+            msg.contains("Arial':BorderStyle=4"),
+            "expected value in error message, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_burned_subtitle_key_apostrophe_rejected() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Font'name".to_string(), "Arial".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        assert!(BurnedSubtitleBuilder::build(&spec).is_err());
+    }
+
+    #[test]
+    fn test_burned_subtitle_key_comma_rejected() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Font,name".to_string(), "Arial".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        assert!(BurnedSubtitleBuilder::build(&spec).is_err());
+    }
+
+    #[test]
+    fn test_burned_subtitle_key_equals_rejected() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Font=name".to_string(), "Arial".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        assert!(BurnedSubtitleBuilder::build(&spec).is_err());
+    }
+
+    #[test]
+    fn test_burned_subtitle_key_colon_rejected() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Font:name".to_string(), "Arial".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        assert!(BurnedSubtitleBuilder::build(&spec).is_err());
+    }
+
+    #[test]
+    fn test_burned_subtitle_force_style_value_apostrophe_error() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Fontname".to_string(), "O'Brien".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        assert!(BurnedSubtitleBuilder::build(&spec).is_err());
+    }
+
+    #[test]
+    fn test_burned_subtitle_force_style_safe_value() {
+        let mut style = std::collections::HashMap::new();
+        style.insert("Fontname".to_string(), "Arial Bold".to_string());
+        let spec = BurnedSubtitleSpec::py_new(Some("/tmp/test.srt".to_string()), None, Some(style));
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        assert!(
+            result.contains("Fontname=Arial Bold"),
+            "expected safe value in output: {result}"
+        );
     }
 
     #[test]

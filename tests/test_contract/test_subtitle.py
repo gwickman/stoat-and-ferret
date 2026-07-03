@@ -869,3 +869,36 @@ class TestBurnedSubtitleBuilderEmitFilterValueDispatch:
         result = BurnedSubtitleBuilder.build(spec)
         # Windows path: single-quoted, drive colon escaped as \:, backslashes → forward slashes
         assert "filename='C\\:/Users/sub.srt'" in result
+
+
+# ---- BL-586: force_style single-quote and key validation ----
+
+
+class TestBurnedSubtitleBuilderForceStyleSafety:
+    """BL-586: single-quote and invalid key char rejection for force_style."""
+
+    def test_force_style_single_quote_raises_value_error(self) -> None:
+        spec = BurnedSubtitleSpec(
+            source_path="/tmp/test.srt",
+            force_style={"Fontname": "O'Brien"},
+        )
+        with pytest.raises(ValueError):
+            BurnedSubtitleBuilder.build(spec)
+
+    def test_force_style_invalid_key_raises_value_error(self) -> None:
+        for bad_key in ["Font'name", "Font,name", "Font=name", "Font:name"]:
+            spec = BurnedSubtitleSpec(
+                source_path="/tmp/test.srt",
+                force_style={bad_key: "Arial"},
+            )
+            with pytest.raises(ValueError, match="force_style key"):
+                BurnedSubtitleBuilder.build(spec)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_burned_subtitle_force_style_ffmpeg_safe() -> None:
+    """AC FR-005-AC-6 (BL-586): FFmpeg contract test; deferred post-merge discharge."""
+    pass
