@@ -434,7 +434,7 @@ async def apply_effect_to_clip(
         clip_s = (clip.out_point - clip.in_point) / project.output_fps
         if clip_s > max_s:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "clip_too_long",
                     "max_s": max_s,
@@ -448,7 +448,7 @@ async def apply_effect_to_clip(
         clip_duration_in_frames = clip.out_point - clip.in_point
         if frame_number >= clip_duration_in_frames:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "frame_number_out_of_range",
                     "frame_number": frame_number,
@@ -502,7 +502,7 @@ async def apply_effect_to_clip(
     if request.window is not None:
         if "enable=" in filter_string:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "code": "window_conflicts_with_builtin_enable",
                     "message": (

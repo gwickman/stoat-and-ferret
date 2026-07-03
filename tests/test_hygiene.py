@@ -234,6 +234,23 @@ def test_uat_baseline_failures_json_schema() -> None:
         )
 
 
+def test_no_http422_unprocessable_entity_in_src() -> None:
+    """BL-545: HTTP_422_UNPROCESSABLE_ENTITY is deprecated in starlette 0.50+.
+
+    All router files must use HTTP_422_UNPROCESSABLE_CONTENT instead.
+    """
+    src_root = _REPO_ROOT / "src"
+    violations: list[str] = []
+    for py_file in sorted(src_root.rglob("*.py")):
+        text = py_file.read_text(encoding="utf-8")
+        if "HTTP_422_UNPROCESSABLE_ENTITY" in text:
+            rel = str(py_file.relative_to(_REPO_ROOT))
+            violations.append(rel)
+    assert not violations, (
+        "Deprecated HTTP_422_UNPROCESSABLE_ENTITY found in src/ files: " + ", ".join(violations)
+    )
+
+
 def test_uat_baseline_stale_j502_j504_absent() -> None:
     """BL-590: J502/J504 fixed by BL-558; must not reappear in baseline-uat-failures.json."""
     import json

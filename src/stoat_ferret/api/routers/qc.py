@@ -108,7 +108,7 @@ async def run_qc(body: QCRunRequest, request: Request) -> QCReportResponse:
         )
     except FileNotFoundError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "ARTIFACT_NOT_FOUND", "message": str(exc)},
         ) from exc
 
