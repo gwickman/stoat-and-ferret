@@ -902,3 +902,26 @@ class TestBurnedSubtitleBuilderForceStyleSafety:
 def test_burned_subtitle_force_style_ffmpeg_safe() -> None:
     """AC FR-005-AC-6 (BL-586): FFmpeg contract test; deferred post-merge discharge."""
     pass
+
+
+# ---- BL-595: colon rejection in emit_filter_option_path ----
+
+
+def test_burned_subtitle_unix_path_with_colon_raises_value_error() -> None:
+    """FR-002-AC-1 (BL-595): source_path containing ':' raises ValueError."""
+    spec = BurnedSubtitleSpec(
+        source_path="/tmp/evil.srt:force_style=Fontname=Impact",
+    )
+    with pytest.raises(ValueError):
+        BurnedSubtitleBuilder.build(spec)
+
+
+def test_subtitle_script_font_file_with_colon_raises_value_error() -> None:
+    """FR-003-AC-1 (BL-595): font_file containing ':' raises ValueError."""
+    entries = [ScriptEntry(0.0, 2.0, "Hello")]
+    spec = SubtitleScriptSpec(
+        entries=entries,
+        font_file="/uploads/font:fontsize=200.ttf",
+    )
+    with pytest.raises(ValueError):
+        SubtitleScriptBuilder.build(spec)
