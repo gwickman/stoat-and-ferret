@@ -492,9 +492,9 @@ jobs:
     needs: [changes]
     if: needs.changes.outputs.code == 'true' || needs.changes.outputs.gui == 'true'
     env:
-      # Size threshold in MB: ceil(baseline_mb * 1.10). Update after first CI run with actual size.
-      # Planning estimate (330 MB) was a ceiling before FFmpeg was excluded from runtime stage.
-      DOCKER_IMAGE_SIZE_THRESHOLD_MB: "400"
+      # Size threshold in MB: max(450, ceil(measured_mb * 1.10)).
+      # Measured size from 2026-07-03 CI run: 430.6 MB; ceil(430.6 * 1.10) = 474 MB. See BL-594-AC-1.
+      DOCKER_IMAGE_SIZE_THRESHOLD_MB: "474"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
