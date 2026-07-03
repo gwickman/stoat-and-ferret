@@ -232,3 +232,18 @@ def test_uat_baseline_failures_json_schema() -> None:
         assert isinstance(entry.get("tracking_reference"), str), (
             f"tracking_reference must be str in entry: {entry}"
         )
+
+
+def test_uat_baseline_stale_j502_j504_absent() -> None:
+    """BL-590: J502/J504 fixed by BL-558; must not reappear in baseline-uat-failures.json."""
+    import json
+
+    registry_path = Path("tests/fixtures/baseline-uat-failures.json")
+    entries = json.loads(registry_path.read_text())
+    journey_ids = {entry["journey_id"] for entry in entries}
+    assert 502 not in journey_ids, (
+        "J502 is stale (fixed by BL-558) and must not be in baseline-uat-failures.json"
+    )
+    assert 504 not in journey_ids, (
+        "J504 is stale (fixed by BL-558) and must not be in baseline-uat-failures.json"
+    )
