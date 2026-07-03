@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     from stoat_ferret.api.services.tts_service import TtsService
     from stoat_ferret.db.asset_repository import AsyncAssetRepository
     from stoat_ferret.db.tts_cue_repository import AsyncTtsCueRepository
+    from stoat_ferret.render.executor import RenderExecutor
 
 logger = structlog.get_logger(__name__)
 
@@ -46,6 +48,42 @@ _QUALITY_CRF: dict[str, str] = {
 
 # Required top-level fields in render_plan JSON
 _REQUIRED_PLAN_FIELDS = ("settings", "total_duration")
+
+# Windows CreateProcessW command-line string limit (including null terminator)
+WINDOWS_ARGV_LIMIT = 32_767
+
+
+def _maybe_route_filter_to_file(
+    command: list[str],
+    job: RenderJob,
+    executor: RenderExecutor,
+) -> tuple[list[str], Path | None]:
+    """Route long filter args to a temp file on Windows to avoid argv limit.
+
+    On non-Windows platforms, returns the command unchanged. On Windows, scans
+    for -vf or -filter_complex with a filter string >= WINDOWS_ARGV_LIMIT chars
+    and replaces them with file-backed alternatives. Returns the (possibly modified)
+    command and the temp file path, or None if no routing was needed.
+    """
+    if sys.platform != "win32":
+        return command, None
+    filter_tmp_path: Path | None = None
+    for flag, script_flag in [
+        ("-vf", "-filter_script"),
+        ("-filter_complex", "-filter_complex_script"),
+    ]:
+        try:
+            idx = command.index(flag)
+        except ValueError:
+            continue
+        if idx + 1 < len(command) and len(command[idx + 1]) >= WINDOWS_ARGV_LIMIT:
+            with tempfile.NamedTemporaryFile(suffix=".filter", delete=False) as tmp:
+                tmp.write(command[idx + 1].encode())
+                filter_tmp_path = Path(tmp.name)
+            executor.register_temp_file(job.id, filter_tmp_path)
+            command = command[:idx] + [script_flag, str(filter_tmp_path)] + command[idx + 2 :]
+            break
+    return command, filter_tmp_path
 
 
 class CommandBuildError(Exception):
@@ -619,6 +657,7 @@ class RenderWorkerLoop:
         """Build command and execute a single render job, managing temp file lifecycle."""
         ffmetadata_path: str | None = None
         tmp_path: Path | None = None
+        filter_tmp_path: Path | None = None
         try:
             metadata_title = _extract_metadata_title(job.render_plan)
             markers = []
@@ -654,11 +693,17 @@ class RenderWorkerLoop:
                 tts_inputs,
                 self.asset_repository,
             )
+            command, filter_tmp_path = _maybe_route_filter_to_file(
+                command, job, self.service._executor
+            )
             await self.service.run_job(job, command)
         finally:
             if tmp_path is not None:
                 with contextlib.suppress(OSError):
                     tmp_path.unlink(missing_ok=True)
+            if filter_tmp_path is not None:
+                with contextlib.suppress(OSError):
+                    filter_tmp_path.unlink(missing_ok=True)
 
     async def _handle_job_error(self, job: RenderJob, exc: Exception) -> None:
         """Handle a job execution exception.
