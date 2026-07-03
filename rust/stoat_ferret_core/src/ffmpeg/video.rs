@@ -56,6 +56,8 @@ fn automation_expr_to_uppercase_t(expr: &str) -> String {
 pub enum PathEscapeError {
     /// The path contains an apostrophe that cannot be safely escaped.
     ApostropheInPath(String),
+    /// The path contains a colon at a position other than a Windows drive-letter prefix.
+    ColonInPath(String),
 }
 
 impl std::fmt::Display for PathEscapeError {
@@ -66,6 +68,12 @@ impl std::fmt::Display for PathEscapeError {
                 "Path '{}' contains an apostrophe which cannot be safely escaped \
                  for use in FFmpeg filter option values. Rename the file to remove \
                  the apostrophe character.",
+                path
+            ),
+            PathEscapeError::ColonInPath(path) => write!(
+                f,
+                "Path '{}' contains a colon which cannot be safely used in FFmpeg \
+                 filter option values. Rename the file to remove the colon character.",
                 path
             ),
         }
@@ -87,6 +95,13 @@ pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeEr
         return Err(PathEscapeError::ApostropheInPath(path.to_string()));
     }
     let bytes = path.as_bytes();
+    let has_forbidden_colon = bytes
+        .iter()
+        .enumerate()
+        .any(|(i, &b)| b == b':' && !(i == 1 && bytes[0].is_ascii_alphabetic()));
+    if has_forbidden_colon {
+        return Err(PathEscapeError::ColonInPath(path.to_string()));
+    }
     let is_windows = bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic();
     if is_windows {
         let drive = &path[..1];
@@ -1863,6 +1878,29 @@ mod tests {
     fn test_windows_path_deep_nesting() {
         let result = emit_filter_option_path("C:\\Users\\foo\\bar\\baz\\file.cube").unwrap();
         assert_eq!(result, "'C\\:/Users/foo/bar/baz/file.cube'");
+    }
+
+    #[test]
+    fn test_colon_in_unix_path_rejected() {
+        let err = emit_filter_option_path("/tmp/evil:injected=1").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("/tmp/evil:injected=1"),
+            "expected path in error message, got: {msg}"
+        );
+        assert!(
+            matches!(err, PathEscapeError::ColonInPath(_)),
+            "expected ColonInPath variant, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_drive_letter_colon_still_accepted() {
+        let result = emit_filter_option_path("C:\\Windows\\Fonts\\arial.ttf").unwrap();
+        assert!(
+            result.contains("C\\:"),
+            "expected drive-letter colon escape in: {result}"
+        );
     }
 
     // --- emit_filter_value contract tests ---
