@@ -102,6 +102,14 @@ pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeEr
     if has_forbidden_colon {
         return Err(PathEscapeError::ColonInPath(path.to_string()));
     }
+    // UNC paths (\\server\share\... or //server/share/...) need backslash-to-forward-slash
+    // conversion and single-quote wrapping.  The colon check above already passes for UNC
+    // paths because they do not contain colons; detect and handle them before the
+    // drive-letter branch.
+    if path.starts_with("\\\\") || path.starts_with("//") {
+        let converted = path.replace('\\', "/");
+        return Ok(format!("'{}'", converted));
+    }
     let is_windows = bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic();
     if is_windows {
         let drive = &path[..1];
@@ -1901,6 +1909,24 @@ mod tests {
             result.contains("C\\:"),
             "expected drive-letter colon escape in: {result}"
         );
+    }
+
+    #[test]
+    fn test_emit_filter_option_path_unc_path() {
+        // BL-593: UNC paths must be converted to forward slashes and single-quote wrapped.
+        let result = emit_filter_option_path("\\\\server\\share\\font.ttf").unwrap();
+        assert_eq!(result, "'//server/share/font.ttf'");
+        assert!(
+            !result.contains('\\'),
+            "output must not contain raw backslashes: {result}"
+        );
+    }
+
+    #[test]
+    fn test_emit_filter_option_path_unc_double_slash() {
+        // BL-593: // prefix (Unix-style UNC) also gets single-quote wrapping.
+        let result = emit_filter_option_path("//server/share/font.ttf").unwrap();
+        assert_eq!(result, "'//server/share/font.ttf'");
     }
 
     // --- emit_filter_value contract tests ---

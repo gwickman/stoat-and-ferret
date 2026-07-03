@@ -945,3 +945,27 @@ def test_subtitle_script_spec_font_color_valid_hex_accepted() -> None:
     entry = ScriptEntry(0.0, 2.0, "Hello")
     spec = SubtitleScriptSpec(entries=[entry], font_color="#ff0000")
     assert spec.font_color == "#ff0000"
+
+
+# ---- BL-593: UNC path escaping in emit_filter_option_path ----
+
+
+def test_build_with_font_file_unc_path() -> None:
+    """FR-003-AC-1 (BL-593): UNC font_file path passes through emit_filter_option_path cleanly.
+
+    SubtitleScriptBuilder.build() with a UNC font_file must produce a fontfile= value
+    that contains no raw backslashes and is wrapped in single quotes.
+    """
+    entries = [ScriptEntry(0.0, 2.0, "Hello")]
+    spec = SubtitleScriptSpec(
+        entries=entries,
+        font_file="\\\\server\\share\\font.ttf",
+    )
+    result = SubtitleScriptBuilder.build(spec)
+    filter_str = str(result)
+    assert "\\" not in filter_str, (
+        f"fontfile= value must not contain raw backslashes, got: {filter_str}"
+    )
+    assert "//server/share/font.ttf" in filter_str, (
+        f"expected converted UNC path in filter output, got: {filter_str}"
+    )
