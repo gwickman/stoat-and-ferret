@@ -4,6 +4,32 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v094 — Subtitle Filter Remediation (2026-07-03)
+
+### Fixed
+
+- BL-585: `SubtitleScriptBuilder` font_file Windows path escaping — `font_file` now uses `emit_filter_option_path` semantics matching `BurnedSubtitleBuilder`; definitions.py metadata updated; 6 new tests (PR #716)
+- BL-586: `BurnedSubtitleBuilder` force_style single-quote and invalid key rejection — `escape_force_style` now rejects bare single-quotes with a descriptive error; key validation rejects `'`, `,`, `=`, `:` per `emit_filter_option_path` convention; 10 new tests (PR #717)
+
+### Breaking Changes
+
+- `BurnedSubtitleBuilder.build()` now raises `ValueError` for `force_style` values containing a bare single-quote. Font names with apostrophes (e.g., `O'Brien`) are rejected.
+- `BurnedSubtitleBuilder.build()` now raises `ValueError` for `force_style` keys containing `'`, `,`, `=`, or `:`.
+
+### Deferred (pending discharge)
+
+- BL-586-AC-6: `test_burned_subtitle_force_style_ffmpeg_safe` — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_contract/test_subtitle.py::test_burned_subtitle_force_style_ffmpeg_safe`
+
+### PRs
+
+#716, #717
+
+### Resolved
+
+BL-585 (SubtitleScriptBuilder font_file Windows path), BL-586 (BurnedSubtitleBuilder force_style safety)
+
+---
+
 ## v093 — Render Correctness Hotfixes, API Test Coverage, Documentation & Rust Quality (2026-07-02)
 
 ### Fixed
