@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - BL-585: `SubtitleScriptBuilder` font_file Windows path escaping — `font_file` now uses `emit_filter_option_path` semantics matching `BurnedSubtitleBuilder`; definitions.py metadata updated; 6 new tests (PR #716)
 - BL-586: `BurnedSubtitleBuilder` force_style single-quote and invalid key rejection — `escape_force_style` now rejects bare single-quotes with a descriptive error; key validation rejects `'`, `,`, `=`, `:` per `emit_filter_option_path` convention; 10 new tests (PR #717)
+- fix(BL-584): route long FFmpeg filtergraphs to temp file on Windows to avoid CreateProcessW 32,767-char argv limit (#718)
 
 ### Breaking Changes
 
@@ -22,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### PRs
 
-#716, #717
+#716, #717, #718
 
 ### Resolved
 
