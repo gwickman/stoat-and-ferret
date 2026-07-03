@@ -77,6 +77,12 @@ impl SubtitleScriptSpec {
                 position
             )));
         }
+        if font_color.contains(':') || font_color.contains('\'') {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "font_color contains forbidden character ':' or single quote: {}",
+                font_color
+            )));
+        }
         Ok(SubtitleScriptSpec {
             entries,
             position,
@@ -654,5 +660,72 @@ mod tests {
         assert_eq!(result.matches("drawtext=").count(), 500);
         // Result must be non-empty and valid (no error)
         assert!(!result.is_empty());
+    }
+
+    // -- font_color validation (BL-596) --
+
+    #[test]
+    fn test_font_color_colon_rejected() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "white:fontsize=200".to_string(),
+            None,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_font_color_apostrophe_rejected() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "wh'ite".to_string(),
+            None,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_font_color_valid_named() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "white".to_string(),
+            None,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn test_font_color_valid_hex() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "#ff0000".to_string(),
+            None,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn test_font_color_valid_0x() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "0xffffff88".to_string(),
+            None,
+        )
+        .is_ok());
     }
 }
