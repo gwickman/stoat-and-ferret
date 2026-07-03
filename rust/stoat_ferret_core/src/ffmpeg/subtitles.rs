@@ -105,7 +105,11 @@ impl SubtitleScriptBuilder {
         for entry in &spec.entries {
             let escaped_text = escape_drawtext(&entry.text);
             let font_part = match &spec.font_file {
-                Some(path) => format!("fontfile={}:", path),
+                Some(path) => {
+                    let escaped = emit_filter_value(ValueKind::Path, path)
+                        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                    format!("fontfile={}:", escaped)
+                }
                 None => String::new(),
             };
             let filter = format!(
@@ -337,6 +341,53 @@ mod tests {
         assert!(result.contains("fontsize=32"));
         assert!(result.contains("fontcolor=yellow"));
         assert!(result.contains("y=10"));
+    }
+
+    #[test]
+    fn test_build_with_font_file_windows_drive() {
+        let spec = SubtitleScriptSpec::py_new(
+            vec![make_entry(0.0, 2.0, "Hello")],
+            "bottom".to_string(),
+            24,
+            "white".to_string(),
+            Some("C:\\Windows\\Fonts\\arial.ttf".to_string()),
+        )
+        .unwrap();
+        let result = SubtitleScriptBuilder::build(&spec).unwrap();
+        // Windows path: drive colon escaped as \:, backslashes → forward slashes, single-quoted
+        assert!(
+            result.contains("fontfile='C\\:/Windows/Fonts/arial.ttf':"),
+            "expected escaped Windows font path in filter, got: {result}"
+        );
+    }
+
+    #[test]
+    fn test_build_with_font_file_space() {
+        let spec = SubtitleScriptSpec::py_new(
+            vec![make_entry(0.0, 2.0, "Hello")],
+            "bottom".to_string(),
+            24,
+            "white".to_string(),
+            Some("C:\\My Fonts\\cool.ttf".to_string()),
+        )
+        .unwrap();
+        let result = SubtitleScriptBuilder::build(&spec).unwrap();
+        // Space preserved inside single quotes; drive colon escaped as \:
+        assert!(
+            result.contains("fontfile='C\\:/My Fonts/cool.ttf':"),
+            "expected space-preserved font path in filter, got: {result}"
+        );
+    }
+
+    #[test]
+    fn test_burned_subtitle_windows_source_path() {
+        let spec = BurnedSubtitleSpec::py_new(Some("C:\\Users\\sub.srt".to_string()), None, None);
+        let result = BurnedSubtitleBuilder::build(&spec).unwrap();
+        // BurnedSubtitleBuilder uses emit_filter_option_path: drive colon escaped as \:
+        assert!(
+            result.contains("filename='C\\:/Users/sub.srt'"),
+            "expected escaped Windows source_path, got: {result}"
+        );
     }
 
     #[test]
