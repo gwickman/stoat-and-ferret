@@ -343,6 +343,17 @@ This allows:
 
 The `py_` prefix distinguishes PyO3 binding methods from pure Rust methods, making it clear which methods are part of the Python API.
 
+### Internal Error Enums
+
+Declare error enums as `pub(crate)` when they exist solely to propagate failure modes
+within a single Rust module. A `pub(crate)` type is not reachable through PyO3; Python
+callers only see the `PyValueError` mapped at the `build()` call site. No `#[gen_stub_pyclass]`
+attribute, no `stub_gen` run, and no `.pyi` update are required.
+
+Pattern: `pub(crate)` error enum → returned by `pub(crate)` helper → caught in `pub` builder
+→ mapped to `PyValueError`. Python callers receive a descriptive `ValueError`; the Rust
+error type is invisible.
+
 ### Enum Non-Hashability Guardrail
 
 **PyO3 0.26 enum values are not hashable** and cannot be used directly as dict keys or set members. Use `str(enum_field)` instead:
@@ -420,6 +431,26 @@ Always regenerate stubs after adding or modifying bindings.
 ## PR Workflow
 
 After completing code changes, follow this workflow:
+
+### PR Authoring Checklist
+
+Before creating a PR, confirm each item that applies to your change:
+
+- **API field changed?** — Did you add, rename, or remove a request/response field? If yes, run:
+  ```bash
+  uv run python -m scripts.export_openapi
+  cd gui && npm run generate:types
+  ```
+- **New module added?** — Did you add a new Python module or Rust binding? If yes, update type stubs
+  (`cargo run --bin stub_gen` + restore-and-append) and add any new PyO3 types to `_core.pyi`.
+- **Smoke skip resolved?** — Did you fix a bug or feature referenced in an existing
+  `pytest.mark.skip(reason="...")` message? If yes, remove or update the skip marker.
+- **Route/model changed?** — Did you modify a FastAPI route decorator, Pydantic model, or response
+  schema? If yes, regenerate `gui/openapi.json` and `gui/src/generated/api-types.ts` (same commands
+  as API field changed above).
+
+These four checks intercept the leading documentation-drift categories. See §OpenAPI Schema Sync
+for the full regeneration procedure.
 
 ### 1. Verify locally
 ```bash
