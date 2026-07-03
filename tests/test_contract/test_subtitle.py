@@ -243,6 +243,20 @@ class TestSubtitleScriptBuilder:
         result = SubtitleScriptBuilder.build(spec)
         assert "fontfile=" not in result
 
+    def test_font_file_windows_path(self) -> None:
+        entries = [ScriptEntry(0.0, 1.0, "text")]
+        spec = SubtitleScriptSpec(entries=entries, font_file="C:\\Windows\\Fonts\\arial.ttf")
+        result = SubtitleScriptBuilder.build(spec)
+        # Windows path: single-quoted, drive colon escaped as \:, backslashes → forward slashes
+        assert "fontfile='C\\:/Windows/Fonts/arial.ttf':" in result
+
+    def test_font_file_space_path(self) -> None:
+        entries = [ScriptEntry(0.0, 1.0, "text")]
+        spec = SubtitleScriptSpec(entries=entries, font_file="C:\\My Fonts\\cool.ttf")
+        result = SubtitleScriptBuilder.build(spec)
+        # Space preserved inside single quotes; drive colon escaped as \:
+        assert "fontfile='C\\:/My Fonts/cool.ttf':" in result
+
     def test_position_bottom_xy(self) -> None:
         entries = [ScriptEntry(0.0, 1.0, "text")]
         spec = SubtitleScriptSpec(entries=entries, position="bottom")
@@ -849,3 +863,9 @@ class TestBurnedSubtitleBuilderEmitFilterValueDispatch:
         spec = BurnedSubtitleSpec(source_path="/tmp/O'Brien.srt")
         with pytest.raises(ValueError):
             BurnedSubtitleBuilder.build(spec)
+
+    def test_burned_subtitle_windows_source_path(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="C:\\Users\\sub.srt")
+        result = BurnedSubtitleBuilder.build(spec)
+        # Windows path: single-quoted, drive colon escaped as \:, backslashes → forward slashes
+        assert "filename='C\\:/Users/sub.srt'" in result
