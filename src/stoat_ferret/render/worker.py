@@ -52,6 +52,9 @@ _REQUIRED_PLAN_FIELDS = ("settings", "total_duration")
 # Windows CreateProcessW command-line string limit (including null terminator)
 WINDOWS_ARGV_LIMIT = 32_767
 
+# Budget for exe path, flag args, separators, and null terminator in the full command line
+COMMAND_OVERHEAD_CHARS = 500
+
 
 def _maybe_route_filter_to_file(
     command: list[str],
@@ -61,9 +64,10 @@ def _maybe_route_filter_to_file(
     """Route long filter args to a temp file on Windows to avoid argv limit.
 
     On non-Windows platforms, returns the command unchanged. On Windows, scans
-    for -vf or -filter_complex with a filter string >= WINDOWS_ARGV_LIMIT chars
-    and replaces them with file-backed alternatives. Returns the (possibly modified)
-    command and the temp file path, or None if no routing was needed.
+    for -vf or -filter_complex with a filter string >= WINDOWS_ARGV_LIMIT -
+    COMMAND_OVERHEAD_CHARS chars and replaces them with file-backed alternatives.
+    Returns the (possibly modified) command and the temp file path, or None if
+    no routing was needed.
     """
     if sys.platform != "win32":
         return command, None
@@ -76,10 +80,21 @@ def _maybe_route_filter_to_file(
             idx = command.index(flag)
         except ValueError:
             continue
-        if idx + 1 < len(command) and len(command[idx + 1]) >= WINDOWS_ARGV_LIMIT:
-            with tempfile.NamedTemporaryFile(suffix=".filter", delete=False) as tmp:
-                tmp.write(command[idx + 1].encode())
-                filter_tmp_path = Path(tmp.name)
+        if (
+            idx + 1 < len(command)
+            and len(command[idx + 1]) >= WINDOWS_ARGV_LIMIT - COMMAND_OVERHEAD_CHARS
+        ):
+            _tmp_name: str | None = None
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".filter", delete=False) as tmp:
+                    _tmp_name = tmp.name
+                    tmp.write(command[idx + 1].encode())
+            except OSError:
+                if _tmp_name is not None:
+                    Path(_tmp_name).unlink(missing_ok=True)
+                raise
+            assert _tmp_name is not None
+            filter_tmp_path = Path(_tmp_name)
             executor.register_temp_file(job.id, filter_tmp_path)
             command = command[:idx] + [script_flag, str(filter_tmp_path)] + command[idx + 2 :]
             break
