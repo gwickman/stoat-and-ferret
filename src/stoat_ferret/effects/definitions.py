@@ -3060,7 +3060,8 @@ SUBTITLE_SCRIPT = EffectDefinition(
     example_prompt="Add captions: 'Breathe in' at 0-3s, 'Hold' at 3-6s, 'Release' at 6-9s.",
     stream_kind="video",
     timeline_T_capable=False,
-    requires_path_escape=False,
+    requires_path_escape=True,
+    value_kind_per_option={"font_file": "path"},
 )
 
 
