@@ -794,4 +794,36 @@ mod tests {
         let v = eval(&e, 1.0, 0.0, 0.0, &mut b).unwrap();
         assert_eq!(v, 0.0, "div-by-zero should return 0.0");
     }
+
+    #[test]
+    fn test_wrong_arity_too_many_args() {
+        let result = parse("sin(x, y)");
+        match result {
+            Err(ParseError::WrongArity {
+                expected_arity,
+                got_arity,
+                ..
+            }) => {
+                assert_eq!(expected_arity, 1);
+                assert_eq!(got_arity, 2);
+            }
+            other => panic!("expected WrongArity, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_wrong_arity_zero_args() {
+        let result = parse("sin()");
+        match result {
+            Err(ParseError::WrongArity {
+                expected_arity,
+                got_arity,
+                ..
+            }) => {
+                assert_eq!(expected_arity, 1);
+                assert_eq!(got_arity, 0);
+            }
+            other => panic!("expected WrongArity, got {:?}", other),
+        }
+    }
 }
