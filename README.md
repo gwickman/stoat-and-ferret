@@ -4,4 +4,4 @@
 
 [Alpha] AI-driven video editor with hybrid Python/Rust architecture - not production ready.
 
-**v094 (Subtitle Filter Remediation):** Windows argv limit guard for long subtitle filtergraphs (BL-584), SubtitleScriptBuilder font_file path escaping for drawtext filter (BL-585), BurnedSubtitleBuilder force_style single-quote safety (BL-586). (PRs #716–#718.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
+**v095 (Post-R3 Hygiene Bundle):** Subtitle injection safety (colon-sequence rejection, font_color hardening, UNC path escaping — BL-595/596/593); test coverage additions (WrongArity Rust tests, TTS PATCH reset HTTP tests, UAT baseline cleanup — BL-591/592/590); code hygiene (HTTP_422 rename, argv-limit guard hardening, CI reliability — BL-545/597/594). (PRs #720–#730.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.

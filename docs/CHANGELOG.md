@@ -4,6 +4,38 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v095 — Post-R3 Hygiene Bundle (2026-07-03)
+
+### Fixed
+
+- BL-595: `emit_filter_option_path` now rejects values containing colons at construction time, closing a filter-option injection path that bypassed the BL-586 force_style safety guard
+- BL-596: `SubtitleScriptSpec.font_color` validated against colon injection at field construction
+- BL-593: UNC path (`\\server\share`) subtitle file references correctly escaped for the `drawtext` filter on Windows
+- BL-597: argv-limit guard hardened — overhead constant added, fence-post off-by-one fixed, write-failure cleanup added, and `_run_job` integration coverage expanded (PR #728)
+
+### Added
+
+- BL-591: Rust unit tests for `ParseError::WrongArity` in `procedural_parser.rs` — distinguishes argument-count mismatches from syntax errors (PR #726)
+- BL-592: HTTP-layer tests for TTS PATCH synthesis-field reset contract (PR #727)
+- Subtitle injection smoke tests and smoke harness guide (Theme 01 Features 004–005)
+
+### Changed
+
+- BL-590: Stale J502/J504 entries removed from `tests/fixtures/baseline-uat-failures.json`
+- BL-545: `HTTP_422_UNPROCESSABLE_ENTITY` renamed to `HTTP_422_UNPROCESSABLE_CONTENT` across 4 router files (PR #729)
+- BL-594: CI reliability — Docker image threshold raised to 474 MB, timing test bounds relaxed, `test_render_cancel` race annotated (PR #730)
+- BL-565-AC-3: UAT baseline cleanup confirmed; J204/J501 entries removed in v093 PR #710; AC-3 runtime discharge complete
+
+### PRs
+
+#720, #721, #722, #723, #724, #725, #726, #727, #728, #729, #730
+
+### Resolved
+
+BL-590 (UAT baseline J502/J504 cleanup), BL-591 (WrongArity Rust tests), BL-592 (TTS PATCH reset HTTP tests), BL-545 (HTTP_422 constant rename), BL-565 (UAT J204/J501 discharge — AC-3 confirmed; AC-1/AC-2/AC-4 source_stale, completed v093), BL-593 (UNC path subtitle escaping), BL-594 (CI reliability), BL-595 (emit_filter_option_path colon rejection), BL-596 (font_color colon injection fix), BL-597 (argv-limit guard hardening)
+
+---
+
 ## v094 — Subtitle Filter Remediation (2026-07-03)
 
 ### Fixed
