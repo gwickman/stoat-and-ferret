@@ -636,4 +636,23 @@ mod tests {
         assert!(result.starts_with("subtitles=filename="));
         assert!(result.contains("inline.srt"));
     }
+
+    // -- SubtitleScriptBuilder scale tests (BL-584-AC-1) --
+
+    #[test]
+    fn test_build_500_entries() {
+        let entries: Vec<ScriptEntry> = (0..500)
+            .map(|i| {
+                let start = i as f64;
+                let end = start + 0.9;
+                make_entry(start, end, &format!("Cue {i}"))
+            })
+            .collect();
+        let spec = make_spec(entries, "bottom");
+        let result = SubtitleScriptBuilder::build(&spec).unwrap();
+        // 500 drawtext filters joined by commas — no artificial cap
+        assert_eq!(result.matches("drawtext=").count(), 500);
+        // Result must be non-empty and valid (no error)
+        assert!(!result.is_empty());
+    }
 }
