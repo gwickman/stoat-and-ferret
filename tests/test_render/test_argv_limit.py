@@ -202,6 +202,27 @@ def test_fence_post_below_threshold_no_routing(
     executor.register_temp_file.assert_not_called()
 
 
+def test_fence_post_at_threshold_routes_to_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Filter at exactly the guard threshold (32,267 chars) routes to file on Windows.
+
+    The gate uses `>=`, so 32_267 >= 32_267 → True → routing must occur.
+    BL-600-AC-1: pins the >= operator against a silent > regression.
+    """
+    monkeypatch.setattr(sys, "platform", "win32")
+    threshold_filter = _make_long_filter(WINDOWS_ARGV_LIMIT - COMMAND_OVERHEAD_CHARS)
+    command = ["ffmpeg", "-i", "input.mp4", "-vf", threshold_filter, "output.mp4"]
+    job = _make_job()
+    executor = _make_executor()
+
+    new_cmd, filter_path = _maybe_route_filter_to_file(command, job, executor)
+
+    assert filter_path is not None
+    with contextlib.suppress(OSError):
+        filter_path.unlink(missing_ok=True)
+
+
 def test_write_failure_cleans_up_temp_file(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
