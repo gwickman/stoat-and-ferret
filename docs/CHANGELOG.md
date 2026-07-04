@@ -4,6 +4,31 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v096 — Post-R3 Hygiene Bundle (2026-07-04)
+
+### Fixed
+
+- BL-599: `font_color` and `emit_filter_option_path` now reject values containing commas and semicolons — closes a filtergraph metacharacter injection path in the subtitle filter (PR #731)
+
+### Added
+
+- BL-599: Smoke tests for comma/semicolon `font_color` injection rejection; smoke harness guide updated to document coverage (PRs #732, #733)
+- BL-600: Fence-post test at the argv-limit routing threshold (32,267 chars) — validates that filtergraphs at the exact character limit route to temp-file correctly (PR #734)
+
+### Changed
+
+- BL-598: `pytest-rerunfailures` installed; `test_render_cancel` unskipped and promoted from flaky to stable (PR #735)
+
+### PRs
+
+#731, #732, #733, #734, #735
+
+### Resolved
+
+BL-598 (pytest-rerunfailures + render cancel stability), BL-599 (comma/semicolon filtergraph metacharacter rejection), BL-600 (argv-limit fence-post test)
+
+---
+
 ## v095 — Post-R3 Hygiene Bundle (2026-07-03)
 
 ### Fixed
