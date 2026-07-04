@@ -940,6 +940,16 @@ def test_subtitle_script_spec_font_color_colon_rejected() -> None:
         )
 
 
+def test_subtitle_script_spec_font_color_comma_rejected() -> None:
+    """FR-003-AC-1 (BL-599): font_color containing ',' raises ValueError at construction."""
+    entry = ScriptEntry(0.0, 2.0, "Hello")
+    with pytest.raises(ValueError):
+        SubtitleScriptSpec(
+            entries=[entry],
+            font_color="white,scale=2",
+        )
+
+
 def test_subtitle_script_spec_font_color_valid_hex_accepted() -> None:
     """FR-003-AC-1 (BL-596): valid hex font_color '#ff0000' is accepted by py_new."""
     entry = ScriptEntry(0.0, 2.0, "Hello")

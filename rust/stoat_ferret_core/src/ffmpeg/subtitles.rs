@@ -77,9 +77,13 @@ impl SubtitleScriptSpec {
                 position
             )));
         }
-        if font_color.contains(':') || font_color.contains('\'') {
+        if font_color.contains(':')
+            || font_color.contains('\'')
+            || font_color.contains(',')
+            || font_color.contains(';')
+        {
             return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "font_color contains forbidden character ':' or single quote: {}",
+                "font_color contains forbidden character (':', single quote, ',', ';'): {}",
                 font_color
             )));
         }
@@ -727,5 +731,33 @@ mod tests {
             None,
         )
         .is_ok());
+    }
+
+    // -- font_color filtergraph metacharacter rejection (BL-599) --
+
+    #[test]
+    fn test_font_color_comma_rejected() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "white,scale=2".to_string(),
+            None,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_font_color_semicolon_rejected() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        assert!(SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "white;scale=2".to_string(),
+            None,
+        )
+        .is_err());
     }
 }
