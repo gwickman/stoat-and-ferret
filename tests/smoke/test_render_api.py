@@ -323,9 +323,8 @@ async def test_render_delete(smoke_client: httpx.AsyncClient) -> None:
     assert get_resp.status_code == 404
 
 
-# BL-594-AC-3: 200/409 cancel race — job may be picked up by render worker before cancel arrives.
-# pytest-rerunfailures not installed; skipped until BL-594 is resolved with a retry package.
-@pytest.mark.skip(reason="BL-594-AC-3: flaky cancel race; pytest-rerunfailures not installed")
+# BL-598: 200/409 cancel race handled by reruns=3 (pytest-rerunfailures installed in v096).
+@pytest.mark.flaky(reruns=3)
 async def test_render_cancel(smoke_client: httpx.AsyncClient) -> None:
     """POST /api/v1/render/{id}/cancel returns 200 on queued job, 404/409 on invalid states."""
     # Create a project and render job
