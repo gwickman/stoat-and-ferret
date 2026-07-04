@@ -61,6 +61,50 @@ def test_subtitle_font_color_with_colon_returns_422() -> None:
         assert response.status_code in (400, 422)
 
 
+def test_subtitle_font_color_with_comma_returns_422() -> None:
+    """FR-001-AC-1 (BL-599): font_color containing ',' causes HTTP 422 rejection."""
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/effects/preview",
+            json={
+                "effect_type": "subtitle_script",
+                "parameters": {
+                    "entries": [{"start_s": 0.0, "end_s": 5.0, "text": "Hello"}],
+                    "font_color": "white,scale=2",
+                },
+            },
+        )
+        # Effects router build_fn exceptions map to 400; 422 is the design intent
+        assert response.status_code in (400, 422)
+
+
+def test_subtitle_font_color_with_semicolon_returns_422() -> None:
+    """FR-002-AC-1 (BL-599): font_color containing ';' causes HTTP 422 rejection."""
+    app = create_app(
+        video_repository=AsyncInMemoryVideoRepository(),
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/effects/preview",
+            json={
+                "effect_type": "subtitle_script",
+                "parameters": {
+                    "entries": [{"start_s": 0.0, "end_s": 5.0, "text": "Hello"}],
+                    "font_color": "white;scale=2",
+                },
+            },
+        )
+        # Effects router build_fn exceptions map to 400; 422 is the design intent
+        assert response.status_code in (400, 422)
+
+
 def test_valid_subtitle_effect_accepted() -> None:
     """FR-003-AC-1: Valid subtitle_script effect with no injection chars is accepted."""
     app = create_app(
