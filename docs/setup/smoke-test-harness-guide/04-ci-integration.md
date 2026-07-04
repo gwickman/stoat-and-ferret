@@ -100,15 +100,14 @@ The test accepts either outcome. Both are valid, and neither indicates a bug.
 
 Phase 1 uses HTTP polling for all asynchronous operations. WebSocket events are timing-sensitive and would introduce flakiness if used for assertions. WebSocket testing is deferred to Phase 2 (Playwright), which has built-in support for waiting on WebSocket messages.
 
-### 5. Retry Policy (Optional)
+### 5. Retry Policy
 
-If flakiness is observed after deployment, add `pytest-rerunfailures`:
+`pytest-rerunfailures` is a standard dev dependency (added in v096). Use `@pytest.mark.flaky(reruns=N)`
+on known-flaky tests rather than `@pytest.mark.skip`. The `reruns=3` value is appropriate for
+cancel-race and similar async-timing tests.
 
-```yaml
-run: uv run pytest tests/smoke/ -v --timeout=120 --tb=short --reruns 1
-```
-
-This is not recommended initially. Flaky tests should be investigated and fixed, not papered over with retries.
+Flaky tests should still be investigated and fixed over time — `@pytest.mark.flaky` is a stabiliser,
+not a permanent replacement for understanding the root cause.
 
 ## Whether to Run in Same pytest Invocation
 
