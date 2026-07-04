@@ -58,6 +58,10 @@ pub enum PathEscapeError {
     ApostropheInPath(String),
     /// The path contains a colon at a position other than a Windows drive-letter prefix.
     ColonInPath(String),
+    /// The path contains a comma (filtergraph chain separator).
+    CommaInPath(String),
+    /// The path contains a semicolon (filtergraph parallel-chain separator).
+    SemicolonInPath(String),
 }
 
 impl std::fmt::Display for PathEscapeError {
@@ -74,6 +78,18 @@ impl std::fmt::Display for PathEscapeError {
                 f,
                 "Path '{}' contains a colon which cannot be safely used in FFmpeg \
                  filter option values. Rename the file to remove the colon character.",
+                path
+            ),
+            PathEscapeError::CommaInPath(path) => write!(
+                f,
+                "Path '{}' contains a comma (filtergraph separator) which cannot be \
+                 safely used in FFmpeg filter option values.",
+                path
+            ),
+            PathEscapeError::SemicolonInPath(path) => write!(
+                f,
+                "Path '{}' contains a semicolon (filtergraph separator) which cannot \
+                 be safely used in FFmpeg filter option values.",
                 path
             ),
         }
@@ -101,6 +117,12 @@ pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeEr
         .any(|(i, &b)| b == b':' && !(i == 1 && bytes[0].is_ascii_alphabetic()));
     if has_forbidden_colon {
         return Err(PathEscapeError::ColonInPath(path.to_string()));
+    }
+    if path.contains(',') {
+        return Err(PathEscapeError::CommaInPath(path.to_string()));
+    }
+    if path.contains(';') {
+        return Err(PathEscapeError::SemicolonInPath(path.to_string()));
     }
     // UNC paths (\\server\share\... or //server/share/...) need backslash-to-forward-slash
     // conversion and single-quote wrapping.  The colon check above already passes for UNC
@@ -1927,6 +1949,20 @@ mod tests {
         // BL-593: // prefix (Unix-style UNC) also gets single-quote wrapping.
         let result = emit_filter_option_path("//server/share/font.ttf").unwrap();
         assert_eq!(result, "'//server/share/font.ttf'");
+    }
+
+    // -- emit_filter_option_path filtergraph metacharacter rejection (BL-599) --
+
+    #[test]
+    fn test_comma_in_path_rejected() {
+        let err = emit_filter_option_path("/tmp/a,scale=2.srt").unwrap_err();
+        assert!(matches!(err, PathEscapeError::CommaInPath(_)));
+    }
+
+    #[test]
+    fn test_semicolon_in_path_rejected() {
+        let err = emit_filter_option_path("/tmp/a;b.srt").unwrap_err();
+        assert!(matches!(err, PathEscapeError::SemicolonInPath(_)));
     }
 
     // --- emit_filter_value contract tests ---
