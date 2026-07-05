@@ -65,8 +65,7 @@ impl PanBuilder {
                 // Commas in if()/lt() expressions must be escaped so FFmpeg's filter
                 // graph parser doesn't split them as chain separators.
                 let escaped = pos_expr.replace(',', "\\,");
-                let exprs =
-                    format!("max(0\\,1-({escaped}))*val(0)|max(0\\,1+({escaped}))*val(1)");
+                let exprs = format!("max(0\\,1-({escaped}))*val(0)|max(0\\,1+({escaped}))*val(1)");
                 Ok(Filter::new(format!("aeval=exprs={exprs}")))
             }
         }
