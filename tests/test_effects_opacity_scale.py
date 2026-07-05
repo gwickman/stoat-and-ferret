@@ -106,12 +106,12 @@ def test_opacity_effect_definition_automatable() -> None:
 
 
 def test_opacity_effect_definition_automation_template() -> None:
-    """OPACITY_EFFECT.automation_filter_template has colorchannelmixer, eval=frame (FR-001-AC-4)."""
+    """OPACITY_EFFECT.automation_filter_template uses geq with {expr_T} placeholder (BL-502)."""
     assert OPACITY_EFFECT.automation_filter_template is not None
     template = OPACITY_EFFECT.automation_filter_template
-    assert "colorchannelmixer" in template, f"Expected colorchannelmixer in template: {template}"
-    assert "eval=frame" in template, f"Expected eval=frame in template: {template}"
-    assert "{expr}" in template, f"Expected {{expr}} placeholder in template: {template}"
+    assert "geq=" in template, f"Expected geq= in template: {template}"
+    assert "{expr_T}" in template, f"Expected {{expr_T}} placeholder in template: {template}"
+    assert "colorchannelmixer" not in template, f"colorchannelmixer must be absent: {template}"
 
 
 # ---- ScaleBuilder unit tests ----
