@@ -18,10 +18,10 @@ from stoat_ferret_core import FreezeFrameBuilder
 # ---------------------------------------------------------------------------
 
 
-def test_freeze_frame_builder_filter_contains_freezeframes() -> None:
-    """FreezeFrameBuilder.build() returns a Filter containing 'freezeframes' (BL-449-AC-1)."""
+def test_freeze_frame_builder_filter_contains_tpad_clone() -> None:
+    """FreezeFrameBuilder.build() returns a tpad=stop_mode=clone filter (BL-449-AC-1, FFmpeg 8)."""
     f = FreezeFrameBuilder(0, 2.0).build()
-    assert "freezeframes" in str(f), f"expected 'freezeframes' in filter, got: {f}"
+    assert "tpad=stop_mode=clone" in str(f), f"expected 'tpad=stop_mode=clone' in filter, got: {f}"
 
 
 def test_freeze_frame_builder_filter_contains_tpad() -> None:
@@ -30,12 +30,10 @@ def test_freeze_frame_builder_filter_contains_tpad() -> None:
     assert "tpad" in str(f), f"expected 'tpad' in filter, got: {f}"
 
 
-def test_freeze_frame_builder_frame_number_in_filter() -> None:
-    """Frame number appears as first/last/replace values in the filter string."""
+def test_freeze_frame_builder_frame_number_accepted() -> None:
+    """FreezeFrameBuilder accepts any valid frame_number and produces a tpad filter (FFmpeg 8)."""
     f = str(FreezeFrameBuilder(30, 1.0).build())
-    assert "first=30" in f, f"expected first=30 in: {f}"
-    assert "last=30" in f, f"expected last=30 in: {f}"
-    assert "replace=30" in f, f"expected replace=30 in: {f}"
+    assert "tpad=stop_mode=clone" in f, f"expected tpad=stop_mode=clone in: {f}"
 
 
 def test_freeze_frame_builder_duration_in_filter() -> None:
@@ -83,9 +81,9 @@ def test_freeze_frame_builder_negative_duration_raises() -> None:
 
 
 def test_freeze_frame_builder_frame_zero_valid() -> None:
-    """Frame number 0 (first frame) is a valid input."""
+    """Frame number 0 (first frame) is a valid input; produces tpad filter (FFmpeg 8)."""
     f = str(FreezeFrameBuilder(0, 1.0).build())
-    assert "first=0" in f
+    assert "tpad=stop_mode=clone" in f
 
 
 # ---------------------------------------------------------------------------
@@ -101,21 +99,21 @@ def test_freeze_frame_registered_in_default_registry() -> None:
     assert registry.get("freeze_frame") is not None, "freeze_frame effect must be registered"
 
 
-def test_freeze_frame_build_fn_returns_filter_with_freezeframes() -> None:
-    """FREEZE_FRAME.build_fn returns a filter string containing 'freezeframes' (BL-449-AC-2)."""
+def test_freeze_frame_build_fn_returns_tpad_filter() -> None:
+    """FREEZE_FRAME.build_fn returns a tpad=stop_mode=clone filter (BL-449-AC-2, FFmpeg 8)."""
     from stoat_ferret.effects.definitions import FREEZE_FRAME
 
     result = FREEZE_FRAME.build_fn({"frame_number": 5, "duration_s": 2.0})
-    assert "freezeframes" in result, f"Expected 'freezeframes' in filter string: {result}"
-    assert "tpad" in result, f"Expected 'tpad' in filter string: {result}"
+    assert "tpad=stop_mode=clone" in result, f"Expected tpad=stop_mode=clone in: {result}"
+    assert "stop_duration=2" in result, f"Expected stop_duration=2 in: {result}"
 
 
-def test_freeze_frame_build_fn_frame_number_appears() -> None:
-    """FREEZE_FRAME.build_fn encodes the requested frame number."""
+def test_freeze_frame_build_fn_accepts_frame_number() -> None:
+    """FREEZE_FRAME.build_fn accepts frame_number; not encoded in filter (FFmpeg 8)."""
     from stoat_ferret.effects.definitions import FREEZE_FRAME
 
     result = FREEZE_FRAME.build_fn({"frame_number": 15, "duration_s": 1.0})
-    assert "first=15" in result, f"Expected first=15 in: {result}"
+    assert "tpad=stop_mode=clone" in result, f"Expected tpad=stop_mode=clone in: {result}"
 
 
 def test_freeze_frame_build_fn_duration_appears() -> None:
@@ -142,12 +140,12 @@ def test_freeze_frame_parameter_schema_additionalproperties_false() -> None:
     assert FREEZE_FRAME.parameter_schema.get("additionalProperties") is False
 
 
-def test_freeze_frame_preview_fn_contains_freezeframes() -> None:
-    """FREEZE_FRAME.preview_fn returns a filter string containing 'freezeframes'."""
+def test_freeze_frame_preview_fn_contains_tpad() -> None:
+    """FREEZE_FRAME.preview_fn returns a filter string containing 'tpad' (FFmpeg 8)."""
     from stoat_ferret.effects.definitions import FREEZE_FRAME
 
     result = FREEZE_FRAME.preview_fn()
-    assert "freezeframes" in result, f"Expected 'freezeframes' in preview filter: {result}"
+    assert "tpad" in result, f"Expected 'tpad' in preview filter: {result}"
 
 
 def test_freeze_frame_ai_summary_nonempty() -> None:

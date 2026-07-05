@@ -383,8 +383,8 @@ pub fn py_estimate_output_size(duration_seconds: f64, codec: &str, quality_prese
 /// `-filter_complex` source filter expression suitable for audio synthesis.
 ///
 /// Supported types:
-/// - `"aevalsrc"`: Arbitrary expression evaluator. Uses `eval=frame` (mandatory per LRN-583)
-///   and `expr` from params. Duration defaults to params `duration` if present.
+/// - `"aevalsrc"`: Arbitrary expression evaluator. Uses `exprs` (plural, FFmpeg 8 option name)
+///   from params. Duration defaults to params `duration` if present.
 /// - `"sine"`: Simple sine wave. Uses `frequency` from params.
 ///
 /// Args:
@@ -412,9 +412,7 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
                 .get("duration")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(duration);
-            Ok(format!(
-                "aevalsrc=expr='{expr}':eval=frame:duration={dur:.6}"
-            ))
+            Ok(format!("aevalsrc=exprs='{expr}':duration={dur:.6}"))
         }
         "sine" => {
             let frequency = params
@@ -455,11 +453,11 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
                         None => format!("sin(2*PI*{rf:.3}*t)"),
                     };
                     Ok(format!(
-                        "aevalsrc=expr='{left_expr}|{right_expr}':channel_layout=stereo:eval=frame:duration={duration:.6}"
+                        "aevalsrc=exprs='{left_expr}|{right_expr}':channel_layout=stereo:duration={duration:.6}"
                     ))
                 }
                 None => Ok(format!(
-                    "aevalsrc=expr='{left_expr}':eval=frame:duration={duration:.6}"
+                    "aevalsrc=exprs='{left_expr}':duration={duration:.6}"
                 )),
             }
         }
@@ -929,8 +927,8 @@ mod tests {
         let f =
             build_generator_source_filter(r#"{"type":"aevalsrc","expr":"sin(2*PI*440*t)"}"#, 3.0)
                 .unwrap();
-        assert!(f.contains("aevalsrc=expr='sin(2*PI*440*t)'"));
-        assert!(f.contains("eval=frame"));
+        assert!(f.contains("aevalsrc=exprs='sin(2*PI*440*t)'"));
+        assert!(!f.contains("eval=frame"));
         assert!(f.contains("duration=3.000000"));
     }
 
