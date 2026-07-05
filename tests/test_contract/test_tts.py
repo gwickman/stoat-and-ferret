@@ -907,18 +907,6 @@ class TestBuildCommandTtsMixing:
         assert "amix" not in cmd_str
         assert "-vf" in cmd
 
-    @pytest.mark.skipif(
-        not __import__("os").environ.get("STOAT_TEST_FFMPEG"),
-        reason="deferred_post_merge: requires STOAT_TEST_FFMPEG=1 and real FFmpeg",
-    )
-    async def test_tts_mixing_energy_bands(self) -> None:
-        """AC FR-002-AC-5 (FFmpeg-gated, deferred_post_merge): ffprobe confirms energy bands.
-
-        Discharge: render a fixture with source audio + TTS cue; ffprobe the output to
-        confirm two distinct audio energy bands (source frequency range + speech range).
-        """
-        pass
-
 
 # ---------------------------------------------------------------------------
 # TTS speech energy placement — FFmpeg-gated (BL-589 / BL-516-AC-4)

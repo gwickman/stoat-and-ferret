@@ -297,15 +297,6 @@ class TestSubtitleScriptBuilder:
         assert "text='Hello World'" in result
 
 
-@pytest.mark.skipif(
-    not os.environ.get("STOAT_TEST_FFMPEG"),
-    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
-)
-def test_subtitle_script_builder_ffmpeg_contract() -> None:
-    """Render 10s clip with 3 captions; deferred to post-merge discharge."""
-    pass
-
-
 # ---- BurnedSubtitleBuilder (BL-519) ----
 
 
@@ -415,24 +406,6 @@ def test_ci_bundle_guard_subtitle_filters() -> None:
     output = proc.stdout + proc.stderr
     assert "subtitles" in output, "subtitles filter missing from bundled FFmpeg"
     assert " ass " in output, "ass filter missing from bundled FFmpeg"
-
-
-@pytest.mark.skipif(
-    not os.environ.get("STOAT_TEST_FFMPEG"),
-    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
-)
-def test_burned_subtitle_srt_render() -> None:
-    """Burn 5s SRT onto color=blue; deferred post-merge discharge (BL-519-AC-6)."""
-    pass
-
-
-@pytest.mark.skipif(
-    not os.environ.get("STOAT_TEST_FFMPEG"),
-    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
-)
-def test_burned_subtitle_force_style_escape_render() -> None:
-    """force_style escape render test; deferred post-merge discharge (BL-519-AC-7)."""
-    pass
 
 
 # ---- SoftSubtitleSpec (BL-520) ----
@@ -893,15 +866,6 @@ class TestBurnedSubtitleBuilderForceStyleSafety:
             )
             with pytest.raises(ValueError, match="force_style key"):
                 BurnedSubtitleBuilder.build(spec)
-
-
-@pytest.mark.skipif(
-    not os.environ.get("STOAT_TEST_FFMPEG"),
-    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
-)
-def test_burned_subtitle_force_style_ffmpeg_safe() -> None:
-    """AC FR-005-AC-6 (BL-586): FFmpeg contract test; deferred post-merge discharge."""
-    pass
 
 
 # ---- BL-595: colon rejection in emit_filter_option_path ----
