@@ -163,7 +163,7 @@ def test_generator_clip_render_via_source_filter(tmp_path: object) -> None:
 
     cmd = build_generator_render_command(params_json, duration, out)
     result = subprocess.run(
-        ["ffmpeg"] + cmd.args,
+        ["ffmpeg"] + cmd.args(),
         capture_output=True,
         text=True,
     )

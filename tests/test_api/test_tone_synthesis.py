@@ -92,7 +92,7 @@ def test_tone_synthesis_renders_constant_frequency(tmp_path: object) -> None:
     out = str(Path(str(tmp_path)) / "tone_constant.wav")  # type: ignore[arg-type]
 
     cmd = build_generator_render_command(params_json, duration, out)
-    result = subprocess.run(["ffmpeg"] + cmd.args, capture_output=True, text=True)
+    result = subprocess.run(["ffmpeg"] + cmd.args(), capture_output=True, text=True)
     assert result.returncode == 0, f"FFmpeg failed: {result.stderr[-500:]}"
     assert Path(out).exists()
     assert Path(out).stat().st_size > 0
@@ -114,7 +114,7 @@ def test_tone_synthesis_renders_frequency_sweep(tmp_path: object) -> None:
     out = str(Path(str(tmp_path)) / "tone_sweep.wav")  # type: ignore[arg-type]
 
     cmd = build_generator_render_command(params_json, duration, out)
-    result = subprocess.run(["ffmpeg"] + cmd.args, capture_output=True, text=True)
+    result = subprocess.run(["ffmpeg"] + cmd.args(), capture_output=True, text=True)
     assert result.returncode == 0, f"FFmpeg failed: {result.stderr[-500:]}"
     assert Path(out).exists()
     assert Path(out).stat().st_size > 0
@@ -136,7 +136,7 @@ def test_tone_synthesis_renders_binaural_stereo(tmp_path: object) -> None:
     out = str(Path(str(tmp_path)) / "tone_binaural.wav")  # type: ignore[arg-type]
 
     cmd = build_generator_render_command(params_json, duration, out)
-    result = subprocess.run(["ffmpeg"] + cmd.args, capture_output=True, text=True)
+    result = subprocess.run(["ffmpeg"] + cmd.args(), capture_output=True, text=True)
     assert result.returncode == 0, f"FFmpeg failed: {result.stderr[-500:]}"
     assert Path(out).exists()
     assert Path(out).stat().st_size > 0

@@ -41,7 +41,7 @@ async def test_qc_oracle_populates_delivery_profile_assertions(
 
     # Create delivery profile with loudness target
     dp_resp = await smoke_client.post(
-        "/api/v1/delivery-profiles",
+        "/api/v1/delivery_profiles",
         json={
             "name": "QC Oracle Test Profile",
             "loudness_target_lufs": -16.0,

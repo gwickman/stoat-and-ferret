@@ -13,7 +13,6 @@ All tests are gated on STOAT_TEST_FFMPEG=1.
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 from pathlib import Path
@@ -94,52 +93,44 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, f"FFmpeg failed during alpha-change test:\n{result.stderr}"
 
-    def _mean_alpha(t: float) -> float:
-        """Extract mean alpha value at timestamp t via ffprobe."""
-        frame_result = subprocess.run(
+    # Use extractplanes=a to extract actual alpha pixel values from RGBA output.
+    # Opacity ramp: 0→1 over 2 s at 24 fps.
+    # frame 5 (≈0.21 s): opacity ≈ 0.10 → mean alpha ≈ 26
+    # frame 43 (≈1.79 s): opacity ≈ 0.90 → mean alpha ≈ 229
+    def _mean_alpha(frame_n: int) -> float:
+        """Render one RGBA frame via lavfi+geq; return mean alpha [0..255] via extractplanes=a."""
+        res = subprocess.run(
             [
-                "ffprobe",
-                "-v",
-                "quiet",
-                "-select_streams",
-                "v:0",
-                "-read_intervals",
-                f"{t}%+0.1",
-                "-show_frames",
-                "-print_format",
-                "json",
-                str(output),
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=red:size=64x64:rate=24:duration=3:pix_fmt=rgba",
+                "-vf",
+                f"{filter_str},select=eq(n\\,{frame_n}),setpts=PTS-STARTPTS,extractplanes=a",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "gray",
+                "-frames:v",
+                "1",
+                "pipe:1",
             ],
             capture_output=True,
-            text=True,
         )
-        data = json.loads(frame_result.stdout or "{}")
-        frames = data.get("frames", [])
-        if not frames:
+        px = res.stdout
+        if len(px) != 64 * 64:
             return -1.0
-        return float(frames[0].get("pkt_pts_time", "-1"))
+        return sum(px) / (64 * 64)
 
-    # Simpler approach: re-encode at specific timestamps and compare file sizes
-    # (fully transparent frame compresses differently from opaque frame)
-    early = tmp_path / "early.png"
-    late = tmp_path / "late.png"
+    early_alpha = _mean_alpha(5)  # frame 5 @ 24 fps ≈ t=0.21 s, expected opacity ≈ 0.10
+    late_alpha = _mean_alpha(43)  # frame 43 @ 24 fps ≈ t=1.79 s, expected opacity ≈ 0.90
 
-    subprocess.run(
-        ["ffmpeg", "-ss", "0.2", "-i", str(output), "-frames:v", "1", "-y", str(early)],
-        capture_output=True,
-        check=True,
-    )
-    subprocess.run(
-        ["ffmpeg", "-ss", "1.8", "-i", str(output), "-frames:v", "1", "-y", str(late)],
-        capture_output=True,
-        check=True,
-    )
-
-    early_size = early.stat().st_size
-    late_size = late.stat().st_size
-    assert early_size != late_size, (
-        f"Frames at t=0.2s and t=1.8s are identical size ({early_size}); "
-        "opacity does not appear to be changing over time"
+    assert early_alpha >= 0, "Failed to extract early alpha frame via extractplanes=a"
+    assert late_alpha >= 0, "Failed to extract late alpha frame via extractplanes=a"
+    assert early_alpha < late_alpha, (
+        f"Alpha not increasing over time: early={early_alpha:.1f}, late={late_alpha:.1f}; "
+        "opacity animation does not appear to be changing"
     )
 
 
