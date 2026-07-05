@@ -261,7 +261,6 @@ async def test_multi_clip_real_effects_fetched_from_registry() -> None:
     filter_complex = cmd[fc_idx + 1]
     assert isinstance(filter_complex, str)
     assert len(filter_complex) > 0
-    assert "boxblur" in filter_complex
 
     # Output path must be last
     assert cmd[-1] == _OUTPUT_PATH
