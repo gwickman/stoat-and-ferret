@@ -62,8 +62,8 @@ def test_pan_builder_clamps_below_minus_one() -> None:
     assert "c1=0*c1" in s, f"expected same output as position=-1.0, got: {s}"
 
 
-def test_pan_builder_automation_contains_eval_frame() -> None:
-    """Automated PanBuilder must emit eval=frame (LRN-583)."""
+def test_pan_builder_automation_no_eval_frame() -> None:
+    """Automated PanBuilder must NOT emit eval=frame (FFmpeg 8: option removed)."""
     auto = Automation(
         default=0.0,
         keyframes=[
@@ -73,7 +73,7 @@ def test_pan_builder_automation_contains_eval_frame() -> None:
     )
     f = PanBuilder(0.0).with_automation(auto).build()
     s = str(f)
-    assert "eval=frame" in s, f"eval=frame must be present per LRN-583, got: {s}"
+    assert "eval=frame" not in s, f"eval=frame must be absent (FFmpeg 8 removed it), got: {s}"
 
 
 def test_pan_builder_automation_uses_aeval_filter() -> None:
@@ -91,12 +91,12 @@ def test_pan_builder_automation_uses_aeval_filter() -> None:
 
 
 def test_pan_builder_automation_contains_both_channels() -> None:
-    """Automated filter string references c0 and c1."""
+    """Automated filter string references val(0) and val(1) channel accessors (FFmpeg 8)."""
     auto = Automation(default=0.0, keyframes=[Keyframe(t=0.0, value=0.0, curve="Hold")])
     f = PanBuilder(0.0).with_automation(auto).build()
     s = str(f)
-    assert "c0" in s, f"expected c0 channel expression, got: {s}"
-    assert "c1" in s, f"expected c1 channel expression, got: {s}"
+    assert "val(0)" in s, f"expected val(0) channel expression, got: {s}"
+    assert "val(1)" in s, f"expected val(1) channel expression, got: {s}"
 
 
 def test_pan_registered_in_default_registry() -> None:
@@ -232,7 +232,7 @@ def test_pan_automation_eval_frame_produces_time_varying_output(tmp_path: str) -
         ],
     )
     pan_filter = str(PanBuilder(0.0).with_automation(auto).build())
-    assert "eval=frame" in pan_filter, f"eval=frame must be present, got: {pan_filter}"
+    assert "eval=frame" not in pan_filter, f"eval=frame must be absent (FFmpeg 8): {pan_filter}"
 
     subprocess.run(
         ["ffmpeg", "-y", "-i", str(mono), "-af", pan_filter, str(output)],

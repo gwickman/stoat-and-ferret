@@ -16,7 +16,7 @@ def test_tone_filter_constant_frequency() -> None:
 
     f = build_generator_source_filter('{"type": "tone", "frequency": 440.0}', 5.0)
     assert "aevalsrc" in f
-    assert "eval=frame" in f  # LRN-583: mandatory for correct per-sample evaluation
+    assert "eval=frame" not in f  # FFmpeg 8: eval=frame option removed
     assert "440.000" in f
     assert "duration=5.000000" in f
     assert "stereo" not in f
@@ -30,7 +30,7 @@ def test_tone_filter_frequency_sweep() -> None:
         '{"type": "tone", "frequency": 100.0, "frequency_end": 200.0}', 10.0
     )
     assert "aevalsrc" in f
-    assert "eval=frame" in f  # LRN-583
+    assert "eval=frame" not in f  # FFmpeg 8: eval=frame option removed
     assert "100.000" in f
     assert "200.000" in f
     assert "t*t" in f
@@ -45,7 +45,7 @@ def test_tone_filter_binaural_beat() -> None:
         '{"type": "tone", "frequency": 200.0, "binaural_offset": 4.0}', 5.0
     )
     assert "stereo" in f
-    assert "eval=frame" in f  # LRN-583
+    assert "eval=frame" not in f  # FFmpeg 8: eval=frame option removed
     assert "200.000" in f
     assert "204.000" in f
     assert "|" in f
