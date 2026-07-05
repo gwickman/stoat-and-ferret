@@ -62,8 +62,11 @@ impl PanBuilder {
             }
             Some(auto) => {
                 let pos_expr = py_compile_automation(auto)?;
+                // Commas in if()/lt() expressions must be escaped so FFmpeg's filter
+                // graph parser doesn't split them as chain separators.
+                let escaped = pos_expr.replace(',', "\\,");
                 let exprs =
-                    format!("max(0\\,1-({pos_expr}))*val(0)|max(0\\,1+({pos_expr}))*val(1)");
+                    format!("max(0\\,1-({escaped}))*val(0)|max(0\\,1+({escaped}))*val(1)");
                 Ok(Filter::new(format!("aeval=exprs={exprs}")))
             }
         }
@@ -208,6 +211,12 @@ mod tests {
         assert!(
             !s.contains("eval=frame"),
             "eval=frame must not appear in aeval (not a valid option), got: {s}"
+        );
+        // Commas inside function arguments must be escaped for the FFmpeg filter
+        // graph parser: e.g. lt(t,0) → lt(t\,0) so the comma isn't a chain separator.
+        assert!(
+            !s.contains("lt(t,"),
+            "unescaped comma in lt(t,...) — must be lt(t\\,...) for filter graph safety, got: {s}"
         );
     }
 

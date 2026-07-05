@@ -98,7 +98,12 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
     # frame 5 (≈0.21 s): opacity ≈ 0.10 → mean alpha ≈ 26
     # frame 43 (≈1.79 s): opacity ≈ 0.90 → mean alpha ≈ 229
     def _mean_alpha(frame_n: int) -> float:
-        """Render one RGBA frame via lavfi+geq; return mean alpha [0..255] via extractplanes=a."""
+        """Render one RGBA frame via lavfi+geq; return mean alpha [0..255].
+
+        Outputs RGBA rawvideo and extracts the alpha byte (offset 3) from
+        each pixel, avoiding extractplanes=a which may behave differently
+        across FFmpeg builds.
+        """
         res = subprocess.run(
             [
                 "ffmpeg",
@@ -107,11 +112,11 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
                 "-i",
                 "color=red:size=64x64:rate=24:duration=3:pix_fmt=rgba",
                 "-vf",
-                f"{filter_str},select=eq(n\\,{frame_n}),setpts=PTS-STARTPTS,extractplanes=a",
+                f"{filter_str},select=eq(n\\,{frame_n}),setpts=PTS-STARTPTS,format=rgba",
                 "-f",
                 "rawvideo",
                 "-pix_fmt",
-                "gray",
+                "rgba",
                 "-frames:v",
                 "1",
                 "pipe:1",
@@ -119,9 +124,12 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
             capture_output=True,
         )
         px = res.stdout
-        if len(px) != 64 * 64:
+        expected = 64 * 64 * 4  # RGBA: 4 bytes per pixel
+        if len(px) != expected:
             return -1.0
-        return sum(px) / (64 * 64)
+        # Alpha is the 4th byte of each RGBA pixel (index 3, 7, 11, ...)
+        alpha_bytes = px[3::4]
+        return sum(alpha_bytes) / len(alpha_bytes)
 
     early_alpha = _mean_alpha(5)  # frame 5 @ 24 fps ≈ t=0.21 s, expected opacity ≈ 0.10
     late_alpha = _mean_alpha(43)  # frame 43 @ 24 fps ≈ t=1.79 s, expected opacity ≈ 0.90
