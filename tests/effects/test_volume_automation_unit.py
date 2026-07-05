@@ -159,11 +159,20 @@ def test_build_automation_filter_string_blur_radius(registry: EffectRegistry) ->
 
 
 def test_build_automation_filter_string_opacity(registry: EffectRegistry) -> None:
-    """build_automation_filter_string for 'opacity' → colorchannelmixer eval=frame (BL-455-AC-1)."""
+    """build_automation_filter_string for 'opacity' → geq with uppercase-T (BL-502)."""
     result = registry.build_automation_filter_string("opacity", "0.5+0.5*sin(t)")
-    assert "eval=frame" in result, f"Expected eval=frame in opacity filter: {result}"
-    assert "colorchannelmixer" in result, f"Expected colorchannelmixer in opacity filter: {result}"
-    assert "0.5+0.5*sin(t)" in result, f"Expected expression in opacity filter: {result}"
+    assert "geq=" in result, f"Expected geq= in opacity filter: {result}"
+    assert "colorchannelmixer" not in result, f"colorchannelmixer must be absent: {result}"
+    # lowercase t converted to uppercase T for geq time variable
+    assert "sin(T)" in result, f"Expected sin(T) (uppercase) in opacity filter: {result}"
+
+
+def test_build_automation_filter_string_opacity_uppercase_t(registry: EffectRegistry) -> None:
+    """Word-boundary re.sub converts standalone t → T, not t inside function names (BL-502)."""
+    result = registry.build_automation_filter_string("opacity", "lt(t,1.0)")
+    # commas in expressions are escaped; standalone t converts to T, lt stays as lt
+    assert r"lt(T\,1.0)" in result, f"Expected lt(T\\,1.0) in result: {result}"
+    assert r"lt(t\,1.0)" not in result, f"Lowercase lt(t\\,1.0) must not appear: {result}"
 
 
 def test_build_automation_filter_string_scale(registry: EffectRegistry) -> None:

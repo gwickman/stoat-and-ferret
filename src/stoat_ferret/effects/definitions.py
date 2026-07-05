@@ -2010,7 +2010,7 @@ OPACITY_EFFECT = EffectDefinition(
     ai_summary="Adjust clip opacity (alpha) with optional keyframed crossfade automation.",
     example_prompt="Fade this clip from transparent to fully opaque over 2 seconds.",
     automatable=frozenset({"opacity"}),
-    automation_filter_template="format=rgba,colorchannelmixer=aa='{expr}':eval=frame",
+    automation_filter_template="format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{expr_T}'",
     value_kind_per_option={"opacity": "numeric"},
 )
 

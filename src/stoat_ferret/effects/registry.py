@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import jsonschema
@@ -216,5 +217,9 @@ class EffectRegistry:
         effect_def = self._effects.get(effect_type)
         if effect_def is None or effect_def.automation_filter_template is None:
             raise ValueError(f"No automation filter string for effect_type: {effect_type}")
+        template = effect_def.automation_filter_template
         escaped = compiled_expression.replace(",", r"\,")
-        return effect_def.automation_filter_template.replace("{expr}", escaped)
+        if "{expr_T}" in template:
+            expr_uppercase_t = re.sub(r"\bt\b", "T", escaped)
+            return template.replace("{expr_T}", expr_uppercase_t)
+        return template.replace("{expr}", escaped)
