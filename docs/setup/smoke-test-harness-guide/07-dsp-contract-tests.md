@@ -1,3 +1,13 @@
+## Definition-of-Done Policy
+
+Every new effect builder **MUST ship with at least one `STOAT_TEST_FFMPEG=1`-gated contract
+test in the same PR as the builder registration**, before the builder is registered.
+A builder merged without a gated contract test is a DoD violation. The gated-coverage guard
+test in `tests/test_contract/test_effect_gated_coverage.py` enforces this structurally;
+the `STOAT_TEST_FFMPEG=1` CI lane (BL-607) enforces it behaviorally.
+
+See also: `AGENTS.md` §Smoke Test Harness for the full DoD expectation.
+
 ## DSP Contract Tests (FFmpeg-Gated)
 
 v077 adds FFmpeg-gated contract tests in `tests/effects/` that verify the DSP effect pipeline end-to-end using a real FFmpeg binary. These tests are separate from the standard API smoke suite because they require FFmpeg to be installed on the host.
