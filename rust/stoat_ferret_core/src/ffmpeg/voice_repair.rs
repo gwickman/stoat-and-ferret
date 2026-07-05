@@ -269,13 +269,17 @@ impl DeesserBuilder {
     /// Assumes 44100 Hz sample rate (Nyquist = 22050 Hz).
     /// TODO: Accept sample_rate parameter for sample-rate-aware normalization.
     ///
-    /// Emits `deesser=f=<normalized>:m=<mode>`.
+    /// Emits `deesser=f=<normalized>:s=<output-selector>`.
+    ///
+    /// Maps mode "wide" → `s=o` (outband) and "split" → `s=i` (inband),
+    /// per FFmpeg 8 deesser option naming (`m` is now numeric max-deessing level).
     #[must_use]
     pub fn build(&self) -> Filter {
         let f_normalized = self.frequency / 22050.0;
+        let s = if self.mode == "split" { "i" } else { "o" };
         Filter::new("deesser")
             .param("f", format!("{f_normalized:.6}"))
-            .param("m", self.mode.clone())
+            .param("s", s)
     }
 }
 
@@ -318,7 +322,7 @@ impl DeesserBuilder {
     /// Builds the de-esser Filter.
     ///
     /// Returns:
-    ///     A Filter with deesser=f=<freq>:m=<mode> syntax.
+    ///     A Filter with deesser=f=<freq>:s=<output-selector> syntax.
     #[pyo3(name = "build")]
     fn py_build(&self) -> Filter {
         self.build()
@@ -700,7 +704,7 @@ mod tests {
     #[test]
     fn test_deesser_default_mode() {
         let filter = DeesserBuilder::new(3000.0).unwrap().build();
-        assert_eq!(filter.to_string(), "deesser=f=0.136054:m=wide");
+        assert_eq!(filter.to_string(), "deesser=f=0.136054:s=o");
     }
 
     #[test]
@@ -710,7 +714,7 @@ mod tests {
             .with_mode("split")
             .unwrap()
             .build();
-        assert_eq!(filter.to_string(), "deesser=f=0.226757:m=split");
+        assert_eq!(filter.to_string(), "deesser=f=0.226757:s=i");
     }
 
     #[test]
@@ -720,7 +724,7 @@ mod tests {
             .with_mode("wide")
             .unwrap()
             .build();
-        assert_eq!(filter.to_string(), "deesser=f=0.362812:m=wide");
+        assert_eq!(filter.to_string(), "deesser=f=0.362812:s=o");
     }
 
     #[test]
@@ -897,7 +901,7 @@ mod tests {
                 .extract()
                 .unwrap();
             assert!(filter.starts_with("deesser=f=0.272109"), "Got: {filter}");
-            assert!(filter.contains("m=split"));
+            assert!(filter.contains("s=i"));
             let repr: String = ds.call_method0("__repr__").unwrap().extract().unwrap();
             assert!(repr.contains("DeesserBuilder"));
 
@@ -1390,9 +1394,9 @@ mod time_stretch_tests {
 
 // ========== PitchShiftBuilder ==========
 
-/// Builds an `arubberband` pitch-shift filter for vocal warmth or correction.
+/// Builds a `rubberband` pitch-shift filter for vocal warmth or correction.
 ///
-/// Uses the FFmpeg `arubberband` filter (requires libRubberBand) to shift pitch
+/// Uses the FFmpeg `rubberband` filter (requires libRubberBand) to shift pitch
 /// by a configured number of semitones while optionally preserving formants for
 /// natural-sounding results.
 ///
@@ -1405,7 +1409,7 @@ mod time_stretch_tests {
 /// let chain = PitchShiftBuilder::new(2.0).unwrap()
 ///     .with_formant("preserved").unwrap()
 ///     .build();
-/// assert!(chain.to_string().contains("arubberband"));
+/// assert!(chain.to_string().contains("rubberband"));
 /// ```
 #[gen_stub_pyclass]
 #[pyclass]
@@ -1492,7 +1496,7 @@ impl PitchShiftBuilder {
     #[must_use]
     pub fn build(&self) -> FilterChain {
         let pitch_factor = 2f64.powf(self.semitones / 12.0);
-        let f = Filter::new("arubberband")
+        let f = Filter::new("rubberband")
             .param("pitch", format!("{pitch_factor:.6}"))
             .param("pitchq", self.quality.clone())
             .param("formant", self.formant.clone());
@@ -1550,7 +1554,7 @@ impl PitchShiftBuilder {
     /// Builds the pitch-shift `FilterChain`.
     ///
     /// Returns:
-    ///     A FilterChain containing a single arubberband filter with the configured
+    ///     A FilterChain containing a single rubberband filter with the configured
     ///     pitch factor, formant mode, and quality.
     #[pyo3(name = "build")]
     fn py_build(&self) -> FilterChain {
@@ -1597,7 +1601,7 @@ mod pitch_shift_tests {
     fn pitch_shift_up_two_semitones() {
         let chain = PitchShiftBuilder::new(2.0).unwrap().build();
         let s = chain.to_string();
-        assert!(s.contains("arubberband"));
+        assert!(s.contains("rubberband"));
         // 2^(2/12) ≈ 1.122462
         assert!(s.contains("pitch=1.122462"));
     }
@@ -1735,7 +1739,7 @@ mod pitch_shift_tests {
                 .unwrap()
                 .extract()
                 .unwrap();
-            assert!(chain_str.contains("arubberband"));
+            assert!(chain_str.contains("rubberband"));
 
             // __repr__
             let repr: String = b5.call_method0("__repr__").unwrap().extract().unwrap();

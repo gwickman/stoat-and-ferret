@@ -4,18 +4,19 @@
 //! Freeze-frame filter builder for FFmpeg.
 //!
 //! This module provides [`FreezeFrameBuilder`] for constructing an FFmpeg
-//! filter that holds a chosen frame and extends the clip duration using
-//! the `freezeframes` and `tpad` filters.
+//! filter that holds a video frame and extends the clip duration using
+//! the `tpad` filter with `stop_mode=clone`.
 //!
 //! # Filter string format
 //!
-//! `freezeframes=first={F}:last={F}:replace={F},tpad=stop_duration={H}`
+//! `tpad=stop_mode=clone:stop_duration={H}`
 //!
-//! where F = `frame_number` (0-indexed) and H = `hold_duration_s` (seconds).
+//! where H = `hold_duration_s` (seconds). The `frame_number` parameter is
+//! validated but not used in the filter string; `tpad` clones the last frame.
 //!
 //! # Minimum FFmpeg version
 //!
-//! FFmpeg 4.0+ is required for the `freezeframes` and `tpad` filters.
+//! FFmpeg 4.0+ is required for the `tpad` filter.
 //!
 //! # Mid-clip freeze note
 //!
@@ -27,18 +28,18 @@
 //! ```
 //! use stoat_ferret_core::ffmpeg::freeze::FreezeFrameBuilder;
 //!
-//! // Freeze frame 5 for 2.5 seconds
+//! // Hold end of clip for 2.5 seconds
 //! let builder = FreezeFrameBuilder::new(5, 2.5).unwrap();
 //! assert_eq!(
 //!     builder.build().to_string(),
-//!     "freezeframes=first=5:last=5:replace=5,tpad=stop_duration=2.5"
+//!     "tpad=stop_mode=clone:stop_duration=2.5"
 //! );
 //!
 //! // Integer hold duration strips the decimal
 //! let builder = FreezeFrameBuilder::new(0, 2.0).unwrap();
 //! assert_eq!(
 //!     builder.build().to_string(),
-//!     "freezeframes=first=0:last=0:replace=0,tpad=stop_duration=2"
+//!     "tpad=stop_mode=clone:stop_duration=2"
 //! );
 //! ```
 
@@ -65,10 +66,11 @@ fn format_duration(s: f64) -> String {
 
 /// Builder for FFmpeg freeze-frame filters.
 ///
-/// Generates: `freezeframes=first={F}:last={F}:replace={F},tpad=stop_duration={H}`
+/// Generates: `tpad=stop_mode=clone:stop_duration={H}`
 ///
-/// The `tpad` filter extends the clip by `hold_duration_s` seconds. Frame bounds
-/// validation (frame_number vs. clip duration) is enforced by the application layer.
+/// Clones the last frame to extend the clip by `hold_duration_s` seconds.
+/// `frame_number` is validated but not used in the filter string (`tpad` always
+/// clones the last frame). Frame bounds validation is enforced by the application layer.
 #[gen_stub_pyclass]
 #[pyclass]
 #[derive(Debug, Clone)]
@@ -96,11 +98,14 @@ impl FreezeFrameBuilder {
     }
 
     /// Builds the FFmpeg filter string for freeze-frame.
+    ///
+    /// Emits `tpad=stop_mode=clone:stop_duration={H}`, cloning the last decoded
+    /// frame for `hold_duration_s` seconds. The 2-input `freezeframes` filter
+    /// is not used here because it cannot be used as a single-input `-vf` chain.
     #[must_use]
     pub fn build(&self) -> Filter {
         Filter::new(format!(
-            "freezeframes=first={0}:last={0}:replace={0},tpad=stop_duration={1}",
-            self.frame_number,
+            "tpad=stop_mode=clone:stop_duration={}",
             format_duration(self.hold_duration_s)
         ))
     }
@@ -165,7 +170,7 @@ mod tests {
         let b = FreezeFrameBuilder::new(5, 2.0).unwrap();
         assert_eq!(
             b.build().to_string(),
-            "freezeframes=first=5:last=5:replace=5,tpad=stop_duration=2"
+            "tpad=stop_mode=clone:stop_duration=2"
         );
     }
 
@@ -174,7 +179,7 @@ mod tests {
         let b = FreezeFrameBuilder::new(5, 2.5).unwrap();
         assert_eq!(
             b.build().to_string(),
-            "freezeframes=first=5:last=5:replace=5,tpad=stop_duration=2.5"
+            "tpad=stop_mode=clone:stop_duration=2.5"
         );
     }
 
@@ -183,7 +188,7 @@ mod tests {
         let b = FreezeFrameBuilder::new(0, 1.0).unwrap();
         assert_eq!(
             b.build().to_string(),
-            "freezeframes=first=0:last=0:replace=0,tpad=stop_duration=1"
+            "tpad=stop_mode=clone:stop_duration=1"
         );
     }
 
@@ -191,8 +196,8 @@ mod tests {
     fn test_filter_string_large_frame_number() {
         let b = FreezeFrameBuilder::new(1200, 3.5).unwrap();
         let s = b.build().to_string();
-        assert!(s.starts_with("freezeframes=first=1200:last=1200:replace=1200"));
-        assert!(s.contains("tpad=stop_duration=3.5"));
+        assert!(s.starts_with("tpad=stop_mode=clone"));
+        assert!(s.contains("stop_duration=3.5"));
     }
 
     #[test]

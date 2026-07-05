@@ -21,7 +21,7 @@ fn gain_to_string(v: f32) -> String {
 /// Stereo pan position builder with optional automation envelope.
 ///
 /// Static mode generates `pan=stereo|c0=L*c0|c1=R*c1`.
-/// Automated mode generates `aeval=exprs=...:eval=frame` (LRN-583: eval=frame mandatory).
+/// Automated mode generates `aeval=exprs=...` using `val(0)`/`val(1)` channel accessors.
 /// Pan position is clamped to [-1.0, 1.0] (LRN-597).
 #[gen_stub_pyclass]
 #[pyclass]
@@ -62,8 +62,9 @@ impl PanBuilder {
             }
             Some(auto) => {
                 let pos_expr = py_compile_automation(auto)?;
-                let exprs = format!("max(0\\,1-({pos_expr}))*c0|max(0\\,1+({pos_expr}))*c1");
-                Ok(Filter::new(format!("aeval=exprs={exprs}:eval=frame")))
+                let exprs =
+                    format!("max(0\\,1-({pos_expr}))*val(0)|max(0\\,1+({pos_expr}))*val(1)");
+                Ok(Filter::new(format!("aeval=exprs={exprs}")))
             }
         }
     }
@@ -173,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_automated_build_contains_eval_frame() {
+    fn test_automated_build_aeval_filter() {
         use super::super::automation::{Automation, Keyframe};
         let auto = Automation {
             default: 0.0,
@@ -193,12 +194,20 @@ mod tests {
         let b = PanBuilder::py_new(0.0).with_automation(auto);
         let s = b.build().unwrap().to_string();
         assert!(
-            s.contains("eval=frame"),
-            "eval=frame must be present (LRN-583), got: {s}"
-        );
-        assert!(
             s.starts_with("aeval="),
             "expected aeval filter for automation, got: {s}"
+        );
+        assert!(
+            s.contains("val(0)"),
+            "expected val(0) channel accessor in automated pan, got: {s}"
+        );
+        assert!(
+            s.contains("val(1)"),
+            "expected val(1) channel accessor in automated pan, got: {s}"
+        );
+        assert!(
+            !s.contains("eval=frame"),
+            "eval=frame must not appear in aeval (not a valid option), got: {s}"
         );
     }
 

@@ -16,10 +16,10 @@ from stoat_ferret_core import PitchShiftBuilder
 # ---------------------------------------------------------------------------
 
 
-def test_pitch_shift_contains_arubberband() -> None:
-    """build() produces an arubberband filter."""
+def test_pitch_shift_contains_rubberband() -> None:
+    """build() produces a rubberband filter."""
     chain = PitchShiftBuilder(2.0).build()
-    assert "arubberband" in str(chain)
+    assert "rubberband" in str(chain)
 
 
 def test_pitch_shift_factor_formula() -> None:

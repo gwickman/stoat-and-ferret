@@ -1536,7 +1536,7 @@ PAN = EffectDefinition(
     ),
     example_prompt="Pan the voice slightly to the right at position 0.3.",
     automatable=frozenset({"position"}),
-    automation_filter_template="aeval=exprs=max(0\\,1-({expr}))*c0|max(0\\,1+({expr}))*c1:eval=frame",
+    automation_filter_template="aeval=exprs=max(0\\,1-({expr}))*val(0)|max(0\\,1+({expr}))*val(1)",
 )
 
 
