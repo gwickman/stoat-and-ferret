@@ -145,6 +145,13 @@ uv run pytest tests/smoke/ -v --timeout=120 --no-cov
 
 See [docs/manual/smoke-test-harness.md](docs/manual/smoke-test-harness.md) for harness setup instructions, `STOAT_TEST_FFMPEG` usage, and discharge procedures for `deferred_post_merge` ACs.
 
+### STOAT_TEST_FFMPEG Gated Suite (DoD Gate — BL-503/BL-607)
+
+`STOAT_TEST_FFMPEG=1` gated suite: runs automatically in CI (all 9 matrix variants of the `test` job).
+Every new effect builder **MUST** ship with at least one `STOAT_TEST_FFMPEG=1`-gated contract test in the same PR (see `docs/setup/smoke-test-harness-guide/07-dsp-contract-tests.md`).
+
+This is a Definition of Done gate (BL-503): a feature that adds an effect builder without a gated contract test is considered incomplete.
+
 ### Frontend (TypeScript, Vitest)
 
 ```bash
