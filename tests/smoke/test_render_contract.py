@@ -557,9 +557,6 @@ async def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
     Uses animated_alpha (RenderEffect.animated_alpha) as the available per-clip
     effect proxy. The animated_alpha variant produces a geq filter in the
     filter_complex, verifying the effect sub-chain stage is emitted before xfade.
-
-    Note: blur-specific filter integration (BlurBuilder → RenderEffect) is
-    deferred_post_merge pending RenderEffect.custom() exposure (BL-555 scope).
     """
     from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
 
@@ -588,6 +585,43 @@ async def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
     xfade_pos = filter_complex.find("xfade")
     assert effect_pos < xfade_pos, (
         f"effect sub-chain (pos {effect_pos}) must appear before xfade (pos {xfade_pos})"
+    )
+
+
+async def test_multi_clip_custom_effect_appears_in_filter_complex() -> None:
+    """RenderEffect.custom() filter chain appears verbatim in the filter_complex (BL-555).
+
+    Verifies that a custom filter chain produced by EffectDefinition.build_fn() is
+    injected into the render graph filter_complex and appears before xfade.
+    """
+    from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+
+    custom_filter = "gblur=sigma=2.5"
+    clips = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip0.mp4",
+            effects=[RenderEffect.custom(custom_filter)],
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip1.mp4",
+            effects=[RenderEffect.none()],
+        ),
+    ]
+    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    assert custom_filter in filter_complex, (
+        f"custom filter_chain must appear verbatim in filter_complex; got: {filter_complex!r}"
+    )
+    # Custom effect sub-chain must appear before xfade.
+    effect_pos = filter_complex.find(custom_filter)
+    xfade_pos = filter_complex.find("xfade")
+    assert effect_pos < xfade_pos, (
+        f"custom effect (pos {effect_pos}) must appear before xfade (pos {xfade_pos})"
     )
 
 

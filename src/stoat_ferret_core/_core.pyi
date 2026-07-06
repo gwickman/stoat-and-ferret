@@ -4545,6 +4545,7 @@ class RenderEffect:
 
     - ``RenderEffect.none()`` — no-op, clip passes through unmodified.
     - ``RenderEffect.animated_alpha(start, end)`` — linear alpha fade over clip duration.
+    - ``RenderEffect.custom(filter_chain)`` — raw FFmpeg filter chain from build_fn.
     """
 
     @staticmethod
@@ -4559,6 +4560,17 @@ class RenderEffect:
         Args:
             start: Starting alpha in [0.0, 1.0] (0.0 = transparent).
             end: Ending alpha in [0.0, 1.0] (1.0 = opaque).
+        """
+        ...
+
+    @staticmethod
+    def custom(filter_chain: str) -> RenderEffect:
+        """Creates a custom effect from a raw FFmpeg filter chain string.
+
+        Args:
+            filter_chain: A valid FFmpeg filter chain string (e.g. ``"gblur=sigma=2.5"``).
+                Produced by ``EffectDefinition.build_fn()``; injected verbatim into the
+                render graph translator output.
         """
         ...
 

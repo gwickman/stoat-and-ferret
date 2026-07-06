@@ -2778,6 +2778,14 @@ CURVES = EffectDefinition(
     stream_kind="video",
     timeline_T_capable=True,
     requires_path_escape=False,
+    value_kind_per_option={
+        "preset": "enum_literal",
+        "master": "knee_string",
+        "red": "knee_string",
+        "green": "knee_string",
+        "blue": "knee_string",
+        "all": "knee_string",
+    },
 )
 
 
@@ -2874,6 +2882,14 @@ VIGNETTE = EffectDefinition(
     stream_kind="video",
     timeline_T_capable=True,
     requires_path_escape=False,
+    value_kind_per_option={
+        "position": "enum_literal",
+        "x_offset": "numeric",
+        "y_offset": "numeric",
+        "angle": "numeric",
+        "mode": "enum_literal",
+        "eval_mode": "enum_literal",
+    },
 )
 
 
@@ -2938,6 +2954,7 @@ HUE_ROTATION = EffectDefinition(
     stream_kind="video",
     timeline_T_capable=True,
     requires_path_escape=False,
+    value_kind_per_option={"h_expr": "expression"},
 )
 
 
