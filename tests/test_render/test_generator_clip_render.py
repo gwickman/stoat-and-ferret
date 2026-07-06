@@ -143,8 +143,9 @@ async def test_generator_clip_multi_clip_command_uses_lavfi_flag() -> None:
     assert "-f" in cmd
     f_idx = cmd.index("-f")
     assert cmd[f_idx + 1] == "lavfi"
-    assert cmd[f_idx + 2] == "-i"
-    assert cmd[f_idx + 3] == _LAVFI_COLOR
+    assert cmd[f_idx + 2] == "-t"
+    assert cmd[f_idx + 4] == "-i"
+    assert cmd[f_idx + 5] == _LAVFI_COLOR
     assert "-filter_complex" in cmd
     assert "-map" in cmd
 

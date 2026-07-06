@@ -308,8 +308,9 @@ async def test_image_clip_multi_clip_command_uses_loop_flag() -> None:
     assert "-loop" in cmd
     loop_idx = cmd.index("-loop")
     assert cmd[loop_idx + 1] == "1"
-    assert cmd[loop_idx + 2] == "-i"
-    assert cmd[loop_idx + 3] == img_path
+    assert cmd[loop_idx + 2] == "-t"
+    assert cmd[loop_idx + 4] == "-i"
+    assert cmd[loop_idx + 5] == img_path
 
 
 @pytest.mark.asyncio

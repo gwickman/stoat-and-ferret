@@ -349,6 +349,7 @@ async def build_command_for_job(
 
         multi_cmd: list[str] = ["ffmpeg"]
         cwe_list = []
+        clip_durations_mc: list[float] = []
         for i, clip in enumerate(clips):
             if clip.clip_type == "image":
                 if asset_repository is None:
@@ -383,6 +384,7 @@ async def build_command_for_job(
                 framerate_mc = vid.frame_rate
             if duration_secs <= 0:
                 raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
+            clip_durations_mc.append(duration_secs)
             render_effects: list[RenderEffect] = []
             if effect_registry and clip.effects:
                 for effect_data in clip.effects:
@@ -412,11 +414,11 @@ async def build_command_for_job(
         translator = RenderGraphTranslator()
         filter_complex_str, input_paths = translator.translate(cwe_list)
 
-        for clip, path in zip(clips, input_paths, strict=True):
+        for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
             if clip.clip_type == "image":
-                multi_cmd.extend(["-loop", "1", "-i", path])
+                multi_cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
             elif clip.clip_type == "generator":
-                multi_cmd.extend(["-f", "lavfi", "-i", path])
+                multi_cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
             else:
                 multi_cmd.extend(["-i", path])
 
