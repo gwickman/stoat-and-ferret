@@ -135,6 +135,9 @@ Likely flow:
 > `quality_preset`, `encoder`) differ from those of `POST /render` (`project_id`); these two
 > endpoints do not share a request body. A project-aware preview is not currently supported.
 
+> **Required:** Before considering this render complete, proceed to **Step 8 — Validate Output**.
+> A successful API response does not confirm pixel-level correctness.
+
 Expected result:
 
 - job enters queue
