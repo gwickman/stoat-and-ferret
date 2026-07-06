@@ -336,6 +336,42 @@ jobs:
       - name: Run smoke tests
         run: uv run pytest tests/smoke/ -v --timeout=120 --no-cov
 
+  ffmpeg-tests:
+    name: FFmpeg gated tests
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install FFmpeg
+        uses: AnimMouse/setup-ffmpeg@v1
+        with:
+          ffmpeg-version: "8"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/stoat_ferret_core
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build Python module
+        run: uv run maturin develop
+
+      - name: Run STOAT_TEST_FFMPEG gated suite
+        run: STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov --timeout=120 -v
+
   uat:
     needs: [changes]
     if: needs.changes.outputs.code == 'true' || needs.changes.outputs.gui == 'true'
