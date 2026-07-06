@@ -208,7 +208,7 @@ async def test_generator_clip_multi_clip_render(tmp_path: Path) -> None:
 
     clips = [
         _make_generator_clip("clip-a", 0, lavfi_string="color=c=red:s=320x240:r=30"),
-        _make_generator_clip("clip-b", 90, lavfi_string="color=c=green:s=320x240:r=30"),
+        _make_generator_clip("clip-b", 3, lavfi_string="color=c=green:s=320x240:r=30"),
     ]
 
     clip_repo = AsyncMock()

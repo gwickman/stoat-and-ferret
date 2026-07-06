@@ -404,7 +404,7 @@ async def test_image_clip_multi_clip_render(tmp_path: Path) -> None:
 
     clips = [
         _make_image_clip("clip-a", "a1", timeline_position=0, timeline_end=3.0),
-        _make_image_clip("clip-b", "a2", timeline_position=90, timeline_end=3.0),
+        _make_image_clip("clip-b", "a2", timeline_position=3, timeline_end=3.0),
     ]
     clip_repo = AsyncMock()
     clip_repo.list_by_project = AsyncMock(return_value=clips)
