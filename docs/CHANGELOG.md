@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v098 — FFmpeg-8 Correctness + STOAT_TEST_FFMPEG CI Lane + Multi-Clip Render Closure (2026-07-06)
+
+### Theme 1: FFmpeg-8 Correctness
+
+- BL-610: PanBuilder `aeval=exprs=` now wraps the expression in single quotes to prevent FFmpeg 8 filtergraph misparse on automation expressions containing commas (PR #744)
+- BL-611: `test_opacity_geq.py::_mean_alpha` helper fixed — removed invalid `pix_fmt=rgba` on color source, added `format=rgba` before `extractplanes=a`, added `check=True` to surface FFmpeg errors (PR #745)
+- BL-602: `RenderGraphTranslator` animated-alpha geq expression corrected from lowercase `t` to uppercase `T` for the FFmpeg geq timestamp variable (PR #746)
+
+### Theme 2: STOAT_TEST_FFMPEG CI Lane
+
+- BL-607: Dedicated `ffmpeg-tests` CI job on ubuntu-latest with FFmpeg 8 and `STOAT_TEST_FFMPEG=1`; pre-existing regressions triaged; lane documented in AGENTS.md and smoke-test-harness guide (PRs #747, #748)
+
+### Theme 3: Render Pipeline Closure
+
+- BL-555: `ValueKind` 7-variant enum and `emit_filter_value()` dispatch function added to `video.rs`; 4 builders (HueRotation, Curves, Vignette, BurnedSubtitle) migrated to typed dispatch; `value_kind_per_option` dict added to `definitions.py` (PR #749)
+- BL-505 / BL-553: Multi-clip render pipeline fully wired — `worker.py` iterates all clips, builds per-clip `RenderEffect` list, calls `RenderGraphTranslator.translate()` for filter_complex; `RenderEffect.custom()` PyO3 method added; xfade `offset=` parameter fixed; SSIM integration tests with >0.99 threshold added (PR #750)
+
+### PRs
+
+#744, #745, #746, #747, #748, #749, #750
+
+### Resolved
+
+BL-610 (PanBuilder aeval comma escape), BL-611 (test_opacity_geq helper fix), BL-602 (animated-alpha geq uppercase T), BL-607 (ffmpeg-tests CI lane), BL-555 (ValueKind typed dispatch), BL-505 (multi-clip render pipeline), BL-553 (worker multi-clip integration)
+
+---
+
 ## v097 — Test-truth keystone + FFmpeg-8 builder regression fixes (2026-07-06)
 
 ### Theme 1: Test Infrastructure Keystone
