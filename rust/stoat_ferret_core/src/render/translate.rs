@@ -513,7 +513,7 @@ fn build_effect_chain(clip: &ClipWithEffects) -> String {
                 // Uses format=rgba to enable the alpha channel before geq.
                 let d = clip.duration_secs;
                 let filter = format!(
-                    "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='({start}+({end}-{start})*min(1,t/{d}))*255'"
+                    "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='({start}+({end}-{start})*min(1,T/{d}))*255'"
                 );
                 // Enable expression: applied when the filter supports the T flag
                 // and a time window is provided.
@@ -645,6 +645,23 @@ mod tests {
         assert!(
             effect_pos < xfade_pos,
             "effect sub-chain (pos {effect_pos}) should appear before xfade (pos {xfade_pos})"
+        );
+    }
+
+    #[test]
+    fn test_animated_alpha_uses_uppercase_t() {
+        let clips = vec![
+            clip_with_alpha(0, 5.0, "/a.mp4", 0.0, 1.0),
+            clip(1, 5.0, 30.0, "/b.mp4"),
+        ];
+        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        assert!(
+            result.contains("min(1,T/"),
+            "AnimatedAlpha geq expression must use uppercase T (FFmpeg geq timestamp variable), got: {result}"
+        );
+        assert!(
+            !result.contains("min(1,t/"),
+            "AnimatedAlpha geq expression must NOT use lowercase t as geq time term, got: {result}"
         );
     }
 
