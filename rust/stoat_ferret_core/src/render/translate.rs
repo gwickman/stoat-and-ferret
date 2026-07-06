@@ -13,7 +13,7 @@
 //! [0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];
 //! [v0]<per-clip-effects>[ev0];
 //! [ev0]fps=30,settb=1/30[pv0];
-//! [pv0][v1]xfade=transition=fade:duration=1[xf0];
+//! [pv0][pn1]xfade=transition=fade:duration=1:offset=2[xf0];
 //! [xf0]format=yuv420p[final]
 //! ```
 
@@ -486,6 +486,7 @@ impl RenderGraphTranslator {
             parts.push(format!("{label}format=yuv420p[final]"));
         } else {
             let mut current_label = effective_labels[0].clone();
+            let mut accumulated = clips[0].duration_secs;
             for k in 1..clips.len() {
                 let next_label = &effective_labels[k];
                 let xf_label = format!("[xf{}]", k - 1);
@@ -504,9 +505,12 @@ impl RenderGraphTranslator {
                     ("fade", 1.0)
                 };
 
+                // offset = cumulative output duration before this transition.
+                let offset = accumulated - duration;
                 parts.push(format!(
-                    "{pinned_current}{pinned_next}xfade=transition={transition_type}:duration={duration}{xf_label}"
+                    "{pinned_current}{pinned_next}xfade=transition={transition_type}:duration={duration}:offset={offset}{xf_label}"
                 ));
+                accumulated = accumulated - duration + clips[k].duration_secs;
                 current_label = xf_label;
             }
             parts.push(format!("{current_label}format=yuv420p[final]"));
@@ -824,6 +828,40 @@ mod tests {
         assert!(
             fps_count >= 4,
             "expected ≥4 fps=30 occurrences (2 stage-1 + 2 re-pins), got {fps_count}: {result}"
+        );
+    }
+
+    #[test]
+    fn test_xfade_includes_offset() {
+        // clip0=3s, xfade=1s → offset = 3 - 1 = 2
+        let clips = vec![
+            clip_with_transition(0, 3.0, "/a.mp4", "fade", 1.0),
+            clip(1, 3.0, 30.0, "/b.mp4"),
+        ];
+        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        assert!(
+            result.contains("offset=2"),
+            "xfade must include offset=2 for 3s clip with 1s transition; got: {result}"
+        );
+    }
+
+    #[test]
+    fn test_xfade_offset_accumulates_across_clips() {
+        // clip0=4s/tr=1s, clip1=3s/tr=1s, clip2=5s
+        // join 0→1: offset = 4-1 = 3; join 1→2: offset = (4-1+3)-1 = 5
+        let clips = vec![
+            clip_with_transition(0, 4.0, "/a.mp4", "fade", 1.0),
+            clip_with_transition(1, 3.0, "/b.mp4", "fade", 1.0),
+            clip(2, 5.0, 30.0, "/c.mp4"),
+        ];
+        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        assert!(
+            result.contains("offset=3"),
+            "first xfade must include offset=3; got: {result}"
+        );
+        assert!(
+            result.contains("offset=5"),
+            "second xfade must include offset=5; got: {result}"
         );
     }
 

@@ -188,3 +188,48 @@ async def test_evidence_schema_fields():
     assert isinstance(evidence["output_path"], str)
     assert evidence["output_size_bytes"] is None or isinstance(evidence["output_size_bytes"], int)
     assert evidence["filter_script_path"] is None or isinstance(evidence["filter_script_path"], str)
+
+
+async def test_render_evidence_fields_populated(tmp_path):
+    """Evidence dict exposes the BL-505-AC-6 required fields after executor.execute().
+
+    Verifies that command_args, exit_code, stderr_tail, output_size_bytes are all
+    present and populated in the evidence dict returned by pop_evidence(). This is
+    the authoritative verification gate for BL-505-AC-6 and BL-553-AC-6: evidence
+    is populated via executor._persist_evidence() through the service.run_job() chain,
+    not directly in worker.py.
+    """
+    if sys.platform == "win32":
+        command = ["cmd", "/c", "exit", "0"]
+    else:
+        command = ["true"]
+
+    executor = RenderExecutor()
+    job = _make_job(output_path=str(tmp_path / "out.mp4"))
+
+    (tmp_path / "out.mp4").write_bytes(b"fake-mp4-data")
+
+    with patch("stoat_ferret.render.executor.logger") as mock_logger:
+        mock_logger.bind.return_value = mock_logger
+        mock_logger.debug.return_value = None
+        mock_logger.info.return_value = None
+        mock_logger.warning.return_value = None
+        mock_logger.error.return_value = None
+
+        await executor.execute(job, command)
+
+    evidence = executor.pop_evidence(job.id)
+
+    assert evidence is not None, "pop_evidence() must return a dict after execute()"
+    # BL-505-AC-6 required fields
+    assert "command_args" in evidence, "command_args must be present in evidence"
+    assert "exit_code" in evidence, "exit_code must be present in evidence"
+    assert "stderr_tail" in evidence, "stderr_tail must be present in evidence"
+    assert "output_size_bytes" in evidence, "output_size_bytes must be present in evidence"
+    assert isinstance(evidence["command_args"], list)
+    assert evidence["exit_code"] is not None, "exit_code must be set after execution"
+    assert isinstance(evidence["stderr_tail"], str)
+    assert evidence["output_size_bytes"] is not None, (
+        "output_size_bytes must be set when output exists"
+    )
+    assert evidence["output_size_bytes"] > 0
