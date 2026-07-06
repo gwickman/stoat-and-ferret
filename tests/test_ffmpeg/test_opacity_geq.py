@@ -105,9 +105,9 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
                 "-f",
                 "lavfi",
                 "-i",
-                "color=red:size=64x64:rate=24:duration=3:pix_fmt=rgba",
+                "color=red:size=64x64:rate=24:duration=3",
                 "-vf",
-                f"{filter_str},select=eq(n\\,{frame_n}),setpts=PTS-STARTPTS,extractplanes=a",
+                f"{filter_str},select=eq(n\\,{frame_n}),setpts=PTS-STARTPTS,format=rgba,extractplanes=a",
                 "-f",
                 "rawvideo",
                 "-pix_fmt",
@@ -117,6 +117,7 @@ def test_geq_alpha_changes_over_time(tmp_path: Path) -> None:
                 "pipe:1",
             ],
             capture_output=True,
+            check=True,
         )
         px = res.stdout
         if len(px) != 64 * 64:
