@@ -1,5 +1,46 @@
 # STATUS.md
 
+## v098 — FFmpeg-8 Correctness + STOAT_TEST_FFMPEG CI Lane + Multi-Clip Render Closure
+
+**Delivered:** 2026-07-06
+**PRs:** #744, #745, #746, #747, #748, #749, #750 (7 PRs)
+**Tests:** 3680 passing (baseline 3591, +89)
+
+### Highlights
+
+- Pan `aeval` comma escape fix: PanBuilder now single-quotes filter expressions — BL-610
+- Opacity `geq` test fix: 3-part FFmpeg 8 compat fix to `_mean_alpha` — BL-611
+- Animated alpha `geq` uppercase T fix in `translate.rs` — BL-602
+- Dedicated `ffmpeg-tests` CI job added: FFmpeg 8.x, `STOAT_TEST_FFMPEG=1`, F1–F5 triage — BL-607
+- AGENTS.md + smoke-test docs updated with CI lane documentation — BL-607
+- `RenderEffect.custom()` added, `ValueKind` enum + `emit_filter_value` dispatch, 4 builders migrated, wired `worker.py` — BL-555
+- SSIM gated tests added; xfade `offset=` bug discovered and fixed in `RenderGraphTranslator` — BL-505/BL-553
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| ffmpeg-8-correctness | BL-610, BL-611, BL-602 | #744, #745, #746 | merged |
+| stoat-test-ffmpeg-ci-lane | BL-607 | #747, #748 | merged |
+| render-pipeline-closure | BL-555, BL-505, BL-553 | #749, #750 | merged |
+
+### AC Status
+
+- Theme 1: 3 BL items, all correctness fixes merged and verified
+- Theme 2: CI lane active on all matrix variants; `STOAT_TEST_FFMPEG=1` gates enabled
+- Theme 3: `RenderEffect.custom()` fully wired; SSIM gated tests pass; xfade `offset=` emitted correctly for all transitions
+- Total: 7 PRs merged, all AC items supported or verified
+
+### Carry-Forwards
+
+| Item | Description | Status |
+|------|-------------|--------|
+| BL-478-AC-1/2, BL-479-AC-1 | Deesser / multiband / volume automation gated tests | Discharge on `STOAT_TEST_FFMPEG=1` CI green run (carried from v097) |
+
+### User Actions Required
+
+None required.
+
 ## v097 — Test-truth keystone + FFmpeg-8 builder regression fixes
 
 **Delivered:** 2026-07-06
