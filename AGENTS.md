@@ -145,6 +145,24 @@ uv run pytest tests/smoke/ -v --timeout=120 --no-cov
 
 See [docs/manual/smoke-test-harness.md](docs/manual/smoke-test-harness.md) for harness setup instructions, `STOAT_TEST_FFMPEG` usage, and discharge procedures for `deferred_post_merge` ACs.
 
+### FFmpeg Gated CI Lane
+
+The `ffmpeg-tests` CI job runs on `ubuntu-latest` with FFmpeg 8 (installed via `AnimMouse/setup-ffmpeg@v1`) and sets `STOAT_TEST_FFMPEG=1` to enable gated tests that are silently skipped in the standard `test` matrix:
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov --timeout=120
+```
+
+To run gated tests locally:
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v
+```
+
+BL-503's per-effect gated-contract DoD gate is enforced by the `ffmpeg-tests` CI lane. Any AC that cross-references BL-503's FFmpeg contract verification is gated on this lane passing.
+
+The `ffmpeg-tests` job is non-required during the triage window — it is not in the `ci-status` needs array. Once the lane is stable it can be promoted to required by adding it to `ci-status.needs`.
+
 ### Frontend (TypeScript, Vitest)
 
 ```bash
