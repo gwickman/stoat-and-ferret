@@ -4,4 +4,4 @@
 
 [Alpha] AI-driven video editor with hybrid Python/Rust architecture - not production ready.
 
-**v096 (Post-v095 Hygiene):** Filtergraph metacharacter injection hardening (comma/semicolon rejection in `font_color` and path arguments — BL-599); argv-limit fence-post test at exact 32,267-char routing threshold (BL-600); pytest-rerunfailures installed, `test_render_cancel` unskipped (BL-598). (PRs #731–#736.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
+**v097 (Test-truth keystone + FFmpeg-8 builder regression fixes):** Per-effect gated-contract DoD gate (BL-503, PR #741); chatbot-driven testing output-integrity verification (BL-506, PR #742); FFmpeg-8 builder regression fixes for deesser/pan/freezeframes/aevalsrc/rubberband (BL-605, PR #737); OpacityBuilder automation expression fix (BL-502, PR #738); vacuous gated-test repair + geq animated-alpha uppercase-T fix (BL-606, PR #739). (PRs #737–#743.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
