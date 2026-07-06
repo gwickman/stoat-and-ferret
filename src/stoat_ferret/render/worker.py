@@ -398,6 +398,7 @@ async def build_command_for_job(
                         )
                     else:
                         filter_str = defn.build_fn(effect_data.get("parameters", {}))
+                        # BL-555 discharged: RenderEffect.custom() wired (v098 PR #749)
                         render_effects.append(RenderEffect.custom(filter_str))
             if not render_effects:
                 render_effects.append(RenderEffect.none())
@@ -414,6 +415,7 @@ async def build_command_for_job(
         translator = RenderGraphTranslator()
         filter_complex_str, input_paths = translator.translate(cwe_list)
 
+        # BL-511-AC-3 discharged by 002-clip-type-routing: -loop 1 -i path for image clips
         for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
             if clip.clip_type == "image":
                 multi_cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
