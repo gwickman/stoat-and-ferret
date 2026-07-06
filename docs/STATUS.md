@@ -1,5 +1,48 @@
 # STATUS.md
 
+## v097 — Test-truth keystone + FFmpeg-8 builder regression fixes
+
+**Delivered:** 2026-07-06
+**PRs:** #737, #738, #739, #741, #742 (+ 3 direct commits to main)
+**Tests:** 3591 passing (baseline 3589, +2)
+
+### Highlights
+
+- Fixed 5 FFmpeg-8 Rust builder regressions: deesser `m=`, pan `aeval` accessors, `freezeframes` → `tpad`, `aevalsrc expr` → `exprs`, `arubberband` → `rubberband` — BL-605
+- Opacity Python preview path rewritten from `colorchannelmixer` to `geq` + `{expr_T}` — BL-502
+- `STOAT_TEST_FFMPEG=1` enabled on all 9 CI matrix variants; ~159 dormant gated assertions now active — BL-607
+- Vacuous/broken gated tests fixed or removed (extractplanes alpha, URL underscore, `cmd.args()`) — BL-606
+- DoD policy document added: MUST-language coverage requirements for new effect types — BL-503
+- Per-effect gated coverage guard test (`test_effect_gated_coverage.py`) blocks regressions at merge — BL-503
+- BL-506 fully discharged: SSIM tokens confirmed, `tempfile.mkdtemp` confirmed, step-7 forward-pointer added — BL-506
+- `spatial.rs` comma escaping bug found and fixed during CI lane activation — BL-607-AC-3
+- BL-478-AC-1/2 and BL-479-AC-1 pending_ci: discharge on first `STOAT_TEST_FFMPEG=1` CI green run
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| ffmpeg-8-builder-correctness | BL-605, BL-502, BL-479 | #737, #738 | merged |
+| test-infrastructure-ci-gate | BL-606, BL-607, BL-503, BL-506, BL-478 | #739, #741, #742 + 3 direct commits | merged |
+
+### AC Status
+
+- Theme 1: 11 supported, 4 unverifiable, 5 deferred_post_merge (FFmpeg-gated)
+- Theme 2: 13 fully met, 1 partial (BL-607-AC-2 — CI ran on main push not PR), 2 deferred (BL-606-AC-2 blocked by BL-555), 3 pending_ci (BL-478-AC-1/2, BL-479-AC-1)
+- Total: all 6 features complete; BL-606-AC-2 deferred due to BL-555 (RenderEffect.custom() not exposed)
+
+### Carry-Forwards
+
+| Item | Description | Status |
+|------|-------------|--------|
+| BL-606-AC-2 | boxblur gated assertion | Deferred — blocked by BL-555 (RenderEffect.custom() not yet in Rust translator) |
+| BL-502-AC-2/3, BL-479-AC-1 | Alpha-changes-over-time opacity; volume automation FFmpeg | Deferred — require FFmpeg 8.x + BL-606-G1 extractplanes fix |
+| BL-478-AC-1/2, BL-479-AC-1 | Deesser / multiband / volume automation gated tests | Pending CI discharge on first `STOAT_TEST_FFMPEG=1` green run |
+
+### User Actions Required
+
+None required. Pending_ci items (BL-478-AC-1/2, BL-479-AC-1) discharge automatically on next CI run.
+
 ## v082 — Release 2, Wave 5 Carry-Forward
 
 **Delivered:** 2026-06-13
