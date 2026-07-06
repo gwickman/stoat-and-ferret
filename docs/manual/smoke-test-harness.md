@@ -75,6 +75,18 @@ If `%TEMP%` is also restricted, add `PYTEST_TMPDIR=<writable-path>` to redirect 
 
 See [docs/setup/smoke-test-harness-guide/smoke-test-key-files.md](../setup/smoke-test-harness-guide/smoke-test-key-files.md) for the full per-file inventory.
 
+## FFmpeg Gated CI Lane
+
+The `ffmpeg-tests` CI job runs the full test suite with `STOAT_TEST_FFMPEG=1` on `ubuntu-latest` with FFmpeg 8, catching regressions that the standard test matrix (which does not set `STOAT_TEST_FFMPEG`) would miss.
+
+To discharge a deferred AC that is gated on the `ffmpeg-tests` lane, run:
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v
+```
+
+See [docs/setup/smoke-test-harness-guide/04-ci-integration.md](../setup/smoke-test-harness-guide/04-ci-integration.md) for the full CI job definition and `STOAT_TEST_FFMPEG` details.
+
 ## Wave-3 Effect Contract Tests (v079)
 
 Wave-3 adds audio DSP builders — tone synthesis, loopable beds, pitch/formant control, sub-bass isolation, and sidechain ducking. Most unit tests are FFmpeg-independent; FFmpeg-gated tests require a real `ffmpeg` binary on PATH.

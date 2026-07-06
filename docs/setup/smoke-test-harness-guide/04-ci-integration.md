@@ -189,3 +189,32 @@ The CI job uploads the entire `testing-evidence/uat-evidence/` directory as an a
 - **Longer timeout** — 10 minutes (browser interactions are slower than API calls)
 - **Evidence artifacts** — screenshots and reports are always uploaded, not just on failure
 - **Depends on smoke-tests** — no point running browser tests if the API is broken
+
+---
+
+## STOAT_TEST_FFMPEG and the FFmpeg Gated CI Lane
+
+The `ffmpeg-tests` CI job is a dedicated lane that runs gated tests requiring a real FFmpeg binary. It is separate from the standard `test` matrix job.
+
+### Job details
+
+- **Job name:** `ffmpeg-tests`
+- **Runner:** `ubuntu-latest`
+- **FFmpeg:** version 8, installed via `AnimMouse/setup-ffmpeg@v1`
+- **Trigger:** runs on every push/PR alongside the standard test matrix
+
+### STOAT_TEST_FFMPEG=1
+
+Setting `STOAT_TEST_FFMPEG=1` enables tests decorated with skip logic that guards against environments without a real FFmpeg binary. Without this variable, those tests are silently skipped in the standard `test` matrix.
+
+The standard `test` matrix does **not** set `STOAT_TEST_FFMPEG` — only the dedicated `ffmpeg-tests` lane does. This prevents FFmpeg-dependent failures on macOS and Windows runners where FFmpeg may not be installed.
+
+To run gated tests locally:
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v
+```
+
+### Non-required status
+
+The `ffmpeg-tests` job is not listed in the `ci-status` needs array. It is non-required during the triage window. Once the lane is stable (all regressions resolved), it can be promoted to required by adding it to `ci-status.needs`.
