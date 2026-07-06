@@ -243,6 +243,20 @@ async def _resolve_subtitle_asset_path(
     return asset.file_path
 
 
+def _build_generator_source(generator_params: dict[str, Any]) -> str:
+    """Extract the lavfi source string from a generator clip's params dict.
+
+    Raises:
+        CommandBuildError: If 'lavfi_string' key is absent from generator_params.
+    """
+    lavfi_string = generator_params.get("lavfi_string")
+    if not lavfi_string:
+        raise CommandBuildError(
+            "Generator clip missing required 'lavfi_string' in generator_params"
+        )
+    return str(lavfi_string)
+
+
 def _add_soft_subtitle_output_flags(
     cmd: list[str],
     output_format: str,
@@ -334,31 +348,43 @@ async def build_command_for_job(
         quality_preset_mc: str = settings.get("quality_preset", "standard")
 
         multi_cmd: list[str] = ["ffmpeg"]
-        clip_videos = []
-        for clip in clips:
-            if clip.clip_type == "generator":
-                raise CommandBuildError(
-                    f"Project {job.project_id}: generator clip rendering not yet supported"
-                )
-            # deferred_ac: BL-511-AC-3 — render path (-loop 1 -i), deferred for v090 scope
-            if clip.clip_type == "image":
-                raise CommandBuildError(
-                    f"Project {job.project_id}: image clip rendering not yet supported"
-                )
-            if clip.source_video_id is None:
-                raise CommandBuildError(f"File clip {clip.id} has no source_video_id")
-            vid = await video_repository.get(clip.source_video_id)
-            if vid is None or not vid.path:
-                raise CommandBuildError(
-                    f"Video {clip.source_video_id} not found for project {job.project_id}"
-                )
-            clip_videos.append(vid)
-
         cwe_list = []
-        for i, (clip, vid) in enumerate(zip(clips, clip_videos, strict=True)):
-            duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
+        clip_durations_mc: list[float] = []
+        for i, clip in enumerate(clips):
+            if clip.clip_type == "image":
+                if asset_repository is None:
+                    raise CommandBuildError(
+                        f"Cannot resolve image asset for clip {clip.id}:"
+                        " no asset_repository provided"
+                    )
+                img_asset = await asset_repository.get_by_id(str(clip.source_asset_id))
+                if img_asset is None or img_asset.deleted_at is not None:
+                    raise CommandBuildError(
+                        f"Image asset {clip.source_asset_id} not found for clip {clip.id}"
+                    )
+                source_path_mc = img_asset.file_path
+                timeline_start_mc = clip.timeline_start or 0.0
+                timeline_end_mc = clip.timeline_end or 0.0
+                duration_secs = timeline_end_mc - timeline_start_mc
+                framerate_mc = fps_mc
+            elif clip.clip_type == "generator":
+                source_path_mc = _build_generator_source(clip.generator_params or {})
+                duration_secs = (clip.out_point - clip.in_point) / fps_mc
+                framerate_mc = fps_mc
+            else:  # file
+                if clip.source_video_id is None:
+                    raise CommandBuildError(f"File clip {clip.id} has no source_video_id")
+                vid = await video_repository.get(clip.source_video_id)
+                if vid is None or not vid.path:
+                    raise CommandBuildError(
+                        f"Video {clip.source_video_id} not found for project {job.project_id}"
+                    )
+                source_path_mc = vid.path
+                duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
+                framerate_mc = vid.frame_rate
             if duration_secs <= 0:
                 raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
+            clip_durations_mc.append(duration_secs)
             render_effects: list[RenderEffect] = []
             if effect_registry and clip.effects:
                 for effect_data in clip.effects:
@@ -379,8 +405,8 @@ async def build_command_for_job(
                 ClipWithEffects(
                     input_index=i,
                     duration_secs=duration_secs,
-                    framerate=vid.frame_rate,
-                    source_path=vid.path,
+                    framerate=framerate_mc,
+                    source_path=source_path_mc,
                     effects=render_effects,
                 )
             )
@@ -388,8 +414,13 @@ async def build_command_for_job(
         translator = RenderGraphTranslator()
         filter_complex_str, input_paths = translator.translate(cwe_list)
 
-        for path in input_paths:
-            multi_cmd.extend(["-i", path])
+        for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
+            if clip.clip_type == "image":
+                multi_cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
+            elif clip.clip_type == "generator":
+                multi_cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
+            else:
+                multi_cmd.extend(["-i", path])
 
         if ffmetadata_path:
             multi_cmd.extend(["-i", ffmetadata_path])
@@ -444,21 +475,32 @@ async def build_command_for_job(
 
     # --- Single-clip path ---
     first_clip = clips[0]
-    if first_clip.clip_type == "generator":
-        raise CommandBuildError(
-            f"Project {job.project_id}: generator clip rendering not yet supported"
-        )
-    # deferred_ac: BL-511-AC-3 — render path (-loop 1 -i), deferred for v090 scope
-    if first_clip.clip_type == "image":
-        raise CommandBuildError(f"Project {job.project_id}: image clip rendering not yet supported")
-    video_id = first_clip.source_video_id
-    if video_id is None:
-        raise CommandBuildError(f"File clip {first_clip.id} has no source_video_id")
-    video = await video_repository.get(video_id)
-    if video is None or not video.path:
-        raise CommandBuildError(f"Video {video_id} not found for project {job.project_id}")
+    use_translator_sc = first_clip.clip_type in ("image", "generator") or bool(first_clip.effects)
 
-    input_path = video.path
+    if first_clip.clip_type == "image":
+        if asset_repository is None:
+            raise CommandBuildError(
+                f"Cannot resolve image asset for clip {first_clip.id}: no asset_repository provided"
+            )
+        sc_asset = await asset_repository.get_by_id(str(first_clip.source_asset_id))
+        if sc_asset is None or sc_asset.deleted_at is not None:
+            raise CommandBuildError(
+                f"Image asset {first_clip.source_asset_id} not found for clip {first_clip.id}"
+            )
+        input_path = sc_asset.file_path
+        source_audio_codec: str | None = None
+    elif first_clip.clip_type == "generator":
+        input_path = _build_generator_source(first_clip.generator_params or {})
+        source_audio_codec = None
+    else:  # file
+        video_id = first_clip.source_video_id
+        if video_id is None:
+            raise CommandBuildError(f"File clip {first_clip.id} has no source_video_id")
+        video = await video_repository.get(video_id)
+        if video is None or not video.path:
+            raise CommandBuildError(f"Video {video_id} not found for project {job.project_id}")
+        input_path = video.path
+        source_audio_codec = video.audio_codec
 
     # --- Select segment ---
     if segments:
@@ -491,7 +533,12 @@ async def build_command_for_job(
     filter_graph: str | None = settings.get("filter_graph")
 
     # --- Assemble FFmpeg command ---
-    cmd: list[str] = ["ffmpeg", "-i", input_path]
+    if first_clip.clip_type == "image":
+        cmd: list[str] = ["ffmpeg", "-loop", "1", "-i", input_path]
+    elif first_clip.clip_type == "generator":
+        cmd = ["ffmpeg", "-f", "lavfi", "-i", input_path]
+    else:
+        cmd = ["ffmpeg", "-i", input_path]
 
     # Second input: ffmetadata file for chapter embedding (must precede output options)
     if ffmetadata_path:
@@ -514,11 +561,46 @@ async def build_command_for_job(
     # Segment timing
     cmd.extend(["-ss", str(timeline_start), "-t", str(seg_duration)])
 
-    # Video + TTS audio filter: merge into filter_complex when TTS is active to avoid
-    # -vf / -filter_complex conflict on the same stream.
-    if tts_inputs:
+    # Filter assembly: translator path for image/generator/effects clips; legacy -vf for file.
+    if use_translator_sc:
+        from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+
+        render_effects_sc: list[RenderEffect] = []
+        if effect_registry and first_clip.effects:
+            for effect_data in first_clip.effects:
+                effect_type_sc = effect_data.get("effect_type", "")
+                defn_sc = effect_registry.get(effect_type_sc)
+                if defn_sc is None:
+                    logger.warning(
+                        "render_worker.unknown_effect_type",
+                        effect_type=effect_type_sc,
+                        clip_id=first_clip.id,
+                    )
+                else:
+                    filter_str_sc = defn_sc.build_fn(effect_data.get("parameters", {}))
+                    render_effects_sc.append(RenderEffect.custom(filter_str_sc))
+        if not render_effects_sc:
+            render_effects_sc.append(RenderEffect.none())
+        cwe_sc = ClipWithEffects(
+            input_index=0,
+            duration_secs=seg_duration,
+            framerate=fps,
+            source_path=input_path,
+            effects=render_effects_sc,
+        )
+        translator_sc = RenderGraphTranslator()
+        filter_complex_sc, _ = translator_sc.translate([cwe_sc])
+        if tts_inputs:
+            tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
+            combined_sc = filter_complex_sc + ";" + tts_filter_seg
+            cmd.extend(["-filter_complex", combined_sc, "-map", "[final]", "-map", tts_audio_label])
+        else:
+            cmd.extend(["-filter_complex", filter_complex_sc, "-map", "[final]", "-an"])
+    elif tts_inputs:
+        # Video + TTS audio filter: merge into filter_complex when TTS is active to avoid
+        # -vf / -filter_complex conflict on the same stream.
         tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
-        if video.audio_codec is not None:
+        if source_audio_codec is not None:
             # Source video has audio — mix with TTS narration into [aout]
             mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
             if filter_graph:
@@ -567,11 +649,11 @@ async def build_command_for_job(
     # Subtitle inputs follow source (0), optional ffmetadata, and TTS inputs.
     if render_settings.soft_subtitles:
         subtitle_base = 1 + (1 if ffmetadata_path else 0) + (len(tts_inputs) if tts_inputs else 0)
-        if not tts_inputs:
-            # No TTS active — explicit video/audio maps required before subtitle maps
+        if not tts_inputs and not use_translator_sc:
+            # No TTS, no translator — explicit video/audio maps required before subtitle maps
             # (FFmpeg auto-selection is superseded when any explicit -map is present)
             cmd.extend(["-map", "0:v"])
-            if video.audio_codec is not None:
+            if source_audio_codec is not None:
                 cmd.extend(["-map", "0:a"])
         for idx, _ in enumerate(render_settings.soft_subtitles):
             cmd.extend(["-map", f"{subtitle_base + idx}:s"])
