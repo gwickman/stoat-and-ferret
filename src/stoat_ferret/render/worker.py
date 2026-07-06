@@ -371,7 +371,7 @@ async def build_command_for_job(
                             clip_id=clip.id,
                         )
                     else:
-                        filter_str = defn.build_fn(effect_data)
+                        filter_str = defn.build_fn(effect_data.get("parameters", {}))
                         render_effects.append(RenderEffect.custom(filter_str))
             if not render_effects:
                 render_effects.append(RenderEffect.none())
