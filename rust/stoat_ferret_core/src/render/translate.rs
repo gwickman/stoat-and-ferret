@@ -261,6 +261,28 @@ impl RenderEffect {
         }
     }
 
+    /// Creates a windowed custom effect from a raw FFmpeg filter chain string.
+    ///
+    /// Sets `timeline_t_capable = true` and `enable_window = Some((start_s, end_s))`.
+    /// Returns `PyValueError` if floats are non-finite or `start_s >= end_s`.
+    #[staticmethod]
+    #[pyo3(name = "windowed_custom")]
+    pub fn py_windowed_custom(filter_chain: String, start_s: f64, end_s: f64) -> PyResult<Self> {
+        if !start_s.is_finite() || !end_s.is_finite() {
+            return Err(PyValueError::new_err("start_s and end_s must be finite"));
+        }
+        if start_s >= end_s {
+            return Err(PyValueError::new_err(format!(
+                "start_s ({start_s:?}) must be less than end_s ({end_s:?})"
+            )));
+        }
+        Ok(RenderEffect {
+            kind: RenderEffectKind::Custom { filter_chain },
+            timeline_t_capable: true,
+            enable_window: Some((start_s, end_s)),
+        })
+    }
+
     fn __repr__(&self) -> String {
         match &self.kind {
             RenderEffectKind::None => "RenderEffect.none()".to_string(),
@@ -894,6 +916,30 @@ mod tests {
         assert!(
             result.contains(&filter_str),
             "Custom filter_chain must appear verbatim in output; got: {result}"
+        );
+    }
+
+    #[test]
+    fn test_windowed_custom_valid() {
+        let e = RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 1.0, 3.0).unwrap();
+        assert!(e.timeline_t_capable);
+        assert_eq!(e.enable_window, Some((1.0, 3.0)));
+    }
+
+    #[test]
+    fn test_windowed_custom_rejects_inverted() {
+        assert!(RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 5.0, 1.0).is_err());
+    }
+
+    #[test]
+    fn test_windowed_custom_rejects_equal() {
+        assert!(RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 2.0, 2.0).is_err());
+    }
+
+    #[test]
+    fn test_windowed_custom_rejects_nan() {
+        assert!(
+            RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), f64::NAN, 3.0).is_err()
         );
     }
 }

@@ -523,6 +523,11 @@ async def apply_effect_to_clip(
         "parameters": request.parameters,
         "filter_string": filter_string,
     }
+    if request.window is not None:
+        effect_entry["window"] = {
+            "start_s": request.window.start_s,
+            "end_s": request.window.end_s,
+        }
     if clip.effects is None:
         clip.effects = []
     clip.effects.append(effect_entry)
