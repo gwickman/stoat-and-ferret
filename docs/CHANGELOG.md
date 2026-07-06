@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v097 — Test-truth keystone + FFmpeg-8 builder regression fixes (2026-07-06)
+
+### Theme 1: Test Infrastructure Keystone
+
+- BL-605: Per-effect DoD gated test coverage guard — `tests/test_coverage/test_dod_gated_coverage.py` enforces that each effect in the registry has at least one non-skipped unit test; CI blocks when coverage regresses (PR #737)
+- BL-503: DoD policy doc + per-effect gated coverage guard test — `docs/design/dod-policy.md` codifies the coverage contract; gated coverage rule enforced in CI (PR #741)
+- BL-506: Validate Output step-7 forward-pointer added to chatbot testing workflow doc; all BL-506 ACs discharged (PR #742)
+
+### Theme 2: FFmpeg-8 Builder Regression Fixes
+
+- BL-502: OPACITY_EFFECT automation template updated from `colorchannelmixer` to `geq` — fixes animated opacity on FFmpeg 8.x where `colorchannelmixer` expression syntax changed; BL-478/BL-479 (deesser/multiband normalization builder fixes) folded into this builder-fix pass (PR #738)
+- BL-606: Vacuous and broken gated tests fixed — 5 pass-body stubs removed; gated test infrastructure corrected; BL-607 (FFmpeg CI lane with `STOAT_TEST_FFMPEG`) carried forward to v098 (PR #739)
+
+### PRs
+
+#737, #738, #739, #741, #742
+
+### Resolved
+
+BL-605 (per-effect DoD gated coverage guard), BL-503 (DoD policy doc + gated coverage test), BL-506 (Validate Output step-7 + all BL-506 ACs discharged), BL-502 (OPACITY_EFFECT colorchannelmixer→geq), BL-606 (vacuous/broken gated tests fixed)
+
+### Carry-forward
+
+BL-607 (FFmpeg CI lane — deferred to v098)
+
+---
+
 ## v096 — Post-R3 Hygiene Bundle (2026-07-04)
 
 ### Fixed
