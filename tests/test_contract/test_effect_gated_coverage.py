@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
+
 """Guard: every effect type in EXPECTED_EFFECT_TYPES must have a STOAT_TEST_FFMPEG-gated test."""
 
 from __future__ import annotations
