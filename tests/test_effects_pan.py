@@ -99,6 +99,25 @@ def test_pan_builder_automation_contains_both_channels() -> None:
     assert "val(1)" in s, f"expected val(1) channel expression, got: {s}"
 
 
+def test_pan_automation_emits_single_quoted_exprs() -> None:
+    """Automated PanBuilder wraps aeval exprs value in single quotes (BL-610-AC-3).
+
+    Single-quoting prevents commas in compiled automation expressions from being
+    parsed as filtergraph separators by FFmpeg 8.
+    """
+    auto = Automation(
+        default=0.0,
+        keyframes=[
+            Keyframe(t=0.0, value=-1.0, curve="Linear"),
+            Keyframe(t=1.0, value=0.0, curve="Linear"),
+            Keyframe(t=2.0, value=1.0, curve="Linear"),
+        ],
+    )
+    f = PanBuilder(0.0).with_automation(auto).build()
+    s = str(f)
+    assert "aeval=exprs='" in s, f"expected single-quoted aeval=exprs=' form (BL-610), got: {s}"
+
+
 def test_pan_registered_in_default_registry() -> None:
     """Pan effect is registered under the 'pan' key in the default registry."""
     from stoat_ferret.effects.definitions import create_default_registry

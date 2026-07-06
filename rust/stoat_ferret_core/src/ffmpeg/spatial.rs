@@ -64,7 +64,7 @@ impl PanBuilder {
                 let pos_expr = py_compile_automation(auto)?;
                 let exprs =
                     format!("max(0\\,1-({pos_expr}))*val(0)|max(0\\,1+({pos_expr}))*val(1)");
-                Ok(Filter::new(format!("aeval=exprs={exprs}")))
+                Ok(Filter::new(format!("aeval=exprs='{exprs}'")))
             }
         }
     }
