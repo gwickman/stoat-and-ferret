@@ -4576,7 +4576,6 @@ class RenderEffect:
 
     @staticmethod
     def windowed_custom(filter_chain: str, start_s: float, end_s: float) -> RenderEffect: ...
-
     def __repr__(self) -> str: ...
 
 class RenderTransition:
