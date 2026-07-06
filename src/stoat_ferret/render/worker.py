@@ -267,7 +267,7 @@ def _add_soft_subtitle_output_flags(
     Raises:
         ValueError: If the container does not support subtitle embedding.
     """
-    fmt = str(output_format).lower()
+    fmt = output_format.lower()
     if fmt == "mp4":
         cmd.extend(["-c:s", "mov_text"])
     elif fmt in ("mkv", "matroska"):
