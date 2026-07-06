@@ -300,6 +300,59 @@ _FFMPEG_GATED = pytest.mark.skipif(
 )
 
 
+# ---------------------------------------------------------------------------
+# Window storage in effect entry (FR-003-AC-1)
+# ---------------------------------------------------------------------------
+
+
+async def test_window_stored_in_effect_entry() -> None:
+    """Window bounds stored as 'window' key in effect entry when WindowSpec provided.
+
+    FR-003-AC-1.
+    """
+    app, project_repo, clip_repo = _make_app_with_registry()
+    await _seed_project_and_clip(project_repo, clip_repo)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/projects/proj-w/clips/clip-w/effects",
+            json={
+                "effect_type": "volume",
+                "parameters": {"volume": 0.5},
+                "window": {"start_s": 2.0, "end_s": 6.0},
+            },
+        )
+
+    assert response.status_code == 201, response.text
+    clip = await clip_repo.get("clip-w")
+    assert clip is not None and clip.effects is not None
+    entry = clip.effects[0]
+    assert "window" in entry, f"Expected 'window' key in effect entry; got keys: {list(entry)}"
+    assert entry["window"]["start_s"] == 2.0
+    assert entry["window"]["end_s"] == 6.0
+
+
+async def test_no_window_key_without_windowspec() -> None:
+    """No 'window' key in effect entry when no WindowSpec provided (backward compatibility)."""
+    app, project_repo, clip_repo = _make_app_with_registry()
+    await _seed_project_and_clip(project_repo, clip_repo)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/projects/proj-w/clips/clip-w/effects",
+            json={
+                "effect_type": "volume",
+                "parameters": {"volume": 0.8},
+            },
+        )
+
+    assert response.status_code == 201, response.text
+    clip = await clip_repo.get("clip-w")
+    assert clip is not None and clip.effects is not None
+    entry = clip.effects[0]
+    assert "window" not in entry, f"'window' key must not appear without WindowSpec; got: {entry}"
+
+
 @_FFMPEG_GATED
 async def test_window_render_probe() -> None:
     """Rendered probe confirms effect active only within window (FR-003-AC-1).
