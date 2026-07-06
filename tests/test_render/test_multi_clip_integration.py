@@ -497,7 +497,7 @@ async def test_per_clip_effect_applied(tmp_path: Path) -> None:
     _gen_lavfi_video(src, "testsrc2=size=320x240:rate=30:duration=3")
 
     def _desaturate_build_fn(params: dict[str, Any]) -> str:
-        return "hue=s=0:enable='between(T,0.5,2.5)'"
+        return "hue=s=0:enable='between(t,0.5,2.5)'"
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = _desaturate_build_fn
