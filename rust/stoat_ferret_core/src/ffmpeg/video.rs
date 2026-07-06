@@ -1135,11 +1135,13 @@ impl VignetteBuilder {
     #[pyo3(name = "build")]
     pub fn py_build(&self) -> PyResult<Filter> {
         let (x0, y0) = resolve_vignette_position(&self.position, self.x_offset, self.y_offset);
+        let mode = emit_filter_value(ValueKind::EnumLiteral, &self.mode)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let eval_mode = emit_filter_value(ValueKind::EnumLiteral, &self.eval_mode)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(Filter::new(format!(
             "vignette=angle={angle}:x0={x0}:y0={y0}:mode={mode}:eval={eval_mode}",
             angle = self.angle,
-            mode = self.mode,
-            eval_mode = self.eval_mode,
         )))
     }
 }

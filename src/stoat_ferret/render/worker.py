@@ -370,10 +370,9 @@ async def build_command_for_job(
                             effect_type=effect_type,
                             clip_id=clip.id,
                         )
-                    # Effects are fetched from DB and validated against the registry.
-                    # Raw filter string injection requires RenderEffect.custom() which is
-                    # not yet exposed by the Rust translator (BL-555 scope).
-                    # Fall through to none() below regardless of lookup result.
+                    else:
+                        filter_str = defn.build_fn(effect_data)
+                        render_effects.append(RenderEffect.custom(filter_str))
             if not render_effects:
                 render_effects.append(RenderEffect.none())
             cwe_list.append(

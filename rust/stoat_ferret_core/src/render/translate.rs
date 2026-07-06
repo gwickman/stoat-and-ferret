@@ -196,6 +196,8 @@ pub enum RenderEffectKind {
     None,
     /// Animated alpha fade: linear interpolation from `start` to `end` over clip duration.
     AnimatedAlpha { start: f64, end: f64 },
+    /// Raw FFmpeg filter chain string injected directly (from EffectDefinition.build_fn output).
+    Custom { filter_chain: String },
 }
 
 /// An effect applied to a single render clip.
@@ -244,11 +246,29 @@ impl RenderEffect {
         }
     }
 
+    /// Creates a custom effect from a raw FFmpeg filter chain string.
+    ///
+    /// Args:
+    ///     filter_chain: A valid FFmpeg filter chain string (e.g. "gblur=sigma=2.5").
+    ///                   Produced by EffectDefinition.build_fn(); injected verbatim.
+    #[staticmethod]
+    #[pyo3(name = "custom")]
+    pub fn py_custom(filter_chain: String) -> Self {
+        Self {
+            kind: RenderEffectKind::Custom { filter_chain },
+            timeline_t_capable: false,
+            enable_window: None,
+        }
+    }
+
     fn __repr__(&self) -> String {
         match &self.kind {
             RenderEffectKind::None => "RenderEffect.none()".to_string(),
             RenderEffectKind::AnimatedAlpha { start, end } => {
                 format!("RenderEffect.animated_alpha({start}, {end})")
+            }
+            RenderEffectKind::Custom { filter_chain } => {
+                format!("RenderEffect.custom({filter_chain:?})")
             }
         }
     }
@@ -527,6 +547,9 @@ fn build_effect_chain(clip: &ClipWithEffects) -> String {
                     filter
                 };
                 filters.push(filter);
+            }
+            RenderEffectKind::Custom { filter_chain } => {
+                filters.push(filter_chain.clone());
             }
         }
     }
@@ -810,5 +833,29 @@ mod tests {
             (0..100).map(|i| clip(i, 1.0, 30.0, "/clip.mp4")).collect();
         let result = RenderGraphTranslator.translate(clips);
         assert!(result.is_ok(), "100 clips should be accepted");
+    }
+
+    #[test]
+    fn test_custom_variant_passthrough() {
+        let filter_str = "gblur=sigma=2.5".to_string();
+        let clip = ClipWithEffects {
+            input_index: 0,
+            duration_secs: 5.0,
+            framerate: 30.0,
+            source_path: "/a.mp4".to_string(),
+            effects: vec![RenderEffect {
+                kind: RenderEffectKind::Custom {
+                    filter_chain: filter_str.clone(),
+                },
+                timeline_t_capable: false,
+                enable_window: None,
+            }],
+            outgoing_transition: None,
+        };
+        let (result, _) = RenderGraphTranslator.translate(vec![clip]).unwrap();
+        assert!(
+            result.contains(&filter_str),
+            "Custom filter_chain must appear verbatim in output; got: {result}"
+        );
     }
 }
