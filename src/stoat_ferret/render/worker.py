@@ -611,7 +611,15 @@ async def build_command_for_job(
                     )
                 else:
                     filter_str_sc = defn_sc.build_fn(effect_data.get("parameters", {}))
-                    render_effects_sc.append(RenderEffect.custom(filter_str_sc))
+                    window_sc = effect_data.get("window")
+                    if window_sc and defn_sc.timeline_T_capable:
+                        render_effects_sc.append(
+                            RenderEffect.windowed_custom(
+                                filter_str_sc, window_sc["start_s"], window_sc["end_s"]
+                            )
+                        )
+                    else:
+                        render_effects_sc.append(RenderEffect.custom(filter_str_sc))
         if not render_effects_sc:
             render_effects_sc.append(RenderEffect.none())
         cwe_sc = ClipWithEffects(
