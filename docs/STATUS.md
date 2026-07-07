@@ -1,5 +1,43 @@
 # STATUS.md
 
+## v099 — Image/Generator Clip Types + Windowed Effects
+
+**Delivered:** 2026-07-07
+**PRs:** #753, #754, #755, #756, #757 (5 PRs)
+**Tests:** 3629 passing (baseline 3680, 83 skipped/STOAT_TEST_FFMPEG-gated)
+
+### Highlights
+
+- Per-clip parameter fix: parameters dict now passed to build_fn in render worker — BL-615
+- Clip-type routing: extended render worker to handle image and generator clip types — BL-604, BL-511
+- R3 acceptance tests and cleanup for render worker coverage — BL-604-AC-3
+- WindowSpec data structure and windowed_custom() factory for windowed effects — BL-512
+- Windowed effect dispatch in worker.py with enable=between(t,s,e) emission in translate.rs — BL-512
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| render-worker-clip-coverage | BL-615, BL-604, BL-511 | #753, #754, #755 | merged |
+| windowed-effects-integration | BL-512 | #756, #757 | merged |
+
+### AC Status
+
+- Theme 1: 3 features merged; per-clip param, image/generator routing, R3 acceptance tests
+- Theme 2: 2 features merged; WindowSpec factory and windowed effect dispatch
+- Total: 5 PRs merged; intent fulfilment partial (BL-512-AC-2 non-T path and BL-512-AC-4 deferred to v100)
+
+### Carry-Forwards
+
+| Item | Description | Status |
+|------|-------------|--------|
+| BL-512-AC-2 | Windowed effects non-T path (frame-based addressing) | Deferred to v100 |
+| BL-512-AC-4 | Windowed effects preview automation | Deferred to v100 |
+
+### User Actions Required
+
+None required.
+
 ## v098 — FFmpeg-8 Correctness + STOAT_TEST_FFMPEG CI Lane + Multi-Clip Render Closure
 
 **Delivered:** 2026-07-06
