@@ -943,3 +943,76 @@ def test_build_with_font_file_unc_path() -> None:
     assert "//server/share/font.ttf" in filter_str, (
         f"expected converted UNC path in filter output, got: {filter_str}"
     )
+
+
+# ---- BL-586-AC-6: FFmpeg contract test for force_style with multi-word value ----
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_burned_subtitle_force_style_ffmpeg_safe() -> None:
+    """AC BL-586-AC-6 (FFmpeg-gated).
+
+    Builds a BurnedSubtitleBuilder filter with force_style={'Fontname': 'Arial Bold'}
+    and runs it through FFmpeg to confirm no filter parse error occurs.  The space in
+    'Arial Bold' is the key case — without proper quoting in the emitted filter string
+    this would produce a malformed force_style block.
+    """
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = os.path.join(tmpdir, "source.mp4")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:size=320x240:rate=10",
+                "-t",
+                "2",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                src_path,
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        srt_path = os.path.join(tmpdir, "test.srt")
+        with open(srt_path, "w") as f:
+            f.write("1\n00:00:00,000 --> 00:00:02,000\nHello World\n")
+
+        spec = BurnedSubtitleSpec(
+            source_path=srt_path,
+            force_style={"Fontname": "Arial Bold"},
+        )
+        filter_str = str(BurnedSubtitleBuilder.build(spec))
+
+        output_path = os.path.join(tmpdir, "output.mp4")
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                src_path,
+                "-vf",
+                filter_str,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-y",
+                output_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, (
+            f"FFmpeg filter parse failed for force_style='{{Fontname: Arial Bold}}'.\n"
+            f"Filter string: {filter_str}\n"
+            f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
+        )
