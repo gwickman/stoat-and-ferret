@@ -9252,6 +9252,7 @@
           },
           "start_s": {
             "type": "number",
+            "maximum": 86400.0,
             "minimum": 0.0,
             "title": "Start S",
             "description": "Timeline placement in seconds"

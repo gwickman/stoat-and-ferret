@@ -51,7 +51,8 @@ def _make_cue(
 async def _seed_project_and_track(db: aiosqlite.Connection, project_id: str, track_id: str) -> None:
     now = datetime.now(timezone.utc).isoformat()
     await db.execute(
-        "INSERT INTO projects (id, name, output_width, output_height, output_fps, created_at, updated_at) "
+        "INSERT INTO projects "
+        "(id, name, output_width, output_height, output_fps, created_at, updated_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         (project_id, "Test Project", 1920, 1080, 30, now, now),
     )

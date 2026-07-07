@@ -29,7 +29,9 @@ class TtsCueCreate(BaseModel):
     track_id: str = Field(
         ..., description="Voice track ID (must reference a track with kind=voice)"
     )
-    start_s: Annotated[float, Field(ge=0.0, le=86400.0, description="Timeline placement in seconds")]
+    start_s: Annotated[
+        float, Field(ge=0.0, le=86400.0, description="Timeline placement in seconds")
+    ]
     text: str = Field(..., min_length=1, description="Text to synthesise")
     voice: str = Field(..., min_length=1, description="Voice identifier")
     backend: TtsBackend = Field(default="piper_local", description="TTS backend")
