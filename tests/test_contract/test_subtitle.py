@@ -235,7 +235,7 @@ class TestSubtitleScriptBuilder:
         entries = [ScriptEntry(0.0, 1.0, "text")]
         spec = SubtitleScriptSpec(entries=entries, font_file="/fonts/arial.ttf")
         result = SubtitleScriptBuilder.build(spec)
-        assert "fontfile=/fonts/arial.ttf:" in result
+        assert "fontfile='/fonts/arial.ttf':" in result
 
     def test_no_font_file_omits_fontfile(self) -> None:
         entries = [ScriptEntry(0.0, 1.0, "text")]
@@ -280,7 +280,7 @@ class TestSubtitleScriptBuilder:
         spec = SubtitleScriptSpec(entries=entries, font_size=36, font_color="yellow")
         result = SubtitleScriptBuilder.build(spec)
         assert "fontsize=36" in result
-        assert "fontcolor=yellow" in result
+        assert "fontcolor='yellow'" in result
 
     def test_filters_joined_by_comma(self) -> None:
         entries = [ScriptEntry(0.0, 1.0, "A"), ScriptEntry(2.0, 3.0, "B")]
@@ -327,7 +327,7 @@ class TestBurnedSubtitleBuilder:
     def test_srt_basic(self) -> None:
         spec = BurnedSubtitleSpec(source_path="/tmp/test.srt")
         result = BurnedSubtitleBuilder.build(spec)
-        assert result.startswith("subtitles=filename=")
+        assert result.startswith("subtitles=filename='")
         assert "test.srt" in result
 
     def test_ass_no_force_style(self) -> None:
@@ -373,7 +373,7 @@ class TestBurnedSubtitleBuilder:
     def test_inline_text_used_as_path(self) -> None:
         spec = BurnedSubtitleSpec(inline_text="/tmp/via_inline.srt")
         result = BurnedSubtitleBuilder.build(spec)
-        assert result.startswith("subtitles=filename=")
+        assert result.startswith("subtitles=filename='")
         assert "via_inline.srt" in result
 
     def test_srt_no_force_style_no_colon(self) -> None:
@@ -819,17 +819,17 @@ class TestBurnedSubtitleBuilderEmitFilterValueDispatch:
     def test_srt_path_passes_through_unchanged_on_unix(self) -> None:
         spec = BurnedSubtitleSpec(source_path="/tmp/test.srt")
         result = BurnedSubtitleBuilder.build(spec)
-        assert result == "subtitles=filename=/tmp/test.srt"
+        assert result == "subtitles=filename='/tmp/test.srt'"
 
     def test_ass_path_passes_through_unchanged_on_unix(self) -> None:
         spec = BurnedSubtitleSpec(source_path="/tmp/test.ass")
         result = BurnedSubtitleBuilder.build(spec)
-        assert result == "ass=filename=/tmp/test.ass"
+        assert result == "ass=filename='/tmp/test.ass'"
 
     def test_path_with_space_accepted_on_unix(self) -> None:
         spec = BurnedSubtitleSpec(source_path="/tmp/my captions.srt")
         result = BurnedSubtitleBuilder.build(spec)
-        assert result.startswith("subtitles=filename=")
+        assert result.startswith("subtitles=filename='")
         assert "my captions.srt" in result
 
     def test_path_with_apostrophe_raises_value_error(self) -> None:
@@ -1016,3 +1016,32 @@ def test_burned_subtitle_force_style_ffmpeg_safe() -> None:
             f"Filter string: {filter_str}\n"
             f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
         )
+
+
+# ---- BL-601-AC-7: SubtitleScriptSpec backslash rejection + fontcolor single-quoting ----
+
+
+class TestSubtitleScriptSpecBl601Ac7:
+    """BL-601-AC-7: font_color backslash rejected; source_path backslash rejected."""
+
+    def test_font_color_backslash_raises_value_error(self) -> None:
+        with pytest.raises(ValueError):
+            SubtitleScriptSpec(
+                entries=[ScriptEntry(text="hi", start_s=0.0, end_s=1.0)],
+                font_color="white\\",
+            )
+
+    def test_font_color_bracket_accepted_when_valid_color(self) -> None:
+        # Brackets are not in the rejection list — valid color names pass through
+        # and are safe because fontcolor is single-quoted in the filter string.
+        spec = SubtitleScriptSpec(
+            entries=[ScriptEntry(text="hi", start_s=0.0, end_s=1.0)],
+            font_color="white",
+        )
+        result = SubtitleScriptBuilder.build(spec)
+        assert "fontcolor='white'" in result
+
+    def test_source_path_backslash_raises_value_error(self) -> None:
+        spec = BurnedSubtitleSpec(source_path="/tmp/a\\b.srt")
+        with pytest.raises(ValueError):
+            BurnedSubtitleBuilder.build(spec)
