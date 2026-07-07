@@ -356,13 +356,115 @@ async def test_no_window_key_without_windowspec() -> None:
 
 
 @_FFMPEG_GATED
-async def test_window_render_probe() -> None:
+def test_window_render_probe(tmp_path: object) -> None:
     """Rendered probe confirms effect active only within window (FR-003-AC-1).
+
+    Renders a solid-blue lavfi source with a negate effect windowed to [2.0, 4.0].
+    Samples one pixel before, inside, and after the window and asserts the effect
+    (colour inversion) is present only within the window bounds.
 
     Discharge command:
         STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_window.py::test_window_render_probe -v
     """
-    pytest.skip("FFmpeg render probe not yet implemented — deferred_post_merge discharge")
+    import subprocess
+    from pathlib import Path
+
+    tmp = Path(str(tmp_path))
+
+    # Solid blue source: 6 s, 5 fps, 64×64 pixels
+    src = tmp / "source.mp4"
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:size=64x64:rate=5",
+            "-t",
+            "6",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            str(src),
+        ],
+        capture_output=True,
+    )
+    assert r.returncode == 0, f"lavfi source creation failed:\n{r.stderr.decode()[-1000:]}"
+
+    # Apply negate windowed to [2.0, 4.0] — effect must flip all channels inside the window
+    window_start, window_end = 2.0, 4.0
+    out = tmp / "output.mp4"
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(src),
+            "-vf",
+            f"negate=enable='between(t,{window_start},{window_end})'",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            str(out),
+        ],
+        capture_output=True,
+    )
+    assert r.returncode == 0, f"windowed render failed:\n{r.stderr.decode()[-1000:]}"
+
+    def _sample_pixel(path: Path, t: float) -> tuple[int, int, int]:
+        """Extract a single 1×1 pixel at time t as raw RGB24 bytes."""
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-ss",
+                str(t),
+                "-i",
+                str(path),
+                "-vframes",
+                "1",
+                "-vf",
+                "scale=1:1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "-",
+            ],
+            capture_output=True,
+        )
+        assert result.returncode == 0 and len(result.stdout) >= 3, (
+            f"pixel extraction at t={t} failed: {result.stderr.decode()[-500:]}"
+        )
+        return int(result.stdout[0]), int(result.stdout[1]), int(result.stdout[2])
+
+    # Sample at t=0.5 (before window), t=3.0 (inside window), t=5.5 (after window)
+    pre = _sample_pixel(out, 0.5)
+    inside = _sample_pixel(out, 3.0)
+    post = _sample_pixel(out, 5.5)
+
+    # Blue (0,0,255) negated → yellow-ish (255,255,0).
+    # R channel: low before/after, high inside.
+    # B channel: high before/after, low inside.
+    assert inside[0] > pre[0] + 50, (
+        f"R inside window ({inside[0]}) should be >> R before window ({pre[0]}); "
+        f"negate effect not active inside window"
+    )
+    assert inside[2] < pre[2] - 50, (
+        f"B inside window ({inside[2]}) should be << B before window ({pre[2]}); "
+        f"negate effect not active inside window"
+    )
+    assert abs(post[0] - pre[0]) < 50, (
+        f"R after window ({post[0]}) should match R before window ({pre[0]}); "
+        f"negate effect leaking outside window"
+    )
+    assert abs(post[2] - pre[2]) < 50, (
+        f"B after window ({post[2]}) should match B before window ({pre[2]}); "
+        f"negate effect leaking outside window"
+    )
 
 
 # ---------------------------------------------------------------------------
