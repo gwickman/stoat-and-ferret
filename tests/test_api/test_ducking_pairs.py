@@ -9,14 +9,19 @@ from collections.abc import Generator
 from datetime import datetime, timezone
 from typing import Any
 
+import aiosqlite
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.app import create_app
-from stoat_ferret.db.ducking_pair_repository import AsyncInMemoryDuckingPairRepository
-from stoat_ferret.db.models import Project
+from stoat_ferret.db.ducking_pair_repository import (
+    AsyncInMemoryDuckingPairRepository,
+    AsyncSQLiteDuckingPairRepository,
+)
+from stoat_ferret.db.models import DuckingPair, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.db.schema import create_tables_async
 
 _PROJECT_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 _TRACK_A = "track-music-1"
@@ -187,3 +192,36 @@ def test_multi_pair_non_blocking(client: TestClient) -> None:
     assert resp.status_code == 200
     items = resp.json()
     assert len(items) == 2
+
+
+# ---------------------------------------------------------------------------
+# BL-581-AC-4: SQLite FK constraint coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def sqlite_ducking_repo() -> AsyncSQLiteDuckingPairRepository:
+    async with aiosqlite.connect(":memory:") as db:
+        await create_tables_async(db)
+        yield AsyncSQLiteDuckingPairRepository(db)
+
+
+async def test_ducking_pair_fk_violation(
+    sqlite_ducking_repo: AsyncSQLiteDuckingPairRepository,
+) -> None:
+    now = datetime.now(timezone.utc)
+    pair = DuckingPair(
+        id="pair-fk-test",
+        project_id="nonexistent-project-id",
+        ducked_track_id="track-a",
+        sidechain_track_id="track-b",
+        threshold=0.02,
+        ratio=8.0,
+        attack_ms=20.0,
+        release_ms=300.0,
+        apply_pre_volume=False,
+        created_at=now,
+        updated_at=now,
+    )
+    with pytest.raises(ValueError, match="constraint"):
+        await sqlite_ducking_repo.create(pair)
