@@ -9,6 +9,7 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass;
+use regex::Regex;
 
 use super::automation::{py_compile_automation, Automation};
 use super::filter::Filter;
@@ -869,6 +870,7 @@ impl ZoompanBuilder {
         height: i64,
         fps: i64,
     ) -> PyResult<Self> {
+        let bare_n_re = Regex::new(r"\bn\b").expect("static regex");
         for (name, expr) in [
             ("z_expr", &z_expr),
             ("x_expr", &x_expr),
@@ -882,6 +884,11 @@ impl ZoompanBuilder {
             if expr.trim().is_empty() {
                 return Err(PyValueError::new_err(format!(
                     "{name} must not be empty or whitespace-only"
+                )));
+            }
+            if bare_n_re.is_match(expr) {
+                return Err(PyValueError::new_err(format!(
+                    "ZoompanBuilder: bare 'n' in {name} expression '{expr}': use 'on' for FFmpeg 8 compatibility"
                 )));
             }
         }
@@ -939,6 +946,30 @@ impl ZoompanBuilder {
             h = self.height,
             fps = self.fps
         )))
+    }
+
+    /// Return a pre-configured Ken Burns slow-zoom instance using `on`-based expressions.
+    ///
+    /// The zoom ramps from 1.0 to `zoom_end` over `duration_s` seconds at 25 fps, keeping
+    /// the subject centred. All expressions use `on` (output frame number) for FFmpeg 8
+    /// compatibility.
+    #[staticmethod]
+    #[pyo3(signature = (duration_s, zoom_end = 1.3))]
+    pub fn ken_burns(duration_s: f64, zoom_end: f64) -> PyResult<ZoompanBuilder> {
+        let fps = 25_i64;
+        let total_frames = ((duration_s * fps as f64).round() as i64).max(1);
+        let zoom_expr = format!("1+(({zoom_end}-1)*on/{total_frames})");
+        let pan_x_expr = "iw/2-(iw/zoom/2)".to_string();
+        let pan_y_expr = "ih/2-(ih/zoom/2)".to_string();
+        ZoompanBuilder::py_new(
+            zoom_expr,
+            pan_x_expr,
+            pan_y_expr,
+            total_frames,
+            1920,
+            1080,
+            fps,
+        )
     }
 }
 
