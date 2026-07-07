@@ -3,8 +3,8 @@
 ## v099 — Image/Generator Clip Types + Windowed Effects
 
 **Delivered:** 2026-07-07
-**PRs:** #753, #754, #755, #756, #757 (5 PRs)
-**Tests:** 3629 passing (baseline 3680, 83 skipped/STOAT_TEST_FFMPEG-gated)
+**PRs:** #753, #754, #756, #757 (4 merged; #755 open)
+**Tests:** 3745 collected (uv run pytest --collect-only -q)
 
 ### Highlights
 
@@ -18,14 +18,14 @@
 
 | Theme | BL Items | PRs | Status |
 |-------|----------|-----|--------|
-| render-worker-clip-coverage | BL-615, BL-604, BL-511 | #753, #754, #755 | merged |
+| render-worker-clip-coverage | BL-615, BL-604, BL-511 | #753, #754 | merged; #755 open |
 | windowed-effects-integration | BL-512 | #756, #757 | merged |
 
 ### AC Status
 
-- Theme 1: 3 features merged; per-clip param, image/generator routing, R3 acceptance tests
+- Theme 1: per-clip param and image/generator routing merged; R3 acceptance tests pending PR #755 merge
 - Theme 2: 2 features merged; WindowSpec factory and windowed effect dispatch
-- Total: 5 PRs merged; intent fulfilment partial (BL-512-AC-2 non-T path and BL-512-AC-4 deferred to v100)
+- Total: 4 PRs merged; PR #755 open; intent fulfilment partial (BL-512-AC-2 non-T path and BL-512-AC-4 deferred to v100; BL-604-AC-3/4/5 pending PR #755 merge)
 
 ### Carry-Forwards
 
@@ -33,6 +33,7 @@
 |------|-------------|--------|
 | BL-512-AC-2 | Windowed effects non-T path (frame-based addressing) | Deferred to v100 |
 | BL-512-AC-4 | Windowed effects preview automation | Deferred to v100 |
+| BL-604-AC-3/4/5 | R3 acceptance tests + E2E discharge cross-links | Pending PR #755 merge |
 
 ### User Actions Required
 
@@ -121,6 +122,165 @@ None required.
 ### User Actions Required
 
 None required. Pending_ci items (BL-478-AC-1/2, BL-479-AC-1) discharge automatically on next CI run.
+
+## v096 — Post-v095 Hygiene
+
+**Delivered:** 2026-07-04
+**PRs:** #731–#736 (6 PRs)
+
+### Highlights
+
+- Documentation and tooling cleanup after v095 hygiene bundle
+- 10/10 ACs completed; 0 regressions
+
+## v095 — Post-R3 Hygiene Bundle
+
+**Delivered:** 2026-07-03
+**PRs:** #720–#730 (11 PRs)
+**Tests:** 3587 passing
+
+### Highlights
+
+- Post-Release-3 hygiene: linting, mypy, test cleanup, CI reliability
+- Build Docker Image CI fixed (first clean run after R3 wave)
+- 39/39 ACs met; 0 regressions
+
+## v094 — Subtitle Filter Remediation
+
+**Delivered:** 2026-07-03
+**PRs:** #716–#718 (3 PRs)
+
+### Highlights
+
+- Long filtergraph routed to temp file on Windows to avoid argv limit — BL-584
+- Font file path escaped via `emit_filter_option_path` in SubtitleScriptBuilder — BL-585
+- Single-quote rejection and key validation added to BurnedSubtitleBuilder — BL-586
+- 17/18 ACs met; BL-586-AC-6 FFmpeg-gated deferred
+
+## v093 — Render Correctness + API Coverage + Hygiene
+
+**Delivered:** 2026-07-02
+**PRs:** #701–#715 (15 PRs)
+
+### Highlights
+
+- Soft subtitle `-map :s` emitted correctly in all render paths — BL-583
+- Asset existence and kind validated on image-clip creation — BL-574
+- TTS `audio_path` field added to API spec, architecture docs, and GUI client — BL-587
+- SQLite FK coverage for DuckingPair; API test coverage for multi-track audio — BL-581, BL-588, BL-589
+- `RenderEffect.custom()` Rust translator wired — BL-555 (Theme 04)
+- 4 themes, 13 features delivered
+
+## v092 — Release 3, Wave 7 — TTS Riders
+
+**Delivered:** 2026-07-01
+**PRs:** #694–#700 (7 PRs)
+
+### Highlights
+
+- BurnedSubtitleBuilder: SRT/ASS sidecar burn-in support — BL-519
+- TTS audio mixing hardened: zero-track guard, duplicate stream_idx protection, start_s bounds checking — BL-582
+- Source audio amixed with TTS label when source video has audio — BL-578
+- 29/35 ACs supported; 6 FFmpeg-gated deferred
+
+## v091 — Multi-Track Audio Mixer + TTS Narration
+
+**Delivered:** 2026-06-29
+**PRs:** #689–#692 (4 PRs)
+**Tests:** 3456 passing
+
+### Highlights
+
+- Multi-track audio mixer: independent track volumes, ducking pairs, SQLite-backed DuckingPair storage, amix integration — BL-516
+- TTS narration: text-to-speech cue rendering into render graph via TtsCue data structure — BL-517
+- 16/18 ACs supported; 2 deferred (quiet-window test BL-517-AC-8, speech energy placement BL-516-AC-4)
+
+## v090 — Asset Library + Image Clips + Generic Procedural Parser + Builder Validation Hardening
+
+**Delivered:** 2026-06-28
+**PRs:** #680–#686 (7 PRs)
+**Tests:** 3403 passing
+
+### Highlights
+
+- Asset library with SQLite-backed storage, CRUD endpoints, and kind-based retrieval — BL-511
+- Image clip type: static image assets rendered as video frames in render worker — BL-511
+- Generator clip type: procedural generator clips routed through render worker — BL-511
+- Generic procedural clip parser for declarative effect configuration — BL-515
+- Builder validation hardening across effect builders — BL-569, BL-570
+- 60/65 ACs met; 5 deferred (scope/FFmpeg-gated)
+
+## v089 — R3 Wave 3a + Wave 4: FFmpeg Filter Builders & Procedural Shape Generators
+
+**Delivered:** 2026-06-27
+**PRs:** #671–#679 (9 PRs)
+
+### Highlights
+
+- FFmpeg filter builder additions for R3 wave shapes and procedural generators
+- ZoompanBuilder and additional motion effect builders
+- 25/30 ACs supported; 5 deferred (FFmpeg-gated)
+
+## v088 — Release 3, Wave 2
+
+**Delivered:** 2026-06-26
+**PRs:** #662–#669 (8 PRs)
+
+### Highlights
+
+- Release 3 Wave 2 feature delivery
+- 29/33 ACs supported; 4 deferred (FFmpeg/UAT-gated)
+
+## v087 — Release 3, Waves 0–1
+
+**Delivered:** 2026-06-26
+**PRs:** #650–#661 (12 PRs)
+
+### Highlights
+
+- Release 3 Wave 0 and Wave 1 feature delivery
+- 10/39 ACs fully verified; remainder FFmpeg/UAT-gated
+
+## v086 — Post-v085 Compliance Riders
+
+**Delivered:** 2026-06-25
+**PRs:** #648–#649 (2 PRs)
+
+### Highlights
+
+- Post-v085 compliance and test hygiene riders
+- 22/22 ACs completed; 0 regressions
+
+## v085 — Post-v084 Compliance Riders
+
+**Delivered:** 2026-06-24
+**PRs:** #642–#646 (5 PRs)
+
+### Highlights
+
+- Post-v084 compliance riders and test corrections
+- 18/18 ACs completed; 0 regressions
+
+## v084 — Post-v083 Compliance Hygiene Wave
+
+**Delivered:** 2026-06-24
+**PRs:** #630–#641 (12 PRs)
+
+### Highlights
+
+- Compliance and hygiene fixes after AGPL relicense
+- 45/47 ACs supported; 2 deferred (headless UAT); 0 regressions
+
+## v083 — AGPL Relicense + Repo Hygiene
+
+**Delivered:** 2026-06-23
+**PRs:** #616–#629 (14 PRs)
+
+### Highlights
+
+- Project relicensed under GNU Affero General Public License (AGPL)
+- Repository hygiene and compliance cleanup
+- 71/76 ACs supported; 0 regressions
 
 ## v082 — Release 2, Wave 5 Carry-Forward
 
