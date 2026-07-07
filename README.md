@@ -4,4 +4,4 @@
 
 [Alpha] AI-driven video editor with hybrid Python/Rust architecture - not production ready.
 
-**v097 (Test-truth keystone + FFmpeg-8 builder regression fixes):** Per-effect gated-contract DoD gate (BL-503, PR #741); chatbot-driven testing output-integrity verification (BL-506, PR #742); FFmpeg-8 builder regression fixes for deesser/pan/freezeframes/aevalsrc/rubberband (BL-605, PR #737); OpacityBuilder automation expression fix (BL-502, PR #738); vacuous gated-test repair + geq animated-alpha uppercase-T fix (BL-606, PR #739). (PRs #737–#743.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
+**v099 (Image/Generator Clip Types + Windowed Effects):** Per-clip effect params dict fix (BL-615, PR #753); render worker extended to image clip (`-loop 1 -i`) and generator clip routing (BL-511/BL-604, PR #754); `windowed_custom()` factory + WindowSpec database storage (BL-512, PR #756); `RenderGraphTranslator` enable= expression injection for T-capable windowed effects via translate.rs (BL-512, PR #757). BL-511 completed (7/7 ACs). (PRs #753, #754, #756, #757.) See [CHANGELOG.md](docs/CHANGELOG.md) for release details.
