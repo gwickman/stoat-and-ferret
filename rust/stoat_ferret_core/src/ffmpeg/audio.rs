@@ -1414,6 +1414,9 @@ impl MultiTrackAudioMixer {
         if weight < 0.0 {
             return Err(format!("weight must be >= 0.0, got {weight}"));
         }
+        if self.inputs.iter().any(|t| t.stream_idx == stream_idx) {
+            return Err(format!("duplicate stream_idx {stream_idx}"));
+        }
         self.inputs.push(TrackInput {
             stream_idx,
             volume_envelope,
