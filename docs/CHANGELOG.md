@@ -4,6 +4,35 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v099 — Image/Generator Clip Types + Windowed Effects (2026-07-07)
+
+### Theme 1: Render Worker Clip Coverage
+
+- BL-615: `parameters_dict` now passed correctly to `build_fn` in render worker — fixes generator/image clips that received an empty params dict instead of the clip's stored parameters (PR #753)
+- BL-511 / BL-604: Render worker updated to route `image` and `generator` clip types through their respective render paths; image clips dispatched via `deferred_ac` guard (render path discharge pending); generator clips call `build_generator_source_filter` dispatch (PR #754)
+
+### Theme 2: Windowed Effects Integration
+
+- BL-512: `windowed_custom()` factory added to effects router — stores window spec per effect in the database; `RenderGraphTranslator.translate()` extended with `enable=` expression injection for windowed effects; `translate.rs` `enable_expr` field wired through `filter_complex` assembly; `enable=` extension activated via the existing translate.rs extension point (PRs #756, #757)
+
+### PRs
+
+#753, #754, #756, #757
+
+### Not yet merged
+
+PR #755 (`feat(BL-604): R3 use-case E2E tests + discharge cross-links`) was created but NOT merged to main. BL-604-AC-3 (per-clip effects FFmpeg pixel-check test), AC-4 (E2E R3 UAT test), and AC-5 (deferred_ac guard removal + cross-links) remain absent from main; fate of PR #755 pending owner triage.
+
+### Resolved
+
+BL-511 (image clip render routing — all 7 ACs supported)
+
+### Partially resolved
+
+BL-615 (parameters dict fix — AC-1/2/3 supported; AC-4 deferred_na: stored-filter_string alternative path not adopted), BL-604 (R3 use-case acceptance — AC-1/2 supported; AC-3/4/5 absent pending PR #755 triage), BL-512 (windowed effects integration — AC-1/3/5 supported; AC-2 weakened; AC-4 unverifiable)
+
+---
+
 ## v098 — FFmpeg-8 Correctness + STOAT_TEST_FFMPEG CI Lane + Multi-Clip Render Closure (2026-07-06)
 
 ### Theme 1: FFmpeg-8 Correctness
