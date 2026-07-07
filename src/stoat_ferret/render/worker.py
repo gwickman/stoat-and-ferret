@@ -398,7 +398,16 @@ async def build_command_for_job(
                         )
                     else:
                         filter_str = defn.build_fn(effect_data.get("parameters", {}))
-                        render_effects.append(RenderEffect.custom(filter_str))
+                        window = effect_data.get("window")
+                        if window and defn.timeline_T_capable:
+                            re = RenderEffect.windowed_custom(
+                                filter_str, window["start_s"], window["end_s"]
+                            )
+                        else:
+                            # Non-T or no window: apply effect without windowing.
+                            # TODO: BL-512-AC-4 non-T windowing deferred to v100.
+                            re = RenderEffect.custom(filter_str)
+                        render_effects.append(re)
             if not render_effects:
                 render_effects.append(RenderEffect.none())
             cwe_list.append(

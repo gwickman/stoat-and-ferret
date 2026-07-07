@@ -575,7 +575,18 @@ fn build_effect_chain(clip: &ClipWithEffects) -> String {
                 filters.push(filter);
             }
             RenderEffectKind::Custom { filter_chain } => {
-                filters.push(filter_chain.clone());
+                // LRN-775: enable= uses lowercase t (timeline time); geq uses uppercase T (geq time var).
+                let filter = if effect.timeline_t_capable {
+                    if let Some((start_s, end_s)) = effect.enable_window {
+                        format!("{filter_chain}:enable='between(t,{start_s:?},{end_s:?})'")
+                    } else {
+                        filter_chain.clone()
+                    }
+                } else {
+                    // TODO: BL-512-AC-4 non-T fallback (split/trim/concat) deferred to v100.
+                    filter_chain.clone()
+                };
+                filters.push(filter);
             }
         }
     }
