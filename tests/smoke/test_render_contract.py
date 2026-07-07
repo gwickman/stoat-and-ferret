@@ -17,16 +17,23 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
 
 from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
-from stoat_ferret.db.models import Clip
-from stoat_ferret.render.models import RenderStatus
+from stoat_ferret.db.models import Clip, Video
+from stoat_ferret.effects.definitions import EffectDefinition
+from stoat_ferret.effects.registry import EffectRegistry
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import AsyncSQLiteRenderRepository
+from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
 from tests.conftest import requires_ffmpeg
 from tests.smoke.conftest import poll_job_until_terminal, scan_videos_and_wait
 
@@ -681,4 +688,245 @@ async def test_multi_clip_render_output_file_exists(
     )
     assert final.get("output_path"), (
         "output_path must be populated after render attempt (deferred: SSIM verification)"
+    )
+
+
+# ── Static command-builder smoke tests (v100 Theme 01, Feature 004) ──────────
+# Static regression coverage for the render command paths corrected in
+# Features 001-003 (PRs #758, #759, #760). Calls build_command_for_job()
+# directly with mocked repos; no FFmpeg execution.
+
+
+@dataclass
+class _CmdStubAsset:
+    id: str
+    file_path: str
+    original_filename: str = "test.srt"
+    content_hash: str = "abc"
+    mime_type: str = "application/x-subrip"
+    kind: str = "subtitle"
+    size_bytes: int = 1024
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    deleted_at: str | None = None
+
+
+def _cmd_make_job(render_plan: str, job_id: str = "job-smoke-render-contract") -> RenderJob:
+    now = datetime.now(timezone.utc)
+    return RenderJob(
+        id=job_id,
+        project_id="proj-smoke-render-contract",
+        status=RenderStatus.RUNNING,
+        output_path="/renders/smoke_contract.mp4",
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=render_plan,
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
+    )
+
+
+def _cmd_make_clip(
+    clip_id: str,
+    video_id: str,
+    timeline_position: int,
+    effects: list[dict[str, Any]] | None = None,
+) -> Clip:
+    now = datetime.now(timezone.utc)
+    return Clip(
+        id=clip_id,
+        project_id="proj-smoke-render-contract",
+        source_video_id=video_id,
+        in_point=0,
+        out_point=300,  # 10 seconds at 30 fps
+        timeline_position=timeline_position,
+        created_at=now,
+        updated_at=now,
+        effects=effects,
+    )
+
+
+def _cmd_make_video(video_id: str, path: str, audio_codec: str | None = "aac") -> Video:
+    now = datetime.now(timezone.utc)
+    return Video(
+        id=video_id,
+        path=path,
+        filename=f"{video_id}.mp4",
+        duration_frames=300,
+        frame_rate_numerator=30,
+        frame_rate_denominator=1,
+        width=1920,
+        height=1080,
+        video_codec="h264",
+        audio_codec=audio_codec,
+        file_size=10_000_000,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+async def test_multi_clip_subtitle_i_before_filter_complex() -> None:
+    """FR-001-AC-1: multi-clip soft-subtitle -i inputs precede -filter_complex.
+
+    Regression smoke test for BL-618 (PR #758): builds a 2-clip command with a
+    soft subtitle track and asserts every -i flag index is less than the
+    -filter_complex index.
+    """
+    en_asset_id = uuid.UUID("00000000-0000-0000-0000-0000000000a1")
+    es_asset_id = uuid.UUID("00000000-0000-0000-0000-0000000000a2")
+
+    clips = [
+        _cmd_make_clip("clip-smoke-a", "vid-smoke-a", 0),
+        _cmd_make_clip("clip-smoke-b", "vid-smoke-b", 300),
+    ]
+    videos = {
+        "vid-smoke-a": _cmd_make_video("vid-smoke-a", "/media/smoke_a.mp4"),
+        "vid-smoke-b": _cmd_make_video("vid-smoke-b", "/media/smoke_b.mp4"),
+    }
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    assets = {
+        str(en_asset_id): _CmdStubAsset(id=str(en_asset_id), file_path="/data/assets/en.srt"),
+        str(es_asset_id): _CmdStubAsset(id=str(es_asset_id), file_path="/data/assets/es.srt"),
+    }
+    asset_repo = AsyncMock()
+    asset_repo.get_by_id = AsyncMock(side_effect=lambda aid: assets.get(aid))
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 20.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+                "soft_subtitles": [
+                    {"source_asset_id": str(en_asset_id), "language": "en", "is_default": True},
+                    {"source_asset_id": str(es_asset_id), "language": "es"},
+                ],
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan)
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
+
+    assert "-filter_complex" in cmd, f"-filter_complex not found in command: {cmd}"
+    fc_idx = cmd.index("-filter_complex")
+    i_positions = [i for i, v in enumerate(cmd) if v == "-i"]
+    assert i_positions, "No -i flags found in command"
+    assert all(pos < fc_idx for pos in i_positions), (
+        f"-i flags at positions {i_positions} must all precede -filter_complex "
+        f"at position {fc_idx}: {cmd}"
+    )
+
+
+async def test_tts_render_with_source_audio_uses_amix() -> None:
+    """FR-002-AC-1: TTS narration + source audio mixes via amix into a single [aout] stream.
+
+    Regression smoke test for BL-578 (PR #759): builds a 2-clip command with a
+    TTS cue input alongside clips that carry source audio, and asserts amix
+    appears in the filter_complex and [aout] is present in a -map arg.
+    """
+    videos = {
+        "vid-smoke-c": _cmd_make_video("vid-smoke-c", "/media/smoke_c.mp4", audio_codec="aac"),
+        "vid-smoke-d": _cmd_make_video("vid-smoke-d", "/media/smoke_d.mp4", audio_codec="aac"),
+    }
+    clips = [
+        _cmd_make_clip("clip-smoke-c", "vid-smoke-c", 0),
+        _cmd_make_clip("clip-smoke-d", "vid-smoke-d", 300),
+    ]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    tts_input = TtsCueAudioInput(
+        cue_id="cue-smoke-001",
+        audio_path="/tmp/smoke_narration.wav",
+        track_id="voice-track",
+        start_s=1.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 20.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan, job_id="job-smoke-tts-amix")
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo, tts_inputs=[tts_input])
+
+    assert "-filter_complex" in cmd, f"-filter_complex not found in command: {cmd}"
+    fc_idx = cmd.index("-filter_complex")
+    filter_complex = cmd[fc_idx + 1]
+    assert "amix" in filter_complex, f"Expected amix in filter_complex, got: {filter_complex}"
+
+    map_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-map"]
+    assert "[aout]" in map_flags, f"Expected [aout] in -map flags, got: {map_flags}"
+
+
+async def test_single_clip_windowed_effect_emits_enable() -> None:
+    """FR-003-AC-1: single-clip T-capable effect + window emits enable='between(t,...)'.
+
+    Regression smoke test for BL-616 (PR #760): builds a single-clip command
+    with a T-capable effect carrying a window and asserts the emitted
+    filter_complex contains the FFmpeg time-window gate.
+    """
+    effect_data: dict[str, Any] = {
+        "effect_type": "gblur",
+        "parameters": {"sigma": 2.0},
+        "window": {"start_s": 1.0, "end_s": 3.0},
+    }
+    clip = _cmd_make_clip("clip-smoke-sc", "vid-smoke-sc", 0, effects=[effect_data])
+    video = _cmd_make_video("vid-smoke-sc", "/media/smoke_single.mp4")
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    defn = MagicMock(spec=EffectDefinition)
+    defn.build_fn = lambda params: "gblur=sigma=2.0"
+    defn.timeline_T_capable = True
+    registry = EffectRegistry()
+    registry.register("gblur", defn)
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 10.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan, job_id="job-smoke-windowed")
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+
+    assert "-filter_complex" in cmd, f"-filter_complex not found in command: {cmd}"
+    fc_idx = cmd.index("-filter_complex")
+    filter_complex = cmd[fc_idx + 1]
+    assert "enable='between(t,1.0,3.0)'" in filter_complex, (
+        f"Expected enable='between(t,1.0,3.0)' in filter_complex, got:\n{filter_complex}"
     )
