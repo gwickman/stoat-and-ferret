@@ -126,6 +126,8 @@ def assemble_multi_track_mixer(
             track list, or if MultiTrackAudioMixer.build() returns an error.
     """
     audio_tracks = [t for t in tracks if t.track_type == "audio"]
+    if not audio_tracks:
+        raise ValueError("at least 1 audio track is required")
     id_to_idx = {t.id: i for i, t in enumerate(audio_tracks)}
 
     mixer = sfc.MultiTrackAudioMixer()
