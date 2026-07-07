@@ -106,6 +106,12 @@ The test harness has three tiers:
 | `tests/smoke/test_generator_clip.py` | Generator clip API (BL-441, v079): `POST /api/v1/projects/{id}/clips` with `clip_type='generator'` accepts FFmpeg `aevalsrc` generator parameters and returns 201. |
 | `tests/smoke/test_video_auxiliary_streams.py` | Auxiliary stream counts (BL-408, v074): verifies audio and subtitle stream counts match the source container using real corpus video files. Gated by `STOAT_TEST_FFMPEG=1`. |
 
+### Phase 11 — v100 Render Command Correctness Smoke Tests
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_render_contract.py` | Static command-builder regression coverage for the render paths corrected in v100 Theme 01 Features 001-003 (v100): `test_multi_clip_subtitle_i_before_filter_complex` (BL-618, PR #758) asserts all `-i` flags precede `-filter_complex` for a multi-clip soft-subtitle command; `test_tts_render_with_source_audio_uses_amix` (BL-578, PR #759) asserts `amix` appears in the filter_complex and `[aout]` is present in a `-map` arg when TTS narration and source audio are both present; `test_single_clip_windowed_effect_emits_enable` (BL-616, PR #760) asserts `enable='between(t,1.0,3.0)'` appears in the filter_complex for a single-clip T-capable effect carrying a window. All three call `build_command_for_job()` directly with mocked repos; no FFmpeg execution. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
