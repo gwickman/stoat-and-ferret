@@ -348,6 +348,7 @@ async def build_command_for_job(
         quality_preset_mc: str = settings.get("quality_preset", "standard")
 
         multi_cmd: list[str] = ["ffmpeg"]
+        source_audio_codec_mc: str | None = None
         cwe_list = []
         clip_durations_mc: list[float] = []
         for i, clip in enumerate(clips):
@@ -382,6 +383,8 @@ async def build_command_for_job(
                 source_path_mc = vid.path
                 duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
                 framerate_mc = vid.frame_rate
+                if i == 0:
+                    source_audio_codec_mc = vid.audio_codec
             if duration_secs <= 0:
                 raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
             clip_durations_mc.append(duration_secs)
@@ -456,16 +459,30 @@ async def build_command_for_job(
         if tts_inputs:
             tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
             combined_filter = filter_complex_str + ";" + tts_filter_seg
-            multi_cmd.extend(
-                [
-                    "-filter_complex",
-                    combined_filter,
-                    "-map",
-                    "[final]",
-                    "-map",
-                    tts_audio_label,
-                ]
-            )
+            if source_audio_codec_mc is not None:
+                mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                combined_filter_with_mix = combined_filter + ";" + mix_seg
+                multi_cmd.extend(
+                    [
+                        "-filter_complex",
+                        combined_filter_with_mix,
+                        "-map",
+                        "[final]",
+                        "-map",
+                        "[aout]",
+                    ]
+                )
+            else:
+                multi_cmd.extend(
+                    [
+                        "-filter_complex",
+                        combined_filter,
+                        "-map",
+                        "[final]",
+                        "-map",
+                        tts_audio_label,
+                    ]
+                )
         else:
             multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
 
@@ -609,7 +626,16 @@ async def build_command_for_job(
         if tts_inputs:
             tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
             combined_sc = filter_complex_sc + ";" + tts_filter_seg
-            cmd.extend(["-filter_complex", combined_sc, "-map", "[final]", "-map", tts_audio_label])
+            if source_audio_codec is not None:
+                mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                combined_sc_with_mix = combined_sc + ";" + mix_seg
+                cmd.extend(
+                    ["-filter_complex", combined_sc_with_mix, "-map", "[final]", "-map", "[aout]"]
+                )
+            else:
+                cmd.extend(
+                    ["-filter_complex", combined_sc, "-map", "[final]", "-map", tts_audio_label]
+                )
         else:
             cmd.extend(["-filter_complex", filter_complex_sc, "-map", "[final]", "-an"])
     elif tts_inputs:
