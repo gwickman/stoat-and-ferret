@@ -267,7 +267,7 @@ def _add_soft_subtitle_output_flags(
     Raises:
         ValueError: If the container does not support subtitle embedding.
     """
-    fmt = str(output_format).lower()
+    fmt = output_format.lower()
     if fmt == "mp4":
         cmd.extend(["-c:s", "mov_text"])
     elif fmt in ("mkv", "matroska"):
@@ -434,10 +434,26 @@ async def build_command_for_job(
         if ffmetadata_path:
             multi_cmd.extend(["-i", ffmetadata_path])
 
+        tts_base: int = 0
         if tts_inputs:
             tts_base = len(input_paths) + (1 if ffmetadata_path else 0)
             for inp in tts_inputs:
                 multi_cmd.extend(["-i", inp.audio_path])
+
+        # Soft subtitle -i inputs: declared BEFORE filter_complex/output -map section (BL-618).
+        # subtitle_base_mc = clip_count + ffmetadata_offset + tts_count
+        subtitle_base_mc: int = 0
+        if render_settings.soft_subtitles:
+            subtitle_base_mc = (
+                len(input_paths)
+                + (1 if ffmetadata_path else 0)
+                + (len(tts_inputs) if tts_inputs else 0)
+            )
+            for spec in render_settings.soft_subtitles:
+                sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
+                multi_cmd.extend(["-i", sub_path])
+
+        if tts_inputs:
             tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
             combined_filter = filter_complex_str + ";" + tts_filter_seg
             multi_cmd.extend(
@@ -453,17 +469,8 @@ async def build_command_for_job(
         else:
             multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
 
-        # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
-        # subtitle_base = len(clips) + ffmetadata_offset + tts_count
+        # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
         if render_settings.soft_subtitles:
-            subtitle_base_mc = (
-                len(input_paths)
-                + (1 if ffmetadata_path else 0)
-                + (len(tts_inputs) if tts_inputs else 0)
-            )
-            for spec in render_settings.soft_subtitles:
-                sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
-                multi_cmd.extend(["-i", sub_path])
             for idx, _ in enumerate(render_settings.soft_subtitles):
                 multi_cmd.extend(["-map", f"{subtitle_base_mc + idx}:s"])
 
