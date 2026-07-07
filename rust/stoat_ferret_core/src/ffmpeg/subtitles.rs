@@ -81,9 +81,10 @@ impl SubtitleScriptSpec {
             || font_color.contains('\'')
             || font_color.contains(',')
             || font_color.contains(';')
+            || font_color.contains('\\')
         {
             return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "font_color contains forbidden character (':', single quote, ',', ';'): {}",
+                "font_color contains forbidden character (':', single quote, ',', ';', backslash): {}",
                 font_color
             )));
         }
@@ -123,7 +124,7 @@ impl SubtitleScriptBuilder {
                 None => String::new(),
             };
             let filter = format!(
-                "drawtext={}fontsize={}:fontcolor={}:text='{}':x={}:y={}:enable='between(t,{:?},{:?})'",
+                "drawtext={}fontsize={}:fontcolor='{}':text='{}':x={}:y={}:enable='between(t,{:?},{:?})'",
                 font_part,
                 spec.font_size,
                 spec.font_color,
@@ -369,7 +370,7 @@ mod tests {
         assert!(result.contains("drawtext="));
         assert!(result.contains("enable='between(t,0.0,2.0)'"));
         assert!(result.contains("fontsize=24"));
-        assert!(result.contains("fontcolor=white"));
+        assert!(result.contains("fontcolor='white'"));
         assert!(result.contains("text='Hello'"));
         assert!(result.contains("x=(w-text_w)/2"));
         assert!(result.contains("y=h-text_h-10"));
@@ -387,9 +388,9 @@ mod tests {
         )
         .unwrap();
         let result = SubtitleScriptBuilder::build(&spec).unwrap();
-        assert!(result.contains("fontfile=/fonts/arial.ttf:"));
+        assert!(result.contains("fontfile='/fonts/arial.ttf':"));
         assert!(result.contains("fontsize=32"));
-        assert!(result.contains("fontcolor=yellow"));
+        assert!(result.contains("fontcolor='yellow'"));
         assert!(result.contains("y=10"));
     }
 
@@ -759,5 +760,39 @@ mod tests {
             None,
         )
         .is_err());
+    }
+
+    // -- BL-601-AC-5: backslash in font_color rejected --
+
+    #[test]
+    fn test_font_color_backslash_rejected() {
+        let entry = make_entry(0.0, 1.0, "hi");
+        let result = SubtitleScriptSpec::py_new(
+            vec![entry],
+            "bottom".to_string(),
+            24,
+            "white\\".to_string(),
+            None,
+        );
+        assert!(
+            result.is_err(),
+            "font_color with backslash must be rejected"
+        );
+    }
+
+    // -- BL-601-AC-2: fontcolor emission is single-quoted --
+
+    #[test]
+    fn test_fontcolor_emission_is_single_quoted() {
+        let spec = make_spec(vec![make_entry(0.0, 1.0, "Hello")], "bottom");
+        let result = SubtitleScriptBuilder::build(&spec).unwrap();
+        assert!(
+            result.contains("fontcolor='white'"),
+            "fontcolor must be single-quoted, got: {result}"
+        );
+        assert!(
+            !result.contains("fontcolor=white:"),
+            "unquoted fontcolor must not appear: {result}"
+        );
     }
 }

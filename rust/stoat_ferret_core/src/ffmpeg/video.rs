@@ -62,6 +62,8 @@ pub enum PathEscapeError {
     CommaInPath(String),
     /// The path contains a semicolon (filtergraph parallel-chain separator).
     SemicolonInPath(String),
+    /// A Unix/relative path contains a backslash (BL-601).
+    BackslashInUnixPath(String),
 }
 
 impl std::fmt::Display for PathEscapeError {
@@ -92,6 +94,12 @@ impl std::fmt::Display for PathEscapeError {
                  be safely used in FFmpeg filter option values.",
                 path
             ),
+            PathEscapeError::BackslashInUnixPath(path) => write!(
+                f,
+                "Path '{}' contains a backslash which cannot be safely used in Unix/relative \
+                 FFmpeg filter option paths.",
+                path
+            ),
         }
     }
 }
@@ -101,8 +109,9 @@ impl std::error::Error for PathEscapeError {}
 /// Escape a file path for use as an FFmpeg filter option value (variant-4 policy).
 ///
 /// Applies single-quoted colon-escape policy for Windows absolute paths:
-/// `C:\Users\file.cube` → `'C\:/Users/file.cube'`. Unix and relative paths
-/// pass through unchanged. Paths containing `'` are rejected.
+/// `C:\Users\file.cube` → `'C\:/Users/file.cube'`. Unix and relative paths are
+/// single-quote wrapped: `/home/user/file.cube` → `'/home/user/file.cube'`.
+/// Paths containing `'` are rejected. Unix/relative paths containing `\` are rejected.
 ///
 /// Scope: filter-option values only (`lut3d=file=...`, `subtitles=filename=...`).
 /// Do NOT apply to subprocess argv paths (`-i <path>`, `-y <output>`).
@@ -138,7 +147,10 @@ pub(crate) fn emit_filter_option_path(path: &str) -> Result<String, PathEscapeEr
         let rest = path[2..].replace('\\', "/");
         Ok(format!("'{}\\:{}'", drive, rest))
     } else {
-        Ok(path.to_string())
+        if path.contains('\\') {
+            return Err(PathEscapeError::BackslashInUnixPath(path.to_string()));
+        }
+        Ok(format!("'{}'", path))
     }
 }
 
@@ -1885,9 +1897,9 @@ mod tests {
     }
 
     #[test]
-    fn test_unix_path_unchanged() {
+    fn test_unix_path_single_quoted() {
         let result = emit_filter_option_path("/home/user/file.cube").unwrap();
-        assert_eq!(result, "/home/user/file.cube");
+        assert_eq!(result, "'/home/user/file.cube'");
     }
 
     #[test]
@@ -1901,9 +1913,9 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_path_unchanged() {
+    fn test_relative_path_single_quoted() {
         let result = emit_filter_option_path("identity.cube").unwrap();
-        assert_eq!(result, "identity.cube");
+        assert_eq!(result, "'identity.cube'");
     }
 
     #[test]
@@ -1967,6 +1979,34 @@ mod tests {
         assert!(matches!(err, PathEscapeError::SemicolonInPath(_)));
     }
 
+    // -- BL-601-AC-3/AC-4/AC-6: unix/relative paths single-quoted, backslash rejected --
+
+    #[test]
+    fn test_unix_path_wrapped_in_single_quotes() {
+        let result = emit_filter_option_path("/home/user/file.cube").unwrap();
+        assert_eq!(result, "'/home/user/file.cube'");
+    }
+
+    #[test]
+    fn test_relative_path_wrapped_in_single_quotes() {
+        let result = emit_filter_option_path("identity.cube").unwrap();
+        assert_eq!(result, "'identity.cube'");
+    }
+
+    #[test]
+    fn test_backslash_in_unix_path_rejected() {
+        let err = emit_filter_option_path("/tmp/a\\b.srt").unwrap_err();
+        assert!(
+            matches!(err, PathEscapeError::BackslashInUnixPath(_)),
+            "expected BackslashInUnixPath variant, got: {err:?}"
+        );
+        let msg = err.to_string();
+        assert!(
+            msg.contains("/tmp/a\\b.srt"),
+            "error message should contain the path: {msg}"
+        );
+    }
+
     // --- emit_filter_value contract tests ---
 
     #[test]
@@ -1990,7 +2030,7 @@ mod tests {
     #[test]
     fn path_delegates_to_emit_filter_option_path_unix() {
         let result = emit_filter_value(ValueKind::Path, "/home/user/file.cube").unwrap();
-        assert_eq!(result, "/home/user/file.cube");
+        assert_eq!(result, "'/home/user/file.cube'");
     }
 
     #[test]
