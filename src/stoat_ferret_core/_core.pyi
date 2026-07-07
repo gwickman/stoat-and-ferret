@@ -4408,6 +4408,26 @@ class ZoompanBuilder:
         """
         ...
 
+    @staticmethod
+    def ken_burns(duration_s: float, zoom_end: float = 1.3) -> ZoompanBuilder:
+        """Return a pre-configured Ken Burns slow-zoom instance.
+
+        Ramps zoom from 1.0 to ``zoom_end`` over ``duration_s`` seconds at 25 fps,
+        keeping the subject centred. All expressions use ``on`` (output frame number)
+        for FFmpeg 8 compatibility.
+
+        Args:
+            duration_s: Duration of the effect in seconds (must be > 0).
+            zoom_end: Final zoom level (default 1.3 = 30 % zoom-in).
+
+        Returns:
+            A ZoompanBuilder using ``on``-based expressions at 1920x1080 25 fps.
+
+        Raises:
+            ValueError: If the resulting expressions would fail validation.
+        """
+        ...
+
 class CurvesBuilder:
     """Colour grading filter builder with preset and per-channel KneeString modes.
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from datetime import datetime, timezone
 
 import pytest
@@ -30,6 +31,7 @@ from stoat_ferret.db.models import Clip, Project
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.effects.definitions import EffectDefinition, create_default_registry
 from stoat_ferret.effects.registry import EffectRegistry
+from stoat_ferret_core import ZoompanBuilder
 
 # ---------------------------------------------------------------------------
 # WindowSpec schema unit tests (FR-001)
@@ -361,3 +363,33 @@ async def test_window_render_probe() -> None:
         STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_window.py::test_window_render_probe -v
     """
     pytest.skip("FFmpeg render probe not yet implemented — deferred_post_merge discharge")
+
+
+# ---------------------------------------------------------------------------
+# ZoompanBuilder bare-n validation and ken_burns() factory (BL-603)
+# ---------------------------------------------------------------------------
+
+
+def test_zoompan_bare_n_raises() -> None:
+    """ZoompanBuilder rejects bare 'n' in zoom expression (BL-603-AC-1/AC-2)."""
+    with pytest.raises(ValueError, match="bare 'n'"):
+        ZoompanBuilder("n/1000+1", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)", 125, 1920, 1080, 25)
+
+
+def test_zoompan_on_accepted() -> None:
+    """ZoompanBuilder accepts 'on'-based expressions and build() returns filter (BL-603-AC-2)."""
+    builder = ZoompanBuilder(
+        "on/1000+1", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)", 125, 1920, 1080, 25
+    )
+    result = builder.build()
+    assert "on" in str(result)
+    assert "zoompan" in str(result)
+
+
+def test_ken_burns_factory_emits_on() -> None:
+    """ken_burns() factory produces filter with 'on' and no bare 'n' (BL-603-AC-3/AC-4)."""
+    builder = ZoompanBuilder.ken_burns(duration_s=3.0, zoom_end=1.3)
+    result = str(builder.build())
+    assert "zoompan" in result
+    assert "on" in result
+    assert not re.search(r"\bn\b", result)
