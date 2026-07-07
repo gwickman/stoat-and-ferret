@@ -273,6 +273,11 @@ async def test_multi_clip_real_effects_fetched_from_registry() -> None:
     assert isinstance(filter_complex, str)
     assert len(filter_complex) > 0
 
+    # The blur effect string must appear in filter_complex (BL-553-AC-2 / BL-606-AC-2)
+    assert blur_filter_str in filter_complex, (
+        f"Expected {blur_filter_str!r} in filter_complex but got: {filter_complex!r}"
+    )
+
     # Output path must be last
     assert cmd[-1] == _OUTPUT_PATH
 
