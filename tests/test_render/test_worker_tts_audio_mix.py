@@ -11,7 +11,10 @@ tests/test_contract/test_tts.py; these tests cover the two remaining paths.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -21,6 +24,12 @@ from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.effects.definitions import create_default_registry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
+
+STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
+_FFMPEG_SKIP = pytest.mark.skipif(
+    not STOAT_TEST_FFMPEG,
+    reason="Set STOAT_TEST_FFMPEG=1 to run FFmpeg-gated tests",
+)
 
 _NOW = datetime.now(timezone.utc)
 _PROJECT_ID = "proj-tts-amix-001"
@@ -223,6 +232,155 @@ async def test_multi_clip_no_tts_no_amix() -> None:
     cmd_str = " ".join(cmd)
     assert "amix" not in cmd_str
     assert "-an" in cmd
+
+
+# ---------------------------------------------------------------------------
+# FFmpeg-gated contract test (BL-621-AC-5)
+# ---------------------------------------------------------------------------
+
+
+def _gen_silent_video(path: Path) -> None:
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=320x240:r=30:d=2",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
+def _gen_video_with_audio(path: Path) -> None:
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=320x240:r=30:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
+def _gen_wav(path: Path, freq: int = 880) -> None:
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            f"sine=frequency={freq}:duration=2",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
+def _run_ffmpeg(cmd: list[str]) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(cmd, capture_output=True, timeout=60)
+
+
+def _ffprobe_has_audio(path: Path) -> bool:
+    probe = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=codec_type",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    return probe.stdout.strip() == "audio"
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_multi_clip_tts_later_clip_audio_ffmpeg_contract(tmp_path: Path) -> None:
+    """BL-621-AC-5: clip 0 video-only + clip 1 has audio + TTS → output audio present.
+
+    Confirms via ffprobe that the output contains an audio stream (source audio
+    from clip 1 was not silently dropped when TTS was also active).
+    """
+    src0 = tmp_path / "clip0_silent.mp4"
+    src1 = tmp_path / "clip1_with_audio.mp4"
+    tts_wav = tmp_path / "tts.wav"
+    _gen_silent_video(src0)
+    _gen_video_with_audio(src1)
+    _gen_wav(tts_wav)
+
+    videos = {
+        "vid-0": _make_video("vid-0", str(src0), audio_codec=None),
+        "vid-1": _make_video("vid-1", str(src1), audio_codec="aac"),
+    }
+    clips = [
+        _make_clip("clip-0", "vid-0", timeline_position=0),
+        _make_clip("clip-1", "vid-1", timeline_position=300),
+    ]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    tts_input = TtsCueAudioInput(
+        cue_id="cue-tts-001",
+        audio_path=str(tts_wav),
+        track_id="voice-track",
+        start_s=0.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+    out = tmp_path / "output.mp4"
+    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[tts_input])
+    cmd[-1] = str(out)
+
+    rc = _run_ffmpeg(cmd)
+    assert rc.returncode == 0, rc.stderr.decode()[-800:]
+    assert out.exists()
+    assert _ffprobe_has_audio(out), "Source audio from clip 1 was silently dropped"
 
 
 # ---------------------------------------------------------------------------
