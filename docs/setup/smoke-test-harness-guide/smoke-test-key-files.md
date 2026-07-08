@@ -112,6 +112,12 @@ The test harness has three tiers:
 |------|-------------------|
 | `tests/smoke/test_render_contract.py` | Static command-builder regression coverage for the render paths corrected in v100 Theme 01 Features 001-003 (v100): `test_multi_clip_subtitle_i_before_filter_complex` (BL-618, PR #758) asserts all `-i` flags precede `-filter_complex` for a multi-clip soft-subtitle command; `test_tts_render_with_source_audio_uses_amix` (BL-578, PR #759) asserts `amix` appears in the filter_complex and `[aout]` is present in a `-map` arg when TTS narration and source audio are both present; `test_single_clip_windowed_effect_emits_enable` (BL-616, PR #760) asserts `enable='between(t,1.0,3.0)'` appears in the filter_complex for a single-clip T-capable effect carrying a window. All three call `build_command_for_job()` directly with mocked repos; no FFmpeg execution. |
 
+### Phase 12 — v101 Worker-Path QC Pipeline Tests (BL-477, BL-488)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/render/test_qc_worker_path.py` | Worker-path QC regression guards and FFmpeg-gated pipeline tests (BL-477-AC-4, BL-488-AC-4/AC-5): `test_no_delivery_profile_returns_404` (mocked, no FFmpeg) asserts `GET /render/{job_id}/qc` returns 404 when no delivery profile is set; `test_assertions_translation_parity` (unit, no FFmpeg) verifies `_build_assertions_from_profile()` and the inline render.py dict literal produce identical keys and values for the same profile. `test_worker_qc_pipeline_target_non_null` and `test_compliant_render_passes_loudness_gate` are gated by `STOAT_TEST_FFMPEG=1` and exercise the full QCService pipeline with a sine WAV fixture, asserting non-null targets and pass=True for loudness/true-peak checks. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
