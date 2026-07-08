@@ -143,11 +143,11 @@ async def test_multi_clip_tts_with_source_audio_uses_amix() -> None:
 
 
 @pytest.mark.asyncio
-async def test_multi_clip_tts_video_only_source_no_amix() -> None:
-    """BL-578-AC-2/AC-6 (multi-clip): TTS + video-only first clip → TTS-only map, no amix."""
+async def test_multi_clip_tts_all_video_only_no_amix() -> None:
+    """BL-578-AC-2/AC-6 (multi-clip): TTS + all-video-only clips → TTS-only map, no amix."""
     videos = {
         "vid-a": _make_video("vid-a", "/media/clip_a.mp4", audio_codec=None),
-        "vid-b": _make_video("vid-b", "/media/clip_b.mp4", audio_codec="aac"),
+        "vid-b": _make_video("vid-b", "/media/clip_b.mp4", audio_codec=None),
     }
     clips = [
         _make_clip("clip-a", "vid-a", timeline_position=0),
@@ -168,6 +168,38 @@ async def test_multi_clip_tts_video_only_source_no_amix() -> None:
 
     map_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-map"]
     assert any(f.startswith("[tts") for f in map_flags)
+
+
+@pytest.mark.asyncio
+async def test_multi_clip_tts_later_clip_audio_uses_amix() -> None:
+    """BL-621-AC-1/AC-4: clip 0 video-only, clip 1 has audio + TTS → amix uses clip 1's stream."""
+    videos = {
+        "vid-a": _make_video("vid-a", "/media/clip_a.mp4", audio_codec=None),
+        "vid-b": _make_video("vid-b", "/media/clip_b.mp4", audio_codec="aac"),
+    }
+    clips = [
+        _make_clip("clip-a", "vid-a", timeline_position=0),
+        _make_clip("clip-b", "vid-b", timeline_position=300),
+    ]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    cmd = await build_command_for_job(
+        _make_job(), clip_repo, video_repo, tts_inputs=[_make_tts_input()]
+    )
+
+    cmd_str = " ".join(cmd)
+    # Source audio from clip 1 (input index 1) must be amixed with TTS, not dropped.
+    assert "amix=inputs=2:duration=longest" in cmd_str
+    assert "[aout]" in cmd_str
+    # Amix must reference input 1's audio stream, not the no-audio input 0.
+    assert "[1:a]" in cmd_str
+    assert "[0:a]" not in cmd_str
+
+    map_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-map"]
+    assert "[aout]" in map_flags
 
 
 @pytest.mark.asyncio
