@@ -128,6 +128,14 @@ def assemble_multi_track_mixer(
     audio_tracks = [t for t in tracks if t.track_type == "audio"]
     if not audio_tracks:
         raise ValueError("at least 1 audio track is required")
+    seen_ids: set[str] = set()
+    dupe_ids: set[str] = set()
+    for t in audio_tracks:
+        if t.id in seen_ids:
+            dupe_ids.add(t.id)
+        seen_ids.add(t.id)
+    if dupe_ids:
+        raise ValueError(f"duplicate audio track id(s): {', '.join(sorted(dupe_ids))!r}")
     id_to_idx = {t.id: i for i, t in enumerate(audio_tracks)}
 
     mixer = sfc.MultiTrackAudioMixer()

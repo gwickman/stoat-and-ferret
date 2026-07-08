@@ -21,8 +21,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from fastapi import FastAPI
+from pydantic import ValidationError
 
 from stoat_ferret.api.routers.tts import router as tts_router
+from stoat_ferret.api.schemas.tts import TtsCueCreate, TtsCueUpdate
 from stoat_ferret.api.services.tts_service import (
     KokoroBackend,
     TtsCache,
@@ -822,6 +824,51 @@ def _make_mix_clip() -> Clip:
         created_at=_NOW,
         updated_at=_NOW,
     )
+
+
+# ---------------------------------------------------------------------------
+# TTS cue schema validation (BL-582-AC-3/AC-4)
+# ---------------------------------------------------------------------------
+
+
+class TestTtsCueStartsBound:
+    """start_s upper bound must be present on both Create and Update schemas."""
+
+    _PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
+    def test_tts_cue_create_rejects_start_s_over_86400(self) -> None:
+        with pytest.raises(ValidationError):
+            TtsCueCreate(
+                project_id=self._PROJECT_ID,
+                track_id="t1",
+                start_s=86401.0,
+                text="hello",
+                voice="en-0",
+            )
+
+    def test_tts_cue_update_rejects_start_s_over_86400(self) -> None:
+        """BL-582-AC-3: TtsCueUpdate.start_s must have an upper bound of 86400."""
+        with pytest.raises(ValidationError):
+            TtsCueUpdate(start_s=86401.0)
+
+    def test_tts_cue_update_accepts_start_s_3600(self) -> None:
+        """BL-582-AC-4 regression guard: valid in-range start_s is accepted."""
+        cue = TtsCueUpdate(start_s=3600.0)
+        assert cue.start_s == 3600.0
+
+    def test_tts_cue_update_accepts_start_s_at_bound(self) -> None:
+        cue = TtsCueUpdate(start_s=86400.0)
+        assert cue.start_s == 86400.0
+
+    def test_tts_cue_create_accepts_start_s_at_bound(self) -> None:
+        cue = TtsCueCreate(
+            project_id=self._PROJECT_ID,
+            track_id="t1",
+            start_s=86400.0,
+            text="hello",
+            voice="en-0",
+        )
+        assert cue.start_s == 86400.0
 
 
 def _make_mix_video(*, audio_codec: str | None = "aac") -> Video:
