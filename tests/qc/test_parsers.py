@@ -25,14 +25,19 @@ _skip_no_ffmpeg = pytest.mark.skipif(
 
 
 def _ffmpeg_stderr(*args: str) -> str:
-    """Run ffmpeg with given args and return stderr as a string."""
+    """Run ffmpeg and return stderr + stdout combined.
+
+    Most FFmpeg filters write diagnostics to stderr (av_log). ametadata=mode=print
+    writes to stdout by default, so stdout is appended to ensure spectral lines
+    (lavfi.aspectralstats.*) are captured regardless of stream.
+    """
     result = subprocess.run(
         ["ffmpeg", *args],
         capture_output=True,
         text=True,
         timeout=60,
     )
-    return result.stderr
+    return result.stderr + result.stdout
 
 
 @_skip_no_ffmpeg
