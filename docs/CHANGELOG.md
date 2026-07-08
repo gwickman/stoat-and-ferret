@@ -4,6 +4,37 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v101 — QC Completion (R2 P1 Cluster) (2026-07-09)
+
+### Theme 1: QC Bug Fix Discharge
+
+- BL-476: Switched `QCService._check_loudness_integrated` and `_check_true_peak` from `ebur128=framelog=verbose` to `loudnorm=print_format=json` measurement pass — Rust `parse_loudness_report` parser now receives JSON it can read; loudness_integrated.measured and true_peak.measured are non-null and numeric for the first time (PR #771)
+- BL-477: Wired `QCService` invocation into `RenderWorkerLoop` post-completion step; `GET /render/{job_id}/qc` now returns 200 with a persisted `QCReport` for real-mode worker-path renders; QC_FAILED transition and WS event parity with the inline path (PR #772)
+- BL-488: `render/service.py` `_handle_completion` now mirrors the inline submit path's `_build_assertions_from_profile` call — loudness_integrated.target and true_peak.target are non-null and pass is computed when a delivery profile is attached (PR #772)
+
+### Theme 2: QC Build Discharge
+
+- BL-423: Five Rust QC measurement parsers (loudnorm/ebur128, astats/volumedetect, silencedetect, aspectralstats, blackdetect/freezedetect) added to `rust/stoat_ferret_core/src/qc/mod.rs` with PyO3 bindings and proptest fuzz coverage — no panic on arbitrary input; all 5 discharged against real FFmpeg 8 in CI (PR #773)
+- BL-424 (AC-5): Golden QC fixture determinism test confirms two back-to-back `QCService.run_checks` calls on the same 5s sine fixture produce identical `checks` dicts (PR #774)
+- BL-427: `OC_TO_QC_CHECK` mapping dict and `OC_HUMAN_ONLY` list in `tests/qc/oc_mapping.py`; `TestOcAssertionsAgainstFixture` activated (no longer placeholder-skipped); `TestOcMapping` structural tests run in every CI build (direct commit on main via PR #773 session)
+- BL-426: `generate_ffmetadata()` verified via ffprobe — chapter count equals section count, title embedded, `chapters_present` QC check passes (direct commit on main via PR #773 session)
+
+### Theme 3: v100 Post-Orch Riders
+
+- BL-620: `scripts/verify_render_output.py` default mode now fetches `GET /render/{job_id}` and asserts only `RenderJobResponse` fields (status, output_path, progress); eliminates permanent false FAIL from schema mismatch with `exit_code`/`output_size_bytes` (PR #775)
+- BL-621: Multi-clip TTS amix source-audio detection expanded across all clip indices — source audio from a non-zero clip is no longer silently dropped when `audio_codec` is absent from clip 0 (PR #776)
+- BL-622: `assemble_multi_track_mixer()` raises `ValueError` on duplicate track IDs; `TtsCueUpdate.start_s` gains `le=86400.0` upper bound matching `TtsCueCreate.start_s` (PR #777)
+
+### PRs
+
+#771, #772, #773, #774, #775, #776, #777
+
+### Resolved
+
+BL-476 (QC loudness/true-peak parser fix — all 4 ACs supported), BL-477 (worker-path QC wiring — 2/4 ACs supported; AC-1/2 pre-existing; AC-3 deferred_post_merge), BL-488 (delivery-profile assertions — 3/5 ACs; AC-1/2 pre-existing; AC-3 deferred_post_merge), BL-423 (Rust QC parsers — all 6 ACs supported), BL-424 AC-5 (golden fixture determinism), BL-427 (OC mapping layer — all 4 ACs supported), BL-426 (chapter/metadata discharge — all 4 ACs supported), BL-620 (verify script default mode — all 5 ACs supported), BL-621 (multi-clip TTS amix — 4/5 ACs; AC-5 deferred_post_merge), BL-622 (TTS validation gaps — 4/5 ACs; AC-1 weakened: case mismatch "duplicate" vs "Duplicate")
+
+---
+
 ## v100 — Render Reliability, Evidence & Subtitle Hardening (2026-07-07)
 
 ### Theme 1: Render Command Correctness
