@@ -145,6 +145,25 @@ class TestAssembleMultiTrackMixerUnit:
         assert "threshold=0.05" in result
         assert "ratio=4" in result
 
+    def test_duplicate_track_id_raises(self) -> None:
+        """BL-582-AC-2: duplicate audio track id must raise ValueError naming the id."""
+        tracks = [_track("dup-id", "music"), _track("dup-id", "voice")]
+        with pytest.raises(ValueError, match="dup-id"):
+            assemble_multi_track_mixer(tracks, [])
+
+    def test_duplicate_track_id_error_message_descriptive(self) -> None:
+        """BL-582-AC-2: error message must mention 'duplicate' and the offending id."""
+        tracks = [_track("x", "music"), _track("x", "voice"), _track("y", "binaural")]
+        with pytest.raises(ValueError, match="duplicate") as exc_info:
+            assemble_multi_track_mixer(tracks, [])
+        assert "x" in str(exc_info.value)
+
+    def test_unique_track_ids_do_not_raise(self) -> None:
+        """Regression guard: distinct ids still build successfully."""
+        tracks = [_track("a", "music"), _track("b", "voice")]
+        result = assemble_multi_track_mixer(tracks, [])
+        assert "amix" in result
+
 
 # ---------------------------------------------------------------------------
 # FFmpeg behavioral tests

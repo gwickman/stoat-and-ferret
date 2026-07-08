@@ -72,7 +72,9 @@ class TtsCueUpdate(BaseModel):
         default=None,
         description="Voice track ID; must reference a track with kind=voice",
     )
-    start_s: float | None = Field(default=None, ge=0.0, description="Timeline placement in seconds")
+    start_s: float | None = Field(
+        default=None, ge=0.0, le=86400.0, description="Timeline placement in seconds"
+    )
     text: str | None = Field(default=None, min_length=1, description="Text to synthesise")
     voice: str | None = Field(default=None, min_length=1, description="Voice identifier")
     backend: TtsBackend | None = Field(default=None, description="TTS backend")
