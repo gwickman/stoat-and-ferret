@@ -4,6 +4,55 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v100 — Render Reliability, Evidence & Subtitle Hardening (2026-07-07)
+
+### Theme 1: Render Command Correctness
+
+- BL-618: Reordered subtitle `-i` inputs before the `-filter_complex`/`-map` output section — fixes all multi-clip soft-subtitle renders that were hard-failing with FFmpeg's `-map` rejection (PR #758)
+- BL-578: Patched `RenderGraphTranslator` multi-clip and single-clip paths to amix source audio with TTS audio when `audio_codec` is present — eliminates silent source-audio data loss for TTS renders; in-version hotfix chain [#759, #761] (PR #759)
+- BL-616: Mirrored multi-clip `windowed_custom` dispatch check in the single-clip effect loop — single-clip windowed T-capable effects now emit `enable='between(t,...)'`; in-version hotfix chain [#760, #761] (PR #760)
+- Render smoke coverage: Three static smoke tests added to `tests/smoke/test_render_contract.py` covering each corrected render path end-to-end without FFmpeg (PR #761)
+
+### Theme 2: Render Evidence and Isolation
+
+- BL-554: Added `scripts/verify_render_output.py` for CLI render verification; `GET /render/{job_id}/evidence` endpoint added; `STOAT_RENDER_EVIDENCE_FULL_ACCESS` env var; config doc updated (PR #762)
+- BL-403: Re-verified concurrent render output path isolation is intact at HEAD (v072 fix confirmed across 28 intermediate versions; no code changes required)
+
+### Theme 3: Subtitle Filtergraph Hardening
+
+- BL-586: Added real-FFmpeg round-trip test for `BurnedSubtitleBuilder` `force_style` — discharges the FFmpeg-gated AC-6 deferred in v094; no Rust source changes needed (existing `escape_force_style()` was already correct) (PR #763)
+- BL-601: `SubtitleScriptBuilder` now emits `fontcolor='{}'` (single-quoted); `emit_filter_option_path()` Unix/relative branch returns single-quoted paths; `BackslashInUnixPath` error variant added; 7 stale test assertions updated (PR #764)
+
+### Theme 4: Audio Builder Hardening
+
+- BL-581: SQLite FK coverage test for `DuckingPair` — exercises `ON DELETE CASCADE` at the database layer (PR #765)
+- BL-582: TTS audio mixer hardened with zero-track guard, duplicate `stream_idx` guard, `start_s ≤ 86400.0` bound validation, and CRUD tests (PR #766)
+- BL-603: `ZoompanBuilder` now rejects bare `n` at construction time; `ken_burns()` factory added for common slow-zoom/pan presets (PR #767)
+
+### Theme 5: Test Quality and Doc Hygiene
+
+- BL-606: Fixed 7 vacuous tests — G2 boxblur assertion and G5 windowed probe converted to real `STOAT_TEST_FFMPEG`-gated tests; 5 pre-existing stubs resolved (PR #768)
+- BL-617: Updated `docs/STATUS.md` with corrected test count (3629 → 3745), PR #755 status (not merged, UA-001 pending), and missing version sections for v083–v096 (PR #769)
+
+### PRs
+
+#758, #759, #760, #761, #762, #763, #764, #765, #766, #767, #768, #769
+
+### In-version hotfixes
+
+BL-578 hotfix chain: #759, #761 (TTS amix fix + smoke coverage)
+BL-616 hotfix chain: #760, #761 (single-clip windowed dispatch + smoke coverage)
+
+### Resolved
+
+BL-618 (multi-clip subtitle `-i` ordering — 4/6 ACs; 2 FFmpeg-gated deferred), BL-578 (TTS source audio mix — 5/6 ACs; AC-5 FFmpeg-gated deferred), BL-616 (single-clip windowed dispatch — 4/5 ACs; AC-3 FFmpeg-gated deferred), BL-554 (render evidence script + endpoint — all 9 ACs supported), BL-586 (BurnedSubtitle force_style — all 6 ACs supported), BL-601 (subtitle seam durable fix — all 8 ACs supported), BL-582 (TTS audio mixer hardening — all 6 ACs supported), BL-603 (ZoompanBuilder validation + ken_burns — all 4 ACs supported), BL-606 (vacuous test fixes — 6/7 ACs; AC-5 FFmpeg-gated deferred), BL-617 (STATUS.md correction — all 4 ACs supported), BL-403 (concurrent render isolation — 3/4 ACs; AC-3 FFmpeg-gated deferred)
+
+### Partially resolved
+
+BL-581 (DuckingPair SQLite FK coverage — execution-confirmed 4/4 ACs; 6 design ACs in source-intent-ledger not in outcome-evidence ledger; delta carried to v101)
+
+---
+
 ## v099 — Image/Generator Clip Types + Windowed Effects (2026-07-07)
 
 ### Theme 1: Render Worker Clip Coverage

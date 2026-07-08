@@ -32,10 +32,13 @@ npm run dev                  # Dev server (proxies API to :8765)
 npm run build                # Production build to gui/dist/
 npx vitest run               # Run tests
 
-# Rust
+# Rust — run cargo commands from rust/stoat_ferret_core/
 cd rust/stoat_ferret_core
 cargo clippy -- -D warnings  # Lint
 cargo test                   # Test
+
+# maturin develop: run from the project ROOT, not from rust/stoat_ferret_core/
+# (Running from the crate directory creates a conflicting package in site-packages)
 maturin develop              # Build Python extension
 
 # UAT (User Acceptance Testing)
