@@ -25,19 +25,14 @@ _skip_no_ffmpeg = pytest.mark.skipif(
 
 
 def _ffmpeg_stderr(*args: str) -> str:
-    """Run ffmpeg and return stderr + stdout combined.
-
-    Most FFmpeg filters write diagnostics to stderr (av_log). ametadata=mode=print
-    writes to stdout by default, so stdout is appended to ensure spectral lines
-    (lavfi.aspectralstats.*) are captured regardless of stream.
-    """
+    """Run ffmpeg with given args and return stderr as a string."""
     result = subprocess.run(
         ["ffmpeg", *args],
         capture_output=True,
         text=True,
         timeout=60,
     )
-    return result.stderr + result.stdout
+    return result.stderr
 
 
 @_skip_no_ffmpeg
@@ -132,8 +127,10 @@ def test_parse_silence_real_output() -> None:
 def test_parse_spectral_real_output() -> None:
     """BL-423-AC-4 (spectral): parse_spectral_report returns populated channel_means.
 
-    aspectralstats stores data as frame metadata; ametadata=mode=print writes
-    lavfi.aspectralstats.*.mean=<value> lines to stderr via av_log.
+    aspectralstats stores data as frame metadata. ametadata=mode=print without file=
+    routes through av_log at INFO level, which is hidden at FFmpeg's default log level
+    and prefixes every line with [filter @ addr]. Using file=/dev/stderr writes directly
+    to stderr without the av_log prefix, so the parser's strip_prefix can match.
     """
     from stoat_ferret_core import parse_spectral_report
 
@@ -143,7 +140,7 @@ def test_parse_spectral_real_output() -> None:
         "-i",
         "sine=frequency=1000:duration=5",
         "-af",
-        "aspectralstats,ametadata=mode=print",
+        "aspectralstats,ametadata=mode=print:file=/dev/stderr",
         "-f",
         "null",
         "/dev/null",
