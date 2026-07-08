@@ -114,7 +114,7 @@ class QCService:
         delivery_profile_id: str | None = None,
         assertions: dict[str, float | None] | None = None,
     ) -> QCReportRecord:
-        """Run all 11 QC checks and persist a QCReport.
+        """Run all 12 QC checks and persist a QCReport.
 
         Args:
             artifact_path: Absolute path to the rendered artifact file.
