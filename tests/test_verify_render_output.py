@@ -12,9 +12,7 @@ from __future__ import annotations
 
 import json
 import sys
-from io import BytesIO
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -43,7 +41,10 @@ class TestDefaultMode:
                 "urllib.request.urlopen",
                 return_value=_mock_response(data),
             ),
-            patch("sys.argv", ["verify_render_output.py", "--job-id", "job-123", *(extra_args or [])]),
+            patch(
+                "sys.argv",
+                ["verify_render_output.py", "--job-id", "job-123", *(extra_args or [])],
+            ),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
@@ -56,9 +57,7 @@ class TestDefaultMode:
         assert code == 0
 
     def test_fail_when_status_not_completed(self) -> None:
-        code = self._run(
-            {"status": "running", "output_path": "/renders/out.mp4", "progress": 0.5}
-        )
+        code = self._run({"status": "running", "output_path": "/renders/out.mp4", "progress": 0.5})
         assert code == 1
 
     def test_fail_when_output_path_empty(self) -> None:
@@ -88,7 +87,7 @@ class TestDefaultMode:
 
 
 class TestFullMode:
-    """--full mode uses GET /render/{job_id}/evidence and checks command_args/exit_code/output_size_bytes."""
+    """--full mode uses the evidence endpoint; checks command_args, exit_code, output_size_bytes."""
 
     def _run(self, data: dict) -> int:
         with (
