@@ -349,6 +349,7 @@ async def build_command_for_job(
 
         multi_cmd: list[str] = ["ffmpeg"]
         source_audio_codec_mc: str | None = None
+        source_audio_input_idx_mc: int = 0
         cwe_list = []
         clip_durations_mc: list[float] = []
         for i, clip in enumerate(clips):
@@ -383,8 +384,9 @@ async def build_command_for_job(
                 source_path_mc = vid.path
                 duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
                 framerate_mc = vid.frame_rate
-                if i == 0:
+                if source_audio_codec_mc is None and vid.audio_codec:
                     source_audio_codec_mc = vid.audio_codec
+                    source_audio_input_idx_mc = i
             if duration_secs <= 0:
                 raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
             clip_durations_mc.append(duration_secs)
@@ -460,7 +462,8 @@ async def build_command_for_job(
             tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
             combined_filter = filter_complex_str + ";" + tts_filter_seg
             if source_audio_codec_mc is not None:
-                mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                src_a = f"[{source_audio_input_idx_mc}:a]"
+                mix_seg = f"{src_a}{tts_audio_label}amix=inputs=2:duration=longest[aout]"
                 combined_filter_with_mix = combined_filter + ";" + mix_seg
                 multi_cmd.extend(
                     [
