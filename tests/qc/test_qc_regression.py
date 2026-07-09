@@ -116,7 +116,7 @@ def test_golden_fixture_has_overall_verdict() -> None:
 
 
 @_skip_no_ffmpeg
-def test_golden_fixture_has_all_11_check_ids() -> None:
+def test_golden_fixture_has_all_12_check_ids() -> None:
     fixture = _load_golden()
     checks = fixture.get("checks", {})
     missing = [cid for cid in ALL_CHECK_IDS if cid not in checks]

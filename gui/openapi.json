@@ -3948,7 +3948,7 @@
           "qc"
         ],
         "summary": "Run Qc",
-        "description": "Run all 11 QC checks over a rendered artifact and return a QCReport.\n\nReturns HTTP 201 with the complete QCReport on success.\nReturns HTTP 422 when the artifact path is missing or invalid.\nReturns HTTP 404 when delivery_profile_id is provided but not found.",
+        "description": "Run all 12 QC checks over a rendered artifact and return a QCReport.\n\nReturns HTTP 201 with the complete QCReport on success.\nReturns HTTP 422 when the artifact path is missing or invalid.\nReturns HTTP 404 when delivery_profile_id is provided but not found.",
         "operationId": "run_qc_api_v1_qc_run_post",
         "requestBody": {
           "content": {

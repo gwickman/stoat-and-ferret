@@ -482,3 +482,37 @@ async def test_overall_verdict_any_false_is_fail(tmp_path: Path) -> None:
     svc._run_check = _null_then_false  # type: ignore[method-assign]
     record = await svc.run_checks(str(artifact))
     assert record.overall_verdict == "fail"
+
+
+# ---------------------------------------------------------------------------
+# Unit tests — BL-624 tone_presence null-target and parse-failure paths
+# ---------------------------------------------------------------------------
+
+
+async def test_tone_presence_no_target_returns_null_pass(tmp_path: Path) -> None:
+    """tone_presence with target=None returns pass=null when spectral parse fails."""
+    artifact = tmp_path / "out.wav"
+    artifact.write_bytes(b"placeholder")
+    # FFmpeg returns rc=0 with empty stderr (no spectral data — triggers parse failure)
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="", returncode=0))
+    record = await svc.run_checks(str(artifact))
+    checks = json.loads(record.checks)
+    assert checks["tone_presence"]["pass"] is None, (
+        f"Expected tone_presence.pass=null with no target, got {checks['tone_presence']['pass']}"
+    )
+
+
+async def test_tone_presence_parse_failure_with_asserted_target_returns_false(
+    tmp_path: Path,
+) -> None:
+    """tone_presence with target set and parse failure returns pass=False."""
+    artifact = tmp_path / "out.wav"
+    artifact.write_bytes(b"placeholder")
+    # FFmpeg returns rc=0 with empty stderr (parse fails — no spectral data)
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="", returncode=0))
+    record = await svc.run_checks(str(artifact), assertions={"tone_presence": -40.0})
+    checks = json.loads(record.checks)
+    assert checks["tone_presence"]["pass"] is False, (
+        f"Expected tone_presence.pass=False with target set and parse failure, "
+        f"got {checks['tone_presence']['pass']}"
+    )
