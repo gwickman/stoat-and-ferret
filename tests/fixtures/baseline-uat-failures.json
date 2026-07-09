@@ -1,7 +1,1 @@
-[
-  {
-    "journey_id": 703,
-    "reason": "UAT seed gap now fixed in code (BL-480-AC-5): seed_sample_project.py now inserts a QC-fail render row when the seed succeeds. CI headless run still fails because demo video files (videos/demo/) are absent on the CI runner, so seed_sample_project.py exits before the QC-fail row insertion step. J703 passes in a headed run with demo videos present. Discharge: BL-480-AC-1 (headed UAT run).",
-    "tracking_reference": "BL-480"
-  }
-]
+[]
