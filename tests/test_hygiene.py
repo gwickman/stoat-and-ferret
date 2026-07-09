@@ -252,15 +252,20 @@ def test_no_http422_unprocessable_entity_in_src() -> None:
 
 
 def test_uat_baseline_stale_j502_j504_absent() -> None:
-    """BL-590: J502/J504 fixed by BL-558; must not reappear in baseline-uat-failures.json."""
+    """BL-590: J502/J504 may appear in baseline only when tracked under BL-558
+    (headless limitation).
+
+    BL-558 (v102) intentionally re-registered J502/J504 as known headless UAT limitations.
+    Stale or untracked re-additions are still guarded — entries must carry
+    tracking_reference=BL-558.
+    """
     import json
 
     registry_path = Path("tests/fixtures/baseline-uat-failures.json")
     entries = json.loads(registry_path.read_text())
-    journey_ids = {entry["journey_id"] for entry in entries}
-    assert 502 not in journey_ids, (
-        "J502 is stale (fixed by BL-558) and must not be in baseline-uat-failures.json"
-    )
-    assert 504 not in journey_ids, (
-        "J504 is stale (fixed by BL-558) and must not be in baseline-uat-failures.json"
-    )
+    for entry in entries:
+        if entry["journey_id"] in (502, 504):
+            assert entry.get("tracking_reference") == "BL-558", (
+                f"J{entry['journey_id']} may only appear in baseline-uat-failures.json "
+                "when tracked via BL-558 (headless UAT limitation)"
+            )
