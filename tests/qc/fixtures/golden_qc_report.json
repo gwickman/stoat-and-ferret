@@ -34,7 +34,7 @@
     "tone_presence": {
       "measured": null,
       "target": null,
-      "pass": false,
+      "pass": null,
       "units": ""
     },
     "ducking": {
