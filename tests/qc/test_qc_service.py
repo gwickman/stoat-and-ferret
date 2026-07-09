@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -620,4 +621,39 @@ async def test_true_peak_scope_guard_ceiling_check_unchanged(tmp_path: Path) -> 
     assert result["pass"] is True, (
         f"true_peak pass=True expected for measured=-2.0 (below ceiling -1.0), "
         f"got {result['pass']} — _check_true_peak must not use bidirectional form"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Behavioral tests — BL-626 decode_integrity null-decode (STOAT_TEST_FFMPEG=1)
+# ---------------------------------------------------------------------------
+
+CORRUPT_ARTIFACT = Path(__file__).parent / "fixtures" / "corrupt_artifact.mp4"
+
+
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
+async def test_decode_integrity_corrupt_artifact_fails() -> None:
+    """Corrupt artifact returns decode_integrity.pass=False under null-decode (BL-626-AC-2).
+
+    The fixture is a truncated/garbage MP4 body. Without -c copy, FFmpeg decodes frames
+    and detects the corruption, exiting non-zero → measured=1.0 → pass=False.
+    """
+    svc, _, _ = _make_service(asyncio.create_subprocess_exec)
+    result = await svc._check_decode_integrity(artifact_path=str(CORRUPT_ARTIFACT), target=0.0)
+    assert result["pass"] is False, (
+        f"Expected pass=False for corrupt artifact, got {result['pass']} "
+        f"(measured={result['measured']})"
+    )
+
+
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
+async def test_decode_integrity_valid_artifact_passes(sample_video_path: Path) -> None:
+    """Valid artifact returns decode_integrity.measured=0.0 under null-decode (BL-626-AC-3).
+
+    FFmpeg decodes all frames without errors → rc=0 → measured=0.0 → pass=True.
+    """
+    svc, _, _ = _make_service(asyncio.create_subprocess_exec)
+    result = await svc._check_decode_integrity(artifact_path=str(sample_video_path), target=0.0)
+    assert result["measured"] == 0.0, (
+        f"Expected measured=0.0 for valid artifact, got {result['measured']}"
     )
