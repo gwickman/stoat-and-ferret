@@ -24,7 +24,7 @@ from stoat_ferret.db.qc_repository import InMemoryQCReportRepository, QCReportRe
 
 
 def _null_checks() -> dict[str, Any]:
-    """Return a deterministic checks dict with all 11 check IDs set to null."""
+    """Return a deterministic checks dict with all 12 check IDs set to null."""
     return {
         check_id: {"measured": None, "target": None, "pass": False, "units": ""}
         for check_id in ALL_CHECK_IDS
@@ -138,6 +138,93 @@ async def test_smoke_get_render_job_qc(qc_smoke_client: httpx.AsyncClient) -> No
     assert resp.status_code == 404
     body = resp.json()
     assert "detail" in body
+
+
+@pytest.fixture()
+async def qc_smoke_client_with_dp() -> httpx.AsyncClient:  # type: ignore[misc]
+    """Async httpx client with mock QCService and delivery_profile_repository injected.
+
+    Extends qc_smoke_client with an in-memory delivery profile repository so that
+    POST /qc/run with delivery_profile_id exercises the profile resolution path.
+    """
+    from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
+    from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
+    from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
+    from stoat_ferret.db.delivery_profiles_repository import AsyncInMemoryDeliveryProfileRepository
+    from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+    from stoat_ferret.jobs.queue import InMemoryJobQueue
+
+    repo = InMemoryQCReportRepository()
+    svc = _build_mock_qc_service(repo)
+
+    video_repo = AsyncInMemoryVideoRepository()
+    queue = InMemoryJobQueue()
+    queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(video_repo))
+
+    app = create_app(
+        video_repository=video_repo,
+        project_repository=AsyncInMemoryProjectRepository(),
+        clip_repository=AsyncInMemoryClipRepository(),
+        job_queue=queue,
+        qc_service=svc,
+        delivery_profile_repository=AsyncInMemoryDeliveryProfileRepository(),
+    )
+    app.state.qc_report_repository = repo
+
+    async with (
+        lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
+        yield client
+
+
+async def test_smoke_post_qc_run_with_profile_resolves_targets(
+    qc_smoke_client_with_dp: httpx.AsyncClient,
+) -> None:
+    """POST /qc/run with delivery_profile_id routes through profile lookup correctly (BL-628).
+
+    Creates a delivery profile, then verifies POST /qc/run returns 201 and echoes
+    delivery_profile_id back. Validates routing and DI wiring — not FFmpeg output.
+    """
+    client = qc_smoke_client_with_dp
+
+    dp_resp = await client.post(
+        "/api/v1/delivery_profiles",
+        json={
+            "name": "smoke-profile-qc",
+            "output_formats": [{"container": "mp4", "codec": "h264", "bitrate_kbps": 2000}],
+            "loudness_target_lufs": -14.0,
+            "true_peak_ceiling_dbtp": -1.0,
+        },
+    )
+    assert dp_resp.status_code == 201, dp_resp.text
+    profile_id = dp_resp.json()["id"]
+
+    resp = await client.post(
+        "/api/v1/qc/run",
+        json={"artifact_path": "/tmp/smoke.mp4", "delivery_profile_id": profile_id},
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["delivery_profile_id"] == profile_id
+    assert "checks" in body
+
+
+async def test_smoke_post_qc_run_profile_not_found_returns_404(
+    qc_smoke_client_with_dp: httpx.AsyncClient,
+) -> None:
+    """POST /qc/run with non-existent delivery_profile_id returns 404 (BL-628-AC-4)."""
+    resp = await qc_smoke_client_with_dp.post(
+        "/api/v1/qc/run",
+        json={
+            "artifact_path": "/tmp/smoke.mp4",
+            "delivery_profile_id": "00000000-0000-0000-0000-000000000000",
+        },
+    )
+    assert resp.status_code == 404, resp.text
 
 
 # ---------------------------------------------------------------------------

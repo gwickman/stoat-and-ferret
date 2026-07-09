@@ -4,7 +4,7 @@
 """QC analysis API endpoints.
 
 Exposes three routes:
-  POST  /api/v1/qc/run               — run all 11 checks, return QCReport (201)
+  POST  /api/v1/qc/run               — run all 12 checks, return QCReport (201)
   GET   /api/v1/qc/reports/{id}      — fetch a QCReport by UUID (200/404)
   GET   /api/v1/render/{job_id}/qc   — latest QCReport for a render job (200/404)
 """
@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from stoat_ferret.api.schemas.qc import QCReportResponse, QCRunRequest
 from stoat_ferret.api.services.qc_service import QCService
 from stoat_ferret.db.qc_repository import AsyncSQLiteQCReportRepository, QCReportRecord
+from stoat_ferret.render.service import _build_assertions_from_profile
 
 logger = structlog.get_logger(__name__)
 
@@ -75,36 +76,36 @@ async def run_qc(body: QCRunRequest, request: Request) -> QCReportResponse:
     """
     svc = _get_service(request)
 
-    # If delivery_profile_id given, verify it exists (profiles not yet implemented → 404)
+    # Resolve delivery profile into QC assertions if provided; explicit assertions take precedence
+    merged_assertions: dict[str, float | None] | None = body.assertions
     if body.delivery_profile_id is not None:
-        # Attempt lookup; fail fast if profile does not exist
-        db = getattr(request.app.state, "db", None)
-        profile_found = False
-        if db is not None:
-            try:
-                cursor = await db.execute(
-                    "SELECT id FROM delivery_profiles WHERE id = ? LIMIT 1",
-                    (body.delivery_profile_id,),
-                )
-                row = await cursor.fetchone()
-                profile_found = row is not None
-            except Exception:
-                profile_found = False
-        if not profile_found:
+        profile_repo = getattr(request.app.state, "delivery_profile_repository", None)
+        if profile_repo is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "DELIVERY_PROFILE_SERVICE_UNAVAILABLE",
+                    "message": "delivery profile service unavailable",
+                },
+            )
+        profile = await profile_repo.get_by_id(body.delivery_profile_id)
+        if profile is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "code": "DELIVERY_PROFILE_NOT_FOUND",
-                    "message": f"Delivery profile '{body.delivery_profile_id}' not found",
+                    "message": f"delivery profile {body.delivery_profile_id} not found",
                 },
             )
+        profile_assertions = _build_assertions_from_profile(profile)
+        merged_assertions = {**profile_assertions, **(body.assertions or {})}
 
     try:
         record = await svc.run_checks(
             artifact_path=body.artifact_path,
             job_id=body.job_id,
             delivery_profile_id=body.delivery_profile_id,
-            assertions=body.assertions,
+            assertions=merged_assertions,
         )
     except FileNotFoundError as exc:
         raise HTTPException(
