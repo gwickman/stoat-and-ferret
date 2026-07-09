@@ -4,6 +4,37 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v102 — QC Gate Correctness & UAT Registry Cleanup (2026-07-09)
+
+### Theme 1: QC Gate Correctness
+
+- BL-623: Excluded null-pass (no-measurement) checks from `overall_verdict` aggregation — `overall_verdict` now reflects only checks that ran and produced a result; "always-fail" regression resolved (PR #778)
+- BL-624: Added `ametadata=mode=print` to tone_presence FFmpeg command — tone detection now emits parseable `lavfi.astats` metadata; `check_tone_presence` returns a non-null `measured` value (PR #779)
+- BL-625: Switched loudness_integrated tolerance check to bidirectional ±0.5 LU window per AC-MASTER-2 spec; updated golden fixture and compliant-render test (PRs #780, #781)
+- BL-626: Fixed null-decode path in decode integrity check — `None` codec name no longer causes `AttributeError`; check returns a structured result in all paths (PR #782)
+- BL-627: Completed OC-to-QC-check mapping table coverage — all outcome codes have a mapped `qc_check` entry; `test_oc_mapping_completeness` passes (PR #783)
+- BL-628: `POST /qc/run` now resolves delivery profile targets via `DeliveryProfileRepository`; loudness and true-peak assertions are populated before `run_checks` is called (PR #784)
+
+### Theme 2: Acceptance Harness Discharge
+
+- BL-459: Fixed `_evaluate_oc_outcomes` semantics and aligned OC count assertion with actual OC-to-QC mapping; acceptance harness passes for all mapped outcome codes (PR #785)
+- BL-457-AC-3: Discharged J703/J704 headed UAT — removed J703/J704 from UAT baseline failure registry (direct commit 4817fdad)
+
+### Theme 3: UAT Registry Cleanup
+
+- BL-536: Registered J204 in UAT baseline failure registry — baseline reflects J204 known failure (direct commit 38929883)
+- BL-558: Registered J502 and J504 in UAT baseline failure registry — baseline reflects two additional known failures (direct commit d8902152)
+
+### PRs
+
+#778, #779, #780, #781, #782, #783, #784, #785
+
+### Resolved
+
+BL-623 (overall_verdict null-pass exclusion — AC-2/3/4 supported; AC-1 FFmpeg-gated deferred), BL-624 (tone_presence FFmpeg fix — ACs supported), BL-625 (bidirectional loudness tolerance — ACs supported), BL-626 (decode integrity null decode — AC-1/2/4 supported; AC-2/3 FFmpeg-gated deferred), BL-627 (OC mapping completeness — ACs supported), BL-628 (QC router profile resolution — ACs supported), BL-459 (acceptance harness _evaluate_oc_outcomes fix — ACs supported), BL-457-AC-3 (J703/J704 headed UAT discharge), BL-536 (J204 UAT baseline registration), BL-558 (J502/J504 UAT baseline registration)
+
+---
+
 ## v101 — QC Completion (R2 P1 Cluster) (2026-07-09)
 
 ### Theme 1: QC Bug Fix Discharge
