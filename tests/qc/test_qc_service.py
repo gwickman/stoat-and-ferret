@@ -421,3 +421,64 @@ async def test_qc_service_golden_fixture(sample_video_path: Path) -> None:
     checks = json.loads(record.checks)
     assert set(checks.keys()) == set(ALL_CHECK_IDS)
     assert record.overall_verdict in ("pass", "fail", "error")
+
+
+# ---------------------------------------------------------------------------
+# Unit tests — BL-623 null-pass exclusion in overall_verdict aggregation
+# ---------------------------------------------------------------------------
+
+
+async def test_overall_verdict_excludes_null_pass_checks(tmp_path: Path) -> None:
+    """overall_verdict is 'pass' when null-pass checks are excluded and at least one passes."""
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+
+    svc, _, _ = _make_service()
+    call_count = [0]
+
+    async def _mixed_null_true(**kwargs: Any) -> dict:
+        call_count[0] += 1
+        # First check passes; all others return null pass (unasserted)
+        if call_count[0] == 1:
+            return {"measured": -14.0, "target": -14.0, "pass": True, "units": "LUFS"}
+        return {"measured": None, "target": None, "pass": None, "units": ""}
+
+    svc._run_check = _mixed_null_true  # type: ignore[method-assign]
+    record = await svc.run_checks(str(artifact))
+    assert record.overall_verdict == "pass"
+
+
+async def test_overall_verdict_all_null_is_fail(tmp_path: Path) -> None:
+    """overall_verdict is 'fail' when all checks have pass=null (no assertions at all)."""
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+
+    svc, _, _ = _make_service()
+
+    async def _null_check(**kwargs: Any) -> dict:
+        return {"measured": None, "target": None, "pass": None, "units": ""}
+
+    svc._run_check = _null_check  # type: ignore[method-assign]
+    record = await svc.run_checks(str(artifact))
+    assert record.overall_verdict == "fail"
+
+
+async def test_overall_verdict_any_false_is_fail(tmp_path: Path) -> None:
+    """overall_verdict is 'fail' when any asserted check has pass=False, even with null others."""
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+
+    svc, _, _ = _make_service()
+    call_count = [0]
+
+    async def _null_then_false(**kwargs: Any) -> dict:
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return {"measured": None, "target": None, "pass": None, "units": ""}
+        if call_count[0] == 2:
+            return {"measured": -10.0, "target": -14.0, "pass": False, "units": "LUFS"}
+        return {"measured": None, "target": None, "pass": None, "units": ""}
+
+    svc._run_check = _null_then_false  # type: ignore[method-assign]
+    record = await svc.run_checks(str(artifact))
+    assert record.overall_verdict == "fail"

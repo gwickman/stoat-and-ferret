@@ -181,7 +181,8 @@ class QCService:
                 )
             )
 
-        all_pass = all(c.get("pass") is True for c in checks.values())
+        asserted = [c for c in checks.values() if c.get("pass") is not None]
+        all_pass = bool(asserted) and all(c.get("pass") is True for c in asserted)
         overall_verdict = "pass" if all_pass else "fail"
 
         record = QCReportRecord(
