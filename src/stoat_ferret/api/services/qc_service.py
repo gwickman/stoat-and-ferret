@@ -539,8 +539,6 @@ class QCService:
             "error",
             "-i",
             artifact_path,
-            "-c",
-            "copy",
             "-f",
             "null",
             "/dev/null",
