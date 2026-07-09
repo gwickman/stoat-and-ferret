@@ -411,19 +411,23 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "aspectralstats",
+            "aspectralstats,ametadata=mode=print",
             "-f",
             "null",
             "/dev/null",
         )
         if rc != 0 and not stderr:
+            if target is None:
+                return _make_check(None, None, "dB")
             return dict(_NULL_CHECK)
         try:
             report = parse_spectral_report(stderr)
             means = report.channel_means
             measured = float(means[0]) if means else None
         except (ValueError, AttributeError, IndexError):
-            return dict(_NULL_CHECK)
+            if target is None:
+                return _make_check(None, None, "dB")
+            return _make_check(None, target, "dB")
 
         if target is None:
             return _make_check(measured, None, "dB")

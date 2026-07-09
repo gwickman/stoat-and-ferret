@@ -67,7 +67,7 @@ def _record_to_response(record: QCReportRecord) -> QCReportResponse:
 
 @router.post("/qc/run", status_code=status.HTTP_201_CREATED, response_model=QCReportResponse)
 async def run_qc(body: QCRunRequest, request: Request) -> QCReportResponse:
-    """Run all 11 QC checks over a rendered artifact and return a QCReport.
+    """Run all 12 QC checks over a rendered artifact and return a QCReport.
 
     Returns HTTP 201 with the complete QCReport on success.
     Returns HTTP 422 when the artifact path is missing or invalid.
