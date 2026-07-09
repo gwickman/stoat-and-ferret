@@ -30,8 +30,8 @@ def _is_placeholder(fixture: dict[str, Any]) -> bool:
 
 
 class TestOcMapping:
-    def test_oc_to_qc_check_has_11_entries(self) -> None:
-        assert len(OC_TO_QC_CHECK) == 11
+    def test_oc_to_qc_check_has_12_entries(self) -> None:
+        assert len(OC_TO_QC_CHECK) == 12
 
     def test_every_check_id_is_non_empty_string(self) -> None:
         for oc, check_ids in OC_TO_QC_CHECK.items():
@@ -39,8 +39,8 @@ class TestOcMapping:
             for cid in check_ids:
                 assert isinstance(cid, str) and cid, f"{oc} has blank check id"
 
-    def test_oc_human_only_has_four_entries(self) -> None:
-        assert len(OC_HUMAN_ONLY) == 4
+    def test_oc_human_only_has_five_entries(self) -> None:
+        assert len(OC_HUMAN_ONLY) == 5
 
     def test_human_only_ocs_not_in_machine_verifiable_map(self) -> None:
         for oc in OC_HUMAN_ONLY:
@@ -93,3 +93,7 @@ class TestOcAssertionsAgainstFixture:
         checks = fixture["checks"]
         for cid in check_ids:
             assert "pass" in checks[cid], f"OC {oc}: check '{cid}' missing 'pass' field"
+            if checks[cid].get("target") is not None:
+                assert checks[cid].get("pass") is not None, (
+                    f"OC {oc}: check '{cid}' pass value is null for an asserted check"
+                )
