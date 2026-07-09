@@ -8,6 +8,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -20,6 +22,10 @@ from stoat_ferret.api.app import create_app
 from stoat_ferret.api.services.qc_service import ALL_CHECK_IDS, QCService
 from stoat_ferret.api.websocket.events import EventType
 from stoat_ferret.api.websocket.manager import ConnectionManager
+from stoat_ferret.db.delivery_profiles_repository import (
+    AsyncInMemoryDeliveryProfileRepository,
+    DeliveryProfile,
+)
 from stoat_ferret.db.qc_repository import InMemoryQCReportRepository
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
@@ -66,7 +72,11 @@ def _make_service(
     return svc, repo, broadcast_events
 
 
-def _make_api_app(svc: QCService, repo: InMemoryQCReportRepository | None = None) -> FastAPI:
+def _make_api_app(
+    svc: QCService,
+    repo: InMemoryQCReportRepository | None = None,
+    delivery_profile_repo: Any | None = None,
+) -> FastAPI:
     """Build a minimal test app with the given QCService injected."""
     from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
     from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
@@ -84,6 +94,7 @@ def _make_api_app(svc: QCService, repo: InMemoryQCReportRepository | None = None
         clip_repository=AsyncInMemoryClipRepository(),
         job_queue=queue,
         qc_service=svc,
+        delivery_profile_repository=delivery_profile_repo,
     )
     if repo is not None:
         app.state.qc_report_repository = repo
@@ -321,14 +332,143 @@ def test_post_qc_run_profile_not_found(tmp_path: Path) -> None:
 
     repo = InMemoryQCReportRepository()
     svc, _, _ = _make_service(repo=repo)
-    app = _make_api_app(svc, repo)
+    dp_repo = AsyncInMemoryDeliveryProfileRepository()
+    app = _make_api_app(svc, repo, delivery_profile_repo=dp_repo)
 
     with TestClient(app) as client:
         resp = client.post(
             "/api/v1/qc/run",
             json={
                 "artifact_path": str(artifact),
-                "delivery_profile_id": "profile-does-not-exist",
+                "delivery_profile_id": "00000000-0000-0000-0000-000000000000",
+            },
+        )
+
+    assert resp.status_code == 404, resp.text
+
+
+def _make_echo_target_service(repo: InMemoryQCReportRepository | None = None) -> QCService:
+    """Build a QCService whose _run_check echoes the target into the result dict.
+
+    This allows API integration tests to verify that assertions (from a delivery
+    profile or explicit caller) are correctly threaded through to run_checks.
+    """
+    svc, _, _ = _make_service(repo=repo)
+
+    async def _echo_target(*, artifact_path: str, target: float | None, **kwargs: Any) -> dict:
+        return {
+            "measured": None,
+            "target": target,
+            "pass": None if target is None else False,
+            "units": "",
+        }
+
+    svc._run_check = _echo_target  # type: ignore[method-assign]
+    return svc
+
+
+def _make_profile(
+    profile_id: str,
+    loudness_target_lufs: float = -14.0,
+    true_peak_ceiling_dbtp: float = -1.0,
+) -> DeliveryProfile:
+    """Build an in-memory DeliveryProfile for testing."""
+    return DeliveryProfile(
+        id=profile_id,
+        name=f"profile-{profile_id[:8]}",
+        output_formats=[],
+        loudness_target_lufs=loudness_target_lufs,
+        true_peak_ceiling_dbtp=true_peak_ceiling_dbtp,
+        metadata_template=None,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+def test_run_qc_with_profile_resolves_targets(tmp_path: Path) -> None:
+    """POST /qc/run with delivery_profile_id only → loudness/true_peak targets non-null (BL-628)."""
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+
+    repo = InMemoryQCReportRepository()
+    svc = _make_echo_target_service(repo)
+
+    profile_id = str(uuid.uuid4())
+    dp_repo = AsyncInMemoryDeliveryProfileRepository()
+    dp_repo._profiles[profile_id] = _make_profile(
+        profile_id, loudness_target_lufs=-14.0, true_peak_ceiling_dbtp=-1.0
+    )
+
+    app = _make_api_app(svc, repo, delivery_profile_repo=dp_repo)
+
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/qc/run",
+            json={"artifact_path": str(artifact), "delivery_profile_id": profile_id},
+        )
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["checks"]["loudness_integrated"]["target"] is not None, (
+        "loudness_integrated.target must be non-null when delivery_profile_id is provided"
+    )
+    assert body["checks"]["true_peak"]["target"] is not None, (
+        "true_peak.target must be non-null when delivery_profile_id is provided"
+    )
+
+
+def test_run_qc_explicit_assertions_win_over_profile(tmp_path: Path) -> None:
+    """POST /qc/run with both profile and explicit assertions → explicit wins (BL-628-AC-2)."""
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+
+    repo = InMemoryQCReportRepository()
+    svc = _make_echo_target_service(repo)
+
+    profile_id = str(uuid.uuid4())
+    dp_repo = AsyncInMemoryDeliveryProfileRepository()
+    dp_repo._profiles[profile_id] = _make_profile(
+        profile_id, loudness_target_lufs=-14.0, true_peak_ceiling_dbtp=-1.0
+    )
+
+    app = _make_api_app(svc, repo, delivery_profile_repo=dp_repo)
+
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/qc/run",
+            json={
+                "artifact_path": str(artifact),
+                "delivery_profile_id": profile_id,
+                "assertions": {"loudness_integrated": -16.0},
+            },
+        )
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    # Explicit assertion (-16.0) overrides profile loudness_target_lufs (-14.0)
+    assert body["checks"]["loudness_integrated"]["target"] == -16.0, (
+        "Explicit assertion must take precedence over profile target"
+    )
+    # true_peak comes from profile when no explicit assertion provided
+    assert body["checks"]["true_peak"]["target"] == -1.0
+
+
+def test_run_qc_profile_not_found_returns_404(tmp_path: Path) -> None:
+    """POST /qc/run with non-existent delivery_profile_id returns 404 (BL-628-AC-4)."""
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+
+    repo = InMemoryQCReportRepository()
+    svc = _make_echo_target_service(repo)
+    dp_repo = AsyncInMemoryDeliveryProfileRepository()
+
+    app = _make_api_app(svc, repo, delivery_profile_repo=dp_repo)
+
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/qc/run",
+            json={
+                "artifact_path": str(artifact),
+                "delivery_profile_id": "00000000-0000-0000-0000-000000000000",
             },
         )
 
