@@ -342,8 +342,8 @@ async def test_compliant_render_passes_loudness_gate(tmp_path: Path) -> None:
     """Compliant audio (meeting loudness/true-peak targets) has pass=True on those checks.
 
     Confirms the gate evaluates real FFmpeg measurements rather than
-    short-circuiting. A 440 Hz sine WAV at ~-21 LUFS / -21 dBTP passes both
-    the -30 LUFS floor and the -1 dBTP ceiling.
+    short-circuiting. A 440 Hz sine WAV at ~-21.75 LUFS / -21 dBTP passes the
+    bidirectional ±0.5 LU window around -22.0 (BL-625) and the -1 dBTP ceiling.
 
     Note: overall_verdict remains "fail" because chapters_present defaults to
     target=1.0 (hardcoded) and av_sync returns _NULL_CHECK for audio-only files.
@@ -354,9 +354,10 @@ async def test_compliant_render_passes_loudness_gate(tmp_path: Path) -> None:
     _generate_sine_wav(audio)
 
     svc = _make_real_qc_service()
-    # Loose targets: sine at ~-21 LUFS passes -30 floor; -21 dBTP passes -1 ceiling.
+    # Bidirectional ±0.5 LU window (BL-625): sine at ~-21.75 LUFS passes -22.0
+    # target (delta=0.25 LU); -21 dBTP passes -1 dBTP ceiling.
     assertions: dict[str, float | None] = {
-        "loudness_integrated": -30.0,
+        "loudness_integrated": -22.0,
         "true_peak": -1.0,
     }
     record = await svc.run_checks(str(audio), assertions=assertions)
@@ -365,7 +366,7 @@ async def test_compliant_render_passes_loudness_gate(tmp_path: Path) -> None:
     li = checks["loudness_integrated"]
     assert li["pass"] is True, (
         f"loudness_integrated.pass should be True: "
-        f"measured={li['measured']} >= target={li['target']}"
+        f"|{li['measured']} - {li['target']}| should be ≤ 0.5 LU"
     )
 
     tp = checks["true_peak"]
