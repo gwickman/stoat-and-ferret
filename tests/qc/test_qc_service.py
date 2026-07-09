@@ -9,7 +9,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -515,4 +515,109 @@ async def test_tone_presence_parse_failure_with_asserted_target_returns_false(
     assert checks["tone_presence"]["pass"] is False, (
         f"Expected tone_presence.pass=False with target set and parse failure, "
         f"got {checks['tone_presence']['pass']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Unit tests — BL-625 bidirectional loudness tolerance (±0.5 LU)
+# ---------------------------------------------------------------------------
+
+
+def _mock_loudness_report(integrated_lufs: float) -> MagicMock:
+    """Build a mock parse_loudness_report return value with given integrated_lufs."""
+    report = MagicMock()
+    report.integrated_lufs = integrated_lufs
+    report.true_peak_dbtp = -1.0
+    report.lra = 7.0
+    return report
+
+
+def test_loudness_named_constant_exists() -> None:
+    """LOUDNESS_TOLERANCE_LU constant exists in qc_service with value 0.5 (AC-MASTER-2)."""
+    from stoat_ferret.api.services.qc_service import LOUDNESS_TOLERANCE_LU
+
+    assert LOUDNESS_TOLERANCE_LU == 0.5
+
+
+async def test_loudness_within_tolerance_passes(tmp_path: Path) -> None:
+    """_check_loudness_integrated passes when measured is within ±0.5 LU of target.
+
+    measured=-14.3, target=-14.0 → |(-14.3) - (-14.0)| = 0.3 ≤ 0.5 → pass=True.
+    """
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="loudnorm_data", returncode=0))
+    mock_report = _mock_loudness_report(-14.3)
+    with patch("stoat_ferret_core.parse_loudness_report", return_value=mock_report):
+        result = await svc._check_loudness_integrated(artifact_path=str(artifact), target=-14.0)
+    assert result["pass"] is True, (
+        f"Expected pass=True for measured=-14.3, target=-14.0, got {result['pass']}"
+    )
+
+
+async def test_loudness_too_loud_fails(tmp_path: Path) -> None:
+    """_check_loudness_integrated fails when measured is more than 0.5 LU louder than target.
+
+    measured=-13.4, target=-14.0 → |(-13.4) - (-14.0)| = 0.6 > 0.5 → pass=False.
+    """
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="loudnorm_data", returncode=0))
+    mock_report = _mock_loudness_report(-13.4)
+    with patch("stoat_ferret_core.parse_loudness_report", return_value=mock_report):
+        result = await svc._check_loudness_integrated(artifact_path=str(artifact), target=-14.0)
+    assert result["pass"] is False, (
+        f"Expected pass=False for measured=-13.4, target=-14.0, got {result['pass']}"
+    )
+
+
+async def test_loudness_too_quiet_fails(tmp_path: Path) -> None:
+    """_check_loudness_integrated fails when measured is more than 0.5 LU quieter than target.
+
+    measured=-18.0, target=-14.0 → |(-18.0) - (-14.0)| = 4.0 > 0.5 → pass=False.
+    """
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="loudnorm_data", returncode=0))
+    mock_report = _mock_loudness_report(-18.0)
+    with patch("stoat_ferret_core.parse_loudness_report", return_value=mock_report):
+        result = await svc._check_loudness_integrated(artifact_path=str(artifact), target=-14.0)
+    assert result["pass"] is False, (
+        f"Expected pass=False for measured=-18.0, target=-14.0, got {result['pass']}"
+    )
+
+
+async def test_loudness_far_above_target_fails(tmp_path: Path) -> None:
+    """_check_loudness_integrated fails when measured is 4 LU louder than target.
+
+    measured=-10.0, target=-14.0 → |(-10.0) - (-14.0)| = 4.0 > 0.5 → pass=False.
+    """
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="loudnorm_data", returncode=0))
+    mock_report = _mock_loudness_report(-10.0)
+    with patch("stoat_ferret_core.parse_loudness_report", return_value=mock_report):
+        result = await svc._check_loudness_integrated(artifact_path=str(artifact), target=-14.0)
+    assert result["pass"] is False, (
+        f"Expected pass=False for measured=-10.0, target=-14.0, got {result['pass']}"
+    )
+
+
+async def test_true_peak_scope_guard_ceiling_check_unchanged(tmp_path: Path) -> None:
+    """_check_true_peak remains a one-sided ceiling check — unchanged by BL-625.
+
+    measured=-2.0, target=-1.0 → -2.0 ≤ -1.0 → pass=True (below ceiling).
+    A bidirectional change would break this: abs(-2.0 - (-1.0)) = 1.0 > 0.5 → False.
+    """
+    artifact = tmp_path / "out.mp4"
+    artifact.write_bytes(b"placeholder")
+    svc, _, _ = _make_service(_make_mock_subprocess(stderr="loudnorm_data", returncode=0))
+    mock_report = _mock_loudness_report(-21.0)
+    mock_report.true_peak_dbtp = -2.0
+    with patch("stoat_ferret_core.parse_loudness_report", return_value=mock_report):
+        result = await svc._check_true_peak(artifact_path=str(artifact), target=-1.0)
+    # -2.0 ≤ -1.0 → pass (ceiling check, not bidirectional)
+    assert result["pass"] is True, (
+        f"true_peak pass=True expected for measured=-2.0 (below ceiling -1.0), "
+        f"got {result['pass']} — _check_true_peak must not use bidirectional form"
     )

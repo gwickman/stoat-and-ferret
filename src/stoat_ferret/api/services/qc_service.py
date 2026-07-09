@@ -50,6 +50,9 @@ ALL_CHECK_IDS: list[str] = [
 # Default result for a missing or failed check (FFmpeg unavailable).
 _NULL_CHECK: dict[str, Any] = {"measured": None, "target": None, "pass": False, "units": ""}
 
+# AC-MASTER-2: loudness compliance window is ±0.5 LU of target (bidirectional).
+LOUDNESS_TOLERANCE_LU = 0.5
+
 
 def _make_check(
     measured: float | None,
@@ -285,7 +288,9 @@ class QCService:
 
         if target is None:
             return _make_check(measured, None, "LUFS")
-        pass_val = measured >= target if measured is not None else False
+        pass_val = (
+            abs(measured - target) <= LOUDNESS_TOLERANCE_LU if measured is not None else False
+        )
         return _make_check(measured, target, "LUFS", pass_override=pass_val)
 
     async def _check_true_peak(self, *, artifact_path: str, target: float | None) -> dict[str, Any]:
