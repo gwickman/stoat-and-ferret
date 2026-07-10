@@ -427,8 +427,12 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
             let frequency = params
                 .get("frequency")
                 .and_then(|v| v.as_f64())
-                .ok_or_else(|| "tone params must have a 'frequency' field".to_string())?;
-            let frequency_end = params.get("frequency_end").and_then(|v| v.as_f64());
+                .ok_or_else(|| "tone params must have a 'frequency' field".to_string())?
+                .clamp(20.0, 20000.0);
+            let frequency_end = params
+                .get("frequency_end")
+                .and_then(|v| v.as_f64())
+                .map(|f| f.clamp(20.0, 20000.0));
             let binaural_offset = params.get("binaural_offset").and_then(|v| v.as_f64());
 
             // Linear chirp when frequency_end is set:
@@ -442,10 +446,10 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
 
             match binaural_offset {
                 Some(offset) => {
-                    let rf = frequency + offset;
+                    let rf = (frequency + offset).clamp(20.0, 20000.0);
                     let right_expr = match frequency_end {
                         Some(f1) => {
-                            let rf1 = f1 + offset;
+                            let rf1 = (f1 + offset).clamp(20.0, 20000.0);
                             format!(
                                 "sin(2*PI*({rf:.3}*t+({rf1:.3}-{rf:.3})*t*t/(2*{duration:.6})))"
                             )
@@ -999,6 +1003,35 @@ mod tests {
     fn build_generator_source_filter_unknown_type() {
         let r = build_generator_source_filter(r#"{"type":"unknown_type"}"#, 5.0);
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn test_tone_filter_frequency_clamped_min() {
+        // frequency=5.0 Hz is below 20 Hz minimum; must clamp to 20 Hz
+        let f = build_generator_source_filter(r#"{"type":"tone","frequency":5.0}"#, 1.0).unwrap();
+        assert!(
+            f.contains("20.000"),
+            "Expected clamped frequency 20.000 in: {f}"
+        );
+        assert!(
+            !f.contains("5.000"),
+            "Expected original 5.000 to be absent: {f}"
+        );
+    }
+
+    #[test]
+    fn test_tone_filter_frequency_clamped_max() {
+        // frequency=25000.0 Hz is above 20000 Hz maximum; must clamp to 20000 Hz
+        let f =
+            build_generator_source_filter(r#"{"type":"tone","frequency":25000.0}"#, 1.0).unwrap();
+        assert!(
+            f.contains("20000.000"),
+            "Expected clamped frequency 20000.000 in: {f}"
+        );
+        assert!(
+            !f.contains("25000.000"),
+            "Expected original 25000.000 to be absent: {f}"
+        );
     }
 
     // -- build_loop_render_command tests --
