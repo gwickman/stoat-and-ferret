@@ -120,6 +120,39 @@
   - Aggregates per-segment progress weighted by duration
   - Location: progress.rs:205
 
+### translate.rs (added post-v090, BL-505/BL-555)
+
+**RenderGraphTranslator** (`render/translate.rs:405`):
+Unit struct; stateless. Translates a list of `ClipWithEffects` into an FFmpeg `filter_complex` string and a list of input file paths.
+- `new() -> Self` (also `#[new]` for Python: `RenderGraphTranslator()`)
+- `translate(clips: Vec<ClipWithEffects>) -> PyResult<(String, Vec<String>)>` — returns `(filter_complex_string, input_paths)`. Enforces: 1–100 clips, positive durations, non-empty `source_path`, valid xfade transitions.
+
+**RenderEffect** (`render/translate.rs:211`):
+Python-visible class (`#[pyclass]`) representing an effect to apply to a clip. Created via static factory methods:
+- `none()` — no-op effect (pass-through)
+- `animated_alpha(start: f64, end: f64)` — linear alpha fade over the clip duration
+- `custom(filter_chain: String)` — raw FFmpeg filter chain string passthrough
+- `windowed_custom(filter_chain: String, start_s: f64, end_s: f64)` — T-capable windowed effect using FFmpeg `enable=between(t,start_s,end_s)` expression
+
+**RenderEffectKind** (`render/translate.rs:194`):
+Internal Rust enum (`pub` visibility, **not exposed to Python** — no `#[pyclass]`). Variants: `None`, `AnimatedAlpha { start: f64, end: f64 }`, `Custom { filter_chain: String }`. Held inside `RenderEffect` as the implementation detail.
+
+**ClipWithEffects** (`render/translate.rs:315`):
+Python-visible struct (`#[pyclass]`) representing one clip with its associated effects. Fields:
+- `input_index: usize` — index of this clip's input file in the FFmpeg command (`#[pyo3(get)]`)
+- `duration_secs: f64` — clip playback duration in seconds (`#[pyo3(get)]`)
+- `framerate: f64` — clip frame rate for filter timing (`#[pyo3(get)]`)
+- `source_path: String` — file path to the clip's source video/audio (`#[pyo3(get)]`)
+- `effects: Vec<RenderEffect>` — effects to apply (in order; not a Python property)
+- `outgoing_transition: Option<RenderTransition>` — optional xfade transition to the next clip (not a Python property)
+
+**RenderTransition** (`render/translate.rs:143`):
+Python-visible struct (`#[pyclass]`) representing an xfade transition between clips. Fields:
+- `transition_type: String` — must be one of the 54 valid xfade transition names (`#[pyo3(get, set)]`)
+- `duration_secs: f64` — overlap duration for the xfade filter (`#[pyo3(get, set)]`)
+
+Validates against `VALID_XFADE_TRANSITIONS` constant (54 transition types).
+
 ## Dependencies
 
 ### Internal Dependencies
