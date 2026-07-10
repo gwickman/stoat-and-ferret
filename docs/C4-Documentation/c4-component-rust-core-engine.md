@@ -21,6 +21,7 @@ By implementing these operations in Rust, the system achieves both correctness (
 - **Drawtext Builder**: Type-safe builder for FFmpeg drawtext filters with positioning, alpha fade, and shadow support
 - **Speed Control**: Video and audio speed adjustment builder with automatic atempo chaining for extreme speeds
 - **Audio Builders**: VolumeBuilder, AfadeBuilder, AmixBuilder, and DuckingPattern for audio processing filter generation
+- **Spatial Audio**: `PanBuilder` (stereo panning with optional automation) and `ConvolutionReverbBuilder` (impulse-response convolution reverb) in the new `spatial.rs` module. Added v079 (Sound Design, PRs #570–#577).
 - **Transition Builders**: FadeBuilder, XfadeBuilder, AcrossfadeBuilder with 59 TransitionType variants for video/audio transitions
 - **Input Sanitization**: Security-focused validation of paths, codecs, presets, and FFmpeg filter text escaping
 - **Layout System**: Normalized coordinate system (0.0–1.0) with LayoutPosition, LayoutPreset (PiP, SideBySide, Grid2x2, etc.)
