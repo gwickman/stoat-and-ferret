@@ -4,6 +4,47 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v103 — R2/R3 Effect-Umbrella Triage and Discharge (2026-07-10)
+
+### Theme 1: Code Correctness Patches
+
+- BL-494: Clamped tone synthesis frequency to [20, 20000] Hz — values outside the audible range no longer produce silent or FFmpeg-rejected output (PR #788)
+- BL-495: Wired `Automation` type into tone generator frequency — animated tone frequency now accepted by the builder (PR #789)
+- BL-563: Added `_escape_filter_option_path()` helper (variant-4 policy: single-quoted, drive-colon-escaped, apostrophe-rejected) to `definitions.py` — resolves LUT path colon escape for FFmpeg `lut3d` filter on Windows paths (PR #790)
+
+### Theme 2: Mixer & TTS Discharge
+
+- BL-517-AC-1: Confirmed multi-track mixer tests pass under STOAT_TEST_FFMPEG=1 (pure discharge, no code changes)
+- BL-516-AC-4: Added `test_tts_renderer_routes_to_mixer_48khz_stereo` integration test — confirms TTS output routes into multi-track mixer at channels=2, sample_rate=48000 (PR #791)
+- BL-631 (raised): TTS+source-audio amix silently downmixes to mono when source clip is mono — filed P2, carry-forward to v104
+
+### Theme 3: Audio Effects Discharge
+
+- BL-430-AC-2, BL-431-AC-2: Mastering discharge — 11/11 volume automation and multiband compressor tests pass under STOAT_TEST_FFMPEG=1 (pure discharge)
+- BL-434-AC-1, BL-435-AC-3: Voice repair discharge — 7/7 de-esser and time-stretch tests pass under STOAT_TEST_FFMPEG=1 (pure discharge)
+- BL-437 (AC-1 through AC-4): Pan discharge — 16/16 stereotools/pan tests pass under STOAT_TEST_FFMPEG=1 (pure discharge)
+- BL-438 (AC-1 through AC-4): Reverb discharge — added `test_convolution_reverb_decay` for AC-2; 10/10 tests pass under STOAT_TEST_FFMPEG=1 (PR #792)
+
+### Theme 4: Video Effects, Subtitle & Editing Discharge
+
+- BL-450-AC-3: Color LUT FFmpeg contract — 24/24 LUT tests pass under STOAT_TEST_FFMPEG=1 after BL-563 path-escape fix (pure discharge)
+- BL-446 (AC-1 through AC-4): Range effect discharge — 21/21 window tests pass under STOAT_TEST_FFMPEG=1 (pure discharge)
+- BL-449 (AC-1 through AC-3): Freeze frame discharge — 24/24 freeze-frame tests pass under STOAT_TEST_FFMPEG=1 (pure discharge)
+- BL-453-AC-3: Added `test_chromatic_aberration_ffmpeg_contract` to `tests/test_effects_optical_distortion.py` — `rgbashift` filter confirmed working under FFmpeg 8 (PR #793)
+- BL-519 (AC-1 through AC-7), BL-520 (AC-1 through AC-6): Added `test_subtitle_burned_contract` and `test_subtitle_force_style_contract` to `tests/test_contract/test_subtitle.py` — burned subtitle and force_style contracts discharged (PR #794)
+- BL-444 (AC-1/2/3): Reverse clip effect — existing headless tests pass; AC-4 GUI preview deferred
+- BL-445 (AC-1/2/3): Clip split/razor — existing headless tests pass; AC-4 unverifiable (test_uc_cap_split_scenario AssetRepoDep regression, triage carry-forward)
+
+### PRs
+
+#788, #789, #790, #791, #792, #793, #794
+
+### Resolved
+
+BL-494 (frequency clamping), BL-495 (Automation type wiring), BL-563 (LUT path escape helper), BL-516-AC-4 (TTS→mixer routing test), BL-438-AC-2 (convolution reverb decay test), BL-430-AC-2 (volume automation discharge), BL-431-AC-2 (multiband compressor discharge), BL-434-AC-1 (de-esser discharge), BL-435-AC-3 (time-stretch discharge), BL-437 (pan discharge — all ACs), BL-438 (reverb discharge — all ACs), BL-450-AC-3 (color LUT FFmpeg contract), BL-446 (range effect — all ACs), BL-449 (freeze frame — all ACs), BL-453-AC-3 (chromatic aberration FFmpeg contract), BL-519 (subtitle — all 7 ACs), BL-520 (force_style — all 6 ACs)
+
+---
+
 ## v102 — QC Gate Correctness & UAT Registry Cleanup (2026-07-09)
 
 ### Theme 1: QC Gate Correctness
