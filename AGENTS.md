@@ -296,6 +296,22 @@ Every Alembic migration that adds or modifies a table or column must also update
 
 **Why three files?** `create_tables_async` is used by tests and is the authoritative schema for fresh installs; the contract test enforces parity; the allowlist is line-number-sensitive. Discovering any of these in CI requires an additional 5–10 minute run. Check all three before the first push.
 
+### DB Column Addition Checklist
+
+When adding a column to any database-backed model, the following files must ALL be updated in the same PR. This list was discovered during BL-408 (v074) when a 3-file design plan expanded to 9 files at execution time, causing a TypeScript-fixture CI failure. Cite: BL-408 and v074 02-api-ergonomics retrospective §Learnings #1.
+
+1. `src/stoat_ferret/db/models.py` — Add field to the domain dataclass
+2. `src/stoat_ferret/db/<entity>_repository.py` (SQLite async repo) — Update INSERT/SELECT SQL to include the new column
+3. `src/stoat_ferret/db/<entity>_repository.py` (InMemory repo, if present) — Update in-memory representation to match
+4. `src/stoat_ferret/db/schema.py` — Update `create_tables_async()` DDL (used for fresh installs and tests)
+5. `alembic/versions/<revision>.py` — Add `ALTER TABLE ... ADD COLUMN` migration with `IF NOT EXISTS` guard per the Migration Safeguard Rule
+6. `tests/security/test_audit.py` — Update SQL allowlist (line-number-sensitive; columns shift allowlist line numbers)
+7. `tests/test_contract/test_repository_parity.py` — Add or update contract test asserting the new column is present with expected type
+8. `tests/test_contract/test_db_schema.py` — Update the expected-column-set assertion for the affected table
+9. GUI TypeScript fixture — Any `gui/src/components/__tests__/` test that constructs the affected model (e.g., `gui/src/components/__tests__/VideoGrid.test.tsx` for VideoResponse). Run `npm run generate:types` to regenerate `gui/src/generated/api-types.ts` after the API schema changes.
+
+**Cross-reference:** The Schema Lockstep Rule above covers items 1, 4, and 7 in detail. This checklist provides the full 9-file surface for completeness.
+
 ---
 
 ## Structured Event Naming
