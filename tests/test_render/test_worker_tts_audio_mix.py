@@ -290,6 +290,38 @@ def _gen_video_with_audio(path: Path) -> None:
         raise RuntimeError(r.stderr.decode()[-500:])
 
 
+def _gen_video_with_48k_stereo_audio(path: Path) -> None:
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=320x240:r=30:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
 def _gen_wav(path: Path, freq: int = 880) -> None:
     r = subprocess.run(
         [
@@ -381,6 +413,77 @@ async def test_multi_clip_tts_later_clip_audio_ffmpeg_contract(tmp_path: Path) -
     assert rc.returncode == 0, rc.stderr.decode()[-800:]
     assert out.exists()
     assert _ffprobe_has_audio(out), "Source audio from clip 1 was silently dropped"
+
+
+def _ffprobe_audio_format(path: Path) -> tuple[int | None, int | None]:
+    """Return (channels, sample_rate) of the first audio stream, or (None, None) if absent."""
+    probe = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=channels,sample_rate",
+            "-of",
+            "json",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    streams = json.loads(probe.stdout).get("streams", [])
+    if not streams:
+        return None, None
+    stream = streams[0]
+    channels = stream.get("channels")
+    sample_rate = int(stream["sample_rate"]) if stream.get("sample_rate") else None
+    return channels, sample_rate
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_tts_renderer_routes_to_mixer_48khz_stereo(tmp_path: Path) -> None:
+    """BL-516-AC-4: TTS output routed into multi-track mixer at channels=2, sample_rate=48000.
+
+    Confirms via ffprobe that the rendered output's audio stream (TTS mixed
+    with a project-conformant (48kHz stereo) source track via
+    adelay -> aformat=stereo -> amix) lands at the mixer's fixed contract
+    format: 2 channels, 48kHz.
+    """
+    src = tmp_path / "clip_with_audio.mp4"
+    tts_wav = tmp_path / "tts.wav"
+    _gen_video_with_48k_stereo_audio(src)
+    _gen_wav(tts_wav)
+
+    videos = {"vid-0": _make_video("vid-0", str(src), audio_codec="aac")}
+    clips = [_make_clip("clip-0", "vid-0", timeline_position=0)]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    tts_input = TtsCueAudioInput(
+        cue_id="cue-tts-002",
+        audio_path=str(tts_wav),
+        track_id="voice-track",
+        start_s=0.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+    out = tmp_path / "output.mp4"
+    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[tts_input])
+    cmd[-1] = str(out)
+
+    rc = _run_ffmpeg(cmd)
+    assert rc.returncode == 0, rc.stderr.decode()[-800:]
+    assert out.exists()
+
+    channels, sample_rate = _ffprobe_audio_format(out)
+    assert channels == 2, f"expected 2 channels, got {channels}"
+    assert sample_rate == 48000, f"expected 48000 Hz, got {sample_rate}"
 
 
 # ---------------------------------------------------------------------------
