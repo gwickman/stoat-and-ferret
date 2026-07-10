@@ -1018,6 +1018,198 @@ def test_burned_subtitle_force_style_ffmpeg_safe() -> None:
         )
 
 
+# ---- BL-519-AC-6/AC-7: burned-subtitle text-presence and force_style contract tests ----
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_subtitle_burned_contract() -> None:
+    """BL-519-AC-6: burn a 5s SRT (3 entries) onto a color=blue test clip; extract
+    frames at each entry's midpoint and a gap frame; assert text presence via
+    pixel-difference (white-ish pixel count).
+    """
+    import tempfile
+
+    from PIL import Image
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = os.path.join(tmpdir, "source.mp4")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:size=320x240:rate=10",
+                "-t",
+                "5",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                src_path,
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        srt_path = os.path.join(tmpdir, "test.srt")
+        with open(srt_path, "w") as f:
+            f.write(
+                "1\n00:00:00,000 --> 00:00:01,000\nOne\n\n"
+                "2\n00:00:02,000 --> 00:00:03,000\nTwo\n\n"
+                "3\n00:00:04,000 --> 00:00:05,000\nThree\n\n"
+            )
+
+        spec = BurnedSubtitleSpec(source_path=srt_path)
+        filter_str = str(BurnedSubtitleBuilder.build(spec))
+
+        output_path = os.path.join(tmpdir, "output.mp4")
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                src_path,
+                "-vf",
+                filter_str,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-y",
+                output_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, (
+            f"FFmpeg burned-subtitle render failed.\n"
+            f"Filter string: {filter_str}\n"
+            f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
+        )
+
+        def _white_pixel_count(t: float) -> int:
+            frame_path = os.path.join(tmpdir, f"frame_{t}.png")
+            r = subprocess.run(
+                ["ffmpeg", "-y", "-ss", str(t), "-i", output_path, "-vframes", "1", frame_path],
+                capture_output=True,
+                text=True,
+            )
+            assert r.returncode == 0, f"frame extraction at t={t} failed: {r.stderr[-500:]}"
+            img = Image.open(frame_path).convert("RGB")
+            return sum(1 for (rr, g, b) in img.getdata() if rr > 200 and g > 200 and b > 200)
+
+        # Midpoints of each of the 3 SRT entries: 0.5, 2.5, 4.5
+        for midpoint in (0.5, 2.5, 4.5):
+            count = _white_pixel_count(midpoint)
+            assert count > 20, (
+                f"Expected burned subtitle text (white-ish pixels) at t={midpoint}, "
+                f"found {count}"
+            )
+
+        # Gap frame (t=1.5, between entries 1 and 2) should show no subtitle text
+        gap_count = _white_pixel_count(1.5)
+        assert gap_count < 20, (
+            f"Expected no subtitle text in gap frame at t=1.5, found {gap_count} white-ish pixels"
+        )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_subtitle_force_style_contract() -> None:
+    """BL-519-AC-7: force_style renders via FFmpeg without error and produces a
+    visible style change versus the default style.
+
+    Uses PrimaryColour=&H0000FF& (ASS BGR order -> pure red) plus Fontsize=48 so
+    the styled render is unambiguously distinguishable from the default white
+    subtitle text via a red-dominant-pixel check (deviation from the AC's literal
+    '&Hffffff&' white value, which would be indistinguishable from the default
+    style and thus not demonstrate a visible change).
+    """
+    import tempfile
+
+    from PIL import Image
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = os.path.join(tmpdir, "source.mp4")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:size=320x240:rate=10",
+                "-t",
+                "2",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                src_path,
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        srt_path = os.path.join(tmpdir, "test.srt")
+        with open(srt_path, "w") as f:
+            f.write("1\n00:00:00,000 --> 00:00:02,000\nHello World\n")
+
+        def _render(force_style: dict[str, str] | None, name: str) -> str:
+            spec = BurnedSubtitleSpec(source_path=srt_path, force_style=force_style)
+            filter_str = str(BurnedSubtitleBuilder.build(spec))
+            output_path = os.path.join(tmpdir, name)
+            result = subprocess.run(
+                [
+                    "ffmpeg",
+                    "-i",
+                    src_path,
+                    "-vf",
+                    filter_str,
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "ultrafast",
+                    "-y",
+                    output_path,
+                ],
+                capture_output=True,
+                text=True,
+            )
+            assert result.returncode == 0, (
+                f"FFmpeg render failed for force_style={force_style}.\n"
+                f"Filter string: {filter_str}\n"
+                f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
+            )
+            return output_path
+
+        baseline_path = _render(None, "baseline.mp4")
+        styled_path = _render({"Fontsize": "48", "PrimaryColour": "&H0000FF&"}, "styled.mp4")
+
+        def _has_red_dominant_pixel(path: str) -> bool:
+            frame_path = path.replace(".mp4", "_frame.png")
+            r = subprocess.run(
+                ["ffmpeg", "-y", "-ss", "1.0", "-i", path, "-vframes", "1", frame_path],
+                capture_output=True,
+                text=True,
+            )
+            assert r.returncode == 0, f"frame extraction failed: {r.stderr[-500:]}"
+            img = Image.open(frame_path).convert("RGB")
+            return any(rr > 180 and g < 80 and b < 80 for (rr, g, b) in img.getdata())
+
+        assert not _has_red_dominant_pixel(baseline_path), (
+            "Baseline (no force_style) render unexpectedly contains red-dominant pixels"
+        )
+        assert _has_red_dominant_pixel(styled_path), (
+            "Styled (force_style PrimaryColour=&H0000FF&) render should contain "
+            "red-dominant text pixels; visible style change not detected"
+        )
+
+
 # ---- BL-601-AC-7: SubtitleScriptSpec backslash rejection + fontcolor single-quoting ----
 
 
