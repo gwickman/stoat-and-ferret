@@ -72,13 +72,27 @@ The project `.gitignore` already includes a `nul` entry as a safety net, but avo
 All git operations for a feature must be chained in a single bash invocation. MSYS2 does not persist branch state reliably across separate shell invocations.
 
 ```bash
-# Correct — all operations chained in one call
-git checkout -b feat/my-feature && git add src/ && git commit -m "feat: ..." && git push -u origin HEAD
+# Correct — all operations chained in one call, with explicit base
+git checkout -b feat/<name> origin/main && git add src/ && git commit -m "feat: ..." && git push -u origin HEAD
 
 # Risky — branch created in one shell, push in another may target wrong branch
 git checkout -b feat/my-feature
 # ... separate shell invocation ...
 git push -u origin HEAD
+```
+
+After creating a branch, verify it has no unexpected commits:
+
+```bash
+git log --oneline main..HEAD
+```
+
+This should show 0 commits. If foreign commits appear, the branch was cut from the wrong base — delete it and re-cut from `origin/main`:
+
+```bash
+git checkout main
+git branch -D feat/<name>
+git checkout -b feat/<name> origin/main
 ```
 
 Always run `git status` before `git push` to verify the current branch is correct.
