@@ -112,7 +112,7 @@ pub fn py_compile_automation(automation: &Automation) -> PyResult<String> {
 ///
 /// Separated from the public function to allow test-side evaluation without
 /// reparsing the compiled string.
-fn compile_automation_impl(automation: &Automation) -> PyResult<Expr> {
+pub(crate) fn compile_automation_impl(automation: &Automation) -> PyResult<Expr> {
     let kf = &automation.keyframes;
 
     if kf.is_empty() {
