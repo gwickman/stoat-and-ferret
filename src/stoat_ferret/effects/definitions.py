@@ -2195,9 +2195,21 @@ def _resolve_lut_path(preset_name: str) -> Path:
         return Path(__file__).parent.parent / "assets" / "luts" / f"{preset_name}.cube"
 
 
+def _escape_filter_option_path(path_str: str) -> str:
+    if "'" in path_str:
+        raise ValueError(
+            f"LUT path contains apostrophe, which cannot be escaped in FFmpeg "
+            f"filter-graph option syntax: {path_str!r}"
+        )
+    normalized = path_str.replace("\\", "/")
+    if len(normalized) >= 2 and normalized[0].isalpha() and normalized[1] == ":":
+        normalized = normalized[0] + "\\:" + normalized[2:]
+    return f"'{normalized}'"
+
+
 def _color_lut_preview() -> str:
     lut_path = _resolve_lut_path("identity")
-    return f"lut3d=file={str(lut_path).replace(chr(92), '/')}"
+    return f"lut3d=file={_escape_filter_option_path(str(lut_path))}"
 
 
 def _build_color_lut(parameters: dict[str, Any]) -> str:
@@ -2212,7 +2224,7 @@ def _build_color_lut(parameters: dict[str, Any]) -> str:
     preset = str(parameters.get("preset", "identity"))
     builder = ColorLutBuilder(preset)
     lut_path = _resolve_lut_path(builder.preset_name())
-    return f"lut3d=file={str(lut_path).replace(chr(92), '/')}"
+    return f"lut3d=file={_escape_filter_option_path(str(lut_path))}"
 
 
 COLOR_LUT = EffectDefinition(

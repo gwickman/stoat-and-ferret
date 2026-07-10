@@ -10,7 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from stoat_ferret.effects.definitions import COLOR_LUT, _build_color_lut, create_default_registry
+from stoat_ferret.effects.definitions import (
+    COLOR_LUT,
+    _build_color_lut,
+    _escape_filter_option_path,
+    create_default_registry,
+)
 from stoat_ferret_core import ColorLutBuilder
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
@@ -139,19 +144,23 @@ def test_color_lut_build_fn_produces_lut3d_string() -> None:
 def test_color_lut_build_fn_path_points_to_existing_file() -> None:
     """build_fn returns a path that resolves to an existing .cube file."""
     s = COLOR_LUT.build_fn({"preset": "identity"})
-    # Extract path after 'file='
+    # Extract path after 'file=', strip variant-4 quoting/colon-escape (BL-563)
     assert "file=" in s, f"Expected file= in: {s}"
     path_part = s.split("file=", 1)[1]
+    path_part = path_part.strip("'").replace("\\:", ":", 1)
     path = Path(path_part)
     assert path.exists(), f"Resolved LUT path does not exist: {path}"
     assert path.suffix == ".cube", f"Expected .cube extension: {path}"
 
 
 def test_color_lut_build_fn_path_uses_forward_slashes() -> None:
-    """Verify _build_color_lut returns a filter string with no backslashes (BL-499)."""
+    """Verify _build_color_lut path segments use forward slashes, aside from
+    the variant-4 drive-colon escape (BL-499, updated for BL-563)."""
     result = _build_color_lut({"preset": "identity"})
-    assert "\\" not in result, f"Expected forward slashes only, got: {result}"
     assert "lut3d=file=" in result
+    path_part = result.split("file=", 1)[1]
+    unescaped = path_part.replace("\\:", ":", 1)
+    assert "\\" not in unescaped, f"Expected forward slashes only, got: {result}"
 
 
 def test_color_lut_bundled_assets_exist() -> None:
@@ -167,6 +176,31 @@ def test_color_lut_bundled_assets_exist() -> None:
 # ---------------------------------------------------------------------------
 # Contract tests — require real FFmpeg (BL-450-AC-3)
 # ---------------------------------------------------------------------------
+
+
+def test_color_lut_path_escape_windows() -> None:
+    """_escape_filter_option_path() escapes a Windows drive path (BL-563-AC-1)."""
+    result = _escape_filter_option_path(r"C:\assets\lut\identity.cube")
+    assert result == "'C\\:/assets/lut/identity.cube'"
+
+
+def test_color_lut_path_escape_unix() -> None:
+    """_escape_filter_option_path() single-quotes a Unix-style path (BL-563-AC-1)."""
+    result = _escape_filter_option_path("assets/lut/identity.cube")
+    assert result == "'assets/lut/identity.cube'"
+
+
+def test_color_lut_path_escape_apostrophe_raises() -> None:
+    """_escape_filter_option_path() raises ValueError for apostrophes (BL-563-AC-2)."""
+    with pytest.raises(ValueError, match="apostrophe"):
+        _escape_filter_option_path("assets/lut/it's-a-lut.cube")
+
+
+def test_color_lut_regression() -> None:
+    """Bundled LUT preset paths produce consistent escaped output (BL-563-AC-4)."""
+    path = "luts/identity.cube"
+    result = _escape_filter_option_path(path)
+    assert result == f"'{path}'"
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="STOAT_TEST_FFMPEG not set")
