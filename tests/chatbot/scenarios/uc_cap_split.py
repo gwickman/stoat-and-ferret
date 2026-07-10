@@ -125,6 +125,7 @@ async def test_uc_cap_split_scenario() -> None:
     from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
     from stoat_ferret.db.models import Video
     from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+    from tests.test_api.conftest import InMemoryAssetRepository
 
     video_repo = AsyncInMemoryVideoRepository()
     project_repo = AsyncInMemoryProjectRepository()
@@ -152,6 +153,7 @@ async def test_uc_cap_split_scenario() -> None:
         video_repository=video_repo,
         project_repository=project_repo,
         clip_repository=clip_repo,
+        asset_repository=InMemoryAssetRepository(),  # BL-633: DI mode needs explicit injection
     )
 
     transport = httpx.ASGITransport(app=app)  # type: ignore[arg-type]
