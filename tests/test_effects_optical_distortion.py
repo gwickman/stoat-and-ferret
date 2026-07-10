@@ -299,3 +299,37 @@ def test_chromatic_aberration_build_fn_uses_provided_params() -> None:
     result = CHROMATIC_ABERRATION_EFFECT.build_fn({"rx": 10, "bx": -10})
     assert "rh=10" in result
     assert "bh=-10" in result
+
+
+# ---------------------------------------------------------------------------
+# Contract test (BL-453-AC-3) — deferred_post_merge, requires real FFmpeg
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="STOAT_TEST_FFMPEG not set")
+def test_chromatic_aberration_ffmpeg_contract(tmp_path: pytest.TempPathFactory) -> None:
+    """rgbashift filter applied to a real video clip produces output without error."""
+    import subprocess
+
+    builder = ChromaticAberrationBuilder(5, 0, 0, 0, -5, 0)
+    filter_str = str(builder.build())
+
+    output = tmp_path / "out.mp4"
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=320x240:d=1",
+            "-vf",
+            filter_str,
+            "-frames:v",
+            "1",
+            str(output),
+        ],
+        capture_output=True,
+    )
+    assert result.returncode == 0, f"FFmpeg failed: {result.stderr.decode()}"
+    assert output.exists()
