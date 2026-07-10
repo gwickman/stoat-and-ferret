@@ -15,6 +15,7 @@ use std::path::Path;
 
 use super::encoder::{build_encoding_args, EncoderInfo, QualityPreset};
 use super::plan::{RenderSegment, RenderSettings};
+use crate::ffmpeg::automation::{compile_automation_impl, Automation, Keyframe};
 
 // ---------------------------------------------------------------------------
 // Bitrate lookup table (bits per second)
@@ -377,6 +378,40 @@ pub fn py_estimate_output_size(duration_seconds: f64, codec: &str, quality_prese
 // Generator source filter
 // ---------------------------------------------------------------------------
 
+/// Parses an `Automation` envelope from a raw `serde_json::Value`.
+///
+/// Used by the tone arm to deserialise the optional `automation` field from
+/// generator params JSON without requiring a `serde::Deserialize` impl on
+/// `Automation` or `Keyframe`.
+fn parse_automation_from_json(v: &serde_json::Value) -> Result<Automation, String> {
+    let default = v.get("default").and_then(|d| d.as_f64()).unwrap_or(0.0);
+    let keyframes = if let Some(kf_arr) = v.get("keyframes").and_then(|k| k.as_array()) {
+        kf_arr
+            .iter()
+            .enumerate()
+            .map(|(idx, k)| {
+                let t = k
+                    .get("t")
+                    .and_then(|t| t.as_f64())
+                    .ok_or_else(|| format!("automation keyframe[{idx}] missing 't'"))?;
+                let value = k
+                    .get("value")
+                    .and_then(|val| val.as_f64())
+                    .ok_or_else(|| format!("automation keyframe[{idx}] missing 'value'"))?;
+                let curve = k
+                    .get("curve")
+                    .and_then(|c| c.as_str())
+                    .unwrap_or("Hold")
+                    .to_string();
+                Ok(Keyframe { t, value, curve })
+            })
+            .collect::<Result<Vec<_>, String>>()?
+    } else {
+        Vec::new()
+    };
+    Ok(Automation { default, keyframes })
+}
+
 /// Builds an FFmpeg source filter string for a generator clip.
 ///
 /// Inspects the `type` field in the generator params JSON and returns a
@@ -424,6 +459,20 @@ pub fn build_generator_source_filter(params_json: &str, duration: f64) -> Result
             ))
         }
         "tone" => {
+            // Optional automation field takes precedence over scalar/chirp path (NFR-002).
+            if let Some(auto_val) = params.get("automation") {
+                let auto = parse_automation_from_json(auto_val)?;
+                let freq_expr = compile_automation_impl(&auto)
+                    .map_err(|_| {
+                        "tone automation: invalid keyframe sequence or unknown curve kind"
+                            .to_string()
+                    })?
+                    .to_string();
+                return Ok(format!(
+                    "aevalsrc=exprs='sin(2*PI*{freq_expr}*t)':duration={duration:.6}"
+                ));
+            }
+
             let frequency = params
                 .get("frequency")
                 .and_then(|v| v.as_f64())
@@ -1031,6 +1080,58 @@ mod tests {
         assert!(
             !f.contains("25000.000"),
             "Expected original 25000.000 to be absent: {f}"
+        );
+    }
+
+    #[test]
+    fn test_tone_automation_frequency_envelope() {
+        // Automation with two keyframes produces time-varying frequency expression (BL-495-AC-2)
+        let params = r#"{"type":"tone","automation":{"default":440.0,"keyframes":[{"t":0.0,"value":440.0,"curve":"Hold"},{"t":5.0,"value":880.0,"curve":"Hold"}]}}"#;
+        let f = build_generator_source_filter(params, 10.0).unwrap();
+        assert!(f.contains("aevalsrc"), "expected aevalsrc in: {f}");
+        // Time-varying expression uses if() for step function between keyframes
+        assert!(
+            f.contains("if("),
+            "expected if( expression for time-varying frequency in: {f}"
+        );
+        assert!(
+            !f.contains("sin(2*PI*440.000*t)"),
+            "expected dynamic expression, not static in: {f}"
+        );
+        assert!(
+            f.contains("duration=10.000000"),
+            "expected duration in: {f}"
+        );
+    }
+
+    #[test]
+    fn test_tone_static_frequency_unchanged() {
+        // No automation field → existing scalar path unchanged (BL-495-AC-3)
+        let f = build_generator_source_filter(r#"{"type":"tone","frequency":440.0}"#, 5.0).unwrap();
+        assert!(
+            f.contains("sin(2*PI*440.000*t)"),
+            "expected static frequency expression in: {f}"
+        );
+        assert!(
+            !f.contains("if("),
+            "expected no if() for static path in: {f}"
+        );
+    }
+
+    #[test]
+    fn test_tone_chirp_path_preserved() {
+        // frequency + frequency_end, no automation → chirp expression preserved (BL-495-AC-4)
+        let f = build_generator_source_filter(
+            r#"{"type":"tone","frequency":100.0,"frequency_end":200.0}"#,
+            10.0,
+        )
+        .unwrap();
+        assert!(f.contains("t*t"), "expected chirp formula (t*t) in: {f}");
+        assert!(f.contains("100.000"), "expected start freq in: {f}");
+        assert!(f.contains("200.000"), "expected end freq in: {f}");
+        assert!(
+            !f.contains("if("),
+            "expected no automation expression in chirp path: {f}"
         );
     }
 
