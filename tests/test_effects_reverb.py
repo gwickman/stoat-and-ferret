@@ -119,3 +119,83 @@ def test_convolution_reverb_contract_ffmpeg() -> None:
             text=True,
         )
         assert result.returncode == 0, f"FFmpeg rejected afir filter: {result.stderr[-500:]}"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="FFmpeg integration test — set STOAT_TEST_FFMPEG=1 to run",
+)
+def test_convolution_reverb_decay() -> None:
+    """BL-438-AC-2: convolution reverb output amplitude decays after the initial transient."""
+    import math
+    import struct
+    import subprocess
+    import tempfile
+    import wave
+
+    def _wav(path: str, duration_s: float = 0.1, rate: int = 48000) -> None:
+        """Short tone burst: full amplitude for the first 5ms, silence after."""
+        n = int(rate * duration_s)
+        burst_n = int(rate * 0.005)
+        with wave.open(path, "w") as wf:
+            wf.setnchannels(2)
+            wf.setsampwidth(2)
+            wf.setframerate(rate)
+            for i in range(n):
+                v = int(10000 * math.sin(2 * math.pi * 440 * i / rate)) if i < burst_n else 0
+                wf.writeframes(struct.pack("<hh", v, v))
+
+    ir_path = str(_resolve_ir_path("hall_small"))
+    with tempfile.TemporaryDirectory() as tmp:
+        src = f"{tmp}/src.wav"
+        out = f"{tmp}/out.wav"
+        _wav(src)
+
+        b = ConvolutionReverbBuilder("hall_small", 0.8)
+        filter_str = str(b.build())
+
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                src,
+                "-i",
+                ir_path,
+                "-filter_complex",
+                filter_str,
+                out,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, f"FFmpeg rejected afir filter: {result.stderr[-500:]}"
+
+        with wave.open(out, "rb") as wf:
+            rate = wf.getframerate()
+            nch = wf.getnchannels()
+            n = wf.getnframes()
+            raw = wf.readframes(n)
+        samples = struct.unpack(f"<{n * nch}h", raw)
+
+        # transient window: the initial burst plus early reverb tail
+        transient_end = int(rate * 0.02) * nch
+        # post-transient window: a later slice of the decaying tail
+        post_start = int(rate * 0.05) * nch
+        post_end = int(rate * 0.08) * nch
+
+        transient = samples[:transient_end]
+        post_transient = samples[post_start:post_end]
+
+        def _rms_samples(vals: tuple[int, ...]) -> float:
+            if not vals:
+                return 0.0
+            return math.sqrt(sum(v * v for v in vals) / len(vals))
+
+        rms_transient = _rms_samples(transient)
+        rms_post = _rms_samples(post_transient)
+
+        assert rms_transient > 0, "expected non-zero energy in the transient window"
+        assert rms_post < rms_transient, (
+            f"expected decay after transient: rms_post={rms_post} >= rms_transient={rms_transient}"
+        )
