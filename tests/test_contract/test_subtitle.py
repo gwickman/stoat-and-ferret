@@ -1105,8 +1105,7 @@ def test_subtitle_burned_contract() -> None:
         for midpoint in (0.5, 2.5, 4.5):
             count = _white_pixel_count(midpoint)
             assert count > 20, (
-                f"Expected burned subtitle text (white-ish pixels) at t={midpoint}, "
-                f"found {count}"
+                f"Expected burned subtitle text (white-ish pixels) at t={midpoint}, found {count}"
             )
 
         # Gap frame (t=1.5, between entries 1 and 2) should show no subtitle text
