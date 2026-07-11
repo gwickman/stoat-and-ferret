@@ -4,6 +4,38 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v104 — C4 Documentation Drift Repair (2026-07-11)
+
+### Theme 1: Python C4 Documentation
+
+- BL-470: Added Video Schemas section to `c4-code-stoat-ferret-api-schemas.md` — documents VideoResponse (including subtitle_count/data_count added in v074), VideoListResponse, VideoSearchResponse, ScanRequest, ScanError, ScanResponse (ARTIFACTS PR #8)
+- BL-486: Added QCService dependency to `c4-code-stoat-ferret-render.md` — Code Elements section, Mermaid classDiagram arrow, and Dependencies block now reflect the optional QCService injected into RenderService in v078; updated `c4-component-application-services.md` accordingly (ARTIFACTS PR #8)
+- BL-487: Added EffectDefinition.automatable field and two new EffectRegistry methods (validate_with_automation, build_automation_filter_string) to `c4-code-python-effects.md` — Rust automation dependencies (Automation, Keyframe, compile_automation) added to External Dependencies block; component doc updated with automation-envelope path (ARTIFACTS PR #8)
+- BL-497: Added generator-clip schema (clip_type, generator_params, nullable source_video_id) to `c4-code-rust-stoat-ferret-core-clip.md` and `c4-code-stoat-ferret-db.md` — references Alembic revision a8516edf859e; image-clip additions (BL-511) included (ARTIFACTS PR #9)
+- BL-573: Added assets router section to `c4-code-stoat-ferret-api-routers.md` (five /api/v1/assets endpoints, AsyncSQLiteAssetRepository dependency injection) and Asset Repository section to `c4-code-stoat-ferret-db.md` (AssetRecord fields, repository methods); added AssetRead/AssetListResponse to api-schemas doc (ARTIFACTS PR #9)
+- BL-614: Added worker.py module section to `c4-code-stoat-ferret-render.md` — documents multi-clip render orchestration and RenderGraphTranslator integration path added in v098 (ARTIFACTS PR #10)
+
+### Theme 2: Rust C4 Documentation
+
+- BL-496: Added spatial.rs module to `c4-code-rust-stoat-ferret-core-ffmpeg.md` (PanBuilder, ConvolutionReverbBuilder); added SubBassBuilder to audio.rs section and PitchShiftBuilder to voice_repair.rs section; updated `c4-component-rust-core-engine.md` with spatial-audio capability (PR #796)
+- BL-613: Added translate.rs module section to `c4-code-rust-stoat-ferret-core-render.md` — documents RenderGraphTranslator, RenderEffect struct, and RenderEffectKind enum (including Custom variant and py_custom()) (PR #797)
+
+### Theme 3: Source Corrections
+
+- BL-467: Added DB Column Addition Checklist to AGENTS.md — enumerates the 9-file surface required when adding a DB column (models.py, repositories, schema.py, Alembic migration, test_audit.py, test_repository_parity.py, test_db_schema.py, GUI TypeScript fixture); cites BL-408/v074 as provenance (PR #798)
+- BL-633: Fixed test_uc_cap_split_scenario — injected InMemoryAssetRepository in DI mode to prevent AttributeError on app.state.db when lifespan is skipped in chatbot scenario tests (PR #799)
+- BL-491: AC-2/AC-3 supported — v079 source-intent-ledger target_tree corrected to api/schemas/render.py; design-phase drift query verification confirmed; AC-1 deferred pending user action (BL-489 description path correction)
+
+### PRs
+
+#796, #797, #798, #799 (main repo); ARTIFACTS #8, #9, #10 (Python C4 documentation)
+
+### Resolved
+
+BL-470 (api-schemas video.py section), BL-486 (render QCService C4 dependency), BL-487 (effects automatable/automation-registry C4), BL-497 (generator-clip schema C4), BL-573 (assets router/repository C4), BL-614 (render worker.py C4), BL-496 (Rust ffmpeg spatial.rs builders), BL-613 (Rust render translate.rs), BL-467 (DB column checklist), BL-633 (uc_cap_split AssetRepoDep DI fix)
+
+---
+
 ## v103 — R2/R3 Effect-Umbrella Triage and Discharge (2026-07-10)
 
 ### Theme 1: Code Correctness Patches
