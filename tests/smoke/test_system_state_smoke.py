@@ -13,6 +13,7 @@ Verifies:
 from __future__ import annotations
 
 import asyncio
+import sys
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -132,7 +133,8 @@ async def test_running_render_job_included_in_active_jobs(
         # we accept that the race resolved before we could observe it (AC-1 evidence is
         # captured by the noop-mode smoke tests that run without a live render worker).
         terminal_statuses = {"completed", "failed", "cancelled"}
-        deadline = 2.0
+        # BL-466: 4s on Windows (longer cancellation latency on windows-latest); 2s elsewhere.
+        deadline = 4.0 if sys.platform == "win32" else 2.0
         interval = 0.1
         elapsed = 0.0
         render_entries: list[dict] = []
