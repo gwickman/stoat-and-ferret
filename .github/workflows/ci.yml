@@ -717,7 +717,7 @@ jobs:
 
   ci-status:
     runs-on: ubuntu-latest
-    needs: [changes, test, rust-coverage, frontend, e2e, ci-a11y, smoke-tests, uat, openapi-freshness, openapi-validation, docker-build, nul-pattern-check, dep-license-check, stray-ref-check]
+    needs: [changes, test, rust-coverage, frontend, e2e, ci-a11y, smoke-tests, uat, ffmpeg-tests, openapi-freshness, openapi-validation, docker-build, nul-pattern-check, dep-license-check, stray-ref-check]
     if: always()
     steps:
       - name: Check CI status
@@ -761,6 +761,14 @@ jobs:
           if [[ "${{ needs.uat.result }}" == "failure" || "${{ needs.uat.result }}" == "cancelled" ]]; then
             echo "UAT tests failed"
             exit 1
+          fi
+          if [[ "${{ needs.ffmpeg-tests.result }}" == "failure" ]]; then
+            echo "FFmpeg gated tests failed"
+            exit 1
+          elif [[ "${{ needs.ffmpeg-tests.result }}" == "skipped" ]]; then
+            echo "FFmpeg gated tests skipped (docs-only PR)"
+          else
+            echo "FFmpeg gated tests passed"
           fi
           if [[ "${{ needs.openapi-freshness.result }}" == "failure" ]]; then
             echo "OpenAPI freshness check failed"

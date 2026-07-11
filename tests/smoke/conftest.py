@@ -251,7 +251,7 @@ async def poll_job_until_terminal(
     timeout: float = 30.0,
     interval: float = 0.5,
 ) -> dict[str, Any]:
-    """Poll GET /api/v1/jobs/{job_id} until status is terminal.
+    """Poll GET /api/v1/render/{job_id} until status is terminal.
 
     Args:
         client: The httpx async client to use.
@@ -270,7 +270,7 @@ async def poll_job_until_terminal(
     body: dict[str, Any] = {}
 
     while asyncio.get_event_loop().time() < deadline:
-        resp = await client.get(f"/api/v1/jobs/{job_id}")
+        resp = await client.get(f"/api/v1/render/{job_id}")
         assert resp.status_code == 200
         body = resp.json()
         if body["status"].lower() in terminal_statuses:
