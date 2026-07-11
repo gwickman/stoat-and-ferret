@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Grant Wickman
 """Check that _core.pyi has not lost any def __new__ constructors.
 
 Used in CI to prevent wholesale stub_gen copy-paste from stripping hand-written __new__ bodies.
