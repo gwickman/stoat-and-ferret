@@ -641,6 +641,29 @@ document is committed to main before the downstream feature begins execution.
 
 ---
 
+## Windows CI Timing
+
+Timer-sensitive tests (NFR-002 response-time, active-jobs polling) use platform-aware
+constants rather than a single hard threshold. Pattern:
+
+```python
+import sys
+THRESHOLD_MS = 250 if sys.platform == "win32" else 100  # BL-466
+```
+
+If a timing test flakes on windows-latest: measure median/p95 across 10 runs, set a
+measurement-backed constant ≤ 250ms, and record the data in the PR. Do NOT just retrigger.
+
+**Applied in:**
+- `tests/test_contract/test_render_contract.py` — frame-endpoint threshold: 250ms (Windows) /
+  500ms (linux/mac, per BL-594 ASGI overhead accommodation). v074 data: median≈180ms,
+  p95≈215ms, worst=203ms on windows-latest.
+- `tests/smoke/test_system_state_smoke.py` — active-jobs poll deadline: 4.0s (Windows) /
+  2.0s (linux/mac). Windows cancellation latency causes the 2s window to race on
+  windows-latest.
+
+---
+
 ## Branch Protection
 
 The `ci-status` job is the required check for branch protection.

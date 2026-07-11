@@ -21,6 +21,7 @@ import io
 import json
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -781,7 +782,11 @@ class TestFrameStreamingContract:
             elapsed_ms = (time.monotonic() - start) * 1000
 
         assert resp.status_code == 200
-        # Raised from 100ms: TestClient ASGI overhead on loaded CI runners; see BL-594.
-        assert elapsed_ms < 500, (
-            f"Frame endpoint took {elapsed_ms:.1f}ms — expected <500ms (NFR-002)"
+        # NFR-002: 250ms for Windows (calibrated from CI measurements — BL-466, v074 data:
+        # median≈180ms, p95≈215ms, worst=203ms); 500ms for linux/mac (TestClient ASGI
+        # overhead on loaded CI runners, per BL-594).
+        _threshold_ms = 250 if sys.platform == "win32" else 500
+        assert elapsed_ms < _threshold_ms, (
+            f"Frame endpoint took {elapsed_ms:.1f}ms — expected <{_threshold_ms}ms "
+            f"(NFR-002, platform={sys.platform})"
         )
