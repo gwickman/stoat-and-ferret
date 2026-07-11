@@ -320,6 +320,29 @@ When adding a column to any database-backed model, the following files must ALL 
 
 ---
 
+## Behavioral AC Citation Policy
+
+Any AC whose text describes existing implementation behavior MUST cite the implementation file:line
+being described in the AC text or attached evidence. This applies to ACs that make claims like
+"the counter resets to 0 on reconnect" or "the handler processes events sequentially."
+
+**Canonical incident:** v074 BL-402-AC-4 stated `event_id` is a per-connection counter that
+resets to 0 on reconnect. The actual implementation at
+`src/stoat_ferret/api/websocket/events.py:20` (`_BROADCAST_COUNTER`) is a module-level global
+monotonic integer. The discrepancy was caught only during execution, forcing a deviation cycle.
+
+**Pre-design review check (30 seconds per AC):**
+For each AC that makes a behavioral claim about existing code, run:
+
+```bash
+grep -n "<claimed_symbol_or_behavior>" src/
+```
+
+If the grep returns no match, or returns a different behavior than the AC describes, the AC
+must be updated before the theme design ships.
+
+---
+
 ## Structured Event Naming
 
 ### Event Namespace Rule
