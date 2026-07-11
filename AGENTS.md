@@ -53,6 +53,12 @@ cargo run --bin stub_gen     # Generate baseline stubs to .generated-stubs/
 # Then verify: uv run python scripts/verify_stubs.py
 ```
 
+## Scratch Directory
+
+Write disposable command output (quality captures, test dumps, one-off scripts) to `.scratch/` —
+not to the repo root. Real deliverables go to their proper canonical location. `.scratch/` contents
+are gitignored; `.scratch/.gitkeep` keeps the directory tracked.
+
 ## Windows (Git Bash)
 
 In Git Bash (MSYS2) on Windows, always use `/dev/null` for output redirection — MSYS translates it to the Windows null device automatically. Do **not** use bare `nul` (the native Windows convention), because Git Bash interprets it as a literal filename and creates a file named `nul` in the working directory.
