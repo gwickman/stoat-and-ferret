@@ -127,6 +127,11 @@ Python type stubs for the Rust PyO3 bindings are maintained in `src/stoat_ferret
 
 ### Workflow After Modifying Rust API
 
+**After every Rust source merge:** Run `maturin develop` from the project root (not
+`--manifest-path`) before executing any Python-level verification. The compiled .pyd binary
+persists from the last build; Rust unit tests can pass while Python behavior reflects
+pre-merge code (LRN-602 incident: v103 post-UAT).
+
 1. Run stub generation:
    ```bash
    cd rust/stoat_ferret_core
