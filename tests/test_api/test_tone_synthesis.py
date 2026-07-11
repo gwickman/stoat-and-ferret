@@ -68,6 +68,14 @@ def test_tone_filter_binaural_sweep() -> None:
     assert "t*t" in f
 
 
+def test_tone_filter_frequency_clamp() -> None:
+    """Smoke test: catches stale .pyd binary that predates BL-494 clamp fix."""
+    from stoat_ferret_core import build_generator_source_filter
+
+    result = build_generator_source_filter('{"type": "tone", "frequency": 5.0}', 1.0)
+    assert "20.000" in result  # frequency clamped to min 20 Hz
+
+
 def test_tone_filter_missing_frequency_raises() -> None:
     """build_generator_source_filter raises ValueError when 'frequency' is absent."""
     from stoat_ferret_core import build_generator_source_filter
