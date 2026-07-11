@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/gwickman/stoat-and-ferret/actions/workflows/ci.yml/badge.svg)](https://github.com/gwickman/stoat-and-ferret/actions/workflows/ci.yml)
 [![License: AGPL v3 or later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gwickman/stoat-and-ferret)
 
 stoat-and-ferret is an alpha video editor built specifically to be operated by chatbots and other programmatic agents. Its primary interface is not a timeline widget or a desktop UI; it is a discoverable HTTP API, OpenAPI schema, effect catalogue, schema endpoints, replayable WebSocket event stream, and agent-oriented workflow documentation.
 
