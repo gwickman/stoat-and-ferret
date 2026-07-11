@@ -264,3 +264,18 @@ nul
 # Auto-dev artefacts belong in the external artifacts root, not the product repo.
 # This guard prevents recurrence of the deletion at commit 710b7bc7.
 docs/auto-dev/
+
+# Scratch directory — disposable output only; .gitkeep keeps the directory tracked
+.scratch/*
+!.scratch/.gitkeep
+
+# Junk patterns that accumulated at repo root before these rules existed
+.quality_*.txt
+j[0-9][0-9][0-9]_*.png
+stoat_ferret.db
+stoat_ferret.db-wal
+stoat_ferret.db-shm
+
+# Untracked working directories
+/working/
+/rust/stoat_ferret_core/data/
