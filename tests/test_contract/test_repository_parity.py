@@ -274,6 +274,15 @@ class TestVideoParity:
         assert sql_result is not None
         assert mem_result.id == sql_result.id
 
+    async def test_video_auxiliary_columns_present(self, sqlite_conn: aiosqlite.Connection) -> None:
+        """videos table has subtitle_count, data_count, subtitle_streams columns (BL-408)."""
+        cursor = await sqlite_conn.execute("PRAGMA table_info(videos)")
+        rows = await cursor.fetchall()
+        col_names = {row[1] for row in rows}
+        assert "subtitle_count" in col_names, "videos.subtitle_count column missing"
+        assert "data_count" in col_names, "videos.data_count column missing"
+        assert "subtitle_streams" in col_names, "videos.subtitle_streams column missing"
+
 
 @pytest.mark.contract
 class TestClipParity:
