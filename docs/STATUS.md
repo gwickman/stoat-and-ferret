@@ -1,5 +1,44 @@
 # STATUS.md
 
+## v105 — Process/Tooling, CI/Build, Test Correctness, Runtime Fixes, Documentation (FINAL PLANNED VERSION)
+
+**Delivered:** 2026-07-12
+**PRs:** #801–#815 (15 merged)
+**Tests:** 3745+ collected
+
+### Highlights
+
+- **Theme 1 — process-and-tooling-guardrails:** .scratch/ directory structure, .gitignore hygiene, branch-base fix for retrospectives — BL-619, BL-468 — PRs #801–#804
+- **Theme 2 — ci-and-build-infrastructure:** FFmpeg-tests CI lane promotion to required, conftest poll URL repair, Windows timing constants for NFR-002, version derivation from importlib.metadata — BL-612, BL-466, BL-498, BL-557 — PRs #805–#807 + commit 742e8b18
+- **Theme 3 — test-correctness-and-code-hygiene:** DB schema checklist documentation, C4 module documentation (translate.rs, spatial.rs), stub_gen CI guard, behavioral-AC citation policy — BL-632, BL-613, BL-498, BL-468 — PR #807 area
+- **Theme 4 — runtime-fixes-and-ffmpeg-coverage:** UAT qc-status-fail locator fix, av_log bracket prefix parsing, mono downmix TTS audio fix, TTS mixing energy test implementation, subtitle FFmpeg contract tests, VideoResponse subtitle/stream counts — BL-630, BL-629, BL-631, BL-608, BL-609, BL-408 — PRs #808–#813
+- **Theme 5 — documentation-and-compliance:** C4 port to main repository (BL-634), final verify-and-close cleanup (BL-559) — PRs #814–#815
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| process-and-tooling-guardrails | BL-619, BL-468 | #801–#804 | merged |
+| ci-and-build-infrastructure | BL-612, BL-466, BL-498, BL-557 | #805–#807, 742e8b18 | merged |
+| test-correctness-and-code-hygiene | BL-632, BL-613, BL-498, BL-468 | #807 area | merged |
+| runtime-fixes-and-ffmpeg-coverage | BL-630, BL-629, BL-631, BL-608, BL-609, BL-408 | #808–#813 | merged |
+| documentation-and-compliance | BL-634, BL-559 | #814–#815 | merged |
+
+### AC Status
+
+- All 5 themes delivered; 23 total features across themes
+- **v105 is the final planned version**
+- C4 documentation ported to main repository (skip_c4_regeneration=true)
+- Full end-to-end process, tooling, CI, and runtime coverage complete
+
+### Carry-Forwards
+
+None. v105 represents complete delivery of planned work.
+
+### User Actions Required
+
+None required. v105 is complete and marks the conclusion of the planned development roadmap.
+
 ## v099 — Image/Generator Clip Types + Windowed Effects
 
 **Delivered:** 2026-07-07
