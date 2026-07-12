@@ -40,7 +40,7 @@ async def run(page: Page, base_url: str, output_dir: Path | None = None) -> None
     # Assert QC panel failure indicator (R2 surface: requires a QC-failing render job)
     await expect(page.locator("[data-testid='qc-status-fail']").first).to_be_visible()
     # Assert re-master flow is reachable from the QC failure state
-    await expect(page.locator("[data-testid='remaster-btn']")).to_be_visible()
+    await expect(page.locator("[data-testid='remaster-btn']").first).to_be_visible()
 
     if screenshot_dir:
         await page.screenshot(path=str(screenshot_dir / "02_qc_fail.png"))
