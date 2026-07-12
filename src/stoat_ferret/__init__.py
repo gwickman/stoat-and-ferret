@@ -5,4 +5,10 @@
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _metadata_version
+
+    __version__: str = _metadata_version("stoat-ferret")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # package not installed (e.g., running from source without install)
