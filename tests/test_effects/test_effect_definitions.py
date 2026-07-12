@@ -39,10 +39,58 @@ def test_all_effects_have_nonempty_example_prompt() -> None:
     assert not missing, f"Effects missing example_prompt: {missing}"
 
 
+REQUIRED_EFFECT_TYPES = {
+    # All effect types known at v105; adding new types does not require updating this set.
+    # This set catches accidental removals — test fails if any required type is missing.
+    "acrossfade",
+    "audio_ducking",
+    "audio_fade",
+    "audio_mix",
+    "blur",
+    "burned_subtitle",
+    "chroma_key",
+    "chromatic_aberration",
+    "color_key",
+    "color_lut",
+    "convolution_reverb",
+    "curves",
+    "deesser",
+    "deplosive",
+    "framerate_convert",
+    "freeze_frame",
+    "gradient_generator",
+    "hue_rotation",
+    "lens_distort",
+    "loudness_normalize",
+    "mastering_limiter",
+    "multiband_compressor",
+    "noise_generator",
+    "noise_reduction",
+    "opacity",
+    "pan",
+    "parametric_eq",
+    "reverse",
+    "scale",
+    "sharpen",
+    "speed_control",
+    "subtitle_script",
+    "text_overlay",
+    "time_stretch",
+    "variable_speed",
+    "video_fade",
+    "vignette",
+    "volume",
+    "xfade",
+    "zoompan",
+}
+
+
 def test_registry_has_builtin_effects() -> None:
     """Guards against silent removals from the default registry."""
     registry = create_default_registry()
-    assert len(registry.list_all()) == 40
+    registered_names = {name for name, _ in registry.list_all()}
+    missing = REQUIRED_EFFECT_TYPES - registered_names
+    assert not missing, f"Required effect types missing from registry: {missing}"
 
 
 def test_value_kind_per_option_populated_for_migrated_builders() -> None:
