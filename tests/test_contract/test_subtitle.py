@@ -1236,3 +1236,195 @@ class TestSubtitleScriptSpecBl601Ac7:
         spec = BurnedSubtitleSpec(source_path="/tmp/a\\b.srt")
         with pytest.raises(ValueError):
             BurnedSubtitleBuilder.build(spec)
+
+
+# ---- BL-609: SubtitleScriptBuilder and BurnedSubtitleBuilder FFmpeg contract tests ----
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_subtitle_script_builder_ffmpeg_contract() -> None:
+    """BL-609-AC-1: render 10s clip with 3 captions via SubtitleScriptBuilder and real FFmpeg."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = os.path.join(tmpdir, "source.mp4")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:size=320x240:rate=10",
+                "-t",
+                "10",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                src_path,
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        entries = [
+            ScriptEntry(1.0, 3.0, "Caption One"),
+            ScriptEntry(4.0, 6.0, "Caption Two"),
+            ScriptEntry(7.0, 9.0, "Caption Three"),
+        ]
+        spec = SubtitleScriptSpec(entries=entries)
+        filter_str = str(SubtitleScriptBuilder.build(spec))
+
+        output_path = os.path.join(tmpdir, "out.mp4")
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                src_path,
+                "-vf",
+                filter_str,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-y",
+                output_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, (
+            f"FFmpeg SubtitleScriptBuilder render failed.\n"
+            f"Filter string: {filter_str}\n"
+            f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
+        )
+        assert os.path.exists(output_path) and os.path.getsize(output_path) > 0
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_burned_subtitle_srt_render() -> None:
+    """BL-609-AC-2: burn SRT onto color=blue 5s clip via real FFmpeg; assert returncode==0."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = os.path.join(tmpdir, "source.mp4")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:size=320x240:rate=10",
+                "-t",
+                "5",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                src_path,
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        srt_path = os.path.join(tmpdir, "subs.srt")
+        with open(srt_path, "w") as f:
+            f.write("1\n00:00:00,000 --> 00:00:05,000\nBurned Text\n")
+
+        spec = BurnedSubtitleSpec(source_path=srt_path)
+        filter_str = str(BurnedSubtitleBuilder.build(spec))
+
+        output_path = os.path.join(tmpdir, "out.mp4")
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                src_path,
+                "-vf",
+                filter_str,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-y",
+                output_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, (
+            f"FFmpeg burned-subtitle SRT render failed.\n"
+            f"Filter string: {filter_str}\n"
+            f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
+        )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
+def test_burned_subtitle_force_style_escape_render() -> None:
+    """BL-609-AC-3: force_style with comma-in-value escaped as \\, renders without FFmpeg error."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = os.path.join(tmpdir, "source.mp4")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:size=320x240:rate=10",
+                "-t",
+                "2",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                src_path,
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        srt_path = os.path.join(tmpdir, "subs.srt")
+        with open(srt_path, "w") as f:
+            f.write("1\n00:00:00,000 --> 00:00:02,000\nHello World\n")
+
+        # Comma in font value is escaped as \, (BL-519); verify FFmpeg accepts the escaped filter
+        spec = BurnedSubtitleSpec(
+            source_path=srt_path,
+            force_style={"Fontname": "Arial,Bold"},
+        )
+        filter_str = str(BurnedSubtitleBuilder.build(spec))
+
+        output_path = os.path.join(tmpdir, "out.mp4")
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                src_path,
+                "-vf",
+                filter_str,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-y",
+                output_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, (
+            f"FFmpeg force_style escape render failed.\n"
+            f"Filter string: {filter_str}\n"
+            f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
+        )
