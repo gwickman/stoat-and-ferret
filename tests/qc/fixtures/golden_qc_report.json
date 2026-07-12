@@ -32,7 +32,7 @@
       "units": "errors"
     },
     "tone_presence": {
-      "measured": null,
+      "measured": 7.52368e-05,
       "target": null,
       "pass": null,
       "units": ""
