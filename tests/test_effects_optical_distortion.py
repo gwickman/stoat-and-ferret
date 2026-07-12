@@ -189,7 +189,7 @@ def test_lens_distort_has_nonempty_example_prompt() -> None:
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="STOAT_TEST_FFMPEG not set")
-def test_lens_distort_contract_ffmpeg(tmp_path: pytest.TempPathFactory) -> None:
+def test_lens_distort_ffmpeg_contract(tmp_path: pytest.TempPathFactory) -> None:
     """lenscorrection filter applied to a real video clip produces output without error."""
     import subprocess
 

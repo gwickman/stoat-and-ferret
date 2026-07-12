@@ -74,7 +74,7 @@ def test_effect_definition_schema_has_required_fields() -> None:
     not os.environ.get("STOAT_TEST_FFMPEG"),
     reason="FFmpeg integration test — set STOAT_TEST_FFMPEG=1 to run",
 )
-def test_convolution_reverb_contract_ffmpeg() -> None:
+def test_convolution_reverb_ffmpeg_contract() -> None:
     """Verify afir filter string is accepted by FFmpeg as valid syntax."""
     import math
     import struct
@@ -125,7 +125,7 @@ def test_convolution_reverb_contract_ffmpeg() -> None:
     not os.environ.get("STOAT_TEST_FFMPEG"),
     reason="FFmpeg integration test — set STOAT_TEST_FFMPEG=1 to run",
 )
-def test_convolution_reverb_decay() -> None:
+def test_convolution_reverb_decay_ffmpeg_contract() -> None:
     """BL-438-AC-2: convolution reverb output amplitude decays after the initial transient."""
     import math
     import struct

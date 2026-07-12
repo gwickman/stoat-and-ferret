@@ -251,7 +251,7 @@ def test_apply_reverse_custom_limit_enforced_from_settings() -> None:
     not os.environ.get("STOAT_TEST_FFMPEG"),
     reason="FFmpeg required; set STOAT_TEST_FFMPEG=1",
 )
-def test_reverse_video_filter_produces_valid_output(tmp_path: str) -> None:
+def test_reverse_video_filter_ffmpeg_contract(tmp_path: str) -> None:
     """ReverseBuilder().video_filter() applied via FFmpeg reverses a test clip (BL-444-AC-4)."""
     import subprocess
     from pathlib import Path

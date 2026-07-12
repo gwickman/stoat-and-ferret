@@ -683,7 +683,7 @@ docs/legal/historical-license-reconciliation.md (see BL-530).
 ### Deferred (FFmpeg-gated / pending discharge)
 
 - BL-499 AC-1/2/3: ColorLutBuilder Windows drive-letter colon escaping — `lut3d=file=C:/path` requires `C\:/path` to avoid filter-graph parser treating `:` as separator
-- BL-453 AC-3: ChromaticAberrationBuilder FFmpeg contract test missing — mirror `test_lens_distort_contract_ffmpeg` pattern
+- BL-453 AC-3: ChromaticAberrationBuilder FFmpeg contract test missing — mirror `test_lens_distort_ffmpeg_contract` pattern
 - BL-452 AC-4: BlendModeBuilder FFmpeg contract test missing — `test_blend_mode_renders_contract` not yet written
 - BL-502 AC-1/2/3: Animation contract tests SKIPPED — `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_opacity_scale.py -k animation_renders`
 - BL-457 AC-4: Browser UAT headless journey — blocked on BL-480 (qc-status-fail testid resolves to 3 elements)

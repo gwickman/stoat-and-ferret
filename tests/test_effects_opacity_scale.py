@@ -252,7 +252,7 @@ def test_scale_build_fn_static() -> None:
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
 @pytest.mark.contract
-def test_opacity_animation_renders() -> None:
+def test_opacity_animation_ffmpeg_contract() -> None:
     """Opacity animation renders without error against real FFmpeg (FR-004-AC-1)."""
     import subprocess
 
@@ -289,7 +289,7 @@ def test_opacity_animation_renders() -> None:
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
 @pytest.mark.contract
-def test_scale_animation_renders() -> None:
+def test_scale_animation_ffmpeg_contract() -> None:
     """Scale animation renders without error against real FFmpeg (FR-004-AC-2)."""
     import subprocess
 

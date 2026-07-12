@@ -289,7 +289,7 @@ def test_apply_freeze_frame_last_valid_frame_returns_201() -> None:
     not os.environ.get("STOAT_TEST_FFMPEG"),
     reason="FFmpeg required; set STOAT_TEST_FFMPEG=1",
 )
-def test_freeze_frame_produces_valid_output(tmp_path) -> None:
+def test_freeze_frame_ffmpeg_contract(tmp_path) -> None:
     """FreezeFrameBuilder applied via FFmpeg produces a longer output (BL-449-AC-3)."""
     import subprocess
     from pathlib import Path

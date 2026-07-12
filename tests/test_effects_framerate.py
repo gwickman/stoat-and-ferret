@@ -213,12 +213,12 @@ _FFMPEG_GATED = pytest.mark.skipif(
 
 
 @_FFMPEG_GATED
-def test_framerate_convert_blend_renders_without_error(tmp_path: str) -> None:
+def test_framerate_convert_blend_ffmpeg_contract(tmp_path: str) -> None:
     """FramerateConvertBuilder blend mode exits with code 0 on a short fixture (BL-448-AC-3).
 
     Discharge command:
         STOAT_TEST_FFMPEG=1 uv run pytest \
-            tests/test_effects_framerate.py::test_framerate_convert_blend_renders_without_error -v
+            tests/test_effects_framerate.py::test_framerate_convert_blend_ffmpeg_contract -v
     """
     import subprocess
     from pathlib import Path

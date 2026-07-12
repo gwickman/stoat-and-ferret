@@ -159,7 +159,7 @@ def test_pan_effect_automatable_flag() -> None:
     not os.environ.get("STOAT_TEST_FFMPEG"),
     reason="FFmpeg required; set STOAT_TEST_FFMPEG=1",
 )
-def test_pan_static_renders_stereo_output(tmp_path: str) -> None:
+def test_pan_static_ffmpeg_contract(tmp_path: str) -> None:
     """PanBuilder(0.5) applied to a mono sine produces a stereo WAV with L != R."""
     import subprocess
     from pathlib import Path
@@ -220,7 +220,7 @@ def test_pan_static_renders_stereo_output(tmp_path: str) -> None:
     not os.environ.get("STOAT_TEST_FFMPEG"),
     reason="FFmpeg required; set STOAT_TEST_FFMPEG=1",
 )
-def test_pan_automation_eval_frame_produces_time_varying_output(tmp_path: str) -> None:
+def test_pan_automation_eval_frame_ffmpeg_contract(tmp_path: str) -> None:
     """Automated PanBuilder with eval=frame produces output that varies over time."""
     import subprocess
     from pathlib import Path

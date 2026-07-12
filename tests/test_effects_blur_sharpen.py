@@ -196,7 +196,7 @@ def test_blur_automation_dispatch_via_registry() -> None:
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1 and real ffmpeg")
-def test_blur_gaussian_renders_contract() -> None:
+def test_blur_gaussian_ffmpeg_contract() -> None:
     """BlurBuilder gaussian render contract test against real FFmpeg."""
     import subprocess
 
@@ -219,7 +219,7 @@ def test_blur_gaussian_renders_contract() -> None:
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1 and real ffmpeg")
-def test_blur_directional_renders_contract() -> None:
+def test_blur_directional_ffmpeg_contract() -> None:
     """BlurBuilder directional render contract test against real FFmpeg."""
     import subprocess
 
@@ -242,7 +242,7 @@ def test_blur_directional_renders_contract() -> None:
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1 and real ffmpeg")
-def test_sharpen_renders_contract() -> None:
+def test_sharpen_ffmpeg_contract() -> None:
     """SharpenBuilder render contract test against real FFmpeg."""
     import subprocess
 

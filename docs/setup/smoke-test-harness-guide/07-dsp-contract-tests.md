@@ -1,3 +1,17 @@
+## Naming Convention
+
+All `STOAT_TEST_FFMPEG=1`-gated test functions in `tests/test_effects_*.py` must use the
+`_ffmpeg_contract` suffix. Examples:
+
+```
+test_color_lut_ffmpeg_contract
+test_blur_gaussian_ffmpeg_contract
+test_lens_distort_ffmpeg_contract
+```
+
+A conformance assertion in `tests/test_hygiene.py::test_ffmpeg_contract_test_naming_convention`
+enforces this at CI time — any non-conforming test name causes a CI failure.
+
 ## Definition-of-Done Policy
 
 Every new effect builder **MUST ship with at least one `STOAT_TEST_FFMPEG=1`-gated contract

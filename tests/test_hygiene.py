@@ -251,6 +251,28 @@ def test_no_http422_unprocessable_entity_in_src() -> None:
     )
 
 
+def test_ffmpeg_contract_test_naming_convention() -> None:
+    """All STOAT_TEST_FFMPEG-gated tests in test_effects_*.py must end with _ffmpeg_contract."""
+    import ast
+    import glob
+
+    non_conforming = []
+    for path in sorted(glob.glob("tests/test_effects*.py")):
+        with open(path) as fh:
+            source = fh.read()
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                for decorator in node.decorator_list:
+                    decorator_src = ast.unparse(decorator)
+                    gated = "STOAT_TEST_FFMPEG" in decorator_src or "_FFMPEG_GATED" in decorator_src
+                    if gated and not node.name.endswith("_ffmpeg_contract"):
+                        non_conforming.append(f"{path}::{node.name}")
+    assert not non_conforming, (
+        f"FFmpeg contract tests must end with '_ffmpeg_contract': {non_conforming}"
+    )
+
+
 def test_uat_baseline_stale_j502_j504_absent() -> None:
     """BL-590: J502/J504 may appear in baseline only when tracked under BL-558
     (headless limitation).

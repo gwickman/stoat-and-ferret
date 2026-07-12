@@ -143,33 +143,35 @@ _FFMPEG_GATED = pytest.mark.skipif(
 
 
 @_FFMPEG_GATED
-def test_variable_speed_output_duration_integral() -> None:
+def test_variable_speed_output_duration_ffmpeg_contract() -> None:
     """Rendered output duration equals sum of segment durations (tolerance ≤ 100ms).
 
     Discharge command:
         STOAT_TEST_FFMPEG=1 uv run pytest \
-            tests/test_effects_variable_speed.py::test_variable_speed_output_duration_integral -v
+            tests/test_effects_variable_speed.py \
+            -k test_variable_speed_output_duration_ffmpeg_contract -v
     """
     pytest.skip("FFmpeg duration probe not yet implemented — deferred_post_merge discharge")
 
 
 @_FFMPEG_GATED
-def test_variable_speed_segment_speed_verified() -> None:
+def test_variable_speed_segment_speed_ffmpeg_contract() -> None:
     """Probe confirms each segment plays at the declared speed (AC-2).
 
     Discharge command:
         STOAT_TEST_FFMPEG=1 uv run pytest \
-            tests/test_effects_variable_speed.py::test_variable_speed_segment_speed_verified -v
+            tests/test_effects_variable_speed.py \
+            -k test_variable_speed_segment_speed_ffmpeg_contract -v
     """
     pytest.skip("FFmpeg segment probe not yet implemented — deferred_post_merge discharge")
 
 
 @_FFMPEG_GATED
-def test_variable_speed_audio_pitch_unchanged() -> None:
+def test_variable_speed_audio_pitch_ffmpeg_contract() -> None:
     """Rendered audio pitch tracks atempo correctly across segments (AC-3).
 
     Discharge command:
         STOAT_TEST_FFMPEG=1 uv run pytest \
-            tests/test_effects_variable_speed.py::test_variable_speed_audio_pitch_unchanged -v
+            tests/test_effects_variable_speed.py::test_variable_speed_audio_pitch_ffmpeg_contract -v
     """
     pytest.skip("FFmpeg audio-pitch probe not yet implemented — deferred_post_merge discharge")

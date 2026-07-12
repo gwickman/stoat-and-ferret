@@ -253,7 +253,7 @@ def test_chroma_key_builder_alongside_z_indexed_composition() -> None:
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
 @pytest.mark.contract
-def test_chromakey_renders_without_error() -> None:
+def test_chromakey_ffmpeg_contract() -> None:
     """chromakey filter executes against real FFmpeg without error (BL-452-AC-4)."""
     import subprocess
 
@@ -283,7 +283,7 @@ def test_chromakey_renders_without_error() -> None:
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
 @pytest.mark.contract
-def test_colorkey_renders_without_error() -> None:
+def test_colorkey_ffmpeg_contract() -> None:
     """colorkey filter executes against real FFmpeg without error (BL-452-AC-4)."""
     import subprocess
 

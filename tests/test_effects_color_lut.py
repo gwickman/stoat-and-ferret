@@ -205,7 +205,7 @@ def test_color_lut_regression() -> None:
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="STOAT_TEST_FFMPEG not set")
 @pytest.mark.contract
-def test_color_lut_renders_contract(tmp_path: Path) -> None:
+def test_color_lut_ffmpeg_contract(tmp_path: Path) -> None:
     """color_lut effect applies without FFmpeg error (integration, BL-450-AC-3)."""
     import subprocess
 

@@ -356,7 +356,7 @@ async def test_no_window_key_without_windowspec() -> None:
 
 
 @_FFMPEG_GATED
-def test_window_render_probe(tmp_path: object) -> None:
+def test_window_render_ffmpeg_contract(tmp_path: object) -> None:
     """Rendered probe confirms effect active only within window (FR-003-AC-1).
 
     Renders a solid-blue lavfi source with a negate effect windowed to [2.0, 4.0].
@@ -364,7 +364,8 @@ def test_window_render_probe(tmp_path: object) -> None:
     (colour inversion) is present only within the window bounds.
 
     Discharge command:
-        STOAT_TEST_FFMPEG=1 uv run pytest tests/test_effects_window.py::test_window_render_probe -v
+        STOAT_TEST_FFMPEG=1 uv run pytest \
+            tests/test_effects_window.py::test_window_render_ffmpeg_contract -v
     """
     import subprocess
     from pathlib import Path
