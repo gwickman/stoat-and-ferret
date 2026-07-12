@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1054,3 +1055,141 @@ class TestTtsSpeechEnergyPlacementFFmpeg:
             f"(post={e_post:.2f}, pre={e_pre:.2f})"
         )
         # BL-516-AC-4 discharged: energy onset measured above
+
+
+# ---------------------------------------------------------------------------
+# TTS mixing energy bands — FFmpeg-gated (BL-608)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(
+    not os.getenv("STOAT_TEST_FFMPEG"),
+    reason="requires STOAT_TEST_FFMPEG=1 and real FFmpeg",
+)
+def test_tts_mixing_energy_bands(tmp_path: Path) -> None:
+    """Verify source audio + TTS mix retains energy in both frequency bands.
+
+    BL-608: validates that amix preserves energy from both the source-audio band
+    (440 Hz sine proxy) and the TTS band (880 Hz sine proxy) so a regression where
+    TTS overwrites source audio is caught in the STOAT_TEST_FFMPEG CI lane.
+    """
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        pytest.skip("ffmpeg/ffprobe not in PATH")
+
+    # Source video: 440 Hz sine, stereo 48 kHz, 4 s
+    src_video = tmp_path / "source_440hz.mp4"
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=320x240:r=30:d=4",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=48000:duration=4",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            str(src_video),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    assert r.returncode == 0, r.stderr.decode()[-500:]
+
+    # TTS proxy WAV: 880 Hz sine, stereo 48 kHz, 4 s (one octave above source — cleanly separated)
+    tts_wav = tmp_path / "tts_proxy_880hz.wav"
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=880:sample_rate=48000:duration=4",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            str(tts_wav),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    assert r.returncode == 0, r.stderr.decode()[-500:]
+
+    # Mix via amix — mirrors the filter produced by build_command_for_job with TTS + source audio
+    mixed = tmp_path / "mixed_output.wav"
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(src_video),
+            "-i",
+            str(tts_wav),
+            "-filter_complex",
+            "[0:a][1:a]amix=inputs=2:duration=longest[aout]",
+            "-map",
+            "[aout]",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            str(mixed),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    assert r.returncode == 0, r.stderr.decode()[-500:]
+    assert mixed.exists()
+
+    def _band_db(path: Path, freq_hz: int) -> float:
+        """Return mean_volume (dBFS) of a 1-octave band centred at freq_hz."""
+        probe = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(path),
+                "-af",
+                f"bandpass=f={freq_hz}:width_type=o:width=1,volumedetect",
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        for line in probe.stderr.splitlines():
+            if "mean_volume" in line:
+                return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
+        raise RuntimeError(f"volumedetect gave no mean_volume at {freq_hz} Hz for {path}")
+
+    energy_source = _band_db(mixed, 440)
+    energy_tts = _band_db(mixed, 880)
+
+    # Both bands must be above silence threshold.
+    # A TTS-overwrites-source regression would zero the 440 Hz band;
+    # a dropped-TTS regression would zero the 880 Hz band.
+    assert energy_source > -60.0, (
+        f"Source audio band (440 Hz) appears silent: {energy_source:.2f} dBFS — "
+        "TTS may have overwritten source audio"
+    )
+    assert energy_tts > -60.0, (
+        f"TTS audio band (880 Hz) appears silent: {energy_tts:.2f} dBFS — "
+        "TTS audio may have been dropped from mix"
+    )
