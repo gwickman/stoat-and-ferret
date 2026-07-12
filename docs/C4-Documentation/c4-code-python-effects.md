@@ -23,6 +23,9 @@
   - `ai_hints: dict[str, str]` -- Map of parameter names to AI guidance strings
   - `preview_fn: Callable[[], str]` -- Function returning filter preview string
   - `build_fn: Callable[[dict[str, Any]], str]` -- Function receiving params, returning filter string
+  - `automatable: frozenset[str]` -- Set of parameter names that support automation envelope (keyframe-based time-varying values). Empty frozenset means no parameters support automation.
+  - `automation_filter_template: str | None` -- Optional FFmpeg filter string template used when building automation filter chains; None means no template override.
+  - `timeline_T_capable: bool` -- Whether the effect supports FFmpeg `T` flag for `enable=between(t,start,end)` time-windowed activation expressions.
 
 #### EffectValidationError (registry.py)
 - **Type**: Class
@@ -39,6 +42,8 @@
   - `get(effect_type: str) -> EffectDefinition | None` -- Retrieves effect definition
   - `list_all() -> list[tuple[str, EffectDefinition]]` -- Lists all registered effects
   - `validate(effect_type: str, parameters: dict) -> list[EffectValidationError]` -- Validate params via JSON schema
+  - `validate_with_automation(effect_type: str, parameters: dict[str, Any]) -> tuple[list[EffectValidationError], str | None]` -- Validates parameters against the effect schema and, if automation envelopes are detected, compiles them via Rust `compile_automation`. Returns `(errors, compiled_expression)` where `compiled_expression` is the Rust-compiled FFmpeg expression string or None.
+  - `build_automation_filter_string(effect_type: str, compiled_expression: str) -> str` -- Returns the full FFmpeg filter string with `:eval=frame` appended for time-varying expression evaluation.
 - **Dependencies**: `jsonschema.Draft7Validator`, `structlog`
 
 ### Functions
@@ -66,6 +71,9 @@ Each effect has a `_build_*` function (receives parameters dict, returns filter 
 ## Dependencies
 
 ### Internal Dependencies
+- `stoat_ferret_core.Automation` -- Automation envelope object used by validate_with_automation
+- `stoat_ferret_core.Keyframe` -- Keyframe data point in an automation envelope
+- `stoat_ferret_core.compile_automation` -- Rust function that compiles an Automation object into an FFmpeg expression string
 - `stoat_ferret_core.DrawtextBuilder` -- Text overlay filter generation
 - `stoat_ferret_core.SpeedControl` -- Speed adjustment filter generation
 - `stoat_ferret_core.VolumeBuilder` -- Volume filter generation

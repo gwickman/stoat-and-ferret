@@ -132,6 +132,22 @@ Exposes `GET /api/v1/system/state` — a best-effort aggregate snapshot of in-me
 
 `get_system_state()` reads `app.state.render_repository` (an `AsyncRenderRepository`) to include active render jobs in the system state snapshot. Only RUNNING and QUEUED render jobs are fetched (not historical completed/failed jobs). Each render job is surfaced as a `JobSummary` with `job_type="render"`. The render repository is accessed via `getattr(app_state, "render_repository", None)` so the endpoint degrades gracefully when the render subsystem is unavailable (NFR-003).
 
+### Assets Router (assets.py)
+
+**File**: `src/stoat_ferret/api/routers/assets.py` — Added in v090 PR #680 (BL-515 — User Asset Library).
+
+- `router: APIRouter` (prefix `/api/v1/assets`, tags `["assets"]`)
+- **Endpoints:**
+  - `POST ''` — upload a new asset (multipart/form-data, `kind` query param); returns 201 `AssetRead`. Validates image magic bytes via Pillow, enforces `STOAT_ASSETS_MAX_SIZE_BYTES`, deduplicates by SHA-256 content hash (re-upload of soft-deleted asset restores it).
+  - `GET ''` — list active (non-deleted) assets; optional `kind`/`offset`/`limit` query params; returns `AssetListResponse`.
+  - `GET /{asset_id}` — get asset metadata by UUID; soft-deleted assets return 404.
+  - `GET /{asset_id}/file` — stream/download raw asset file content via `FileResponse`.
+  - `DELETE /{asset_id}` — soft-delete an asset (physical file not removed); returns 204.
+- **Dependency injection:**
+  - `_get_repo(request) -> AsyncSQLiteAssetRepository` — retrieves `request.app.state.asset_repository`
+  - `_get_settings(request) -> Settings` — retrieves `request.app.state._settings`
+- **Storage:** Assets are persisted via `AsyncSQLiteAssetRepository` wired on `app.state.asset_repository` at startup. Files are stored under `STOAT_ASSETS_DIR` using the SHA-256 content hash as the filename.
+
 ### Source Router (source.py)
 
 Provides AGPL §13 source-offer compliance endpoint under `/api/v1`.

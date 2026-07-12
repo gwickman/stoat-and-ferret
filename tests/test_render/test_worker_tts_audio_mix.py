@@ -290,6 +290,39 @@ def _gen_video_with_audio(path: Path) -> None:
         raise RuntimeError(r.stderr.decode()[-500:])
 
 
+def _gen_video_with_mono_441_audio(path: Path) -> None:
+    """Generate a 2s video with mono 44.1kHz AAC audio — the BL-631 trigger case."""
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=green:s=320x240:r=30:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=220:sample_rate=44100:duration=2",
+            "-ar",
+            "44100",
+            "-ac",
+            "1",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
 def _gen_video_with_48k_stereo_audio(path: Path) -> None:
     r = subprocess.run(
         [
@@ -484,6 +517,47 @@ async def test_tts_renderer_routes_to_mixer_48khz_stereo(tmp_path: Path) -> None
     channels, sample_rate = _ffprobe_audio_format(out)
     assert channels == 2, f"expected 2 channels, got {channels}"
     assert sample_rate == 48000, f"expected 48000 Hz, got {sample_rate}"
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_tts_mono_source_audio_renders_stereo_output(tmp_path: Path) -> None:
+    """BL-631-AC-1: mono 44.1kHz source + TTS cue → output channels=2, sample_rate=48000.
+
+    Verifies the aformat=channel_layouts=stereo,aresample=48000 fix on the source-audio
+    branch prevents amix from negotiating mono output when source clip audio is mono.
+    """
+    src = tmp_path / "clip_mono_441.mp4"
+    tts_wav = tmp_path / "tts.wav"
+    _gen_video_with_mono_441_audio(src)
+    _gen_wav(tts_wav)
+
+    videos = {"vid-mono": _make_video("vid-mono", str(src), audio_codec="aac")}
+    clips = [_make_clip("clip-mono", "vid-mono", timeline_position=0)]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    tts_input = TtsCueAudioInput(
+        cue_id="cue-bl631-001",
+        audio_path=str(tts_wav),
+        track_id="voice-track",
+        start_s=0.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+    out = tmp_path / "output.mp4"
+    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[tts_input])
+    cmd[-1] = str(out)
+
+    rc = _run_ffmpeg(cmd)
+    assert rc.returncode == 0, rc.stderr.decode()[-800:]
+    assert out.exists()
+
+    channels, sample_rate = _ffprobe_audio_format(out)
+    assert channels == 2, f"expected 2 channels (stereo), got {channels} — BL-631 regression"
+    assert sample_rate == 48000, f"expected 48000 Hz, got {sample_rate} — BL-631 regression"
 
 
 # ---------------------------------------------------------------------------
