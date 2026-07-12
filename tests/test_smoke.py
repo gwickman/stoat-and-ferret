@@ -13,9 +13,14 @@ def test_smoke() -> None:
 
 def test_import_stoat_ferret() -> None:
     """Verify the stoat_ferret package can be imported."""
+    from importlib.metadata import version as _metadata_version
+
     import stoat_ferret
 
-    assert stoat_ferret.__version__ == "0.1.0"
+    expected = _metadata_version("stoat-ferret")
+    assert stoat_ferret.__version__ == expected, (
+        f"__version__ {stoat_ferret.__version__!r} != package metadata {expected!r}"
+    )
 
 
 def test_import_stoat_ferret_core() -> None:
