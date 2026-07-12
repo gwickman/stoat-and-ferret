@@ -255,3 +255,19 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k test_concurrent_renders_have_d
 ```
 
 **Pass criteria:** Both renders complete with distinct `output_path` values; test passes.
+
+---
+
+## Frontend Tests (Vitest)
+
+Frontend tests live in `gui/` and are separate from the Python smoke suite. They use Vitest with a jsdom environment configured in `gui/vitest.config.ts`.
+
+### Canonical invocation
+
+```bash
+cd gui && npx vitest run
+```
+
+### jsdom environment requirement
+
+Always run vitest from inside the `gui/` directory. **Do not** invoke `npx vitest run gui/` from the project root. When vitest is called with a directory argument from outside `gui/`, it does not load `gui/vitest.config.ts` and the jsdom environment is not configured — DOM-dependent tests will fail or report incorrect results.

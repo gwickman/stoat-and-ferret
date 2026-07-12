@@ -195,6 +195,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
+      - name: Verify vitest invocation docs
+        run: grep -q "cd gui && npx vitest run" AGENTS.md
+
       - name: Install dependencies
         run: npm ci
         working-directory: gui

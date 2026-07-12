@@ -30,7 +30,7 @@ cd gui
 npm install                  # Install dependencies
 npm run dev                  # Dev server (proxies API to :8765)
 npm run build                # Production build to gui/dist/
-npx vitest run               # Run tests
+cd gui && npx vitest run     # Run tests (canonical — do NOT use: npx vitest run gui/ from root)
 
 # Rust — run cargo commands from rust/stoat_ferret_core/
 cd rust/stoat_ferret_core
@@ -194,10 +194,13 @@ The `ffmpeg-tests` job is non-required during the triage window — it is not in
 ### Frontend (TypeScript, Vitest)
 
 ```bash
-cd gui
-npx tsc -b                   # Type check
-npx vitest run               # Run tests
+cd gui && npx tsc -b         # Type check
+cd gui && npx vitest run     # Run tests
 ```
+
+> **Important:** Always run `cd gui && npx vitest run`, not `npx vitest run gui/` from the project
+> root. Invoking vitest with a directory argument from the root bypasses `gui/vitest.config.ts`,
+> which means the jsdom environment is not loaded and DOM-dependent tests fail.
 
 ### Rust (clippy, cargo test)
 
