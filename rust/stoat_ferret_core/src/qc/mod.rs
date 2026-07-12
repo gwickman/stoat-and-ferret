@@ -433,20 +433,25 @@ pub fn py_parse_spectral_report(output: &str) -> PyResult<SpectralReport> {
     for line in output.lines() {
         let line = line.trim();
         let prefix = "lavfi.aspectralstats.";
-        if let Some(rest) = line.strip_prefix(prefix) {
-            // rest is like "1.mean=0.001234" or "1.variance=0.000056"
-            // Split on first '.' to get channel number
-            let dot_pos = rest.find('.');
-            if let Some(dp) = dot_pos {
-                let channel_str = &rest[..dp];
-                let stat_and_value = &rest[dp + 1..];
-                if let Ok(channel) = channel_str.parse::<i64>() {
-                    // Only capture .mean= entries for channel energy summary
-                    if let Some(val_str) = stat_and_value.strip_prefix("mean=") {
-                        if let Ok(mean) = val_str.trim().parse::<f64>() {
-                            // Keep the first mean per channel (first frame)
-                            channel_means.entry(channel).or_insert(mean);
-                        }
+        // Use find() so bracket-prefixed lines (e.g. "[Parsed_ametadata_0 @ 0x7f...] lavfi...")
+        // are handled the same as plain lines (BL-629).
+        let rest = if let Some(idx) = line.find(prefix) {
+            &line[idx + prefix.len()..]
+        } else {
+            continue;
+        };
+        // rest is like "1.mean=0.001234" or "1.variance=0.000056"
+        // Split on first '.' to get channel number
+        let dot_pos = rest.find('.');
+        if let Some(dp) = dot_pos {
+            let channel_str = &rest[..dp];
+            let stat_and_value = &rest[dp + 1..];
+            if let Ok(channel) = channel_str.parse::<i64>() {
+                // Only capture .mean= entries for channel energy summary
+                if let Some(val_str) = stat_and_value.strip_prefix("mean=") {
+                    if let Ok(mean) = val_str.trim().parse::<f64>() {
+                        // Keep the first mean per channel (first frame)
+                        channel_means.entry(channel).or_insert(mean);
                     }
                 }
             }
@@ -706,6 +711,24 @@ lavfi.aspectralstats.2.variance=0.000078
     fn test_parse_spectral_no_mean_lines_returns_err() {
         let text = "frame:0   pts:0     pts_time:0\nlavfi.aspectralstats.1.variance=0.001\n";
         assert!(py_parse_spectral_report(text).is_err());
+    }
+
+    #[test]
+    fn test_parse_spectral_bracket_prefix() {
+        let input = "[Parsed_ametadata_0 @ 0x7f1234] lavfi.aspectralstats.1.mean=0.001234\n\
+                     [Parsed_ametadata_0 @ 0x7f1234] lavfi.aspectralstats.2.mean=0.005678\n";
+        let report = py_parse_spectral_report(input).expect("should parse bracket-prefix output");
+        assert_eq!(report.channel_count, 2);
+        assert!((report.channel_means[0] - 0.001234_f64).abs() < 1e-6);
+        assert!((report.channel_means[1] - 0.005678_f64).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_parse_spectral_no_prefix_still_works() {
+        let input = "lavfi.aspectralstats.1.mean=0.001234\n";
+        let report = py_parse_spectral_report(input).expect("should parse no-prefix output");
+        assert_eq!(report.channel_count, 1);
+        assert!((report.channel_means[0] - 0.001234_f64).abs() < 1e-6);
     }
 
     // -- Video defect tests --
