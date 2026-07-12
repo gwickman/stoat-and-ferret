@@ -463,7 +463,10 @@ async def build_command_for_job(
             combined_filter = filter_complex_str + ";" + tts_filter_seg
             if source_audio_codec_mc is not None:
                 src_a = f"[{source_audio_input_idx_mc}:a]"
-                mix_seg = f"{src_a}{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                mix_seg = (
+                    f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                )
                 combined_filter_with_mix = combined_filter + ";" + mix_seg
                 multi_cmd.extend(
                     [
@@ -638,7 +641,10 @@ async def build_command_for_job(
             tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
             combined_sc = filter_complex_sc + ";" + tts_filter_seg
             if source_audio_codec is not None:
-                mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                mix_seg = (
+                    f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                )
                 combined_sc_with_mix = combined_sc + ";" + mix_seg
                 cmd.extend(
                     ["-filter_complex", combined_sc_with_mix, "-map", "[final]", "-map", "[aout]"]
@@ -655,7 +661,10 @@ async def build_command_for_job(
         tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
         if source_audio_codec is not None:
             # Source video has audio — mix with TTS narration into [aout]
-            mix_seg = f"[0:a]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+            mix_seg = (
+                f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+            )
             if filter_graph:
                 combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg};{mix_seg}"
                 cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", "[aout]"])
