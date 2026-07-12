@@ -162,12 +162,13 @@ def load_known_failures(
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
-        if isinstance(data, list):
-            failures_list = data
-        elif isinstance(data, dict) and "failures" in data:
-            failures_list = data["failures"]
-        else:
-            raise ValueError("Registry must contain 'failures' key")
+        if not isinstance(data, list):
+            raise ValueError(
+                f"Expected bare JSON array in {path!r}; got {type(data).__name__}. "
+                'canonical format: [{"journey_id": ..., "reason": "...", '
+                '"tracking_reference": "..."}]'
+            )
+        failures_list = data
 
         failures_by_id: dict[int, dict[str, str]] = {}
         for entry in failures_list:

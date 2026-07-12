@@ -20,16 +20,10 @@ from scripts.uat_runner import get_journey_annotation, load_known_failures, run_
 
 
 def test_load_valid_registry(tmp_path: pytest.TempPathFactory) -> None:
-    """Valid registry file parses without exception and returns correct mapping."""
+    """Valid bare-array registry file parses without exception and returns correct mapping."""
     registry_file = tmp_path / "registry.json"
     registry_file.write_text(
-        json.dumps(
-            {
-                "failures": [
-                    {"journey_id": 501, "reason": "test reason", "tracking_reference": "ref-001"}
-                ]
-            }
-        ),
+        json.dumps([{"journey_id": 501, "reason": "test reason", "tracking_reference": "ref-001"}]),
         encoding="utf-8",
     )
 
@@ -55,12 +49,12 @@ def test_load_malformed_json(tmp_path: pytest.TempPathFactory) -> None:
         load_known_failures(str(registry_file))
 
 
-def test_load_missing_failures_key(tmp_path: pytest.TempPathFactory) -> None:
-    """Registry without 'failures' key raises ValueError."""
+def test_load_non_list_top_level(tmp_path: pytest.TempPathFactory) -> None:
+    """Non-list top-level value raises ValueError naming the canonical bare-array shape."""
     registry_file = tmp_path / "nokey.json"
     registry_file.write_text(json.dumps({"other": []}), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="must contain 'failures'"):
+    with pytest.raises(ValueError, match="Expected bare JSON array"):
         load_known_failures(str(registry_file))
 
 
@@ -68,13 +62,7 @@ def test_load_invalid_journey_id(tmp_path: pytest.TempPathFactory) -> None:
     """Non-integer journey_id raises ValueError."""
     registry_file = tmp_path / "badid.json"
     registry_file.write_text(
-        json.dumps(
-            {
-                "failures": [
-                    {"journey_id": "not_an_int", "reason": "test", "tracking_reference": "ref"}
-                ]
-            }
-        ),
+        json.dumps([{"journey_id": "not_an_int", "reason": "test", "tracking_reference": "ref"}]),
         encoding="utf-8",
     )
 
@@ -86,7 +74,7 @@ def test_load_missing_required_field(tmp_path: pytest.TempPathFactory) -> None:
     """Entry missing tracking_reference raises ValueError."""
     registry_file = tmp_path / "incomplete.json"
     registry_file.write_text(
-        json.dumps({"failures": [{"journey_id": 501, "reason": "test"}]}),
+        json.dumps([{"journey_id": 501, "reason": "test"}]),
         encoding="utf-8",
     )
 
@@ -95,9 +83,9 @@ def test_load_missing_required_field(tmp_path: pytest.TempPathFactory) -> None:
 
 
 def test_load_empty_failures_list(tmp_path: pytest.TempPathFactory) -> None:
-    """Registry with empty failures list returns empty dict."""
+    """Empty bare-array registry returns empty dict."""
     registry_file = tmp_path / "empty.json"
-    registry_file.write_text(json.dumps({"failures": []}), encoding="utf-8")
+    registry_file.write_text(json.dumps([]), encoding="utf-8")
 
     result = load_known_failures(str(registry_file))
     assert result == {}
