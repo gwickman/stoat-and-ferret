@@ -22,6 +22,13 @@
   - `out_point: Position` - End position within source (exclusive)
   - `source_duration: Option<Duration>` - Total source file duration (optional)
 - **Attributes**: `#[gen_stub_pyclass]` `#[pyclass]` `#[derive(Debug, Clone)]`
+- **Python-side DB schema additions** (persisted in the `clips` SQLite table, reflected via `db/models.py`):
+  - Generator-clip schema (Alembic revision `a8516edf859e`, v079 PR #574/BL-441):
+    - `clip_type: str` — `"file"` (default), `"generator"`, or `"image"`
+    - `generator_params: dict[str, Any] | None` — generator parameters; None for file/image clips
+    - `source_video_id: str | None` — nullable; None for generator/image clips (file clips still require a non-null `source_video_id`)
+  - Image-clip schema (Alembic revision `i1b2c3d4e5f6`, BL-511, v090):
+    - `source_asset_id: str | None` — nullable FK to assets table; required for image clips, None for file/generator clips
 
 #### `ValidationError`
 - **Description**: Detailed validation error with field name, message, and optional actual/expected values.
