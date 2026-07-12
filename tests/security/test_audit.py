@@ -58,50 +58,35 @@ pytestmark = pytest.mark.timeout(30)
 # (``sqlite_master`` queries). SQLite's PRAGMA and ALTER TABLE statements do
 # not accept parameter binding for identifiers, so f-string interpolation is
 # the only mechanism available — these calls are safe by construction. Each
-# entry is ``(relative_path, line_number)``.
-SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
+# entry is ``(relative_path, enclosing_function_name)``.
+SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
     {
-        # _alter_videos_add_auxiliary_columns (sync) — BL-408
-        ("src/stoat_ferret/db/schema.py", 500),
-        # _alter_render_jobs_add_partial_columns (sync) — BL-415
-        ("src/stoat_ferret/db/schema.py", 514),
-        # _alter_render_jobs_add_evidence_columns (sync) — BL-554
-        ("src/stoat_ferret/db/schema.py", 528),
-        # _alter_projects_add_audio_mix_column (sync)
-        ("src/stoat_ferret/db/schema.py", 542),
-        # _alter_projects_add_audio_baseline_columns (sync) — BL-422
-        ("src/stoat_ferret/db/schema.py", 556),
-        # _alter_clips_add_timeline_columns (sync)
-        ("src/stoat_ferret/db/schema.py", 572),
-        # _alter_clips_add_generator_columns (sync) — BL-441
-        ("src/stoat_ferret/db/schema.py", 589),
-        # _alter_clips_add_image_columns (sync) — BL-511
-        ("src/stoat_ferret/db/schema.py", 603),
-        # _alter_tracks_add_audio_columns_sync (sync) — BL-517
-        ("src/stoat_ferret/db/schema.py", 617),
-        # _alter_videos_add_auxiliary_columns_async — BL-408
-        ("src/stoat_ferret/db/schema.py", 699),
-        # _alter_projects_add_audio_mix_column_async
-        ("src/stoat_ferret/db/schema.py", 715),
-        # _alter_projects_add_audio_baseline_columns_async — BL-422
-        ("src/stoat_ferret/db/schema.py", 731),
-        # _alter_clips_add_timeline_columns_async
-        ("src/stoat_ferret/db/schema.py", 747),
-        # _alter_clips_add_generator_columns_async — BL-441
-        ("src/stoat_ferret/db/schema.py", 764),
-        # _alter_clips_add_image_columns_async — BL-511
-        ("src/stoat_ferret/db/schema.py", 778),
-        # _alter_render_jobs_add_partial_columns_async (async) — BL-415
-        ("src/stoat_ferret/db/schema.py", 794),
-        # _alter_render_jobs_add_evidence_columns_async (async) — BL-554
-        ("src/stoat_ferret/db/schema.py", 810),
-        # _alter_tracks_add_audio_columns_async (async) — BL-517
-        ("src/stoat_ferret/db/schema.py", 824),
-        ("src/stoat_ferret/api/services/migrations.py", 437),
+        # schema.py sync ALTER TABLE migrations — BL-408/415/554/422/441/511/517
+        ("src/stoat_ferret/db/schema.py", "_alter_videos_add_auxiliary_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_partial_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_evidence_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_mix_column"),
+        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_baseline_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_timeline_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_generator_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_image_columns"),
+        ("src/stoat_ferret/db/schema.py", "_alter_tracks_add_audio_columns_sync"),
+        # schema.py async ALTER TABLE migrations — BL-408/422/441/511/415/554/517
+        ("src/stoat_ferret/db/schema.py", "_alter_videos_add_auxiliary_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_mix_column_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_baseline_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_timeline_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_generator_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_image_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_partial_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_evidence_columns_async"),
+        ("src/stoat_ferret/db/schema.py", "_alter_tracks_add_audio_columns_async"),
+        # PRAGMA table_info snapshot — identifier comes from sqlite_master query
+        ("src/stoat_ferret/api/services/migrations.py", "table_schema_snapshot"),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.
         # The interpolated value contains only "?" and "," — values are bound
         # through the second argument to ``.execute()``.
-        ("src/stoat_ferret/render/checkpoints.py", 143),
+        ("src/stoat_ferret/render/checkpoints.py", "cleanup_stale"),
     }
 )
 
@@ -135,10 +120,21 @@ def _looks_like_sql(node: ast.AST) -> bool:
     return False
 
 
+def _get_enclosing_function(tree: ast.AST, lineno: int) -> str | None:
+    """Return the innermost function def name containing the given line number."""
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.lineno <= lineno <= node.end_lineno
+        ):
+            return node.name
+    return None
+
+
 def _scan_module_for_unsafe_sql(
     module_path: Path,
-) -> list[tuple[str, int, str]]:
-    """Return ``(rel_path, lineno, snippet)`` for unsafe execute calls."""
+) -> list[tuple[str, str | None, str]]:
+    """Return ``(rel_path, enclosing_function, snippet)`` for unsafe execute calls."""
     source = module_path.read_text(encoding="utf-8")
     try:
         tree = ast.parse(source, filename=str(module_path))
@@ -146,7 +142,7 @@ def _scan_module_for_unsafe_sql(
         return []
 
     rel_path = module_path.relative_to(REPO_ROOT).as_posix()
-    findings: list[tuple[str, int, str]] = []
+    findings: list[tuple[str, str | None, str]] = []
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -167,47 +163,50 @@ def _scan_module_for_unsafe_sql(
         if not _looks_like_sql(first_arg):
             continue
         snippet = ast.unparse(first_arg)
-        findings.append((rel_path, node.lineno, snippet))
+        enclosing_function = _get_enclosing_function(tree, node.lineno)
+        findings.append((rel_path, enclosing_function, snippet))
 
     return findings
 
 
-def test_no_sql_fstring_interpolation() -> None:
+def test_no_sql_interpolation_outside_allowlist() -> None:
     """No ``.execute()`` call uses f-string or ``%`` SQL interpolation outside the allowlist.
 
     Walks every ``.py`` file under ``src/stoat_ferret/`` looking for
-    interpolated SQL. The allowlist captures the four ``ALTER TABLE``
-    migrations (column names from a Python-side constant list) and the
-    ``PRAGMA table_info`` snapshot helper (table name from a
-    ``sqlite_master`` query). SQLite cannot bind identifiers, so these
-    are the only places interpolation is used.
+    interpolated SQL. The allowlist captures the ``ALTER TABLE`` migrations
+    (column names from a Python-side constant list) and the ``PRAGMA
+    table_info`` snapshot helper (table name from a ``sqlite_master`` query).
+    SQLite cannot bind identifiers, so these are the only places interpolation
+    is used.
     """
     py_files = sorted(SRC_ROOT.rglob("*.py"))
     assert py_files, "expected to find Python sources under src/stoat_ferret"
 
-    all_findings: list[tuple[str, int, str]] = []
+    all_findings: list[tuple[str, str | None, str]] = []
     for module_path in py_files:
         all_findings.extend(_scan_module_for_unsafe_sql(module_path))
 
     unexpected = [
-        (rel_path, lineno, snippet)
-        for rel_path, lineno, snippet in all_findings
-        if (rel_path, lineno) not in SQL_INTERPOLATION_ALLOWLIST
+        (rel_path, enclosing_function, snippet)
+        for rel_path, enclosing_function, snippet in all_findings
+        if (rel_path, enclosing_function) not in SQL_INTERPOLATION_ALLOWLIST
     ]
 
-    for rel_path, lineno, snippet in all_findings:
+    for rel_path, enclosing_function, snippet in all_findings:
         logger.info(
             "audit_finding",
-            severity="P3" if (rel_path, lineno) in SQL_INTERPOLATION_ALLOWLIST else "P0",
+            severity=(
+                "P3" if (rel_path, enclosing_function) in SQL_INTERPOLATION_ALLOWLIST else "P0"
+            ),
             category="sql_injection",
-            location=f"{rel_path}:{lineno}",
+            location=f"{rel_path}:{enclosing_function}",
             snippet=snippet,
-            allowlisted=(rel_path, lineno) in SQL_INTERPOLATION_ALLOWLIST,
+            allowlisted=(rel_path, enclosing_function) in SQL_INTERPOLATION_ALLOWLIST,
         )
 
     assert not unexpected, (
         "Unexpected SQL string interpolation detected — review for injection risk:\n"
-        + "\n".join(f"  {rel}:{lineno}  {snippet}" for rel, lineno, snippet in unexpected)
+        + "\n".join(f"  {rel}:{fn}  {snippet}" for rel, fn, snippet in unexpected)
     )
 
 
@@ -218,15 +217,15 @@ def test_sql_interpolation_allowlist_is_live() -> None:
     allowlist needs to move with it, otherwise drift accumulates and the
     main probe silently weakens.
     """
-    discovered: set[tuple[str, int]] = set()
+    discovered: set[tuple[str, str | None]] = set()
     for module_path in sorted(SRC_ROOT.rglob("*.py")):
-        for rel_path, lineno, _ in _scan_module_for_unsafe_sql(module_path):
-            discovered.add((rel_path, lineno))
+        for rel_path, enclosing_function, _ in _scan_module_for_unsafe_sql(module_path):
+            discovered.add((rel_path, enclosing_function))
 
     stale = SQL_INTERPOLATION_ALLOWLIST - discovered
     assert not stale, (
         "SQL interpolation allowlist contains entries that no longer exist:\n"
-        + "\n".join(f"  {rel}:{lineno}" for rel, lineno in sorted(stale))
+        + "\n".join(f"  {rel}:{fn}" for rel, fn in sorted(stale))
     )
 
 
