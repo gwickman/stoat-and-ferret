@@ -4,6 +4,56 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v105 — Process, Tooling & Test-Hygiene Tech-Debt (2026-07-12) — FINAL PLANNED VERSION
+
+### Theme 1: Process and Tooling Guardrails (4 features)
+
+- BL-619: Established `.scratch/` as canonical disposable-output location — 30 committed junk files untracked; `.gitignore` gaps closed for `working/`, `rust/stoat_ferret_core/data/`, `.quality_*.txt`, `j[0-9][0-9][0-9]_*.png`, `stoat_ferret.db*`; "Scratch Directory" section added to AGENTS.md (PR #801)
+- BL-468: Added Behavioral AC Citation Policy to AGENTS.md — requires any AC describing existing implementation behavior to cite file:line; cites BL-402-AC-4 (v074 global counter misread) as canonical incident (PR #802)
+- BL-474: Added executor completion-report routing guard to auto-dev-mcp feature executor template — prohibits `completion-report.md` routing to exploration outbox (auto-dev-mcp PR #1041)
+- BL-562: Extended `_validate_grep_targets` in `build_source_ledger.py` to emit WARNING when non-empty `expected_grep_targets` pattern produces zero matches; two new unit tests (auto-dev-mcp PR #1042)
+
+### Theme 2: CI and Build Infrastructure (4 features)
+
+- BL-632: Confirmed maturin rebuild already present at 7 CI locations; added stale-.pyd smoke test `tests/test_smoke.py::test_maturin_pyd_is_current`; added AGENTS.md note that `maturin develop` must run from project root after every Rust merge (PR #803)
+- BL-498: Added `scripts/check_pyi_append_only.py` — CI guard that blocks any PR reducing `__new__` constructor count in `src/stoat_ferret_core/_core.pyi` below base-branch count; CI step added to `.github/workflows/ci.yml` (PR #804)
+- BL-466: Calibrated Windows CI timing constants — `test_frame_endpoint_timing` threshold 250ms (Windows) / 100ms (linux/mac); active-jobs poll deadline 4.0s (Windows) / 2.0s (linux/mac); `sys.platform == "win32"` detection; "Windows CI Timing" section added to AGENTS.md (PR #805)
+- BL-612: Wired `ffmpeg-tests` job into `ci-status.needs` in `.github/workflows/ci.yml`; AC-1 (GitHub branch protection required check) requires operator action (PR #806)
+
+### Theme 3: Test Correctness and Code Hygiene (7 features)
+
+- BL-557: Aligned `__version__` to `importlib.metadata.version("stoat-ferret")` — all 5 version surfaces now consistent: `pyproject.toml`, `stoat_ferret.__version__`, FastAPI `app.version`, `/api/v1/version.app_version`, `/api/v1/source.version` (PR #807)
+- BL-540: Removed dead dict-wrapper branch from `scripts/uat_runner.py:load_known_failures`; 5 dict-wrapper smoke tests removed; raises `ValueError` on non-list input (direct commit)
+- BL-493: Replaced hardcoded `len(registry.list_all()) == 40` in effects test with `REQUIRED_EFFECT_TYPES` frozenset membership check — adding new effect types no longer requires test modification (direct commit)
+- BL-504: Renamed 20 test functions to `_ffmpeg_contract` suffix across 12 test files; conformance test added to `tests/test_hygiene.py`; convention documented in `docs/setup/smoke-test-harness-guide/07-dsp-contract-tests.md` (direct commit)
+- BL-564: Re-anchored `SQL_INTERPOLATION_ALLOWLIST` in `tests/security/test_audit.py` from `(file_path, line_number)` to `(file_path, enclosing_function_name)` via AST walk — 20 sites re-anchored; inserting new functions before existing allowlisted code no longer requires allowlist edits (direct commit)
+- BL-566: Updated AGENTS.md frontend-tests section with canonical `cd gui && npx vitest run` invocation; note added to smoke-test-harness.md; CI grep guard step added to verify documented invocation stays in AGENTS.md (direct commit)
+- BL-559: Verify-and-close — `UV_NO_CACHE=1 uv run pytest tests/smoke/` already documented in AGENTS.md and smoke-test-harness.md at HEAD; 3/3 ACs supported (direct commit)
+
+### Theme 4: Runtime Fixes and FFmpeg Coverage (6 features)
+
+- BL-630: Fixed J703 headless UAT locator — scoped `[data-testid='qc-status-fail']` to `.first()` in `j_qc_fail.py:41` to resolve Playwright strict-mode violation with 2+ matching elements in headless mode (PR #808)
+- BL-629: Fixed `parse_spectral_report` in Rust to strip av_log bracket prefix (`[Parsed_ametadata_0 @ 0x...]`) before parsing `lavfi.aspectralstats.*` lines; Rust unit test added (PR #809)
+- BL-631: Added `aformat=channel_layouts=stereo,aresample=48000` normalization to source-audio branch in `worker.py` amix segments — mono 44.1kHz source audio + TTS now produces stereo 48kHz output (PR #810)
+- BL-608: Re-implemented `test_tts_mixing_energy_bands` with a non-pass body — renders fixture with source audio + TTS cue, calls ffprobe, asserts two distinct frequency energy bands present; gated on `STOAT_TEST_FFMPEG=1` (PR #811)
+- BL-609: Re-implemented 4 stubbed subtitle FFmpeg contract tests — burned subtitles, SRT render, force_style escape, colon-escaped force_style; all gated on `STOAT_TEST_FFMPEG=1` (PR #812)
+- BL-408: Extended `VideoResponse` with `subtitle_count` and `data_count` fields; `ffprobe_video()` now counts subtitle and data codec streams; AC-1/AC-2 deferred (fixture files required) (PR #813)
+
+### Theme 5: Documentation and Compliance (2 features)
+
+- BL-634: Ported 6 C4 documentation fixes from ARTIFACTS repo to MAIN repo `docs/C4-Documentation/` — BL-470 (api-schemas video), BL-486 (render QCService), BL-487 (effects automatable), BL-497 (generator-clip schema), BL-573 (assets router), BL-614 (render worker.py); all 7 grep targets verified in main repo (PR #814)
+- BL-526: Verify-and-close — CLA compliance infrastructure verified at HEAD: `CONTRIBUTING.md`, `CLA.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.cla-assistant.json` all confirmed delivered by v083 PR #616; AC-6/9/10 deferred (CLA Assistant App install — operator UI action) (PR #815)
+
+### PRs
+
+#801, #802, #803, #804, #805, #806, #807, #808, #809, #810, #811, #812, #813, #814, #815
+
+### Resolved
+
+BL-619 (repo-root hygiene), BL-468 (AC citation policy), BL-474 (executor completion-report guard), BL-562 (ledger token-presence validation), BL-632 (maturin stale-.pyd documentation), BL-498 (_core.pyi append-only guard), BL-466 (Windows CI timing), BL-612 (ffmpeg-tests lane — AC-1/2 operator-gated), BL-557 (__version__ alignment), BL-540 (UAT dict-wrapper removal), BL-493 (effect count assertion invariant), BL-504 (FFmpeg contract test naming), BL-564 (SQL allowlist function anchor), BL-566 (vitest invocation documentation), BL-559 (Windows smoke command), BL-630 (J703 headless UAT locator fix), BL-629 (spectral bracket-prefix fix), BL-631 (TTS stereo fix), BL-608 (TTS energy-bands test), BL-609 (subtitle FFmpeg contract tests), BL-408 (video aux stream counts — AC-1/2 fixture-gated), BL-634 (C4 doc-drift port), BL-526 (CLA compliance — AC-6/9/10 operator-gated)
+
+---
+
 ## v104 — C4 Documentation Drift Repair (2026-07-11)
 
 ### Theme 1: Python C4 Documentation
