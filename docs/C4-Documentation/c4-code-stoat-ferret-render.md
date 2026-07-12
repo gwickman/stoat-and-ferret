@@ -46,6 +46,12 @@
   Location: service.py:73-400
   Key Methods: submit_job, run_job, cancel_job, recover
 
+- QCService (optional dependency injected into RenderService):
+  Location: `stoat_ferret.api.services.qc_service`
+  Role: Optional quality-control service invoked by RenderService after each render job completes
+  Key method: `run_checks(artifact_path, job_id=None, delivery_profile_id=None, assertions=None) -> QCReportRecord` (`qc_service.py:113`)
+  Added: v078 PR #551
+
 - StaleRenderSweeper: Background task that detects and fails stuck running jobs
   Location: sweeper.py
   Purpose: Periodically polls for render jobs that have been in RUNNING status longer than `STOAT_RENDER_STUCK_THRESHOLD_SECONDS`; transitions each stale job to FAILED and broadcasts a RENDER_FAILED WebSocket event
@@ -76,9 +82,27 @@ Provides hardware encoder detection result caching using SQLite.
 | `AsyncEncoderCacheRepository` | Abstract Protocol type for encoder cache persistence — pluggable implementation |
 | `AsyncSQLiteEncoderCacheRepository` | Concrete SQLite implementation of `AsyncEncoderCacheRepository` using aiosqlite |
 
+### worker.py
+
+**Purpose:** Multi-clip render orchestration. Dequeues jobs from RenderQueue, builds FFmpeg commands, routes long filter arguments to temp files on Windows, and executes renders via RenderExecutor.
+
+**Key types:**
+- `CommandBuildError` — exception raised when FFmpeg command construction fails
+- `RenderWorkerLoop` — background async loop that dequeues and executes render jobs
+
+**Key functions:**
+- `build_command_for_job(job, project, clips, video_repo, clip_repo, effect_registry, settings) -> list[str]` — constructs FFmpeg argument list from RenderJob render_plan JSON; dispatches through RenderGraphTranslator for multi-clip plans
+- `_maybe_route_filter_to_file(command, job, executor) -> tuple[list[str], Path | None]` (`worker.py:59`) — on Windows: routes long `-vf`/`-filter_complex` arguments to a temp file via `-filter_script`/`-filter_complex_script` when filter string length exceeds `WINDOWS_ARGV_LIMIT - COMMAND_OVERHEAD_CHARS`
+
+**Constants:** `WINDOWS_ARGV_LIMIT = 32767`, `COMMAND_OVERHEAD_CHARS = 500`
+
+**Key imports:** `RenderGraphTranslator` from `stoat_ferret_core`; `RenderPlanSettings`, `SoftSubtitleSpec` from `api.schemas.render`
+
+**v094 addition:** `_maybe_route_filter_to_file()` for Windows argv-limit routing
+
 ## Dependencies
 
-Internal: stoat_ferret.api.settings, .api.websocket, .render.metrics, stoat_ferret_core
+Internal: stoat_ferret.api.settings, .api.websocket, .render.metrics, stoat_ferret_core, stoat_ferret.api.services.qc_service
 External: asyncio, aiosqlite, structlog, pathlib, datetime
 
 ## Relationships

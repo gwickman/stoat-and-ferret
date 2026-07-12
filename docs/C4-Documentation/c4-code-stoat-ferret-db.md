@@ -22,6 +22,12 @@
 - `ProxyFile`: proxy video metadata with new_id()
 - `Track`: timeline track with new_id()
 - `Clip`: video clip on timeline with validate() and new_id()
+  - Generator-clip schema additions (Alembic revision `a8516edf859e`, v079 PR #574/BL-441):
+    - `clip_type: str` (default `"file"`) — clip type; values: `"file"`, `"generator"`, `"image"`
+    - `generator_params: dict[str, Any] | None` — JSON-encoded parameters for generator clips; None for file/image clips
+    - `source_video_id: str | None` — now nullable (`models.py:377`); None for generator and image clips
+  - Image-clip schema additions (Alembic revision `i1b2c3d4e5f6`, BL-511, v090):
+    - `source_asset_id: str | None` (`models.py:389`) — FK to assets table; required for image clips, None for file/generator clips
 - `Project`: editing project with new_id()
 - `AuditEntry`: audit log entry with new_id()
 - `Video`: video metadata with frame_rate, duration_seconds properties and new_id()
@@ -31,6 +37,20 @@
 
 **Functions:**
 - `validate_preview_transition(current: str, new: str) -> None`
+
+### Asset Repository (asset_repository.py)
+
+Added in v090 PR #680 (BL-515 — User Asset Library); wired on `app.state.asset_repository` at startup.
+
+- `AssetRecord` (dataclass) (`asset_repository.py:16`): `id: str`, `original_filename: str`, `content_hash: str`, `mime_type: str`, `kind: str`, `size_bytes: int`, `file_path: str`, `created_at: str`, `updated_at: str`, `deleted_at: str | None`
+- `AsyncAssetRepository` (Protocol): `insert`, `get_by_id`, `get_by_content_hash`, `list_assets`, `soft_delete`, `restore`
+- `AsyncSQLiteAssetRepository` methods (all async):
+  - `insert(asset: AssetRecord) -> AssetRecord`
+  - `get_by_id(asset_id: str) -> AssetRecord | None` — includes soft-deleted records
+  - `get_by_content_hash(content_hash: str) -> AssetRecord | None` — includes soft-deleted; used for dedup on upload
+  - `list_assets(kind: str | None, tags: list[str] | None, offset: int, limit: int) -> list[AssetRecord]` — active (non-deleted) only
+  - `soft_delete(asset_id: str) -> bool` — sets `deleted_at`; physical file not removed
+  - `restore(asset_id: str) -> AssetRecord | None` — clears `deleted_at`; used by dedup re-upload path
 
 ### Schema (schema.py)
 

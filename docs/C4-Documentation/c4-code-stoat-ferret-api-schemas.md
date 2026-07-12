@@ -160,6 +160,29 @@
 - `EffectTransitionResponse(BaseModel)`
   - **Fields**: id, source_clip_id, target_clip_id, transition_type, parameters, filter_string
 
+### Video Schemas (`video.py`)
+
+**VideoResponse** (`video.py:14`):
+Fields: `id: str`, `path: str`, `filename: str`, `duration_frames: int`, `frame_rate_numerator: int`, `frame_rate_denominator: int`, `width: int`, `height: int`, `video_codec: str`, `audio_codec: str | None`, `file_size: int`, `thumbnail_path: str | None`, `created_at: datetime`, `updated_at: datetime`, `subtitle_count: int = 0`, `data_count: int = 0`, `subtitle_streams: list[dict[str, Any]] = []`. ORM mode enabled (`ConfigDict(from_attributes=True)`). The `subtitle_count` and `data_count` fields were added in v074 PR #510.
+
+**VideoListResponse** (`video.py:41`): `videos: list[VideoResponse]`, `total: int`, `limit: int`, `offset: int`
+
+**VideoSearchResponse** (`video.py:53`): `videos: list[VideoResponse]`, `total: int`, `query: str`
+
+**ScanRequest** (`video.py:64`): `path: str`, `recursive: bool = True`. Extra fields forbidden (`extra="forbid"`).
+
+**ScanError** (`video.py:76`): `path: str`, `error: str`
+
+**ScanResponse** (`video.py:86`): `scanned: int`, `new: int`, `updated: int`, `skipped: int`, `errors: list[ScanError]`
+
+### Asset Schemas (`schemas/assets.py`)
+
+Added in v090 PR #680 (BL-515 — User Asset Library).
+
+**AssetRead** (`assets.py:13`): Full asset representation returned by the API. Fields: `id: str`, `original_filename: str`, `content_hash: str` (SHA-256 hex), `mime_type: str`, `kind: Literal["image","audio","subtitle","font","lut"]`, `size_bytes: int`, `deleted_at: str | None` (ISO 8601 UTC of soft deletion), `created_at: str`, `updated_at: str`. ORM mode enabled (`ConfigDict(from_attributes=True)`). Note: `file_path` is intentionally excluded from the public schema.
+
+**AssetListResponse** (`assets.py:34`): Paginated list wrapper. Fields: `items: list[AssetRead]`, `offset: int`, `limit: int`, `total: int`.
+
 ## Dependencies
 
 ### Internal Dependencies
