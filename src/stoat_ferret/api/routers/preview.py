@@ -472,7 +472,11 @@ async def get_manifest(
         )
 
     content = manifest_file.read_text()
-    return Response(content=content, media_type=HLS_MANIFEST_CONTENT_TYPE)
+    return Response(
+        content=content,
+        media_type=HLS_MANIFEST_CONTENT_TYPE,
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.get(
@@ -526,4 +530,8 @@ async def get_segment(
         )
 
     content = segment_file.read_bytes()
-    return Response(content=content, media_type=HLS_SEGMENT_CONTENT_TYPE)
+    return Response(
+        content=content,
+        media_type=HLS_SEGMENT_CONTENT_TYPE,
+        headers={"X-Content-Type-Options": "nosniff"},
+    )

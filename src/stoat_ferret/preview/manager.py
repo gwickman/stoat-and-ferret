@@ -31,6 +31,7 @@ from stoat_ferret.db.models import (
     PreviewStatus,
     validate_preview_transition,
 )
+from stoat_ferret.preview._paths import confine_child_path
 from stoat_ferret.preview.metrics import (
     preview_errors_total,
     preview_generation_seconds,
@@ -125,8 +126,11 @@ class PreviewManager:
 
         Returns:
             Path to the session's output directory.
+
+        Raises:
+            ValueError: If session_id resolves outside the output base directory.
         """
-        return self._output_base_dir / session_id
+        return confine_child_path(self._output_base_dir, session_id)
 
     def _get_lock(self, session_id: str) -> asyncio.Lock:
         """Get or create a per-session lock.

@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import pytest
 
 from stoat_ferret.ffmpeg.async_executor import FakeAsyncFFmpegExecutor
+from stoat_ferret.preview._paths import confine_child_path
 from stoat_ferret.preview.hls_generator import (
     MANIFEST_FILENAME,
     SEGMENT_FILENAME_PATTERN,
@@ -114,6 +116,31 @@ class TestBuildHlsArgs:
         assert args[-1] == str(tmp_path / "manifest.m3u8")
 
 
+class TestConfineChildPath:
+    """Tests for the confine_child_path() session-directory confinement helper."""
+
+    @pytest.mark.parametrize("session_id", [str(uuid.uuid4()) for _ in range(3)])
+    def test_uuid4_round_trip_unchanged(self, tmp_path: Path, session_id: str) -> None:
+        """Real uuid4 session IDs resolve to base.resolve()/id unchanged."""
+        result = confine_child_path(tmp_path, session_id)
+        assert result == tmp_path.resolve() / session_id
+
+    def test_traversal_escape_raises(self, tmp_path: Path) -> None:
+        """A traversal child raises ValueError before any directory is touched."""
+        with pytest.raises(ValueError, match="escapes base directory"):
+            confine_child_path(tmp_path, "../../escape")
+
+    def test_empty_child_raises(self, tmp_path: Path) -> None:
+        """An empty child resolves to the base itself and raises ValueError."""
+        with pytest.raises(ValueError, match="escapes base directory"):
+            confine_child_path(tmp_path, "")
+
+    def test_dot_child_raises(self, tmp_path: Path) -> None:
+        """A '.' child resolves to the base itself and raises ValueError."""
+        with pytest.raises(ValueError, match="escapes base directory"):
+            confine_child_path(tmp_path, ".")
+
+
 class TestGetSegmentDuration:
     """Tests for segment duration configuration."""
 
@@ -169,6 +196,41 @@ class TestSimplifyFilterForPreview:
 
 class TestHLSGenerator:
     """Tests for the HLS generator class."""
+
+    @pytest.mark.parametrize("session_id", [str(uuid.uuid4()) for _ in range(3)])
+    def test_session_dir_uuid4_round_trip(self, tmp_path: Path, session_id: str) -> None:
+        """_session_dir() routes uuid4 session IDs through confine_child_path unchanged."""
+        generator = HLSGenerator(
+            async_executor=FakeAsyncFFmpegExecutor(),
+            output_base_dir=str(tmp_path),
+        )
+        assert generator._session_dir(session_id) == tmp_path.resolve() / session_id
+
+    def test_session_dir_traversal_raises(self, tmp_path: Path) -> None:
+        """_session_dir() raises ValueError for a traversal session ID."""
+        generator = HLSGenerator(
+            async_executor=FakeAsyncFFmpegExecutor(),
+            output_base_dir=str(tmp_path),
+        )
+        with pytest.raises(ValueError, match="escapes base directory"):
+            generator._session_dir("../../escape")
+
+    async def test_generate_traversal_session_id_raises_before_mkdir(self, tmp_path: Path) -> None:
+        """generate() with a traversal session_id raises before creating any directory."""
+        executor = FakeAsyncFFmpegExecutor()
+        generator = HLSGenerator(
+            async_executor=executor,
+            output_base_dir=str(tmp_path),
+        )
+
+        with pytest.raises(ValueError, match="escapes base directory"):
+            await generator.generate(
+                session_id="../../escape",
+                input_path="/media/video.mp4",
+            )
+
+        assert len(executor.calls) == 0
+        assert not (tmp_path.resolve().parent.parent / "escape").exists()
 
     async def test_generate_creates_output_directory(self, tmp_path: Path) -> None:
         """Generate creates the session output directory."""
