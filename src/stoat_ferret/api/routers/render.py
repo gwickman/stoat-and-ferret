@@ -566,7 +566,17 @@ async def create_render_job(
                     assertions=assertions,
                 )
                 if qc_report.overall_verdict != "pass":
-                    await render_repo.update_status(job.id, RenderStatus.QC_FAILED)
+                    checks_dict = json.loads(qc_report.checks)
+                    failed_ids = [cid for cid, c in checks_dict.items() if c.get("pass") is False]
+                    error_message = (
+                        "QC failed: " + ", ".join(failed_ids)
+                        if failed_ids
+                        else "QC failed: overall_verdict=fail with no individually-failing "
+                        "checks (assertions may be missing)"
+                    )
+                    await render_repo.update_status(
+                        job.id, RenderStatus.QC_FAILED, error_message=error_message
+                    )
                     refreshed = await render_repo.get(job.id)
                     if refreshed is not None:
                         job = refreshed
