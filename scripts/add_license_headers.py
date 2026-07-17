@@ -138,12 +138,18 @@ def _insert_rs_header(content: str) -> str:
     return header + content
 
 
-def process_file(path: Path, check_only: bool) -> bool:
+def process_file(path: Path, check_only: bool, repo_root: Path | None = None) -> bool:
     """
     Process a single file.
 
     Returns True if file already has correct header (or was fixed in write mode).
     Returns False if header is missing/wrong (check mode) or file was modified (write mode).
+
+    When `repo_root` is provided and `check_only` is False, the write is refused (raising
+    `SystemExit`) if `path`'s resolved location falls outside the resolved `repo_root` — this
+    closes the TOCTOU-adjacent gap where a tracked path is lexically inside `repo_root` but its
+    resolved symlink target is not. `repo_root` is optional so callers that don't need the
+    confinement check (e.g. tests exercising other behavior) are unaffected.
     """
     content = path.read_text(encoding="utf-8")
     lines = content.splitlines(keepends=True)
@@ -165,6 +171,9 @@ def process_file(path: Path, check_only: bool) -> bool:
     if check_only:
         return False
 
+    if repo_root is not None and not path.resolve().is_relative_to(repo_root.resolve()):
+        raise SystemExit(f"refusing to write outside repo_root: {path}")
+
     new_content = _insert_py_header(content) if is_py else _insert_rs_header(content)
     path.write_text(new_content, encoding="utf-8")
     return False  # return False = "was modified"
@@ -175,7 +184,7 @@ def run_write(repo_root: Path) -> int:
     files = _enumerate_files(repo_root)
     modified = 0
     for f in files:
-        was_ok = process_file(f, check_only=False)
+        was_ok = process_file(f, check_only=False, repo_root=repo_root)
         if not was_ok:
             modified += 1
     print(f"--write complete: {modified} files modified, {len(files) - modified} already correct")
