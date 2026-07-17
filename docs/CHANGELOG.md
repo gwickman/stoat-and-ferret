@@ -28,7 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### PRs
 
-#816, #817, #818, #819, #820, #821, #822, #823, #824, #825, #826, #827
+#816, #818, #819, #820, #821, #822, #823, #824, #825, #826, #827
+
+(PR #817, "poll job-queue jobs at /api/v1/jobs, not /api/v1/render", BL-692, merged within this version's execution window but is a smoke-test-infrastructure prerequisite fix, not one of v106's 11 planned items.)
 
 ### Resolved
 

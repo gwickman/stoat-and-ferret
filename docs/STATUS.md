@@ -1,6 +1,42 @@
 # STATUS.md
 
-## v105 — Process/Tooling, CI/Build, Test Correctness, Runtime Fixes, Documentation (FINAL PLANNED VERSION)
+## v106 — Sonar Security Hardening + Render-Path Functional Fix
+
+**Delivered:** 2026-07-17
+**PRs:** #816–#827 (12 merged) + #828 (CHANGELOG entry)
+**Tests:** 3775 passed, 109 skipped, 1 failed (stale local `.pyd` build artifact, pre-existing BL-494 fix; not a v106 regression)
+
+### Highlights
+
+- **Theme 1 — sec-preview-and-filesystem-confinement:** `confine_child_path()` helper confining preview session-dir paths against traversal, `X-Content-Type-Options: nosniff` on HLS responses, exposure-conditional fail-closed pre-check on filesystem-scan endpoints, path-confinement dev principle added to AGENTS.md — BL-636, BL-637, BL-638 — PRs #816, #818, #819
+- **Theme 2 — sec-script-sink-and-ssrf-hardening:** Closed a tracked-symlink write-sink escape, CWD-confined dependency-license CLI paths, SSRF host-allowlist validation for render-verification scripts, ReDoS false-positive suppression — BL-639, BL-640, BL-641, BL-642 — PRs #820–#823
+- **Theme 3 — functional-fix-and-lint-guards:** QC failure reason preserved on `QC_FAILED` render transitions, tautological self-comparison assertion fixed, fire-and-forget frame-capture task retained against GC, `PLR0124`/`RUF006` ruff lint guards added — BL-645, BL-646, BL-650, BL-649 — PRs #824–#827
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| sec-preview-and-filesystem-confinement | BL-636, BL-637, BL-638 | #816, #818, #819 | merged |
+| sec-script-sink-and-ssrf-hardening | BL-639, BL-640, BL-641, BL-642 | #820–#823 | merged |
+| functional-fix-and-lint-guards | BL-645, BL-646, BL-650, BL-649 | #824–#827 | merged |
+
+### AC Status
+
+- 3 themes delivered; 11 total features across themes
+- 42/43 source ACs supported; 1 non-blocking unverifiable (BL-637-AC-7, pending human SonarCloud UI disposition of finding S6549; discharge plan recorded in the source ledger)
+- New-cycle opener (v106–v111), following the 2026-07-16 BL-quality remediation (backlog 78→62 open)
+
+### Carry-Forwards
+
+None. All 11 planned v106 items executed; BL-637 remains `open` pending the AC-7 human action only (not carried to a future version).
+
+### User Actions Required
+
+- Disposition SonarCloud finding S6549 (`filesystem.py`, pre-check line, BL-637-AC-7) as ACCEPTED via the SonarCloud UI, then complete BL-637
+- Delete 20 stale local + 8 stale remote-only git branches (post-merge hygiene)
+- See `docs/auto-dev/plan/v106-sonar-security-hardening.md` for the full outstanding-actions list
+
+## v105 — Process/Tooling, CI/Build, Test Correctness, Runtime Fixes, Documentation
 
 **Delivered:** 2026-07-12
 **PRs:** #801–#815 (15 merged)
