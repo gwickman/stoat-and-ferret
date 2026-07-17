@@ -500,14 +500,11 @@ class InMemoryRenderRepository:
         elif status == RenderStatus.COMPLETED:
             job.progress = 1.0
             job.completed_at = now
-        elif status == RenderStatus.FAILED:
+        elif status in (RenderStatus.FAILED, RenderStatus.QC_FAILED):
             job.error_message = error_message
             job.completed_at = now
         elif status == RenderStatus.CANCELLED:
             job.error_message = None
-            job.completed_at = now
-        elif status == RenderStatus.QC_FAILED:
-            job.error_message = error_message
             job.completed_at = now
         else:
             job.error_message = error_message

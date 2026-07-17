@@ -282,16 +282,6 @@ function SchemaField({
           onChange={onChange}
         />
       )
-    case 'string':
-      return (
-        <StringField
-          name={name}
-          prop={prop}
-          value={value}
-          error={error}
-          onChange={onChange}
-        />
-      )
     case 'boolean':
       return (
         <BooleanField
