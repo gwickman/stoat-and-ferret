@@ -7,6 +7,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 # We import from the scripts package using the project root on sys.path.
 # Since pytest is run from the repo root, sys.path already includes it.
 # Add scripts/ explicitly so we can import add_license_headers as a module.
@@ -245,3 +247,56 @@ def test_run_check_fails_on_unheadered_file() -> None:
         assert alh.process_file(tmp_file, check_only=True) is False
     finally:
         tmp_file.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Scenario 9 — Write-sink confinement against repo_root escape (BL-639)
+# ---------------------------------------------------------------------------
+
+
+def test_write_refuses_symlink_escape_outside_repo_root(tmp_path: Path) -> None:
+    """A tracked symlink whose resolved target is outside repo_root is refused in write mode."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    target = outside_dir / "secret.py"
+    target.write_text("import os\n", encoding="utf-8")
+
+    symlink_path = repo_root / "escape.py"
+    try:
+        symlink_path.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation unavailable on this platform (requires elevated privilege)")
+
+    with pytest.raises(SystemExit):
+        alh.process_file(symlink_path, check_only=False, repo_root=repo_root)
+
+    # The outside file must remain untouched.
+    assert target.read_text(encoding="utf-8") == "import os\n"
+
+
+def test_write_refuses_direct_outside_repo_path(tmp_path: Path) -> None:
+    """A direct (non-symlink) path outside repo_root is refused in write mode."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    target = outside_dir / "file.py"
+    target.write_text("import os\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit):
+        alh.process_file(target, check_only=False, repo_root=repo_root)
+
+    assert target.read_text(encoding="utf-8") == "import os\n"
+
+
+def test_write_within_repo_root_still_succeeds(tmp_path: Path) -> None:
+    """A path inside repo_root is written normally when repo_root is passed."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    inside = repo_root / "mod.py"
+    inside.write_text("import os\n", encoding="utf-8")
+
+    assert alh.process_file(inside, check_only=False, repo_root=repo_root) is False
+    assert "SPDX-License-Identifier: AGPL-3.0-or-later" in inside.read_text(encoding="utf-8")
