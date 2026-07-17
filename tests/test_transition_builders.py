@@ -125,7 +125,7 @@ class TestTransitionType:
         """Test TransitionType equality."""
         from stoat_ferret_core import TransitionType
 
-        assert TransitionType.Fade == TransitionType.Fade
+        assert TransitionType.from_str("fade") == TransitionType.Fade
         assert TransitionType.Fade != TransitionType.Dissolve
 
 
