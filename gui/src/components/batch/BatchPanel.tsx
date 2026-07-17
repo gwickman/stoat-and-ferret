@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useBatchStore, type BatchJob } from '../../stores/batchStore'
 
 interface BatchEntry {
+  id: string
   project_id: string
   output_path: string
   quality: string
@@ -21,7 +22,7 @@ interface BatchPanelProps {
 }
 
 function emptyEntry(): BatchEntry {
-  return { project_id: '', output_path: '', quality: 'standard' }
+  return { id: uuid(), project_id: '', output_path: '', quality: 'standard' }
 }
 
 function uuid(): string {
@@ -129,7 +130,7 @@ export default function BatchPanel({ onBatchSubmitted }: BatchPanelProps) {
       <form onSubmit={handleSubmit} className="space-y-3">
         {entries.map((entry, idx) => (
           <div
-            key={idx}
+            key={entry.id}
             data-testid={`batch-entry-${idx}`}
             className="grid grid-cols-12 gap-2 rounded border border-gray-700 bg-gray-900 p-3"
           >
