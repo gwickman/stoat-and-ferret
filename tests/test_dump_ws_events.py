@@ -16,6 +16,8 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.host_allowlist_vectors import host_allowlist_vectors
+
 # Load dump-ws-events.py as a module via importlib (avoids import name collision
 # with the hyphenated filename).
 _SCRIPT = pathlib.Path(__file__).parent.parent / "scripts" / "examples" / "dump-ws-events.py"
@@ -24,23 +26,11 @@ assert _spec is not None and _spec.loader is not None
 dump_ws_events = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(dump_ws_events)  # type: ignore[arg-type]
 
-# Shared test-vector table (requirements.md "Parity Requirements") — applied
-# identically across test_verify_render_output.py, test_wait_for_render.py,
-# and test_dump_ws_events.py so a bypass found against one script is
-# mechanically checked against the other two. `ws`/`wss` substituted for the
-# websocket transport per FR-001-AC-1.
-# NOSONAR (S5332): these are test-vector literals exercising the allowlist's
-# accept/reject decision itself, not real network endpoints.
-HOST_ALLOWLIST_VECTORS = [
-    ("ws://localhost:8765", True),  # NOSONAR
-    ("ws://127.0.0.1:8765", True),  # NOSONAR
-    ("ws://evil.com:8765", False),  # NOSONAR
-    ("ws://localhost.evil.example:8765", False),  # NOSONAR
-    ("ws://127.0.0.1.evil.example:8765", False),  # NOSONAR
-    ("ws://localhost@evil.example", False),  # NOSONAR
-    ("ws://[::1]:8765/", True),  # NOSONAR
-    ("file:///etc/passwd", False),
-]
+# Shared test-vector table (requirements.md "Parity Requirements", tests/host_allowlist_vectors.py)
+# — applied identically across test_verify_render_output.py, test_wait_for_render.py, and
+# test_dump_ws_events.py so a bypass found against one script is mechanically checked against
+# the other two. `ws`/`wss` substituted for the websocket transport per FR-001-AC-1.
+HOST_ALLOWLIST_VECTORS = host_allowlist_vectors("ws")
 
 
 class _FakeWSConnection:
@@ -73,22 +63,25 @@ class TestHostAllowlist:
     def test_non_allowlisted_host_exits_before_connect(self) -> None:
         # Nested `with` (not combined) works around Sonar S5778 on the combined form.
         with patch.object(dump_ws_events.websockets, "connect") as mock_connect:  # noqa: SIM117
+            coro = dump_ws_events.stream_events("evil.com", 8765, None)
             with pytest.raises(SystemExit):
-                asyncio.run(dump_ws_events.stream_events("evil.com", 8765, None))
+                asyncio.run(coro)
         mock_connect.assert_not_called()
 
     def test_hostname_trick_embedded_auth_rejected_before_connect(self) -> None:
         # Nested `with` (not combined) works around Sonar S5778 on the combined form.
         with patch.object(dump_ws_events.websockets, "connect") as mock_connect:  # noqa: SIM117
+            coro = dump_ws_events.stream_events("localhost@evil.example", 8765, None)
             with pytest.raises(SystemExit):
-                asyncio.run(dump_ws_events.stream_events("localhost@evil.example", 8765, None))
+                asyncio.run(coro)
         mock_connect.assert_not_called()
 
     def test_hostname_trick_subdomain_rejected_before_connect(self) -> None:
         # Nested `with` (not combined) works around Sonar S5778 on the combined form.
         with patch.object(dump_ws_events.websockets, "connect") as mock_connect:  # noqa: SIM117
+            coro = dump_ws_events.stream_events("localhost.evil.example", 8765, None)
             with pytest.raises(SystemExit):
-                asyncio.run(dump_ws_events.stream_events("localhost.evil.example", 8765, None))
+                asyncio.run(coro)
         mock_connect.assert_not_called()
 
     def test_bracketed_ipv6_loopback_accepted(self) -> None:
@@ -103,17 +96,20 @@ class TestHostAllowlist:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "staging.internal")
+        # must not raise
         dump_ws_events._validate_host(
-            "ws://staging.internal:8765", {"ws", "wss"}
-        )  # must not raise; NOSONAR (S5332): test vector
+            "ws://staging.internal:8765",  # NOSONAR (S5332): test vector
+            {"ws", "wss"},
+        )
 
     def test_env_override_is_not_a_bare_boolean(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Setting the env var to a truthy-looking string must not disable the allowlist."""
         monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "true")
         with pytest.raises(SystemExit):
             dump_ws_events._validate_host(
-                "ws://evil.com", {"ws", "wss"}
-            )  # NOSONAR (S5332): test vector
+                "ws://evil.com",  # NOSONAR (S5332): test vector
+                {"ws", "wss"},
+            )
 
     def test_default_host_still_reaches_connect(self) -> None:
         """Existing default (--host localhost) must remain unaffected (FR-006-AC-1)."""

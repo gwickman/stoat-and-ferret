@@ -16,6 +16,8 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.host_allowlist_vectors import host_allowlist_vectors
+
 # Load wait-for-render.py as a module via importlib (avoids import name collision
 # with the hyphenated filename).
 _SCRIPT = pathlib.Path(__file__).parent.parent / "scripts" / "examples" / "wait-for-render.py"
@@ -24,22 +26,11 @@ assert _spec is not None and _spec.loader is not None
 wait_for_render = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(wait_for_render)  # type: ignore[arg-type]
 
-# Shared test-vector table (requirements.md "Parity Requirements") — applied
-# identically across test_verify_render_output.py, test_wait_for_render.py,
-# and test_dump_ws_events.py so a bypass found against one script is
-# mechanically checked against the other two.
-# NOSONAR (S5332): these are test-vector literals exercising the allowlist's
-# accept/reject decision itself, not real network endpoints.
-HOST_ALLOWLIST_VECTORS = [
-    ("http://localhost:8765", True),  # NOSONAR
-    ("http://127.0.0.1:8765", True),  # NOSONAR
-    ("http://evil.com:8765", False),  # NOSONAR
-    ("http://localhost.evil.example:8765", False),  # NOSONAR
-    ("http://127.0.0.1.evil.example:8765", False),  # NOSONAR
-    ("http://localhost@evil.example", False),  # NOSONAR
-    ("http://[::1]:8765/", True),  # NOSONAR
-    ("file:///etc/passwd", False),
-]
+# Shared test-vector table (requirements.md "Parity Requirements", tests/host_allowlist_vectors.py)
+# — applied identically across test_verify_render_output.py, test_wait_for_render.py, and
+# test_dump_ws_events.py so a bypass found against one script is mechanically checked against
+# the other two.
+HOST_ALLOWLIST_VECTORS = host_allowlist_vectors("http")
 
 
 class TestHostAllowlist:
@@ -88,17 +79,20 @@ class TestHostAllowlist:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "staging.internal")
+        # must not raise
         wait_for_render._validate_host(
-            "http://staging.internal:8765", {"http", "https"}
-        )  # must not raise; NOSONAR (S5332): test vector
+            "http://staging.internal:8765",  # NOSONAR (S5332): test vector
+            {"http", "https"},
+        )
 
     def test_env_override_is_not_a_bare_boolean(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Setting the env var to a truthy-looking string must not disable the allowlist."""
         monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "true")
         with pytest.raises(SystemExit):
             wait_for_render._validate_host(
-                "http://evil.com", {"http", "https"}
-            )  # NOSONAR (S5332): test vector
+                "http://evil.com",  # NOSONAR (S5332): test vector
+                {"http", "https"},
+            )
 
     def test_default_host_still_reaches_network_call(self) -> None:
         """Existing default (--host localhost) must remain unaffected (FR-006-AC-1)."""
