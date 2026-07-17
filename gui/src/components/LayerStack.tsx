@@ -41,6 +41,7 @@ export default function LayerStack() {
         <div className="mt-4" data-testid="custom-inputs">
           <h4 className="mb-2 text-sm font-medium text-gray-300">Custom Positions</h4>
           {customPositions.map((pos, i) => (
+            // eslint-disable-next-line react/no-array-index-key -- list is always replaced wholesale
             <div key={i} className="mb-2 rounded bg-gray-800 p-2" data-testid={`custom-pos-${i}`}>
               <span className="mb-1 block text-xs font-medium text-gray-300">
                 Position {i + 1}
