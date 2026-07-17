@@ -12,8 +12,10 @@ and library DELETE WS events (video_deleted, clip_deleted).
 from __future__ import annotations
 
 import asyncio
+import gc
 import json
 import time
+import weakref
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,7 +28,7 @@ from stoat_ferret.render.executor import RenderExecutor
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
 from stoat_ferret.render.render_repository import InMemoryRenderRepository
-from stoat_ferret.render.service import RenderService
+from stoat_ferret.render.service import RenderService, _background_tasks
 from stoat_ferret.render.sweeper import StaleRenderSweeper
 
 # Disable Rust bindings — tests exercise Python orchestration logic.
@@ -320,6 +322,47 @@ class TestThrottledFrameBroadcast:
             assert len(frame_events) == 1
             assert frame_events[0]["payload"]["frame_url"].endswith(".jpg")
             assert frame_events[0]["payload"]["resolution"] == "540p"
+
+
+class TestFrameCaptureTaskRetention:
+    """GC-survival regression test for the retained frame-capture task (BL-650)."""
+
+    async def test_frame_capture_task_survives_gc_while_pending(self) -> None:
+        """The fire-and-forget frame-capture task is retained and not GC'd mid-flight."""
+        with _PATCH_NO_RUST:
+            service, _, ws, _ = _build_service()
+            job_id = "job-retain"
+            release_event = asyncio.Event()
+
+            async def _blocking_capture(_job_id: str) -> None:
+                await release_event.wait()
+
+            before = set(_background_tasks)
+            with patch.object(service, "_try_capture_frame", side_effect=_blocking_capture):
+                await service._broadcast_throttled_frame(job_id, 0.10)
+
+            new_tasks = _background_tasks - before
+            assert len(new_tasks) == 1
+            task_ref = weakref.ref(new_tasks.pop())
+            del new_tasks
+
+            assert task_ref() is not None
+            assert not task_ref().done()  # type: ignore[union-attr]
+            assert task_ref() in _background_tasks
+
+            # No local strong reference to the task is held here — only the
+            # module-level `_background_tasks` set and the weakref above.
+            gc.collect()
+
+            task = task_ref()
+            assert task is not None, "task was garbage-collected despite module-level retention"
+            assert task in _background_tasks
+            assert not task.done()
+
+            release_event.set()
+            await task
+
+            assert task not in _background_tasks
 
 
 class TestPerJobIsolation:

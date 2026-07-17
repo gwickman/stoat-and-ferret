@@ -223,11 +223,12 @@ class TestRealAsyncFFmpegExecutor:
         mock_process.stdout.read = slow_read
 
         executor = RealAsyncFFmpegExecutor()
-        asyncio.create_task(set_cancel_then_complete())
+        task = asyncio.create_task(set_cancel_then_complete())
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             await executor.run(["-version"], cancel_event=cancel_event)
 
+        await task
         mock_process.terminate.assert_called_once()
 
 

@@ -155,6 +155,17 @@ class CancelPreemptedError(Exception):
         super().__init__(f"Cancel preempted: job already in terminal state {current_status!r}")
 
 
+_background_tasks: set[asyncio.Task[Any]] = set()
+
+
+def _create_retained_task(coro: Any) -> asyncio.Task[Any]:
+    """Create an asyncio task with strong reference retention."""
+    task: asyncio.Task[Any] = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
+
+
 class RenderService:
     """Orchestrates the full render job lifecycle.
 
@@ -774,7 +785,7 @@ class RenderService:
             return
 
         # Fire-and-forget frame capture — graceful degradation per NFR-004
-        asyncio.create_task(self._try_capture_frame(job_id))  # noqa: RUF006
+        _create_retained_task(self._try_capture_frame(job_id))
 
         frame_url = f"/api/v1/render/{job_id}/frame_preview.jpg"
         await self._ws.broadcast(
