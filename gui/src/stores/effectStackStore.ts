@@ -12,6 +12,13 @@ interface EffectStackState {
   selectedClipId: string | null
   /** Effects for the currently selected clip. */
   effects: AppliedEffect[]
+  /**
+   * Client-generated ids kept in lockstep with `effects` (same length, same
+   * index correspondence) so `EffectStack` rows keep stable DOM identity
+   * across the async delete/refetch boundary. Never regenerated for a
+   * position that already has one at the start of a `fetchEffects` call.
+   */
+  clientIds: string[]
   /** Whether a fetch is in flight. */
   isLoading: boolean
   /** Error from the last API call. */
@@ -31,10 +38,12 @@ interface EffectStackState {
 export const useEffectStackStore = create<EffectStackState>((set, get) => ({
   selectedClipId: null,
   effects: [],
+  clientIds: [],
   isLoading: false,
   error: null,
 
-  selectClip: (clipId) => set({ selectedClipId: clipId, effects: [], error: null }),
+  selectClip: (clipId) =>
+    set({ selectedClipId: clipId, effects: [], clientIds: [], error: null }),
 
   setEffects: (effects) => set({ effects }),
   setLoading: (isLoading) => set({ isLoading }),
@@ -47,8 +56,24 @@ export const useEffectStackStore = create<EffectStackState>((set, get) => ({
       if (!res.ok) throw new Error(`Fetch clips failed: ${res.status}`)
       const json = await res.json()
       const clip = json.clips?.find((c: { id: string }) => c.id === clipId)
+      const newEffects: AppliedEffect[] = clip?.effects ?? []
+      const currentClientIds = get().clientIds
+      // Covers initial fetch (currentClientIds empty), same-length fetch
+      // (0 new ids generated), and append fetch (prefix preserved, new ids
+      // generated only for the new tail entries) in one branch.
+      const newClientIds =
+        newEffects.length >= currentClientIds.length
+          ? [
+              ...currentClientIds,
+              ...Array.from(
+                { length: newEffects.length - currentClientIds.length },
+                () => crypto.randomUUID(),
+              ),
+            ]
+          : newEffects.map(() => crypto.randomUUID())
       set({
-        effects: clip?.effects ?? [],
+        effects: newEffects,
+        clientIds: newClientIds,
         isLoading: false,
       })
     } catch (err) {
@@ -66,8 +91,13 @@ export const useEffectStackStore = create<EffectStackState>((set, get) => ({
         { method: 'DELETE' },
       )
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`)
-      // Refresh the effect list
-      await get().fetchEffects(projectId, clipId)
+      // Splice the deleted index out of both arrays in the same lockstep
+      // operation instead of re-fetching — a re-fetch would let a
+      // same-length fetch race the async window (INV-001).
+      set((state) => ({
+        effects: state.effects.filter((_, i) => i !== index),
+        clientIds: state.clientIds.filter((_, i) => i !== index),
+      }))
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Unknown error',
@@ -79,6 +109,7 @@ export const useEffectStackStore = create<EffectStackState>((set, get) => ({
     set({
       selectedClipId: null,
       effects: [],
+      clientIds: [],
       isLoading: false,
       error: null,
     }),

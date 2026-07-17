@@ -1,7 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { act, render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import EffectStack from '../EffectStack'
 import type { AppliedEffect } from '../../stores/effectStackStore'
+import { useEffectStackStore } from '../../stores/effectStackStore'
 
 const mockEffects: AppliedEffect[] = [
   {
@@ -15,6 +16,10 @@ const mockEffects: AppliedEffect[] = [
     filter_string: 'volume=1.5',
   },
 ]
+
+beforeEach(() => {
+  useEffectStackStore.getState().reset()
+})
 
 describe('EffectStack', () => {
   it('renders ordered list of effects', () => {
@@ -103,5 +108,37 @@ describe('EffectStack', () => {
     const params = screen.getByTestId('effect-params-0')
     expect(params.textContent).toContain('text: Hello')
     expect(params.textContent).toContain('fontsize: 48')
+  })
+
+  it('keeps a later row\'s focused DOM node when an earlier row is removed', () => {
+    useEffectStackStore.setState({ clientIds: ['id-a', 'id-b'] })
+
+    const { rerender } = render(
+      <EffectStack effects={mockEffects} isLoading={false} onEdit={vi.fn()} onRemove={vi.fn()} />,
+    )
+
+    const laterRowButton = screen.getByTestId('edit-effect-1')
+    laterRowButton.focus()
+    expect(document.activeElement).toBe(laterRowButton)
+
+    // Simulate the store-driven removal of the earlier row: clientIds splices
+    // in lockstep with effects (removeEffect's contract), and the parent
+    // re-renders EffectStack with the shortened effects array.
+    act(() => {
+      useEffectStackStore.setState({ clientIds: ['id-b'] })
+      rerender(
+        <EffectStack
+          effects={[mockEffects[1]]}
+          isLoading={false}
+          onEdit={vi.fn()}
+          onRemove={vi.fn()}
+        />,
+      )
+    })
+
+    expect(screen.queryByTestId('effect-entry-1')).toBeNull()
+    const survivingButton = screen.getByTestId('edit-effect-0')
+    expect(survivingButton).toBe(laterRowButton)
+    expect(document.activeElement).toBe(survivingButton)
   })
 })
