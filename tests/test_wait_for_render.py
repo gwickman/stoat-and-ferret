@@ -28,14 +28,16 @@ _spec.loader.exec_module(wait_for_render)  # type: ignore[arg-type]
 # identically across test_verify_render_output.py, test_wait_for_render.py,
 # and test_dump_ws_events.py so a bypass found against one script is
 # mechanically checked against the other two.
+# NOSONAR (S5332): these are test-vector literals exercising the allowlist's
+# accept/reject decision itself, not real network endpoints.
 HOST_ALLOWLIST_VECTORS = [
-    ("http://localhost:8765", True),
-    ("http://127.0.0.1:8765", True),
-    ("http://evil.com:8765", False),
-    ("http://localhost.evil.example:8765", False),
-    ("http://127.0.0.1.evil.example:8765", False),
-    ("http://localhost@evil.example", False),
-    ("http://[::1]:8765/", True),
+    ("http://localhost:8765", True),  # NOSONAR
+    ("http://127.0.0.1:8765", True),  # NOSONAR
+    ("http://evil.com:8765", False),  # NOSONAR
+    ("http://localhost.evil.example:8765", False),  # NOSONAR
+    ("http://127.0.0.1.evil.example:8765", False),  # NOSONAR
+    ("http://localhost@evil.example", False),  # NOSONAR
+    ("http://[::1]:8765/", True),  # NOSONAR
     ("file:///etc/passwd", False),
 ]
 
@@ -88,13 +90,15 @@ class TestHostAllowlist:
         monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "staging.internal")
         wait_for_render._validate_host(
             "http://staging.internal:8765", {"http", "https"}
-        )  # must not raise
+        )  # must not raise; NOSONAR (S5332): test vector
 
     def test_env_override_is_not_a_bare_boolean(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Setting the env var to a truthy-looking string must not disable the allowlist."""
         monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "true")
         with pytest.raises(SystemExit):
-            wait_for_render._validate_host("http://evil.com", {"http", "https"})
+            wait_for_render._validate_host(
+                "http://evil.com", {"http", "https"}
+            )  # NOSONAR (S5332): test vector
 
     def test_default_host_still_reaches_network_call(self) -> None:
         """Existing default (--host localhost) must remain unaffected (FR-006-AC-1)."""
