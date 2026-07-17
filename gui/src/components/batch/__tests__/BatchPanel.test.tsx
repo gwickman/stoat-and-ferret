@@ -106,6 +106,24 @@ describe('BatchPanel', () => {
     expect(projectInput.value).toBe('proj-1')
   })
 
+  it('keeps focus and in-progress value in a later row when an earlier row is removed', () => {
+    render(<BatchPanel />)
+    fireEvent.click(screen.getByTestId('batch-add-row'))
+
+    const laterRowInput = screen.getByTestId('batch-project-1') as HTMLInputElement
+    laterRowInput.focus()
+    fireEvent.change(laterRowInput, { target: { value: 'later-row-value' } })
+    expect(document.activeElement).toBe(laterRowInput)
+
+    fireEvent.click(screen.getByTestId('batch-remove-0'))
+
+    expect(screen.queryByTestId('batch-entry-1')).toBeNull()
+    const survivingInput = screen.getByTestId('batch-project-0') as HTMLInputElement
+    expect(survivingInput).toBe(laterRowInput)
+    expect(survivingInput.value).toBe('later-row-value')
+    expect(document.activeElement).toBe(survivingInput)
+  })
+
   it('disables submit button while submitting', async () => {
     let resolveFetch: (value: Response) => void = () => {}
     vi.spyOn(globalThis, 'fetch').mockImplementation(
