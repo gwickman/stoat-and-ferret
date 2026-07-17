@@ -16,7 +16,7 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `STOAT_API_HOST` | `str` | `127.0.0.1` | Host address the API server binds to. Use `0.0.0.0` to listen on all interfaces. |
+| `STOAT_API_HOST` | `str` | `127.0.0.1` | Host address the API server binds to. Use `0.0.0.0` to listen on all interfaces. Loopback values (`127.0.0.1`, `::1`, `localhost`, case-insensitive) are treated as trusted for the `STOAT_ALLOWED_SCAN_ROOTS` fail-closed check below — write the IPv6 loopback as `::1`, not `[::1]`. |
 | `STOAT_API_PORT` | `int` | `8765` | Port number for the API server (valid range: 1-65535). |
 
 ### Development
@@ -97,7 +97,7 @@ All environment variables use the `STOAT_` prefix. The settings class is defined
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `STOAT_ALLOWED_SCAN_ROOTS` | `list[str]` | `[]` (empty) | Allowed root directories for media file scanning. When empty (default), all directories are allowed. Set this to restrict which directories the application can scan for video files. |
+| `STOAT_ALLOWED_SCAN_ROOTS` | `list[str]` | `[]` (empty) | Allowed root directories for media file scanning. When empty (default), directories are allowed on a loopback bind (`STOAT_API_HOST` in `127.0.0.1`/`::1`/`localhost`); on a non-loopback bind (e.g. `0.0.0.0`), leaving this empty causes `/filesystem/directories` and `/videos/scan` to fail closed with HTTP 403. Set this to restrict (or, on a non-loopback bind, to permit) scanning. |
 
 To set a list value via environment variable, use a JSON array:
 

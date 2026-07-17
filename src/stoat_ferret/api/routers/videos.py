@@ -39,6 +39,8 @@ _PLACEHOLDER_PATH = (
 
 router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
 
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+
 
 async def get_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
@@ -191,17 +193,33 @@ async def scan_videos(
         Job submission response with the job ID.
 
     Raises:
-        HTTPException: 400 if path is not a valid directory.
+        HTTPException: 400 if path is not a valid directory, 403 if outside allowed
+            roots or if allowed_scan_roots is unset on a non-loopback bind.
     """
     path = scan_request.path
     logger.info("scan_requested", path=path, recursive=scan_request.recursive)
+
+    settings = get_settings()
+
+    # Security: fail closed when allowed_scan_roots is unset on a non-loopback bind.
+    # Loopback binds (dev/test/UAT/chatbot) keep the existing allow-all behavior.
+    if not settings.allowed_scan_roots and settings.api_host.lower() not in _LOOPBACK_HOSTS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "SCAN_ROOTS_REQUIRED",
+                "message": (
+                    "allowed_scan_roots must be set when the server is bound to a non-loopback host"
+                ),
+            },
+        )
+
     if not os.path.isdir(path):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "INVALID_PATH", "message": f"Not a directory: {path}"},
         )
 
-    settings = get_settings()
     error = validate_scan_path(path, settings.allowed_scan_roots)
     if error is not None:
         raise HTTPException(

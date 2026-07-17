@@ -26,7 +26,17 @@ class TestValidateScanPath:
     """Unit tests for the validate_scan_path function."""
 
     def test_empty_allowlist_permits_all(self, tmp_path: Any) -> None:
-        """Empty allowed_roots list permits any path."""
+        """Empty allowed_roots list permits any path at the validate_scan_path() layer.
+
+        This function-level contract is unchanged by BL-637 (see the Out of Scope
+        section of requirements.md — no change to validate_scan_path()'s signature or
+        internal empty-allowlist=allow-all logic). The exposure-conditional
+        loopback-permissive/non-loopback-fail-closed decision (FR-002/FR-003) is a
+        separate call-site pre-check applied before this function runs — see
+        test_list_directories_loopback_permissive_when_roots_unset /
+        test_list_directories_non_loopback_fails_closed_when_roots_unset in
+        test_filesystem.py and their /videos/scan counterparts in test_videos.py.
+        """
         assert validate_scan_path(str(tmp_path), []) is None
 
     def test_path_under_allowed_root(self, tmp_path: Any) -> None:

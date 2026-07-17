@@ -241,7 +241,13 @@ class Settings(BaseSettings):
     # Security
     allowed_scan_roots: list[str] = Field(
         default_factory=list,
-        description="Allowed root directories for scanning. Empty list allows all directories.",
+        description=(
+            "Allowed root directories for scanning. Empty list allows all directories "
+            "when bound to loopback (api_host in 127.0.0.1/::1/localhost); required "
+            "(non-empty) when bound to a non-loopback host, or scan endpoints fail "
+            "closed with 403. Do not wrap an IPv6 loopback api_host in URL-style "
+            "brackets (use ::1, not [::1])."
+        ),
     )
 
     # Migration safety (BL-266)

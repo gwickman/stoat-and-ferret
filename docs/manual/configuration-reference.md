@@ -26,6 +26,43 @@ The asset library (`/api/v1/assets`) stores user-uploaded files (PNG and JPEG in
 - `STOAT_ASSETS_MAX_SIZE_BYTES` is the primary denial-of-service guard for the upload endpoint. An internet-facing deployment without authentication should keep this at the default or lower. Raising it on an unauthenticated API increases the potential for disk-exhaustion attacks via repeated large uploads.
 - File type validation uses Pillow `Image.open()` magic-bytes sniffing rather than the caller-supplied MIME extension. A renamed TIFF or HEIC file is rejected (HTTP 415) even if the extension says `.png`. This prevents storing files that downstream FFmpeg builds may not support.
 
+## Filesystem Scan Scope
+
+`GET /api/v1/filesystem/directories` and `POST /api/v1/videos/scan` resolve a caller-supplied
+directory path. The two variables below jointly determine whether an empty allowlist means
+"allow all" (safe on a developer workstation) or "fail closed" (required once the server is
+reachable over the network).
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STOAT_ALLOWED_SCAN_ROOTS` | `list[str]` | `[]` (empty) | Allowed root directories for scanning. See exposure-conditional behaviour below. |
+| `STOAT_API_HOST` | `str` | `127.0.0.1` | Host the API server binds to. Loopback values (`127.0.0.1`, `::1`, `localhost`, case-insensitive) are the trust boundary for the check below. |
+
+**Security implications**
+
+- **Exposure-conditional fail-closed (BL-637).** When `STOAT_ALLOWED_SCAN_ROOTS` is empty AND
+  `STOAT_API_HOST` is a loopback value, both endpoints keep the historical allow-all behaviour —
+  this preserves local/dev/test/UAT usage unchanged on every platform and checkout location. When
+  `STOAT_ALLOWED_SCAN_ROOTS` is empty AND `STOAT_API_HOST` is **not** loopback (e.g. `0.0.0.0`, the
+  Dockerfile's shipped default), both endpoints return HTTP 403 instead of enumerating the
+  filesystem. **No silent default root (e.g. `$HOME`) is ever substituted** — the operator must set
+  an explicit allowlist to unblock a network-exposed deployment.
+- **Why not a location-based default:** a default root would break test/CI/container checkouts
+  whose paths sit outside it (pytest `tmp_path` is outside `$HOME` on Linux/macOS; the container
+  runs at `/app`, outside `$HOME=/root`). Tying the control to bind exposure instead of location
+  keeps all local usage working while closing the gap exactly where it exists — on an
+  unauthenticated, network-reachable deployment.
+- **Shipped container default:** `docker-compose.yml` sets `STOAT_ALLOWED_SCAN_ROOTS` to the
+  mounted data volume (`/app/data`) so the shipped `0.0.0.0` bind (`Dockerfile`) does not
+  immediately fail closed out of the box. Operators changing the data mount path must update this
+  variable to match, or scanning will return 403.
+- **Malformed paths return 400, not 500.** A null-byte or otherwise malformed `path` is rejected
+  with a structured HTTP 400 rather than propagating an unhandled `ValueError`/`OSError` from
+  `Path.resolve()`.
+- Once `STOAT_ALLOWED_SCAN_ROOTS` is non-empty, behaviour is unchanged from before this control:
+  the allowlist is enforced regardless of bind address, and a path outside every configured root
+  returns 403.
+
 ## Batch Rendering
 
 Batch rendering exposes the `/api/v1/batch/*` routes that accept multi-job render requests. Disabling batch rendering removes the routes entirely; misconfigured limits expose CPU and FFmpeg process pressure.

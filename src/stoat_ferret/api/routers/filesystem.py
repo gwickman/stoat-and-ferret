@@ -18,6 +18,8 @@ from stoat_ferret.api.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/filesystem", tags=["filesystem"])
 
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+
 
 def _list_dirs(path: str) -> list[DirectoryEntry]:
     """List subdirectories within a path using os.scandir.
@@ -66,16 +68,45 @@ async def list_directories(
         Paginated directory listing with metadata.
 
     Raises:
-        HTTPException: 400 if path is not a directory, 403 if outside allowed roots,
-            404 if path does not exist.
+        HTTPException: 400 if path is not a directory or is malformed (e.g. contains
+            a null byte), 403 if outside allowed roots or if allowed_scan_roots is
+            unset on a non-loopback bind, 404 if path does not exist.
     """
     settings = get_settings()
+
+    # Security: fail closed when allowed_scan_roots is unset on a non-loopback bind.
+    # Loopback binds (dev/test/UAT/chatbot) keep the existing allow-all behavior.
+    if not settings.allowed_scan_roots and settings.api_host.lower() not in _LOOPBACK_HOSTS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "SCAN_ROOTS_REQUIRED",
+                "message": (
+                    "allowed_scan_roots must be set when the server is bound to a non-loopback host"
+                ),
+            },
+        )
 
     # Default path when none provided
     if path is None:
         path = settings.allowed_scan_roots[0] if settings.allowed_scan_roots else str(Path.home())
 
-    resolved = str(Path(path).resolve())
+    # Security: reject null bytes explicitly — Path.resolve() only raises for
+    # embedded nulls on POSIX (os.stat rejects them); Windows' non-strict resolve()
+    # silently accepts them, so a string check is required for cross-platform 400s.
+    if "\x00" in path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PATH", "message": "Path contains a null byte"},
+        )
+
+    try:
+        resolved = str(Path(path).resolve())
+    except (ValueError, OSError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PATH", "message": f"Malformed path: {e}"},
+        ) from e
 
     # Security: validate against allowed_scan_roots
     error = validate_scan_path(resolved, settings.allowed_scan_roots)
