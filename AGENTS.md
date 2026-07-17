@@ -682,6 +682,13 @@ This allows docs-only PRs to merge without running the full test matrix.
 - **PyO3 bindings**: `from stoat_ferret_core import StoatFerretCore`
 - **Transparency**: API responses include generated FFmpeg filter strings
 
+### Path Confinement
+
+Any filesystem path built from an external identifier (e.g. a `session_id`, a client-supplied
+name) must be confined to its intended base directory via `resolve()` + `is_relative_to()`
+before use in `mkdir`/`rmtree`/`open`/`write_text`. See
+`src/stoat_ferret/preview/_paths.py`'s `confine_child_path()` for the canonical implementation.
+
 ## FFmpeg Production Role
 
 FFmpeg is classified as **non-critical** for production readiness. The render and preview services
