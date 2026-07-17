@@ -74,6 +74,20 @@ def _normalize(name: str) -> str:
     return name.lower().replace("-", "_")
 
 
+def _confine_to_cwd(path_str: str, flag_name: str) -> Path:
+    """Resolve path_str and confine it to the current working directory.
+
+    Exits non-zero with a confinement error if the resolved path escapes cwd,
+    before any open/read is attempted.
+    """
+    resolved = Path(path_str).resolve()
+    cwd = Path.cwd().resolve()
+    if not resolved.is_relative_to(cwd):
+        print(f"ERROR: {flag_name} escapes cwd: {path_str}", file=sys.stderr)
+        raise SystemExit(1)
+    return resolved
+
+
 def get_inventory_package_names(inventory_path: Path = INVENTORY_PATH) -> set[str]:
     """Return set of normalized package names listed in the inventory markdown tables."""
     if not inventory_path.exists():
@@ -119,10 +133,10 @@ def main() -> int:
         print("Use --check to validate the inventory.")
         return 0
 
-    pyproject_path = args.pyproject_path or "pyproject.toml"
-    inventory_path = Path(args.inventory_path) if args.inventory_path else INVENTORY_PATH
+    pyproject_path = _confine_to_cwd(args.pyproject_path or "pyproject.toml", "--pyproject-path")
+    inventory_path = _confine_to_cwd(args.inventory_path or str(INVENTORY_PATH), "--inventory-path")
 
-    if not Path(pyproject_path).exists():
+    if not pyproject_path.exists():
         print(f"ERROR: {pyproject_path} does not exist.", file=sys.stderr)
         return 1
 
@@ -132,7 +146,7 @@ def main() -> int:
 
     # Parse direct runtime deps from pyproject.toml [project.dependencies]
     try:
-        dep_names = parse_project_deps(pyproject_path)
+        dep_names = parse_project_deps(str(pyproject_path))
     except Exception as exc:
         print(f"ERROR: Failed to parse {pyproject_path}: {exc}", file=sys.stderr)
         return 1

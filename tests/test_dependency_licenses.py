@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 SCRIPT = "scripts/check_dependency_licenses.py"
+SCRIPT_PATH = Path(SCRIPT).resolve()
 
 
 def _pip_licenses_available() -> bool:
@@ -35,17 +36,68 @@ def test_missing_dep_exits_nonzero(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            SCRIPT,
+            str(SCRIPT_PATH),
             "--pyproject-path",
-            str(pyproject),
+            "pyproject.toml",
             "--inventory-path",
-            str(inventory),
+            "inventory.md",
         ],
         capture_output=True,
         text=True,
+        cwd=tmp_path,
     )
     assert result.returncode != 0
     assert "test-dep-missing" in result.stdout + result.stderr
+
+
+def test_pyproject_path_escaping_cwd_rejected(tmp_path: Path) -> None:
+    """A --pyproject-path outside cwd is rejected with a confinement error."""
+    outside = tmp_path / "outside_pyproject.toml"
+    outside.write_text("[project]\ndependencies = []\n")
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--pyproject-path",
+            str(outside),
+            "--inventory-path",
+            "inventory.md",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=workdir,
+    )
+    assert result.returncode != 0
+    assert "escapes cwd" in result.stdout + result.stderr
+    assert "FileNotFoundError" not in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_inventory_path_escaping_cwd_rejected(tmp_path: Path) -> None:
+    """A --inventory-path outside cwd is rejected with a confinement error."""
+    outside = tmp_path / "outside_inventory.md"
+    outside.write_text("# Dependency License Inventory\n")
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--pyproject-path",
+            "pyproject.toml",
+            "--inventory-path",
+            str(outside),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=workdir,
+    )
+    assert result.returncode != 0
+    assert "escapes cwd" in result.stdout + result.stderr
+    assert "FileNotFoundError" not in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_current_pyproject_passes() -> None:
