@@ -111,6 +111,8 @@ describe('ClipFormModal', () => {
     expect((screen.getByTestId('input-timeline-position') as HTMLInputElement).value).toBe('0')
     // Source video select should not appear in edit mode
     expect(screen.queryByTestId('select-source-video')).toBeNull()
+    // Submit button shows "Save" (not "Add Clip") when editing and not submitting
+    expect(screen.getByTestId('btn-clip-save').textContent).toBe('Save')
   })
 
   it('validates required fields before submission', async () => {

@@ -65,6 +65,24 @@ export interface OutputFormat {
 // Store interface
 // ---------------------------------------------------------------------------
 
+/**
+ * Options for {@link RenderStoreState.setProgress}. `etaSeconds`/`speedRatio` are
+ * overwritten to `null` whenever omitted; `frameCount`/`fps`/`encoderName`/`encoderType`
+ * preserve their prior stored value when the key is omitted and are only overwritten
+ * when the key is present (including present-with-`null`) — see BL-659 State Lifecycle
+ * Specification for the two-group asymmetry this type encodes.
+ */
+export interface SetProgressOptions {
+  jobId: string
+  progress: number
+  etaSeconds?: number | null
+  speedRatio?: number | null
+  frameCount?: number | null
+  fps?: number | null
+  encoderName?: string | null
+  encoderType?: string | null
+}
+
 interface RenderStoreState {
   /** All render jobs. */
   jobs: RenderJob[]
@@ -89,7 +107,7 @@ interface RenderStoreState {
   updateJob: (job: Partial<RenderJob> & { id: string }) => void
   removeJob: (jobId: string) => void
   setQueueStatus: (partial: Partial<QueueStatus>) => void
-  setProgress: (jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null, frameCount?: number | null, fps?: number | null, encoderName?: string | null, encoderType?: string | null) => void
+  setProgress: (options: SetProgressOptions) => void
   setFrameUrl: (jobId: string, frameUrl: string | null) => void
   reset: () => void
 }
@@ -192,7 +210,8 @@ export const useRenderStore = create<RenderStoreState>((set) => ({
     }))
   },
 
-  setProgress: (jobId, progress, etaSeconds, speedRatio, frameCount, fps, encoderName, encoderType) => {
+  setProgress: (options) => {
+    const { jobId, progress, etaSeconds, speedRatio } = options
     set((state) => ({
       jobs: state.jobs.map((j) =>
         j.id === jobId
@@ -201,10 +220,16 @@ export const useRenderStore = create<RenderStoreState>((set) => ({
               progress,
               eta_seconds: etaSeconds ?? null,
               speed_ratio: speedRatio ?? null,
-              frame_count: frameCount !== undefined ? frameCount : j.frame_count,
-              fps: fps !== undefined ? fps : j.fps,
-              encoder_name: encoderName !== undefined ? encoderName : j.encoder_name,
-              encoder_type: encoderType !== undefined ? encoderType : j.encoder_type,
+              frame_count: Object.hasOwn(options, 'frameCount')
+                ? (options.frameCount ?? null)
+                : j.frame_count,
+              fps: Object.hasOwn(options, 'fps') ? (options.fps ?? null) : j.fps,
+              encoder_name: Object.hasOwn(options, 'encoderName')
+                ? (options.encoderName ?? null)
+                : j.encoder_name,
+              encoder_type: Object.hasOwn(options, 'encoderType')
+                ? (options.encoderType ?? null)
+                : j.encoder_type,
             }
           : j,
       ),

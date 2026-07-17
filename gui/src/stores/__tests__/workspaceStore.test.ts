@@ -317,6 +317,26 @@ describe('workspaceStore', () => {
       expect(loadWorkspaceState().preset).toBe('edit')
     })
 
+    it('resolves anchorPreset from preset itself when anchorPreset is absent/invalid and preset is named', () => {
+      window.localStorage.setItem(
+        WORKSPACE_STORAGE_KEY,
+        JSON.stringify({ preset: 'render', panelSizes: {}, panelVisibility: {} }),
+      )
+      const state = loadWorkspaceState()
+      expect(state.preset).toBe('render')
+      expect(state.anchorPreset).toBe('render')
+    })
+
+    it('falls back to the initial anchorPreset when preset is custom and anchorPreset is absent/invalid', () => {
+      window.localStorage.setItem(
+        WORKSPACE_STORAGE_KEY,
+        JSON.stringify({ preset: 'custom', panelSizes: {}, panelVisibility: {} }),
+      )
+      const state = loadWorkspaceState()
+      expect(state.preset).toBe('custom')
+      expect(state.anchorPreset).toBe('edit')
+    })
+
     it('discards malformed sizesByPreset entries', () => {
       window.localStorage.setItem(
         WORKSPACE_STORAGE_KEY,

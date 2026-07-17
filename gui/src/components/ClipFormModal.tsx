@@ -11,6 +11,12 @@ interface ClipFormModalProps {
   onSaved: () => void
 }
 
+/** Label for the submit button, reflecting submission state and add-vs-edit mode. */
+function getSubmitButtonLabel(isSubmitting: boolean, mode: 'add' | 'edit'): string {
+  if (isSubmitting) return 'Saving...'
+  return mode === 'add' ? 'Add Clip' : 'Save'
+}
+
 export default function ClipFormModal({
   mode,
   clip,
@@ -201,7 +207,7 @@ export default function ClipFormModal({
               className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               data-testid="btn-clip-save"
             >
-              {isSubmitting ? 'Saving...' : mode === 'add' ? 'Add Clip' : 'Save'}
+              {getSubmitButtonLabel(isSubmitting, mode)}
             </button>
           </div>
         </form>
