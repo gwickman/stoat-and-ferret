@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AppliedEffect } from '../stores/effectStackStore'
+import { useEffectStackStore } from '../stores/effectStackStore'
 import { highlightFilter } from './FilterPreview'
 
 interface EffectStackProps {
@@ -12,6 +13,7 @@ interface EffectStackProps {
 /** Renders the ordered list of effects applied to a clip with edit/remove actions. */
 export default function EffectStack({ effects, isLoading, onEdit, onRemove }: EffectStackProps) {
   const [confirmIndex, setConfirmIndex] = useState<number | null>(null)
+  const clientIds = useEffectStackStore((s) => s.clientIds)
 
   if (isLoading) {
     return (
@@ -41,7 +43,7 @@ export default function EffectStack({ effects, isLoading, onEdit, onRemove }: Ef
 
           return (
             <li
-              key={index}
+              key={clientIds[index] ?? index}
               data-testid={`effect-entry-${index}`}
               className="rounded border border-gray-700 bg-gray-800 p-3"
             >
