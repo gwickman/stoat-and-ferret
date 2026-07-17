@@ -24,6 +24,7 @@ def test_list_directories_valid_path(client: TestClient, tmp_path: os.PathLike) 
 
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(tmp_path)},
@@ -45,6 +46,7 @@ def test_list_directories_nonexistent_path(client: TestClient) -> None:
     """Non-existent path returns 404."""
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": "/nonexistent/path/that/does/not/exist"},
@@ -62,6 +64,7 @@ def test_list_directories_file_path(client: TestClient, tmp_path: os.PathLike) -
 
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(file_path)},
@@ -137,6 +140,7 @@ def test_list_directories_sorted(client: TestClient, tmp_path: os.PathLike) -> N
 
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(tmp_path)},
@@ -152,6 +156,7 @@ def test_list_directories_empty(client: TestClient, tmp_path: os.PathLike) -> No
     """Empty directory returns empty list."""
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(tmp_path)},
@@ -170,6 +175,7 @@ def test_list_directories_default_pagination(client: TestClient, tmp_path: os.Pa
 
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(tmp_path)},
@@ -192,6 +198,7 @@ def test_list_directories_custom_pagination(client: TestClient, tmp_path: os.Pat
 
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(tmp_path), "limit": 5, "offset": 10},
@@ -215,6 +222,7 @@ def test_list_directories_pagination_boundary_invalid(
     """limit=0 or limit=101 returns 422 validation error."""
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
 
         response_zero = client.get(
             "/api/v1/filesystem/directories",
@@ -236,6 +244,7 @@ def test_list_directories_offset_beyond_total(client: TestClient, tmp_path: os.P
 
     with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
         mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
         response = client.get(
             "/api/v1/filesystem/directories",
             params={"path": str(tmp_path), "offset": 100},
@@ -245,3 +254,70 @@ def test_list_directories_offset_beyond_total(client: TestClient, tmp_path: os.P
     data = response.json()
     assert data["directories"] == []
     assert data["total"] == 1
+
+
+# --- Exposure-conditional scan-scope tests (BL-637) ---
+
+
+@pytest.mark.api
+def test_list_directories_loopback_permissive_when_roots_unset(
+    client: TestClient, tmp_path: os.PathLike
+) -> None:
+    """Loopback bind + unset allowed_scan_roots stays permissive (FR-002-AC-1)."""
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.api
+def test_list_directories_non_loopback_fails_closed_when_roots_unset(
+    client: TestClient, tmp_path: os.PathLike
+) -> None:
+    """Non-loopback bind + unset allowed_scan_roots fails closed with 403 (FR-003-AC-1)."""
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "0.0.0.0"
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "SCAN_ROOTS_REQUIRED"
+
+
+@pytest.mark.api
+def test_list_directories_non_loopback_case_insensitive(
+    client: TestClient, tmp_path: os.PathLike
+) -> None:
+    """Loopback comparison is case-insensitive (Task 007 refinement)."""
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "Localhost"
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.api
+def test_list_directories_null_byte_returns_400(client: TestClient) -> None:
+    """Null byte in path returns structured 400, not an unhandled 500 (FR-004-AC-1)."""
+    with patch("stoat_ferret.api.routers.filesystem.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
+        response = client.get(
+            "/api/v1/filesystem/directories",
+            params={"path": "/valid/path\x00/injected"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "INVALID_PATH"

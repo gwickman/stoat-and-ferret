@@ -283,6 +283,40 @@ def test_scan_invalid_path(client: TestClient) -> None:
     assert data["detail"]["code"] == "INVALID_PATH"
 
 
+# --- Exposure-conditional scan-scope tests (BL-637) ---
+
+
+@pytest.mark.api
+def test_scan_non_loopback_fails_closed_when_roots_unset(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Non-loopback bind + unset allowed_scan_roots fails closed with 403 (FR-003-AC-1)."""
+    with patch("stoat_ferret.api.routers.videos.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "0.0.0.0"
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "SCAN_ROOTS_REQUIRED"
+
+
+@pytest.mark.api
+def test_scan_loopback_permissive_when_roots_unset(client: TestClient, tmp_path: Path) -> None:
+    """Loopback bind + unset allowed_scan_roots stays permissive (FR-002-AC-1)."""
+    with patch("stoat_ferret.api.routers.videos.get_settings") as mock_settings:
+        mock_settings.return_value.allowed_scan_roots = []
+        mock_settings.return_value.api_host = "127.0.0.1"
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(tmp_path)},
+        )
+
+    assert response.status_code == 202
+
+
 @pytest.mark.api
 def test_scan_returns_job_id(client: TestClient, tmp_path: Path) -> None:
     """Scan returns 202 with a job ID."""

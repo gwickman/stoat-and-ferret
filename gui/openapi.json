@@ -666,7 +666,7 @@
           "videos"
         ],
         "summary": "Scan Videos",
-        "description": "Submit a directory scan as an async job.\n\nCreates a scan job and returns the job ID immediately.\nUse GET /api/v1/jobs/{job_id} to poll for status and results.\n\nArgs:\n    scan_request: Scan request with directory path and recursion flag.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job submission response with the job ID.\n\nRaises:\n    HTTPException: 400 if path is not a valid directory.",
+        "description": "Submit a directory scan as an async job.\n\nCreates a scan job and returns the job ID immediately.\nUse GET /api/v1/jobs/{job_id} to poll for status and results.\n\nArgs:\n    scan_request: Scan request with directory path and recursion flag.\n    request: The FastAPI request object for accessing app state.\n\nReturns:\n    Job submission response with the job ID.\n\nRaises:\n    HTTPException: 400 if path is not a valid directory, 403 if outside allowed\n        roots or if allowed_scan_roots is unset on a non-loopback bind.",
         "operationId": "scan_videos_api_v1_videos_scan_post",
         "requestBody": {
           "content": {
@@ -2887,7 +2887,7 @@
           "filesystem"
         ],
         "summary": "List Directories",
-        "description": "List subdirectories within a given path with pagination.\n\nReturns a paginated list of immediate subdirectories. Hidden directories\n(starting with '.') are excluded. Uses run_in_executor for async-safe\nfilesystem access.\n\nWhen path is not provided, defaults to the first allowed_scan_root\nor the user's home directory if no roots are configured.\n\nArgs:\n    path: Directory path to list. Defaults to a sensible starting location.\n    limit: Maximum number of entries to return (1-100, default 20).\n    offset: Number of entries to skip (default 0).\n\nReturns:\n    Paginated directory listing with metadata.\n\nRaises:\n    HTTPException: 400 if path is not a directory, 403 if outside allowed roots,\n        404 if path does not exist.",
+        "description": "List subdirectories within a given path with pagination.\n\nReturns a paginated list of immediate subdirectories. Hidden directories\n(starting with '.') are excluded. Uses run_in_executor for async-safe\nfilesystem access.\n\nWhen path is not provided, defaults to the first allowed_scan_root\nor the user's home directory if no roots are configured.\n\nArgs:\n    path: Directory path to list. Defaults to a sensible starting location.\n    limit: Maximum number of entries to return (1-100, default 20).\n    offset: Number of entries to skip (default 0).\n\nReturns:\n    Paginated directory listing with metadata.\n\nRaises:\n    HTTPException: 400 if path is not a directory or is malformed (e.g. contains\n        a null byte), 403 if outside allowed roots or if allowed_scan_roots is\n        unset on a non-loopback bind, 404 if path does not exist.",
         "operationId": "list_directories_api_v1_filesystem_directories_get",
         "parameters": [
           {

@@ -5,6 +5,11 @@ services:
       - "8765:8765"
     volumes:
       - ./data:/app/data
+    environment:
+      # Fail-closed guard (BL-637): binding 0.0.0.0 in Dockerfile requires an explicit
+      # allowlist, or /filesystem/directories and /videos/scan return 403. Scoped to
+      # the mounted data volume above.
+      - STOAT_ALLOWED_SCAN_ROOTS=["/app/data"]
     healthcheck:
       # Use /health/live (not /health/ready) for Docker healthchecks: liveness checks
       # are faster (no subsystem probes) and Docker's restart policy only needs to know

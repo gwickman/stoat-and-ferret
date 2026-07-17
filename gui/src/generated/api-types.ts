@@ -406,7 +406,8 @@ export interface paths {
          *         Job submission response with the job ID.
          *
          *     Raises:
-         *         HTTPException: 400 if path is not a valid directory.
+         *         HTTPException: 400 if path is not a valid directory, 403 if outside allowed
+         *             roots or if allowed_scan_roots is unset on a non-loopback bind.
          */
         post: operations["scan_videos_api_v1_videos_scan_post"];
         delete?: never;
@@ -1594,8 +1595,9 @@ export interface paths {
          *         Paginated directory listing with metadata.
          *
          *     Raises:
-         *         HTTPException: 400 if path is not a directory, 403 if outside allowed roots,
-         *             404 if path does not exist.
+         *         HTTPException: 400 if path is not a directory or is malformed (e.g. contains
+         *             a null byte), 403 if outside allowed roots or if allowed_scan_roots is
+         *             unset on a non-loopback bind, 404 if path does not exist.
          */
         get: operations["list_directories_api_v1_filesystem_directories_get"];
         put?: never;
@@ -2238,7 +2240,7 @@ export interface paths {
         put?: never;
         /**
          * Run Qc
-         * @description Run all 11 QC checks over a rendered artifact and return a QCReport.
+         * @description Run all 12 QC checks over a rendered artifact and return a QCReport.
          *
          *     Returns HTTP 201 with the complete QCReport on success.
          *     Returns HTTP 422 when the artifact path is missing or invalid.
