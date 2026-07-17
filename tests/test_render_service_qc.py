@@ -69,9 +69,15 @@ def _make_job(*, with_profile: bool = True) -> RenderJob:
     )
 
 
-def _make_qc_report(*, verdict: str = "pass") -> MagicMock:
+def _make_qc_report(*, verdict: str = "pass", checks: dict | None = None) -> MagicMock:
     report = MagicMock()
     report.overall_verdict = verdict
+    if checks is None:
+        checks = {
+            "loudness_integrated": {"target": -14.0, "pass": False},
+            "true_peak": {"target": -1.0, "pass": True},
+        }
+    report.checks = json.dumps(checks)
     return report
 
 
@@ -209,6 +215,75 @@ class TestWorkerPathQC:
         completed_idx = statuses.index(RenderStatus.COMPLETED)
         qc_failed_idx = statuses.index(RenderStatus.QC_FAILED)
         assert completed_idx < qc_failed_idx
+
+    async def test_qc_fail_error_message_lists_failing_checks(self) -> None:
+        """FR-002-AC-1 / BL-645-AC-2: QC_FAILED transition carries a non-null,
+        useful error_message listing the failing check IDs."""
+        qc_service = AsyncMock()
+        qc_service.run_checks = AsyncMock(
+            return_value=_make_qc_report(
+                verdict="fail",
+                checks={
+                    "loudness_integrated": {"target": -14.0, "pass": False},
+                    "true_peak": {"target": -1.0, "pass": True},
+                },
+            )
+        )
+
+        service = _make_service(qc_service=qc_service)
+        job = _make_job(with_profile=True)
+
+        with (
+            patch("stoat_ferret.render.service.render_jobs_total"),
+            patch("stoat_ferret.render.service.render_duration_seconds"),
+            patch("stoat_ferret.render.service.render_disk_usage_bytes"),
+        ):
+            await service._complete_job(job)
+
+        qc_failed_calls = [
+            c
+            for c in service._repo.update_status.call_args_list
+            if c.args[1] == RenderStatus.QC_FAILED
+        ]
+        assert len(qc_failed_calls) == 1
+        error_message = qc_failed_calls[0].kwargs["error_message"]
+        assert error_message is not None
+        assert "loudness_integrated" in error_message
+        assert "true_peak" not in error_message
+
+    async def test_qc_fail_fallback_message_when_unasserted(self) -> None:
+        """FR-002-AC-1 / BL-645-AC-2 fallback branch: overall_verdict=fail but no
+        check individually failed (all pass: None) — degenerate unasserted-run case."""
+        qc_service = AsyncMock()
+        qc_service.run_checks = AsyncMock(
+            return_value=_make_qc_report(
+                verdict="fail",
+                checks={
+                    "loudness_integrated": {"target": None, "pass": None},
+                    "true_peak": {"target": None, "pass": None},
+                },
+            )
+        )
+
+        service = _make_service(qc_service=qc_service)
+        job = _make_job(with_profile=True)
+
+        with (
+            patch("stoat_ferret.render.service.render_jobs_total"),
+            patch("stoat_ferret.render.service.render_duration_seconds"),
+            patch("stoat_ferret.render.service.render_disk_usage_bytes"),
+        ):
+            await service._complete_job(job)
+
+        qc_failed_calls = [
+            c
+            for c in service._repo.update_status.call_args_list
+            if c.args[1] == RenderStatus.QC_FAILED
+        ]
+        assert len(qc_failed_calls) == 1
+        error_message = qc_failed_calls[0].kwargs["error_message"]
+        assert error_message is not None
+        assert "assertions may be missing" in error_message
 
     async def test_qc_pass_job_stays_completed(self) -> None:
         """Pass verdict: job stays COMPLETED, no QC_FAILED transition."""

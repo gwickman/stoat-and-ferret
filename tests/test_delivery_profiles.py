@@ -448,6 +448,78 @@ async def test_render_qc_failure_sets_status_qc_failed(
 
     assert resp.status_code == 201
     assert resp.json()["status"] == "qc_failed"
+    error_message = resp.json()["error_message"]
+    assert error_message is not None
+    assert "loudness_integrated" in error_message
+    assert "true_peak" in error_message
+
+
+async def test_render_qc_failure_error_message_fallback_when_unasserted(
+    dp_repo: AsyncInMemoryDeliveryProfileRepository,
+    render_repo: InMemoryRenderRepository,
+    project_repo: AsyncInMemoryProjectRepository,
+    clip_repo: AsyncInMemoryClipRepository,
+) -> None:
+    """FR-003-AC-1 / BL-645-AC-3 fallback branch: overall_verdict=fail but no check
+    individually failed (all pass: None) — the QC_FAILED job still carries a non-null,
+    useful error_message."""
+    from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
+    from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
+
+    video_repo = AsyncInMemoryVideoRepository()
+    queue = InMemoryJobQueue()
+    queue.register_handler(SCAN_JOB_TYPE, make_scan_handler(video_repo))
+
+    render_service = _make_noop_render_service(render_repo)
+    unasserted_checks = {
+        "loudness_integrated": {"measured": None, "target": None, "pass": None},
+        "true_peak": {"measured": None, "target": None, "pass": None},
+    }
+    unasserted_report = QCReportRecord(
+        id=str(uuid.uuid4()),
+        job_id=None,
+        artifact_path="/fake/output.mp4",
+        delivery_profile_id=None,
+        overall_verdict="fail",
+        checks=json.dumps(unasserted_checks),
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    unasserted_qc_service = MagicMock()
+    unasserted_qc_service.run_checks = AsyncMock(return_value=unasserted_report)
+
+    app = create_app(
+        video_repository=video_repo,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+        job_queue=queue,
+        render_repository=render_repo,
+        render_service=render_service,
+        delivery_profile_repository=dp_repo,
+        qc_service=unasserted_qc_service,
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        project_id = await _seed_project_with_clip(client)
+        name = _profile_name()
+        await client.post("/api/v1/delivery_profiles", json=_make_profile(name=name))
+
+        resp = await client.post(
+            "/api/v1/render",
+            json={
+                "project_id": project_id,
+                "render_plan": '{"total_duration": 5.0, "settings": {}}',
+                "delivery_profile": name,
+            },
+        )
+
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "qc_failed"
+    error_message = resp.json()["error_message"]
+    assert error_message is not None
+    assert "assertions may be missing" in error_message
 
 
 async def test_render_qc_failure_project_remains_editable(
