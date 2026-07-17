@@ -27,6 +27,7 @@ export default function LayoutPreview() {
         )}
         {positions.map((pos, i) => (
           <div
+            // eslint-disable-next-line react/no-array-index-key -- list is always replaced wholesale
             key={i}
             data-testid={`preview-rect-${i}`}
             className="absolute rounded border border-white/30"
