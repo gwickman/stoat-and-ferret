@@ -37,7 +37,13 @@ def upgrade() -> None:
     existing_cols = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(clips)")).fetchall()}
 
     # Columns that may or may not exist depending on migration state
-    optional_cols = ["effects_json", "track_id", "timeline_start", "timeline_end", "generator_params"]
+    optional_cols = [
+        "effects_json",
+        "track_id",
+        "timeline_start",
+        "timeline_end",
+        "generator_params",
+    ]
     base_cols = [
         "id",
         "project_id",
@@ -104,7 +110,13 @@ def downgrade() -> None:
     conn = op.get_bind()
     existing_cols = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(clips)")).fetchall()}
 
-    optional_cols = ["effects_json", "track_id", "timeline_start", "timeline_end", "generator_params"]
+    optional_cols = [
+        "effects_json",
+        "track_id",
+        "timeline_start",
+        "timeline_end",
+        "generator_params",
+    ]
     base_cols = [
         "id",
         "project_id",
