@@ -450,6 +450,7 @@ class TestGetManifest:
         assert response.status_code == 200
         assert "application/vnd.apple.mpegurl" in response.headers["content-type"]
         assert "#EXTM3U" in response.text
+        assert response.headers["x-content-type-options"] == "nosniff"
 
     async def test_not_ready_returns_404(
         self,
@@ -508,6 +509,7 @@ class TestGetSegment:
         assert response.status_code == 200
         assert response.headers["content-type"] == "video/MP2T"
         assert response.content == segment_content
+        assert response.headers["x-content-type-options"] == "nosniff"
 
     async def test_missing_segment_returns_404(
         self,

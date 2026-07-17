@@ -11,6 +11,7 @@ and WebSocket event broadcasting.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -596,3 +597,19 @@ class TestParityStartSeek:
 
         seek_events = [call.args[0]["type"] for call in ws.broadcast.call_args_list]
         assert "preview.error" in seek_events
+
+
+class TestSessionDirConfinement:
+    """Tests confirming PreviewManager._session_dir() call-site wiring parity."""
+
+    @pytest.mark.parametrize("session_id", [str(uuid.uuid4()) for _ in range(3)])
+    def test_session_dir_uuid4_round_trip(self, tmp_path: Path, session_id: str) -> None:
+        """_session_dir() routes uuid4 session IDs through confine_child_path unchanged."""
+        manager, _, _, _ = _make_manager(output_base_dir=str(tmp_path))
+        assert manager._session_dir(session_id) == tmp_path.resolve() / session_id
+
+    def test_session_dir_traversal_raises(self, tmp_path: Path) -> None:
+        """_session_dir() raises ValueError for a traversal session ID."""
+        manager, _, _, _ = _make_manager(output_base_dir=str(tmp_path))
+        with pytest.raises(ValueError, match="escapes base directory"):
+            manager._session_dir("../../escape")

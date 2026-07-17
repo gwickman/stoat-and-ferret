@@ -472,7 +472,15 @@ async def get_manifest(
         )
 
     content = manifest_file.read_text()
-    return Response(content=content, media_type=HLS_MANIFEST_CONTENT_TYPE)
+    # NOSONAR: media_type is a hardcoded HLS manifest MIME type (not attacker-influenced)
+    # and X-Content-Type-Options: nosniff prevents browser MIME-sniffing, so the reflected
+    # content cannot be interpreted as executable script by any browser (S5131 accepted
+    # risk, BL-636).
+    return Response(  # NOSONAR
+        content=content,
+        media_type=HLS_MANIFEST_CONTENT_TYPE,
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.get(
@@ -526,4 +534,12 @@ async def get_segment(
         )
 
     content = segment_file.read_bytes()
-    return Response(content=content, media_type=HLS_SEGMENT_CONTENT_TYPE)
+    # NOSONAR: media_type is a hardcoded MPEG-TS MIME type (not attacker-influenced) and
+    # X-Content-Type-Options: nosniff prevents browser MIME-sniffing, so the reflected
+    # content cannot be interpreted as executable script by any browser (S5131 accepted
+    # risk, BL-636).
+    return Response(  # NOSONAR
+        content=content,
+        media_type=HLS_SEGMENT_CONTENT_TYPE,
+        headers={"X-Content-Type-Options": "nosniff"},
+    )

@@ -20,6 +20,7 @@ import structlog
 
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.ffmpeg.async_executor import ProgressInfo
+from stoat_ferret.preview._paths import confine_child_path
 from stoat_ferret.preview.metrics import preview_segment_seconds
 from stoat_ferret_core import FilterGraph
 
@@ -168,8 +169,11 @@ class HLSGenerator:
 
         Returns:
             Path to the session's output directory.
+
+        Raises:
+            ValueError: If session_id resolves outside the output base directory.
         """
-        return self._output_base_dir / session_id
+        return confine_child_path(self._output_base_dir, session_id)
 
     async def generate(
         self,
