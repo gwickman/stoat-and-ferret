@@ -71,7 +71,7 @@ async def test_uc12_cancel_scan(
 
     # Wait for job to reach terminal state before re-cancelling.
     # The cancel flag is set but the job may still be processing.
-    await poll_job_until_terminal(smoke_client, job_id)
+    await poll_job_until_terminal(smoke_client, job_id, endpoint_prefix="/api/v1/jobs")
 
     # Now the job is terminal — cancelling again should return 409
     resp = await smoke_client.post(f"/api/v1/jobs/{job_id}/cancel")

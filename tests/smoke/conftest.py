@@ -250,14 +250,18 @@ async def poll_job_until_terminal(
     *,
     timeout: float = 30.0,
     interval: float = 0.5,
+    endpoint_prefix: str = "/api/v1/render",
 ) -> dict[str, Any]:
-    """Poll GET /api/v1/render/{job_id} until status is terminal.
+    """Poll GET {endpoint_prefix}/{job_id} until status is terminal.
 
     Args:
         client: The httpx async client to use.
         job_id: The job ID to poll.
         timeout: Maximum seconds to wait (default 30).
         interval: Seconds between polls (default 0.5).
+        endpoint_prefix: URL prefix to poll, job_id is appended (default
+            "/api/v1/render", the render-job status endpoint). Pass
+            "/api/v1/jobs" for generic job-queue jobs (e.g. scan jobs).
 
     Returns:
         The final job status response body.
@@ -270,7 +274,7 @@ async def poll_job_until_terminal(
     body: dict[str, Any] = {}
 
     while asyncio.get_event_loop().time() < deadline:
-        resp = await client.get(f"/api/v1/render/{job_id}")
+        resp = await client.get(f"{endpoint_prefix}/{job_id}")
         assert resp.status_code == 200
         body = resp.json()
         if body["status"].lower() in terminal_statuses:
@@ -291,6 +295,9 @@ async def scan_videos_and_wait(
 ) -> dict[str, Any]:
     """Submit a scan request and poll until complete.
 
+    Scan jobs run on the generic job-queue router (mounted at
+    /api/v1/jobs), not the render router, so status is polled there.
+
     Args:
         client: The httpx async client to use.
         videos_path: Path to the directory to scan.
@@ -305,7 +312,9 @@ async def scan_videos_and_wait(
     )
     assert resp.status_code == 202
     job_id = resp.json()["job_id"]
-    return await poll_job_until_terminal(client, job_id, timeout=timeout)
+    return await poll_job_until_terminal(
+        client, job_id, timeout=timeout, endpoint_prefix="/api/v1/jobs"
+    )
 
 
 async def create_project_with_clips(

@@ -208,7 +208,9 @@ async def test_proxy_odd_dimension(
     assert resp.status_code == 202
     job_id = resp.json()["job_id"]
 
-    job_body = await poll_job_until_terminal(smoke_client, job_id, timeout=60.0)
+    job_body = await poll_job_until_terminal(
+        smoke_client, job_id, timeout=60.0, endpoint_prefix="/api/v1/jobs"
+    )
     assert job_body["status"] == "completed", (
         f"Proxy job failed — odd-dim rounding may not be applied. "
         f"Job status: {job_body['status']!r}, error: {job_body.get('error')!r}"
@@ -266,7 +268,9 @@ async def test_proxy_failure_terminal_ws_event(
     assert resp.status_code == 202
     job_id = resp.json()["job_id"]
 
-    await poll_job_until_terminal(smoke_client, job_id, timeout=30.0)
+    await poll_job_until_terminal(
+        smoke_client, job_id, timeout=30.0, endpoint_prefix="/api/v1/jobs"
+    )
 
     # After terminal state, proxy.failed must be in the WS replay buffer
     deadline = asyncio.get_event_loop().time() + 5.0
