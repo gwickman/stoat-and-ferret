@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
+from urllib.parse import urlsplit
 
 try:
     import websockets
@@ -38,6 +40,22 @@ except ImportError:
         '       or:           pip install "websockets>=12.0"\n'
     )
     sys.exit(1)
+
+_DEFAULT_ALLOWED_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+def _validate_host(url: str, allowed_schemes: set[str]) -> None:
+    """Reject non-allowlisted scheme/host before any network call (BL-641, SSRF)."""
+    parsed = urlsplit(url)
+    if parsed.scheme not in allowed_schemes:
+        raise SystemExit(f"error: scheme not allowed: {parsed.scheme!r}")
+    allowed = {
+        h.strip().lower()
+        for h in os.environ.get("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "").split(",")
+        if h.strip()
+    } or _DEFAULT_ALLOWED_HOSTS
+    if (parsed.hostname or "").lower() not in allowed:
+        raise SystemExit(f"error: host not allowlisted: {parsed.hostname!r}")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -61,6 +79,7 @@ async def stream_events(host: str, port: int, last_event_id: str | None) -> int:
     Returns 0 on graceful close, 1 on connection error.
     """
     url = f"ws://{host}:{port}/ws"
+    _validate_host(url, {"ws", "wss"})
     headers: list[tuple[str, str]] | None = None
     if last_event_id is not None:
         headers = [("Last-Event-ID", last_event_id)]

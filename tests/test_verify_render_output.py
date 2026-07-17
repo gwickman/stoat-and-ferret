@@ -17,10 +17,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.host_allowlist_vectors import host_allowlist_vectors
+
 # Import via path so the test doesn't require the scripts/ dir to be a package.
 scripts_dir = Path(__file__).parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
-from verify_render_output import main  # noqa: E402
+from verify_render_output import _validate_host, main  # noqa: E402
+
+# Shared test-vector table (requirements.md "Parity Requirements", tests/host_allowlist_vectors.py)
+# — applied identically across test_verify_render_output.py, test_wait_for_render.py, and
+# test_dump_ws_events.py so a bypass found against one script is mechanically checked against
+# the other two.
+HOST_ALLOWLIST_VECTORS = host_allowlist_vectors("http")
 
 
 def _mock_response(data: dict) -> MagicMock:
@@ -143,3 +151,69 @@ class TestFullMode:
             }
         )
         assert code == 1
+
+
+class TestHostAllowlist:
+    """SSRF host-allowlist validation (BL-641) — must reject before any network call."""
+
+    @pytest.mark.parametrize("url,expect_accept", HOST_ALLOWLIST_VECTORS)
+    def test_validate_host_vector_table(self, url: str, expect_accept: bool) -> None:
+        if expect_accept:
+            _validate_host(url, {"http", "https"})  # must not raise
+        else:
+            with pytest.raises(SystemExit):
+                _validate_host(url, {"http", "https"})
+
+    def test_non_allowlisted_host_exits_before_network_call(self) -> None:
+        with (
+            patch("urllib.request.urlopen") as mock_urlopen,
+            patch(
+                "sys.argv",
+                [
+                    "verify_render_output.py",
+                    "--job-id",
+                    "job-123",
+                    "--base-url",
+                    "http://evil.com",  # NOSONAR (S5332): test vector, not a real endpoint
+                ],
+            ),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        assert exc_info.value.code != 0
+        mock_urlopen.assert_not_called()
+
+    def test_non_http_scheme_rejected_before_network_call(self) -> None:
+        with (
+            patch("urllib.request.urlopen") as mock_urlopen,
+            patch(
+                "sys.argv",
+                [
+                    "verify_render_output.py",
+                    "--job-id",
+                    "job-123",
+                    "--base-url",
+                    "file:///etc/passwd",
+                ],
+            ),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        assert exc_info.value.code != 0
+        mock_urlopen.assert_not_called()
+
+    def test_env_override_allows_listed_non_loopback_host(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "staging.internal")
+        # must not raise
+        _validate_host(
+            "http://staging.internal:8765",  # NOSONAR (S5332): test vector
+            {"http", "https"},
+        )
+
+    def test_env_override_is_not_a_bare_boolean(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Setting the env var to a truthy-looking string must not disable the allowlist."""
+        monkeypatch.setenv("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "true")
+        with pytest.raises(SystemExit):
+            _validate_host("http://evil.com", {"http", "https"})  # NOSONAR (S5332): test vector

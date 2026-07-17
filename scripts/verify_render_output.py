@@ -5,9 +5,27 @@
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
+
+_DEFAULT_ALLOWED_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+def _validate_host(url: str, allowed_schemes: set[str]) -> None:
+    """Reject non-allowlisted scheme/host before any network call (BL-641, SSRF)."""
+    parsed = urlsplit(url)
+    if parsed.scheme not in allowed_schemes:
+        raise SystemExit(f"error: scheme not allowed: {parsed.scheme!r}")
+    allowed = {
+        h.strip().lower()
+        for h in os.environ.get("STOAT_RENDER_VERIFY_ALLOWED_HOSTS", "").split(",")
+        if h.strip()
+    } or _DEFAULT_ALLOWED_HOSTS
+    if (parsed.hostname or "").lower() not in allowed:
+        raise SystemExit(f"error: host not allowlisted: {parsed.hostname!r}")
 
 
 def main() -> None:
@@ -33,6 +51,8 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    _validate_host(args.base_url, {"http", "https"})
 
     if args.full:
         url = f"{args.base_url}/api/v1/render/{args.job_id}/evidence"
