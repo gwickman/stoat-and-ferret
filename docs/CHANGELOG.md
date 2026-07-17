@@ -4,6 +4,38 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v106 — Security Hardening & Functional Fixes (2026-07-17)
+
+### Theme 1: Preview and Filesystem Confinement (3 features)
+
+- BL-636: Confined preview session-dir paths against traversal and added `X-Content-Type-Options: nosniff` to HLS responses in `src/stoat_ferret/api/routers/preview.py` (SonarCloud S2083, S6549, S5131) (PR #816)
+- BL-637: `/api/v1/filesystem/directories` and `/api/v1/videos/scan` now apply an exposure-conditional fail-closed pre-check — loopback binds with unset `allowed_scan_roots` keep today's allow-all behavior, non-loopback binds (e.g. shipped `0.0.0.0`) now return HTTP 403 directing the operator to set `allowed_scan_roots`, and malformed/null-byte paths return a structured 400 instead of an unhandled 500; AC-7 (SonarCloud S6549 disposition) deferred to operator action (PR #818)
+- BL-638: Added a path-confinement development principle to AGENTS.md, codifying the `confine_child_path()` pattern established by BL-636 (docs only) (PR #819)
+
+### Theme 2: Script Sink and SSRF Hardening (4 features)
+
+- BL-639: Closed a tracked-symlink write-sink escape in `scripts/add_license_headers.py` (PR #820)
+- BL-640: CWD-confined path arguments accepted by `scripts/check_dependency_licenses.py`'s CLI (PR #821)
+- BL-641: Added SSRF host-allowlist validation to render-verification scripts (PR #822)
+- BL-642: Suppressed a ReDoS false positive on `tests/test_license_stray.py`'s `PYTHON_PATTERN` regex with a justified `# NOSONAR` suppression (PR #823)
+
+### Theme 3: Functional Fixes and Lint Guards (4 features)
+
+- BL-645: Fixed an information-loss bug on the render observability path — QC failure reason is now preserved on `QC_FAILED` render transitions instead of being dropped (PR #824)
+- BL-646: Replaced a tautological self-comparison assertion (`TransitionType.Fade == TransitionType.Fade`, SonarCloud S1764) in `tests/test_transition_builders.py` with a comparison of two independently constructed instances (PR #825)
+- BL-650: Retained the reference to the fire-and-forget frame-capture task in `RenderService` instead of letting it be garbage-collected mid-flight (SonarCloud S7502) (PR #826)
+- BL-649: Added `PLR0124` (self-comparison) and `RUF006` (unawaited asyncio task) to the ruff `[tool.ruff.lint] select` list to guard against regressions of BL-646 and BL-650 (PR #827)
+
+### PRs
+
+#816, #817, #818, #819, #820, #821, #822, #823, #824, #825, #826, #827
+
+### Resolved
+
+BL-636 (preview session-path confinement + HLS nosniff), BL-637 (fail-closed filesystem scan scope — AC-7 operator-gated), BL-638 (path-confinement dev principle), BL-639 (license-header write-sink symlink escape), BL-640 (dependency-license CLI CWD confinement), BL-641 (SSRF host-allowlist for verification scripts), BL-642 (ReDoS false-positive suppression), BL-645 (QC failure reason preservation), BL-646 (tautological assertion fix), BL-650 (frame-capture task retention), BL-649 (ruff lint guards for BL-646/BL-650)
+
+---
+
 ## v105 — Process, Tooling & Test-Hygiene Tech-Debt (2026-07-12) — FINAL PLANNED VERSION
 
 ### Theme 1: Process and Tooling Guardrails (4 features)
