@@ -15,10 +15,11 @@ job reaches a terminal state. The design is intentionally minimal:
   (INV-LP-1).
 - :func:`wait_for_job_terminal` is the handler helper: it short-circuits
   when the job is already terminal (INV-LP-2), otherwise awaits the event
-  under :func:`asyncio.wait_for` and surfaces timeouts as
-  :class:`fastapi.HTTPException` with HTTP 408 (INV-LP-3). The
-  timeout catch uses :class:`asyncio.TimeoutError` — distinct from
-  :class:`builtins.TimeoutError` on Python 3.10.
+  under :func:`asyncio.timeout` (3.11+) or :func:`asyncio.wait_for` (3.10)
+  and surfaces timeouts as :class:`fastapi.HTTPException` with HTTP 408
+  (INV-LP-3). The timeout catch uses :class:`asyncio.TimeoutError` —
+  distinct from :class:`builtins.TimeoutError` on Python 3.10, and unified
+  with it on 3.11+.
 
 The dict is discarded when the process exits; pending clients are
 expected to reconnect and re-query after a restart.
@@ -27,6 +28,7 @@ expected to reconnect and re-query after a restart.
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
@@ -69,8 +71,9 @@ async def wait_for_job_terminal(
     Returns immediately when the job is already terminal at call time so
     no persistent :class:`asyncio.Event` is created for already-completed
     jobs (INV-LP-2). Otherwise creates the event lazily, awaits it under
-    :func:`asyncio.wait_for`, then refetches the result so the caller
-    always sees the final state written by the queue worker.
+    :func:`asyncio.timeout` (Python 3.11+) or :func:`asyncio.wait_for`
+    (Python 3.10), then refetches the result so the caller always sees the
+    final state written by the queue worker.
 
     Args:
         job_queue: The queue that owns the job.
@@ -98,7 +101,11 @@ async def wait_for_job_terminal(
     event = _terminal_events.setdefault(job_id, asyncio.Event())
 
     try:
-        await asyncio.wait_for(event.wait(), timeout=timeout_seconds)
+        if sys.version_info >= (3, 11):
+            async with asyncio.timeout(timeout_seconds):
+                await event.wait()
+        else:
+            await asyncio.wait_for(event.wait(), timeout=timeout_seconds)
     except asyncio.TimeoutError:
         raise HTTPException(
             status_code=status.HTTP_408_REQUEST_TIMEOUT,
