@@ -3380,6 +3380,11 @@ export interface components {
             jobs_queued: number;
             /** Status */
             status: string;
+            /**
+             * Job Ids
+             * @description Server-assigned job IDs, in the same order as the submitted jobs list. Callers must use these IDs (not client-generated placeholders) when tracking individual job status via GET /render/batch/{batch_id}.
+             */
+            job_ids?: string[];
         };
         /** Body_upload_asset_api_v1_assets_post */
         Body_upload_asset_api_v1_assets_post: {

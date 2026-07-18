@@ -62,6 +62,34 @@ def test_submit_batch_returns_correct_jobs_queued(client: TestClient) -> None:
 
 
 @pytest.mark.api
+def test_submit_batch_returns_job_ids_matching_progress_endpoint(client: TestClient) -> None:
+    """Response job_ids are real, unique IDs that GET /batch/{id} recognizes.
+
+    Regression test: BatchPanel.tsx previously seeded the GUI store with a
+    client-generated placeholder job_id that could never match the
+    server-assigned job_id returned by the progress endpoint, so a
+    submitted job's status badge never updated past 'queued' (BL-653).
+    """
+    response = client.post(
+        "/api/v1/render/batch",
+        json={
+            "jobs": [
+                {"project_id": "proj-1", "output_path": "/out/1.mp4"},
+                {"project_id": "proj-2", "output_path": "/out/2.mp4"},
+            ]
+        },
+    )
+    data = response.json()
+    job_ids = data["job_ids"]
+    assert len(job_ids) == 2
+    assert len(set(job_ids)) == 2  # unique
+
+    progress = client.get(f"/api/v1/render/batch/{data['batch_id']}")
+    progress_job_ids = {job["job_id"] for job in progress.json()["jobs"]}
+    assert set(job_ids) == progress_job_ids
+
+
+@pytest.mark.api
 def test_submit_batch_default_quality(client: TestClient) -> None:
     """Jobs default to standard quality when not specified."""
     response = client.post(
@@ -172,7 +200,9 @@ def test_batch_response_round_trip() -> None:
     """BatchResponse serializes and deserializes correctly."""
     from stoat_ferret.api.schemas.batch import BatchResponse
 
-    resp = BatchResponse(batch_id="abc-123", jobs_queued=3, status="accepted")
+    resp = BatchResponse(
+        batch_id="abc-123", jobs_queued=3, status="accepted", job_ids=["j1", "j2", "j3"]
+    )
     data = resp.model_dump()
     restored = BatchResponse.model_validate(data)
     assert restored == resp

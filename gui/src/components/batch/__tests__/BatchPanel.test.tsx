@@ -50,10 +50,15 @@ describe('BatchPanel', () => {
     expect(screen.getByTestId('batch-validation-error').textContent).toContain('at least one')
   })
 
-  it('submits the batch and seeds the store with placeholder jobs on 202', async () => {
+  it('submits the batch and seeds the store with the server-assigned job_id on 202', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
-        JSON.stringify({ batch_id: 'b-100', jobs_queued: 1, status: 'accepted' }),
+        JSON.stringify({
+          batch_id: 'b-100',
+          jobs_queued: 1,
+          status: 'accepted',
+          job_ids: ['server-job-1'],
+        }),
         { status: 202 },
       ),
     )
@@ -70,6 +75,9 @@ describe('BatchPanel', () => {
     )
     const jobs = useBatchStore.getState().jobs
     expect(jobs).toHaveLength(1)
+    // The seeded job_id must be the server-assigned id (not a client
+    // placeholder) so subsequent status polling can find and update this row.
+    expect(jobs[0].job_id).toBe('server-job-1')
     expect(jobs[0].batch_id).toBe('b-100')
     expect(jobs[0].project_id).toBe('proj-1')
     expect(jobs[0].status).toBe('queued')
@@ -138,7 +146,7 @@ describe('BatchPanel', () => {
       expect((screen.getByTestId('batch-submit') as HTMLButtonElement).disabled).toBe(true)
     })
     resolveFetch(new Response(
-      JSON.stringify({ batch_id: 'b1', jobs_queued: 1, status: 'accepted' }),
+      JSON.stringify({ batch_id: 'b1', jobs_queued: 1, status: 'accepted', job_ids: ['j1'] }),
       { status: 202 },
     ))
     await waitFor(() => {

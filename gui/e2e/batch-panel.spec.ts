@@ -151,15 +151,17 @@ test.describe("J603: Batch Panel WebSocket Events", () => {
         // Status badge and percentage text are visible immediately.
         // batch-progress-bar is the inner fill div; at 0% progress its width is
         // 0px and Playwright reports it as hidden — assert the pct text instead.
-        await expect(
-          page.getByTestId(`batch-status-${jobId}`),
-        ).toBeVisible();
+        const statusBadge = page.getByTestId(`batch-status-${jobId}`);
+        await expect(statusBadge).toBeVisible();
         await expect(
           page.getByTestId(`batch-progress-pct-${jobId}`),
         ).toBeVisible();
 
-        // Allow time for job processing and WebSocket events to arrive
-        await page.waitForTimeout(5_000);
+        // Wait for the job to reach a terminal status (bounded, observable-condition
+        // wait) before inspecting collected WebSocket frames.
+        await expect
+          .poll(async () => statusBadge.textContent(), { timeout: 30_000 })
+          .toMatch(/^(completed|failed|cancelled)$/);
 
         // If render_progress WebSocket events arrived, verify their schema
         const renderProgressEvents = wsFrames.filter(
