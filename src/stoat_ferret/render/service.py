@@ -555,53 +555,77 @@ class RenderService:
         )
         await self._broadcast_queue_status()
         self._clear_throttle_state(job.id)
-        if self._qc_service is not None:
-            try:
-                plan_settings = json.loads(job.render_plan).get("settings") or {}
-                delivery_profile_id = plan_settings.get("delivery_profile_id")
-            except (json.JSONDecodeError, AttributeError):
-                delivery_profile_id = None
-            if delivery_profile_id:
-                try:
-                    assertions: dict[str, float | None] | None = None
-                    if self._dp_repo is not None:
-                        try:
-                            profile = await self._dp_repo.get_by_id(delivery_profile_id)
-                            if profile is not None:
-                                assertions = _build_assertions_from_profile(profile)
-                            else:
-                                logger.warning(
-                                    "delivery_profile_not_found",
-                                    profile_id=delivery_profile_id,
-                                )
-                        except Exception:
-                            logger.warning(
-                                "delivery_profile_fetch_failed",
-                                profile_id=delivery_profile_id,
-                            )
-                    qc_report = await self._qc_service.run_checks(
-                        artifact_path=job.output_path,
-                        job_id=job.id,
-                        delivery_profile_id=delivery_profile_id,
-                        assertions=assertions,
-                    )
-                    if qc_report.overall_verdict != "pass":
-                        checks_dict = json.loads(qc_report.checks)
-                        failed_ids = [
-                            cid for cid, c in checks_dict.items() if c.get("pass") is False
-                        ]
-                        error_message = (
-                            "QC failed: " + ", ".join(failed_ids)
-                            if failed_ids
-                            else "QC failed: overall_verdict=fail with no individually-failing "
-                            "checks (assertions may be missing)"
-                        )
-                        await self._repo.update_status(
-                            job.id, RenderStatus.QC_FAILED, error_message=error_message
-                        )
-                except Exception:
-                    logger.error("qc.step_failed", job_id=job.id, exc_info=True)
+        await self._run_completion_qc(job)
         await self._cleanup(job.id)
+
+    async def _load_delivery_profile_assertions(
+        self, delivery_profile_id: str
+    ) -> dict[str, float | None] | None:
+        """Load QC assertions from a delivery profile.
+
+        Args:
+            delivery_profile_id: ID of the delivery profile to fetch.
+
+        Returns:
+            Assertions dict built from the profile, or None if unavailable.
+        """
+        if self._dp_repo is None:
+            return None
+        try:
+            profile = await self._dp_repo.get_by_id(delivery_profile_id)
+            if profile is not None:
+                return _build_assertions_from_profile(profile)
+            logger.warning(
+                "delivery_profile_not_found",
+                profile_id=delivery_profile_id,
+            )
+        except Exception:
+            logger.warning(
+                "delivery_profile_fetch_failed",
+                profile_id=delivery_profile_id,
+            )
+        return None
+
+    async def _run_completion_qc(self, job: RenderJob) -> None:
+        """Run optional QC and delivery-profile checks after job completion.
+
+        No-ops when QC service is absent or no delivery profile is attached.
+        On QC failure, transitions the job to QC_FAILED.
+
+        Args:
+            job: The completed render job.
+        """
+        if self._qc_service is None:
+            return
+        try:
+            plan_settings = json.loads(job.render_plan).get("settings") or {}
+            delivery_profile_id = plan_settings.get("delivery_profile_id")
+        except (json.JSONDecodeError, AttributeError):
+            delivery_profile_id = None
+        if not delivery_profile_id:
+            return
+        try:
+            assertions = await self._load_delivery_profile_assertions(delivery_profile_id)
+            qc_report = await self._qc_service.run_checks(
+                artifact_path=job.output_path,
+                job_id=job.id,
+                delivery_profile_id=delivery_profile_id,
+                assertions=assertions,
+            )
+            if qc_report.overall_verdict != "pass":
+                checks_dict = json.loads(qc_report.checks)
+                failed_ids = [cid for cid, c in checks_dict.items() if c.get("pass") is False]
+                error_message = (
+                    "QC failed: " + ", ".join(failed_ids)
+                    if failed_ids
+                    else "QC failed: overall_verdict=fail with no individually-failing "
+                    "checks (assertions may be missing)"
+                )
+                await self._repo.update_status(
+                    job.id, RenderStatus.QC_FAILED, error_message=error_message
+                )
+        except Exception:
+            logger.error("qc.step_failed", job_id=job.id, exc_info=True)
 
     async def _handle_failure(self, job: RenderJob, error_message: str) -> None:
         """Handle a job failure with retry logic.
