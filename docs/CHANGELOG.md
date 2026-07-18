@@ -4,6 +4,41 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v107 — React Row Identity, GUI Simplification, Async Event-Loop Hygiene & Path-Confinement Residual (2026-07-18)
+
+### Theme 1: React Row Identity and Lint (3 features)
+
+- BL-643: Gave `BatchPanel` rows a stable id to prevent focus loss on delete (PR #829)
+- BL-644: Gave `EffectStack` rows a stable `clientIds` client id across async delete/refetch transitions (PR #830)
+- BL-647: Added `react/no-array-index-key` lint rule and suppressed 2 benign sites; AC-3 ("passes clean") deferred_post_merge — falsified by 27 pre-existing/unrelated eslint errors confirmed byte-identical to pre-feature baseline (PR #831)
+
+### Theme 2: GUI and Simplification Cleanups (2 features)
+
+- BL-648: Removed duplicate branches in `EffectParameterForm` and `render_repository` (PR #832)
+- BL-659: Converted `setProgress` to an options object and de-nested 2 ternaries (PR #833)
+
+### Theme 3: Async Event-Loop Hygiene (5 features)
+
+- BL-651: Moved blocking TTS/ffmetadata/filter-route writes off the shared event loop (PR #834)
+- BL-652: De-async'd 3 test methods with no `await` (PR #835)
+- BL-653: Replaced a fixed Playwright wait with an observable batch-status wait (PR #836)
+- BL-654: Rewrote job-completion wait to `asyncio.timeout()` with a Python 3.10 fallback; AC-3's literal regression command (`-k job_completion`) selects 0 tests, an AC-authoring/test-naming gap — actual coverage is `tests/test_api/test_long_poll.py` (12/12 passing) (PR #837)
+- BL-675: Extracted `async_executor.run()` closures to instance methods (PR #838)
+
+### Theme 4: Security-Scan Path-Confinement Residual (1 feature)
+
+- BL-696: Reordered `/api/v1/videos/scan` to confine the path before filesystem access (PR #839)
+
+### PRs
+
+#829, #830, #831, #832, #833, #834, #835, #836, #837, #838, #839
+
+### Resolved
+
+BL-643 (BatchPanel row stable id), BL-644 (EffectStack row stable client id), BL-647 (react/no-array-index-key lint rule — AC-3 deferred_post_merge), BL-648 (duplicate-branch removal), BL-659 (setProgress options object), BL-651 (offload blocking writes off event loop), BL-652 (de-async no-await tests), BL-653 (observable Playwright wait), BL-654 (asyncio.timeout job-completion wait — AC-3 weakened), BL-675 (async_executor closure extraction), BL-696 (videos/scan path confinement reorder)
+
+---
+
 ## v106 — Security Hardening & Functional Fixes (2026-07-17)
 
 ### Theme 1: Preview and Filesystem Confinement (3 features)
