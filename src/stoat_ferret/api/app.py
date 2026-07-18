@@ -71,7 +71,7 @@ from stoat_ferret.api.services.scan import SCAN_JOB_TYPE, make_scan_handler
 from stoat_ferret.api.services.synthetic_monitoring import SyntheticMonitoringTask
 from stoat_ferret.api.services.thumbnail import ThumbnailService
 from stoat_ferret.api.services.waveform import WaveformService
-from stoat_ferret.api.settings import get_settings
+from stoat_ferret.api.settings import Settings, get_settings
 from stoat_ferret.api.websocket.identity import ClientIdentityStore, InMemoryClientIdentityStore
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.asset_repository import AsyncSQLiteAssetRepository
@@ -140,6 +140,90 @@ def _get_git_sha() -> str:
     except Exception:
         pass
     return "unknown"
+
+
+async def _cancel_task_with_timeout(
+    task: asyncio.Task[None], name: str, timeout: float = 15.0
+) -> None:
+    """Cancel a background task and wait for it to finish, bounded by timeout.
+
+    LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10.
+    """
+    task.cancel()
+    await asyncio.wait({task}, timeout=timeout)
+
+
+async def _shutdown_synthetic_monitoring(
+    synthetic_task_handle: asyncio.Task[None] | None,
+    synthetic_client: httpx.AsyncClient | None,
+) -> None:
+    """Cancel the synthetic monitoring task and close its HTTP client (BL-269)."""
+    if synthetic_task_handle is not None:
+        await _cancel_task_with_timeout(synthetic_task_handle, "synthetic_monitoring_task")
+    if synthetic_client is not None:
+        await synthetic_client.aclose()
+
+
+async def _shutdown_render_services(app: FastAPI, settings: Settings) -> None:
+    """Run the graceful render shutdown sequence and cancel render background tasks.
+
+    Order: set flag -> cancel via stdin 'q' -> wait grace -> SIGKILL -> clean temp (BL-227),
+    then cancel the render worker and stale-render sweeper tasks.
+    """
+    rs: RenderService | None = getattr(app.state, "render_service", None)
+    re: RenderExecutor | None = getattr(app.state, "render_executor", None)
+    if rs is not None and re is not None:
+        # Step 1: Reject new requests
+        rs.initiate_shutdown()
+
+        # Step 2: Cancel active renders via stdin 'q'
+        cancelled_ids = await re.cancel_all()
+
+        if cancelled_ids:
+            # Step 3: Wait grace period for processes to finalize
+            grace = settings.render_cancel_grace_seconds
+            logger.info(
+                "render_shutdown.waiting_grace",
+                grace_seconds=grace,
+                active_count=len(cancelled_ids),
+            )
+            await asyncio.sleep(grace)
+
+            # Step 4: Kill remaining processes
+            killed_ids = await re.kill_remaining()
+            if killed_ids:
+                logger.warning(
+                    "render_shutdown.killed_remaining",
+                    killed_count=len(killed_ids),
+                )
+
+        # Step 5: Clean up temp files for all tracked jobs
+        cleaned_ids = re.cleanup_all_temp_files()
+        if cleaned_ids:
+            logger.info("render_shutdown.temp_files_cleaned", count=len(cleaned_ids))
+
+        logger.info("render_services_shutdown")
+
+    # Cancel render worker before general job worker (prevent orphaned jobs)
+    rw_task: asyncio.Task[None] | None = getattr(app.state, "render_worker_task", None)
+    if rw_task is not None:
+        await _cancel_task_with_timeout(rw_task, "render_worker_task")
+
+    # Cancel stale-job sweeper
+    sw_task: asyncio.Task[None] | None = getattr(app.state, "render_sweeper_task", None)
+    if sw_task is not None:
+        await _cancel_task_with_timeout(sw_task, "render_sweeper_task")
+
+
+async def _shutdown_preview(app: FastAPI) -> None:
+    """Cancel active preview sessions and stop the preview cache cleanup task."""
+    preview_manager: PreviewManager | None = getattr(app.state, "preview_manager", None)
+    if preview_manager is not None:
+        await preview_manager.cancel_all()
+
+    preview_cache: PreviewCache | None = getattr(app.state, "preview_cache", None)
+    if preview_cache is not None:
+        await preview_cache.stop_cleanup_task()
 
 
 @asynccontextmanager
@@ -442,76 +526,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown: cancel the synthetic monitoring task (BL-269) first so
     # subsequent probes cannot race with the rest of teardown.
-    if synthetic_task_handle is not None:
-        synthetic_task_handle.cancel()
-        # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
-        await asyncio.wait({synthetic_task_handle}, timeout=15.0)
-    if synthetic_client is not None:
-        await synthetic_client.aclose()
+    await _shutdown_synthetic_monitoring(synthetic_task_handle, synthetic_client)
 
-    # Shutdown: graceful render shutdown sequence (BL-227)
-    # Order: set flag → cancel via stdin 'q' → wait grace → SIGKILL → clean temp
-    rs: RenderService | None = getattr(app.state, "render_service", None)
-    re: RenderExecutor | None = getattr(app.state, "render_executor", None)
-    if rs is not None and re is not None:
-        # Step 1: Reject new requests
-        rs.initiate_shutdown()
-
-        # Step 2: Cancel active renders via stdin 'q'
-        cancelled_ids = await re.cancel_all()
-
-        if cancelled_ids:
-            # Step 3: Wait grace period for processes to finalize
-            grace = settings.render_cancel_grace_seconds
-            logger.info(
-                "render_shutdown.waiting_grace",
-                grace_seconds=grace,
-                active_count=len(cancelled_ids),
-            )
-            await asyncio.sleep(grace)
-
-            # Step 4: Kill remaining processes
-            killed_ids = await re.kill_remaining()
-            if killed_ids:
-                logger.warning(
-                    "render_shutdown.killed_remaining",
-                    killed_count=len(killed_ids),
-                )
-
-        # Step 5: Clean up temp files for all tracked jobs
-        cleaned_ids = re.cleanup_all_temp_files()
-        if cleaned_ids:
-            logger.info("render_shutdown.temp_files_cleaned", count=len(cleaned_ids))
-
-        logger.info("render_services_shutdown")
+    # Shutdown: graceful render shutdown sequence (BL-227) and render task cancellation
+    await _shutdown_render_services(app, settings)
 
     # Shutdown: cancel preview sessions first
-    preview_manager: PreviewManager | None = getattr(app.state, "preview_manager", None)
-    if preview_manager is not None:
-        await preview_manager.cancel_all()
-
-    preview_cache: PreviewCache | None = getattr(app.state, "preview_cache", None)
-    if preview_cache is not None:
-        await preview_cache.stop_cleanup_task()
-
-    # Shutdown: cancel render worker before general job worker (prevent orphaned jobs)
-    rw_task: asyncio.Task[None] | None = getattr(app.state, "render_worker_task", None)
-    if rw_task is not None:
-        rw_task.cancel()
-        # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
-        await asyncio.wait({rw_task}, timeout=15.0)
-
-    # Shutdown: cancel stale-job sweeper
-    sw_task: asyncio.Task[None] | None = getattr(app.state, "render_sweeper_task", None)
-    if sw_task is not None:
-        sw_task.cancel()
-        # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
-        await asyncio.wait({sw_task}, timeout=15.0)
+    await _shutdown_preview(app)
 
     # Shutdown: cancel worker and close database
-    worker_task.cancel()
-    # LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10
-    await asyncio.wait({worker_task}, timeout=15.0)
+    await _cancel_task_with_timeout(worker_task, "job_worker")
     logger.info("job_worker_stopped")
 
     # Shutdown: cancel active TTS synthesis tasks (BL-516)
@@ -547,6 +571,78 @@ async def _fix_405_allow_header(request: Request, exc: StarletteHTTPException) -
                 headers={"Allow": ", ".join(sorted(allowed))},
             )
     return await _default_http_exception_handler(request, exc)
+
+
+def _apply_di_overrides(app: FastAPI, **kwargs: object) -> None:
+    """Store each non-None keyword value on app.state under its own name."""
+    for name, value in kwargs.items():
+        if value is not None:
+            setattr(app.state, name, value)
+
+
+def _apply_injected_repositories(
+    app: FastAPI,
+    *,
+    video_repository: AsyncVideoRepository | None,
+    project_repository: AsyncProjectRepository | None,
+    clip_repository: AsyncClipRepository | None,
+    timeline_repository: AsyncTimelineRepository | None,
+    version_repository: AsyncVersionRepository | None,
+    batch_repository: AsyncBatchRepository | None,
+    proxy_repository: AsyncProxyRepository | None,
+    render_repository: AsyncRenderRepository | None,
+    job_queue: AsyncioJobQueue | None,
+) -> bool:
+    """Store injected repositories/job queue on app.state when any is provided.
+
+    When any dependency is injected, all nine attributes are assigned
+    unconditionally (including None values) so app.state reflects exactly
+    the DI-mode configuration the caller requested.
+
+    Returns:
+        True if any dependency was injected (and app.state was updated),
+        False otherwise.
+    """
+    has_injected = any(
+        dep is not None
+        for dep in (
+            video_repository,
+            project_repository,
+            clip_repository,
+            render_repository,
+            job_queue,
+        )
+    )
+    if has_injected:
+        app.state._deps_injected = True
+        app.state.video_repository = video_repository
+        app.state.project_repository = project_repository
+        app.state.clip_repository = clip_repository
+        app.state.timeline_repository = timeline_repository
+        app.state.version_repository = version_repository
+        app.state.batch_repository = batch_repository
+        app.state.proxy_repository = proxy_repository
+        app.state.render_repository = render_repository
+        app.state.job_queue = job_queue
+    return has_injected
+
+
+def _mount_gui_routes(app: FastAPI, gui_dir: Path) -> None:
+    """Mount /gui and /gui/{path:path} SPA routes serving files from gui_dir."""
+    index_html = gui_dir / "index.html"
+
+    @app.get("/gui")
+    async def gui_root() -> FileResponse:
+        """Serve index.html for the bare /gui path."""
+        return FileResponse(index_html)
+
+    @app.get("/gui/{path:path}")
+    async def gui_catch_all(path: str) -> FileResponse:
+        """Serve static files or fall back to index.html for SPA routing."""
+        file_path = gui_dir / path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(index_html)
 
 
 def create_app(
@@ -644,72 +740,37 @@ def create_app(
     app.state.client_identity_store = resolved_identity_store
 
     # Store injected dependencies on app.state
-    has_injected = any(
-        dep is not None
-        for dep in (
-            video_repository,
-            project_repository,
-            clip_repository,
-            render_repository,
-            job_queue,
-        )
+    has_injected = _apply_injected_repositories(
+        app,
+        video_repository=video_repository,
+        project_repository=project_repository,
+        clip_repository=clip_repository,
+        timeline_repository=timeline_repository,
+        version_repository=version_repository,
+        batch_repository=batch_repository,
+        proxy_repository=proxy_repository,
+        render_repository=render_repository,
+        job_queue=job_queue,
     )
-    if has_injected:
-        app.state._deps_injected = True
-        app.state.video_repository = video_repository
-        app.state.project_repository = project_repository
-        app.state.clip_repository = clip_repository
-        app.state.timeline_repository = timeline_repository
-        app.state.version_repository = version_repository
-        app.state.batch_repository = batch_repository
-        app.state.proxy_repository = proxy_repository
-        app.state.render_repository = render_repository
-        app.state.job_queue = job_queue
 
-    if render_queue is not None:
-        app.state.render_queue = render_queue
-
-    if render_service is not None:
-        app.state.render_service = render_service
-
-    if audit_logger is not None:
-        app.state.audit_logger = audit_logger
-
-    if ws_manager is not None:
-        app.state.ws_manager = ws_manager
-
-    if effect_registry is not None:
-        app.state.effect_registry = effect_registry
-
-    if ffmpeg_executor is not None:
-        app.state.ffmpeg_executor = ffmpeg_executor
-
-    if preview_manager is not None:
-        app.state.preview_manager = preview_manager
-
-    if preview_cache is not None:
-        app.state.preview_cache = preview_cache
-
-    if thumbnail_service is not None:
-        app.state.thumbnail_service = thumbnail_service
-
-    if waveform_service is not None:
-        app.state.waveform_service = waveform_service
-
-    if qc_service is not None:
-        app.state.qc_service = qc_service
-
-    if delivery_profile_repository is not None:
-        app.state.delivery_profile_repository = delivery_profile_repository
-
-    if asset_repository is not None:
-        app.state.asset_repository = asset_repository
-
-    if ducking_pair_repository is not None:
-        app.state.ducking_pair_repository = ducking_pair_repository
-
-    if tts_cue_repository is not None:
-        app.state.tts_cue_repository = tts_cue_repository
+    _apply_di_overrides(
+        app,
+        render_queue=render_queue,
+        render_service=render_service,
+        audit_logger=audit_logger,
+        ws_manager=ws_manager,
+        effect_registry=effect_registry,
+        ffmpeg_executor=ffmpeg_executor,
+        preview_manager=preview_manager,
+        preview_cache=preview_cache,
+        thumbnail_service=thumbnail_service,
+        waveform_service=waveform_service,
+        qc_service=qc_service,
+        delivery_profile_repository=delivery_profile_repository,
+        asset_repository=asset_repository,
+        ducking_pair_repository=ducking_pair_repository,
+        tts_cue_repository=tts_cue_repository,
+    )
 
     app.include_router(assets.router)
     app.include_router(health.router)
@@ -756,20 +817,7 @@ def create_app(
     if effective_gui_path is not None:
         gui_dir = Path(effective_gui_path)
         if gui_dir.is_dir():
-            index_html = gui_dir / "index.html"
-
-            @app.get("/gui")
-            async def gui_root() -> FileResponse:
-                """Serve index.html for the bare /gui path."""
-                return FileResponse(index_html)
-
-            @app.get("/gui/{path:path}")
-            async def gui_catch_all(path: str) -> FileResponse:
-                """Serve static files or fall back to index.html for SPA routing."""
-                file_path = gui_dir / path
-                if file_path.is_file():
-                    return FileResponse(file_path)
-                return FileResponse(index_html)
+            _mount_gui_routes(app, gui_dir)
 
     # Inject standalone enum schemas into OpenAPI spec so they flow through
     # to TypeScript codegen before proxy API endpoints exist (BL-176).
