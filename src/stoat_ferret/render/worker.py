@@ -184,6 +184,44 @@ def _build_tts_audio_filter(
     return ";".join(parts) + ";" + amix, mix_label
 
 
+async def _dispatch_and_wait_for_cues(cues: Any, tts_service: Any) -> None:
+    """Dispatch pending TTS cues and wait up to 15 s for in-flight synthesis (LRN-406)."""
+    for cue in cues:
+        if cue.status == "failed":
+            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
+        if cue.status in ("pending", "synthesising"):
+            if cue.status == "pending":
+                await tts_service.synthesise_cue(cue.id)
+            task = tts_service._active_tasks.get(cue.id)
+            if task is not None:
+                done, _ = await asyncio.wait({task}, timeout=15.0)
+                if not done:
+                    raise CommandBuildError(f"TTS synthesis timeout for cue {cue.id}")
+
+
+def _build_tts_audio_inputs(cues: Any) -> list[TtsCueAudioInput]:
+    """Validate final synthesis status and build TtsCueAudioInput records."""
+    result: list[TtsCueAudioInput] = []
+    for cue in cues:
+        if cue.status == "failed":
+            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
+        if cue.status != "ready":
+            raise CommandBuildError(
+                f"TTS synthesis not ready for cue {cue.id}: status={cue.status}"
+            )
+        result.append(
+            TtsCueAudioInput(
+                cue_id=cue.id,
+                audio_path=cue.generated_asset_id,
+                track_id=cue.track_id,
+                start_s=cue.start_s,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        )
+    return result
+
+
 async def _run_tts_preflight(
     project_id: str,
     tts_service: Any,
@@ -207,39 +245,11 @@ async def _run_tts_preflight(
     if not cues:
         return []
 
-    for cue in cues:
-        if cue.status == "failed":
-            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
-        if cue.status in ("pending", "synthesising"):
-            if cue.status == "pending":
-                await tts_service.synthesise_cue(cue.id)
-            task = tts_service._active_tasks.get(cue.id)
-            if task is not None:
-                done, _ = await asyncio.wait({task}, timeout=15.0)
-                if not done:
-                    raise CommandBuildError(f"TTS synthesis timeout for cue {cue.id}")
+    await _dispatch_and_wait_for_cues(cues, tts_service)
 
     # Re-fetch to get final status after all tasks have completed
     cues = await tts_repo.list_by_project(project_id)
-    result: list[TtsCueAudioInput] = []
-    for cue in cues:
-        if cue.status == "failed":
-            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
-        if cue.status != "ready":
-            raise CommandBuildError(
-                f"TTS synthesis not ready for cue {cue.id}: status={cue.status}"
-            )
-        result.append(
-            TtsCueAudioInput(
-                cue_id=cue.id,
-                audio_path=cue.generated_asset_id,
-                track_id=cue.track_id,
-                start_s=cue.start_s,
-                weight=1.0,
-                volume_envelope=None,
-            )
-        )
-    return result
+    return _build_tts_audio_inputs(cues)
 
 
 async def _resolve_subtitle_asset_path(
