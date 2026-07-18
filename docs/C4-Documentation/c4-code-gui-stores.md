@@ -158,7 +158,7 @@
 - `useRenderStore(): RenderStoreState`
   - Description: Render job queue management with status and encoder/format detection
   - Location: `renderStore.ts:1-199`
-  - Exports: `RenderJob`, `QueueStatus`, `Encoder`, `OutputFormat` interfaces
+  - Exports: `RenderJob`, `QueueStatus`, `Encoder`, `OutputFormat`, `SetProgressOptions` interfaces
   - Key state: `jobs: RenderJob[]`, `queueStatus: QueueStatus | null`, `encoders: Encoder[]`, `formats: OutputFormat[]`, `isLoading: boolean`, `error: string | null`
   - Key actions (Fetch):
     - `fetchJobs(): Promise<void>` - GET `/api/v1/render`
@@ -169,7 +169,7 @@
     - `updateJob(job: Partial<RenderJob> & { id: string }): void` - creates or merges by id
     - `removeJob(jobId: string): void`
     - `setQueueStatus(partial: Partial<QueueStatus>): void` - shallow merge
-    - `setProgress(jobId: string, progress: number, etaSeconds?: number | null, speedRatio?: number | null): void`
+    - `setProgress(options: SetProgressOptions): void` - `SetProgressOptions` is `{ jobId, progress, etaSeconds?, speedRatio?, frameCount?, fps?, encoderName?, encoderType? }`; `etaSeconds`/`speedRatio` overwrite to `null` when omitted, while `frameCount`/`fps`/`encoderName`/`encoderType` preserve their prior value when the key is omitted (property-presence check) and only overwrite when the key is present (BL-659)
     - `reset(): void`
 
 #### Settings Store
@@ -325,7 +325,7 @@ classDiagram
             +fetchJobs() Promise
             +fetchQueueStatus() Promise
             +updateJob(job) void
-            +setProgress(jobId, progress, eta, speed) void
+            +setProgress(options) void
             jobs: RenderJob[]
         }
         class SettingsStore {

@@ -136,14 +136,19 @@ describe('renderStore', () => {
 
   it('setProgress updates progress on matching job', () => {
     useRenderStore.getState().updateJob(mockJob)
-    useRenderStore.getState().setProgress('job-1', 0.75)
+    useRenderStore.getState().setProgress({ jobId: 'job-1', progress: 0.75 })
 
     expect(useRenderStore.getState().jobs[0].progress).toBe(0.75)
   })
 
   it('setProgress stores eta_seconds and speed_ratio', () => {
     useRenderStore.getState().updateJob(mockJob)
-    useRenderStore.getState().setProgress('job-1', 0.5, 12.3, 1.05)
+    useRenderStore.getState().setProgress({
+      jobId: 'job-1',
+      progress: 0.5,
+      etaSeconds: 12.3,
+      speedRatio: 1.05,
+    })
 
     const job = useRenderStore.getState().jobs[0]
     expect(job.progress).toBe(0.5)
@@ -153,12 +158,77 @@ describe('renderStore', () => {
 
   it('setProgress with null eta/speed stores null values', () => {
     useRenderStore.getState().updateJob(mockJob)
-    useRenderStore.getState().setProgress('job-1', 0.3, null, null)
+    useRenderStore.getState().setProgress({
+      jobId: 'job-1',
+      progress: 0.3,
+      etaSeconds: null,
+      speedRatio: null,
+    })
 
     const job = useRenderStore.getState().jobs[0]
     expect(job.progress).toBe(0.3)
     expect(job.eta_seconds).toBeNull()
     expect(job.speed_ratio).toBeNull()
+  })
+
+  it('setProgress omitted-vs-explicit-null: etaSeconds/speedRatio always null out when omitted', () => {
+    useRenderStore.getState().updateJob({
+      ...mockJob,
+      eta_seconds: 5,
+      speed_ratio: 0.9,
+    })
+
+    // Omitting etaSeconds/speedRatio must overwrite them to null (unlike the other group).
+    useRenderStore.getState().setProgress({ jobId: 'job-1', progress: 0.4 })
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.eta_seconds).toBeNull()
+    expect(job.speed_ratio).toBeNull()
+  })
+
+  it('setProgress omitted-vs-explicit-null: frameCount/fps/encoderName/encoderType preserve prior value when omitted', () => {
+    useRenderStore.getState().updateJob({
+      ...mockJob,
+      frame_count: 120,
+      fps: 30,
+      encoder_name: 'libx264',
+      encoder_type: 'software',
+    })
+
+    // Key omitted entirely -> prior stored value is preserved (property-presence check).
+    useRenderStore.getState().setProgress({ jobId: 'job-1', progress: 0.6 })
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.frame_count).toBe(120)
+    expect(job.fps).toBe(30)
+    expect(job.encoder_name).toBe('libx264')
+    expect(job.encoder_type).toBe('software')
+  })
+
+  it('setProgress omitted-vs-explicit-null: frameCount/fps/encoderName/encoderType clear to null when explicitly null', () => {
+    useRenderStore.getState().updateJob({
+      ...mockJob,
+      frame_count: 120,
+      fps: 30,
+      encoder_name: 'libx264',
+      encoder_type: 'software',
+    })
+
+    // Key present with explicit null -> overwrites to null (unlike omission).
+    useRenderStore.getState().setProgress({
+      jobId: 'job-1',
+      progress: 0.6,
+      frameCount: null,
+      fps: null,
+      encoderName: null,
+      encoderType: null,
+    })
+
+    const job = useRenderStore.getState().jobs[0]
+    expect(job.frame_count).toBeNull()
+    expect(job.fps).toBeNull()
+    expect(job.encoder_name).toBeNull()
+    expect(job.encoder_type).toBeNull()
   })
 
   it('setQueueStatus performs partial merge preserving REST-only fields', () => {

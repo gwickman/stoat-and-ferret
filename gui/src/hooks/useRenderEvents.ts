@@ -69,20 +69,23 @@ export function useRenderEvents(): void {
           break
 
         case 'render_progress':
-          store.setProgress(
-            payload.job_id as string,
-            payload.progress as number,
-            (payload.eta_seconds as number | undefined) ?? null,
-            (payload.speed_ratio as number | undefined) ?? null,
-            (payload.frame_count as number | undefined) ?? null,
-            (payload.fps as number | undefined) ?? null,
-            (payload.encoder_name as string | undefined) ?? null,
-            (payload.encoder_type as string | undefined) ?? null,
-          )
+          store.setProgress({
+            jobId: payload.job_id as string,
+            progress: payload.progress as number,
+            etaSeconds: (payload.eta_seconds as number | undefined) ?? null,
+            speedRatio: (payload.speed_ratio as number | undefined) ?? null,
+            frameCount: (payload.frame_count as number | undefined) ?? null,
+            fps: (payload.fps as number | undefined) ?? null,
+            encoderName: (payload.encoder_name as string | undefined) ?? null,
+            encoderType: (payload.encoder_type as string | undefined) ?? null,
+          })
           break
 
         case 'render_frame_available':
-          store.setProgress(payload.job_id as string, payload.progress as number)
+          store.setProgress({
+            jobId: payload.job_id as string,
+            progress: payload.progress as number,
+          })
           store.setFrameUrl(
             payload.job_id as string,
             (payload.frame_url as string | null) ?? null,

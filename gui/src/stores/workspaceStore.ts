@@ -181,6 +181,17 @@ const isFiniteSize = (value: unknown): value is number =>
 const isNamedPreset = (value: unknown): value is NamedPreset =>
   typeof value === 'string' && NAMED_PRESETS.has(value as NamedPreset)
 
+/**
+ * Resolve the anchor preset for hydration: use the persisted value if it's a valid
+ * named preset, otherwise fall back to the initial anchor when the persisted preset
+ * is 'custom' (no named preset to anchor to), otherwise use the persisted preset itself.
+ */
+function resolveAnchorPreset(preset: WorkspacePreset, rawAnchorPreset: unknown): NamedPreset {
+  if (isNamedPreset(rawAnchorPreset)) return rawAnchorPreset
+  if (preset === 'custom') return initialState.anchorPreset
+  return preset as NamedPreset
+}
+
 interface PersistedShape {
   preset?: unknown
   anchorPreset?: unknown
@@ -242,11 +253,7 @@ export function loadWorkspaceState(): WorkspaceState {
         ? (parsed.preset as WorkspacePreset)
         : initialState.preset
 
-    const anchorPreset: NamedPreset = isNamedPreset(parsed.anchorPreset)
-      ? parsed.anchorPreset
-      : preset === 'custom'
-        ? initialState.anchorPreset
-        : (preset as NamedPreset)
+    const anchorPreset: NamedPreset = resolveAnchorPreset(preset, parsed.anchorPreset)
 
     const panelSizes: PanelSizes = { ...DEFAULT_PANEL_SIZES }
     if (parsed.panelSizes && typeof parsed.panelSizes === 'object') {
