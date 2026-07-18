@@ -26,6 +26,7 @@ from stoat_ferret.api.schemas.render import RenderPlanSettings, SoftSubtitleSpec
 from stoat_ferret.db.async_repository import AsyncVideoRepository
 from stoat_ferret.db.clip_repository import AsyncClipRepository
 from stoat_ferret.db.markers_repository import MarkerRepository
+from stoat_ferret.db.models import Clip
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import RenderJob, RenderStatus
 from stoat_ferret.render.queue import RenderQueue
@@ -54,6 +55,11 @@ WINDOWS_ARGV_LIMIT = 32_767
 
 # Budget for exe path, flag args, separators, and null terminator in the full command line
 COMMAND_OVERHEAD_CHARS = 500
+
+# S1192: reuse these instead of duplicating the string literals across both clip branches
+_LABEL_FINAL = "[final]"
+_LABEL_AOUT = "[aout]"
+_LABEL_VOUT = "[vout]"
 
 
 def _write_ffmetadata_file(content: str) -> str:
@@ -178,6 +184,44 @@ def _build_tts_audio_filter(
     return ";".join(parts) + ";" + amix, mix_label
 
 
+async def _dispatch_and_wait_for_cues(cues: Any, tts_service: Any) -> None:
+    """Dispatch pending TTS cues and wait up to 15 s for in-flight synthesis (LRN-406)."""
+    for cue in cues:
+        if cue.status == "failed":
+            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
+        if cue.status in ("pending", "synthesising"):
+            if cue.status == "pending":
+                await tts_service.synthesise_cue(cue.id)
+            task = tts_service._active_tasks.get(cue.id)
+            if task is not None:
+                done, _ = await asyncio.wait({task}, timeout=15.0)
+                if not done:
+                    raise CommandBuildError(f"TTS synthesis timeout for cue {cue.id}")
+
+
+def _build_tts_audio_inputs(cues: Any) -> list[TtsCueAudioInput]:
+    """Validate final synthesis status and build TtsCueAudioInput records."""
+    result: list[TtsCueAudioInput] = []
+    for cue in cues:
+        if cue.status == "failed":
+            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
+        if cue.status != "ready":
+            raise CommandBuildError(
+                f"TTS synthesis not ready for cue {cue.id}: status={cue.status}"
+            )
+        result.append(
+            TtsCueAudioInput(
+                cue_id=cue.id,
+                audio_path=cue.generated_asset_id,
+                track_id=cue.track_id,
+                start_s=cue.start_s,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        )
+    return result
+
+
 async def _run_tts_preflight(
     project_id: str,
     tts_service: Any,
@@ -201,39 +245,11 @@ async def _run_tts_preflight(
     if not cues:
         return []
 
-    for cue in cues:
-        if cue.status == "failed":
-            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
-        if cue.status in ("pending", "synthesising"):
-            if cue.status == "pending":
-                await tts_service.synthesise_cue(cue.id)
-            task = tts_service._active_tasks.get(cue.id)
-            if task is not None:
-                done, _ = await asyncio.wait({task}, timeout=15.0)
-                if not done:
-                    raise CommandBuildError(f"TTS synthesis timeout for cue {cue.id}")
+    await _dispatch_and_wait_for_cues(cues, tts_service)
 
     # Re-fetch to get final status after all tasks have completed
     cues = await tts_repo.list_by_project(project_id)
-    result: list[TtsCueAudioInput] = []
-    for cue in cues:
-        if cue.status == "failed":
-            raise CommandBuildError(f"TTS synthesis failed for cue {cue.id}: {cue.error}")
-        if cue.status != "ready":
-            raise CommandBuildError(
-                f"TTS synthesis not ready for cue {cue.id}: status={cue.status}"
-            )
-        result.append(
-            TtsCueAudioInput(
-                cue_id=cue.id,
-                audio_path=cue.generated_asset_id,
-                track_id=cue.track_id,
-                start_s=cue.start_s,
-                weight=1.0,
-                volume_envelope=None,
-            )
-        )
-    return result
+    return _build_tts_audio_inputs(cues)
 
 
 async def _resolve_subtitle_asset_path(
@@ -292,6 +308,77 @@ def _add_soft_subtitle_output_flags(
         cmd.extend([f"-metadata:s:s:{idx}", f"language={iso639}"])
         if spec.is_default:
             cmd.extend([f"-disposition:s:{idx}", "default"])
+
+
+async def _resolve_clip_source(
+    clip: Clip,
+    project_id: str,
+    video_repository: AsyncVideoRepository,
+    asset_repository: AsyncAssetRepository | None,
+    fps: float,
+) -> tuple[str, str | None, float]:
+    """Resolve source path, audio codec, and frame rate for a clip.
+
+    Returns ``(source_path, audio_codec, frame_rate)``.  Timing values (duration,
+    segment boundaries) are NOT returned; callers derive timing from the render
+    plan segment or clip in/out points as appropriate to their path.
+    """
+    if clip.clip_type == "image":
+        if asset_repository is None:
+            raise CommandBuildError(
+                f"Cannot resolve image asset for clip {clip.id}: no asset_repository provided"
+            )
+        img_asset = await asset_repository.get_by_id(str(clip.source_asset_id))
+        if img_asset is None or img_asset.deleted_at is not None:
+            raise CommandBuildError(
+                f"Image asset {clip.source_asset_id} not found for clip {clip.id}"
+            )
+        return img_asset.file_path, None, fps
+    elif clip.clip_type == "generator":
+        return _build_generator_source(clip.generator_params or {}), None, fps
+    else:  # file
+        if clip.source_video_id is None:
+            raise CommandBuildError(f"File clip {clip.id} has no source_video_id")
+        vid = await video_repository.get(clip.source_video_id)
+        if vid is None or not vid.path:
+            raise CommandBuildError(
+                f"Video {clip.source_video_id} not found for project {project_id}"
+            )
+        return vid.path, vid.audio_codec, vid.frame_rate
+
+
+def _build_clip_render_effects(
+    clip: Clip,
+    effect_registry: EffectRegistry | None,
+) -> list[Any]:
+    """Build the RenderEffect list for a clip; returns ``[RenderEffect.none()]`` if empty."""
+    from stoat_ferret_core import RenderEffect
+
+    render_effects: list[Any] = []
+    if effect_registry and clip.effects:
+        for effect_data in clip.effects:
+            effect_type = effect_data.get("effect_type", "")
+            defn = effect_registry.get(effect_type)
+            if defn is None:
+                logger.warning(
+                    "render_worker.unknown_effect_type",
+                    effect_type=effect_type,
+                    clip_id=clip.id,
+                )
+            else:
+                filter_str = defn.build_fn(effect_data.get("parameters", {}))
+                window = effect_data.get("window")
+                if window and defn.timeline_T_capable:
+                    render_effects.append(
+                        RenderEffect.windowed_custom(filter_str, window["start_s"], window["end_s"])
+                    )
+                else:
+                    # Non-T or no window: apply effect without windowing.
+                    # TODO: BL-512-AC-4 non-T windowing deferred to v100.
+                    render_effects.append(RenderEffect.custom(filter_str))
+    if not render_effects:
+        render_effects.append(RenderEffect.none())
+    return render_effects
 
 
 async def build_command_for_job(
@@ -354,7 +441,7 @@ async def build_command_for_job(
 
     # --- Multi-clip path: use RenderGraphTranslator (BL-505) ---
     if len(clips) > 1:
-        from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+        from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
 
         codec_mc: str = settings.get("codec", "libx264")
         fps_mc: float = settings.get("fps", 30.0)
@@ -366,68 +453,24 @@ async def build_command_for_job(
         cwe_list = []
         clip_durations_mc: list[float] = []
         for i, clip in enumerate(clips):
+            source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
+                clip, job.project_id, video_repository, asset_repository, fps_mc
+            )
             if clip.clip_type == "image":
-                if asset_repository is None:
-                    raise CommandBuildError(
-                        f"Cannot resolve image asset for clip {clip.id}:"
-                        " no asset_repository provided"
-                    )
-                img_asset = await asset_repository.get_by_id(str(clip.source_asset_id))
-                if img_asset is None or img_asset.deleted_at is not None:
-                    raise CommandBuildError(
-                        f"Image asset {clip.source_asset_id} not found for clip {clip.id}"
-                    )
-                source_path_mc = img_asset.file_path
                 timeline_start_mc = clip.timeline_start or 0.0
                 timeline_end_mc = clip.timeline_end or 0.0
                 duration_secs = timeline_end_mc - timeline_start_mc
-                framerate_mc = fps_mc
             elif clip.clip_type == "generator":
-                source_path_mc = _build_generator_source(clip.generator_params or {})
                 duration_secs = (clip.out_point - clip.in_point) / fps_mc
-                framerate_mc = fps_mc
             else:  # file
-                if clip.source_video_id is None:
-                    raise CommandBuildError(f"File clip {clip.id} has no source_video_id")
-                vid = await video_repository.get(clip.source_video_id)
-                if vid is None or not vid.path:
-                    raise CommandBuildError(
-                        f"Video {clip.source_video_id} not found for project {job.project_id}"
-                    )
-                source_path_mc = vid.path
-                duration_secs = (clip.out_point - clip.in_point) / vid.frame_rate
-                framerate_mc = vid.frame_rate
-                if source_audio_codec_mc is None and vid.audio_codec:
-                    source_audio_codec_mc = vid.audio_codec
+                duration_secs = (clip.out_point - clip.in_point) / framerate_mc
+                if source_audio_codec_mc is None and clip_audio_codec:
+                    source_audio_codec_mc = clip_audio_codec
                     source_audio_input_idx_mc = i
             if duration_secs <= 0:
                 raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
             clip_durations_mc.append(duration_secs)
-            render_effects: list[RenderEffect] = []
-            if effect_registry and clip.effects:
-                for effect_data in clip.effects:
-                    effect_type = effect_data.get("effect_type", "")
-                    defn = effect_registry.get(effect_type)
-                    if defn is None:
-                        logger.warning(
-                            "render_worker.unknown_effect_type",
-                            effect_type=effect_type,
-                            clip_id=clip.id,
-                        )
-                    else:
-                        filter_str = defn.build_fn(effect_data.get("parameters", {}))
-                        window = effect_data.get("window")
-                        if window and defn.timeline_T_capable:
-                            re = RenderEffect.windowed_custom(
-                                filter_str, window["start_s"], window["end_s"]
-                            )
-                        else:
-                            # Non-T or no window: apply effect without windowing.
-                            # TODO: BL-512-AC-4 non-T windowing deferred to v100.
-                            re = RenderEffect.custom(filter_str)
-                        render_effects.append(re)
-            if not render_effects:
-                render_effects.append(RenderEffect.none())
+            render_effects = _build_clip_render_effects(clip, effect_registry)
             cwe_list.append(
                 ClipWithEffects(
                     input_index=i,
@@ -478,7 +521,7 @@ async def build_command_for_job(
                 src_a = f"[{source_audio_input_idx_mc}:a]"
                 mix_seg = (
                     f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
                 )
                 combined_filter_with_mix = combined_filter + ";" + mix_seg
                 multi_cmd.extend(
@@ -486,9 +529,9 @@ async def build_command_for_job(
                         "-filter_complex",
                         combined_filter_with_mix,
                         "-map",
-                        "[final]",
+                        _LABEL_FINAL,
                         "-map",
-                        "[aout]",
+                        _LABEL_AOUT,
                     ]
                 )
             else:
@@ -497,13 +540,13 @@ async def build_command_for_job(
                         "-filter_complex",
                         combined_filter,
                         "-map",
-                        "[final]",
+                        _LABEL_FINAL,
                         "-map",
                         tts_audio_label,
                     ]
                 )
         else:
-            multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", "[final]", "-an"])
+            multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
 
         # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
         if render_settings.soft_subtitles:
@@ -529,30 +572,9 @@ async def build_command_for_job(
     first_clip = clips[0]
     use_translator_sc = first_clip.clip_type in ("image", "generator") or bool(first_clip.effects)
 
-    if first_clip.clip_type == "image":
-        if asset_repository is None:
-            raise CommandBuildError(
-                f"Cannot resolve image asset for clip {first_clip.id}: no asset_repository provided"
-            )
-        sc_asset = await asset_repository.get_by_id(str(first_clip.source_asset_id))
-        if sc_asset is None or sc_asset.deleted_at is not None:
-            raise CommandBuildError(
-                f"Image asset {first_clip.source_asset_id} not found for clip {first_clip.id}"
-            )
-        input_path = sc_asset.file_path
-        source_audio_codec: str | None = None
-    elif first_clip.clip_type == "generator":
-        input_path = _build_generator_source(first_clip.generator_params or {})
-        source_audio_codec = None
-    else:  # file
-        video_id = first_clip.source_video_id
-        if video_id is None:
-            raise CommandBuildError(f"File clip {first_clip.id} has no source_video_id")
-        video = await video_repository.get(video_id)
-        if video is None or not video.path:
-            raise CommandBuildError(f"Video {video_id} not found for project {job.project_id}")
-        input_path = video.path
-        source_audio_codec = video.audio_codec
+    input_path, source_audio_codec, _ = await _resolve_clip_source(
+        first_clip, job.project_id, video_repository, asset_repository, settings.get("fps", 30.0)
+    )
 
     # --- Select segment ---
     if segments:
@@ -615,32 +637,9 @@ async def build_command_for_job(
 
     # Filter assembly: translator path for image/generator/effects clips; legacy -vf for file.
     if use_translator_sc:
-        from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+        from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
 
-        render_effects_sc: list[RenderEffect] = []
-        if effect_registry and first_clip.effects:
-            for effect_data in first_clip.effects:
-                effect_type_sc = effect_data.get("effect_type", "")
-                defn_sc = effect_registry.get(effect_type_sc)
-                if defn_sc is None:
-                    logger.warning(
-                        "render_worker.unknown_effect_type",
-                        effect_type=effect_type_sc,
-                        clip_id=first_clip.id,
-                    )
-                else:
-                    filter_str_sc = defn_sc.build_fn(effect_data.get("parameters", {}))
-                    window_sc = effect_data.get("window")
-                    if window_sc and defn_sc.timeline_T_capable:
-                        render_effects_sc.append(
-                            RenderEffect.windowed_custom(
-                                filter_str_sc, window_sc["start_s"], window_sc["end_s"]
-                            )
-                        )
-                    else:
-                        render_effects_sc.append(RenderEffect.custom(filter_str_sc))
-        if not render_effects_sc:
-            render_effects_sc.append(RenderEffect.none())
+        render_effects_sc = _build_clip_render_effects(first_clip, effect_registry)
         cwe_sc = ClipWithEffects(
             input_index=0,
             duration_secs=seg_duration,
@@ -656,18 +655,25 @@ async def build_command_for_job(
             if source_audio_codec is not None:
                 mix_seg = (
                     f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
                 )
                 combined_sc_with_mix = combined_sc + ";" + mix_seg
                 cmd.extend(
-                    ["-filter_complex", combined_sc_with_mix, "-map", "[final]", "-map", "[aout]"]
+                    [
+                        "-filter_complex",
+                        combined_sc_with_mix,
+                        "-map",
+                        _LABEL_FINAL,
+                        "-map",
+                        _LABEL_AOUT,
+                    ]
                 )
             else:
                 cmd.extend(
-                    ["-filter_complex", combined_sc, "-map", "[final]", "-map", tts_audio_label]
+                    ["-filter_complex", combined_sc, "-map", _LABEL_FINAL, "-map", tts_audio_label]
                 )
         else:
-            cmd.extend(["-filter_complex", filter_complex_sc, "-map", "[final]", "-an"])
+            cmd.extend(["-filter_complex", filter_complex_sc, "-map", _LABEL_FINAL, "-an"])
     elif tts_inputs:
         # Video + TTS audio filter: merge into filter_complex when TTS is active to avoid
         # -vf / -filter_complex conflict on the same stream.
@@ -676,14 +682,14 @@ async def build_command_for_job(
             # Source video has audio — mix with TTS narration into [aout]
             mix_seg = (
                 f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest[aout]"
+                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
             )
             if filter_graph:
-                combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg};{mix_seg}"
-                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", "[aout]"])
+                combined = f"[0:v]{filter_graph}{_LABEL_VOUT};{tts_filter_seg};{mix_seg}"
+                cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", _LABEL_AOUT])
             elif width and height:
-                combined = f"[0:v]scale={width}:{height}[vout];{tts_filter_seg};{mix_seg}"
-                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", "[aout]"])
+                combined = f"[0:v]scale={width}:{height}{_LABEL_VOUT};{tts_filter_seg};{mix_seg}"
+                cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", _LABEL_AOUT])
             else:
                 cmd.extend(
                     [
@@ -692,17 +698,21 @@ async def build_command_for_job(
                         "-map",
                         "0:v",
                         "-map",
-                        "[aout]",
+                        _LABEL_AOUT,
                     ]
                 )
         else:
             # Video-only source — TTS audio only (existing behavior)
             if filter_graph:
-                combined = f"[0:v]{filter_graph}[vout];{tts_filter_seg}"
-                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+                combined = f"[0:v]{filter_graph}{_LABEL_VOUT};{tts_filter_seg}"
+                cmd.extend(
+                    ["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", tts_audio_label]
+                )
             elif width and height:
-                combined = f"[0:v]scale={width}:{height}[vout];{tts_filter_seg}"
-                cmd.extend(["-filter_complex", combined, "-map", "[vout]", "-map", tts_audio_label])
+                combined = f"[0:v]scale={width}:{height}{_LABEL_VOUT};{tts_filter_seg}"
+                cmd.extend(
+                    ["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", tts_audio_label]
+                )
             else:
                 cmd.extend(
                     [
