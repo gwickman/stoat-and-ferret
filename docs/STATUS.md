@@ -1,5 +1,43 @@
 # STATUS.md
 
+## v107 — GUI/React Correctness, Simplification Cleanups & Async Event-Loop Hygiene
+
+**Delivered:** 2026-07-18
+**PRs:** #829–#839 (11 merged)
+**Tests:** 3890 passed (delta +5 vs. 3885 baseline), 1 pre-existing failure unchanged (`test_tone_filter_frequency_clamp`, stale local `.pyd` build artifact predating BL-494's fix; not a v107 regression)
+
+### Highlights
+
+- **Theme 1 — react-row-identity-and-lint:** `BatchPanel` rows given a stable `id` and `EffectStack` rows given a stable `clientIds` client id to prevent focus loss across delete/refetch transitions; `react/no-array-index-key` ESLint rule added and its 4 known sites resolved (AC-3 "passes clean" deferred_post_merge — falsified by 27 pre-existing/unrelated eslint errors confirmed byte-identical to the pre-feature baseline) — BL-643, BL-644, BL-647 — PRs #829–#831
+- **Theme 2 — gui-and-simplification-cleanups:** Removed duplicate `elif` branches in `EffectParameterForm` and `render_repository.py` (SonarCloud S1871); converted `setProgress` to an options object and de-nested 2 flagged ternaries — BL-648, BL-659 — PRs #832–#833
+- **Theme 3 — async-event-loop-hygiene:** Moved 3 blocking TTS/ffmetadata/filter-route writes off the shared event loop via `asyncio.to_thread`; de-async'd 3 no-`await` test methods; replaced a fixed 5s Playwright wait with an observable batch-status wait (surfaced and fixed a pre-existing production defect — `job_ids` missing from `BatchResponse`); rewrote the job-completion wait to `asyncio.timeout()` with a Python 3.10 fallback (AC-3's literal regression command selects 0 tests — an AC-authoring/test-naming gap, actual coverage `tests/test_api/test_long_poll.py` 12/12 passing); extracted `async_executor.run()`'s two closures to instance methods — BL-651, BL-652, BL-653, BL-654, BL-675 — PRs #834–#838
+- **Theme 4 — sec-scan-path-confinement-residual:** Reordered `/api/v1/videos/scan` to confine the resolved path before any filesystem access, porting the proven null-byte → resolve → validate → filesystem-call ordering from `filesystem.py` (v106 BL-637 sibling) — BL-696 — PR #839
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| react-row-identity-and-lint | BL-643, BL-644, BL-647 | #829–#831 | merged |
+| gui-and-simplification-cleanups | BL-648, BL-659 | #832–#833 | merged |
+| async-event-loop-hygiene | BL-651, BL-652, BL-653, BL-654, BL-675 | #834–#838 | merged |
+| sec-scan-path-confinement-residual | BL-696 | #839 | merged |
+
+### AC Status
+
+- 4 themes delivered; 11 total features across themes
+- 39/41 source ACs supported; 2 weakened (BL-647-AC-3 deferred_post_merge — pre-existing unrelated eslint debt now tracked as BL-697; BL-654-AC-3 — AC-authoring test-naming gap, underlying regression intent independently verified via `tests/test_api/test_long_poll.py` + full CI matrix)
+- Continuation of the v106–v111 replanning cycle (post 2026-07-16 BL-quality remediation)
+
+### Carry-Forwards
+
+None new. BL-647 and BL-654 remain `open` (partial) pending their dispatched investigator's verdict/AC-text correction — see `docs/auto-dev/plan/v107-gui-react-correctness-async-hygiene.md` for the full outstanding-actions list.
+
+### User Actions Required
+
+- Delete 11 stale remote v107 branches + 20 carryover local (12 v105 + 8 v106) + ~9 carryover remote-only v105/v106 stragglers (post-merge hygiene)
+- BL-647 / BL-654: no operator action needed unless the dispatched investigator's verdict is missing at reconciliation (see Raiser Reconciliation in this version's closure record)
+- See `docs/auto-dev/plan/v107-gui-react-correctness-async-hygiene.md` for the full outstanding-actions list
+
 ## v106 — Sonar Security Hardening + Render-Path Functional Fix
 
 **Delivered:** 2026-07-17
