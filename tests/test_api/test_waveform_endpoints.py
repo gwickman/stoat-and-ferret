@@ -231,7 +231,7 @@ class TestGetWaveformMetadata:
 class TestGetWaveformImage:
     """Tests for GET /api/v1/videos/{video_id}/waveform.png."""
 
-    async def test_serves_png_image(
+    def test_serves_png_image(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -299,7 +299,7 @@ class TestGetWaveformImage:
 class TestGetWaveformJson:
     """Tests for GET /api/v1/videos/{video_id}/waveform.json."""
 
-    async def test_returns_samples_array(
+    def test_returns_samples_array(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
