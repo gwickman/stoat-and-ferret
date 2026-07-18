@@ -381,26 +381,9 @@ class RenderService:
             frame: int | None,
             fps: float | None,
         ) -> None:
-            # Log progress milestones at 25%, 50%, 75%, 100%
-            pct = int(progress * 100)
-            for milestone in (25, 50, 75, 100):
-                if pct >= milestone and milestone not in logged_milestones:
-                    logged_milestones.add(milestone)
-                    log.info(
-                        "render_job.progress_milestone",
-                        milestone_pct=milestone,
-                        progress=round(progress, 4),
-                    )
-
-            # Compute ETA via Rust binding
-            eta_seconds: float | None = None
-            if _HAS_RUST_BINDINGS:
-                eta_seconds = estimate_eta(elapsed_seconds, progress)
-
-            # Compute speed ratio
-            speed_ratio: float | None = None
-            if elapsed_seconds > 0 and total_duration_s > 0 and progress > 0:
-                speed_ratio = (total_duration_s * progress) / elapsed_seconds
+            eta_seconds, speed_ratio = self._log_progress_milestones(
+                log, logged_milestones, progress, elapsed_seconds, total_duration_s
+            )
 
             await self._repo.update_progress(jid, progress)
             await self._broadcast_throttled_progress(
@@ -425,38 +408,115 @@ class RenderService:
         render_elapsed = time.monotonic() - render_start
 
         # Persist evidence collected by the executor (BL-554)
-        evidence = self._executor.pop_evidence(job_id)
-        if evidence is not None:
-            with suppress(Exception):
-                await self._repo.update_evidence(job_id, json.dumps(evidence))
+        await self._persist_evidence(job_id)
 
         if success:
-            # Verify output file exists and has non-zero size (BL-551-AC-3)
-            if not self._output_file_ok(job.output_path):
-                log.error(
-                    "render_worker.zero_byte_output",
-                    job_id=job_id,
-                    output_path=str(job.output_path),
-                )
-                await self._handle_failure(
-                    job, "Output file missing or zero-byte after FFmpeg completion"
-                )
-            else:
-                await self._complete_job(job, render_elapsed)
+            await self._finalize_success(job, render_elapsed, log)
         else:
-            # Check if job was cancelled
-            current = await self._repo.get(job_id)
-            if current and current.status == RenderStatus.CANCELLED:
-                log.info("render_job.cancelled")
+            if await self._finalize_failure(job, log):
                 return
-
-            await self._handle_failure(job, "FFmpeg process failed")
 
     def _output_file_ok(self, output_path: str | None) -> bool:
         if not output_path:
             return False
         p = Path(output_path)
         return p.exists() and p.stat().st_size > 0
+
+    def _log_progress_milestones(
+        self,
+        log: Any,
+        logged_milestones: set[int],
+        progress: float,
+        elapsed_seconds: float,
+        total_duration_s: float,
+    ) -> tuple[float | None, float | None]:
+        """Log progress milestones and compute ETA/speed ratio.
+
+        Args:
+            log: Bound structlog logger for the job.
+            logged_milestones: Mutable set of already-logged milestone percentages.
+            progress: Current progress value 0.0-1.0.
+            elapsed_seconds: Wall-clock seconds elapsed since render start.
+            total_duration_s: Total render duration in seconds.
+
+        Returns:
+            Tuple of (eta_seconds, speed_ratio), either of which may be None.
+        """
+        pct = int(progress * 100)
+        for milestone in (25, 50, 75, 100):
+            if pct >= milestone and milestone not in logged_milestones:
+                logged_milestones.add(milestone)
+                log.info(
+                    "render_job.progress_milestone",
+                    milestone_pct=milestone,
+                    progress=round(progress, 4),
+                )
+
+        eta_seconds: float | None = None
+        if _HAS_RUST_BINDINGS:
+            eta_seconds = estimate_eta(elapsed_seconds, progress)
+
+        speed_ratio: float | None = None
+        if elapsed_seconds > 0 and total_duration_s > 0 and progress > 0:
+            speed_ratio = (total_duration_s * progress) / elapsed_seconds
+
+        return eta_seconds, speed_ratio
+
+    async def _persist_evidence(self, job_id: str) -> None:
+        """Persist evidence collected by the executor for the given job.
+
+        Preserves pop_evidence + suppress(Exception) + update_evidence verbatim.
+
+        Args:
+            job_id: The render job ID whose evidence to persist.
+        """
+        evidence = self._executor.pop_evidence(job_id)
+        if evidence is not None:
+            with suppress(Exception):
+                await self._repo.update_evidence(job_id, json.dumps(evidence))
+
+    async def _finalize_success(self, job: RenderJob, render_elapsed: float, log: Any) -> None:
+        """Handle success-path finalization for a render job.
+
+        Verifies the output file exists and has non-zero size, then
+        either completes the job or triggers failure handling.
+
+        Args:
+            job: The render job that succeeded.
+            render_elapsed: Wall-clock render time in seconds.
+            log: Bound structlog logger for the job.
+        """
+        if not self._output_file_ok(job.output_path):
+            log.error(
+                "render_worker.zero_byte_output",
+                job_id=job.id,
+                output_path=str(job.output_path),
+            )
+            await self._handle_failure(
+                job, "Output file missing or zero-byte after FFmpeg completion"
+            )
+        else:
+            await self._complete_job(job, render_elapsed)
+
+    async def _finalize_failure(self, job: RenderJob, log: Any) -> bool:
+        """Handle failure-path finalization for a render job.
+
+        Checks whether the failure was due to cancellation; if so, returns
+        True to signal the caller to return early without further handling.
+
+        Args:
+            job: The render job that failed.
+            log: Bound structlog logger for the job.
+
+        Returns:
+            True if the job was cancelled (caller should return), False otherwise.
+        """
+        current = await self._repo.get(job.id)
+        if current and current.status == RenderStatus.CANCELLED:
+            log.info("render_job.cancelled")
+            return True
+        await self._handle_failure(job, "FFmpeg process failed")
+        return False
 
     async def cancel_job(self, job_id: str) -> bool:
         """Cancel a render job.
