@@ -5601,6 +5601,14 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "job_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Job Ids",
+            "description": "Server-assigned job IDs, in the same order as the submitted jobs list. Callers must use these IDs (not client-generated placeholders) when tracking individual job status via GET /render/batch/{batch_id}."
           }
         },
         "type": "object",

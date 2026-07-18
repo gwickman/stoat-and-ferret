@@ -44,6 +44,14 @@ class BatchResponse(BaseModel):
     batch_id: str
     jobs_queued: int
     status: str
+    job_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Server-assigned job IDs, in the same order as the submitted jobs list. "
+            "Callers must use these IDs (not client-generated placeholders) when "
+            "tracking individual job status via GET /render/batch/{batch_id}."
+        ),
+    )
 
 
 class BatchJobStatusResponse(BaseModel):

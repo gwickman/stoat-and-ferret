@@ -14,6 +14,8 @@ interface BatchSubmitResponse {
   batch_id: string
   jobs_queued: number
   status: string
+  /** Server-assigned job IDs, same order as the submitted jobs list. */
+  job_ids: string[]
 }
 
 interface BatchPanelProps {
@@ -95,12 +97,12 @@ export default function BatchPanel({ onBatchSubmitted }: BatchPanelProps) {
       }
       const json = (await res.json()) as BatchSubmitResponse
       const submittedAt = Date.now()
-      // Seed the store with placeholder jobs so the list renders
-      // immediately; the polling hook will replace fields as they
-      // come in from the server.
-      for (const entry of validEntries) {
+      // Seed the store using the server-assigned job_id (not a client
+      // placeholder) so the polling hook's job_id-keyed updateJob() can
+      // find and update these rows as status changes arrive.
+      validEntries.forEach((entry, index) => {
         const seed: BatchJob = {
-          job_id: uuid(),
+          job_id: json.job_ids[index],
           batch_id: json.batch_id,
           project_id: entry.project_id,
           status: 'queued',
@@ -109,7 +111,7 @@ export default function BatchPanel({ onBatchSubmitted }: BatchPanelProps) {
           submitted_at: submittedAt,
         }
         addJob(seed)
-      }
+      })
       setEntries([emptyEntry()])
       onBatchSubmitted?.(json.batch_id)
     } catch (err) {

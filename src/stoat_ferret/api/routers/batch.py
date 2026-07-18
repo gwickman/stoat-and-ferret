@@ -197,6 +197,7 @@ async def submit_batch(
         batch_id=batch_id,
         jobs_queued=len(job_records),
         status="accepted",
+        job_ids=[record.job_id for record in job_records],
     )
 
 
