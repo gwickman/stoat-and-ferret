@@ -4,6 +4,50 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v108 — Worker Hotspot Deduplication & Render Service Decomposition & Security Correctness Residuals (2026-07-18)
+
+4 themes, 10 features, 39 ACs, PRs #840–#847.
+
+### Theme 1: Worker Hotspot Deduplication (2 features)
+
+Extracted 3 helpers from `render/worker.py`, reducing `build_command_for_job`'s cognitive complexity (codebase's top hotspot, CC 214).
+
+- BL-655: Extracted `_resolve_clip_source` and `_build_clip_render_effects` (plus `_LABEL_FINAL`/`_LABEL_AOUT`/`_LABEL_VOUT` constants) from `build_command_for_job`, eliminating duplicated inline clip-source/effect-building logic across multi-clip and single-clip branches (PR #840)
+- BL-668: Extracted `_dispatch_and_wait_for_cues` and `_build_tts_audio_inputs` from `_run_tts_preflight` (PR #840)
+
+### Theme 2: Render Service and Executor Extraction (3 features)
+
+Extracted 4 helpers from `render/service.py` for job-completion and progress handling, plus 4 helpers from `render/executor.py`'s FFmpeg subprocess drain path.
+
+- BL-660: Extracted `_load_delivery_profile_assertions` and `_run_completion_qc` from `_complete_job` (PR #841)
+- BL-667: Extracted `_log_progress_milestones`, `_persist_evidence`, `_finalize_success`, `_finalize_failure` from `run_job` (PR #841)
+- BL-666: Extracted `_drain_stderr_task`, `_join_stderr_drain`, `_read_stdout_with_progress`, `_log_ffmpeg_failure` from `_run_process` (PR #842)
+
+### Theme 3: Render Endpoint and App Lifecycle (2 features)
+
+Decomposed `create_render_job`'s validation pipeline and extracted shutdown helpers from `app.py`'s `lifespan`/`create_app`.
+
+- BL-662: Extracted `_validate_and_translate_plan`, `_validate_encoder_compatibility`, `_resolve_delivery_profile`, `_apply_qc_gate` from `create_render_job` (PR #843)
+- BL-661: Extracted shutdown helpers (`_cancel_task_with_timeout`, `_shutdown_synthetic_monitoring`, `_shutdown_render_services`, `_shutdown_preview`) and DI-override helpers (`_apply_di_overrides`, `_apply_injected_repositories`, `_mount_gui_routes`) from `app.py`'s `lifespan`/`create_app` (PR #844)
+
+### Theme 4: Security Correctness Residuals (3 features)
+
+Fixed a TOCTOU race in the scan endpoint and a concurrent-waiter notification-loss race in job completion, plus end-to-end smoke coverage for both.
+
+- BL-699: Fixed a TOCTOU race in `/api/v1/videos/scan` — endpoint and worker now re-validate against the resolved path instead of the raw caller-supplied path, closing a symlink-retarget window between validation and use (PR #845)
+- BL-700: Fixed a concurrent-waiter notification-loss race in job completion — the long-poll registry changed from a single `asyncio.Event` per job to a `set[asyncio.Event]`, so all concurrent waiters are notified on job completion instead of only the first (PR #846)
+- Added HTTP smoke tests covering both fixes end-to-end via the live API stack (PR #847)
+
+### PRs
+
+#840, #841, #842, #843, #844, #845, #846, #847
+
+### Resolved
+
+BL-655 (worker.py clip-source/effect dedup), BL-668 (TTS preflight helper split), BL-660 (render-completion QC helper extraction), BL-667 (run_job helper extraction), BL-666 (run_process drain-path helper extraction), BL-662 (create_render_job validation-pipeline decomposition), BL-661 (app.py shutdown/DI helper extraction), BL-699 (scan endpoint TOCTOU fix), BL-700 (concurrent-waiter notification-loss fix)
+
+---
+
 ## v107 — React Row Identity, GUI Simplification, Async Event-Loop Hygiene & Path-Confinement Residual (2026-07-18)
 
 ### Theme 1: React Row Identity and Lint (3 features)
