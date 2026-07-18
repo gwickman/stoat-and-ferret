@@ -214,17 +214,34 @@ async def scan_videos(
             },
         )
 
-    if not os.path.isdir(path):
+    # Security: reject null bytes explicitly — Path.resolve() only raises for
+    # embedded nulls on POSIX (os.stat rejects them); Windows' non-strict resolve()
+    # silently accepts them, so a string check is required for cross-platform 400s.
+    if "\x00" in path:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "INVALID_PATH", "message": f"Not a directory: {path}"},
+            detail={"code": "INVALID_PATH", "message": "Path contains a null byte"},
         )
 
-    error = validate_scan_path(path, settings.allowed_scan_roots)
+    try:
+        resolved = str(Path(path).resolve())
+    except (ValueError, OSError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PATH", "message": f"Malformed path: {e}"},
+        ) from e
+
+    error = validate_scan_path(resolved, settings.allowed_scan_roots)
     if error is not None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "PATH_NOT_ALLOWED", "message": error},
+        )
+
+    if not os.path.isdir(resolved):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PATH", "message": f"Not a directory: {path}"},
         )
 
     if scan_request.recursive:
