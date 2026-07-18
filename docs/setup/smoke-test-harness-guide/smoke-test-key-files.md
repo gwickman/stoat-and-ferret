@@ -118,6 +118,12 @@ The test harness has three tiers:
 |------|-------------------|
 | `tests/render/test_qc_worker_path.py` | Worker-path QC regression guards and FFmpeg-gated pipeline tests (BL-477-AC-4, BL-488-AC-4/AC-5): `test_no_delivery_profile_returns_404` (mocked, no FFmpeg) asserts `GET /render/{job_id}/qc` returns 404 when no delivery profile is set; `test_assertions_translation_parity` (unit, no FFmpeg) verifies `_build_assertions_from_profile()` and the inline render.py dict literal produce identical keys and values for the same profile. `test_worker_qc_pipeline_target_non_null` and `test_compliant_render_passes_loudness_gate` are gated by `STOAT_TEST_FFMPEG=1` and exercise the full QCService pipeline with a sine WAV fixture, asserting non-null targets and pass=True for loudness/true-peak checks. |
 
+### Phase 13 — v108 Security and Correctness Smoke Tests (BL-699, BL-700)
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/smoke/test_security_smoke.py` | Scan path confinement (BL-699): `test_scan_rejects_out_of_root_path` asserts 403 `PATH_NOT_ALLOWED` for out-of-root paths when `STOAT_ALLOWED_SCAN_ROOTS` is set; `test_scan_accepts_valid_path` confirms the happy path is unbroken (202). Concurrent job completion (BL-700): `test_concurrent_waiters_both_receive_completion` submits a noop render job and asserts two concurrent pollers launched via `asyncio.gather` both receive terminal status. All tests run without FFmpeg. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
