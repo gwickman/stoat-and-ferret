@@ -317,6 +317,58 @@ def test_scan_loopback_permissive_when_roots_unset(client: TestClient, tmp_path:
     assert response.status_code == 202
 
 
+# --- Path-confinement reorder tests (BL-696) ---
+
+
+@pytest.mark.api
+def test_scan_rejects_out_of_root_path_without_filesystem_probe(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """A disallowed path is rejected by validate_scan_path before any filesystem probe.
+
+    Regression test for BL-696 (FR-002-AC-2): os.path.isdir and os.listdir must not be
+    invoked for a path outside allowed_scan_roots — confinement must run first.
+    """
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+
+    with (
+        patch("stoat_ferret.api.routers.videos.get_settings") as mock_settings,
+        patch("stoat_ferret.api.routers.videos.os.path.isdir") as mock_isdir,
+        patch("stoat_ferret.api.routers.videos.os.listdir") as mock_listdir,
+    ):
+        mock_settings.return_value.allowed_scan_roots = [str(allowed)]
+        response = client.post(
+            "/api/v1/videos/scan",
+            json={"path": str(outside)},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "PATH_NOT_ALLOWED"
+    mock_isdir.assert_not_called()
+    mock_listdir.assert_not_called()
+
+
+@pytest.mark.api
+def test_scan_null_byte_path_returns_structured_400(client: TestClient) -> None:
+    """A null byte in the scan path returns a structured 400 INVALID_PATH.
+
+    Regression test for BL-696 (FR-003-AC-3): the explicit null-byte guard must reject
+    the path before any resolve()/filesystem call, not rely on incidental platform
+    behavior of os.path.isdir with an embedded null byte.
+    """
+    response = client.post(
+        "/api/v1/videos/scan",
+        json={"path": "C:\\foo\x00bar"},
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_PATH"
+    assert "null byte" in data["detail"]["message"]
+
+
 @pytest.mark.api
 def test_scan_returns_job_id(client: TestClient, tmp_path: Path) -> None:
     """Scan returns 202 with a job ID."""
