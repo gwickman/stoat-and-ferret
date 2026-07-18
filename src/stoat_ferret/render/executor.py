@@ -35,6 +35,49 @@ logger = structlog.get_logger(__name__)
 ProgressCallback = Callable[[str, float, float, int | None, float | None], Awaitable[None]]
 
 
+async def _drain_stderr_task(
+    process: asyncio.subprocess.Process,
+    stderr_lines: list[bytes],
+) -> None:
+    """Drain stderr concurrently to prevent pipe deadlock."""
+    assert process.stderr is not None
+    while True:
+        line = await process.stderr.readline()
+        if not line:
+            break
+        stderr_lines.append(line)
+
+
+async def _join_stderr_drain(
+    stderr_task: asyncio.Task[None],
+    job_id: str,
+) -> None:
+    """Join stderr drain task with bounded timeout per LRN-406."""
+    done, pending = await asyncio.wait({stderr_task}, timeout=5.0)
+    if pending:
+        for task in pending:
+            task.cancel()
+        logger.warning("render_worker.stderr_drain_timeout", job_id=job_id)
+
+
+def _log_ffmpeg_failure(
+    job_id: str,
+    success: bool,
+    stderr_lines: list[bytes],
+    returncode: int | None,
+) -> None:
+    """Log stderr on failure for post-mortem analysis."""
+    if not success and stderr_lines:
+        stderr_text = b"".join(stderr_lines).decode("utf-8", errors="replace").strip()
+        if stderr_text:
+            logger.error(
+                "render_executor.ffmpeg_stderr",
+                job_id=job_id,
+                stderr=stderr_text,
+                returncode=returncode,
+            )
+
+
 class RenderExecutor:
     """Execute FFmpeg render jobs with progress tracking and cancellation.
 
@@ -272,6 +315,27 @@ class RenderExecutor:
             cleaned.append(job_id)
         return cleaned
 
+    async def _read_stdout_with_progress(
+        self,
+        job_id: str,
+        process: asyncio.subprocess.Process,
+        total_duration_us: int,
+    ) -> None:
+        """Read stdout and report progress until stdout is exhausted."""
+        if process.stdout is not None:
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(process.stdout.readline(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if process.returncode is not None:
+                        break
+                    continue
+                if not chunk:
+                    break
+
+                if self._progress_callback and total_duration_us > 0:
+                    await self._parse_and_report_progress(job_id, chunk, total_duration_us)
+
     async def _run_process(
         self,
         job_id: str,
@@ -289,64 +353,19 @@ class RenderExecutor:
             Tuple of (success, stderr_lines) where success is True when
             FFmpeg exited with return code 0.
         """
-        stdout_chunks: list[bytes] = []
         stderr_lines: list[bytes] = []
 
-        async def _drain_stderr() -> None:
-            """Drain stderr concurrently to prevent pipe deadlock."""
-            assert process.stderr is not None
-            while True:
-                line = await process.stderr.readline()
-                if not line:
-                    break
-                stderr_lines.append(line)
+        stderr_task = asyncio.create_task(_drain_stderr_task(process, stderr_lines))
 
-        # Start concurrent stderr drain task before stdout loop
-        stderr_task = asyncio.create_task(_drain_stderr())
-
-        if process.stdout is not None:
-            while True:
-                try:
-                    # Timeout readline so we detect a killed process on
-                    # Python 3.10 where pipe close doesn't unblock reads.
-                    chunk = await asyncio.wait_for(process.stdout.readline(), timeout=1.0)
-                except asyncio.TimeoutError:
-                    if process.returncode is not None:
-                        break
-                    continue
-                if not chunk:
-                    break
-                stdout_chunks.append(chunk)
-
-                if self._progress_callback and total_duration_us > 0:
-                    await self._parse_and_report_progress(job_id, chunk, total_duration_us)
+        await self._read_stdout_with_progress(job_id, process, total_duration_us)
 
         # Wait for process to exit after stdout is exhausted
         await process.wait()
 
-        # Join stderr drain task with bounded timeout per LRN-406.
-        # 5s is sufficient after process.wait() — any remaining stderr data is
-        # in the OS buffer and drains in ms on normal exits. Reduced from the
-        # reference impl's 15s so that the test budget (15s) is not consumed by
-        # a stuck pipe on Windows/Python 3.10.
-        done, pending = await asyncio.wait({stderr_task}, timeout=5.0)
-        if pending:
-            for task in pending:
-                task.cancel()
-            logger.warning("render_worker.stderr_drain_timeout", job_id=job_id)
+        await _join_stderr_drain(stderr_task, job_id)
 
         success = process.returncode == 0
-
-        # Log stderr on failure for post-mortem analysis
-        if not success and stderr_lines:
-            stderr_text = b"".join(stderr_lines).decode("utf-8", errors="replace").strip()
-            if stderr_text:
-                logger.error(
-                    "render_executor.ffmpeg_stderr",
-                    job_id=job_id,
-                    stderr=stderr_text,
-                    returncode=process.returncode,
-                )
+        _log_ffmpeg_failure(job_id, success, stderr_lines, process.returncode)
 
         return success, stderr_lines
 
