@@ -56,6 +56,19 @@ WINDOWS_ARGV_LIMIT = 32_767
 COMMAND_OVERHEAD_CHARS = 500
 
 
+def _write_ffmetadata_file(content: str) -> str:
+    """Write ffmetadata content to a temp file and return its path.
+
+    Sync helper dispatched via `asyncio.to_thread` from `_run_job` so the
+    write does not block the shared event loop.
+    """
+    with tempfile.NamedTemporaryFile(
+        suffix=".ffmetadata", delete=False, mode="w", encoding="utf-8"
+    ) as tmp:
+        tmp.write(content)
+        return tmp.name
+
+
 def _maybe_route_filter_to_file(
     command: list[str],
     job: RenderJob,
@@ -825,12 +838,8 @@ class RenderWorkerLoop:
                 )
             if markers or metadata_title:
                 content = generate_ffmetadata(markers, metadata_title=metadata_title)
-                with tempfile.NamedTemporaryFile(
-                    suffix=".ffmetadata", delete=False, mode="w", encoding="utf-8"
-                ) as tmp:
-                    tmp.write(content)
-                    ffmetadata_path = tmp.name
-                    tmp_path = Path(tmp.name)
+                ffmetadata_path = await asyncio.to_thread(_write_ffmetadata_file, content)
+                tmp_path = Path(ffmetadata_path)
 
             tts_inputs: list[TtsCueAudioInput] | None = None
             if self.tts_service is not None and self.tts_cue_repository is not None:
@@ -851,8 +860,8 @@ class RenderWorkerLoop:
                 tts_inputs,
                 self.asset_repository,
             )
-            command, filter_tmp_path = _maybe_route_filter_to_file(
-                command, job, self.service._executor
+            command, filter_tmp_path = await asyncio.to_thread(
+                _maybe_route_filter_to_file, command, job, self.service._executor
             )
             await self.service.run_job(job, command)
         finally:

@@ -113,6 +113,24 @@ def _reconcile_to_48k_stereo(input_path: str) -> bytes:
             os.unlink(out_path)
 
 
+def _write_and_reconcile(raw_audio: bytes) -> bytes:
+    """Write raw audio to a temp file, reconcile to 48 kHz stereo, then clean up.
+
+    Sync helper dispatched via `asyncio.to_thread` from `KokoroBackend.synthesise`
+    so the write and subprocess-based reconciliation do not block the shared
+    event loop.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        tmp.write(raw_audio)
+        raw_path = tmp.name
+
+    try:
+        return _reconcile_to_48k_stereo(raw_path)
+    finally:
+        if os.path.exists(raw_path):
+            os.unlink(raw_path)
+
+
 class PiperBackend:
     """Piper local TTS backend (GPL-3.0 subprocess invocation).
 
@@ -242,15 +260,7 @@ class KokoroBackend:
         response.raise_for_status()
 
         raw_audio = response.content
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp.write(raw_audio)
-            raw_path = tmp.name
-
-        try:
-            return _reconcile_to_48k_stereo(raw_path)
-        finally:
-            if os.path.exists(raw_path):
-                os.unlink(raw_path)
+        return await asyncio.to_thread(_write_and_reconcile, raw_audio)
 
 
 _background_tasks: set[asyncio.Task[Any]] = set()

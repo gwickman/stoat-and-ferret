@@ -188,6 +188,27 @@ class TestKokoroBackend:
         with pytest.raises(RuntimeError, match="500"):
             await backend.synthesise("hello", "af_heart", settings)
 
+    async def test_success_dispatches_via_to_thread(self) -> None:
+        """BL-651-AC-1/AC-4: the write+reconcile+cleanup block is dispatched via
+        asyncio.to_thread, not run inline on the event loop (deterministic,
+        mock/patch-based — not timing-only)."""
+        from stoat_ferret.api.services.tts_service import _write_and_reconcile
+
+        wav = _minimal_wav_bytes()
+        transport = _make_kokoro_transport(200, wav)
+        backend = KokoroBackend(transport=transport)
+        settings = _make_settings()
+
+        with patch(
+            "stoat_ferret.api.services.tts_service.asyncio.to_thread",
+            new_callable=AsyncMock,
+            return_value=wav,
+        ) as mock_to_thread:
+            result = await backend.synthesise("hello", "af_heart", settings)
+
+        mock_to_thread.assert_awaited_once_with(_write_and_reconcile, wav)
+        assert result == wav
+
     async def test_success_calls_reconcile(self, tmp_path: Path) -> None:
         wav = _minimal_wav_bytes()
         transport = _make_kokoro_transport(200, wav)

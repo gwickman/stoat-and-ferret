@@ -15,10 +15,12 @@ import asyncio
 import json
 import time
 from datetime import datetime, timezone
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import CommandBuildError, RenderWorkerLoop, build_command_for_job
@@ -749,6 +751,58 @@ class TestWorkerLoop:
                 await loop.run()
 
         service.run_job.assert_awaited_once_with(job, expected_cmd)
+
+    @pytest.mark.asyncio
+    async def test_ffmetadata_path_exercised_with_markers_and_title(self) -> None:
+        """BL-651-AC-2/AC-3: markers+title drive the ffmetadata write path (now
+        dispatched via asyncio.to_thread); build_command_for_job receives a
+        real ffmetadata path and behavior survives the refactor."""
+        plan = json.loads(_make_render_plan())
+        plan["settings"]["metadata_title"] = "My Title"
+        job = _make_job(render_plan=json.dumps(plan))
+
+        marker = Marker(
+            id="marker-1",
+            project_id=_PROJECT_ID,
+            start_time=1.0,
+            end_time=5.0,
+            name="Chapter 1",
+            region_type="section",
+            created_at="2026-01-01T00:00:00Z",
+        )
+        markers_repo = AsyncMock()
+        markers_repo.list_by_project = AsyncMock(return_value=[marker])
+
+        clip_repo, video_repo = _make_repos()
+        service = MagicMock()
+        service.run_job = AsyncMock(return_value=None)
+
+        loop = RenderWorkerLoop(
+            service=service,
+            queue=MagicMock(),
+            clip_repository=clip_repo,
+            video_repository=video_repo,
+            markers_repository=markers_repo,
+        )
+
+        captured: list[str | None] = []
+
+        async def _capture_build(*args: Any, **_kwargs: Any) -> list[str]:
+            captured.append(args[3])
+            return ["ffmpeg", "-i", "in.mp4", "out.mp4"]
+
+        with patch(
+            "stoat_ferret.render.worker.build_command_for_job",
+            side_effect=_capture_build,
+        ):
+            await loop._run_job(job)
+
+        assert len(captured) == 1
+        ffmetadata_path = captured[0]
+        assert ffmetadata_path is not None
+        assert ffmetadata_path.endswith(".ffmetadata")
+        markers_repo.list_by_project.assert_awaited_once_with(_PROJECT_ID, region_type="section")
+        service.run_job.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_idle_backoff_on_none_dequeue(self) -> None:
