@@ -233,7 +233,7 @@ class TestGetStripMetadata:
 class TestGetStripImage:
     """Tests for GET /api/v1/videos/{video_id}/thumbnails/strip.jpg."""
 
-    async def test_serves_jpeg_image(
+    def test_serves_jpeg_image(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
