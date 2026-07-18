@@ -247,7 +247,9 @@ async def scan_videos(
     if scan_request.recursive:
         try:
             subdirs = sorted(
-                entry for entry in os.listdir(path) if os.path.isdir(os.path.join(path, entry))
+                entry
+                for entry in os.listdir(resolved)
+                if os.path.isdir(os.path.join(resolved, entry))
             )
         except OSError:
             subdirs = []
@@ -267,9 +269,9 @@ async def scan_videos(
     job_queue = request.app.state.job_queue
     job_id = await job_queue.submit(
         SCAN_JOB_TYPE,
-        {"path": path, "recursive": scan_request.recursive},
+        {"path": resolved, "recursive": scan_request.recursive},
     )
-    logger.info("scan_job_queued", job_id=str(job_id), path=path)
+    logger.info("scan_job_queued", job_id=str(job_id), path=resolved)
     return JobSubmitResponse(job_id=job_id)
 
 

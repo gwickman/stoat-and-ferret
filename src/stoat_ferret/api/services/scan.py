@@ -90,10 +90,21 @@ def make_scan_handler(
 
         Returns:
             Scan results as a dict.
+
+        Raises:
+            ValueError: If the resolved path is not under an allowed scan root (fail-closed).
         """
-        scan_path = payload["path"]
         job_id = payload.get("_job_id")
         cancel_event: asyncio.Event | None = payload.get("_cancel_event")
+
+        # Re-resolve and re-validate before scanning to close the TOCTOU gap (FR-003 / BL-699)
+        resolved_path = str(Path(payload["path"]).resolve())
+        settings = get_settings()
+        error = validate_scan_path(resolved_path, settings.allowed_scan_roots)
+        if error is not None:
+            raise ValueError(error)
+        scan_path = resolved_path
+
         logger.info("scan_handler_started", job_id=str(job_id), path=str(scan_path))
 
         # Build progress callback if queue/job_id or ws_manager are available
