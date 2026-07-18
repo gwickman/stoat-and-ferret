@@ -157,6 +157,7 @@ class TestAutoProxyQueueing:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = True
 
             result = await handler("scan", {"path": str(tmp_path), "recursive": True})
@@ -208,6 +209,7 @@ class TestAutoProxyQueueing:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = False
 
             result = await handler("scan", {"path": str(tmp_path), "recursive": True})
@@ -257,6 +259,7 @@ class TestAutoProxyQueueing:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = True
 
             # First scan: creates the video
@@ -290,6 +293,7 @@ class TestAutoProxyQueueing:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = True
 
             # Second scan: video already has proxy
@@ -343,6 +347,7 @@ class TestStaleProxyDetection:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = True
             await handler("scan", {"path": str(tmp_path), "recursive": True})
 
@@ -373,6 +378,7 @@ class TestStaleProxyDetection:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = True
             await handler("scan", {"path": str(tmp_path), "recursive": True})
 
@@ -421,6 +427,7 @@ class TestLoggingEvents:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = True
             await handler("scan", {"path": str(tmp_path), "recursive": True})
 
@@ -459,6 +466,7 @@ class TestLoggingEvents:
                 subtitle_streams=[],
             )
             settings = mock_settings.return_value
+            settings.allowed_scan_roots = []
             settings.proxy_auto_generate = False
             result = await handler("scan", {"path": str(tmp_path), "recursive": True})
 
