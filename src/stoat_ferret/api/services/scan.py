@@ -98,14 +98,14 @@ def make_scan_handler(
         cancel_event: asyncio.Event | None = payload.get("_cancel_event")
 
         # Re-resolve and re-validate before scanning to close the TOCTOU gap (FR-003 / BL-699)
-        resolved_path = str(Path(payload["path"]).resolve())
+        submitted_path = payload["path"]
+        scan_path = str(Path(submitted_path).resolve())
         settings = get_settings()
-        error = validate_scan_path(resolved_path, settings.allowed_scan_roots)
+        error = validate_scan_path(scan_path, settings.allowed_scan_roots)
         if error is not None:
             raise ValueError(error)
-        scan_path = resolved_path
 
-        logger.info("scan_handler_started", job_id=str(job_id), path=str(scan_path))
+        logger.info("scan_handler_started", job_id=str(job_id), path=scan_path)
 
         # Build progress callback if queue/job_id or ws_manager are available
         progress_callback: Callable[[float], Awaitable[None]] | None = None
@@ -123,8 +123,10 @@ def make_scan_handler(
                     )
 
         if ws_manager:
-            logger.info("scan_broadcast_started", path=str(scan_path))
-            await ws_manager.broadcast(build_event(EventType.SCAN_STARTED, {"path": scan_path}))
+            logger.info("scan_broadcast_started", path=submitted_path)
+            await ws_manager.broadcast(
+                build_event(EventType.SCAN_STARTED, {"path": submitted_path})
+            )
 
         video_ids: list[str] = []
         result = await scan_directory(
@@ -152,11 +154,11 @@ def make_scan_handler(
         # setLastMessage survives.  useJobProgress filters for "job_progress",
         # so it must be the last message in the burst.
         if ws_manager:
-            logger.info("scan_broadcast_completed", path=str(scan_path))
+            logger.info("scan_broadcast_completed", path=submitted_path)
             await ws_manager.broadcast(
                 build_event(
                     EventType.SCAN_COMPLETED,
-                    {"path": scan_path, "video_count": result.new + result.updated},
+                    {"path": submitted_path, "video_count": result.new + result.updated},
                 )
             )
 
