@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -235,6 +235,193 @@ def _job_to_response(job: RenderJob) -> RenderJobResponse:
     )
 
 
+# ---------- Render-job validation helpers ----------
+
+
+def _validate_and_translate_plan(
+    body: CreateRenderRequest,
+) -> tuple[OutputFormat, QualityPreset, dict[str, Any], str]:
+    """Validate format/preset, parse JSON plan, and inject FFmpeg preset name.
+
+    Args:
+        body: The render job creation request.
+
+    Returns:
+        Tuple of (output_format, quality_preset, plan_data, render_plan_json).
+
+    Raises:
+        HTTPException: 400 for invalid format, invalid preset, or invalid JSON plan.
+        HTTPException: 422 if render_plan is missing required settings field.
+    """
+    try:
+        output_format = OutputFormat(body.output_format)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_FORMAT",
+                "message": f"Invalid output format: {body.output_format}. "
+                f"Valid: {[f.value for f in OutputFormat]}",
+            },
+        ) from err
+
+    try:
+        quality_preset = QualityPreset(body.quality_preset)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PRESET",
+                "message": "Use public vocabulary: draft | standard | high",
+            },
+        ) from err
+
+    quality_preset_ffmpeg = QUALITY_PRESET_MAP[quality_preset.value]
+    logger.info(
+        "render.preset_translation", input=quality_preset.value, output=quality_preset_ffmpeg
+    )
+    try:
+        plan_data = json.loads(body.render_plan)
+    except json.JSONDecodeError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_RENDER_PLAN", "message": "render_plan must be valid JSON"},
+        ) from err
+    if "settings" not in plan_data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "PREFLIGHT_FAILED",
+                "message": "render plan missing required field: settings",
+            },
+        )
+    plan_data.setdefault("settings", {})["quality_preset"] = quality_preset_ffmpeg
+    render_plan_json = json.dumps(plan_data)
+    return output_format, quality_preset, plan_data, render_plan_json
+
+
+def _validate_encoder_compatibility(output_format_value: str, encoder: str | None) -> None:
+    """Validate encoder is compatible with the chosen output format.
+
+    Args:
+        output_format_value: String value of the output format (e.g. 'mp4').
+        encoder: FFmpeg encoder name, or None to skip the check.
+
+    Raises:
+        HTTPException: 422 if encoder is incompatible with the output format.
+    """
+    if encoder is None:
+        return
+    fmt_info = next((f for f in _FORMAT_DATA if f.format == output_format_value), None)
+    if fmt_info is not None:
+        codec_family = _encoder_codec_family(encoder)
+        allowed = [c.name for c in fmt_info.codecs]
+        if codec_family is not None and codec_family not in allowed:
+            logger.info(
+                "render.validation_failed",
+                format=output_format_value,
+                encoder=encoder,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "INCOMPATIBLE_FORMAT_ENCODER",
+                    "message": (
+                        f"Encoder '{encoder}' is not compatible with format "
+                        f"'{output_format_value}'. Supported codec families for "
+                        f"{output_format_value}: {allowed}"
+                    ),
+                },
+            )
+
+
+async def _resolve_delivery_profile(request: Request, name: str | None) -> Any:
+    """Look up a delivery profile by name from app state.
+
+    Args:
+        request: FastAPI request for app.state access.
+        name: Delivery profile name, or None to skip lookup.
+
+    Returns:
+        The delivery profile object, or None if name is None.
+
+    Raises:
+        HTTPException: 422 if the delivery profile repository is unavailable or profile not found.
+    """
+    if name is None:
+        return None
+    dp_repo = await _get_delivery_profile_repository(request)
+    if dp_repo is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "DELIVERY_PROFILE_NOT_FOUND",
+                "message": f"Delivery profile '{name}' not found",
+            },
+        )
+    delivery_profile = await dp_repo.get_by_name(name)
+    if delivery_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "DELIVERY_PROFILE_NOT_FOUND",
+                "message": f"Delivery profile '{name}' not found",
+            },
+        )
+    return delivery_profile
+
+
+async def _apply_qc_gate(
+    request: Request,
+    render_repo_getter: Any,
+    job: RenderJob,
+    delivery_profile: Any,
+) -> RenderJob:
+    """Run QC checks when a delivery profile is set and the render completed inline.
+
+    Args:
+        request: FastAPI request for app.state access.
+        render_repo_getter: Callable accepting Request, returning AsyncRenderRepository.
+        job: The submitted render job.
+        delivery_profile: Resolved delivery profile object, or None to skip QC.
+
+    Returns:
+        Potentially updated job (status set to QC_FAILED when QC check fails).
+    """
+    if delivery_profile is not None and job.status == RenderStatus.COMPLETED:
+        qc_service: QCService | None = await _get_qc_service(request)
+        render_repo = await render_repo_getter(request)
+        if qc_service is not None:
+            try:
+                assertions: dict[str, float | None] = {
+                    "loudness_integrated": delivery_profile.loudness_target_lufs,
+                    "true_peak": delivery_profile.true_peak_ceiling_dbtp,
+                }
+                qc_report = await qc_service.run_checks(
+                    artifact_path=job.output_path,
+                    job_id=job.id,
+                    assertions=assertions,
+                )
+                if qc_report.overall_verdict != "pass":
+                    checks_dict = json.loads(qc_report.checks)
+                    failed_ids = [cid for cid, c in checks_dict.items() if c.get("pass") is False]
+                    error_message = (
+                        "QC failed: " + ", ".join(failed_ids)
+                        if failed_ids
+                        else "QC failed: overall_verdict=fail with no individually-failing "
+                        "checks (assertions may be missing)"
+                    )
+                    await render_repo.update_status(
+                        job.id, RenderStatus.QC_FAILED, error_message=error_message
+                    )
+                    refreshed = await render_repo.get(job.id)
+                    if refreshed is not None:
+                        job = refreshed
+            except FileNotFoundError:
+                pass  # artifact not present in noop/test mode without real render
+    return job
+
+
 # ---------- Encoder helpers ----------
 
 
@@ -389,102 +576,14 @@ async def create_render_job(
     """
     settings = get_settings()
 
-    # Validate output format
-    try:
-        output_format = OutputFormat(body.output_format)
-    except ValueError as err:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_FORMAT",
-                "message": f"Invalid output format: {body.output_format}. "
-                f"Valid: {[f.value for f in OutputFormat]}",
-            },
-        ) from err
+    output_format, quality_preset, plan_data, render_plan_json = _validate_and_translate_plan(body)
 
-    # Validate quality preset
-    try:
-        quality_preset = QualityPreset(body.quality_preset)
-    except ValueError as err:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_PRESET",
-                "message": "Use public vocabulary: draft | standard | high",
-            },
-        ) from err
-
-    # Translate public quality_preset vocabulary to FFmpeg preset and inject into render_plan.
-    # Rust validation layer expects FFmpeg preset names (veryfast/medium/slow), not public names.
-    quality_preset_ffmpeg = QUALITY_PRESET_MAP[quality_preset.value]
-    logger.info(
-        "render.preset_translation", input=quality_preset.value, output=quality_preset_ffmpeg
-    )
-    try:
-        plan_data = json.loads(body.render_plan)
-    except json.JSONDecodeError as err:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "INVALID_RENDER_PLAN", "message": "render_plan must be valid JSON"},
-        ) from err
-    if "settings" not in plan_data:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "PREFLIGHT_FAILED",
-                "message": "render plan missing required field: settings",
-            },
-        )
-    plan_data.setdefault("settings", {})["quality_preset"] = quality_preset_ffmpeg
-    render_plan_json = json.dumps(plan_data)
-
-    # Validate format-encoder compatibility when encoder is explicitly provided
-    if body.encoder is not None:
-        fmt_info = next((f for f in _FORMAT_DATA if f.format == body.output_format), None)
-        if fmt_info is not None:
-            codec_family = _encoder_codec_family(body.encoder)
-            allowed = [c.name for c in fmt_info.codecs]
-            if codec_family is not None and codec_family not in allowed:
-                logger.info(
-                    "render.validation_failed",
-                    format=body.output_format,
-                    encoder=body.encoder,
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail={
-                        "code": "INCOMPATIBLE_FORMAT_ENCODER",
-                        "message": (
-                            f"Encoder '{body.encoder}' is not compatible with format "
-                            f"'{body.output_format}'. Supported codec families for "
-                            f"{body.output_format}: {allowed}"
-                        ),
-                    },
-                )
+    _validate_encoder_compatibility(body.output_format, body.encoder)
 
     project_id_str = str(body.project_id)
 
     # Resolve delivery profile by name before render starts (FR-002, NFR-001)
-    delivery_profile = None
-    if body.delivery_profile is not None:
-        dp_repo = await _get_delivery_profile_repository(request)
-        if dp_repo is None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail={
-                    "code": "DELIVERY_PROFILE_NOT_FOUND",
-                    "message": f"Delivery profile '{body.delivery_profile}' not found",
-                },
-            )
-        delivery_profile = await dp_repo.get_by_name(body.delivery_profile)
-        if delivery_profile is None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail={
-                    "code": "DELIVERY_PROFILE_NOT_FOUND",
-                    "message": f"Delivery profile '{body.delivery_profile}' not found",
-                },
-            )
+    delivery_profile = await _resolve_delivery_profile(request, body.delivery_profile)
 
     # Project existence check (FR-001)
     project = await project_repo.get(project_id_str)
@@ -551,37 +650,7 @@ async def create_render_job(
     )
 
     # QC pass when a delivery profile is set and render completed inline (noop mode / tests)
-    if delivery_profile is not None and job.status == RenderStatus.COMPLETED:
-        qc_service: QCService | None = await _get_qc_service(request)
-        render_repo = await get_render_repository(request)
-        if qc_service is not None:
-            try:
-                assertions: dict[str, float | None] = {
-                    "loudness_integrated": delivery_profile.loudness_target_lufs,
-                    "true_peak": delivery_profile.true_peak_ceiling_dbtp,
-                }
-                qc_report = await qc_service.run_checks(
-                    artifact_path=job.output_path,
-                    job_id=job.id,
-                    assertions=assertions,
-                )
-                if qc_report.overall_verdict != "pass":
-                    checks_dict = json.loads(qc_report.checks)
-                    failed_ids = [cid for cid, c in checks_dict.items() if c.get("pass") is False]
-                    error_message = (
-                        "QC failed: " + ", ".join(failed_ids)
-                        if failed_ids
-                        else "QC failed: overall_verdict=fail with no individually-failing "
-                        "checks (assertions may be missing)"
-                    )
-                    await render_repo.update_status(
-                        job.id, RenderStatus.QC_FAILED, error_message=error_message
-                    )
-                    refreshed = await render_repo.get(job.id)
-                    if refreshed is not None:
-                        job = refreshed
-            except FileNotFoundError:
-                pass  # artifact not present in noop/test mode without real render
+    job = await _apply_qc_gate(request, get_render_repository, job, delivery_profile)
 
     return _job_to_response(job)
 
