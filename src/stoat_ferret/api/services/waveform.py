@@ -115,6 +115,45 @@ def build_json_ffmpeg_args(
     ]
 
 
+# astats metrics configuration (FR-001): each entry is a section as it
+# appears in the ffprobe tag key (`lavfi.astats.<section>.<metric>`) paired
+# with the prefix used in the output sample key.
+_ASTATS_SECTIONS: tuple[tuple[str, str], ...] = (
+    ("Overall", ""),
+    ("1", "ch1_"),
+    ("2", "ch2_"),
+)
+_ASTATS_METRIC_NAMES: tuple[str, ...] = ("Peak_level", "RMS_level")
+
+
+def _parse_astats_metrics(
+    tags: dict[str, Any],
+    sections: tuple[tuple[str, str], ...] = _ASTATS_SECTIONS,
+    metric_names: tuple[str, ...] = _ASTATS_METRIC_NAMES,
+) -> dict[str, str]:
+    """Extract configured astats metrics from one ffprobe frame's tags (FR-002).
+
+    Iterates the section/metric configuration and looks up each
+    `lavfi.astats.<section>.<metric>` tag, routing overall and per-channel
+    values to their respective output keys (FR-003).
+
+    Args:
+        tags: The `tags` mapping from a single ffprobe frame.
+        sections: Section-name/output-prefix pairs to extract.
+        metric_names: Metric names to extract within each section.
+
+    Returns:
+        Dict of extracted metric string values, keyed by prefixed metric name.
+    """
+    sample: dict[str, str] = {}
+    for section, prefix in sections:
+        for metric in metric_names:
+            value = tags.get(f"lavfi.astats.{section}.{metric}")
+            if value is not None:
+                sample[f"{prefix}{metric}"] = str(value)
+    return sample
+
+
 def parse_astats_output(raw_output: str) -> list[dict[str, str]]:
     """Parse ffprobe astats JSON output into amplitude samples.
 
@@ -137,33 +176,7 @@ def parse_astats_output(raw_output: str) -> list[dict[str, str]]:
     samples: list[dict[str, str]] = []
 
     for frame in frames:
-        tags = frame.get("tags", {})
-        sample: dict[str, str] = {}
-
-        # Overall levels
-        peak = tags.get("lavfi.astats.Overall.Peak_level")
-        rms = tags.get("lavfi.astats.Overall.RMS_level")
-        if peak is not None:
-            sample["Peak_level"] = str(peak)
-        if rms is not None:
-            sample["RMS_level"] = str(rms)
-
-        # Per-channel levels (channel 1)
-        peak_1 = tags.get("lavfi.astats.1.Peak_level")
-        rms_1 = tags.get("lavfi.astats.1.RMS_level")
-        if peak_1 is not None:
-            sample["ch1_Peak_level"] = str(peak_1)
-        if rms_1 is not None:
-            sample["ch1_RMS_level"] = str(rms_1)
-
-        # Per-channel levels (channel 2)
-        peak_2 = tags.get("lavfi.astats.2.Peak_level")
-        rms_2 = tags.get("lavfi.astats.2.RMS_level")
-        if peak_2 is not None:
-            sample["ch2_Peak_level"] = str(peak_2)
-        if rms_2 is not None:
-            sample["ch2_RMS_level"] = str(rms_2)
-
+        sample = _parse_astats_metrics(frame.get("tags", {}))
         if sample:
             samples.append(sample)
 
