@@ -43,6 +43,85 @@ class EffectValidationError:
         return f"EffectValidationError(path={self.path!r}, message={self.message!r})"
 
 
+def _validate_scalar_parameters(
+    definition: EffectDefinition, scalar_parameters: dict[str, Any]
+) -> list[EffectValidationError]:
+    """Validate non-automation scalar parameters against the effect's JSON schema."""
+    schema = definition.parameter_schema
+    validator = jsonschema.Draft7Validator(schema)
+    errors: list[EffectValidationError] = []
+    for error in validator.iter_errors(scalar_parameters):
+        path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
+        errors.append(EffectValidationError(path=path, message=error.message))
+    return errors
+
+
+def _build_rust_keyframes(envelope: AutomationEnvelope) -> str:
+    """Compile an automation envelope to a Rust expression string.
+
+    Args:
+        envelope: Validated automation envelope.
+
+    Returns:
+        The compiled FFmpeg expression string.
+
+    Raises:
+        ValueError: If the Rust compiler rejects the envelope.
+    """
+    rust_keyframes = [
+        Keyframe(t=kf.t, value=kf.value, curve=_CURVE_NAME_MAP[kf.curve])
+        for kf in envelope.keyframes
+    ]
+    automation = Automation(default=envelope.default, keyframes=rust_keyframes)
+    return compile_automation(automation)
+
+
+def _process_automation_parameter(
+    definition: EffectDefinition,
+    name: str,
+    value: dict[str, Any],
+) -> tuple[list[EffectValidationError], str | None, Any]:
+    """Process one automation envelope parameter.
+
+    Args:
+        definition: The effect definition.
+        name: The parameter name.
+        value: The automation envelope dict (must contain a ``"keyframes"`` key).
+
+    Returns:
+        A 3-tuple ``(errors, compiled_expression, scalar_default)``.
+        On any error ``compiled_expression`` and ``scalar_default`` are ``None``.
+        On success ``compiled_expression`` is the Rust-compiled string and
+        ``scalar_default`` is the envelope's default for JSON schema injection.
+    """
+    errors: list[EffectValidationError] = []
+
+    try:
+        envelope = AutomationEnvelope.model_validate(value)
+    except ValidationError as exc:
+        for error in exc.errors():
+            loc = ".".join(str(p) for p in error["loc"]) if error["loc"] else ""
+            errors.append(EffectValidationError(path=loc, message=error["msg"]))
+        return errors, None, None
+
+    if name not in definition.automatable:
+        errors.append(
+            EffectValidationError(
+                path=name,
+                message=f"Parameter '{name}' is not automatable",
+            )
+        )
+        return errors, None, None
+
+    try:
+        compiled_expression = _build_rust_keyframes(envelope)
+    except ValueError as exc:
+        errors.append(EffectValidationError(path=name, message=str(exc)))
+        return errors, None, None
+
+    return errors, compiled_expression, envelope.default
+
+
 class EffectRegistry:
     """Registry of available effects with parameter schemas and AI hints.
 
@@ -103,13 +182,7 @@ class EffectRegistry:
             msg = f"Unknown effect type: {effect_type}"
             raise KeyError(msg)
 
-        schema = definition.parameter_schema
-        validator = jsonschema.Draft7Validator(schema)
-        errors: list[EffectValidationError] = []
-        for error in validator.iter_errors(parameters):
-            path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
-            errors.append(EffectValidationError(path=path, message=error.message))
-        return errors
+        return _validate_scalar_parameters(definition, parameters)
 
     def validate_with_automation(
         self, effect_type: str, parameters: dict[str, Any]
@@ -146,55 +219,22 @@ class EffectRegistry:
 
         for name, value in parameters.items():
             if isinstance(value, dict) and "keyframes" in value:
-                # Parse and validate the automation envelope.
-                try:
-                    envelope = AutomationEnvelope.model_validate(value)
-                except ValidationError as exc:
-                    for error in exc.errors():
-                        loc = ".".join(str(p) for p in error["loc"]) if error["loc"] else ""
-                        errors.append(EffectValidationError(path=loc, message=error["msg"]))
-                    continue
-
-                # Check the parameter is declared automatable.
-                if name not in definition.automatable:
-                    errors.append(
-                        EffectValidationError(
-                            path=name,
-                            message=f"Parameter '{name}' is not automatable",
-                        )
-                    )
-                    continue
-
-                # Build Rust objects and compile.
-                rust_keyframes = [
-                    Keyframe(
-                        t=kf.t,
-                        value=kf.value,
-                        curve=_CURVE_NAME_MAP[kf.curve],
-                    )
-                    for kf in envelope.keyframes
-                ]
-                automation = Automation(default=envelope.default, keyframes=rust_keyframes)
-                try:
-                    compiled_expression = compile_automation(automation)
-                except ValueError as exc:
-                    errors.append(EffectValidationError(path=name, message=str(exc)))
-                    continue
-
-                # Inject the default scalar so JSON schema's "required" check passes.
-                # The schema is designed for scalar validation; the envelope bypasses
-                # range checks (the Rust compiler owns range correctness).
-                scalar_parameters[name] = envelope.default
+                param_errors, param_compiled, param_default = _process_automation_parameter(
+                    definition, name, value
+                )
+                errors.extend(param_errors)
+                if param_compiled is not None:
+                    compiled_expression = param_compiled
+                    # Inject the default scalar so JSON schema's "required" check passes.
+                    # The schema is designed for scalar validation; the envelope bypasses
+                    # range checks (the Rust compiler owns range correctness).
+                    scalar_parameters[name] = param_default
             else:
                 scalar_parameters[name] = value
 
         # Run JSON schema validation on scalar parameters only.
         if not errors:
-            schema = definition.parameter_schema
-            validator = jsonschema.Draft7Validator(schema)
-            for error in validator.iter_errors(scalar_parameters):
-                path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else ""
-                errors.append(EffectValidationError(path=path, message=error.message))
+            errors.extend(_validate_scalar_parameters(definition, scalar_parameters))
 
         return errors, compiled_expression
 
