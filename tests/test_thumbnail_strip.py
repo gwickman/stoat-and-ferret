@@ -674,9 +674,7 @@ class TestGetExistingReadyStrip:
         repo = InMemoryThumbnailStripRepository()
         stray_memory_strip = _make_strip(status=ThumbnailStripStatus.READY)
 
-        result = await _get_existing_ready_strip(
-            "vid1", repo, {"vid1": stray_memory_strip}
-        )
+        result = await _get_existing_ready_strip("vid1", repo, {"vid1": stray_memory_strip})
 
         assert result is None
 
