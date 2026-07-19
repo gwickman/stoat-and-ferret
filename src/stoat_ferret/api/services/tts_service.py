@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 _OPENROUTER_TTS_URL = "https://openrouter.ai/api/v1/audio/speech"
+_TTS_FORMAT_MISMATCH_MSG = "TTS output format mismatch: expected channels=2 sample_rate=48000"
 
 
 class TtsCache:
@@ -94,17 +95,17 @@ def _reconcile_to_48k_stereo(input_path: str) -> bytes:
             capture_output=True,
         )
         if probe_result.returncode != 0:
-            raise RuntimeError("TTS output format mismatch: expected channels=2 sample_rate=48000")
+            raise RuntimeError(_TTS_FORMAT_MISMATCH_MSG)
 
         probe_data = json.loads(probe_result.stdout)
         streams = probe_data.get("streams", [])
         if not streams:
-            raise RuntimeError("TTS output format mismatch: expected channels=2 sample_rate=48000")
+            raise RuntimeError(_TTS_FORMAT_MISMATCH_MSG)
         stream = streams[0]
         channels = int(stream.get("channels", 0))
         sample_rate = int(stream.get("sample_rate", 0))
         if channels != 2 or sample_rate != 48000:
-            raise RuntimeError("TTS output format mismatch: expected channels=2 sample_rate=48000")
+            raise RuntimeError(_TTS_FORMAT_MISMATCH_MSG)
 
         with open(out_path, "rb") as f:
             return f.read()
