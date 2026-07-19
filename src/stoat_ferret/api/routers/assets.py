@@ -37,6 +37,9 @@ _KIND_MIME_MAP: dict[str, frozenset[str]] = {
     "image": frozenset({"image/png", "image/jpeg", "image/jpg"}),
 }
 
+# Shared 404 detail for asset-not-found responses (get/download/delete).
+_ASSET_NOT_FOUND_DETAIL = "Asset not found."
+
 
 def _get_repo(request: Request) -> AsyncSQLiteAssetRepository:
     repo: AsyncSQLiteAssetRepository = request.app.state.asset_repository
@@ -125,6 +128,98 @@ def _resolve_safe_path(assets_dir: Path, filename: str) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Upload helpers (extracted from upload_asset to reduce handler complexity)
+# ---------------------------------------------------------------------------
+
+
+async def _check_dedup(
+    repo: AsyncSQLiteAssetRepository, content_hash: str
+) -> AssetRead | None:
+    """Check for an existing asset with the given content hash.
+
+    Args:
+        repo: Asset repository.
+        content_hash: SHA-256 hex digest of the uploaded content.
+
+    Returns:
+        An `AssetRead` if a dedup hit (active or restored) was found, else None.
+
+    Raises:
+        HTTPException: 500 if a soft-deleted match fails to restore.
+    """
+    existing = await repo.get_by_content_hash(content_hash)
+    if existing is None:
+        return None
+
+    if existing.deleted_at is None:
+        # Active asset with same content already exists — return it
+        logger.info(
+            "asset.dedup_hit",
+            asset_id=existing.id,
+            content_hash=content_hash,
+        )
+        return _to_schema(existing)
+
+    # Soft-deleted asset: restore and return
+    restored = await repo.restore(existing.id)
+    if restored is None:
+        raise HTTPException(status_code=500, detail="Failed to restore asset.")
+    logger.info(
+        "asset.restored",
+        asset_id=restored.id,
+        content_hash=content_hash,
+    )
+    return _to_schema(restored)
+
+
+def _validate_upload_size(data: bytes, max_bytes: int) -> None:
+    """Raise 413 if the uploaded payload exceeds the configured size limit.
+
+    Args:
+        data: Raw uploaded bytes.
+        max_bytes: Configured STOAT_ASSETS_MAX_SIZE_BYTES limit.
+
+    Raises:
+        HTTPException: 413 if `data` exceeds `max_bytes`.
+    """
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Upload exceeds maximum allowed size of {max_bytes} bytes.",
+        )
+
+
+async def _sniff_content(
+    kind: str, data: bytes, original_filename: str, file: UploadFile
+) -> tuple[str, str]:
+    """Detect MIME type and extension, validating content for image kind.
+
+    Args:
+        kind: Asset kind (e.g. "image", "audio").
+        data: Raw uploaded bytes.
+        original_filename: Client-supplied filename, used for extension fallback.
+        file: The original UploadFile, used for its declared content-type.
+
+    Returns:
+        Tuple of (mime_type, ext).
+
+    Raises:
+        HTTPException: 415 if image content-sniff validation fails.
+    """
+    if kind == "image":
+        try:
+            _fmt, mime_type = await asyncio.to_thread(_validate_image_magic_bytes, data)
+        except ValueError as exc:
+            raise HTTPException(status_code=415, detail=str(exc)) from exc
+        ext = "png" if _fmt == "PNG" else "jpg"
+    else:
+        # Non-image kinds: use uploaded content-type (v090 out of scope for magic-bytes)
+        mime_type = file.content_type or "application/octet-stream"
+        ext = Path(original_filename).suffix.lstrip(".") or "bin"
+    return mime_type, ext
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -150,11 +245,7 @@ async def upload_asset(
 
     # Read uploaded bytes (bounded by max_size)
     data = await file.read(max_bytes + 1)
-    if len(data) > max_bytes:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Upload exceeds maximum allowed size of {max_bytes} bytes.",
-        )
+    _validate_upload_size(data, max_bytes)
 
     if len(data) == 0:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
@@ -162,42 +253,15 @@ async def upload_asset(
     original_filename = file.filename or "upload"
 
     # Content-sniff validation (v090: image kind only)
-    if kind == "image":
-        try:
-            _fmt, mime_type = await asyncio.to_thread(_validate_image_magic_bytes, data)
-        except ValueError as exc:
-            raise HTTPException(status_code=415, detail=str(exc)) from exc
-        ext = "png" if _fmt == "PNG" else "jpg"
-    else:
-        # Non-image kinds: use uploaded content-type (v090 out of scope for magic-bytes)
-        mime_type = file.content_type or "application/octet-stream"
-        ext = Path(original_filename).suffix.lstrip(".") or "bin"
+    mime_type, ext = await _sniff_content(kind, data, original_filename, file)
 
     # Compute content hash (blocking) — also needed for dedup check before file write
     content_hash = hashlib.sha256(data).hexdigest()
 
     # Deduplication: check existing record before touching disk
-    existing = await repo.get_by_content_hash(content_hash)
-    if existing is not None:
-        if existing.deleted_at is None:
-            # Active asset with same content already exists — return it
-            logger.info(
-                "asset.dedup_hit",
-                asset_id=existing.id,
-                content_hash=content_hash,
-            )
-            return _to_schema(existing)
-        else:
-            # Soft-deleted asset: restore and return
-            restored = await repo.restore(existing.id)
-            if restored is None:
-                raise HTTPException(status_code=500, detail="Failed to restore asset.")
-            logger.info(
-                "asset.restored",
-                asset_id=restored.id,
-                content_hash=content_hash,
-            )
-            return _to_schema(restored)
+    dedup_hit = await _check_dedup(repo, content_hash)
+    if dedup_hit is not None:
+        return dedup_hit
 
     # Ensure assets_dir exists
     assets_dir.mkdir(parents=True, exist_ok=True)
@@ -262,7 +326,7 @@ async def get_asset(asset_id: str, request: Request) -> AssetRead:
     repo = _get_repo(request)
     record = await repo.get_by_id(asset_id)
     if record is None or record.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Asset not found.")
+        raise HTTPException(status_code=404, detail=_ASSET_NOT_FOUND_DETAIL)
     return _to_schema(record)
 
 
@@ -272,7 +336,7 @@ async def download_asset(asset_id: str, request: Request) -> FileResponse:
     repo = _get_repo(request)
     record = await repo.get_by_id(asset_id)
     if record is None or record.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Asset not found.")
+        raise HTTPException(status_code=404, detail=_ASSET_NOT_FOUND_DETAIL)
     file_path = Path(record.file_path)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Asset file not found on disk.")
@@ -285,10 +349,10 @@ async def delete_asset(asset_id: str, request: Request) -> None:
     repo = _get_repo(request)
     record = await repo.get_by_id(asset_id)
     if record is None or record.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Asset not found.")
+        raise HTTPException(status_code=404, detail=_ASSET_NOT_FOUND_DETAIL)
     deleted = await repo.soft_delete(asset_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Asset not found.")
+        raise HTTPException(status_code=404, detail=_ASSET_NOT_FOUND_DETAIL)
     logger.info("asset.deleted", asset_id=asset_id)
 
 
