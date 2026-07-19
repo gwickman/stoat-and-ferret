@@ -150,6 +150,52 @@ def test_readiness_ffmpeg_timeout_returns_200(client: TestClient) -> None:
     assert data["checks"]["ffmpeg"]["error"] == "check timed out"
 
 
+@pytest.mark.api
+@pytest.mark.parametrize(
+    ("check_name", "expected_check_status", "is_critical"),
+    [
+        ("_check_database", "error", True),
+        ("_check_rust_core", "error", True),
+        ("_check_filesystem", "error", True),
+        ("_check_ffmpeg", "error", False),
+        ("_check_preview", "degraded", False),
+        ("_check_proxy", "degraded", False),
+        ("_check_render", "degraded", False),
+    ],
+)
+def test_readiness_check_timeout_branches(
+    client: TestClient,
+    check_name: str,
+    expected_check_status: str,
+    is_critical: bool,
+) -> None:
+    """Each of the 7 readiness checks reports a timeout through _run_check().
+
+    A timed-out critical check (database, rust_core, filesystem) yields HTTP
+    503 with overall status "degraded". A timed-out non-critical check
+    (ffmpeg, preview, proxy, render) yields HTTP 200 with overall status
+    "degraded".
+    """
+    check_key = check_name.removeprefix("_check_")
+    with (
+        patch("stoat_ferret.api.routers.health.shutil.which", return_value="/usr/bin/ffmpeg"),
+        patch("stoat_ferret.api.routers.health.subprocess.run") as mock_run,
+        patch(
+            f"stoat_ferret.api.routers.health.{check_name}",
+            new_callable=AsyncMock,
+            side_effect=asyncio.TimeoutError,
+        ),
+    ):
+        mock_run.return_value = MagicMock(stdout="ffmpeg version 6.0 Copyright (c) 2000-2023\n")
+        response = client.get("/health/ready")
+
+    data = response.json()
+    assert data["checks"][check_key]["status"] == expected_check_status
+    assert data["checks"][check_key]["error"] == "check timed out"
+    assert data["status"] == "degraded"
+    assert response.status_code == (503 if is_critical else 200)
+
+
 @requires_ffmpeg
 @pytest.mark.api
 def test_readiness_with_ffmpeg_returns_200_ok(client: TestClient) -> None:
