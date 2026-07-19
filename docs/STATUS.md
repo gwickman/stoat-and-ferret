@@ -1,5 +1,46 @@
 # STATUS.md
 
+## v109 — Sonar COMPLEX-1 Refactors pt.2
+
+**Delivered:** 2026-07-19
+**PRs:** #849–#863 (15 merged)
+**Tests:** 3823 passed, 110 skipped (0 regressions vs. v108 baseline)
+
+### Highlights
+
+- **Theme 1 — api-router-and-validation-refactors:** Extracted effects-router variant-preserving helpers, automation-parameter processing helpers, split clip-type validation into per-type helpers, extracted upload-asset helpers, collapsed health-readiness 7-way timeout/check pattern, extracted waveform strip helpers, extracted scan-handler broadcast and stale-proxy helpers — BL-656, BL-664, BL-662, BL-663, BL-670, BL-673, BL-672 — PRs #849–#855
+- **Theme 2 — db-effects-and-signal-processing-refactors:** Consolidated migration helpers and error constants, extracted waveform result lifecycle helpers, implemented data-driven astats parsing — BL-657, BL-658, BL-674 — PRs #856–#858
+- **Theme 3 — named-constants-and-dedup-literals:** Named zoompan centering expressions, deduplicated marker-not-found literal, named migration-rollback event constant, named QC service FFmpeg constants, named TTS format-mismatch constant — BL-665, BL-671, BL-676, BL-677, BL-678 — PRs #859–#863
+- **Theme 4 — smoke-test-coverage-verification:** Verified smoke tests for effects registry (34 smoke tests) and health endpoint (11 smoke tests) — verification-only, no code changes needed
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| api-router-and-validation-refactors | BL-656, BL-664, BL-662, BL-663, BL-670, BL-673, BL-672 | #849–#855 | merged |
+| db-effects-and-signal-processing-refactors | BL-657, BL-658, BL-674 | #856–#858 | merged |
+| named-constants-and-dedup-literals | BL-665, BL-671, BL-676, BL-677, BL-678 | #859–#863 | merged |
+| smoke-test-coverage-verification | Feature 016, 017 | — | verified |
+
+### AC Status
+
+- 4 themes delivered; 17 total features (15 with PRs merged + 2 verification-only)
+- All features complete with 0 regressions
+- Continuation of Sonar COMPLEX-1 refactor initiative (pt.1 in v108)
+
+### Pre-Existing Issues
+
+- **CI format drift (not a v109 regression):** `ruff format --check` fails on `src/stoat_ferret/api/services/scan.py` from PR #855 onward; requires repo-wide `ruff format` follow-up (introduced by PR #855 itself, pre-existing baseline violation)
+- **Pre-existing failing test:** `tests/test_api/test_filesystem.py::test_list_directories_path_traversal` unchanged from baseline
+
+### Carry-Forwards
+
+None new. All v109 features fully discharged.
+
+### User Actions Required
+
+- Repo-wide `ruff format` to resolve scan.py formatting drift (post-merge housekeeping; P3)
+
 ## v107 — GUI/React Correctness, Simplification Cleanups & Async Event-Loop Hygiene
 
 **Delivered:** 2026-07-18
