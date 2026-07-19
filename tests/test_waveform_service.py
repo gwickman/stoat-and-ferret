@@ -16,6 +16,7 @@ from stoat_ferret.api.services.waveform import (
     WaveformService,
     _finalize_result,
     _get_or_create_pending,
+    _parse_astats_metrics,
     build_json_ffmpeg_args,
     build_png_ffmpeg_args,
     escape_path_for_amovie,
@@ -284,6 +285,55 @@ class TestParseAstatsOutput:
         raw = json.dumps({"frames": [{"tags": {}}]})
         samples = parse_astats_output(raw)
         assert samples == []
+
+
+# ---------------------------------------------------------------------------
+# _parse_astats_metrics (BL-674)
+# ---------------------------------------------------------------------------
+
+
+class TestParseAstatsMetrics:
+    """Tests for the data-driven per-frame metrics extraction helper."""
+
+    def test_extracts_all_configured_sections(self) -> None:
+        """Extracts Overall and per-channel metrics per the default config."""
+        tags = {
+            "lavfi.astats.Overall.Peak_level": "-6.0",
+            "lavfi.astats.Overall.RMS_level": "-12.0",
+            "lavfi.astats.1.Peak_level": "-6.5",
+            "lavfi.astats.1.RMS_level": "-12.5",
+            "lavfi.astats.2.Peak_level": "-7.0",
+            "lavfi.astats.2.RMS_level": "-13.0",
+        }
+        sample = _parse_astats_metrics(tags)
+        assert sample == {
+            "Peak_level": "-6.0",
+            "RMS_level": "-12.0",
+            "ch1_Peak_level": "-6.5",
+            "ch1_RMS_level": "-12.5",
+            "ch2_Peak_level": "-7.0",
+            "ch2_RMS_level": "-13.0",
+        }
+
+    def test_missing_tags_omitted(self) -> None:
+        """Tags absent from input produce no corresponding sample key."""
+        sample = _parse_astats_metrics({"lavfi.astats.Overall.Peak_level": "-1.0"})
+        assert sample == {"Peak_level": "-1.0"}
+
+    def test_empty_tags_returns_empty_dict(self) -> None:
+        """No matching tags yields an empty sample dict."""
+        assert _parse_astats_metrics({}) == {}
+
+    def test_custom_config_restricts_extraction(self) -> None:
+        """Passing a narrower config extracts only the configured metrics."""
+        tags = {
+            "lavfi.astats.Overall.Peak_level": "-6.0",
+            "lavfi.astats.Overall.RMS_level": "-12.0",
+        }
+        sample = _parse_astats_metrics(
+            tags, sections=(("Overall", ""),), metric_names=("Peak_level",)
+        )
+        assert sample == {"Peak_level": "-6.0"}
 
 
 # ---------------------------------------------------------------------------
