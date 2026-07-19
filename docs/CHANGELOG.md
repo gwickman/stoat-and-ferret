@@ -4,6 +4,57 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v109 — API/Router & Validation Refactors, DB/DSP Refactors, Named-Constant Dedup & Smoke-Test Verification (2026-07-19)
+
+4 themes, 17 features, PRs #849–#863.
+
+### Theme 1: API Router and Validation Refactors (7 features)
+
+Extracted helper functions from four API route handlers and two validation layers, collapsing inlined per-case logic into parameterized helpers and reducing Sonar S3776 cyclomatic complexity across the effects, clips, assets, and health-readiness handlers.
+
+- BL-656: Extracted `_resolve_effect_helper`, `_validate_params_helper`, `_flatten_automation_helper`, `_build_filter_helper` from four effects-router handlers; variant-preserving parameterization preserves per-handler thumbnail, preview, and error-list differences (PR #849)
+- BL-663: Split `ClipCreate.validate_clip_type_fields` into `_validate_file_clip`, `_validate_generator_clip`, `_validate_image_clip` private methods; dispatcher becomes a 3-arm if/elif/elif; added image-clip `timeline_end ≤ timeline_start` coverage test (PR #850)
+- BL-664: Extracted `_process_automation_parameter`, `_build_rust_keyframes`, `_validate_scalar_parameters` from `registry.validate_with_automation`; `_validate_scalar_parameters` deduplicated across `validate()` and `validate_with_automation()` (PR #851)
+- BL-669: Extracted `_check_dedup`, `_validate_upload_size`, `_sniff_content` from `upload_asset`; added `_ASSET_NOT_FOUND_DETAIL` constant consolidating 4 inline occurrences across asset handlers (PR #852)
+- BL-670: Extracted `_run_check` helper collapsing 7 identical `asyncio.wait_for`/`TimeoutError` blocks in the health-readiness endpoint; added `_CHECK_TIMEOUT_ERROR` constant and `_resolve_overall_status` helper; parametrized timeout test now covers all 7 checks (PR #853)
+- BL-673: Extracted strip helpers and centralized the ffmpeg-flag constant in the waveform module (PR #854)
+- BL-672: Extracted `_build_scan_progress_callback`, `_broadcast_scan_started`, `_broadcast_scan_completed` from `make_scan_handler`; extracted `_check_and_flag_stale_proxies`, `_queue_proxy_for_video` from `_auto_queue_proxies`; extracted `_scan_one_file` per-file try/except (PR #855)
+
+### Theme 2: DB, Effects, and Signal-Processing Refactors (3 features)
+
+Consolidated migration helpers, extracted waveform result lifecycle helpers, and replaced an 11-key if/else dispatch in the astats parser with a data-driven mapping table.
+
+- BL-657: Consolidated migration helpers and centralized error constants in the migrations module (PR #856)
+- BL-658: Extracted result lifecycle helpers from the waveform module (PR #857)
+- BL-674: Replaced 11-key if/else chain in `parse_astats_output` with a data-driven key→field mapping table; eliminates repeated pattern (PR #858)
+
+### Theme 3: Named Constants and Dedup Literals (5 features)
+
+Replaced 5 sets of duplicated string/expression literals with named module-level constants, making each value single-source-of-truth.
+
+- BL-665: Named zoompan centering expressions — replaced duplicated inline expressions with `_ZOOMPAN_CENTER_X` and `_ZOOMPAN_CENTER_Y` constants (PR #859)
+- BL-671: Named marker-not-found error literal — `_MARKER_NOT_FOUND_MSG` constant replaces duplicate raise strings (PR #860)
+- BL-676: Named migration-rollback event constant — `_MIGRATION_ROLLBACK_EVENT` replaces inline literal in migration service (PR #861)
+- BL-677: Named loudnorm and FFmpeg null-sink constants — `_LOUDNORM_FILTER`, `_FFMPEG_NULL_SINK` replace duplicated inline literals in QC module (PR #862)
+- BL-678: Named TTS format-mismatch message constant — `_TTS_FORMAT_MISMATCH_MSG` replaces duplicated inline string in TTS module (PR #863)
+
+### Theme 4: Smoke-Test Coverage Verification (2 features)
+
+Verified existing smoke-test coverage for the effects registry and the health endpoint; no code changes required.
+
+- Verify-001: Confirmed all 40+ effects in the registry have at least one non-skipped smoke test entry covering core functionality (verification only, no code changes)
+- Verify-002: Confirmed health endpoint smoke tests pass end-to-end via the live API stack (verification only, no code changes)
+
+### PRs
+
+#849, #850, #851, #852, #853, #854, #855, #856, #857, #858, #859, #860, #861, #862, #863
+
+### Resolved
+
+BL-656 (effects-router variant-preserving helper extraction), BL-663 (clip-type validation per-type split), BL-664 (automation-parameter processing extraction), BL-669 (upload-asset helper extraction + error literal consolidation), BL-670 (health-readiness timeout/check pattern collapse), BL-673 (waveform strip helpers + ffmpeg-flag constant), BL-672 (scan-handler broadcast and stale-proxy helpers), BL-657 (migration helpers consolidation), BL-658 (waveform result lifecycle helpers), BL-674 (data-driven astats parsing), BL-665 (zoompan centering expression constants), BL-671 (marker-not-found literal dedup), BL-676 (migration-rollback event constant), BL-677 (loudnorm and ffmpeg null-sink constants), BL-678 (TTS format-mismatch message constant)
+
+---
+
 ## v108 — Worker Hotspot Deduplication & Render Service Decomposition & Security Correctness Residuals (2026-07-18)
 
 4 themes, 10 features, 39 ACs, PRs #840–#847.
