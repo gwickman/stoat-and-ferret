@@ -40,6 +40,8 @@ logger = structlog.get_logger(__name__)
 # (FR-002 AC) cites >=3.37 as a conservative floor, so match that threshold.
 _VACUUM_INTO_MIN_VERSION = (3, 37, 0)
 
+_EVENT_MIGRATION_ROLLBACK = "deployment.migration_rollback"
+
 
 def _parse_sqlite_version(version: str) -> tuple[int, int, int]:
     """Parse an ``sqlite3.sqlite_version`` string into a comparable tuple."""
@@ -284,7 +286,7 @@ class MigrationService:
             duration_ms = (time.perf_counter() - start) * 1000.0
             stoat_migration_duration_seconds.labels(result="failure").observe(duration_ms / 1000.0)
             logger.warning(
-                "deployment.migration_rollback",
+                _EVENT_MIGRATION_ROLLBACK,
                 reason="backup_failed",
                 error=str(exc),
                 from_revision=from_revision,
@@ -306,7 +308,7 @@ class MigrationService:
             duration_ms = (time.perf_counter() - start) * 1000.0
             stoat_migration_duration_seconds.labels(result="failure").observe(duration_ms / 1000.0)
             logger.warning(
-                "deployment.migration_rollback",
+                _EVENT_MIGRATION_ROLLBACK,
                 reason="upgrade_failed",
                 error=str(exc),
                 from_revision=from_revision,
@@ -381,7 +383,7 @@ class MigrationService:
         except Exception as exc:
             duration_ms = (time.perf_counter() - start) * 1000.0
             logger.warning(
-                "deployment.migration_rollback",
+                _EVENT_MIGRATION_ROLLBACK,
                 reason="downgrade_failed",
                 error=str(exc),
                 from_revision=from_revision,
@@ -402,7 +404,7 @@ class MigrationService:
 
         duration_ms = (time.perf_counter() - start) * 1000.0
         logger.info(
-            "deployment.migration_rollback",
+            _EVENT_MIGRATION_ROLLBACK,
             reason="downgrade_success",
             from_revision=from_revision,
             to_revision=to_revision,
