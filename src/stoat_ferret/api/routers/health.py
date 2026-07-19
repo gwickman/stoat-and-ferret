@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import time
+from collections.abc import Coroutine
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,46 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 # Cache usage threshold for degraded status (90%)
 _CACHE_DEGRADED_THRESHOLD = 90.0
+
+# Error literal used by _run_check for every check that exceeds its timeout.
+_CHECK_TIMEOUT_ERROR = "check timed out"
+
+
+async def _run_check(
+    check_coro: Coroutine[Any, Any, dict[str, Any]],
+    *,
+    timeout_status: str = "error",
+) -> dict[str, Any]:
+    """Run a readiness check coroutine with a 5-second timeout.
+
+    Args:
+        check_coro: The check coroutine to await.
+        timeout_status: The "status" value to report if the check times out.
+
+    Returns:
+        The check's result dict, or a timeout error dict if it exceeded the timeout.
+    """
+    try:
+        return await asyncio.wait_for(check_coro, timeout=5.0)
+    except asyncio.TimeoutError:
+        return {"status": timeout_status, "error": _CHECK_TIMEOUT_ERROR}
+
+
+def _resolve_overall_status(critical_healthy: bool, any_degraded: bool) -> tuple[str, int]:
+    """Resolve the overall readiness status and HTTP status code.
+
+    Args:
+        critical_healthy: Whether all critical checks passed.
+        any_degraded: Whether any non-critical check reported non-"ok" status.
+
+    Returns:
+        Tuple of (status string, HTTP status code).
+    """
+    if not critical_healthy:
+        return "degraded", status.HTTP_503_SERVICE_UNAVAILABLE
+    if any_degraded:
+        return "degraded", status.HTTP_200_OK
+    return "ok", status.HTTP_200_OK
 
 
 @router.get("/live")
@@ -78,86 +119,49 @@ async def readiness(request: Request) -> JSONResponse:
     any_degraded = False
 
     # Database check (critical)
-    try:
-        db_check = await asyncio.wait_for(_check_database(request), timeout=5.0)
-    except asyncio.TimeoutError:
-        db_check = {"status": "error", "error": "check timed out"}
-        critical_healthy = False
+    db_check = await _run_check(_check_database(request))
     checks["database"] = db_check
     if db_check["status"] != "ok":
         critical_healthy = False
 
     # Rust core check (critical)
-    try:
-        rust_check = await asyncio.wait_for(_check_rust_core(), timeout=5.0)
-    except asyncio.TimeoutError:
-        rust_check = {"status": "error", "error": "check timed out"}
-        critical_healthy = False
+    rust_check = await _run_check(_check_rust_core())
     checks["rust_core"] = rust_check
     if rust_check["status"] != "ok":
         critical_healthy = False
 
     # Filesystem check (critical)
-    try:
-        fs_check = await asyncio.wait_for(_check_filesystem(), timeout=5.0)
-    except asyncio.TimeoutError:
-        fs_check = {"status": "error", "error": "check timed out"}
-        critical_healthy = False
+    fs_check = await _run_check(_check_filesystem())
     checks["filesystem"] = fs_check
     if fs_check["status"] != "ok":
         critical_healthy = False
 
     # FFmpeg check (non-critical — degraded only)
-    try:
-        ffmpeg_check = await asyncio.wait_for(_check_ffmpeg(), timeout=5.0)
-    except asyncio.TimeoutError:
-        ffmpeg_check = {"status": "error", "error": "check timed out"}
-        any_degraded = True
+    ffmpeg_check = await _run_check(_check_ffmpeg())
     checks["ffmpeg"] = ffmpeg_check
     if ffmpeg_check["status"] != "ok":
         any_degraded = True
 
     # Preview check (non-critical — degraded only)
-    try:
-        preview_check = await asyncio.wait_for(_check_preview(request), timeout=5.0)
-    except asyncio.TimeoutError:
-        preview_check = {"status": "degraded", "error": "check timed out"}
-        any_degraded = True
+    preview_check = await _run_check(_check_preview(request), timeout_status="degraded")
     checks["preview"] = preview_check
     if preview_check["status"] != "ok":
         any_degraded = True
 
     # Proxy check (non-critical — degraded only)
-    try:
-        proxy_check = await asyncio.wait_for(_check_proxy(request), timeout=5.0)
-    except asyncio.TimeoutError:
-        proxy_check = {"status": "degraded", "error": "check timed out"}
-        any_degraded = True
+    proxy_check = await _run_check(_check_proxy(request), timeout_status="degraded")
     checks["proxy"] = proxy_check
     if proxy_check["status"] != "ok":
         any_degraded = True
 
     # Render check (non-critical — degraded only, per LRN-136)
-    try:
-        render_check = await asyncio.wait_for(_check_render(request), timeout=5.0)
-    except asyncio.TimeoutError:
-        render_check = {"status": "degraded", "error": "check timed out"}
-        any_degraded = True
+    render_check = await _run_check(_check_render(request), timeout_status="degraded")
     checks["render"] = render_check
     if render_check["status"] != "ok":
         any_degraded = True
 
     is_ready = critical_healthy
-
-    if not critical_healthy:
-        overall = "degraded"
-        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    elif any_degraded:
-        overall = "degraded"
-        status_code = status.HTTP_200_OK
-    else:
-        overall = "ok"
-        status_code = status.HTTP_200_OK
+    overall, status_code = _resolve_overall_status(critical_healthy, any_degraded)
 
     # Extract version info from check results.
     # sqlite_version is the SQLite runtime version (e.g., "3.50.4") — distinct
