@@ -132,9 +132,7 @@ def _resolve_safe_path(assets_dir: Path, filename: str) -> Path:
 # ---------------------------------------------------------------------------
 
 
-async def _check_dedup(
-    repo: AsyncSQLiteAssetRepository, content_hash: str
-) -> AssetRead | None:
+async def _check_dedup(repo: AsyncSQLiteAssetRepository, content_hash: str) -> AssetRead | None:
     """Check for an existing asset with the given content hash.
 
     Args:
