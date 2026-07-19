@@ -5,19 +5,24 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 
 from stoat_ferret.api.services.thumbnail import (
+    _FFMPEG_FRAMES_V_FLAG,
     MAX_COLUMNS,
     ThumbnailService,
+    _get_existing_ready_strip,
+    _persist_strip_status,
     build_strip_ffmpeg_args,
     calculate_strip_dimensions,
     extract_frame_args,
 )
 from stoat_ferret.db.models import ThumbnailStrip, ThumbnailStripStatus
+from stoat_ferret.db.thumbnail_strip_repository import InMemoryThumbnailStripRepository
 from stoat_ferret.ffmpeg.async_executor import FakeAsyncFFmpegExecutor
 from stoat_ferret.ffmpeg.executor import FakeFFmpegExecutor
 
@@ -570,6 +575,181 @@ class TestConstructorBackwardsCompatibility:
         service = ThumbnailService(fake, tmp_path)
         result = service.generate("/videos/test.mp4", "vid1")
         assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Extracted helpers (BL-673)
+# ---------------------------------------------------------------------------
+
+
+def _make_strip(
+    video_id: str = "vid1",
+    status: ThumbnailStripStatus = ThumbnailStripStatus.PENDING,
+) -> ThumbnailStrip:
+    return ThumbnailStrip(
+        id=ThumbnailStrip.new_id(),
+        video_id=video_id,
+        status=status,
+        created_at=datetime.now(timezone.utc),
+    )
+
+
+class TestFfmpegFramesVFlagConstant:
+    """Tests for the centralized FFmpeg frames flag constant."""
+
+    def test_used_in_extract_frame_args(self) -> None:
+        """extract_frame_args uses the shared constant value."""
+        args = extract_frame_args("/videos/test.mp4", "/out.jpg")
+        assert _FFMPEG_FRAMES_V_FLAG in args
+
+    def test_used_in_build_strip_ffmpeg_args(self) -> None:
+        """build_strip_ffmpeg_args uses the shared constant value."""
+        args = build_strip_ffmpeg_args(
+            "/videos/test.mp4",
+            "/out.jpg",
+            interval=5.0,
+            frame_width=160,
+            frame_height=90,
+            columns=10,
+            rows=2,
+        )
+        assert _FFMPEG_FRAMES_V_FLAG in args
+
+    def test_flag_value(self) -> None:
+        """The constant holds the expected FFmpeg flag string."""
+        assert _FFMPEG_FRAMES_V_FLAG == "-frames:v"
+
+
+class TestGetExistingReadyStrip:
+    """Tests for the _get_existing_ready_strip helper (FR-002)."""
+
+    async def test_no_repository_no_existing_returns_none(self) -> None:
+        """Returns None when there's no repository and nothing in memory."""
+        result = await _get_existing_ready_strip("vid1", None, {})
+        assert result is None
+
+    async def test_no_repository_pending_in_memory_returns_none(self) -> None:
+        """A PENDING in-memory strip is not considered existing/ready."""
+        strips = {"vid1": _make_strip(status=ThumbnailStripStatus.PENDING)}
+        result = await _get_existing_ready_strip("vid1", None, strips)
+        assert result is None
+
+    async def test_no_repository_ready_in_memory_returned(self) -> None:
+        """A READY in-memory strip is returned."""
+        strip = _make_strip(status=ThumbnailStripStatus.READY)
+        result = await _get_existing_ready_strip("vid1", None, {"vid1": strip})
+        assert result is strip
+
+    async def test_no_repository_generating_in_memory_returned(self) -> None:
+        """A GENERATING in-memory strip is returned."""
+        strip = _make_strip(status=ThumbnailStripStatus.GENERATING)
+        result = await _get_existing_ready_strip("vid1", None, {"vid1": strip})
+        assert result is strip
+
+    async def test_repository_ready_returned(self) -> None:
+        """A READY strip from the repository is returned, ignoring memory dict."""
+        repo = InMemoryThumbnailStripRepository()
+        strip = _make_strip(status=ThumbnailStripStatus.PENDING)
+        await repo.add(strip)
+        await repo.update_status(strip.id, ThumbnailStripStatus.GENERATING)
+        await repo.update_status(strip.id, ThumbnailStripStatus.READY)
+
+        result = await _get_existing_ready_strip("vid1", repo, {})
+
+        assert result is not None
+        assert result.status == ThumbnailStripStatus.READY
+
+    async def test_repository_pending_returns_none(self) -> None:
+        """A PENDING strip from the repository is not returned."""
+        repo = InMemoryThumbnailStripRepository()
+        strip = _make_strip(status=ThumbnailStripStatus.PENDING)
+        await repo.add(strip)
+
+        result = await _get_existing_ready_strip("vid1", repo, {})
+
+        assert result is None
+
+    async def test_repository_takes_precedence_over_memory(self) -> None:
+        """When a repository is configured, the in-memory dict is not consulted."""
+        repo = InMemoryThumbnailStripRepository()
+        stray_memory_strip = _make_strip(status=ThumbnailStripStatus.READY)
+
+        result = await _get_existing_ready_strip(
+            "vid1", repo, {"vid1": stray_memory_strip}
+        )
+
+        assert result is None
+
+
+class TestPersistStripStatus:
+    """Tests for the _persist_strip_status helper (FR-003)."""
+
+    async def test_updates_strip_status_in_place(self) -> None:
+        """The passed-in strip object is mutated with the new status."""
+        strip = _make_strip(status=ThumbnailStripStatus.PENDING)
+
+        await _persist_strip_status(strip, ThumbnailStripStatus.GENERATING, None)
+
+        assert strip.status == ThumbnailStripStatus.GENERATING
+
+    async def test_updates_optional_fields_in_place(self) -> None:
+        """file_path, frame_count, and rows are applied when provided."""
+        strip = _make_strip(status=ThumbnailStripStatus.GENERATING)
+
+        await _persist_strip_status(
+            strip,
+            ThumbnailStripStatus.READY,
+            None,
+            file_path="/strips/out.jpg",
+            frame_count=12,
+            rows=2,
+        )
+
+        assert strip.status == ThumbnailStripStatus.READY
+        assert strip.file_path == "/strips/out.jpg"
+        assert strip.frame_count == 12
+        assert strip.rows == 2
+
+    async def test_no_repository_does_not_raise(self) -> None:
+        """With no repository configured, only in-memory mutation happens."""
+        strip = _make_strip(status=ThumbnailStripStatus.PENDING)
+        await _persist_strip_status(strip, ThumbnailStripStatus.GENERATING, None)
+        assert strip.status == ThumbnailStripStatus.GENERATING
+
+    async def test_persists_to_repository(self) -> None:
+        """When a repository is configured, its update_status is called."""
+        repo = InMemoryThumbnailStripRepository()
+        strip = _make_strip(status=ThumbnailStripStatus.PENDING)
+        await repo.add(strip)
+
+        await _persist_strip_status(strip, ThumbnailStripStatus.GENERATING, repo)
+
+        stored = await repo.get(strip.id)
+        assert stored is not None
+        assert stored.status == ThumbnailStripStatus.GENERATING
+
+    async def test_persists_optional_fields_to_repository(self) -> None:
+        """Optional fields are forwarded to the repository update_status call."""
+        repo = InMemoryThumbnailStripRepository()
+        strip = _make_strip(status=ThumbnailStripStatus.PENDING)
+        await repo.add(strip)
+        await repo.update_status(strip.id, ThumbnailStripStatus.GENERATING)
+
+        await _persist_strip_status(
+            strip,
+            ThumbnailStripStatus.READY,
+            repo,
+            file_path="/strips/out.jpg",
+            frame_count=12,
+            rows=2,
+        )
+
+        stored = await repo.get(strip.id)
+        assert stored is not None
+        assert stored.status == ThumbnailStripStatus.READY
+        assert stored.file_path == "/strips/out.jpg"
+        assert stored.frame_count == 12
+        assert stored.rows == 2
 
 
 # ---------------------------------------------------------------------------
