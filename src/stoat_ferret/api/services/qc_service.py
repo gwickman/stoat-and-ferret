@@ -50,6 +50,12 @@ ALL_CHECK_IDS: list[str] = [
 # Default result for a missing or failed check (FFmpeg unavailable).
 _NULL_CHECK: dict[str, Any] = {"measured": None, "target": None, "pass": False, "units": ""}
 
+# Measurement-pass loudnorm filter (JSON stats only, no normalization applied).
+_LOUDNORM_MEASURE_FILTER = "loudnorm=I=-23:TP=-1:LRA=11:print_format=json"
+
+# FFmpeg args that discard output while still running filters/decoders for analysis.
+_FFMPEG_NULL_SINK: tuple[str, str, str] = ("-f", "null", "/dev/null")
+
 # AC-MASTER-2: loudness compliance window is ±0.5 LU of target (bidirectional).
 LOUDNESS_TOLERANCE_LU = 0.5
 
@@ -272,10 +278,8 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "loudnorm=I=-23:TP=-1:LRA=11:print_format=json",
-            "-f",
-            "null",
-            "/dev/null",
+            _LOUDNORM_MEASURE_FILTER,
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
@@ -304,10 +308,8 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "loudnorm=I=-23:TP=-1:LRA=11:print_format=json",
-            "-f",
-            "null",
-            "/dev/null",
+            _LOUDNORM_MEASURE_FILTER,
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
@@ -335,9 +337,7 @@ class QCService:
             artifact_path,
             "-af",
             "astats=metadata=1",
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
@@ -366,9 +366,7 @@ class QCService:
             artifact_path,
             "-af",
             "silencedetect=noise=-50dB:duration=2",
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
@@ -392,9 +390,7 @@ class QCService:
             "1",
             "-aframes",
             "1",
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         measured: float | None = 0.0 if rc == 0 else None
 
@@ -417,9 +413,7 @@ class QCService:
             artifact_path,
             "-af",
             "aspectralstats,ametadata=mode=print",
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             if target is None:
@@ -451,9 +445,7 @@ class QCService:
             artifact_path,
             "-af",
             "astats=metadata=1",
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
@@ -481,10 +473,8 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "loudnorm=I=-23:TP=-1:LRA=11:print_format=json",
-            "-f",
-            "null",
-            "/dev/null",
+            _LOUDNORM_MEASURE_FILTER,
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
@@ -539,9 +529,7 @@ class QCService:
             "error",
             "-i",
             artifact_path,
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         measured = 0.0 if rc == 0 else 1.0
 
@@ -601,9 +589,7 @@ class QCService:
             artifact_path,
             "-af",
             "astats=measure_overall=Correlation",
-            "-f",
-            "null",
-            "/dev/null",
+            *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
