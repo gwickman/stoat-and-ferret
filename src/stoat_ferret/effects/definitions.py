@@ -2577,9 +2577,13 @@ NOISE_GENERATOR = EffectDefinition(
 )
 
 
+_ZOOMPAN_CENTER_X_EXPR = "iw/2-(iw/zoom/2)"
+_ZOOMPAN_CENTER_Y_EXPR = "ih/2-(ih/zoom/2)"
+
+
 def _zoompan_preview() -> str:
     """Generate a filter preview for zoompan with default parameters."""
-    b = ZoompanBuilder("1.5", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)", 125, 1920, 1080, 30)
+    b = ZoompanBuilder("1.5", _ZOOMPAN_CENTER_X_EXPR, _ZOOMPAN_CENTER_Y_EXPR, 125, 1920, 1080, 30)
     return str(b.build())
 
 
@@ -2594,8 +2598,8 @@ def _build_zoompan(parameters: dict[str, Any]) -> str:
         FFmpeg zoompan+fps+settb filter chain string.
     """
     z_expr = str(parameters.get("z_expr", "1.5"))
-    x_expr = str(parameters.get("x_expr", "iw/2-(iw/zoom/2)"))
-    y_expr = str(parameters.get("y_expr", "ih/2-(ih/zoom/2)"))
+    x_expr = str(parameters.get("x_expr", _ZOOMPAN_CENTER_X_EXPR))
+    y_expr = str(parameters.get("y_expr", _ZOOMPAN_CENTER_Y_EXPR))
     d = int(parameters.get("d", 125))
     width = int(parameters.get("width", 1920))
     height = int(parameters.get("height", 1080))
@@ -2622,12 +2626,12 @@ ZOOMPAN = EffectDefinition(
             },
             "x_expr": {
                 "type": "string",
-                "default": "iw/2-(iw/zoom/2)",
+                "default": _ZOOMPAN_CENTER_X_EXPR,
                 "description": "X-pan expression. No apostrophes.",
             },
             "y_expr": {
                 "type": "string",
-                "default": "ih/2-(ih/zoom/2)",
+                "default": _ZOOMPAN_CENTER_Y_EXPR,
                 "description": "Y-pan expression. No apostrophes.",
             },
             "d": {
@@ -2664,8 +2668,12 @@ ZOOMPAN = EffectDefinition(
             "or 'if(lte(zoom,1.5),zoom+0.002,zoom)' for animated zoom). "
             "No apostrophes allowed."
         ),
-        "x_expr": "X-pan expression (e.g. 'iw/2-(iw/zoom/2)' to centre-pan). No apostrophes.",
-        "y_expr": "Y-pan expression (e.g. 'ih/2-(ih/zoom/2)' to centre-pan). No apostrophes.",
+        "x_expr": (
+            f"X-pan expression (e.g. '{_ZOOMPAN_CENTER_X_EXPR}' to centre-pan). No apostrophes."
+        ),
+        "y_expr": (
+            f"Y-pan expression (e.g. '{_ZOOMPAN_CENTER_Y_EXPR}' to centre-pan). No apostrophes."
+        ),
         "d": "Duration in frames. At 30 fps, 125 frames = ~4 seconds.",
         "width": "Canvas width in pixels. Default 1920 for HD.",
         "height": "Canvas height in pixels. Default 1080 for HD.",
