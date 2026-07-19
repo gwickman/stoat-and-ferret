@@ -19,7 +19,7 @@ from stoat_ferret.api.services.proxy_service import PROXY_JOB_TYPE
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.api.websocket.events import EventType, build_event
 from stoat_ferret.db.async_repository import AsyncVideoRepository
-from stoat_ferret.db.models import ProxyStatus, Video
+from stoat_ferret.db.models import ProxyFile, ProxyStatus, Video
 from stoat_ferret.ffmpeg.probe import ffprobe_video
 
 if TYPE_CHECKING:
@@ -59,6 +59,90 @@ def validate_scan_path(path: str, allowed_roots: list[str]) -> str | None:
 
 
 SCAN_JOB_TYPE = "scan"
+
+
+def _build_scan_progress_callback(
+    queue: AsyncJobQueue | None,
+    job_id: Any,
+    ws_manager: ConnectionManager | None,
+) -> Callable[[float], Awaitable[None]] | None:
+    """Build the progress callback used to report scan progress.
+
+    Args:
+        queue: Optional job queue for progress reporting.
+        job_id: Optional job identifier, present when running as a queued job.
+        ws_manager: Optional WebSocket manager for broadcasting progress.
+
+    Returns:
+        An async callback invoked with progress 0.0-1.0, or None if neither
+        a queue+job_id nor a ws_manager is available.
+    """
+    if not ((queue and job_id) or ws_manager):
+        return None
+
+    async def progress_callback(value: float) -> None:
+        if queue and job_id:
+            queue.set_progress(job_id, value)
+        if ws_manager and job_id:
+            await ws_manager.broadcast(
+                build_event(
+                    EventType.JOB_PROGRESS,
+                    {"job_id": str(job_id), "progress": value, "status": "running"},
+                )
+            )
+
+    return progress_callback
+
+
+async def _broadcast_scan_started(ws_manager: ConnectionManager | None, scan_path: str) -> None:
+    """Broadcast a SCAN_STARTED event, if a WebSocket manager is configured.
+
+    Args:
+        ws_manager: Optional WebSocket manager for broadcasting scan events.
+        scan_path: The path being scanned, as submitted by the caller.
+    """
+    if ws_manager:
+        logger.info("scan_broadcast_started", path=scan_path)
+        await ws_manager.broadcast(build_event(EventType.SCAN_STARTED, {"path": scan_path}))
+
+
+async def _broadcast_scan_completed(
+    ws_manager: ConnectionManager | None,
+    scan_path: str,
+    result: ScanResponse,
+    job_id: Any,
+) -> None:
+    """Broadcast scan completion, if a WebSocket manager is configured.
+
+    Broadcasts SCAN_COMPLETED first, then the terminal JOB_PROGRESS(completed)
+    event last. When rapid WebSocket messages are batched by React, only the
+    final setLastMessage survives. useJobProgress filters for "job_progress",
+    so it must be the last message in the burst.
+
+    Args:
+        ws_manager: Optional WebSocket manager for broadcasting scan events.
+        scan_path: The path that was scanned, as submitted by the caller.
+        result: The scan result.
+        job_id: Optional job identifier, present when running as a queued job.
+    """
+    if ws_manager:
+        logger.info("scan_broadcast_completed", path=scan_path)
+        await ws_manager.broadcast(
+            build_event(
+                EventType.SCAN_COMPLETED,
+                {"path": scan_path, "video_count": result.new + result.updated},
+            )
+        )
+
+    # Scan jobs live only in the in-memory AsyncJobQueue (no DB table), so
+    # renaming the terminal value from "complete" to "completed" needs no migration.
+    if ws_manager and job_id:
+        await ws_manager.broadcast(
+            build_event(
+                EventType.JOB_PROGRESS,
+                {"job_id": str(job_id), "progress": 1.0, "status": "completed"},
+            )
+        )
 
 
 def make_scan_handler(
@@ -107,26 +191,9 @@ def make_scan_handler(
 
         logger.info("scan_handler_started", job_id=str(job_id), path=scan_path)
 
-        # Build progress callback if queue/job_id or ws_manager are available
-        progress_callback: Callable[[float], Awaitable[None]] | None = None
-        if (queue and job_id) or ws_manager:
+        progress_callback = _build_scan_progress_callback(queue, job_id, ws_manager)
 
-            async def progress_callback(value: float) -> None:
-                if queue and job_id:
-                    queue.set_progress(job_id, value)
-                if ws_manager and job_id:
-                    await ws_manager.broadcast(
-                        build_event(
-                            EventType.JOB_PROGRESS,
-                            {"job_id": str(job_id), "progress": value, "status": "running"},
-                        )
-                    )
-
-        if ws_manager:
-            logger.info("scan_broadcast_started", path=submitted_path)
-            await ws_manager.broadcast(
-                build_event(EventType.SCAN_STARTED, {"path": submitted_path})
-            )
+        await _broadcast_scan_started(ws_manager, submitted_path)
 
         video_ids: list[str] = []
         result = await scan_directory(
@@ -149,32 +216,82 @@ def make_scan_handler(
                 video_ids=video_ids,
             )
 
-        # Broadcast SCAN_COMPLETED first, then JOB_PROGRESS(complete) last.
-        # When rapid WebSocket messages are batched by React, only the final
-        # setLastMessage survives.  useJobProgress filters for "job_progress",
-        # so it must be the last message in the burst.
-        if ws_manager:
-            logger.info("scan_broadcast_completed", path=submitted_path)
-            await ws_manager.broadcast(
-                build_event(
-                    EventType.SCAN_COMPLETED,
-                    {"path": submitted_path, "video_count": result.new + result.updated},
-                )
-            )
-
-        # Scan jobs live only in the in-memory AsyncJobQueue (no DB table), so
-        # renaming the terminal value from "complete" to "completed" needs no migration.
-        if ws_manager and job_id:
-            await ws_manager.broadcast(
-                build_event(
-                    EventType.JOB_PROGRESS,
-                    {"job_id": str(job_id), "progress": 1.0, "status": "completed"},
-                )
-            )
+        await _broadcast_scan_completed(ws_manager, submitted_path, result, job_id)
 
         return result.model_dump()
 
     return handler
+
+
+async def _check_and_flag_stale_proxies(
+    proxy_service: ProxyService, video: Video, existing_proxies: list[ProxyFile]
+) -> int:
+    """Check a video's existing READY proxies for staleness and flag any found.
+
+    Args:
+        proxy_service: Proxy service used to compare source checksums.
+        video: The video whose proxies are being checked.
+        existing_proxies: Proxies currently associated with the video.
+
+    Returns:
+        The number of proxies detected as stale.
+    """
+    stale_count = 0
+    for existing_proxy in existing_proxies:
+        if existing_proxy.status == ProxyStatus.READY:
+            try:
+                was_stale = await proxy_service.check_stale(existing_proxy.id, video.path)
+                if was_stale:
+                    stale_count += 1
+                    logger.info(
+                        "proxy_auto_queue_stale_detected",
+                        video_id=video.id,
+                        proxy_id=existing_proxy.id,
+                    )
+            except Exception:
+                logger.warning(
+                    "proxy_auto_queue_stale_check_failed",
+                    video_id=video.id,
+                    proxy_id=existing_proxy.id,
+                    exc_info=True,
+                )
+    return stale_count
+
+
+async def _queue_proxy_for_video(queue: AsyncJobQueue, video: Video) -> bool:
+    """Submit a proxy-generation job for a video.
+
+    Args:
+        queue: Job queue for submitting the proxy generation job.
+        video: The video to generate a proxy for.
+
+    Returns:
+        True if the job was enqueued successfully, False otherwise.
+    """
+    try:
+        await queue.submit(
+            PROXY_JOB_TYPE,
+            {
+                "video_id": video.id,
+                "source_path": video.path,
+                "source_width": video.width,
+                "source_height": video.height,
+                "duration_us": int(video.duration_seconds * 1_000_000),
+            },
+        )
+        logger.info(
+            "proxy_auto_queue_started",
+            video_id=video.id,
+            filename=video.filename,
+        )
+        return True
+    except Exception:
+        logger.warning(
+            "proxy_auto_queue_failed",
+            video_id=video.id,
+            exc_info=True,
+        )
+        return False
 
 
 async def _auto_queue_proxies(
@@ -233,50 +350,11 @@ async def _auto_queue_proxies(
 
         # Check for stale proxies on existing videos
         existing_proxies = await proxy_service.list_by_video(video.id)
-        for existing_proxy in existing_proxies:
-            if existing_proxy.status == ProxyStatus.READY:
-                try:
-                    was_stale = await proxy_service.check_stale(existing_proxy.id, video.path)
-                    if was_stale:
-                        stale_count += 1
-                        logger.info(
-                            "proxy_auto_queue_stale_detected",
-                            video_id=video.id,
-                            proxy_id=existing_proxy.id,
-                        )
-                except Exception:
-                    logger.warning(
-                        "proxy_auto_queue_stale_check_failed",
-                        video_id=video.id,
-                        proxy_id=existing_proxy.id,
-                        exc_info=True,
-                    )
+        stale_count += await _check_and_flag_stale_proxies(proxy_service, video, existing_proxies)
 
         # Queue proxy generation for videos without any proxy
-        if not existing_proxies:
-            try:
-                await queue.submit(
-                    PROXY_JOB_TYPE,
-                    {
-                        "video_id": video.id,
-                        "source_path": video.path,
-                        "source_width": video.width,
-                        "source_height": video.height,
-                        "duration_us": int(video.duration_seconds * 1_000_000),
-                    },
-                )
-                queued_count += 1
-                logger.info(
-                    "proxy_auto_queue_started",
-                    video_id=video.id,
-                    filename=video.filename,
-                )
-            except Exception:
-                logger.warning(
-                    "proxy_auto_queue_failed",
-                    video_id=video.id,
-                    exc_info=True,
-                )
+        if not existing_proxies and await _queue_proxy_for_video(queue, video):
+            queued_count += 1
 
     logger.info(
         "proxy_auto_queue_complete",
@@ -284,6 +362,78 @@ async def _auto_queue_proxies(
         queued=queued_count,
         stale_detected=stale_count,
     )
+
+
+async def _scan_one_file(
+    file_path: Path,
+    repository: AsyncVideoRepository,
+    thumbnail_service: ThumbnailService | None,
+    video_ids_out: list[str] | None,
+) -> tuple[str | None, ScanError | None]:
+    """Probe a single video file and add or update it in the repository.
+
+    Args:
+        file_path: Path to the video file to probe.
+        repository: Video repository for storing results.
+        thumbnail_service: Optional thumbnail service for generating thumbnails.
+        video_ids_out: Optional list to collect the processed video's ID.
+
+    Returns:
+        A tuple of (outcome, error). outcome is "new" or "updated" on success,
+        None on failure; error is a ScanError on failure, None on success.
+    """
+    str_path = str(file_path.absolute())
+    try:
+        # Check if already exists
+        existing = await repository.get_by_path(str_path)
+
+        # Probe video metadata
+        metadata = await ffprobe_video(str_path)
+
+        video_id = existing.id if existing else Video.new_id()
+
+        if video_ids_out is not None:
+            video_ids_out.append(video_id)
+
+        # Generate thumbnail if service is available
+        thumbnail_path: str | None = None
+        if thumbnail_service is not None:
+            thumbnail_path = await asyncio.to_thread(
+                thumbnail_service.generate, str_path, video_id
+            )
+
+        video = Video(
+            id=video_id,
+            path=str_path,
+            filename=file_path.name,
+            duration_frames=metadata.duration_frames,
+            frame_rate_numerator=metadata.frame_rate_numerator,
+            frame_rate_denominator=metadata.frame_rate_denominator,
+            width=metadata.width,
+            height=metadata.height,
+            video_codec=metadata.video_codec,
+            audio_codec=metadata.audio_codec,
+            file_size=file_path.stat().st_size,
+            thumbnail_path=thumbnail_path,
+            created_at=existing.created_at if existing else datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            subtitle_count=metadata.subtitle_count,
+            data_count=metadata.data_count,
+            subtitle_streams=metadata.subtitle_streams,
+        )
+
+        if existing:
+            await repository.update(video)
+            logger.info("scan_video_updated", video_id=str(video_id), file=file_path.name)
+            return "updated", None
+
+        await repository.add(video)
+        logger.info("scan_video_added", video_id=str(video_id), file=file_path.name)
+        return "new", None
+
+    except Exception as e:
+        logger.error("scan_file_error", file=str_path, error=str(e), exc_info=True)
+        return None, ScanError(path=str_path, error=str(e))
 
 
 async def scan_directory(
@@ -344,65 +494,22 @@ async def scan_directory(
             break
 
         processed += 1
-        str_path = str(file_path.absolute())
         logger.debug(
             "scan_probing_file",
-            file=str_path,
+            file=str(file_path.absolute()),
             index=processed,
             total=total_files,
         )
 
-        try:
-            # Check if already exists
-            existing = await repository.get_by_path(str_path)
-
-            # Probe video metadata
-            metadata = await ffprobe_video(str_path)
-
-            video_id = existing.id if existing else Video.new_id()
-
-            if video_ids_out is not None:
-                video_ids_out.append(video_id)
-
-            # Generate thumbnail if service is available
-            thumbnail_path: str | None = None
-            if thumbnail_service is not None:
-                thumbnail_path = await asyncio.to_thread(
-                    thumbnail_service.generate, str_path, video_id
-                )
-
-            video = Video(
-                id=video_id,
-                path=str_path,
-                filename=file_path.name,
-                duration_frames=metadata.duration_frames,
-                frame_rate_numerator=metadata.frame_rate_numerator,
-                frame_rate_denominator=metadata.frame_rate_denominator,
-                width=metadata.width,
-                height=metadata.height,
-                video_codec=metadata.video_codec,
-                audio_codec=metadata.audio_codec,
-                file_size=file_path.stat().st_size,
-                thumbnail_path=thumbnail_path,
-                created_at=existing.created_at if existing else datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-                subtitle_count=metadata.subtitle_count,
-                data_count=metadata.data_count,
-                subtitle_streams=metadata.subtitle_streams,
-            )
-
-            if existing:
-                await repository.update(video)
-                updated += 1
-                logger.info("scan_video_updated", video_id=str(video_id), file=file_path.name)
-            else:
-                await repository.add(video)
-                new += 1
-                logger.info("scan_video_added", video_id=str(video_id), file=file_path.name)
-
-        except Exception as e:
-            logger.error("scan_file_error", file=str_path, error=str(e), exc_info=True)
-            errors.append(ScanError(path=str_path, error=str(e)))
+        outcome, error = await _scan_one_file(
+            file_path, repository, thumbnail_service, video_ids_out
+        )
+        if outcome == "new":
+            new += 1
+        elif outcome == "updated":
+            updated += 1
+        elif error is not None:
+            errors.append(error)
 
         if progress_callback:
             await progress_callback(processed / total_files)
