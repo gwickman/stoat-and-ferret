@@ -290,3 +290,96 @@ async def test_unknown_curve_api_rejected() -> None:
             },
         )
     assert response.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Direct unit tests for _process_automation_parameter (BL-664-AC-4)
+# ---------------------------------------------------------------------------
+
+
+def test_process_automation_parameter_envelope_validation_failure() -> None:
+    """_process_automation_parameter returns errors for an invalid envelope (empty keyframes)."""
+    from stoat_ferret.effects.definitions import create_default_registry
+    from stoat_ferret.effects.registry import _process_automation_parameter
+
+    definition = create_default_registry().get("volume")
+    assert definition is not None
+
+    errors, compiled, default = _process_automation_parameter(
+        definition, "volume", {"default": 0.5, "keyframes": []}
+    )
+
+    assert len(errors) > 0
+    assert compiled is None
+    assert default is None
+    assert any("keyframe" in e.message.lower() for e in errors)
+
+
+def test_process_automation_parameter_not_automatable() -> None:
+    """_process_automation_parameter returns error when parameter is not automatable."""
+    from stoat_ferret.effects.definitions import create_default_registry
+    from stoat_ferret.effects.registry import _process_automation_parameter
+
+    definition = create_default_registry().get("volume")
+    assert definition is not None
+
+    # "precision" is not in volume's automatable frozenset
+    errors, compiled, default = _process_automation_parameter(
+        definition,
+        "precision",
+        {"default": 0.5, "keyframes": [{"t": 0.0, "value": 0.5, "curve": "linear"}]},
+    )
+
+    assert len(errors) == 1
+    assert compiled is None
+    assert default is None
+    assert "not automatable" in errors[0].message
+
+
+def test_process_automation_parameter_rust_compile_failure() -> None:
+    """_process_automation_parameter returns error when Rust compilation raises ValueError."""
+    from unittest.mock import patch
+
+    from stoat_ferret.effects.definitions import create_default_registry
+    from stoat_ferret.effects.registry import _process_automation_parameter
+
+    definition = create_default_registry().get("volume")
+    assert definition is not None
+
+    compile_target = "stoat_ferret.effects.registry.compile_automation"
+    with patch(compile_target, side_effect=ValueError("bad expr")):
+        errors, compiled, default = _process_automation_parameter(
+            definition,
+            "volume",
+            {"default": 0.5, "keyframes": [{"t": 0.0, "value": 0.5, "curve": "linear"}]},
+        )
+
+    assert len(errors) == 1
+    assert compiled is None
+    assert default is None
+    assert "bad expr" in errors[0].message
+
+
+def test_process_automation_parameter_success() -> None:
+    """_process_automation_parameter returns compiled expression and default on success."""
+    from stoat_ferret.effects.definitions import create_default_registry
+    from stoat_ferret.effects.registry import _process_automation_parameter
+
+    definition = create_default_registry().get("volume")
+    assert definition is not None
+
+    errors, compiled, default = _process_automation_parameter(
+        definition,
+        "volume",
+        {
+            "default": 0.5,
+            "keyframes": [
+                {"t": 0.0, "value": 0.2, "curve": "linear"},
+                {"t": 1.0, "value": 0.8, "curve": "linear"},
+            ],
+        },
+    )
+
+    assert errors == []
+    assert compiled is not None
+    assert default == 0.5
