@@ -9,6 +9,11 @@ import sqlite3
 
 import aiosqlite
 
+from stoat_ferret.db.migration_helpers import (
+    _add_columns_idempotent,
+    _add_columns_idempotent_async,
+)
+
 # Table names
 TABLE_VIDEOS = "videos"
 TABLE_VIDEOS_FTS = "videos_fts"
@@ -495,12 +500,7 @@ def _alter_videos_add_auxiliary_columns(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in VIDEOS_AUXILIARY_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE videos ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_VIDEOS, VIDEOS_AUXILIARY_COLUMNS)
 
 
 def _alter_render_jobs_add_partial_columns(conn: sqlite3.Connection) -> None:
@@ -509,12 +509,7 @@ def _alter_render_jobs_add_partial_columns(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in RENDER_JOBS_PARTIAL_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_RENDER_JOBS, RENDER_JOBS_PARTIAL_COLUMNS)
 
 
 def _alter_render_jobs_add_evidence_columns(conn: sqlite3.Connection) -> None:
@@ -523,12 +518,7 @@ def _alter_render_jobs_add_evidence_columns(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in RENDER_JOBS_EVIDENCE_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_RENDER_JOBS, RENDER_JOBS_EVIDENCE_COLUMNS)
 
 
 def _alter_projects_add_audio_mix_column(conn: sqlite3.Connection) -> None:
@@ -537,12 +527,7 @@ def _alter_projects_add_audio_mix_column(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_PROJECTS, PROJECTS_AUDIO_MIX_COLUMNS)
 
 
 def _alter_projects_add_audio_baseline_columns(conn: sqlite3.Connection) -> None:
@@ -551,28 +536,16 @@ def _alter_projects_add_audio_baseline_columns(conn: sqlite3.Connection) -> None
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in PROJECTS_AUDIO_BASELINE_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_PROJECTS, PROJECTS_AUDIO_BASELINE_COLUMNS)
 
 
 def _alter_clips_add_timeline_columns(conn: sqlite3.Connection) -> None:
     """Add timeline columns to clips table idempotently.
 
-    Uses try/except per column so re-running is safe on existing databases.
-
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in CLIPS_TIMELINE_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_CLIPS, CLIPS_TIMELINE_COLUMNS)
 
 
 def _alter_clips_add_generator_columns(conn: sqlite3.Connection) -> None:
@@ -584,12 +557,7 @@ def _alter_clips_add_generator_columns(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in CLIPS_GENERATOR_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_CLIPS, CLIPS_GENERATOR_COLUMNS)
 
 
 def _alter_clips_add_image_columns(conn: sqlite3.Connection) -> None:
@@ -598,12 +566,7 @@ def _alter_clips_add_image_columns(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in CLIPS_IMAGE_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_CLIPS, CLIPS_IMAGE_COLUMNS)
 
 
 def _alter_tracks_add_audio_columns_sync(conn: sqlite3.Connection) -> None:
@@ -612,12 +575,7 @@ def _alter_tracks_add_audio_columns_sync(conn: sqlite3.Connection) -> None:
     Args:
         conn: SQLite database connection.
     """
-    for col, col_type in TRACKS_AUDIO_COLUMNS:
-        try:
-            conn.execute(f"ALTER TABLE tracks ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    _add_columns_idempotent(conn, TABLE_TRACKS, TRACKS_AUDIO_COLUMNS)
 
 
 def create_tables(conn: sqlite3.Connection) -> None:
@@ -694,12 +652,7 @@ async def _alter_videos_add_auxiliary_columns_async(db: aiosqlite.Connection) ->
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in VIDEOS_AUXILIARY_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE videos ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_VIDEOS, VIDEOS_AUXILIARY_COLUMNS)
 
 
 async def _alter_projects_add_audio_mix_column_async(
@@ -710,12 +663,7 @@ async def _alter_projects_add_audio_mix_column_async(
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in PROJECTS_AUDIO_MIX_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_PROJECTS, PROJECTS_AUDIO_MIX_COLUMNS)
 
 
 async def _alter_projects_add_audio_baseline_columns_async(
@@ -726,28 +674,16 @@ async def _alter_projects_add_audio_baseline_columns_async(
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in PROJECTS_AUDIO_BASELINE_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_PROJECTS, PROJECTS_AUDIO_BASELINE_COLUMNS)
 
 
 async def _alter_clips_add_timeline_columns_async(db: aiosqlite.Connection) -> None:
     """Add timeline columns to clips table idempotently (async).
 
-    Uses try/except per column so re-running is safe on existing databases.
-
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in CLIPS_TIMELINE_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_CLIPS, CLIPS_TIMELINE_COLUMNS)
 
 
 async def _alter_clips_add_generator_columns_async(db: aiosqlite.Connection) -> None:
@@ -759,12 +695,7 @@ async def _alter_clips_add_generator_columns_async(db: aiosqlite.Connection) -> 
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in CLIPS_GENERATOR_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_CLIPS, CLIPS_GENERATOR_COLUMNS)
 
 
 async def _alter_clips_add_image_columns_async(db: aiosqlite.Connection) -> None:
@@ -773,12 +704,7 @@ async def _alter_clips_add_image_columns_async(db: aiosqlite.Connection) -> None
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in CLIPS_IMAGE_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE clips ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_CLIPS, CLIPS_IMAGE_COLUMNS)
 
 
 async def _alter_render_jobs_add_partial_columns_async(
@@ -789,12 +715,7 @@ async def _alter_render_jobs_add_partial_columns_async(
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in RENDER_JOBS_PARTIAL_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_RENDER_JOBS, RENDER_JOBS_PARTIAL_COLUMNS)
 
 
 async def _alter_render_jobs_add_evidence_columns_async(
@@ -805,12 +726,7 @@ async def _alter_render_jobs_add_evidence_columns_async(
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in RENDER_JOBS_EVIDENCE_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE render_jobs ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_RENDER_JOBS, RENDER_JOBS_EVIDENCE_COLUMNS)
 
 
 async def _alter_tracks_add_audio_columns_async(db: aiosqlite.Connection) -> None:
@@ -819,12 +735,7 @@ async def _alter_tracks_add_audio_columns_async(db: aiosqlite.Connection) -> Non
     Args:
         db: aiosqlite database connection.
     """
-    for col, col_type in TRACKS_AUDIO_COLUMNS:
-        try:
-            await db.execute(f"ALTER TABLE tracks ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e):
-                raise
+    await _add_columns_idempotent_async(db, TABLE_TRACKS, TRACKS_AUDIO_COLUMNS)
 
 
 async def create_tables_async(db: aiosqlite.Connection) -> None:
