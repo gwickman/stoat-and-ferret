@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -13,12 +14,15 @@ import pytest
 
 from stoat_ferret.api.services.waveform import (
     WaveformService,
+    _finalize_result,
+    _get_or_create_pending,
     build_json_ffmpeg_args,
     build_png_ffmpeg_args,
     escape_path_for_amovie,
     parse_astats_output,
 )
 from stoat_ferret.db.models import Waveform, WaveformFormat, WaveformStatus
+from stoat_ferret.db.waveform_repository import InMemoryWaveformRepository
 from stoat_ferret.ffmpeg.async_executor import FakeAsyncFFmpegExecutor
 
 # ---------------------------------------------------------------------------
@@ -280,6 +284,206 @@ class TestParseAstatsOutput:
         raw = json.dumps({"frames": [{"tags": {}}]})
         samples = parse_astats_output(raw)
         assert samples == []
+
+
+# ---------------------------------------------------------------------------
+# _get_or_create_pending / _finalize_result (BL-658)
+# ---------------------------------------------------------------------------
+
+
+class TestGetOrCreatePending:
+    """Tests for the shared _get_or_create_pending lifecycle helper."""
+
+    async def test_creates_new_pending_in_memory(self) -> None:
+        """New waveform is created, stored, and transitioned to GENERATING (in-memory)."""
+        waveforms: dict[str, Waveform] = {}
+
+        waveform, created = await _get_or_create_pending(
+            video_id="vid1",
+            fmt=WaveformFormat.PNG,
+            duration_seconds=30.0,
+            channels=1,
+            waveform_id=None,
+            waveform_repository=None,
+            waveforms=waveforms,
+        )
+
+        assert created is True
+        assert waveform.status == WaveformStatus.GENERATING
+        assert waveforms["vid1:png"] is waveform
+
+    async def test_creates_new_pending_with_repository(self) -> None:
+        """New waveform is persisted and transitioned to GENERATING via repository."""
+        repo = InMemoryWaveformRepository()
+
+        waveform, created = await _get_or_create_pending(
+            video_id="vid1",
+            fmt=WaveformFormat.JSON,
+            duration_seconds=12.0,
+            channels=2,
+            waveform_id=None,
+            waveform_repository=repo,
+            waveforms={},
+        )
+
+        assert created is True
+        assert waveform.status == WaveformStatus.GENERATING
+        persisted = await repo.get(waveform.id)
+        assert persisted is not None
+        assert persisted.status == WaveformStatus.GENERATING
+
+    async def test_uses_explicit_waveform_id(self) -> None:
+        """A caller-supplied waveform_id is used instead of a generated one."""
+        waveform, _created = await _get_or_create_pending(
+            video_id="vid1",
+            fmt=WaveformFormat.PNG,
+            duration_seconds=30.0,
+            channels=1,
+            waveform_id="explicit-id",
+            waveform_repository=None,
+            waveforms={},
+        )
+        assert waveform.id == "explicit-id"
+
+    async def test_returns_existing_ready_without_creating(self) -> None:
+        """An existing READY waveform is returned as-is (idempotent short-circuit)."""
+        repo = InMemoryWaveformRepository()
+        existing = Waveform(
+            id="existing-id",
+            video_id="vid1",
+            format=WaveformFormat.PNG,
+            status=WaveformStatus.PENDING,
+            created_at=datetime.now(timezone.utc),
+        )
+        await repo.add(existing)
+        await repo.update_status("existing-id", WaveformStatus.GENERATING)
+        await repo.update_status("existing-id", WaveformStatus.READY, file_path="/out.png")
+
+        waveform, created = await _get_or_create_pending(
+            video_id="vid1",
+            fmt=WaveformFormat.PNG,
+            duration_seconds=30.0,
+            channels=1,
+            waveform_id=None,
+            waveform_repository=repo,
+            waveforms={},
+        )
+
+        assert created is False
+        assert waveform.id == "existing-id"
+        assert waveform.status == WaveformStatus.READY
+
+    async def test_returns_existing_generating_without_creating(self) -> None:
+        """An existing GENERATING waveform is returned as-is (concurrent-request race)."""
+        waveforms: dict[str, Waveform] = {
+            "vid1:json": Waveform(
+                id="in-flight-id",
+                video_id="vid1",
+                format=WaveformFormat.JSON,
+                status=WaveformStatus.GENERATING,
+                created_at=datetime.now(timezone.utc),
+            )
+        }
+
+        waveform, created = await _get_or_create_pending(
+            video_id="vid1",
+            fmt=WaveformFormat.JSON,
+            duration_seconds=30.0,
+            channels=1,
+            waveform_id=None,
+            waveform_repository=None,
+            waveforms=waveforms,
+        )
+
+        assert created is False
+        assert waveform.id == "in-flight-id"
+
+    async def test_orphaned_pending_does_not_short_circuit(self) -> None:
+        """An orphaned PENDING record does not block a fresh generation attempt."""
+        repo = InMemoryWaveformRepository()
+        orphaned = Waveform(
+            id="orphaned-id",
+            video_id="vid1",
+            format=WaveformFormat.PNG,
+            status=WaveformStatus.PENDING,
+            created_at=datetime.now(timezone.utc),
+        )
+        await repo.add(orphaned)
+
+        waveform, created = await _get_or_create_pending(
+            video_id="vid1",
+            fmt=WaveformFormat.PNG,
+            duration_seconds=30.0,
+            channels=1,
+            waveform_id=None,
+            waveform_repository=repo,
+            waveforms={},
+        )
+
+        assert created is True
+        assert waveform.id != "orphaned-id"
+        assert waveform.status == WaveformStatus.GENERATING
+        # The orphaned row is left untouched, not deleted or reused.
+        still_orphaned = await repo.get("orphaned-id")
+        assert still_orphaned is not None
+        assert still_orphaned.status == WaveformStatus.PENDING
+
+
+class TestFinalizeResult:
+    """Tests for the shared _finalize_result lifecycle helper."""
+
+    async def test_marks_ready_and_sets_file_path_in_memory(self) -> None:
+        """Waveform is mutated to READY with the given file path (no repository)."""
+        waveform = Waveform(
+            id="wf1",
+            video_id="vid1",
+            format=WaveformFormat.PNG,
+            status=WaveformStatus.GENERATING,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        await _finalize_result(waveform, file_path="/out.png", waveform_repository=None)
+
+        assert waveform.status == WaveformStatus.READY
+        assert waveform.file_path == "/out.png"
+
+    async def test_persists_ready_status_via_repository(self) -> None:
+        """Waveform's READY status and file path are persisted via the repository."""
+        repo = InMemoryWaveformRepository()
+        waveform = Waveform(
+            id="wf1",
+            video_id="vid1",
+            format=WaveformFormat.JSON,
+            status=WaveformStatus.PENDING,
+            created_at=datetime.now(timezone.utc),
+        )
+        await repo.add(waveform)
+        await repo.update_status("wf1", WaveformStatus.GENERATING)
+
+        await _finalize_result(waveform, file_path="/out.json", waveform_repository=repo)
+
+        persisted = await repo.get("wf1")
+        assert persisted is not None
+        assert persisted.status == WaveformStatus.READY
+        assert persisted.file_path == "/out.json"
+
+    async def test_finalizing_already_final_result_raises(self) -> None:
+        """Re-finalizing an already-READY waveform raises via the repository's
+        transition validation (ready -> ready is not an allowed transition)."""
+        repo = InMemoryWaveformRepository()
+        waveform = Waveform(
+            id="wf1",
+            video_id="vid1",
+            format=WaveformFormat.PNG,
+            status=WaveformStatus.PENDING,
+            created_at=datetime.now(timezone.utc),
+        )
+        await repo.add(waveform)
+        await repo.update_status("wf1", WaveformStatus.GENERATING)
+        await _finalize_result(waveform, file_path="/out.png", waveform_repository=repo)
+
+        with pytest.raises(ValueError, match="Invalid status transition"):
+            await _finalize_result(waveform, file_path="/out.png", waveform_repository=repo)
 
 
 # ---------------------------------------------------------------------------

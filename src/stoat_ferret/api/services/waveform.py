@@ -170,6 +170,99 @@ def parse_astats_output(raw_output: str) -> list[dict[str, str]]:
     return samples
 
 
+async def _get_or_create_pending(
+    *,
+    video_id: str,
+    fmt: WaveformFormat,
+    duration_seconds: float,
+    channels: int,
+    waveform_id: str | None,
+    waveform_repository: AsyncWaveformRepository | None,
+    waveforms: dict[str, Waveform],
+) -> tuple[Waveform, bool]:
+    """Return an existing ready/generating waveform, or create and start a new one.
+
+    Mirrors the get-or-create guard shared by PNG and JSON generation: if a
+    waveform already exists for the video+format pair in READY or GENERATING
+    status it is returned as-is, which makes concurrent or duplicate generation
+    requests idempotent (including races against an orphaned PENDING record,
+    which is left untouched and superseded by the new row). Otherwise a new
+    PENDING waveform is created, persisted, and transitioned to GENERATING.
+
+    Args:
+        video_id: Source video ID.
+        fmt: Waveform format (png or json).
+        duration_seconds: Audio duration in seconds.
+        channels: Number of audio channels.
+        waveform_id: Optional pre-generated waveform ID.
+        waveform_repository: Optional repository for persisted waveform records.
+        waveforms: In-memory waveform fallback, keyed by "{video_id}:{format}".
+
+    Returns:
+        Tuple of (waveform, created). created is False when an existing
+        ready/generating waveform was returned as-is; True when a new waveform
+        was created and transitioned to GENERATING.
+    """
+    key = f"{video_id}:{fmt.value}"
+    if waveform_repository is not None:
+        existing = await waveform_repository.get_by_video_and_format(video_id, fmt)
+    else:
+        existing = waveforms.get(key)
+
+    if existing is not None and existing.status in (
+        WaveformStatus.READY,
+        WaveformStatus.GENERATING,
+    ):
+        return existing, False
+
+    wid = waveform_id or Waveform.new_id()
+    waveform = Waveform(
+        id=wid,
+        video_id=video_id,
+        format=fmt,
+        status=WaveformStatus.PENDING,
+        created_at=datetime.now(timezone.utc),
+        duration=duration_seconds,
+        channels=channels,
+    )
+
+    if waveform_repository is not None:
+        await waveform_repository.add(waveform)
+    else:
+        waveforms[key] = waveform
+
+    waveform.status = WaveformStatus.GENERATING
+    if waveform_repository is not None:
+        await waveform_repository.update_status(wid, WaveformStatus.GENERATING)
+
+    return waveform, True
+
+
+async def _finalize_result(
+    waveform: Waveform,
+    *,
+    file_path: str,
+    waveform_repository: AsyncWaveformRepository | None,
+) -> None:
+    """Mark a waveform as READY and persist the generated output file path.
+
+    A no-op guard is unnecessary here: this is only ever called once per
+    generation run, immediately after the underlying FFmpeg/ffprobe process
+    succeeds, so the waveform is always in GENERATING status at this point.
+
+    Args:
+        waveform: The waveform to finalize (mutated in place).
+        file_path: Path to the generated output file.
+        waveform_repository: Optional repository for persisted waveform records.
+    """
+    waveform.status = WaveformStatus.READY
+    waveform.file_path = file_path
+    if waveform_repository is not None:
+        await waveform_repository.update_status(
+            waveform.id, WaveformStatus.READY, file_path=file_path
+        )
+
+
 class WaveformService:
     """Generate audio waveform visualizations using FFmpeg.
 
@@ -243,42 +336,18 @@ class WaveformService:
         Raises:
             RuntimeError: If FFmpeg fails.
         """
-        # Get-or-create guard: return existing waveform if ready or generating
-        if self._waveform_repository is not None:
-            existing = await self._waveform_repository.get_by_video_and_format(
-                video_id, WaveformFormat.PNG
-            )
-            if existing is not None and existing.status in (
-                WaveformStatus.READY,
-                WaveformStatus.GENERATING,
-            ):
-                return existing
-        else:
-            key_check = f"{video_id}:{WaveformFormat.PNG.value}"
-            if key_check in self._waveforms:
-                existing_mem = self._waveforms[key_check]
-                if existing_mem.status in (WaveformStatus.READY, WaveformStatus.GENERATING):
-                    return existing_mem
-
-        wid = waveform_id or Waveform.new_id()
-        waveform = Waveform(
-            id=wid,
+        waveform, created = await _get_or_create_pending(
             video_id=video_id,
-            format=WaveformFormat.PNG,
-            status=WaveformStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
-            duration=duration_seconds,
+            fmt=WaveformFormat.PNG,
+            duration_seconds=duration_seconds,
             channels=channels,
+            waveform_id=waveform_id,
+            waveform_repository=self._waveform_repository,
+            waveforms=self._waveforms,
         )
-
-        key = f"{video_id}:{WaveformFormat.PNG.value}"
-        if self._waveform_repository is not None:
-            await self._waveform_repository.add(waveform)
-        else:
-            self._waveforms[key] = waveform
-        waveform.status = WaveformStatus.GENERATING
-        if self._waveform_repository is not None:
-            await self._waveform_repository.update_status(wid, WaveformStatus.GENERATING)
+        if not created:
+            return waveform
+        wid = waveform.id
 
         # Prepare output directory
         self._waveform_dir.mkdir(parents=True, exist_ok=True)
@@ -337,12 +406,9 @@ class WaveformService:
             raise RuntimeError(f"FFmpeg failed with code {result.returncode}: {error_msg}")
 
         # Update waveform metadata on success
-        waveform.status = WaveformStatus.READY
-        waveform.file_path = output_path
-        if self._waveform_repository is not None:
-            await self._waveform_repository.update_status(
-                wid, WaveformStatus.READY, file_path=output_path
-            )
+        await _finalize_result(
+            waveform, file_path=output_path, waveform_repository=self._waveform_repository
+        )
 
         logger.info(
             "waveform_generated",
@@ -391,42 +457,18 @@ class WaveformService:
         if self._ffprobe_executor is None:
             raise RuntimeError("ffprobe executor required for JSON waveform generation")
 
-        # Get-or-create guard: return existing waveform if ready or generating
-        if self._waveform_repository is not None:
-            existing = await self._waveform_repository.get_by_video_and_format(
-                video_id, WaveformFormat.JSON
-            )
-            if existing is not None and existing.status in (
-                WaveformStatus.READY,
-                WaveformStatus.GENERATING,
-            ):
-                return existing
-        else:
-            key_check = f"{video_id}:{WaveformFormat.JSON.value}"
-            if key_check in self._waveforms:
-                existing_mem = self._waveforms[key_check]
-                if existing_mem.status in (WaveformStatus.READY, WaveformStatus.GENERATING):
-                    return existing_mem
-
-        wid = waveform_id or Waveform.new_id()
-        waveform = Waveform(
-            id=wid,
+        waveform, created = await _get_or_create_pending(
             video_id=video_id,
-            format=WaveformFormat.JSON,
-            status=WaveformStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
-            duration=duration_seconds,
+            fmt=WaveformFormat.JSON,
+            duration_seconds=duration_seconds,
             channels=channels,
+            waveform_id=waveform_id,
+            waveform_repository=self._waveform_repository,
+            waveforms=self._waveforms,
         )
-
-        key = f"{video_id}:{WaveformFormat.JSON.value}"
-        if self._waveform_repository is not None:
-            await self._waveform_repository.add(waveform)
-        else:
-            self._waveforms[key] = waveform
-        waveform.status = WaveformStatus.GENERATING
-        if self._waveform_repository is not None:
-            await self._waveform_repository.update_status(wid, WaveformStatus.GENERATING)
+        if not created:
+            return waveform
+        wid = waveform.id
 
         # Prepare output directory
         self._waveform_dir.mkdir(parents=True, exist_ok=True)
@@ -492,12 +534,9 @@ class WaveformService:
         Path(output_path).write_text(json.dumps(output_data, indent=2))
 
         # Update waveform metadata on success
-        waveform.status = WaveformStatus.READY
-        waveform.file_path = output_path
-        if self._waveform_repository is not None:
-            await self._waveform_repository.update_status(
-                wid, WaveformStatus.READY, file_path=output_path
-            )
+        await _finalize_result(
+            waveform, file_path=output_path, waveform_repository=self._waveform_repository
+        )
 
         logger.info(
             "waveform_generated",
