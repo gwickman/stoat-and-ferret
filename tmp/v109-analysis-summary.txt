@@ -1,0 +1,186 @@
+================================================================================
+v109 LEARNINGS AND PR PROMOTION ANALYSIS
+================================================================================
+
+Generated: 2026-07-19
+Project: stoat-and-ferret
+Version: v109 (Sonar COMPLEX-1 refactoring: API/DB/DSP hotspots + constants)
+
+================================================================================
+PART 1: LEARNINGS SEARCH RESULTS
+================================================================================
+
+Query: tags=["design-phase", "architecture"], limit=30
+Results: 3 learnings returned (all 3 available)
+
+LEARNING 1: LRN-226
+-------------------
+Title: Architectural trade-offs should be validated against acceptance tests during design review
+Tags: design-phase, architecture, process
+Summary: Validate architectural invariants against acceptance tests early in design phase to surface conflicts before implementation.
+Source: v040/01-websocket-observability/002-replay-buffer completion-report
+Applicability: HIGH
+  v109 involves multiple architectural trade-offs (API contract changes, DB schema evolution, DSP constant sweep).
+  Early AC validation against design will surface gaps before PR merge.
+Recommendation: Apply to v109 design phase
+  Validate all refactored API endpoints with acceptance criteria before design seal to reduce post-merge remediation.
+
+LEARNING 2: LRN-842
+-------------------
+Title: Route blocking file I/O off shared asyncio event loops
+Tags: design-phase, architecture, asyncio, failure-mode, quality-gates
+Summary: Synchronous file writes, large reads, and subprocess-backed post-processing inside async functions block the entire shared event loop. Move blocking sequences off-loop; do not rely on async lint rules.
+Source: Sonar-remediation review, 2026-07
+Applicability: HIGH
+  v109 COMPLEX-1 refactoring includes API/DB/DSP hotspots (scan.py, waveform.py, qc_service.py, tts_service.py).
+  These may involve subprocess calls or blocking I/O. v108 addressed this (BL-661/699/700); v109 must maintain invariant.
+Recommendation: Apply to v109 during refactoring
+  Ensure no new blocking I/O introduced on shared event loop during service refactoring.
+  Reference this learning in design ACs for affected routers/services.
+
+LEARNING 3: LRN-843 (CRITICAL)
+-----------------------------
+Title: Confine filesystem paths derived from external identifiers to their intended base
+Tags: design-phase, architecture, validation, failure-mode, pattern
+Summary: Any feature converting external identifier/user value into filesystem path must confine resolved path strictly under intended base. Inconsistent reuse of confinement check is how the gap reappears.
+Source: Sonar-remediation review, 2026-07
+Applicability: CRITICAL
+  v108 closed BL-699/700 (scan path confinement + worker re-validation).
+  v109 must NOT regress this during COMPLEX-1 refactoring. Particularly relevant to scan.py, asset upload, new path-handling logic.
+Recommendation: MANDATORY REGRESSION GUARD
+  Add to v109 design ACs: "All filesystem path operations derived from external IDs must pass path-confinement validation consistently across all call sites (no gap re-emergence)."
+
+================================================================================
+PART 2: PRODUCT REQUEST PROMOTION ANALYSIS
+================================================================================
+
+Total Open Items: 63
+Items Analyzed: first 50 (13 backlog items + 37 product requests)
+Version-Age Threshold: 5+ consecutive versions (created in v104 or earlier)
+
+TOP 5 PROMOTION CANDIDATES (version-age sorted descending):
+
+Rank | ID     | Version-Age | Priority | Decision  | Reason
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+1    | PR-042 | 65          | P2       | DEFER     | Doc-only (curl examples). v039 learning artifact.
+     |        |             |          |           | Bundle into post-v109 doc cycle (v110+).
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+2    | PR-063 | 64          | P2       | DEFER     | Doc-only (E2E test path). Long-standing since v053.
+     |        |             |          |           | v109 not a test-harness phase. Defer to v110+ doc audit.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+3    | PR-068 | 64          | P3       | DEFER     | Browser-compat (Firefox). GUI scope.
+     |        |             |          |           | v109 is backend refactoring. Defer to post-v109 GUI cycle.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+4    | PR-069 | 64          | P3       | DEFER     | Browser-compat (WebKit). GUI/accessibility scope.
+     |        |             |          |           | v109 is backend refactoring. Defer to post-v109 GUI cycle.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+5    | PR-070 | 64          | P3       | DEFER     | Browser-compat (WebKit). GUI/routing scope.
+     |        |             |          |           | v109 is backend refactoring. Defer to post-v109 GUI cycle.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+
+ADDITIONAL CANDIDATES (6-10):
+
+Rank | ID     | Version-Age | Priority | Decision  | Reason
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+6    | PR-091 | 61          | P2       | DEFER     | AGENTS.md process doc. Asyncio/Windows testing guardrail.
+     |        |             |          |           | Related to LRN-842. Defer to v110+ AGENTS.md updates.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+7    | PR-092 | 61          | P2       | DEFER     | Quality-gates infrastructure (contract tests).
+     |        |             |          |           | v109 is code refactoring, not testing-harness design.
+     |        |             |          |           | Promote to BL in v110+ quality-gates cycle.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+8    | PR-097 | 60          | P2       | DEFER     | CI infrastructure (FFmpeg smoke-test tier).
+     |        |             |          |           | Accumulated from v069. v109 COMPLEX-1 no CI lane changes.
+     |        |             |          |           | Promote to BL in v110+ CI cycle.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+9    | PR-108 | 57          | P3       | DEFER     | Process improvement (design-phase scope gate).
+     |        |             |          |           | v079 investigated-raise. v109 not process-redesign phase.
+     |        |             |          |           | Address in auto-dev-mcp framework (BL-1144).
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+10   | PR-109 | 56          | P3       | DEFER     | License/header hygiene (GUI scope).
+     |        |             |          |           | Deferred from v083 intentionally. Re-eval in v110+.
+-----|--------|-------------|----------|-----------|----------------------------------------------------------
+
+PROMOTION SUMMARY:
+- Total old PRs analyzed: 37
+- Suitable for v109 promotion: NONE
+- Reason: All top candidates (version-age >= 56) are documentation, GUI, CI infrastructure, or process improvements — orthogonal to v109 COMPLEX-1 API/DB/DSP refactoring scope.
+- Correct triage: Deferral prevents scope creep; allows v109 to focus on refactoring hotspots.
+
+BACKLOG ITEMS IN SEARCH RESULTS:
+- Count: 13 open BL items (cross-search with include_backlog=true)
+- Status: Already in v109 backlog (sonar-remediation-complex1 cluster)
+- Notable: BL-672 explicitly requires rebase over v108 BL-699
+- Action: No promotion needed; already in backlog
+
+================================================================================
+PART 3: v109 DESIGN-PHASE RECOMMENDATIONS
+================================================================================
+
+APPLY LEARNINGS:
+1. LRN-843 (CRITICAL): Add filesystem path-confinement regression guard to v109 design ACs
+   - Maintain v108 BL-699/700 invariant
+   - Require consistent confinement checks across scan.py, asset upload, any new path logic
+
+2. LRN-842: Route blocking I/O off shared event loops
+   - Review scan.py, waveform.py, qc_service.py, tts_service.py during refactoring
+   - Ensure no new blocking I/O introduced on shared asyncio loop
+   - Reference in design ACs for affected services
+
+3. LRN-226: Validate architectural trade-offs against ACs in design phase
+   - Apply to v109 API contract refactoring (BL-656 effect-resolve helpers, etc.)
+   - Surface AC conflicts early; reduce post-merge remediation
+
+DEFER ALL OLD PRs:
+- No promotion from the 37 open PRs analyzed (all version-age >= 56)
+- All deferred items are documentation, GUI, CI, or process — orthogonal to v109 scope
+- Next cycle (v110+) should bundle:
+  - PR-042, PR-063 into doc audit
+  - PR-068, PR-069, PR-070 into GUI/browser-compat cycle
+  - PR-091 into AGENTS.md updates
+  - PR-092, PR-097 into quality-gates/CI cycle
+  - PR-108 into auto-dev-mcp process redesign (BL-1144)
+  - PR-109 into post-backend-SPDX license cycle
+
+v109 FOCUS:
+- Refactor API/DB/DSP hotspots (13 sonar-remediation-complex1 BL items)
+- Maintain async hygiene (LRN-842)
+- Ensure path-confinement regression guard (LRN-843)
+- Validate all architectural changes against ACs (LRN-226)
+
+================================================================================
+METHODOLOGY
+================================================================================
+
+Learnings Search:
+- Tool: search_learnings(project="stoat-and-ferret", tags=["design-phase", "architecture"], limit=30)
+- Intent: "Seeking architectural design patterns and design-phase learnings for API/DB/DSP refactoring; context is v109 COMPLEX-1 refactoring needs design precedents"
+- Results: 3 learnings (all available tagged learnings matched)
+
+PR Promotion Review:
+- Tool: list_product_requests(project="stoat-and-ferret", status="open", limit=50, sort="created_asc")
+- Intent: "Looking for open PRs eligible for v109 promotion (oldest first); trigger is v109 planning needs to identify long-open PRs (age >= 5 versions) for promotion/deferral/closure"
+- Results: 50 items (63 total available; analyzed first 50)
+- Version-Age Calculation: current_version (109) - pr_creation_version
+- Threshold: PR_PROMOTION_THRESHOLD_VERSIONS = 5 (open for 5+ consecutive versions)
+
+Analysis Filters Applied:
+- All top 10 candidates exceed the 5-version threshold (range: 56-65 versions old)
+- Decision criteria: orthogonality to v109 COMPLEX-1 scope (API/DB/DSP refactoring)
+- Result: All deferred to post-v109 cycles with specific recommendations
+
+================================================================================
+OUTPUT FILES
+================================================================================
+
+1. v109-learnings-and-prs-report.json
+   - Structured JSON with learnings metadata, PR decisions, version-age rankings
+   - Machine-readable format for further processing
+
+2. v109-analysis-summary.txt (this file)
+   - Human-readable summary with decision rationale for each PR
+   - Design recommendations for v109 using applicable learnings
+
+================================================================================
+END ANALYSIS
+================================================================================

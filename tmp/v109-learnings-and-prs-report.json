@@ -1,0 +1,192 @@
+{
+  "v109_context": {
+    "version": 109,
+    "theme": "Sonar COMPLEX-1 refactoring (API/DB/DSP hotspots + constants)",
+    "query_date": "2026-07-19",
+    "current_version_baseline": 109
+  },
+  "learnings_summary": {
+    "search_tags": ["design-phase", "architecture"],
+    "total_returned": 3,
+    "total_available": 3,
+    "results": [
+      {
+        "id": "LRN-226",
+        "title": "Architectural trade-offs should be validated against acceptance tests during design review",
+        "tags": ["design-phase", "architecture", "process"],
+        "summary": "Validate architectural invariants against acceptance tests early in design phase to surface conflicts before implementation.",
+        "source": "v040/01-websocket-observability/002-replay-buffer completion-report",
+        "applicability_to_v109": "HIGH — v109 is COMPLEX-1 refactoring with multiple architectural trade-offs (API contract changes, DB schema evolution, DSP constant sweep). Early AC validation against design will surface gaps before implementation.",
+        "recommendation": "APPLICABLE — Apply this pattern to v109 design phase: validate all refactored API endpoints with acceptance criteria before design seal."
+      },
+      {
+        "id": "LRN-842",
+        "title": "Route blocking file I/O off shared asyncio event loops",
+        "tags": ["design-phase", "architecture", "asyncio", "failure-mode", "quality-gates"],
+        "summary": "Synchronous file writes, large reads, and subprocess-backed post-processing inside async functions block the entire shared event loop.",
+        "source": "Sonar-remediation review, 2026-07",
+        "applicability_to_v109": "HIGH — v109 includes API/DB/DSP hotspots that may involve subprocess calls. This is directly relevant to async hygiene (v108 addressed BL-661/699/700); v109 must maintain this invariant.",
+        "recommendation": "APPLICABLE — During v109 refactoring of scan.py, waveform.py, qc_service.py, tts_service.py, ensure no new blocking I/O on shared event loop."
+      },
+      {
+        "id": "LRN-843",
+        "title": "Confine filesystem paths derived from external identifiers to their intended base",
+        "tags": ["design-phase", "architecture", "validation", "failure-mode", "pattern"],
+        "summary": "Any feature converting external identifier/user value into filesystem path must confine resolved path strictly under intended base.",
+        "source": "Sonar-remediation review, 2026-07",
+        "applicability_to_v109": "CRITICAL — v108 closed BL-699/700 (scan path confinement). v109 must NOT regress this during COMPLEX-1 refactoring. Relevant to scan.py, asset upload, any new path-handling logic.",
+        "recommendation": "MANDATORY REGRESSION GUARD — Add to v109 design ACs: 'All filesystem path operations from external IDs must pass path-confinement validation consistently across all call sites.'"
+      }
+    ]
+  },
+  "pr_promotion_review": {
+    "note": "Version-age = current_version(109) - pr_creation_version. Sorted by creation date (oldest first). Threshold: 5+ versions open.",
+    "threshold_versions": 5,
+    "total_open_items": 63,
+    "items_returned": 50,
+    "analysis_performed_on": "first_50_items",
+    "promotion_decisions": [
+      {
+        "rank": 1,
+        "id": "PR-042",
+        "type": "product_request",
+        "title": "Standardize curl example placeholders and validation in documentation",
+        "created": "2026-04-23",
+        "version_age": 65,
+        "priority": "P2",
+        "tags": ["documentation"],
+        "upvotes": 1,
+        "decision": "DEFER",
+        "rationale": "Documentation-only, post-v039 artifact. Not actionable in v109 (COMPLEX-1 code refactoring). Bundle into post-v109 doc cycle."
+      },
+      {
+        "rank": 2,
+        "id": "PR-063",
+        "type": "product_request",
+        "title": "Clarify E2E Test Directory Path in Documentation",
+        "created": "2026-05-02",
+        "version_age": 64,
+        "priority": "P2",
+        "tags": ["documentation", "testing"],
+        "upvotes": 1,
+        "decision": "DEFER",
+        "rationale": "Long-standing doc issue (v053). v109 not a test-harness phase. Defer to v110+ doc audit."
+      },
+      {
+        "rank": 3,
+        "id": "PR-068",
+        "type": "product_request",
+        "title": "Firefox focus trap false positive in workspace (J604)",
+        "created": "2026-05-02",
+        "version_age": 64,
+        "priority": "P3",
+        "tags": ["browser-compat", "firefox"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "Browser-compat (GUI). v109 is backend refactoring. Defer to post-v109 GUI cycle."
+      },
+      {
+        "rank": 4,
+        "id": "PR-069",
+        "type": "product_request",
+        "title": "WebKit skip-link programmatic focus (J604/J605)",
+        "created": "2026-05-02",
+        "version_age": 64,
+        "priority": "P3",
+        "tags": ["browser-compat", "webkit", "accessibility"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "WebKit accessibility fix. v109 backend refactoring. Defer to post-v109 GUI cycle."
+      },
+      {
+        "rank": 5,
+        "id": "PR-070",
+        "type": "product_request",
+        "title": "WebKit URL workspace routing timing race (J602)",
+        "created": "2026-05-02",
+        "version_age": 64,
+        "priority": "P3",
+        "tags": ["browser-compat", "webkit", "url-routing"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "WebKit browser-compat. v109 backend scope. Defer to post-v109 GUI cycle."
+      },
+      {
+        "rank": 6,
+        "id": "PR-091",
+        "type": "product_request",
+        "title": "Document asyncio.wait pending-set drain in AGENTS.md (Windows guard)",
+        "created": "2026-05-17",
+        "version_age": 61,
+        "priority": "P2",
+        "tags": ["asyncio", "windows", "agents-md"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "Process/doc improvement (AGENTS.md). v109 code refactoring, not process redesign. Related to LRN-842. Defer to v110+ AGENTS.md updates."
+      },
+      {
+        "rank": 7,
+        "id": "PR-092",
+        "type": "product_request",
+        "title": "Add contract-asserting tests for architectural invariants",
+        "created": "2026-05-17",
+        "version_age": 61,
+        "priority": "P2",
+        "tags": ["testing", "contract-tests", "quality-gates"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "Quality-gates testing infrastructure. v109 is refactoring, not testing-harness design. Promote to BL in v110+ quality-gates cycle."
+      },
+      {
+        "rank": 8,
+        "id": "PR-097",
+        "type": "product_request",
+        "title": "Implement real-FFmpeg smoke test CI tier for behavioral AC discharge",
+        "created": "2026-05-28",
+        "version_age": 60,
+        "priority": "P2",
+        "tags": ["ci", "ffmpeg", "testing", "quality-gates"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "CI/testing infrastructure. Accumulated from v069. v109 COMPLEX-1 refactoring does not include CI lanes. Promote to BL in v110+ infrastructure cycle."
+      },
+      {
+        "rank": 9,
+        "id": "PR-108",
+        "type": "product_request",
+        "title": "Add pre-flight scope gate to reduce execution-agent overrun",
+        "created": "2026-06-12",
+        "version_age": 57,
+        "priority": "P3",
+        "tags": ["scope-expansion", "investigated-raise"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "Process improvement (design-phase gate). v079 investigated-raise. v109 not a process-redesign phase. Address in auto-dev-mcp framework (BL-1144). Defer to v110+."
+      },
+      {
+        "rank": 10,
+        "id": "PR-109",
+        "type": "product_request",
+        "title": "Extend SPDX header policy to frontend (.ts/.tsx/.js/.css)",
+        "created": "2026-06-20",
+        "version_age": 56,
+        "priority": "P3",
+        "tags": ["license", "frontend", "gui", "spdx"],
+        "upvotes": 0,
+        "decision": "DEFER",
+        "rationale": "License/header hygiene follow-on (GUI scope). Deferred from v083 intentionally. v109 backend refactoring. Re-evaluate in v110+ post-backend-SPDX."
+      }
+    ]
+  },
+  "summary": {
+    "top_5_promotion_candidates": "NONE suitable for v109 promotion.",
+    "rationale": "All top-10 items (all version_age >= 56) are documentation, GUI, CI infrastructure, or process improvements — orthogonal to v109's COMPLEX-1 API/DB/DSP refactoring scope. Deferral is correct triage.",
+    "backlog_items_identified": 13,
+    "backlog_status": "13 open BL items cross-searched (sonar-remediation-complex1 cluster). These are already in v109 backlog. BL-672 explicitly requires rebase over v108 BL-699. No promotion action needed.",
+    "v109_design_learnings_to_apply": [
+      "LRN-843: Maintain filesystem path-confinement invariant (v108 BL-699/700 regression guard)",
+      "LRN-842: Route blocking I/O off event loops (async hygiene during refactoring)",
+      "LRN-226: Validate architectural trade-offs against ACs in design phase"
+    ]
+  }
+}
