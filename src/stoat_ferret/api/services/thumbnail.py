@@ -35,6 +35,9 @@ MAX_COLUMNS = 400
 _PROGRESS_MIN_INTERVAL_S = 0.5
 _PROGRESS_MIN_DELTA = 0.05
 
+# FFmpeg flag requesting a single output frame (shared by frame and strip extraction)
+_FFMPEG_FRAMES_V_FLAG = "-frames:v"
+
 
 def calculate_strip_dimensions(
     duration_seconds: float,
@@ -88,7 +91,7 @@ def build_strip_ffmpeg_args(
         video_path,
         "-vf",
         vf,
-        "-frames:v",
+        _FFMPEG_FRAMES_V_FLAG,
         "1",
         "-q:v",
         "5",
@@ -127,7 +130,7 @@ def extract_frame_args(
         str(timestamp),
         "-i",
         video_path,
-        "-frames:v",
+        _FFMPEG_FRAMES_V_FLAG,
         "1",
         "-vf",
         f"scale={width}:{height}",
@@ -136,6 +139,72 @@ def extract_frame_args(
         "-y",
         output_path,
     ]
+
+
+async def _get_existing_ready_strip(
+    video_id: str,
+    strip_repository: AsyncThumbnailStripRepository | None,
+    strips: dict[str, ThumbnailStrip],
+) -> ThumbnailStrip | None:
+    """Return an existing strip for a video if it is ready or already generating.
+
+    Args:
+        video_id: Source video ID.
+        strip_repository: Optional repository for persisted strip records.
+        strips: In-memory strip fallback, keyed by video ID.
+
+    Returns:
+        The existing ThumbnailStrip if its status is READY or GENERATING,
+        otherwise None.
+    """
+    if strip_repository is not None:
+        existing = await strip_repository.get_by_video(video_id)
+    else:
+        existing = strips.get(video_id)
+
+    if existing is not None and existing.status in (
+        ThumbnailStripStatus.READY,
+        ThumbnailStripStatus.GENERATING,
+    ):
+        return existing
+    return None
+
+
+async def _persist_strip_status(
+    strip: ThumbnailStrip,
+    status: ThumbnailStripStatus,
+    strip_repository: AsyncThumbnailStripRepository | None,
+    *,
+    file_path: str | None = None,
+    frame_count: int | None = None,
+    rows: int | None = None,
+) -> None:
+    """Update a strip's status in place and persist it via the repository.
+
+    Args:
+        strip: The strip to update (mutated in place).
+        status: New status value.
+        strip_repository: Optional repository for persisted strip records.
+        file_path: Updated file path (typically set on ready).
+        frame_count: Updated frame count (typically set on ready).
+        rows: Updated row count (typically set on ready).
+    """
+    strip.status = status
+    if file_path is not None:
+        strip.file_path = file_path
+    if frame_count is not None:
+        strip.frame_count = frame_count
+    if rows is not None:
+        strip.rows = rows
+
+    if strip_repository is not None:
+        await strip_repository.update_status(
+            strip.id,
+            status,
+            file_path=file_path,
+            frame_count=frame_count,
+            rows=rows,
+        )
 
 
 class ThumbnailService:
@@ -264,7 +333,7 @@ class ThumbnailService:
             video_path,
             "-vf",
             vf,
-            "-frames:v",
+            _FFMPEG_FRAMES_V_FLAG,
             "1",
             "-q:v",
             str(quality),
@@ -365,20 +434,9 @@ class ThumbnailService:
             raise RuntimeError("Async executor required for strip generation")
 
         # Get-or-create guard: return existing strip if ready or generating
-        if self._strip_repository is not None:
-            existing = await self._strip_repository.get_by_video(video_id)
-            if existing is not None and existing.status in (
-                ThumbnailStripStatus.READY,
-                ThumbnailStripStatus.GENERATING,
-            ):
-                return existing
-        elif video_id in self._strips:
-            existing_mem = self._strips[video_id]
-            if existing_mem.status in (
-                ThumbnailStripStatus.READY,
-                ThumbnailStripStatus.GENERATING,
-            ):
-                return existing_mem
+        existing = await _get_existing_ready_strip(video_id, self._strip_repository, self._strips)
+        if existing is not None:
+            return existing
 
         effective_interval = interval if interval is not None else self._strip_interval
         effective_columns = min(columns, MAX_COLUMNS)
@@ -408,9 +466,7 @@ class ThumbnailService:
             await self._strip_repository.add(strip)
         else:
             self._strips[video_id] = strip
-        strip.status = ThumbnailStripStatus.GENERATING
-        if self._strip_repository is not None:
-            await self._strip_repository.update_status(sid, ThumbnailStripStatus.GENERATING)
+        await _persist_strip_status(strip, ThumbnailStripStatus.GENERATING, self._strip_repository)
 
         # Prepare output
         strip_dir = self._thumbnail_dir / "strips"
@@ -442,9 +498,7 @@ class ThumbnailService:
                 progress_callback=progress_cb,
             )
         except Exception:
-            strip.status = ThumbnailStripStatus.ERROR
-            if self._strip_repository is not None:
-                await self._strip_repository.update_status(sid, ThumbnailStripStatus.ERROR)
+            await _persist_strip_status(strip, ThumbnailStripStatus.ERROR, self._strip_repository)
             logger.error(
                 "thumbnail_strip_generation_error",
                 strip_id=sid,
@@ -456,9 +510,7 @@ class ThumbnailService:
         generation_time = time.monotonic() - start_time
 
         if result.returncode != 0:
-            strip.status = ThumbnailStripStatus.ERROR
-            if self._strip_repository is not None:
-                await self._strip_repository.update_status(sid, ThumbnailStripStatus.ERROR)
+            await _persist_strip_status(strip, ThumbnailStripStatus.ERROR, self._strip_repository)
             error_msg = result.stderr.decode("utf-8", errors="replace")[:500]
             logger.error(
                 "thumbnail_strip_generation_failed",
@@ -470,18 +522,14 @@ class ThumbnailService:
             raise RuntimeError(f"FFmpeg failed with code {result.returncode}: {error_msg}")
 
         # Update strip metadata on success
-        strip.status = ThumbnailStripStatus.READY
-        strip.file_path = output_path
-        strip.frame_count = frame_count
-        strip.rows = rows
-        if self._strip_repository is not None:
-            await self._strip_repository.update_status(
-                sid,
-                ThumbnailStripStatus.READY,
-                file_path=output_path,
-                frame_count=frame_count,
-                rows=rows,
-            )
+        await _persist_strip_status(
+            strip,
+            ThumbnailStripStatus.READY,
+            self._strip_repository,
+            file_path=output_path,
+            frame_count=frame_count,
+            rows=rows,
+        )
 
         strip_size_bytes = os.path.getsize(output_path) if os.path.exists(output_path) else 0
 
