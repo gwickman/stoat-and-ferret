@@ -61,26 +61,11 @@ pytestmark = pytest.mark.timeout(30)
 # entry is ``(relative_path, enclosing_function_name)``.
 SQL_INTERPOLATION_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
     {
-        # schema.py sync ALTER TABLE migrations — BL-408/415/554/422/441/511/517
-        ("src/stoat_ferret/db/schema.py", "_alter_videos_add_auxiliary_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_partial_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_evidence_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_mix_column"),
-        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_baseline_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_timeline_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_generator_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_image_columns"),
-        ("src/stoat_ferret/db/schema.py", "_alter_tracks_add_audio_columns_sync"),
-        # schema.py async ALTER TABLE migrations — BL-408/422/441/511/415/554/517
-        ("src/stoat_ferret/db/schema.py", "_alter_videos_add_auxiliary_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_mix_column_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_projects_add_audio_baseline_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_timeline_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_generator_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_clips_add_image_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_partial_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_render_jobs_add_evidence_columns_async"),
-        ("src/stoat_ferret/db/schema.py", "_alter_tracks_add_audio_columns_async"),
+        # migration_helpers.py idempotent ALTER TABLE ADD COLUMN — BL-657 consolidated
+        # the per-table _alter_* wrappers in schema.py (BL-408/415/554/422/441/511/517)
+        # into these two shared sync/async helpers.
+        ("src/stoat_ferret/db/migration_helpers.py", "_add_columns_idempotent"),
+        ("src/stoat_ferret/db/migration_helpers.py", "_add_columns_idempotent_async"),
         # PRAGMA table_info snapshot — identifier comes from sqlite_master query
         ("src/stoat_ferret/api/services/migrations.py", "table_schema_snapshot"),
         # IN-clause placeholder expansion: "?,?,?" derived from a list length.

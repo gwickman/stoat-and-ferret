@@ -30,6 +30,7 @@ from alembic.script import ScriptDirectory
 
 from alembic import command
 from stoat_ferret.api.middleware.metrics import stoat_migration_duration_seconds
+from stoat_ferret.db.migration_helpers import _migration_safety_check
 from stoat_ferret.models.migrations import MigrationResult, RollbackResult
 
 logger = structlog.get_logger(__name__)
@@ -259,7 +260,7 @@ class MigrationService:
                 error="No alembic head revision found",
             )
 
-        if from_revision == head_revision:
+        if _migration_safety_check(from_revision, head_revision):
             duration_ms = (time.perf_counter() - start) * 1000.0
             stoat_migration_duration_seconds.labels(result="success").observe(duration_ms / 1000.0)
             logger.info(
@@ -362,7 +363,7 @@ class MigrationService:
         config = self._build_alembic_config()
         from_revision = self._current_revision()
 
-        if from_revision == to_revision:
+        if _migration_safety_check(from_revision, to_revision):
             duration_ms = (time.perf_counter() - start) * 1000.0
             return RollbackResult(
                 success=True,
