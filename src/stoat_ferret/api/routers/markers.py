@@ -15,6 +15,8 @@ from stoat_ferret.db.markers_repository import AsyncSQLiteMarkerRepository, Mark
 
 router = APIRouter(prefix="/api/v1/projects/{pid}/markers", tags=["markers"])
 
+_MARKER_NOT_FOUND_DETAIL = "Marker not found"
+
 
 def _get_repo(request: Request) -> AsyncSQLiteMarkerRepository:
     """Return the markers repository from app state."""
@@ -105,7 +107,7 @@ async def update_marker(pid: str, mid: str, body: MarkerUpdate, request: Request
 
     existing = await repo.get(mid)
     if existing is None or existing.project_id != pid:
-        raise HTTPException(status_code=404, detail="Marker not found")
+        raise HTTPException(status_code=404, detail=_MARKER_NOT_FOUND_DETAIL)
 
     new_start = body.start_time if body.start_time is not None else existing.start_time
     new_end = body.end_time if body.end_time is not None else existing.end_time
@@ -134,7 +136,7 @@ async def update_marker(pid: str, mid: str, body: MarkerUpdate, request: Request
     )
     result = await repo.update(updated)
     if result is None:
-        raise HTTPException(status_code=404, detail="Marker not found")
+        raise HTTPException(status_code=404, detail=_MARKER_NOT_FOUND_DETAIL)
     return MarkerResponse(
         id=result.id,
         project_id=result.project_id,
@@ -154,9 +156,9 @@ async def delete_marker(pid: str, mid: str, request: Request) -> Response:
     # Verify the marker belongs to this project
     existing = await repo.get(mid)
     if existing is None or existing.project_id != pid:
-        raise HTTPException(status_code=404, detail="Marker not found")
+        raise HTTPException(status_code=404, detail=_MARKER_NOT_FOUND_DETAIL)
 
     deleted = await repo.delete(mid)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Marker not found")
+        raise HTTPException(status_code=404, detail=_MARKER_NOT_FOUND_DETAIL)
     return Response(status_code=204)
