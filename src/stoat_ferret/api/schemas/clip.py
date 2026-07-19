@@ -31,33 +31,45 @@ class ClipCreate(BaseModel):
     timeline_start: float | None = None
     timeline_end: float | None = None
 
+    def _validate_file_clip(self) -> None:
+        """Validate file-clip specific constraints."""
+        if self.source_video_id is None:
+            raise ValueError("source_video_id is required for file clips")
+        if self.generator_params is not None:
+            raise ValueError("generator_params must be null for file clips")
+        if self.source_asset_id is not None:
+            raise ValueError("source_asset_id must be null for file clips")
+
+    def _validate_generator_clip(self) -> None:
+        """Validate generator-clip specific constraints."""
+        if self.generator_params is None:
+            raise ValueError("generator_params is required for generator clips")
+        if self.source_video_id is not None:
+            raise ValueError("source_video_id must be null for generator clips")
+        if self.source_asset_id is not None:
+            raise ValueError("source_asset_id must be null for generator clips")
+
+    def _validate_image_clip(self) -> None:
+        """Validate image-clip specific constraints."""
+        if self.source_asset_id is None:
+            raise ValueError("source_asset_id is required for image clips")
+        if self.source_video_id is not None:
+            raise ValueError("source_video_id must be null for image clips")
+        if self.timeline_end is None:
+            raise ValueError("timeline_end is required for image clips")
+        timeline_start = self.timeline_start if self.timeline_start is not None else 0.0
+        if self.timeline_end <= timeline_start:
+            raise ValueError("timeline_end must be greater than timeline_start for image clips")
+
     @model_validator(mode="after")
     def validate_clip_type_fields(self) -> ClipCreate:
         """Enforce cross-field validation based on clip_type."""
         if self.clip_type == "file":
-            if self.source_video_id is None:
-                raise ValueError("source_video_id is required for file clips")
-            if self.generator_params is not None:
-                raise ValueError("generator_params must be null for file clips")
-            if self.source_asset_id is not None:
-                raise ValueError("source_asset_id must be null for file clips")
+            self._validate_file_clip()
         elif self.clip_type == "generator":
-            if self.generator_params is None:
-                raise ValueError("generator_params is required for generator clips")
-            if self.source_video_id is not None:
-                raise ValueError("source_video_id must be null for generator clips")
-            if self.source_asset_id is not None:
-                raise ValueError("source_asset_id must be null for generator clips")
+            self._validate_generator_clip()
         elif self.clip_type == "image":
-            if self.source_asset_id is None:
-                raise ValueError("source_asset_id is required for image clips")
-            if self.source_video_id is not None:
-                raise ValueError("source_video_id must be null for image clips")
-            if self.timeline_end is None:
-                raise ValueError("timeline_end is required for image clips")
-            timeline_start = self.timeline_start if self.timeline_start is not None else 0.0
-            if self.timeline_end <= timeline_start:
-                raise ValueError("timeline_end must be greater than timeline_start for image clips")
+            self._validate_image_clip()
         return self
 
 

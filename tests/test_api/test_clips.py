@@ -973,6 +973,42 @@ async def test_add_image_clip_source_asset_id_not_null_for_non_image(
     assert response.status_code == 422
 
 
+def test_image_clip_timeline_end_not_greater_than_start() -> None:
+    """Image clip with timeline_end <= timeline_start raises ValidationError (BL-663-AC-3)."""
+    from pydantic import ValidationError
+
+    from stoat_ferret.api.schemas.clip import ClipCreate
+
+    # timeline_end < timeline_start
+    with pytest.raises(ValidationError) as exc_info:
+        ClipCreate.model_validate(
+            {
+                "clip_type": "image",
+                "source_asset_id": "asset-123",
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 0,
+                "timeline_start": 5.0,
+                "timeline_end": 3.0,
+            }
+        )
+    assert "timeline_end must be greater than timeline_start for image clips" in str(exc_info.value)
+
+    # timeline_end == timeline_start (also invalid)
+    with pytest.raises(ValidationError):
+        ClipCreate.model_validate(
+            {
+                "clip_type": "image",
+                "source_asset_id": "asset-123",
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 0,
+                "timeline_start": 5.0,
+                "timeline_end": 5.0,
+            }
+        )
+
+
 @pytest.mark.api
 async def test_get_clip_allow_header(
     client: TestClient,
