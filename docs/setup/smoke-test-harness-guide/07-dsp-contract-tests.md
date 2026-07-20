@@ -124,7 +124,7 @@ The catalog tests (`test_*_in_effect_catalog`) do not require FFmpeg — they va
 
 Three Wave 3a builders have `timeline_T_capable=True`: **curves**, **vignette**, and **hue_rotation**.
 
-`zoompan` is `timeline_T_capable=False`. Windowed zoompan application routes through the split/trim/concat fallback (BL-512, pending).
+`zoompan` is `timeline_T_capable=False`. Windowed zoompan application routes through the split/trim/concat fallback (BL-512, shipped in v110 F009).
 
 #### Wave 3a smoke discharge command
 

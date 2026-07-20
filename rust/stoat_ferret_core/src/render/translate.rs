@@ -130,6 +130,30 @@ impl std::fmt::Display for TranslateError {
 }
 
 // ---------------------------------------------------------------------------
+// EffectChainResult
+// ---------------------------------------------------------------------------
+
+/// Result of building a per-clip effect sub-chain.
+///
+/// `Simple` contains a filter chain string injected directly between
+/// `[v{i}]` and `[ev{i}]` by Stage 2. `WindowedGraph` contains a set of
+/// filter_complex parts that implement windowed application via split/trim/concat
+/// for filters that do not support FFmpeg's `enable=` timeline expression.
+pub(crate) enum EffectChainResult {
+    /// A single filter chain string to inject as `[v{i}]{chain}[ev{i}]`.
+    Simple(String),
+    /// Multiple filter_complex parts implementing split/trim/concat windowing.
+    /// The output label is always `ev{i}` (where `i` is `clip.input_index`).
+    WindowedGraph {
+        parts: Vec<String>,
+        /// The final output label (always `ev{i}`). Provided for callers that
+        /// need to know the label without re-deriving it from input_index.
+        #[allow(dead_code)]
+        output_label: String,
+    },
+}
+
+// ---------------------------------------------------------------------------
 // RenderTransition
 // ---------------------------------------------------------------------------
 
@@ -263,11 +287,23 @@ impl RenderEffect {
 
     /// Creates a windowed custom effect from a raw FFmpeg filter chain string.
     ///
-    /// Sets `timeline_t_capable = true` and `enable_window = Some((start_s, end_s))`.
+    /// Sets `enable_window = Some((start_s, end_s))` and `timeline_t_capable` to
+    /// the supplied value (default `true`). When `timeline_t_capable=true` the
+    /// translator emits `enable='between(t,…)'`; when `false` it routes through
+    /// the split/trim/concat graph-level fallback (BL-512-AC-2).
+    ///
     /// Returns `PyValueError` if floats are non-finite or `start_s >= end_s`.
     #[staticmethod]
-    #[pyo3(name = "windowed_custom")]
-    pub fn py_windowed_custom(filter_chain: String, start_s: f64, end_s: f64) -> PyResult<Self> {
+    #[pyo3(
+        name = "windowed_custom",
+        signature = (filter_chain, start_s, end_s, timeline_t_capable = true)
+    )]
+    pub fn py_windowed_custom(
+        filter_chain: String,
+        start_s: f64,
+        end_s: f64,
+        timeline_t_capable: bool,
+    ) -> PyResult<Self> {
         if !start_s.is_finite() || !end_s.is_finite() {
             return Err(PyValueError::new_err("start_s and end_s must be finite"));
         }
@@ -278,7 +314,7 @@ impl RenderEffect {
         }
         Ok(RenderEffect {
             kind: RenderEffectKind::Custom { filter_chain },
-            timeline_t_capable: true,
+            timeline_t_capable,
             enable_window: Some((start_s, end_s)),
         })
     }
@@ -493,8 +529,17 @@ impl RenderGraphTranslator {
                 .any(|e| !matches!(e.kind, RenderEffectKind::None));
 
             if has_effect {
-                let chain = build_effect_chain(clip);
-                parts.push(format!("[v{i}]{chain}[ev{i}]"));
+                let chain_result = build_effect_chain(clip);
+                match chain_result {
+                    EffectChainResult::Simple(chain_str) => {
+                        parts.push(format!("[v{i}]{chain_str}[ev{i}]"));
+                    }
+                    EffectChainResult::WindowedGraph {
+                        parts: graph_parts, ..
+                    } => {
+                        parts.extend(graph_parts);
+                    }
+                }
                 effective_labels.push(format!("[ev{i}]"));
             } else {
                 effective_labels.push(format!("[v{i}]"));
@@ -542,13 +587,54 @@ impl RenderGraphTranslator {
     }
 }
 
-/// Builds the effect filter chain string for a clip (excluding input/output labels).
+/// Builds the effect sub-chain for a clip and returns an `EffectChainResult`.
 ///
-/// For effects with `timeline_t_capable=true` and an `enable_window`, emits
-/// `:enable='between(t,start_s,end_s)'` to restrict the effect to a time window.
-/// Otherwise applies the effect to the entire clip (split/trim/concat fallback is
-/// deferred to a future feature since no v088 builder uses windowing).
-fn build_effect_chain(clip: &ClipWithEffects) -> String {
+/// When a `Custom` effect has `timeline_t_capable=false` and `enable_window` set,
+/// returns `WindowedGraph` with split/trim/concat parts (BL-512-AC-2 non-T fallback).
+/// For all other cases (T-capable windowed or non-windowed effects) returns `Simple`.
+fn build_effect_chain(clip: &ClipWithEffects) -> EffectChainResult {
+    let i = clip.input_index;
+
+    // Non-T windowed fallback: a Custom effect with !timeline_t_capable + enable_window
+    // must be routed through split/trim/concat (BL-512-AC-2).
+    let non_t_windowed = clip.effects.iter().find(|e| {
+        matches!(&e.kind, RenderEffectKind::Custom { .. })
+            && !e.timeline_t_capable
+            && e.enable_window.is_some()
+    });
+
+    if let Some(effect) = non_t_windowed {
+        let (start_s, end_s) = effect.enable_window.unwrap();
+        let filter_chain = match &effect.kind {
+            RenderEffectKind::Custom { filter_chain } => filter_chain.as_str(),
+            _ => unreachable!(),
+        };
+
+        // Build split/trim/concat graph. format=yuv420p at each segment junction
+        // ensures pix_fmt compatibility (NFR-003). setpts=PTS-STARTPTS resets
+        // timestamps after trim so that concat produces correct output timing.
+        let bef =
+            format!("[vi_bef{i}]trim=end={start_s},setpts=PTS-STARTPTS,format=yuv420p[bef{i}]");
+        let seg = format!(
+            "[vi_seg{i}]trim=start={start_s}:end={end_s},setpts=PTS-STARTPTS,\
+             {filter_chain},format=yuv420p[seg{i}]"
+        );
+        let aft =
+            format!("[vi_aft{i}]trim=start={end_s},setpts=PTS-STARTPTS,format=yuv420p[aft{i}]");
+        let parts = vec![
+            format!("[v{i}]split=3[vi_seg{i}][vi_bef{i}][vi_aft{i}]"),
+            bef,
+            seg,
+            aft,
+            format!("[bef{i}][seg{i}][aft{i}]concat=n=3:v=1:a=0[ev{i}]"),
+        ];
+        return EffectChainResult::WindowedGraph {
+            parts,
+            output_label: format!("ev{i}"),
+        };
+    }
+
+    // Simple path: T-capable windowed effects or effects without a window.
     let mut filters: Vec<String> = Vec::new();
     for effect in &clip.effects {
         match &effect.kind {
@@ -575,7 +661,7 @@ fn build_effect_chain(clip: &ClipWithEffects) -> String {
                 filters.push(filter);
             }
             RenderEffectKind::Custom { filter_chain } => {
-                // LRN-775: enable= uses lowercase t (timeline time); geq uses uppercase T (geq time var).
+                // LRN-775: enable= uses lowercase t (timeline time); geq uses uppercase T.
                 let filter = if effect.timeline_t_capable {
                     if let Some((start_s, end_s)) = effect.enable_window {
                         format!("{filter_chain}:enable='between(t,{start_s:?},{end_s:?})'")
@@ -583,14 +669,13 @@ fn build_effect_chain(clip: &ClipWithEffects) -> String {
                         filter_chain.clone()
                     }
                 } else {
-                    // TODO: BL-512-AC-4 non-T fallback (split/trim/concat) deferred to v100.
                     filter_chain.clone()
                 };
                 filters.push(filter);
             }
         }
     }
-    filters.join(",")
+    EffectChainResult::Simple(filters.join(","))
 }
 
 // ---------------------------------------------------------------------------
@@ -932,25 +1017,125 @@ mod tests {
 
     #[test]
     fn test_windowed_custom_valid() {
-        let e = RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 1.0, 3.0).unwrap();
+        let e =
+            RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 1.0, 3.0, true).unwrap();
         assert!(e.timeline_t_capable);
         assert_eq!(e.enable_window, Some((1.0, 3.0)));
     }
 
     #[test]
     fn test_windowed_custom_rejects_inverted() {
-        assert!(RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 5.0, 1.0).is_err());
+        assert!(
+            RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 5.0, 1.0, true).is_err()
+        );
     }
 
     #[test]
     fn test_windowed_custom_rejects_equal() {
-        assert!(RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 2.0, 2.0).is_err());
+        assert!(
+            RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), 2.0, 2.0, true).is_err()
+        );
     }
 
     #[test]
     fn test_windowed_custom_rejects_nan() {
         assert!(
-            RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), f64::NAN, 3.0).is_err()
+            RenderEffect::py_windowed_custom("gblur=sigma=7".to_string(), f64::NAN, 3.0, true)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_windowed_custom_non_t_sets_timeline_t_capable_false() {
+        let e =
+            RenderEffect::py_windowed_custom("scale=iw:ih".to_string(), 1.0, 3.0, false).unwrap();
+        assert!(!e.timeline_t_capable);
+        assert_eq!(e.enable_window, Some((1.0, 3.0)));
+    }
+
+    #[test]
+    fn test_build_effect_chain_t_capable_returns_simple() {
+        let clip = ClipWithEffects {
+            input_index: 0,
+            duration_secs: 5.0,
+            framerate: 30.0,
+            source_path: "/a.mp4".to_string(),
+            effects: vec![RenderEffect {
+                kind: RenderEffectKind::Custom {
+                    filter_chain: "gblur=sigma=7".to_string(),
+                },
+                timeline_t_capable: true,
+                enable_window: Some((1.0, 3.0)),
+            }],
+            outgoing_transition: None,
+        };
+        let result = build_effect_chain(&clip);
+        assert!(
+            matches!(result, EffectChainResult::Simple(_)),
+            "T-capable windowed Custom must return Simple"
+        );
+    }
+
+    #[test]
+    fn test_build_effect_chain_non_t_windowed_returns_windowed_graph() {
+        let clip = ClipWithEffects {
+            input_index: 0,
+            duration_secs: 5.0,
+            framerate: 30.0,
+            source_path: "/a.mp4".to_string(),
+            effects: vec![RenderEffect {
+                kind: RenderEffectKind::Custom {
+                    filter_chain: "scale=iw*0.5:ih*0.5".to_string(),
+                },
+                timeline_t_capable: false,
+                enable_window: Some((1.0, 3.0)),
+            }],
+            outgoing_transition: None,
+        };
+        let result = build_effect_chain(&clip);
+        match result {
+            EffectChainResult::WindowedGraph {
+                parts,
+                output_label,
+            } => {
+                let joined = parts.join(";");
+                assert!(
+                    joined.contains("split=3"),
+                    "must contain split=3; got: {joined}"
+                );
+                assert!(
+                    joined.contains("trim=start="),
+                    "must contain trim=start=; got: {joined}"
+                );
+                assert!(
+                    joined.contains("concat=n=3"),
+                    "must contain concat=n=3; got: {joined}"
+                );
+                assert!(
+                    joined.contains("format=yuv420p"),
+                    "must contain format=yuv420p at each junction; got: {joined}"
+                );
+                assert!(
+                    joined.contains("scale=iw*0.5:ih*0.5"),
+                    "effect chain must appear in segment; got: {joined}"
+                );
+                assert_eq!(output_label, "ev0");
+            }
+            EffectChainResult::Simple(_) => {
+                panic!("non-T windowed Custom must return WindowedGraph, got Simple");
+            }
+        }
+    }
+
+    #[test]
+    fn test_window_zero_length_returns_error() {
+        // BL-512-AC-2: zero-length window must be rejected at construction time
+        let err = RenderEffect::py_windowed_custom("scale=iw:ih".to_string(), 2.0, 2.0, true)
+            .unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("must be less than"),
+            "error must state start < end constraint; got: {msg}"
         );
     }
 }
