@@ -225,3 +225,67 @@ async def test_ducking_pair_fk_violation(
     )
     with pytest.raises(ValueError, match="constraint"):
         await sqlite_ducking_repo.create(pair)
+
+
+async def test_ducking_pair_rejects_nonexistent_ducked_track_id(
+    sqlite_ducking_repo: AsyncSQLiteDuckingPairRepository,
+) -> None:
+    """BL-690-AC-1: track FK rejection — project exists, ducked_track_id does not."""
+    now_str = datetime.now(timezone.utc).isoformat()
+    await sqlite_ducking_repo._conn.execute(
+        "INSERT INTO projects (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        ("proj-track-fk-1", "Track FK Test 1", now_str, now_str),
+    )
+    await sqlite_ducking_repo._conn.execute(
+        "INSERT INTO tracks (id, project_id, track_type, label) VALUES (?, ?, ?, ?)",
+        ("track-sidechain-valid-1", "proj-track-fk-1", "audio", "Valid Sidechain"),
+    )
+    await sqlite_ducking_repo._conn.commit()
+    now = datetime.now(timezone.utc)
+    pair = DuckingPair(
+        id="pair-ducked-fk-test",
+        project_id="proj-track-fk-1",
+        ducked_track_id="nonexistent-ducked-track",
+        sidechain_track_id="track-sidechain-valid-1",
+        threshold=0.02,
+        ratio=8.0,
+        attack_ms=20.0,
+        release_ms=300.0,
+        apply_pre_volume=False,
+        created_at=now,
+        updated_at=now,
+    )
+    with pytest.raises(ValueError, match="constraint"):
+        await sqlite_ducking_repo.create(pair)
+
+
+async def test_ducking_pair_rejects_nonexistent_sidechain_track_id(
+    sqlite_ducking_repo: AsyncSQLiteDuckingPairRepository,
+) -> None:
+    """BL-690-AC-2: track FK rejection — project exists, sidechain_track_id does not."""
+    now_str = datetime.now(timezone.utc).isoformat()
+    await sqlite_ducking_repo._conn.execute(
+        "INSERT INTO projects (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        ("proj-track-fk-2", "Track FK Test 2", now_str, now_str),
+    )
+    await sqlite_ducking_repo._conn.execute(
+        "INSERT INTO tracks (id, project_id, track_type, label) VALUES (?, ?, ?, ?)",
+        ("track-ducked-valid-2", "proj-track-fk-2", "audio", "Valid Ducked"),
+    )
+    await sqlite_ducking_repo._conn.commit()
+    now = datetime.now(timezone.utc)
+    pair = DuckingPair(
+        id="pair-sidechain-fk-test",
+        project_id="proj-track-fk-2",
+        ducked_track_id="track-ducked-valid-2",
+        sidechain_track_id="nonexistent-sidechain-track",
+        threshold=0.02,
+        ratio=8.0,
+        attack_ms=20.0,
+        release_ms=300.0,
+        apply_pre_volume=False,
+        created_at=now,
+        updated_at=now,
+    )
+    with pytest.raises(ValueError, match="constraint"):
+        await sqlite_ducking_repo.create(pair)
