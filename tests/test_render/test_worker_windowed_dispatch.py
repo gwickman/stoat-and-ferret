@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from PIL import Image
 
 from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.effects.definitions import EffectDefinition
@@ -292,3 +295,151 @@ async def test_single_clip_windowed_render_probe_ffmpeg() -> None:
         f"FFmpeg-gated: expected enable='between(t,...) in filter_complex, got:\n{filter_complex}"
     )
     assert "between(t,1.0,4.0)" in filter_complex
+
+
+# ---------------------------------------------------------------------------
+# BL-683-AC-1: Windowed T-capable effect real render + pixel proof
+# ---------------------------------------------------------------------------
+
+
+def _run_render(cmd: list[str]) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(cmd, capture_output=True, timeout=60)
+
+
+def _gen_solid_red_video(path: Path, duration: float = 5.0) -> None:
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c=red:s=128x72:r=30:d={duration}",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
+def _extract_frame_mean_luma(video: Path, t: float, tmp: Path) -> float:
+    """Extract a frame near time t, scale to 32x32, return mean luma (0–255)."""
+    out = tmp / f"frame_{int(t * 10):03d}.png"
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            str(t),
+            "-i",
+            str(video),
+            "-frames:v",
+            "1",
+            "-vf",
+            "scale=32:32",
+            str(out),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"Frame extract failed at t={t}: {r.stderr.decode()[-300:]}")
+    img = Image.open(out).convert("L")
+    raw = img.tobytes()
+    return sum(raw) / len(raw)
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_windowed_negate_effect_real_render(tmp_path: Path) -> None:
+    """BL-683-AC-1: windowed T-capable geq effect visible inside and absent outside window.
+
+    Real render proof: geq=lum_expr=0:cb_expr=128:cr_expr=128 applied with
+    enable='between(t,1.0,4.0)' blacks out frames inside the window. Frame at t=0.5
+    (outside) is red (luma ~76); frame at t=2.5 (inside) is black (luma ~0).
+    Asserts measurable luma difference >50. NOT command inspection — FFmpeg is
+    actually invoked and output is probed frame-by-frame.
+    """
+    src = tmp_path / "source_red.mp4"
+    _gen_solid_red_video(src, duration=5.0)
+
+    clip = Clip(
+        id="clip-geq-wind-001",
+        project_id=_PROJECT_ID,
+        source_video_id="vid-geq-wind-001",
+        in_point=0,
+        out_point=150,  # 5s at 30fps
+        timeline_position=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        effects=[
+            {
+                "effect_type": "geq_blacken",
+                "parameters": {},
+                "window": {"start_s": 1.0, "end_s": 4.0},
+            }
+        ],
+    )
+    video = Video(
+        id="vid-geq-wind-001",
+        path=str(src),
+        filename="source_red.mp4",
+        duration_frames=150,
+        frame_rate_numerator=30,
+        frame_rate_denominator=1,
+        width=128,
+        height=72,
+        video_codec="h264",
+        audio_codec=None,
+        file_size=50_000,
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    registry = _make_t_capable_registry("geq_blacken", "geq=lum_expr=0:cb_expr=128:cr_expr=128")
+
+    out = tmp_path / "windowed_output.mp4"
+    job = RenderJob(
+        id="job-geq-wind-001",
+        project_id=_PROJECT_ID,
+        status=RenderStatus.RUNNING,
+        output_path=str(out),
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=_make_render_plan(total_duration=5.0),
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        completed_at=None,
+    )
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+    cmd[-1] = str(out)
+
+    rc = _run_render(cmd)
+    assert rc.returncode == 0, f"FFmpeg failed:\n{rc.stderr.decode()[-800:]}"
+    assert out.exists() and out.stat().st_size > 0, "Output file missing or empty"
+
+    luma_outside = _extract_frame_mean_luma(out, t=0.5, tmp=tmp_path)
+    luma_inside = _extract_frame_mean_luma(out, t=2.5, tmp=tmp_path)
+
+    assert luma_inside < luma_outside, (
+        f"geq blacken effect not detected: outside luma={luma_outside:.1f}, "
+        f"inside luma={luma_inside:.1f}; expected inside (blackened) < outside (red)"
+    )
+    assert (luma_outside - luma_inside) > 50, (
+        f"Effect magnitude too small: outside={luma_outside:.1f}, "
+        f"inside={luma_inside:.1f}, diff={luma_outside - luma_inside:.1f} (expected >50)"
+    )

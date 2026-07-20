@@ -20,6 +20,7 @@ import pytest
 from stoat_ferret.api.services.audio_service import assemble_multi_track_mixer
 from stoat_ferret.db.models import DuckingPair, Track
 from tests.conftest import requires_ffmpeg
+from tests.helpers.audio_helpers import _measure_band_db_windowed
 
 _NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -280,32 +281,6 @@ class TestMultiTrackMixerFFmpeg:
                 return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
         raise RuntimeError(f"volumedetect gave no mean_volume at {freq_hz} Hz for {path}")
 
-    def _measure_band_db_windowed(
-        self, path: Path, freq_hz: int, start: float, end: float
-    ) -> float:
-        """Return mean_volume (dBFS) of a narrow frequency band within a time window."""
-        r = subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(path),
-                "-af",
-                f"atrim=start={start}:end={end},bandpass=f={freq_hz}:width_type=o:width=1,volumedetect",
-                "-f",
-                "null",
-                "-",
-            ],
-            capture_output=True,
-            text=True,
-        )
-        for line in r.stderr.splitlines():
-            if "mean_volume" in line:
-                return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
-        raise RuntimeError(
-            f"volumedetect gave no mean_volume at {freq_hz} Hz for {path} [{start},{end}]"
-        )
-
     def test_music_ducked_during_voice(self, tmp_path: Path) -> None:
         """Music 200 Hz band must be ≥6 dB quieter when voice is active (AC-8).
 
@@ -469,10 +444,10 @@ class TestMultiTrackMixerFFmpeg:
         # Measure 200 Hz band energy in voice-silent windows for both renders.
         # pre-voice:  [0.2, 1.5] s — before voice onset at 2.0 s.
         # post-voice: [post_start, 5.5] s — after compressor release tail (release_ms + 100 ms).
-        e_ducked_pre = self._measure_band_db_windowed(ducked, 200, 0.2, 1.5)
-        e_noduck_pre = self._measure_band_db_windowed(noduck, 200, 0.2, 1.5)
-        e_ducked_post = self._measure_band_db_windowed(ducked, 200, post_start, 5.5)
-        e_noduck_post = self._measure_band_db_windowed(noduck, 200, post_start, 5.5)
+        e_ducked_pre = _measure_band_db_windowed(ducked, 200, 0.2, 1.5)
+        e_noduck_pre = _measure_band_db_windowed(noduck, 200, 0.2, 1.5)
+        e_ducked_post = _measure_band_db_windowed(ducked, 200, post_start, 5.5)
+        e_noduck_post = _measure_band_db_windowed(noduck, 200, post_start, 5.5)
 
         pre_delta = abs(e_ducked_pre - e_noduck_pre)
         post_delta = abs(e_ducked_post - e_noduck_post)
