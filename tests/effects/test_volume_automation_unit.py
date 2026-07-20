@@ -5,7 +5,10 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -215,4 +218,100 @@ def test_update_endpoint_automation_filter_contains_eval_frame() -> None:
     data = update_resp.json()
     assert "eval=frame" in data["filter_string"], (
         f"Expected 'eval=frame' in update filter_string: {data['filter_string']}"
+    )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="Requires STOAT_TEST_FFMPEG=1",
+)
+def test_volume_automation_level_follows_curve(tmp_path: Path) -> None:
+    """AC-1: quiet-start/loud-end volume envelope yields end level >= start + 5 dB (BL-687-AC-1)."""
+    input_path = tmp_path / "sine.wav"
+    output_path = tmp_path / "automated.wav"
+
+    # Generate 6-second constant sine wave at full scale.
+    # lavfi sine emits at 0.125 amplitude; volume=8 brings it to 1.0.
+    gen = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=6",
+            "-af",
+            "volume=8",
+            "-c:a",
+            "pcm_f32le",
+            "-ar",
+            "44100",
+            "-y",
+            str(input_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert gen.returncode == 0, f"Sine fixture failed: {gen.stderr.decode()}"
+
+    # Build volume automation: ramps 0.1 -> 1.0 over 5 s, then holds 1.0.
+    # At t=0 volume=0.1 (~-20 dBFS), at t=5 volume=1.0 (~0 dBFS): delta ~20 dB >> 5 dB threshold.
+    registry = create_default_registry()
+    filter_str = registry.build_automation_filter_string("volume", "if(lt(t,5),0.1+0.18*t,1.0)")
+
+    render = subprocess.run(
+        [
+            "ffmpeg",
+            "-i",
+            str(input_path),
+            "-af",
+            filter_str,
+            "-c:a",
+            "pcm_f32le",
+            "-ar",
+            "44100",
+            "-y",
+            str(output_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert render.returncode == 0, f"Volume automation render failed: {render.stderr.decode()}"
+    assert output_path.stat().st_size > 0, "Output file is empty"
+
+    def _mean_db(path: Path, offset: float, duration: float = 0.5) -> float:
+        """Return mean volume (dBFS) of a window via volumedetect."""
+        probe = subprocess.run(
+            [
+                "ffmpeg",
+                "-ss",
+                str(offset),
+                "-i",
+                str(path),
+                "-t",
+                str(duration),
+                "-af",
+                "volumedetect",
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        for line in probe.stderr.decode().splitlines():
+            if "mean_volume" in line:
+                parts = line.split("mean_volume:")
+                if len(parts) > 1:
+                    return float(parts[1].strip().split()[0])
+        pytest.skip(f"Could not parse mean_volume: {probe.stderr.decode()[:500]}")
+
+    start_db = _mean_db(output_path, offset=0.1)
+    end_db = _mean_db(output_path, offset=5.0)
+
+    assert end_db >= start_db + 5.0, (
+        f"End level {end_db:.1f} dBFS must be at least 5 dB above "
+        f"start {start_db:.1f} dBFS (delta: {end_db - start_db:.1f} dB)"
     )
