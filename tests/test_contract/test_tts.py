@@ -983,6 +983,10 @@ class TestBuildCommandTtsMixing:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
 class TestTtsSpeechEnergyPlacementFFmpeg:
     """FFmpeg-gated energy-placement tests for TTS audio (BL-589).
 
