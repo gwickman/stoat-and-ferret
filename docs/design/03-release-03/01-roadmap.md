@@ -79,7 +79,7 @@ Cross-cutting:
 
 ### Wave 4 — Time-window dispatch (BL-512 reframed)
 
-- [ ] **BL-512** — Renderer consumption of existing `WindowSpec` (already on `effect.py:109`). Per-builder `timeline_T_capable` flag drives dispatch:
+- [x] **BL-512** — Renderer consumption of existing `WindowSpec` (already on `effect.py:109`). Per-builder `timeline_T_capable` flag drives dispatch:
   - T-capable filters: append `:enable='between(t,start_s,end_s)'`.
   - Non-T filters (scale, zoompan, format, fps, settb, subtitles, ass, amix, sidechaincompress, xfade): graph-level split/trim/concat fallback.
 - Cross-check hygiene test against `ffmpeg -filters` output.

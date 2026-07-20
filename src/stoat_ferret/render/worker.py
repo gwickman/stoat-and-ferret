@@ -368,13 +368,16 @@ def _build_clip_render_effects(
             else:
                 filter_str = defn.build_fn(effect_data.get("parameters", {}))
                 window = effect_data.get("window")
-                if window and defn.timeline_T_capable:
+                if window:
                     render_effects.append(
-                        RenderEffect.windowed_custom(filter_str, window["start_s"], window["end_s"])
+                        RenderEffect.windowed_custom(
+                            filter_str,
+                            window["start_s"],
+                            window["end_s"],
+                            defn.timeline_T_capable,
+                        )
                     )
                 else:
-                    # Non-T or no window: apply effect without windowing.
-                    # TODO: BL-512-AC-4 non-T windowing deferred to v100.
                     render_effects.append(RenderEffect.custom(filter_str))
     if not render_effects:
         render_effects.append(RenderEffect.none())

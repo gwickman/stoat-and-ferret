@@ -197,11 +197,11 @@ async def test_no_window_dispatch_uses_custom() -> None:
 
 @pytest.mark.asyncio
 async def test_non_t_capable_effect_ignores_window() -> None:
-    """Non-T-capable effect with window falls back to custom() — window silently ignored.
+    """Non-T-capable effect with window routes through split/trim/concat (BL-512-AC-2).
 
-    BL-512-AC-4 (split/trim/concat fallback) is deferred to v100.
-    When timeline_T_capable=False, the worker uses custom() even if a window key is present.
-    No enable='between(t,...) appears in the output.
+    The effect chain (scale=iw:ih) must appear in the filter_complex output and
+    no enable='between(t,...) expression may be emitted. The graph-level windowing
+    (split/trim/concat) is verified by test_nont_window_fallback_split_trim_concat.
     """
     effect_data: dict[str, Any] = {
         "effect_type": "scale_windowed",
@@ -245,17 +245,59 @@ async def test_non_t_capable_effect_ignores_window() -> None:
     )
 
 
-@pytest.mark.skip(
-    reason=(
-        "BL-512-AC-4: non-T filter windowing deferred to v100 "
-        "(split/trim/concat fallback not yet implemented in translate.rs)"
-    )
-)
-def test_nont_window_fallback_stub() -> None:
-    """Stub test for BL-512-AC-4 non-T fallback (deferred to v100).
+@pytest.mark.asyncio
+async def test_nont_window_fallback_split_trim_concat() -> None:
+    """BL-512-AC-4: Non-T windowed effect routes through split/trim/concat.
 
-    A non-T-capable effect with a window should eventually route through
-    split/trim/concat to apply the effect only within the window bounds.
-    This path is deferred to v100 — see translate.rs TODO: BL-512-AC-4.
+    A non-T-capable effect (e.g. scale) with a window must produce
+    split/trim/concat parts in the filter_complex instead of enable='between(t,...)'.
+    The window bounds are respected at the graph level by splitting the clip,
+    applying the effect only to the [start_s, end_s] segment, and concatenating
+    the three segments.
     """
-    pass
+    effect_data: dict[str, Any] = {
+        "effect_type": "scale_nont_windowed",
+        "parameters": {},
+        "window": {"start_s": 1.0, "end_s": 3.0},
+    }
+    clips = [
+        _make_clip("clip-x", "vid-x", timeline_position=0, effects=[effect_data]),
+    ]
+    videos = {
+        "vid-x": _make_video("vid-x", "/media/clip_x.mp4"),
+    }
+
+    defn = MagicMock(spec=EffectDefinition)
+    defn.build_fn = lambda params: "scale=iw*0.5:ih*0.5"
+    defn.timeline_T_capable = False  # scale is NOT T-capable
+
+    registry = EffectRegistry()
+    registry.register("scale_nont_windowed", defn)
+
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    job = _make_job()
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+
+    assert "-filter_complex" in cmd
+    fc_idx = cmd.index("-filter_complex")
+    filter_complex = cmd[fc_idx + 1]
+
+    # Non-T fallback: split/trim/concat must appear, not enable='between'
+    assert "split=3" in filter_complex, (
+        f"Non-T windowed effect must use split=3, got:\n{filter_complex}"
+    )
+    assert "trim" in filter_complex, f"Non-T windowed effect must use trim, got:\n{filter_complex}"
+    assert "concat=n=3" in filter_complex, (
+        f"Non-T windowed effect must use concat=n=3, got:\n{filter_complex}"
+    )
+    assert "enable='between" not in filter_complex, (
+        f"Non-T effect must not emit enable='between(t,...)', got:\n{filter_complex}"
+    )
+    # Effect chain must appear inside the windowed segment
+    assert "scale=iw*0.5:ih*0.5" in filter_complex, (
+        f"Effect must appear in filter_complex segment, got:\n{filter_complex}"
+    )
