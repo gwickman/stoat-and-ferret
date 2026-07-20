@@ -133,3 +133,28 @@ uv run pytest tests/smoke/test_effects.py -k "zoompan or curves or vignette or h
 ```
 
 The catalog tests run without FFmpeg. The preview generation tests require `videos/demo/` to be present — they will fail (not skip) if the directory is missing.
+
+### Windowed Non-T Effect Fallback (BL-512)
+
+Filters that do not support the FFmpeg `enable=` T flag (e.g., `zoompan`, `scale`, `subtitles`)
+cannot use `enable='between(t,start,end)'` for time-window gating. Instead, the stoat_ferret_core
+translator routes them through a **split/trim/concat fallback**:
+
+1. Split the clip at `window_start` and `window_end` using `trim` filters.
+2. Apply the effect to the middle segment.
+3. Concatenate the three segments with `concat=n=3:v=1:a=0`.
+4. Each segment junction adds `format=yuv420p` to ensure pixel format consistency.
+
+The non-T condition is: `defn.timeline_T_capable=False` AND a `WindowSpec` is present on the
+effect. Effects with `timeline_T_capable=True` continue to use `enable='between(t,...)'`
+without splitting the clip.
+
+**Smoke tests** (added in v110, BL-512):
+
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_smoke_windowed_non_t.py -v
+```
+
+Tests confirm:
+- The effect is visibly present inside the window and absent outside it (frame comparison).
+- Output `pix_fmt` is `yuv420p` (ffprobe assertion).
