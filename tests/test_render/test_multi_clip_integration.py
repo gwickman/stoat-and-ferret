@@ -595,6 +595,55 @@ async def test_fps_settb_normalization(tmp_path: Path) -> None:
 
 
 @_FFMPEG_SKIP
+async def test_fps_settb_necessity_negative_control(tmp_path: Path) -> None:
+    """AC-3 negative control: removing fps,settb normalization yields 0-byte output.
+
+    Builds a real two-clip command with mixed-framerate inputs (30fps + 25fps),
+    then substitutes the fps=30,settb=1/30 normalization filters with null
+    (a valid passthrough that preserves the original, mismatched timebases).
+    xfade on mismatched timebases fails in FFmpeg 8, producing a 0-byte output
+    or non-zero exit — demonstrating that the normalization is mandatory.
+    """
+    src_30 = tmp_path / "src_30fps.mp4"
+    src_25 = tmp_path / "src_25fps.mp4"
+    out = tmp_path / "output_no_norm.mp4"
+
+    _gen_lavfi_video(src_30, "color=c=cyan:s=320x240:r=30:d=3")
+    _gen_lavfi_video(src_25, "color=c=magenta:s=320x240:r=25:d=3")
+
+    clips = [
+        _make_gated_clip("clip-30", "vid-30", 0),
+        _make_gated_clip("clip-25", "vid-25", _GATED_DUR_FRAMES, out_point=75),
+    ]
+    videos = {
+        "vid-30": _make_gated_video("vid-30", str(src_30), fps_num=30, fps_den=1),
+        "vid-25": _make_gated_video("vid-25", str(src_25), fps_num=25, fps_den=1, dur_frames=75),
+    }
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    job = _make_gated_job(str(out))
+    cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+    # Strip fps/settb normalization: replace with the null video passthrough filter
+    # so the filter_complex remains syntactically valid but operates on the original
+    # mismatched timebases (30fps vs 25fps).
+    fc_idx = cmd.index("-filter_complex")
+    cmd[fc_idx + 1] = re.sub(r"fps=30,settb=1/30", "null", cmd[fc_idx + 1])
+
+    r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
+    # xfade on mismatched timebases must fail: 0-byte output or non-zero exit.
+    output_size = out.stat().st_size if out.exists() else 0
+    assert output_size == 0 or r.returncode != 0, (
+        "Expected 0-byte output or non-zero exit when fps/settb normalization is removed "
+        f"on mixed-framerate (30fps + 25fps) inputs. "
+        f"Got: size={output_size}, returncode={r.returncode}"
+    )
+
+
+@_FFMPEG_SKIP
 async def test_format_yuv420p_terminal(tmp_path: Path) -> None:
     """Output pixel format is yuv420p (BL-505-AC-4).
 
