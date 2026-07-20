@@ -743,3 +743,64 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
         f"3kHz band (TTS) not present: {db_3khz:.1f} dBFS "
         f"(expected >-40.0 dBFS) — TTS audio may have been dropped by amix"
     )
+
+
+# ---------------------------------------------------------------------------
+# BL-689-AC-1: TTS + source-audio two-band proof (full render-graph path)
+# ---------------------------------------------------------------------------
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_tts_source_two_band_amix_proof(tmp_path: Path) -> None:
+    """BL-689-AC-1: TTS + source-audio (clip-0) both survive amix (full render-graph path).
+
+    Single-clip render where clip-0 carries source audio at ~200 Hz plus a TTS cue at
+    ~3000 Hz (15x frequency ratio — exceeds NFR-001's ≥10x separation requirement).
+    Confirms both frequency bands exceed -40 dBFS in the rendered output, proving the
+    source audio from the first clip is not dropped when mixed with TTS.
+
+    This is the full render-graph path, distinct from the later-clip path tested by
+    test_tts_source_two_band_amix_survival (BL-683-AC-2).
+    """
+    src = tmp_path / "clip0_200hz.mp4"
+    tts_wav = tmp_path / "tts_3000hz.wav"
+    _gen_video_with_sine_audio(src, freq=200)
+    _gen_wav(tts_wav, freq=3000)
+
+    videos = {"vid-200hz": _make_video("vid-200hz", str(src), audio_codec="aac")}
+    clips = [_make_clip("clip-200hz", "vid-200hz", timeline_position=0)]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    tts_input = TtsCueAudioInput(
+        cue_id="cue-bl689-3khz-001",
+        audio_path=str(tts_wav),
+        track_id="voice-track",
+        start_s=0.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+    out = tmp_path / "bl689_two_band_output.mp4"
+    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[tts_input])
+    cmd[-1] = str(out)
+
+    rc = _run_ffmpeg(cmd)
+    assert rc.returncode == 0, rc.stderr.decode()[-800:]
+    assert out.exists() and out.stat().st_size > 0, "Output file missing or empty"
+
+    # Measure both bands in [0.5, 1.5]s — both sources are active in this window.
+    # Bandpass at 200Hz (1 octave wide) covers ~141–283 Hz; at 3000Hz covers ~2121–4243 Hz.
+    source_db = _measure_band_db_windowed(out, 200, 0.5, 1.5)
+    tts_db = _measure_band_db_windowed(out, 3000, 0.5, 1.5)
+
+    assert source_db > -40.0, (
+        f"200Hz band (source audio from clip 0) not present: {source_db:.1f} dBFS "
+        f"(expected >-40.0 dBFS) — source audio may have been dropped by amix"
+    )
+    assert tts_db > -40.0, (
+        f"3kHz band (TTS) not present: {tts_db:.1f} dBFS "
+        f"(expected >-40.0 dBFS) — TTS audio may have been dropped by amix"
+    )
