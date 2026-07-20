@@ -187,6 +187,12 @@ To run gated tests locally:
 STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v
 ```
 
+**Empty-commit discharge note:** The `ffmpeg-tests` CI job uses a paths-filter and skips when
+no code changes are detected. Empty tracking commits (discharge-confirmation push with no new
+source code) always trigger this skip — `ci-status` still passes. For discharge-only features,
+the local `STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v` run on the target FFmpeg
+version is the authoritative evidence; CI skip is expected, not an error.
+
 BL-503's per-effect gated-contract DoD gate is enforced by the `ffmpeg-tests` CI lane. Any AC that cross-references BL-503's FFmpeg contract verification is gated on this lane passing.
 
 The `ffmpeg-tests` job is non-required during the triage window — it is not in the `ci-status` needs array. Once the lane is stable it can be promoted to required by adding it to `ci-status.needs`.
@@ -536,6 +542,12 @@ Before creating a PR, confirm each item that applies to your change:
 - **Route/model changed?** — Did you modify a FastAPI route decorator, Pydantic model, or response
   schema? If yes, regenerate `gui/openapi.json` and `gui/src/generated/api-types.ts` (same commands
   as API field changed above).
+- **New .py file added?** — Did you create any new Python file (including empty `__init__.py`)? If yes, ensure every new file begins with the SPDX header:
+  ```python
+  # SPDX-License-Identifier: AGPL-3.0-or-later
+  # Copyright (C) 2026 Grant Wickman
+  ```
+  This header is required even when the file body is otherwise empty. CI enforces this; missing it adds an avoidable push round-trip.
 
 These four checks intercept the leading documentation-drift categories. See §OpenAPI Schema Sync
 for the full regeneration procedure.

@@ -4,6 +4,66 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v110 — FFmpeg-8 Emission-Contract Discharge (2026-07-20)
+
+3 themes, 13 features, PRs #865–#877.
+
+### Theme 1: FFmpeg-8 Builder and Effect Emission Proofs (4 features)
+
+Proved voice-repair and audio-effect emission contracts against FFmpeg 8: verified filter-graph strings
+for deesser, pan, freeze, aevalsrc, rubberband, and multiband_compressor builders. Confirmed animated-alpha
+`geq` compositing, volume dB-ramp correctness, and DuckingPair track FK isolation under live FFmpeg 8.
+
+- BL-680: FFmpeg 8 builder-emission proof suite — proved pan automation, freeze, deesser, aevalsrc,
+  rubberband, multiband_compressor filter contracts with `STOAT_TEST_FFMPEG=1` (PR #865)
+- BL-681: Animated-alpha geq visual proof — confirmed `geq` compositing produces the expected
+  luma/alpha pixel distribution via FFmpeg 8 pixel diff (PR #866)
+- BL-687: Volume dB-ramp audible proof — verified aevalsrc dB-ramp produces measurable per-band
+  energy contrast (PR #867)
+- BL-690: DuckingPair non-existent track FK rejection — confirmed Rust translator rejects invalid
+  track references before FFmpeg invocation (PR #868)
+
+### Theme 2: Worker Render and QC FFmpeg Discharge (4 features)
+
+Proved end-to-end worker render pipeline correctness: QC lifecycle (QCReport persistence,
+QC_FAILED transition, 404 no-profile, compliant verdict), windowed render output, multi-clip
+SSIM fidelity, and TTS+source-audio two-band amix.
+
+- BL-682 / BL-683: QC worker FFmpeg 8 discharge — QC pipeline produces QCReport with persist +
+  correct state transitions; compliant H.264+AAC MP4 yields `overall_verdict=pass` (PR #869)
+- BL-686: Windowed-render FFmpeg 8 discharge — renders windowed effect timeline to completion
+  with frame extraction at t=1s (PR #870)
+- BL-684: Multi-clip SSIM pixel-proof — two-clip render produces distinct SSIM-verified outputs
+  per clip slot (PR #871)
+- BL-689: TTS + source-audio two-band energy proof — amix with `normalize=0` preserves energy
+  ratio across low-band and high-band frequency regions (PR #872)
+
+### Theme 3: Render Output Integrity and Capability Tail (5 features)
+
+Implemented non-T windowed effect fallback in the Rust translator and smoke-test harness.
+Added concurrent render isolation proof and gated-suite quality guard.
+
+- BL-512: Non-T windowed effect split/trim/concat fallback — `EffectChainResult` enum routes
+  non-T filters through split/trim/concat graph; `format=yuv420p` + `setpts=PTS-STARTPTS`
+  at every junction (PRs #873, #874, #875)
+- Concurrent render distinct-outputs proof — verifies two simultaneous renders produce distinct
+  output files with no UUID collision (PR #876)
+- BL-691: Gated-suite quality guard — `scripts/check_gated_test_quality.py` AST scanner
+  enforces `STOAT_TEST_FFMPEG` guard on all gated tests; CI test in `tests/test_quality/`
+  (PR #877)
+
+### PRs
+
+#865, #866, #867, #868, #869, #870, #871, #872, #873, #874, #875, #876, #877
+
+### Resolved
+
+BL-680 (FFmpeg 8 builder-emission proofs), BL-681 (animated-alpha geq proof), BL-687
+(volume dB-ramp audible proof), BL-690 (DuckingPair track FK rejection), BL-682 (worker
+render pipeline correctness), BL-683 (QC worker FFmpeg 8 discharge), BL-684 (multi-clip
+SSIM pixel-proof), BL-689 (TTS + source-audio two-band energy proof), BL-512 (time-window
+non-T effect fallback)
+
 ## v109 — API/Router & Validation Refactors, DB/DSP Refactors, Named-Constant Dedup & Smoke-Test Verification (2026-07-19)
 
 4 themes, 17 features, PRs #849–#863.
