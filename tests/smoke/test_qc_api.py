@@ -359,6 +359,31 @@ async def qc_worker_path_client() -> httpx.AsyncClient:  # type: ignore[misc]
         yield client
 
 
+async def test_smoke_render_no_delivery_profile_qc_returns_404(
+    qc_worker_path_client: httpx.AsyncClient,
+) -> None:
+    """GET /render/{id}/qc returns 404 when render submitted without delivery profile.
+
+    BL-682-AC-3: non-FFmpeg regression guard — render without delivery profile
+    completes without QC, so GET .../qc returns 404.
+    """
+    client = qc_worker_path_client
+    project_id = await _seed_stub_project_with_clip(client)
+
+    render_resp = await client.post(
+        "/api/v1/render",
+        json={
+            "project_id": project_id,
+            "render_plan": json.dumps({"total_duration": 10.0, "settings": {}}),
+        },
+    )
+    assert render_resp.status_code == 201
+    job_id = render_resp.json()["id"]
+
+    qc_resp = await client.get(f"/api/v1/render/{job_id}/qc")
+    assert qc_resp.status_code == 404
+
+
 async def test_smoke_render_qc_worker_path(
     qc_worker_path_client: httpx.AsyncClient,
 ) -> None:
