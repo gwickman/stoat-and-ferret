@@ -392,6 +392,10 @@ class TestBurnedSubtitleBuilder:
         assert ":force_style='Fontsize=28'" in result
 
 
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires runtime FFmpeg (set STOAT_TEST_FFMPEG=1)",
+)
 def test_ci_bundle_guard_subtitle_filters() -> None:
     """Assert subtitles and ass filters are present in the bundled FFmpeg."""
     try:
