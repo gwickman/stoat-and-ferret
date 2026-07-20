@@ -36,6 +36,7 @@ from stoat_ferret.db.models import Clip, TtsCue, Video
 from stoat_ferret.db.tts_cue_repository import AsyncInMemoryTtsCueRepository
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
+from tests.helpers.audio_helpers import _measure_band_db_windowed
 
 _NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -990,34 +991,6 @@ class TestTtsSpeechEnergyPlacementFFmpeg:
                   -k test_tts_speech_energy_placement
     """
 
-    def _measure_band_db_windowed(
-        self, path: Path, freq_hz: int, start: float, end: float
-    ) -> float:
-        """Return mean_volume (dBFS) of a narrow frequency band within a time window."""
-        import subprocess
-
-        r = subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(path),
-                "-af",
-                f"atrim=start={start}:end={end},bandpass=f={freq_hz}:width_type=o:width=1,volumedetect",
-                "-f",
-                "null",
-                "-",
-            ],
-            capture_output=True,
-            text=True,
-        )
-        for line in r.stderr.splitlines():
-            if "mean_volume" in line:
-                return float(line.split("mean_volume:")[-1].strip().split(" ")[0])
-        raise RuntimeError(
-            f"volumedetect gave no mean_volume at {freq_hz} Hz for {path} [{start},{end}]"
-        )
-
     def test_tts_speech_energy_placement(self, tmp_path: Path) -> None:
         """Discharges BL-516-AC-4 and FR-002-AC-2. TTS audio energy must be
         concentrated in the post-cue window (≥-40 dBFS) and absent in the
@@ -1062,8 +1035,8 @@ class TestTtsSpeechEnergyPlacementFFmpeg:
         pre_start, pre_end = 0.5, t_cue - 0.3  # 300 ms margin before onset
         post_start, post_end = t_cue + 0.1, 3.8  # 100 ms after onset, within sine burst
 
-        e_pre = self._measure_band_db_windowed(wav_path, 500, pre_start, pre_end)
-        e_post = self._measure_band_db_windowed(wav_path, 500, post_start, post_end)
+        e_pre = _measure_band_db_windowed(wav_path, 500, pre_start, pre_end)
+        e_post = _measure_band_db_windowed(wav_path, 500, post_start, post_end)
 
         assert e_post >= -40.0, (
             f"post-cue [{post_start},{post_end}]s energy={e_post:.2f} dBFS expected ≥-40 dBFS"

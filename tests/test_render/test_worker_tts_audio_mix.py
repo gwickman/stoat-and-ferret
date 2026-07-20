@@ -24,6 +24,7 @@ from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.effects.definitions import create_default_registry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
+from tests.helpers.audio_helpers import _measure_band_db_windowed
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG")
 _FFMPEG_SKIP = pytest.mark.skipif(
@@ -649,3 +650,96 @@ async def test_translator_no_tts_no_amix() -> None:
     assert "amix" not in cmd_str
     assert "-filter_complex" in cmd
     assert "-an" in cmd
+
+
+# ---------------------------------------------------------------------------
+# BL-683-AC-2: TTS + source-audio two-band amix survival
+# ---------------------------------------------------------------------------
+
+
+def _gen_video_with_sine_audio(path: Path, freq: int) -> None:
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=green:s=320x240:r=30:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            f"sine=frequency={freq}:duration=2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-y",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[-500:])
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
+    """BL-683-AC-2: TTS + source audio both survive amix (two-band energy proof).
+
+    Multi-clip render: clip 0 video-only, clip 1 video + 100Hz source audio.
+    TTS cue at 3000Hz. Confirms both frequency bands exceed -40 dBFS in the
+    rendered output, proving amix does not silence either stream.
+    """
+    src0 = tmp_path / "clip0_silent.mp4"
+    src1 = tmp_path / "clip1_100hz.mp4"
+    tts_wav = tmp_path / "tts_3000hz.wav"
+    _gen_silent_video(src0)
+    _gen_video_with_sine_audio(src1, freq=100)
+    _gen_wav(tts_wav, freq=3000)
+
+    videos = {
+        "vid-band0": _make_video("vid-band0", str(src0), audio_codec=None),
+        "vid-band1": _make_video("vid-band1", str(src1), audio_codec="aac"),
+    }
+    clips = [
+        _make_clip("clip-band0", "vid-band0", timeline_position=0),
+        _make_clip("clip-band1", "vid-band1", timeline_position=300),
+    ]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    tts_input = TtsCueAudioInput(
+        cue_id="cue-tts-3khz-001",
+        audio_path=str(tts_wav),
+        track_id="voice-track",
+        start_s=0.0,
+        weight=1.0,
+        volume_envelope=None,
+    )
+    out = tmp_path / "two_band_output.mp4"
+    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[tts_input])
+    cmd[-1] = str(out)
+
+    rc = _run_ffmpeg(cmd)
+    assert rc.returncode == 0, rc.stderr.decode()[-800:]
+    assert out.exists() and out.stat().st_size > 0, "Output file missing or empty"
+
+    # Both bands should be present simultaneously: source audio (100Hz) and TTS (3000Hz)
+    # are both active from the audio timeline start (FFmpeg does not delay src audio).
+    db_100hz = _measure_band_db_windowed(out, 100, 0.5, 1.5)
+    db_3khz = _measure_band_db_windowed(out, 3000, 0.5, 1.5)
+
+    assert db_100hz > -40.0, (
+        f"100Hz band (source audio from clip 1) not present: {db_100hz:.1f} dBFS "
+        f"(expected >-40.0 dBFS) — source audio may have been dropped by amix"
+    )
+    assert db_3khz > -40.0, (
+        f"3kHz band (TTS) not present: {db_3khz:.1f} dBFS "
+        f"(expected >-40.0 dBFS) — TTS audio may have been dropped by amix"
+    )
