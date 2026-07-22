@@ -239,7 +239,7 @@ BL-636 (preview session-path confinement + HLS nosniff), BL-637 (fail-closed fil
 
 ### Theme 2: CI and Build Infrastructure (4 features)
 
-- BL-632: Confirmed maturin rebuild already present at 7 CI locations; added stale-.pyd smoke test `tests/test_smoke.py::test_maturin_pyd_is_current`; added AGENTS.md note that `maturin develop` must run from project root after every Rust merge (PR #803)
+- BL-632: Confirmed maturin rebuild already present at 7 CI locations; added stale-.pyd guard test `tests/test_api/test_tone_synthesis.py::test_tone_filter_frequency_clamp`; added AGENTS.md note that `maturin develop` must run from project root after every Rust merge (PR #803)
 - BL-498: Added `scripts/check_pyi_append_only.py` — CI guard that blocks any PR reducing `__new__` constructor count in `src/stoat_ferret_core/_core.pyi` below base-branch count; CI step added to `.github/workflows/ci.yml` (PR #804)
 - BL-466: Calibrated Windows CI timing constants — `test_frame_endpoint_timing` threshold 250ms (Windows) / 100ms (linux/mac); active-jobs poll deadline 4.0s (Windows) / 2.0s (linux/mac); `sys.platform == "win32"` detection; "Windows CI Timing" section added to AGENTS.md (PR #805)
 - BL-612: Wired `ffmpeg-tests` job into `ci-status.needs` in `.github/workflows/ci.yml`; AC-1 (GitHub branch protection required check) requires operator action (PR #806)
