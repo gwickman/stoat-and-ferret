@@ -35,7 +35,7 @@
       "measured": 7.52368e-05,
       "target": null,
       "pass": null,
-      "units": ""
+      "units": "dB"
     },
     "ducking": {
       "measured": -21.072762,
