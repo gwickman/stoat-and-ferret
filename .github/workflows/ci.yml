@@ -765,7 +765,7 @@ jobs:
             echo "UAT tests failed"
             exit 1
           fi
-          if [[ "${{ needs.ffmpeg-tests.result }}" == "failure" ]]; then
+          if [[ "${{ needs.ffmpeg-tests.result }}" == "failure" || "${{ needs.ffmpeg-tests.result }}" == "cancelled" ]]; then
             echo "FFmpeg gated tests failed"
             exit 1
           elif [[ "${{ needs.ffmpeg-tests.result }}" == "skipped" ]]; then
