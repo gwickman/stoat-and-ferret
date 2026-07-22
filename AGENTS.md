@@ -195,7 +195,7 @@ version is the authoritative evidence; CI skip is expected, not an error.
 
 BL-503's per-effect gated-contract DoD gate is enforced by the `ffmpeg-tests` CI lane. Any AC that cross-references BL-503's FFmpeg contract verification is gated on this lane passing.
 
-The `ffmpeg-tests` job is non-required during the triage window — it is not in the `ci-status` needs array. Once the lane is stable it can be promoted to required by adding it to `ci-status.needs`.
+The `ffmpeg-tests` job is enforced by the required `ci-status` aggregator — it is in `ci-status.needs` (ci.yml:723), so a failing or cancelled ffmpeg-tests run blocks the required ci-status check and cannot merge.
 
 ### Frontend (TypeScript, Vitest)
 

@@ -215,6 +215,6 @@ To run gated tests locally:
 STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v
 ```
 
-### Non-required status
+### Enforcement model
 
-The `ffmpeg-tests` job is not listed in the `ci-status` needs array. It is non-required during the triage window. Once the lane is stable (all regressions resolved), it can be promoted to required by adding it to `ci-status.needs`.
+The `ffmpeg-tests` job is listed in the `ci-status` needs array (ci.yml:723) and is enforced by the required `ci-status` aggregator — the branch-protection required check. A failing or cancelled `ffmpeg-tests` run causes `ci-status` to exit non-zero, blocking merge. No additional GitHub settings change is required; enforcement is fully in-repo.
