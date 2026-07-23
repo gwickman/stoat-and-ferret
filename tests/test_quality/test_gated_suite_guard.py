@@ -130,8 +130,23 @@ def find_ungated_ffmpeg_tests(tests_root: Path) -> list[str]:
     return violations
 
 
+def _is_bare_pass_body(func_node: ast.FunctionDef) -> bool:
+    """Return True if the function body consists only of pass statements and/or docstrings."""
+    for stmt in func_node.body:
+        if isinstance(stmt, ast.Pass):
+            continue
+        if (
+            isinstance(stmt, ast.Expr)
+            and isinstance(stmt.value, ast.Constant)
+            and isinstance(stmt.value.value, str)
+        ):
+            continue  # docstring
+        return False
+    return True
+
+
 # ---------------------------------------------------------------------------
-# Policy test
+# Policy tests
 # ---------------------------------------------------------------------------
 
 
@@ -142,4 +157,60 @@ def test_all_ffmpeg_tests_are_gated() -> None:
     assert not violations, (
         "Found FFmpeg-invoking test functions missing STOAT_TEST_FFMPEG skip guard:\n"
         + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_bare_pass_gated_tests_are_flagged() -> None:
+    """BL-691-AC-2: any FFmpeg-gated test_ with a bare-pass body is flagged."""
+    # Positive case: bare-pass gated test IS detected
+    positive_src = """
+import pytest
+STOAT_TEST_FFMPEG = True
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="needs ffmpeg")
+def test_fake_ffmpeg_bare_pass():
+    pass
+"""
+    tree = ast.parse(positive_src)
+    bare_found = any(
+        _is_bare_pass_body(n) and _decorators_have_ffmpeg_guard(n.decorator_list)
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
+    )
+    assert bare_found, "Positive case: bare-pass gated test was NOT detected by the guard"
+
+    # Negative case: gated test with a real assertion is NOT flagged
+    negative_src = """
+import pytest
+STOAT_TEST_FFMPEG = True
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="needs ffmpeg")
+def test_fake_ffmpeg_with_assertion():
+    assert 1 + 1 == 2
+"""
+    tree2 = ast.parse(negative_src)
+    bare_in_negative = any(
+        _is_bare_pass_body(n) and _decorators_have_ffmpeg_guard(n.decorator_list)
+        for n in ast.walk(tree2)
+        if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
+    )
+    assert not bare_in_negative, "Negative case: guard falsely flagged a test with a real assertion"
+
+    # Real scan: walk all test files for bare-pass gated tests
+    tests_root = Path(__file__).parent.parent  # tests/
+    bare_pass_culprits: list[str] = []
+    for py_file in sorted(tests_root.rglob("test_*.py")):
+        try:
+            source = py_file.read_text(encoding="utf-8")
+            tree3 = ast.parse(source)
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for node in ast.walk(tree3):
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name.startswith("test_")
+                and _decorators_have_ffmpeg_guard(node.decorator_list)
+                and _is_bare_pass_body(node)
+            ):
+                bare_pass_culprits.append(f"{py_file.relative_to(tests_root.parent)}::{node.name}")
+    assert not bare_pass_culprits, "Bare-pass gated tests found (BL-691 guard):\n" + "\n".join(
+        f"  {c}" for c in bare_pass_culprits
     )
