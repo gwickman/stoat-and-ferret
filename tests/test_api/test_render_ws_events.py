@@ -152,7 +152,7 @@ class TestEventTypeEnum:
         ]
         assert len(render_types) == 8
         # All are distinct
-        assert len(set(rt.value for rt in render_types)) == 8
+        assert len({rt.value for rt in render_types}) == 8
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ class TestFrameExtractionSpike:
     async def test_frame_available_event_includes_resolution(self) -> None:
         """render.frame_available event payload includes 540p resolution."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service()
+            service, _repo, ws, _executor = _build_service()
             job = await service.submit_job(
                 project_id="proj-1",
                 output_path="/tmp/out.mp4",
@@ -330,7 +330,7 @@ class TestFrameCaptureTaskRetention:
     async def test_frame_capture_task_survives_gc_while_pending(self) -> None:
         """The fire-and-forget frame-capture task is retained and not GC'd mid-flight."""
         with _PATCH_NO_RUST:
-            service, _, ws, _ = _build_service()
+            service, _, _ws, _ = _build_service()
             job_id = "job-retain"
             release_event = asyncio.Event()
 
@@ -404,7 +404,7 @@ class TestThrottleStateCleanup:
     async def test_clear_throttle_state(self) -> None:
         """Throttle state is cleared after job completion."""
         with _PATCH_NO_RUST:
-            service, _, ws, _ = _build_service()
+            service, _, _ws, _ = _build_service()
             job_id = "job-cleanup"
 
             await service._broadcast_throttled_progress(job_id, 0.10)

@@ -25,15 +25,15 @@ from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 
 def _make_project(**kwargs) -> Project:
     now = datetime.now(timezone.utc)
-    defaults = dict(
-        id="test-id",
-        name="Test Project",
-        output_width=1920,
-        output_height=1080,
-        output_fps=30,
-        created_at=now,
-        updated_at=now,
-    )
+    defaults = {
+        "id": "test-id",
+        "name": "Test Project",
+        "output_width": 1920,
+        "output_height": 1080,
+        "output_fps": 30,
+        "created_at": now,
+        "updated_at": now,
+    }
     defaults.update(kwargs)
     return Project(**defaults)
 

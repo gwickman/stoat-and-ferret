@@ -53,7 +53,7 @@ async def _join_stderr_drain(
     job_id: str,
 ) -> None:
     """Join stderr drain task with bounded timeout per LRN-406."""
-    done, pending = await asyncio.wait({stderr_task}, timeout=5.0)
+    _done, pending = await asyncio.wait({stderr_task}, timeout=5.0)
     if pending:
         for task in pending:
             task.cancel()

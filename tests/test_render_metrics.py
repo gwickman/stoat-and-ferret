@@ -155,7 +155,7 @@ class TestJobCounters:
     async def test_counter_increments_on_completion(self) -> None:
         """render_jobs_total(status=completed) increments on successful completion."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service()
+            service, repo, _ws, executor = _build_service()
 
             before = _get_counter_value(render_jobs_total, {"status": "completed"})
 
@@ -176,7 +176,7 @@ class TestJobCounters:
     async def test_counter_increments_on_failure(self) -> None:
         """render_jobs_total(status=failed) increments on permanent failure."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service(
+            service, repo, _ws, executor = _build_service(
                 settings=Settings(render_retry_count=0),
             )
 
@@ -199,7 +199,7 @@ class TestJobCounters:
     async def test_counter_increments_on_cancellation(self) -> None:
         """render_jobs_total(status=cancelled) increments on cancellation."""
         with _PATCH_NO_RUST:
-            service, repo, ws, _ = _build_service()
+            service, _repo, _ws, _ = _build_service()
 
             before = _get_counter_value(render_jobs_total, {"status": "cancelled"})
 
@@ -218,7 +218,7 @@ class TestJobCounters:
     async def test_counter_increments_on_submission(self) -> None:
         """render_jobs_total(status=submitted) increments when job is created."""
         with _PATCH_NO_RUST:
-            service, repo, ws, _ = _build_service()
+            service, _repo, _ws, _ = _build_service()
 
             before = _get_counter_value(render_jobs_total, {"status": "submitted"})
 
@@ -245,7 +245,7 @@ class TestDurationHistogram:
     async def test_duration_observed_on_completion(self) -> None:
         """render_duration_seconds observes elapsed time on successful completion."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service()
+            service, repo, _ws, executor = _build_service()
 
             job = await service.submit_job(
                 project_id="proj-1",
@@ -401,7 +401,7 @@ class TestDiskUsage:
     async def test_disk_usage_updated_on_completion(self) -> None:
         """render_disk_usage_bytes updates on job completion."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service()
+            service, repo, _ws, executor = _build_service()
             render_disk_usage_bytes.set(0)
 
             mock_usage = MagicMock()
@@ -428,7 +428,7 @@ class TestDiskUsage:
     async def test_disk_usage_handles_missing_dir(self) -> None:
         """Disk usage silently skips when output dir doesn't exist."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service()
+            service, repo, _ws, executor = _build_service()
             render_disk_usage_bytes.set(0)
 
             job = await service.submit_job(

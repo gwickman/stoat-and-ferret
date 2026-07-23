@@ -217,7 +217,7 @@ class TestGracefulShutdown:
 
     async def test_cancel_all_cancels_active_tasks(self) -> None:
         """FR-004: Active FFmpeg processes terminated on shutdown."""
-        manager, repo, gen, _ws = _make_manager()
+        manager, _repo, gen, _ws = _make_manager()
 
         # Make generate() block indefinitely until cancelled
         cancel_signal = asyncio.Event()

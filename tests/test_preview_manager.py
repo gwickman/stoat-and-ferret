@@ -90,7 +90,7 @@ class TestStateMachine:
 
     async def test_start_transitions_initializing_to_generating(self) -> None:
         """Start should create session in initializing, then transition to generating."""
-        manager, repo, gen, ws = _make_manager()
+        manager, repo, _gen, _ws = _make_manager()
 
         session = await manager.start(
             project_id="proj-1",
@@ -104,7 +104,7 @@ class TestStateMachine:
 
     async def test_start_to_ready_on_generation_complete(self) -> None:
         """After generation completes, session transitions to ready."""
-        manager, repo, gen, ws = _make_manager()
+        manager, repo, _gen, _ws = _make_manager()
 
         session = await manager.start(
             project_id="proj-1",
@@ -123,7 +123,7 @@ class TestStateMachine:
         """Generation failure transitions session to error state."""
         gen = AsyncMock()
         gen.generate = AsyncMock(side_effect=RuntimeError("FFmpeg failed"))
-        manager, repo, _, ws = _make_manager(generator=gen)
+        manager, repo, _, _ws = _make_manager(generator=gen)
 
         session = await manager.start(
             project_id="proj-1",
@@ -139,7 +139,7 @@ class TestStateMachine:
 
     async def test_invalid_transition_rejected(self) -> None:
         """Invalid state transitions should be rejected."""
-        manager, repo, gen, ws = _make_manager()
+        manager, repo, _gen, _ws = _make_manager()
 
         session = await manager.start(
             project_id="proj-1",
@@ -158,7 +158,7 @@ class TestStateMachine:
     async def test_all_valid_transitions_succeed(self) -> None:
         """All valid transition paths should succeed."""
         repo = InMemoryPreviewRepository()
-        manager, _, gen, ws = _make_manager(repository=repo)
+        manager, _, _gen, _ws = _make_manager(repository=repo)
 
         now = datetime.now(timezone.utc)
 
@@ -204,7 +204,7 @@ class TestConcurrentSessionLimit:
 
     async def test_max_sessions_enforced(self) -> None:
         """Creating session max+1 should raise SessionLimitError."""
-        manager, repo, gen, ws = _make_manager(max_sessions=2)
+        manager, _repo, _gen, _ws = _make_manager(max_sessions=2)
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await manager.start(project_id="p2", input_path="/v2.mp4")
@@ -214,7 +214,7 @@ class TestConcurrentSessionLimit:
 
     async def test_existing_sessions_unaffected_on_limit(self) -> None:
         """Existing sessions should be unaffected when limit is hit."""
-        manager, repo, gen, ws = _make_manager(max_sessions=2)
+        manager, repo, _gen, _ws = _make_manager(max_sessions=2)
 
         s1 = await manager.start(project_id="p1", input_path="/v1.mp4")
         s2 = await manager.start(project_id="p2", input_path="/v2.mp4")
@@ -228,7 +228,7 @@ class TestConcurrentSessionLimit:
 
     async def test_can_create_after_stop(self) -> None:
         """After stopping a session, a new one can be created."""
-        manager, repo, gen, ws = _make_manager(max_sessions=1)
+        manager, _repo, _gen, _ws = _make_manager(max_sessions=1)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -246,7 +246,7 @@ class TestSeek:
 
     async def test_seek_cancels_and_restarts_generation(self) -> None:
         """Seek should cancel active generation, clean segments, restart."""
-        manager, repo, gen, ws = _make_manager()
+        manager, repo, _gen, _ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)  # Let generation complete
@@ -268,7 +268,7 @@ class TestSeek:
 
     async def test_seek_broadcasts_events(self) -> None:
         """Seek should broadcast seeking and then ready events."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -287,14 +287,14 @@ class TestSeek:
 
     async def test_seek_not_found_raises(self) -> None:
         """Seeking a non-existent session should raise SessionNotFoundError."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, _ws = _make_manager()
 
         with pytest.raises(SessionNotFoundError):
             await manager.seek("nonexistent", input_path="/v1.mp4")
 
     async def test_seek_expired_raises(self) -> None:
         """Seeking an expired session should raise SessionExpiredError."""
-        manager, repo, gen, ws = _make_manager(session_ttl_seconds=0)
+        manager, _repo, _gen, _ws = _make_manager(session_ttl_seconds=0)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -317,7 +317,7 @@ class TestSeek:
             return Path("/tmp/previews/fake-session")
 
         slow_gen.generate = AsyncMock(side_effect=slow_generate)
-        manager, repo, _, ws = _make_manager(generator=slow_gen)
+        manager, repo, _, _ws = _make_manager(generator=slow_gen)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await generation_started.wait()
@@ -342,7 +342,7 @@ class TestGracefulStop:
 
     async def test_stop_cleans_up_session(self) -> None:
         """Stop should remove session directory and repository record."""
-        manager, repo, gen, ws = _make_manager()
+        manager, repo, _gen, _ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -355,7 +355,7 @@ class TestGracefulStop:
 
     async def test_stop_not_found_raises(self) -> None:
         """Stopping a non-existent session should raise SessionNotFoundError."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, _ws = _make_manager()
 
         with pytest.raises(SessionNotFoundError):
             await manager.stop("nonexistent")
@@ -373,7 +373,7 @@ class TestGracefulStop:
             raise RuntimeError("Cancelled")
 
         slow_gen.generate = AsyncMock(side_effect=slow_generate)
-        manager, repo, _, ws = _make_manager(generator=slow_gen)
+        manager, repo, _, _ws = _make_manager(generator=slow_gen)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await generation_started.wait()
@@ -389,7 +389,7 @@ class TestSessionExpiry:
 
     async def test_accessing_expired_session_raises(self) -> None:
         """Accessing an expired session should raise SessionExpiredError."""
-        manager, repo, gen, ws = _make_manager(session_ttl_seconds=0)
+        manager, _repo, _gen, _ws = _make_manager(session_ttl_seconds=0)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -399,7 +399,7 @@ class TestSessionExpiry:
 
     async def test_cleanup_expired_removes_sessions(self) -> None:
         """cleanup_expired should remove all expired sessions."""
-        manager, repo, gen, ws = _make_manager(session_ttl_seconds=0)
+        manager, repo, _gen, _ws = _make_manager(session_ttl_seconds=0)
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await manager.start(project_id="p2", input_path="/v2.mp4")
@@ -413,7 +413,7 @@ class TestSessionExpiry:
 
     async def test_non_expired_sessions_not_cleaned(self) -> None:
         """cleanup_expired should not remove sessions that haven't expired."""
-        manager, repo, gen, ws = _make_manager(session_ttl_seconds=3600)
+        manager, repo, _gen, _ws = _make_manager(session_ttl_seconds=3600)
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -428,7 +428,7 @@ class TestWebSocketEvents:
 
     async def test_start_emits_generating_event(self) -> None:
         """Starting a session should broadcast preview.generating."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, ws = _make_manager()
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
 
@@ -438,7 +438,7 @@ class TestWebSocketEvents:
 
     async def test_generation_complete_emits_ready_event(self) -> None:
         """Completed generation should broadcast preview.ready."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, ws = _make_manager()
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -450,7 +450,7 @@ class TestWebSocketEvents:
         """Failed generation should broadcast preview.error."""
         gen = AsyncMock()
         gen.generate = AsyncMock(side_effect=RuntimeError("FFmpeg crashed"))
-        manager, repo, _, ws = _make_manager(generator=gen)
+        manager, _repo, _, ws = _make_manager(generator=gen)
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -460,7 +460,7 @@ class TestWebSocketEvents:
 
     async def test_event_payload_contains_session_id(self) -> None:
         """All events should include session_id in payload."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -471,7 +471,7 @@ class TestWebSocketEvents:
 
     async def test_seek_emits_seeking_event(self) -> None:
         """Seek should broadcast preview.seeking event."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -490,7 +490,7 @@ class TestGetStatus:
 
     async def test_get_status_returns_session(self) -> None:
         """get_status should return the current session."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, _ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -501,7 +501,7 @@ class TestGetStatus:
 
     async def test_get_status_not_found_raises(self) -> None:
         """get_status for a non-existent session should raise."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, _ws = _make_manager()
 
         with pytest.raises(SessionNotFoundError):
             await manager.get_status("nonexistent")
@@ -512,7 +512,7 @@ class TestSeekSerialization:
 
     async def test_concurrent_seeks_serialized(self) -> None:
         """Concurrent seek requests on the same session use a per-session lock."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, _ws = _make_manager()
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -550,7 +550,7 @@ class TestParityStartSeek:
 
     async def test_both_emit_generating_to_ready_events(self) -> None:
         """Both start and seek should emit generating -> ready events on success."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, _gen, ws = _make_manager()
 
         # Start
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
@@ -585,7 +585,7 @@ class TestParityStartSeek:
             raise RuntimeError("Generation failed")
 
         gen.generate = AsyncMock(side_effect=fail_generate)
-        manager, repo, _, ws = _make_manager(generator=gen)
+        manager, _repo, _, ws = _make_manager(generator=gen)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
