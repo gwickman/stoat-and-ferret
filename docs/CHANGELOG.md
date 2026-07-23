@@ -4,6 +4,67 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v111 — Verification-Gate Closeout and Agent-Surface/Doc Hygiene (2026-07-23)
+
+5 themes, 22 features, PRs #878–#893. **Final planned version.**
+
+### Theme 1: UAT Discharge (headed and headless)
+
+Discharged all outstanding UAT acceptance criteria for headed and headless browser journeys,
+and completed Wave-T FFmpeg-gated QC verification.
+
+- BL-679: GUI headed-UAT discharge — all headed browser journeys pass with no unexpected failures
+- BL-685: Headless UAT confirmation — all headless journeys pass; J204 export-render confirmed UNEXPECTED_PASS
+- BL-472: Wave-T FFmpeg-gated QC discharge — confirmed QC pipeline produces correct outcomes under FFmpeg 8 for wave-T effects (PR #879)
+
+### Theme 2: CI Gates and Design Drift Guards
+
+Added CI enforcement for the FFmpeg test lane, SonarCloud integration, and design-phase AC-status drift detection.
+
+- BL-612: Harden `ffmpeg-tests` ci-status gate and repair documentation (PR #880)
+- BL-688: Design-phase AC-status drift guard — CI check detecting ACs marked supported without ledger evidence
+- BL-693: SonarCloud exclusion — added `sonar-project.properties` with cpd.exclusions for render-verify scripts (PR #881)
+- BL-694: PLR0124 self-comparison guard — AST guard detecting attribute self-comparison patterns (PR #882)
+- BL-704: Dynamic C4 location-line regression guard — parametrized test verifying C4 `Location:` citations resolve to correct source line numbers (PR #885)
+
+### Theme 3: Documentation and Source Corrections
+
+Corrected documentation gaps and source citation errors surfaced by retrospective and post-orchestration review.
+
+- BL-635: Correct v105 BL-632 CHANGELOG test path [skip ci] (PR #883)
+- BL-654: Job-completion asyncio.timeout rewrite — AC-3 evidence documented and verified
+- BL-698: Add `clientIds` field to C4 GUI Stores documentation (PR #886, combined with BL-703)
+
+### Theme 4: GUI Hygiene Residuals (post-v107 postorch)
+
+Completed GUI correctness fixes deferred from v107 post-orchestration review.
+
+- BL-701: LayerStack composite keys — use composite `z_index+x+y` as stable React key in `LayerStack` (PR #887)
+- BL-702: `useRenderEvents` null-forwarding — forward omitted-vs-null distinction in `render_progress` handler (PR #888)
+- BL-703: Dead code cleanup — remove dead `setEffects` action from EffectStack store (zero call sites); replace silent array-index fallback with fail-closed invariant guard in DEV mode (PR #886)
+
+### Theme 5: Test-Hygiene Riders
+
+Closed test-quality gaps identified in v110 retrospective, post-orchestration review, and prior deferred items.
+
+- BL-558: Retire stale J502/J504 known-failure registry entries (PR #878)
+- BL-686: FFmpeg multi-clip distinct MP4s — add ffprobe duration assertion to concurrent render test (PR #891)
+- BL-691: FFmpeg-gated full suite + bare-pass guard — quality guard script enforcing `STOAT_TEST_FFMPEG` guard on all gated tests (PR #892)
+- BL-695: Alembic migration ruff format fix — apply ruff format to alembic migration file (PR #884)
+- BL-705: Fixture pre-yield cleanup — add pre-yield cleanup to `_clean_root_handlers` fixture to prevent handler leak between tests (PR #889)
+- BL-706: Mixed-timeout concurrent-wait regression test — verifies short-timeout waiters time out while long-timeout waiters complete (PR #890)
+- BL-708: QC oracle smoke test payload fix — add `output_formats` to qc_oracle smoke test POST payload (PR #893)
+
+### PRs
+
+#878, #879, #880, #881, #882, #883, #884, #885, #886, #887, #888, #889, #890, #891, #892, #893
+
+### Resolved
+
+BL-472 (wave-T QC discharge), BL-558 (stale known-failures), BL-612 (ffmpeg-tests ci-status gate), BL-635 (CHANGELOG test path), BL-654 (asyncio.timeout job-completion), BL-679 (GUI headed-UAT), BL-685 (headless UAT), BL-686 (FFmpeg multi-clip distinct MP4s), BL-688 (design-phase AC-status guard), BL-691 (gated-suite quality guard), BL-693 (SonarCloud exclusion), BL-694 (PLR0124 self-comparison guard), BL-695 (alembic migration format fix), BL-698 (C4 clientIds field), BL-701 (LayerStack composite keys), BL-702 (useRenderEvents null-forwarding), BL-703 (dead setEffects action cleanup), BL-704 (C4 location-line guard), BL-705 (fixture pre-yield cleanup), BL-706 (mixed-timeout regression test), BL-708 (QC oracle smoke payload fix)
+
+---
+
 ## v110 — FFmpeg-8 Emission-Contract Discharge (2026-07-20)
 
 3 themes, 13 features, PRs #865–#877.
