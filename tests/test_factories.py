@@ -123,7 +123,7 @@ class TestProjectFactoryBuildWithClips:
 
     def test_multiple_clips(self) -> None:
         """build_with_clips() handles multiple clips."""
-        project, videos, clips = (
+        _project, videos, clips = (
             ProjectFactory()
             .with_clip(out_point=100)
             .with_clip(out_point=200, timeline_position=100)

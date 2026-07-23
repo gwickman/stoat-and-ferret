@@ -194,7 +194,7 @@ class TestJobLifecycle:
     async def test_submit_creates_and_enqueues(self) -> None:
         """submit_job creates a job and enqueues it."""
         with _PATCH_NO_RUST:
-            service, repo, ws, _ = _build_service()
+            service, repo, _ws, _ = _build_service()
             plan_json = _make_plan_json()
 
             job = await service.submit_job(
@@ -442,7 +442,7 @@ class TestRetryLogic:
     async def test_retry_increments_count(self) -> None:
         """Each retry increments retry_count."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service(
+            service, repo, _ws, executor = _build_service(
                 settings=_make_settings(retry_count=3),
             )
             plan_json = _make_plan_json()
@@ -524,7 +524,7 @@ class TestCancelLifecycle:
     async def test_cancel_completed_returns_false(self) -> None:
         """Cancelling an already completed job returns False."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service()
+            service, repo, _ws, _executor = _build_service()
 
             job = await service.submit_job(
                 project_id="proj-1",
@@ -678,7 +678,7 @@ class TestCleanup:
         """Cleanup runs on successful completion."""
         with _PATCH_NO_RUST:
             checkpoint_mgr = _make_checkpoint_manager()
-            service, repo, ws, executor = _build_service(
+            service, repo, _ws, executor = _build_service(
                 checkpoint_manager=checkpoint_mgr,
             )
 
@@ -700,7 +700,7 @@ class TestCleanup:
         """Cleanup runs on permanent failure (no more retries)."""
         with _PATCH_NO_RUST:
             checkpoint_mgr = _make_checkpoint_manager()
-            service, repo, ws, executor = _build_service(
+            service, repo, _ws, executor = _build_service(
                 checkpoint_manager=checkpoint_mgr,
                 settings=_make_settings(retry_count=0),
             )
@@ -1269,7 +1269,7 @@ class TestRenderWorkerNoop:
     async def test_noop_jobs_complete_inline(self) -> None:
         """AC-6.1: noop mode drives job to COMPLETED without worker involvement."""
         with _PATCH_NO_RUST:
-            service, repo, ws, executor = _build_service(
+            service, _repo, _ws, executor = _build_service(
                 settings=Settings(render_mode="noop"),
             )
             executor.execute = AsyncMock(return_value=False)  # type: ignore[method-assign]

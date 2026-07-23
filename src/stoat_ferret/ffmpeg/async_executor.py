@@ -249,7 +249,7 @@ class RealAsyncFFmpegExecutor:
             with contextlib.suppress(asyncio.CancelledError):
                 await cancel_task
             # Bounded wait per LRN-406: bare await can stall indefinitely on Python 3.10
-            done, pending = await asyncio.wait({reader_task}, timeout=15.0)
+            _done, pending = await asyncio.wait({reader_task}, timeout=15.0)
             for task in pending:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):

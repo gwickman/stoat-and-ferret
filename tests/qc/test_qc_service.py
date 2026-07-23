@@ -111,7 +111,7 @@ async def test_qc_service_runs_all_12_checks(tmp_path: Path) -> None:
     artifact = tmp_path / "out.mp4"
     artifact.write_bytes(b"placeholder")
 
-    svc, repo, _ = _make_service()
+    svc, _repo, _ = _make_service()
     record = await svc.run_checks(str(artifact))
 
     checks = json.loads(record.checks)
@@ -534,8 +534,8 @@ async def test_qc_standalone_vs_post_render_parity(tmp_path: Path) -> None:
     artifact = tmp_path / "out.mp4"
     artifact.write_bytes(b"placeholder")
 
-    svc_standalone, repo_a, _ = _make_service()
-    svc_post_render, repo_b, _ = _make_service()
+    svc_standalone, _repo_a, _ = _make_service()
+    svc_post_render, _repo_b, _ = _make_service()
 
     record_a = await svc_standalone.run_checks(str(artifact))
     record_b = await svc_post_render.run_checks(str(artifact), job_id="job-xyz")

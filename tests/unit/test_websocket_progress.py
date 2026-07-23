@@ -170,7 +170,7 @@ class TestProgressWithStateTransitions:
 
         gen = AsyncMock()
         gen.generate = AsyncMock(side_effect=capturing_generate)
-        manager, repo, _, ws = _make_manager(generator=gen)
+        manager, _repo, _, ws = _make_manager(generator=gen)
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -197,7 +197,7 @@ class TestProgressWithStateTransitions:
 
         gen = AsyncMock()
         gen.generate = AsyncMock(side_effect=generate_with_progress)
-        manager, repo, _, ws = _make_manager(generator=gen)
+        manager, _repo, _, ws = _make_manager(generator=gen)
 
         session = await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -214,7 +214,7 @@ class TestProgressWithStateTransitions:
 
     async def test_generator_receives_progress_callback(self) -> None:
         """Generator.generate() should receive a progress_callback argument."""
-        manager, repo, gen, ws = _make_manager()
+        manager, _repo, gen, _ws = _make_manager()
 
         await manager.start(project_id="p1", input_path="/v1.mp4")
         await asyncio.sleep(0.05)
@@ -230,7 +230,7 @@ class TestProgressCallbackPerformance:
 
     async def test_callback_execution_under_5ms(self) -> None:
         """Progress callback execution should be under 5ms per invocation."""
-        manager, _repo, _gen, ws = _make_manager()
+        manager, _repo, _gen, _ws = _make_manager()
         callback = manager._make_progress_callback("session-perf")
 
         # Warm up

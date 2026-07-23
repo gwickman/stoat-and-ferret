@@ -779,7 +779,7 @@ class TestStripEdgeCases:
 
     def test_four_hour_within_jpeg_limits(self) -> None:
         """4-hour video sprite sheet fits within JPEG 65535px limits (FR-006)."""
-        frame_count, rows = calculate_strip_dimensions(4 * 3600, 5.0, 10)
+        _frame_count, rows = calculate_strip_dimensions(4 * 3600, 5.0, 10)
         total_width = 10 * 160
         total_height = rows * 90
         assert total_width <= 65535

@@ -1211,7 +1211,7 @@ async def _run_loudnorm_pass1(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    stdout_b, stderr_b = await proc.communicate()
+    _stdout_b, stderr_b = await proc.communicate()
     stderr_text = stderr_b.decode("utf-8", errors="replace")
 
     if proc.returncode != 0:

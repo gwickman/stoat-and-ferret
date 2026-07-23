@@ -489,7 +489,7 @@ class TestGracefulShutdownSystem:
     async def test_graceful_shutdown_sequence(self) -> None:
         """System: shutdown sets flag, cancels via stdin 'q', cleans temp files."""
         with _PATCH_NO_RUST:
-            service, repo, _, executor = _build_service()
+            service, _repo, _, executor = _build_service()
 
             # Submit a job
             job = await service.submit_job(

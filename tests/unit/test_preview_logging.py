@@ -82,7 +82,7 @@ class TestPreviewSessionLogging:
 
     async def test_session_created_event(self) -> None:
         """preview_session_created emitted with session_id on start."""
-        mgr, repo, gen, ws = _make_preview_manager()
+        mgr, _repo, _gen, _ws = _make_preview_manager()
 
         with patch("stoat_ferret.preview.manager.logger") as mock_logger:
             session = await mgr.start(
@@ -99,7 +99,7 @@ class TestPreviewSessionLogging:
 
     async def test_generation_started_event(self) -> None:
         """preview_generation_started emitted with session_id."""
-        mgr, repo, gen, ws = _make_preview_manager()
+        mgr, _repo, _gen, _ws = _make_preview_manager()
 
         with patch("stoat_ferret.preview.manager.logger") as mock_logger:
             session = await mgr.start(
@@ -122,7 +122,7 @@ class TestPreviewSessionLogging:
         (output_dir / "segment_001.ts").write_bytes(b"\x00" * 100)
         (output_dir / "manifest.m3u8").write_text("#EXTM3U")
 
-        mgr, repo, gen, ws = _make_preview_manager(output_base_dir=str(tmp_path))
+        mgr, _repo, gen, _ws = _make_preview_manager(output_base_dir=str(tmp_path))
         gen.generate = AsyncMock(return_value=output_dir)
 
         with patch("stoat_ferret.preview.manager.logger") as mock_logger:
@@ -148,7 +148,7 @@ class TestPreviewSessionLogging:
         output_dir.mkdir()
         (output_dir / "manifest.m3u8").write_text("#EXTM3U")
 
-        mgr, repo, gen, ws = _make_preview_manager(output_base_dir=str(tmp_path))
+        mgr, _repo, gen, _ws = _make_preview_manager(output_base_dir=str(tmp_path))
         gen.generate = AsyncMock(return_value=output_dir)
 
         with patch("stoat_ferret.preview.manager.logger") as mock_logger:
@@ -172,7 +172,7 @@ class TestPreviewSessionLogging:
         output_dir.mkdir()
         (output_dir / "manifest.m3u8").write_text("#EXTM3U")
 
-        mgr, repo, gen, ws = _make_preview_manager(output_base_dir=str(tmp_path))
+        mgr, _repo, gen, _ws = _make_preview_manager(output_base_dir=str(tmp_path))
         gen.generate = AsyncMock(return_value=output_dir)
 
         session = await mgr.start(
@@ -198,7 +198,7 @@ class TestPreviewSessionLogging:
 
     async def test_generation_failed_event(self) -> None:
         """preview_generation_failed emitted with session_id on error."""
-        mgr, repo, gen, ws = _make_preview_manager()
+        mgr, _repo, gen, _ws = _make_preview_manager()
         gen.generate = AsyncMock(side_effect=RuntimeError("ffmpeg crashed"))
 
         with patch("stoat_ferret.preview.manager.logger") as mock_logger:
@@ -220,7 +220,7 @@ class TestPreviewSessionLogging:
 
     async def test_session_expired_event(self) -> None:
         """preview_session_expired emitted with session_id."""
-        mgr, repo, gen, ws = _make_preview_manager()
+        mgr, repo, _gen, _ws = _make_preview_manager()
 
         session = await mgr.start(
             project_id="proj-1",
@@ -256,7 +256,7 @@ class TestPreviewSessionNamingConvention:
         output_dir.mkdir()
         (output_dir / "manifest.m3u8").write_text("#EXTM3U")
 
-        mgr, repo, gen, ws = _make_preview_manager(output_base_dir=str(tmp_path))
+        mgr, _repo, gen, _ws = _make_preview_manager(output_base_dir=str(tmp_path))
         gen.generate = AsyncMock(return_value=output_dir)
 
         expected_events = {
@@ -569,7 +569,7 @@ class TestCorrelationIdPropagation:
 
     async def test_correlation_id_in_session_events(self) -> None:
         """All preview session log events include correlation_id."""
-        mgr, repo, gen, ws = _make_preview_manager()
+        mgr, _repo, _gen, _ws = _make_preview_manager()
 
         with (
             patch("stoat_ferret.preview.manager.logger") as mock_logger,

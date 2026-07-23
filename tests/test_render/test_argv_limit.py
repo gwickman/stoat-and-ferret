@@ -216,7 +216,7 @@ def test_fence_post_at_threshold_routes_to_file(
     job = _make_job()
     executor = _make_executor()
 
-    new_cmd, filter_path = _maybe_route_filter_to_file(command, job, executor)
+    _new_cmd, filter_path = _maybe_route_filter_to_file(command, job, executor)
 
     assert filter_path is not None
     with contextlib.suppress(OSError):

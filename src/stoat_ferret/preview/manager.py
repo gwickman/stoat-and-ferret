@@ -672,7 +672,7 @@ class PreviewManager:
         if tasks:
             for task in tasks:
                 task.cancel()
-            done, pending = await asyncio.wait(tasks, timeout=5.0)
+            _done, pending = await asyncio.wait(tasks, timeout=5.0)
             for task in pending:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
