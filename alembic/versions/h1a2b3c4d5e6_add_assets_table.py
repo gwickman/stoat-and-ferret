@@ -43,13 +43,9 @@ def upgrade() -> None:
         )
     )
     op.execute(
-        sa.text(
-            "CREATE INDEX IF NOT EXISTS idx_assets_content_hash ON assets(content_hash)"
-        )
+        sa.text("CREATE INDEX IF NOT EXISTS idx_assets_content_hash ON assets(content_hash)")
     )
-    op.execute(
-        sa.text("CREATE INDEX IF NOT EXISTS idx_assets_kind ON assets(kind)")
-    )
+    op.execute(sa.text("CREATE INDEX IF NOT EXISTS idx_assets_kind ON assets(kind)"))
 
 
 def downgrade() -> None:
