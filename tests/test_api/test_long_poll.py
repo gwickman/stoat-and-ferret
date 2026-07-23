@@ -25,7 +25,7 @@ from collections.abc import AsyncIterator, Iterator
 
 import httpx
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.services import job_completion
@@ -296,4 +296,50 @@ async def test_concurrent_waiters_share_event_and_both_return(
 
     assert result_a.status is JobStatus.COMPLETED
     assert result_b.status is JobStatus.COMPLETED
+    assert job_id not in job_completion._terminal_events
+
+
+async def test_concurrent_waiters_mixed_timeout_short_expires_first(
+    job_queue: InMemoryJobQueue,
+) -> None:
+    """Short waiter times out before job completes; long waiter still observes COMPLETED.
+
+    BL-706 regression guard for BL-700 ``_terminal_events`` registry-race fix: the short
+    waiter removes its own event on timeout (at 0.05 s); the long waiter must still receive
+    the terminal notification when the job completes at 0.15 s, confirming the per-job
+    ``set[asyncio.Event]`` prevents the short-timeout removal from starving the long waiter.
+    """
+    job_id = "mixed-timeout-wait"
+    entry = _JobEntry(job_id=job_id, job_type="scan", payload={})
+    entry.result = JobResult(job_id=job_id, status=JobStatus.PENDING)
+    job_queue._jobs[job_id] = entry
+
+    async def _complete() -> None:
+        # Job completes at 0.15 s — well after the short waiter (0.05 s) has timed out,
+        # and well before the long waiter (2.0 s) would timeout.
+        await asyncio.sleep(0.15)
+        entry.result = JobResult(
+            job_id=job_id,
+            status=JobStatus.COMPLETED,
+            result={"status": "ok"},
+        )
+        notify_job_terminal(job_id)
+
+    short_task = asyncio.create_task(wait_for_job_terminal(job_queue, job_id, 0.05))
+    long_task = asyncio.create_task(wait_for_job_terminal(job_queue, job_id, 2.0))
+    completer = asyncio.create_task(_complete())
+
+    # return_exceptions=True so the short waiter's TimeoutError is captured, not raised.
+    short_result, long_result, _ = await asyncio.gather(
+        short_task, long_task, completer, return_exceptions=True
+    )
+
+    # (a) short waiter observed a timeout/408 result
+    assert isinstance(short_result, HTTPException) and short_result.status_code == 408, (
+        f"expected HTTPException(408) from short waiter, got {short_result!r}"
+    )
+    # (b) long waiter observed COMPLETED, not a timeout
+    assert isinstance(long_result, JobResult)
+    assert long_result.status is JobStatus.COMPLETED
+    # (c) registry cleared after both waiters finish
     assert job_id not in job_completion._terminal_events
