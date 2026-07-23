@@ -166,6 +166,27 @@ async def _run_render_async(cmd: list[str]) -> subprocess.CompletedProcess[bytes
     return await asyncio.to_thread(subprocess.run, cmd, capture_output=True, timeout=60)
 
 
+def _ffprobe_duration(video_path: Path) -> float:
+    """Return duration in seconds reported by ffprobe, or raise on failure."""
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            str(video_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffprobe failed for {video_path}: {result.stderr}")
+    return float(result.stdout.strip())
+
+
 # ---------------------------------------------------------------------------
 # BL-686: concurrent real-mode renders produce distinct, non-contaminated outputs
 # ---------------------------------------------------------------------------
@@ -237,3 +258,8 @@ async def test_concurrent_render_distinct_outputs(tmp_path: Path) -> None:
         "Frame hashes are identical — outputs may be cross-contaminated "
         f"(hash1={hash1[:12]}…, hash2={hash2[:12]}…)"
     )
+
+    # BL-686-AC-2: verify each output is a valid video with non-zero duration
+    for output_path in [out1, out2]:
+        duration = _ffprobe_duration(output_path)
+        assert duration > 0, f"Expected non-zero duration for {output_path}"
