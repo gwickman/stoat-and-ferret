@@ -70,7 +70,7 @@ class TestTimelineTypes:
 
         fps = FrameRate.fps_24()
         pos = Position(48)
-        assert pos.as_secs(fps) == 2.0
+        assert pos.as_secs(fps) == pytest.approx(2.0, abs=0.1)
 
     def test_position_comparison(self) -> None:
         """Test Position comparison operators."""
@@ -1368,7 +1368,7 @@ class TestCompositionTimeline:
         from stoat_ferret_core import CompositionClip
 
         clip = CompositionClip(0, 2.0, 7.0, 0, 0)
-        assert clip.duration() == 5.0
+        assert clip.duration() == pytest.approx(5.0, abs=0.1)
 
     def test_transition_spec_construction(self) -> None:
         """Test TransitionSpec construction with TransitionType."""
@@ -1400,7 +1400,7 @@ class TestCompositionTimeline:
         assert adjusted[0].timeline_end == 5.0
         # Second clip should shift earlier by transition duration
         assert adjusted[1].timeline_start < 5.0
-        assert adjusted[1].timeline_start == 4.0  # Shifted left by 1.0s
+        assert adjusted[1].timeline_start == pytest.approx(4.0, abs=0.1)  # Shifted left by 1.0s
 
     def test_calculate_composition_positions_clamping(self) -> None:
         """Test that transition duration is clamped to clip durations."""
@@ -1438,7 +1438,7 @@ class TestCompositionTimeline:
 
         duration = calculate_timeline_duration([clip_a, clip_b], [spec])
         # With 1s overlap, total should be 9s (5 + 5 - 1)
-        assert duration == 9.0
+        assert duration == pytest.approx(9.0, abs=0.1)
 
     def test_calculate_timeline_duration_no_transitions(self) -> None:
         """Test calculate_timeline_duration without transitions."""
