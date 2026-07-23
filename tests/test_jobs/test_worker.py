@@ -58,13 +58,13 @@ class TestWorkerLifecycle:
 class TestLifespanIntegration:
     """Tests for job queue lifespan integration with FastAPI app."""
 
-    async def test_app_with_injected_job_queue(self) -> None:
+    def test_app_with_injected_job_queue(self) -> None:
         """App accepts job_queue via DI and stores on app.state."""
         queue = AsyncioJobQueue()
         app = create_app(job_queue=queue)
         assert app.state.job_queue is queue
 
-    async def test_app_without_injection_works(self) -> None:
+    def test_app_without_injection_works(self) -> None:
         """App works without injected job_queue (production path tested via lifespan)."""
         app = create_app()
         # In test mode (no lifespan started), job_queue may not exist

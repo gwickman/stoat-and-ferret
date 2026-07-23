@@ -189,7 +189,7 @@ async def test_qc_service_artifact_not_found() -> None:
         await svc.run_checks("/nonexistent/path/out.mp4")
 
 
-async def test_qc_service_invalid_assertion_format(tmp_path: Path) -> None:
+def test_qc_service_invalid_assertion_format(tmp_path: Path) -> None:
     """422 is raised by the API (Pydantic validation) for malformed assertions.
 
     This test verifies that an invalid assertions structure is rejected before

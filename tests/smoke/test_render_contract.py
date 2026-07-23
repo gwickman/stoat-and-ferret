@@ -494,7 +494,7 @@ async def test_multi_clip_render_api_accepts(
     )
 
 
-async def test_multi_clip_translator_xfade_present() -> None:
+def test_multi_clip_translator_xfade_present() -> None:
     """RenderGraphTranslator produces filter_complex with xfade for a 2-clip project (FR-001).
 
     Calls the Rust translator directly to assert that a 2-clip timeline produces
@@ -527,7 +527,7 @@ async def test_multi_clip_translator_xfade_present() -> None:
     )
 
 
-async def test_multi_clip_translator_input_paths_count_matches_clips() -> None:
+def test_multi_clip_translator_input_paths_count_matches_clips() -> None:
     """translate() returns input_paths with count equal to the clip count (FR-001).
 
     Verifies that the number of `-i` input paths returned by the translator
@@ -558,7 +558,7 @@ async def test_multi_clip_translator_input_paths_count_matches_clips() -> None:
     assert input_paths == ["/clip0.mp4", "/clip1.mp4"]
 
 
-async def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
+def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
     """Per-clip effect filter strings appear in the filter_complex (FR-001).
 
     Uses animated_alpha (RenderEffect.animated_alpha) as the available per-clip
@@ -595,7 +595,7 @@ async def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
     )
 
 
-async def test_multi_clip_custom_effect_appears_in_filter_complex() -> None:
+def test_multi_clip_custom_effect_appears_in_filter_complex() -> None:
     """RenderEffect.custom() filter chain appears verbatim in the filter_complex (BL-555).
 
     Verifies that a custom filter chain produced by EffectDefinition.build_fn() is

@@ -447,7 +447,7 @@ async def test_image_clip_single_clip_render(tmp_path: Path) -> None:
 
 
 @_FFMPEG_SKIP
-async def test_image_clip_animated_opacity(tmp_path: Path) -> None:
+def test_image_clip_animated_opacity(tmp_path: Path) -> None:
     """FR-008-AC-1 = BL-511-AC-7: image clip with RenderEffect.animated_alpha renders cleanly.
 
     Uses RenderEffect.animated_alpha(0.0, 1.0) directly via PyO3 binding.

@@ -194,7 +194,7 @@ class TestStartPreview:
         assert "session_id" in data
         assert data["session_id"] == session.id
 
-    async def test_nonexistent_project_returns_404(
+    def test_nonexistent_project_returns_404(
         self,
         client: TestClient,
     ) -> None:
@@ -245,7 +245,7 @@ class TestStartPreview:
 class TestGetPreviewStatus:
     """Tests for GET /preview/{session_id}."""
 
-    async def test_returns_status_with_manifest_url(
+    def test_returns_status_with_manifest_url(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -264,7 +264,7 @@ class TestGetPreviewStatus:
         assert data["status"] == "ready"
         assert data["manifest_url"] == "/api/v1/preview/test-session-id/manifest.m3u8"
 
-    async def test_generating_status_no_manifest_url(
+    def test_generating_status_no_manifest_url(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -279,7 +279,7 @@ class TestGetPreviewStatus:
         assert data["status"] == "generating"
         assert data["manifest_url"] is None
 
-    async def test_nonexistent_session_returns_404(
+    def test_nonexistent_session_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -292,7 +292,7 @@ class TestGetPreviewStatus:
         data = response.json()
         assert data["detail"]["code"] == "NOT_FOUND"
 
-    async def test_expired_session_returns_404(
+    def test_expired_session_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -312,7 +312,7 @@ class TestGetPreviewStatus:
 class TestSeekPreview:
     """Tests for POST /preview/{session_id}/seek."""
 
-    async def test_returns_seeking_status(
+    def test_returns_seeking_status(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -330,7 +330,7 @@ class TestSeekPreview:
         assert data["session_id"] == "test-session-id"
         assert data["status"] == "seeking"
 
-    async def test_validates_position(
+    def test_validates_position(
         self,
         client: TestClient,
     ) -> None:
@@ -341,7 +341,7 @@ class TestSeekPreview:
         )
         assert response.status_code == 422
 
-    async def test_missing_position_returns_422(
+    def test_missing_position_returns_422(
         self,
         client: TestClient,
     ) -> None:
@@ -352,7 +352,7 @@ class TestSeekPreview:
         )
         assert response.status_code == 422
 
-    async def test_nonexistent_session_returns_404(
+    def test_nonexistent_session_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -366,7 +366,7 @@ class TestSeekPreview:
         )
         assert response.status_code == 404
 
-    async def test_error_state_seek_returns_409(
+    def test_error_state_seek_returns_409(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -392,7 +392,7 @@ class TestSeekPreview:
 class TestStopPreview:
     """Tests for DELETE /preview/{session_id}."""
 
-    async def test_returns_confirmation(
+    def test_returns_confirmation(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -406,7 +406,7 @@ class TestStopPreview:
         assert data["session_id"] == "test-session-id"
         assert data["stopped"] is True
 
-    async def test_nonexistent_session_returns_404(
+    def test_nonexistent_session_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -426,7 +426,7 @@ class TestStopPreview:
 class TestGetManifest:
     """Tests for GET /preview/{session_id}/manifest.m3u8."""
 
-    async def test_serves_manifest_with_correct_content_type(
+    def test_serves_manifest_with_correct_content_type(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -452,7 +452,7 @@ class TestGetManifest:
         assert "#EXTM3U" in response.text
         assert response.headers["x-content-type-options"] == "nosniff"
 
-    async def test_not_ready_returns_404(
+    def test_not_ready_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -466,7 +466,7 @@ class TestGetManifest:
         data = response.json()
         assert data["detail"]["code"] == "NOT_READY"
 
-    async def test_nonexistent_session_returns_404(
+    def test_nonexistent_session_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -484,7 +484,7 @@ class TestGetManifest:
 class TestGetSegment:
     """Tests for GET /preview/{session_id}/segment_{index}.ts."""
 
-    async def test_serves_segment_with_correct_content_type(
+    def test_serves_segment_with_correct_content_type(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -511,7 +511,7 @@ class TestGetSegment:
         assert response.content == segment_content
         assert response.headers["x-content-type-options"] == "nosniff"
 
-    async def test_missing_segment_returns_404(
+    def test_missing_segment_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -532,7 +532,7 @@ class TestGetSegment:
         data = response.json()
         assert data["detail"]["code"] == "NOT_FOUND"
 
-    async def test_not_ready_returns_404(
+    def test_not_ready_returns_404(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,
@@ -551,7 +551,7 @@ class TestGetSegment:
 class TestErrorResponseFormat:
     """Verify error responses follow the same format as proxy endpoints."""
 
-    async def test_404_error_has_code_and_message(
+    def test_404_error_has_code_and_message(
         self,
         client: TestClient,
         mock_preview_manager: MagicMock,

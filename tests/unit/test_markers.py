@@ -164,7 +164,7 @@ async def test_delete_marker_returns_204() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_create_marker_unknown_project_returns_404() -> None:
+def test_create_marker_unknown_project_returns_404() -> None:
     """POST returns 404 when project_id does not exist."""
     app, _, _ = _make_app()
 
@@ -176,7 +176,7 @@ async def test_create_marker_unknown_project_returns_404() -> None:
     assert resp.status_code == 404
 
 
-async def test_list_markers_unknown_project_returns_404() -> None:
+def test_list_markers_unknown_project_returns_404() -> None:
     """GET list returns 404 when project_id does not exist."""
     app, _, _ = _make_app()
 

@@ -855,8 +855,7 @@ class TestWorkerLoop:
 
         mock_logger.info.assert_any_call("render_worker.started")
 
-    @pytest.mark.asyncio
-    async def test_worker_injectable(self) -> None:
+    def test_worker_injectable(self) -> None:
         """AC-5.1: Worker instance is injectable via DI (constructor params)."""
         service = MagicMock()
         service.run_job = AsyncMock()

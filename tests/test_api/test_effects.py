@@ -449,7 +449,7 @@ def test_apply_effect_clip_not_found_returns_404(client: TestClient) -> None:
 
 
 @pytest.mark.api
-async def test_apply_effect_project_not_found_returns_404(
+def test_apply_effect_project_not_found_returns_404(
     client: TestClient,
 ) -> None:
     """Applying effect to clip in nonexistent project returns 404."""
@@ -1408,7 +1408,7 @@ async def test_transition_nonexistent_clip_returns_404(
 
 
 @pytest.mark.api
-async def test_transition_nonexistent_project_returns_404(
+def test_transition_nonexistent_project_returns_404(
     client: TestClient,
 ) -> None:
     """POST /effects/transition returns 404 for nonexistent project."""
@@ -1845,7 +1845,7 @@ async def test_delete_effect_invalid_index_returns_404(
 
 
 @pytest.mark.api
-async def test_delete_effect_nonexistent_project_returns_404(
+def test_delete_effect_nonexistent_project_returns_404(
     client: TestClient,
 ) -> None:
     """DELETE /effects/{index} with nonexistent project returns 404."""

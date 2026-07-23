@@ -332,7 +332,7 @@ async def test_theater_mode_displays_streaming_frames() -> None:
     )
 
 
-async def test_theater_mode_frame_endpoint_returns_jpeg_when_buffer_populated() -> None:
+def test_theater_mode_frame_endpoint_returns_jpeg_when_buffer_populated() -> None:
     """Frame endpoint returns valid 540p JPEG when service frame buffer is pre-populated.
 
     Verifies the full data path:
