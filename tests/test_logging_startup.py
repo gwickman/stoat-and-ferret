@@ -23,8 +23,15 @@ from stoat_ferret.logging import configure_logging
 @pytest.fixture(autouse=True)
 def _clean_root_handlers() -> Generator[None, None, None]:
     """Remove handlers added by configure_logging between tests."""
-    yield
     root = logging.getLogger()
+    # pre-yield: clear any stale handlers from prior tests
+    root.handlers = [
+        h
+        for h in root.handlers
+        if type(h) is not logging.StreamHandler and type(h) is not RotatingFileHandler
+    ]
+    yield
+    # post-yield: same cleanup
     root.handlers = [
         h
         for h in root.handlers
