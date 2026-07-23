@@ -181,7 +181,7 @@ class TestShutdownFlag:
                     render_plan_json=_make_plan_json(),
                 )
 
-    async def test_is_shutting_down_property(self) -> None:
+    def test_is_shutting_down_property(self) -> None:
         """is_shutting_down reflects shutdown state."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
@@ -271,7 +271,7 @@ class TestGracefulShutdown:
         assert killed == []
         proc.kill.assert_not_called()
 
-    async def test_cleanup_all_temp_files(self) -> None:
+    def test_cleanup_all_temp_files(self) -> None:
         """FR-004: Temp files cleaned up during shutdown for all jobs."""
         executor = RenderExecutor()
 
@@ -327,7 +327,7 @@ class TestFFmpegDegradation:
                     render_plan_json=_make_plan_json(),
                 )
 
-    async def test_ffmpeg_available_property(self) -> None:
+    def test_ffmpeg_available_property(self) -> None:
         """ffmpeg_available property reflects detection result."""
         with _PATCH_NO_RUST:
             service_with, _, _, _ = _build_service(ffmpeg_available=True)

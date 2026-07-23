@@ -438,7 +438,7 @@ class TestWorkerPathQCAssertions:
         call_kwargs = qc_service.run_checks.call_args.kwargs
         assert call_kwargs["assertions"] is None
 
-    async def test_inline_path_assertions_unchanged(self) -> None:
+    def test_inline_path_assertions_unchanged(self) -> None:
         """BL-488-AC-4: Inline submit path assertions in render.py:538-545 not regressed.
 
         The inline path is comprehensively tested in

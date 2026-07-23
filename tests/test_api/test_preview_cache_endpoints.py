@@ -69,7 +69,7 @@ def client(cache_app: FastAPI) -> Generator[TestClient, None, None]:
 class TestGetCacheStatus:
     """Tests for GET /api/v1/preview/cache."""
 
-    async def test_returns_cache_metrics(
+    def test_returns_cache_metrics(
         self,
         client: TestClient,
         mock_preview_cache: MagicMock,
@@ -91,7 +91,7 @@ class TestGetCacheStatus:
         assert data["usage_percent"] == 0.10
         assert data["sessions"] == ["session-a", "session-b"]
 
-    async def test_empty_cache_returns_zeros(
+    def test_empty_cache_returns_zeros(
         self,
         client: TestClient,
         mock_preview_cache: MagicMock,
@@ -111,7 +111,7 @@ class TestGetCacheStatus:
         assert data["used_bytes"] == 0
         assert data["sessions"] == []
 
-    async def test_cache_unavailable_returns_503(self) -> None:
+    def test_cache_unavailable_returns_503(self) -> None:
         """GET without cache injected returns 503."""
         app = create_app(
             video_repository=AsyncInMemoryVideoRepository(),
@@ -136,7 +136,7 @@ class TestGetCacheStatus:
 class TestClearCache:
     """Tests for DELETE /api/v1/preview/cache."""
 
-    async def test_clears_cache_and_returns_counts(
+    def test_clears_cache_and_returns_counts(
         self,
         client: TestClient,
         mock_preview_cache: MagicMock,
@@ -151,7 +151,7 @@ class TestClearCache:
         assert data["freed_bytes"] == 4096
         mock_preview_cache.clear_all.assert_called_once()
 
-    async def test_empty_cache_clear_returns_zeros(
+    def test_empty_cache_clear_returns_zeros(
         self,
         client: TestClient,
         mock_preview_cache: MagicMock,
@@ -165,7 +165,7 @@ class TestClearCache:
         assert data["cleared_sessions"] == 0
         assert data["freed_bytes"] == 0
 
-    async def test_cache_unavailable_returns_503(self) -> None:
+    def test_cache_unavailable_returns_503(self) -> None:
         """DELETE without cache injected returns 503."""
         app = create_app(
             video_repository=AsyncInMemoryVideoRepository(),
@@ -188,7 +188,7 @@ class TestClearCache:
 class TestCacheErrorResponseFormat:
     """Verify cache error responses follow the same format as other endpoints."""
 
-    async def test_503_error_has_code_and_message(self) -> None:
+    def test_503_error_has_code_and_message(self) -> None:
         """503 error includes code and message in detail."""
         app = create_app(
             video_repository=AsyncInMemoryVideoRepository(),

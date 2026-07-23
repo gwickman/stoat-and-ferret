@@ -400,7 +400,7 @@ class TestCacheMetricsInstrumentation:
         assert val >= 100
 
     @pytest.mark.usefixtures("_mock_settings")
-    async def test_max_bytes_set_on_init(self, tmp_path: Path) -> None:
+    def test_max_bytes_set_on_init(self, tmp_path: Path) -> None:
         """__init__() sets preview_cache_max_bytes gauge."""
         from stoat_ferret.preview.cache import PreviewCache
 

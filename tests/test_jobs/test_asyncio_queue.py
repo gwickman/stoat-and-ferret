@@ -185,12 +185,12 @@ class TestJobTimeout:
             with pytest.raises(asyncio.CancelledError):
                 await worker
 
-    async def test_custom_timeout_is_used(self) -> None:
+    def test_custom_timeout_is_used(self) -> None:
         """Queue uses the configured timeout value."""
         queue = AsyncioJobQueue(timeout=42.0)
         assert queue._timeout == 42.0
 
-    async def test_default_timeout_is_300(self) -> None:
+    def test_default_timeout_is_300(self) -> None:
         """Default timeout is 5 minutes (300 seconds)."""
         queue = AsyncioJobQueue()
         assert queue._timeout == 300.0
@@ -216,7 +216,7 @@ class TestCancellation:
         entry = queue._jobs[job_id]
         assert entry.cancel_event.is_set()
 
-    async def test_cancel_unknown_job_raises(self) -> None:
+    def test_cancel_unknown_job_raises(self) -> None:
         """cancel() with invalid job_id raises KeyError."""
         queue = AsyncioJobQueue()
         with pytest.raises(KeyError):
@@ -259,7 +259,7 @@ class TestCancellation:
             with pytest.raises(asyncio.CancelledError):
                 await worker
 
-    async def test_cancelled_status_serializes_correctly(self) -> None:
+    def test_cancelled_status_serializes_correctly(self) -> None:
         """JobStatus.CANCELLED serializes to 'cancelled'."""
         assert JobStatus.CANCELLED.value == "cancelled"
 
@@ -284,7 +284,7 @@ class TestProgress:
         result = await queue.get_result(job_id)
         assert result.progress == 0.5
 
-    async def test_set_progress_unknown_job_is_noop(self) -> None:
+    def test_set_progress_unknown_job_is_noop(self) -> None:
         """set_progress with invalid job_id is a no-op."""
         queue = AsyncioJobQueue()
         # Should not raise

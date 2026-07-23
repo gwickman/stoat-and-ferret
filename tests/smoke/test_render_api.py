@@ -823,7 +823,7 @@ async def test_smoke_render_with_delivery_profile(smoke_client: httpx.AsyncClien
 # -- BL-499: ColorLut path-escaping smoke tests --
 
 
-async def test_colorlut_path_escape_smoke() -> None:
+def test_colorlut_path_escape_smoke() -> None:
     """ColorLutBuilder.build() produces backslash-free filter strings for all presets (BL-499)."""
     from stoat_ferret_core import ColorLutBuilder
 
@@ -835,7 +835,7 @@ async def test_colorlut_path_escape_smoke() -> None:
         assert "\\" not in s, f"Preset '{preset}' filter must not contain backslashes (BL-499): {s}"
 
 
-async def test_colorlut_apostrophe_rejection_unit() -> None:
+def test_colorlut_apostrophe_rejection_unit() -> None:
     """Apostrophe rejection is enforced in emit_filter_option_path (BL-499).
 
     Verified via Rust unit tests (test_apostrophe_in_path_rejected).  This
@@ -851,7 +851,7 @@ async def test_colorlut_apostrophe_rejection_unit() -> None:
 # -- BL-502: OpacityBuilder geq expression smoke tests --
 
 
-async def test_opacity_animated_geq_smoke() -> None:
+def test_opacity_animated_geq_smoke() -> None:
     """OpacityBuilder with automation produces a geq filter with uppercase T (BL-502)."""
     from stoat_ferret_core import Automation, Keyframe, OpacityBuilder
 
@@ -873,7 +873,7 @@ async def test_opacity_animated_geq_smoke() -> None:
     assert "T" in s, f"geq expression must use uppercase T for time: {s}"
 
 
-async def test_opacity_static_uses_colorchannelmixer_smoke() -> None:
+def test_opacity_static_uses_colorchannelmixer_smoke() -> None:
     """OpacityBuilder without automation still uses colorchannelmixer (BL-502)."""
     from stoat_ferret_core import OpacityBuilder
 

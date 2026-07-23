@@ -230,7 +230,7 @@ async def test_wait_for_job_terminal_short_circuits_on_terminal_status(
     assert job_id not in job_completion._terminal_events
 
 
-async def test_notify_without_waiter_is_noop() -> None:
+def test_notify_without_waiter_is_noop() -> None:
     """``notify_job_terminal`` is safe when no waiter has registered."""
     notify_job_terminal("nobody-is-listening")
     assert "nobody-is-listening" not in job_completion._terminal_events

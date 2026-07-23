@@ -52,7 +52,7 @@ class TestConnectionManager:
 
         assert manager.active_connections == 0
 
-    async def test_disconnect_unknown_is_noop(self) -> None:
+    def test_disconnect_unknown_is_noop(self) -> None:
         """Disconnecting an unknown websocket should not raise."""
         manager = ConnectionManager()
         ws = _make_mock_ws()

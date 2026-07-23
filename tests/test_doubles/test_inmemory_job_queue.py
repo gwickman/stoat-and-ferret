@@ -136,7 +136,7 @@ class TestSetProgress:
         # Should not raise
         queue.set_progress(job_id, 0.5)
 
-    async def test_set_progress_unknown_job_is_noop(self) -> None:
+    def test_set_progress_unknown_job_is_noop(self) -> None:
         """set_progress with unknown job_id does not raise."""
         queue = InMemoryJobQueue()
         queue.set_progress("nonexistent", 0.5)
@@ -152,7 +152,7 @@ class TestCancel:
         # Should not raise
         queue.cancel(job_id)
 
-    async def test_cancel_unknown_job_is_noop(self) -> None:
+    def test_cancel_unknown_job_is_noop(self) -> None:
         """cancel with unknown job_id does not raise."""
         queue = InMemoryJobQueue()
         queue.cancel("nonexistent")

@@ -112,7 +112,7 @@ class TestGenerateStrip:
         assert isinstance(data["strip_id"], str)
         assert data["status"] == "pending"
 
-    async def test_missing_video_returns_404(
+    def test_missing_video_returns_404(
         self,
         client: TestClient,
     ) -> None:
@@ -174,7 +174,7 @@ class TestGenerateStrip:
 class TestGetStripMetadata:
     """Tests for GET /api/v1/videos/{video_id}/thumbnails/strip."""
 
-    async def test_returns_metadata_with_all_fields(
+    def test_returns_metadata_with_all_fields(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
@@ -197,7 +197,7 @@ class TestGetStripMetadata:
         assert data["columns"] == 10
         assert data["rows"] == 2
 
-    async def test_not_generated_returns_404(
+    def test_not_generated_returns_404(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
@@ -210,7 +210,7 @@ class TestGetStripMetadata:
         data = response.json()
         assert data["detail"]["code"] == "STRIP_NOT_FOUND"
 
-    async def test_columns_and_rows_for_coordinate_lookup(
+    def test_columns_and_rows_for_coordinate_lookup(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
@@ -254,7 +254,7 @@ class TestGetStripImage:
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
-    async def test_not_generated_returns_404(
+    def test_not_generated_returns_404(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
@@ -267,7 +267,7 @@ class TestGetStripImage:
         data = response.json()
         assert data["detail"]["code"] == "STRIP_NOT_FOUND"
 
-    async def test_file_missing_returns_404(
+    def test_file_missing_returns_404(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
@@ -279,7 +279,7 @@ class TestGetStripImage:
         response = client.get("/api/v1/videos/vid-1/thumbnails/strip.jpg")
         assert response.status_code == 404
 
-    async def test_no_file_path_returns_404(
+    def test_no_file_path_returns_404(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,
@@ -314,7 +314,7 @@ class TestApiParity:
         assert "strip_id" in data
         assert "status" in data
 
-    async def test_404_response_structure(
+    def test_404_response_structure(
         self,
         client: TestClient,
         mock_thumbnail_service: MagicMock,

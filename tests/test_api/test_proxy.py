@@ -57,7 +57,7 @@ class TestGenerateProxy:
         assert "job_id" in data
         assert isinstance(data["job_id"], str)
 
-    async def test_missing_video_returns_404(
+    def test_missing_video_returns_404(
         self,
         client: TestClient,
     ) -> None:
@@ -112,7 +112,7 @@ class TestGetProxyStatus:
         assert data["file_size_bytes"] == 50_000
         assert data["generated_at"] is not None
 
-    async def test_missing_proxy_returns_404(
+    def test_missing_proxy_returns_404(
         self,
         client: TestClient,
     ) -> None:
@@ -148,7 +148,7 @@ class TestDeleteProxy:
         remaining = await proxy_repository.list_by_video(video_id)
         assert len(remaining) == 0
 
-    async def test_missing_proxy_returns_404(
+    def test_missing_proxy_returns_404(
         self,
         client: TestClient,
     ) -> None:
@@ -190,7 +190,7 @@ class TestBatchGenerateProxies:
         assert video1.id in data["queued"]
         assert video2.id in data["skipped"]
 
-    async def test_skips_missing_videos(
+    def test_skips_missing_videos(
         self,
         client: TestClient,
     ) -> None:
@@ -211,7 +211,7 @@ class TestBatchGenerateProxies:
 class TestErrorFormatParity:
     """Verify proxy error responses match JSON:API-style pattern."""
 
-    async def test_404_error_format(
+    def test_404_error_format(
         self,
         client: TestClient,
     ) -> None:

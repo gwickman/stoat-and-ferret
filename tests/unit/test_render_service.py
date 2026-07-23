@@ -46,7 +46,7 @@ _NOOP_PLAN = '{"total_duration": 5.0, "settings": {"quality_preset": "medium"}}'
 class TestSubmitJobLockAcquisition:
     """Verify _submit_lock is acquired before state mutation in noop mode."""
 
-    async def test_submit_lock_attribute_exists(self) -> None:
+    def test_submit_lock_attribute_exists(self) -> None:
         """RenderService has _submit_lock attribute of type asyncio.Lock."""
         service = _make_noop_service(InMemoryRenderRepository())
         assert hasattr(service, "_submit_lock")

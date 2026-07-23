@@ -142,7 +142,7 @@ class TestGenerateWaveform:
         )
         assert response.status_code == 422
 
-    async def test_missing_video_returns_404(
+    def test_missing_video_returns_404(
         self,
         client: TestClient,
     ) -> None:
@@ -175,7 +175,7 @@ class TestGenerateWaveform:
 class TestGetWaveformMetadata:
     """Tests for GET /api/v1/videos/{video_id}/waveform."""
 
-    async def test_returns_metadata_with_all_fields(
+    def test_returns_metadata_with_all_fields(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -196,7 +196,7 @@ class TestGetWaveformMetadata:
         assert data["channels"] == 2
         assert data["samples_per_second"] == 10
 
-    async def test_png_metadata_null_samples_per_second(
+    def test_png_metadata_null_samples_per_second(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -211,7 +211,7 @@ class TestGetWaveformMetadata:
         assert data["format"] == "png"
         assert data["samples_per_second"] is None
 
-    async def test_not_generated_returns_404(
+    def test_not_generated_returns_404(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -253,7 +253,7 @@ class TestGetWaveformImage:
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
-    async def test_not_generated_returns_404(
+    def test_not_generated_returns_404(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -266,7 +266,7 @@ class TestGetWaveformImage:
         data = response.json()
         assert data["detail"]["code"] == "WAVEFORM_NOT_FOUND"
 
-    async def test_file_missing_returns_404(
+    def test_file_missing_returns_404(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -280,7 +280,7 @@ class TestGetWaveformImage:
         response = client.get("/api/v1/videos/vid-1/waveform.png")
         assert response.status_code == 404
 
-    async def test_no_file_path_returns_404(
+    def test_no_file_path_returns_404(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -335,7 +335,7 @@ class TestGetWaveformJson:
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
-    async def test_not_generated_returns_404(
+    def test_not_generated_returns_404(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -348,7 +348,7 @@ class TestGetWaveformJson:
         data = response.json()
         assert data["detail"]["code"] == "WAVEFORM_NOT_FOUND"
 
-    async def test_file_missing_returns_404(
+    def test_file_missing_returns_404(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,
@@ -385,7 +385,7 @@ class TestApiParity:
         assert "waveform_id" in data
         assert "status" in data
 
-    async def test_404_response_structure(
+    def test_404_response_structure(
         self,
         client: TestClient,
         mock_waveform_service: MagicMock,

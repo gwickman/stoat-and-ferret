@@ -123,7 +123,7 @@ class TestReplayFiltering:
 
         assert manager.replay_since(events[-1]["event_id"]) == []
 
-    async def test_replay_empty_buffer_returns_empty_list(self) -> None:
+    def test_replay_empty_buffer_returns_empty_list(self) -> None:
         """A fresh manager replays nothing regardless of the header."""
         manager = ConnectionManager(buffer_size=10, ttl_seconds=300)
 
@@ -210,7 +210,7 @@ class TestReplayPreservesOrder:
 class TestSettingsDefaults:
     """Buffer size and TTL default to settings when not passed explicitly."""
 
-    async def test_defaults_are_loaded_from_settings(self) -> None:
+    def test_defaults_are_loaded_from_settings(self) -> None:
         """With no constructor args, settings values are used."""
         manager = ConnectionManager()
 

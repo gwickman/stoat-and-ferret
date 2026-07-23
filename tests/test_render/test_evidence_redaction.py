@@ -140,7 +140,7 @@ async def test_evidence_endpoint_returns_200_when_enabled(
     assert isinstance(body["command_args"], list)
 
 
-async def test_evidence_endpoint_returns_404_for_unknown_job(
+def test_evidence_endpoint_returns_404_for_unknown_job(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """GET /render/{job_id}/evidence returns 404 for non-existent job."""

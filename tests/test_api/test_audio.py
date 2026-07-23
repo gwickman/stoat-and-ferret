@@ -256,7 +256,7 @@ async def test_put_audio_mix_persists_config(
 
 
 @pytest.mark.api
-async def test_put_audio_mix_project_not_found(
+def test_put_audio_mix_project_not_found(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
 ) -> None:

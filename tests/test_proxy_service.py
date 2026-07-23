@@ -552,7 +552,7 @@ class TestListByVideo:
 class TestJobHandlerRegistration:
     """Tests for job handler registration (FR-009)."""
 
-    async def test_proxy_handler_registration_with_timeout(self) -> None:
+    def test_proxy_handler_registration_with_timeout(self) -> None:
         """register_handler() accepts timeout parameter; proxy uses 1800s."""
         queue = InMemoryJobQueue()
         repo = InMemoryProxyRepository()
@@ -571,7 +571,7 @@ class TestJobHandlerRegistration:
         _, timeout = queue._handlers[PROXY_JOB_TYPE]
         assert timeout == 1800.0
 
-    async def test_default_timeout_for_other_jobs(self) -> None:
+    def test_default_timeout_for_other_jobs(self) -> None:
         """Other job types use the default 300s timeout."""
         from stoat_ferret.jobs.queue import AsyncioJobQueue
 
