@@ -25,7 +25,6 @@ interface EffectStackState {
   error: string | null
 
   selectClip: (clipId: string | null) => void
-  setEffects: (effects: AppliedEffect[]) => void
   setLoading: (isLoading: boolean) => void
   setError: (error: string | null) => void
   /** Fetch effects for the selected clip from the API. */
@@ -45,7 +44,6 @@ export const useEffectStackStore = create<EffectStackState>((set, get) => ({
   selectClip: (clipId) =>
     set({ selectedClipId: clipId, effects: [], clientIds: [], error: null }),
 
-  setEffects: (effects) => set({ effects }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error, isLoading: false }),
 

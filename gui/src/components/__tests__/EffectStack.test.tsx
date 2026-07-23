@@ -19,6 +19,8 @@ const mockEffects: AppliedEffect[] = [
 
 beforeEach(() => {
   useEffectStackStore.getState().reset()
+  // Seed clientIds to match mockEffects so the BL-703 invariant guard passes.
+  useEffectStackStore.setState({ clientIds: ['id-0', 'id-1'] })
 })
 
 describe('EffectStack', () => {

@@ -31,6 +31,10 @@ export default function EffectStack({ effects, isLoading, onEdit, onRemove }: Ef
     )
   }
 
+  if (import.meta.env.DEV && clientIds.length !== effects.length) {
+    throw new Error(`BL-703: clientIds/effects length mismatch (${clientIds.length} vs ${effects.length})`)
+  }
+
   return (
     <div data-testid="effect-stack" className="mt-4">
       <h3 className="mb-2 text-lg font-semibold text-white">Effect Stack</h3>
@@ -43,7 +47,7 @@ export default function EffectStack({ effects, isLoading, onEdit, onRemove }: Ef
 
           return (
             <li
-              key={clientIds[index] ?? index}
+              key={clientIds[index]}
               data-testid={`effect-entry-${index}`}
               className="rounded border border-gray-700 bg-gray-800 p-3"
             >
