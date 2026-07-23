@@ -23,8 +23,9 @@ export default function LayerStack() {
       ) : (
         <ul className="space-y-1" data-testid="layer-list">
           {sortedLayers.map((layer) => (
+            // BL-701: composite key on z_index+x+y (unique stable identity); addendum to BL-647's 4-site enumeration — missed because index was laundered through a member expression, bypassing react/no-array-index-key
             <li
-              key={layer.index}
+              key={`${layer.z_index}-${layer.x}-${layer.y}`}
               data-testid={`layer-${layer.index}`}
               className="flex items-center justify-between rounded bg-gray-800 px-3 py-1.5 text-sm"
             >
