@@ -389,7 +389,96 @@ def test_time_stretch_duration_matches_factor(tmp_path: Path) -> None:
 @_requires_ffmpeg
 def test_time_stretch_spectral_centroid_stable(tmp_path: Path) -> None:
     """BL-435-AC-3: rubberband mode preserves spectral centroid (pitch-invariant stretch)."""
-    pass
+    if not _ffmpeg_available():
+        pytest.skip("ffmpeg binary not available")
+
+    input_path = tmp_path / "input.wav"
+    stretched_path = tmp_path / "stretched.wav"
+
+    gen_result = subprocess.run(
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-c:a",
+            "pcm_s16le",
+            "-y",
+            str(input_path),
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if gen_result.returncode != 0:
+        pytest.skip(f"Could not generate sine wave: {gen_result.stderr.decode()}")
+
+    from stoat_ferret_core import TimeStretchBuilder
+
+    builder = TimeStretchBuilder(0.8, "rubberband")
+    filter_str = str(builder.build())
+    assert "rubberband" in filter_str.lower(), (
+        f"Expected rubberband in filter string, got: {filter_str}"
+    )
+
+    render_result = subprocess.run(
+        [
+            "ffmpeg",
+            "-i",
+            str(input_path),
+            "-af",
+            filter_str,
+            "-c:a",
+            "pcm_s16le",
+            "-y",
+            str(stretched_path),
+        ],
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    if render_result.returncode != 0:
+        stderr = render_result.stderr.decode()
+        if any(kw in stderr.lower() for kw in ("rubberband", "unknown", "not found")):
+            pytest.skip("rubberband not available in this FFmpeg build")
+        pytest.fail(f"FFmpeg rubberband render failed (rc={render_result.returncode}):\n{stderr}")
+
+    assert stretched_path.exists(), "rubberband output file was not created"
+    assert stretched_path.stat().st_size > 0, "rubberband output file is empty"
+
+    # Duration must scale by factor: ~2.0s / 0.8 = ~2.5s (pitch-invariant)
+    duration_before = _measure_duration(input_path)
+    duration_after = _measure_duration(stretched_path)
+    expected = duration_before / 0.8
+    assert abs(duration_after - expected) < 0.3, (
+        f"Expected rubberband duration ~{expected:.2f}s, got {duration_after:.2f}s"
+    )
+
+    # Spectral centroid stability: 440 Hz band energy must survive the stretch
+    bp_result = subprocess.run(
+        [
+            "ffmpeg",
+            "-i",
+            str(stretched_path),
+            "-af",
+            "bandpass=f=440:width_type=o:width=2,volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    bp_output = bp_result.stderr.decode()
+    match = re.search(r"mean_volume:\s*([-\d.]+)\s*dB", bp_output)
+    if match:
+        band_energy = float(match.group(1))
+        assert band_energy > -40.0, (
+            f"440 Hz band energy too low after rubberband stretch ({band_energy:.1f} dBFS): "
+            "spectral centroid may have shifted"
+        )
 
 
 def test_deesser_f_in_valid_range() -> None:
