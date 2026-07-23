@@ -101,12 +101,11 @@
 #### Effect Stack Store
 - `useEffectStackStore(): EffectStackState`
   - Description: Manages effects applied to a specific clip with API synchronization
-  - Location: `effectStackStore.ts:1-85`
+  - Location: `effectStackStore.ts:1-114`
   - Exports: `AppliedEffect` interface
-  - Key state: `selectedClipId: string | null`, `effects: AppliedEffect[]`, `isLoading: boolean`, `error: string | null`
+  - Key state: `selectedClipId: string | null`, `effects: AppliedEffect[]`, `clientIds: string[]` (stable React row keys, regenerated lockstep with effects via fetchEffects/removeEffect), `isLoading: boolean`, `error: string | null`
   - Key actions:
     - `selectClip(clipId: string | null): void` - clears effects and error
-    - `setEffects(effects: AppliedEffect[]): void`
     - `setLoading(isLoading: boolean): void`
     - `setError(error: string | null): void`
     - `fetchEffects(projectId: string, clipId: string): Promise<void>` - GET `/api/v1/projects/{projectId}/clips`
