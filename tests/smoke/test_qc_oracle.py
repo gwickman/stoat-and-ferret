@@ -46,6 +46,7 @@ async def test_qc_oracle_populates_delivery_profile_assertions(
             "name": "QC Oracle Test Profile",
             "loudness_target_lufs": -16.0,
             "true_peak_ceiling_dbtp": -1.0,
+            "output_formats": [{"container": "mp4", "codec": "h264", "bitrate_kbps": 4000}],
         },
     )
     assert dp_resp.status_code == 201, f"Delivery profile creation failed: {dp_resp.text}"
