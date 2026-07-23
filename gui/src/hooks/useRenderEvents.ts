@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { ConnectionState } from './useWebSocket'
 import { useWebSocket } from './useWebSocket'
 import { useRenderStore } from '../stores/renderStore'
+import type { SetProgressOptions } from '../stores/renderStore'
 
 /** All render event type strings emitted by the backend. */
 const RENDER_EVENT_TYPES = new Set([
@@ -68,18 +69,24 @@ export function useRenderEvents(): void {
           })
           break
 
-        case 'render_progress':
-          store.setProgress({
+        case 'render_progress': {
+          // BL-702: split into two groups matching the BL-659 setProgress contract.
+          // Always-overwrite: etaSeconds/speedRatio use ?? null (absent means "not applicable").
+          // Preserve-prior-value: frameCount/fps/encoderName/encoderType use conditional
+          // assignment so absent payload fields do not clear previously-stored values.
+          const progressOpts: SetProgressOptions = {
             jobId: payload.job_id as string,
             progress: payload.progress as number,
             etaSeconds: (payload.eta_seconds as number | undefined) ?? null,
             speedRatio: (payload.speed_ratio as number | undefined) ?? null,
-            frameCount: (payload.frame_count as number | undefined) ?? null,
-            fps: (payload.fps as number | undefined) ?? null,
-            encoderName: (payload.encoder_name as string | undefined) ?? null,
-            encoderType: (payload.encoder_type as string | undefined) ?? null,
-          })
+          }
+          if (payload.frame_count !== undefined) progressOpts.frameCount = payload.frame_count as number | null
+          if (payload.fps !== undefined) progressOpts.fps = payload.fps as number | null
+          if (payload.encoder_name !== undefined) progressOpts.encoderName = payload.encoder_name as string | null
+          if (payload.encoder_type !== undefined) progressOpts.encoderType = payload.encoder_type as string | null
+          store.setProgress(progressOpts)
           break
+        }
 
         case 'render_frame_available':
           store.setProgress({
