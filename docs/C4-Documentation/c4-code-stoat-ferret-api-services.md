@@ -49,22 +49,22 @@
 
 - `validate_scan_path(path: str, allowed_roots: list[str]) -> str | None`
   - Description: Validate scan path falls within allowed root directories (security constraint).
-  - Location: scan.py:33
+  - Location: scan.py:36
   - Dependencies: pathlib.Path
 
 - `make_scan_handler(repository: AsyncVideoRepository, thumbnail_service: ThumbnailService | None = None, ws_manager: ConnectionManager | None = None, queue: AsyncJobQueue | None = None, proxy_service: ProxyService | None = None) -> Callable[[str, dict[str, Any]], Awaitable[Any]]`
   - Description: Factory creating async job handler for directory scans with optional thumbnail/proxy generation.
-  - Location: scan.py:61
+  - Location: scan.py:148
   - Dependencies: AsyncVideoRepository, ThumbnailService, ConnectionManager, AsyncJobQueue
 
 - `scan_directory(path: str, recursive: bool, repository: AsyncVideoRepository, thumbnail_service: ThumbnailService | None = None, *, progress_callback: Callable[[float], Awaitable[None]] | None = None, cancel_event: asyncio.Event | None = None) -> ScanResponse`
   - Description: Walk directory for video files, extract metadata via ffprobe, update repository, optionally generate thumbnails.
-  - Location: scan.py:276
+  - Location: scan.py:437
   - Dependencies: AsyncVideoRepository, ffprobe_video, Video, ScanResponse
 
 - `_auto_queue_proxies(*, result: ScanResponse, repository: AsyncVideoRepository, proxy_service: ProxyService, queue: AsyncJobQueue, video_ids: list[str]) -> None`
   - Description: Auto-queue proxy generation for new videos and detect stale proxies via checksums. Uses video IDs collected during the scan loop instead of re-walking the filesystem.
-  - Location: scan.py:160
+  - Location: scan.py:297
   - Dependencies: ProxyService, AsyncJobQueue
 
 #### thumbnail.py

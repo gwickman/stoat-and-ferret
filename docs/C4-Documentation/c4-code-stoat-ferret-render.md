@@ -39,11 +39,11 @@
   Key Methods: enqueue, dequeue, recover
 
 - RenderExecutor: FFmpeg subprocess lifecycle management
-  Location: executor.py:34-447
+  Location: executor.py:81
   Key Methods: execute, cancel, cancel_all, kill_remaining
 
 - RenderService: Complete job lifecycle orchestration
-  Location: service.py:73-400
+  Location: service.py:169
   Key Methods: submit_job, run_job, cancel_job, recover
 
 - QCService (optional dependency injected into RenderService):
@@ -92,7 +92,7 @@ Provides hardware encoder detection result caching using SQLite.
 
 **Key functions:**
 - `build_command_for_job(job, project, clips, video_repo, clip_repo, effect_registry, settings) -> list[str]` — constructs FFmpeg argument list from RenderJob render_plan JSON; dispatches through RenderGraphTranslator for multi-clip plans
-- `_maybe_route_filter_to_file(command, job, executor) -> tuple[list[str], Path | None]` (`worker.py:59`) — on Windows: routes long `-vf`/`-filter_complex` arguments to a temp file via `-filter_script`/`-filter_complex_script` when filter string length exceeds `WINDOWS_ARGV_LIMIT - COMMAND_OVERHEAD_CHARS`
+- `_maybe_route_filter_to_file(command, job, executor) -> tuple[list[str], Path | None]` (`worker.py:78`) — on Windows: routes long `-vf`/`-filter_complex` arguments to a temp file via `-filter_script`/`-filter_complex_script` when filter string length exceeds `WINDOWS_ARGV_LIMIT - COMMAND_OVERHEAD_CHARS`
 
 **Constants:** `WINDOWS_ARGV_LIMIT = 32767`, `COMMAND_OVERHEAD_CHARS = 500`
 

@@ -7,11 +7,7 @@ from pathlib import Path
 
 import pytest
 
-ARTIFACTS_C4 = Path(
-    "C:/Users/grant/Documents/projects/auto-dev-projects/stoat-and-ferret/docs/C4-Documentation"
-)
-
-_C4_AVAILABLE = ARTIFACTS_C4.exists()
+MAIN_C4 = Path(__file__).parents[2] / "docs" / "C4-Documentation"
 
 PRODUCT_SRC = Path(__file__).parents[2] / "src" / "stoat_ferret"
 
@@ -143,14 +139,10 @@ def _find_source_line(src_path: Path, symbol_pattern: str) -> int | None:
     return None
 
 
-_SKIP_REASON = "ARTIFACTS C4 path not accessible in this environment"
-
-
-@pytest.mark.skipif(not _C4_AVAILABLE, reason=_SKIP_REASON)
 @pytest.mark.parametrize("doc_name,source_rel,symbol_pattern", SYMBOLS)
 def test_c4_location_matches_source(doc_name: str, source_rel: str, symbol_pattern: str) -> None:
     """Assert that each C4 Location: citation matches the actual symbol line in source."""
-    doc_path = ARTIFACTS_C4 / doc_name
+    doc_path = MAIN_C4 / doc_name
     src_path = PRODUCT_SRC / source_rel
 
     assert doc_path.exists(), f"C4 doc not found: {doc_path}"
