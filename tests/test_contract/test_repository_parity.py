@@ -191,7 +191,7 @@ class TestProjectParity:
         await mem.add(project)
         await sql.add(project)
 
-        updated = replace(project, name="Updated", updated_at=datetime.now(timezone.utc))
+        updated: Project = replace(project, name="Updated", updated_at=datetime.now(timezone.utc))
         await mem.update(updated)
         await sql.update(updated)
 

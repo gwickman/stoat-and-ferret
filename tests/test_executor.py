@@ -479,6 +479,7 @@ class TestFFmpegExecutorProtocol:
         """Test RealFFmpegExecutor satisfies FFmpegExecutor protocol."""
 
         def accepts_executor(executor: FFmpegExecutor) -> None:
+            # Intentionally empty: static Protocol-conformance probe, never executed.
             pass
 
         accepts_executor(RealFFmpegExecutor())
@@ -487,6 +488,7 @@ class TestFFmpegExecutorProtocol:
         """Test RecordingFFmpegExecutor satisfies FFmpegExecutor protocol."""
 
         def accepts_executor(executor: FFmpegExecutor) -> None:
+            # Intentionally empty: static Protocol-conformance probe, never executed.
             pass
 
         mock = MockExecutor()
@@ -496,6 +498,7 @@ class TestFFmpegExecutorProtocol:
         """Test FakeFFmpegExecutor satisfies FFmpegExecutor protocol."""
 
         def accepts_executor(executor: FFmpegExecutor) -> None:
+            # Intentionally empty: static Protocol-conformance probe, never executed.
             pass
 
         accepts_executor(FakeFFmpegExecutor([]))

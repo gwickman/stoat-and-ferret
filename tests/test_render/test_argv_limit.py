@@ -247,6 +247,7 @@ def test_write_failure_cleans_up_temp_file(
             return self
 
         def __exit__(self, *args: object) -> None:
+            # Intentionally empty: default __exit__ does not suppress the raised OSError.
             pass
 
     monkeypatch.setattr(tempfile, "NamedTemporaryFile", lambda **kwargs: _FailingFile())

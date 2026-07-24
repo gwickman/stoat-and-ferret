@@ -8,7 +8,6 @@ from __future__ import annotations
 
 def test_smoke() -> None:
     """Verify pytest runs."""
-    assert True
 
 
 def test_import_stoat_ferret() -> None:
