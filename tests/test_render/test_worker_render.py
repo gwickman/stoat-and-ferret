@@ -36,8 +36,16 @@ _FFMPEG_SKIP = pytest.mark.skipif(
 _PROJECT_ID = "proj-concurrent-001"
 _NOW = datetime.now(timezone.utc)
 
+# BL-726-AC-3: single source of truth for the rendered timeline span used across
+# the fixture (render_plan.total_duration, source-video generation) and the
+# ffprobe duration assertion below. Currently 3.0s == 90 frames at 30fps
+# (see _make_clip's out_point=90 and _make_video's duration_frames=90); if the
+# fixture's frame count or frame rate ever drifts from this value, update this
+# constant so the assertion keeps matching the actual rendered span.
+_EXPECTED_RENDER_DURATION_SECONDS = 3.0
 
-def _make_render_plan(duration: float = 3.0) -> str:
+
+def _make_render_plan(duration: float = _EXPECTED_RENDER_DURATION_SECONDS) -> str:
     return json.dumps(
         {
             "total_duration": duration,
@@ -52,7 +60,9 @@ def _make_render_plan(duration: float = 3.0) -> str:
     )
 
 
-def _make_job(job_id: str, output_path: str, duration: float = 3.0) -> RenderJob:
+def _make_job(
+    job_id: str, output_path: str, duration: float = _EXPECTED_RENDER_DURATION_SECONDS
+) -> RenderJob:
     return RenderJob(
         id=job_id,
         project_id=_PROJECT_ID,
@@ -110,7 +120,9 @@ def _make_repos(clip: Clip, video: Video) -> tuple[AsyncMock, AsyncMock]:
     return clip_repo, video_repo
 
 
-def _gen_solid_video(path: Path, color: str, duration: float = 3.0) -> None:
+def _gen_solid_video(
+    path: Path, color: str, duration: float = _EXPECTED_RENDER_DURATION_SECONDS
+) -> None:
     r = subprocess.run(
         [
             "ffmpeg",
@@ -210,8 +222,8 @@ async def test_concurrent_render_distinct_outputs(tmp_path: Path) -> None:
     # Generate two visually-distinct source videos
     src_blue = tmp_path / "blue_source.mp4"
     src_red = tmp_path / "red_source.mp4"
-    _gen_solid_video(src_blue, color="blue", duration=3.0)
-    _gen_solid_video(src_red, color="red", duration=3.0)
+    _gen_solid_video(src_blue, color="blue", duration=_EXPECTED_RENDER_DURATION_SECONDS)
+    _gen_solid_video(src_red, color="red", duration=_EXPECTED_RENDER_DURATION_SECONDS)
 
     out1 = tmp_path / "render_job1.mp4"
     out2 = tmp_path / "render_job2.mp4"
@@ -259,7 +271,13 @@ async def test_concurrent_render_distinct_outputs(tmp_path: Path) -> None:
         f"(hash1={hash1[:12]}…, hash2={hash2[:12]}…)"
     )
 
-    # BL-686-AC-2: verify each output is a valid video with non-zero duration
+    # BL-726-AC-1: verify each output's ffprobe duration matches the rendered
+    # timeline span (not just a non-zero/file-validity proxy), with an explicit
+    # 0.1s absolute tolerance. A regression that truncated a concurrent render
+    # to a fraction of its expected span would fail this assertion.
     for output_path in [out1, out2]:
         duration = _ffprobe_duration(output_path)
-        assert duration > 0, f"Expected non-zero duration for {output_path}"
+        assert abs(duration - _EXPECTED_RENDER_DURATION_SECONDS) < 0.1, (
+            f"Expected duration ~{_EXPECTED_RENDER_DURATION_SECONDS}s (matching the "
+            f"rendered timeline span) for {output_path}, got {duration}s"
+        )
