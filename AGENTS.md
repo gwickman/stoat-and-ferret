@@ -254,6 +254,25 @@ Security audits are conducted on a recurring schedule defined in `docs/security/
 - Prefer returning `Result<T, E>` over panicking
 - PyO3 bindings should have Python-friendly error messages
 
+### Testing: Typed-Factory Convention for Test Doubles
+
+Test doubles for internal dataclasses and models should be built by a typed factory that
+returns the real model with sensible defaults, rather than an ad-hoc parallel class. A
+hand-rolled fake's fields and enum types can drift silently from the real model, because
+`mypy src/` (see Quality Gates) does not type-check `tests/`.
+
+Cite these existing in-repo factories as the pattern to copy:
+
+- `tests/test_contract/test_repository_parity.py` (`make_project()`, `make_video()`,
+  `make_clip()`) — repository-parity pattern: functions returning the real `Project`/
+  `Video`/`Clip` dataclasses with keyword-overridable defaults.
+- `tests/test_render/test_r3_use_cases.py` (`_make_render_job()`) — R3 use-case pattern:
+  returns a real `RenderJob` with proper enum values (`RenderStatus`, `OutputFormat`,
+  `QualityPreset`) instead of string stand-ins.
+
+This is guidance, not a new mandatory process step, checklist item, or quality gate, and it
+does not extend `mypy` scope to `tests/`.
+
 ## Code Quality Principles
 
 Default to KISS + YAGNI for new code. Refactor to DRY and SOLID (SRP/DIP/ISP baseline, LSP via substitutability tests) after duplication or change is demonstrated. Introduce OCP extension points when there's an evidenced extension requirement.
