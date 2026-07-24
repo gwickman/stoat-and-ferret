@@ -128,7 +128,6 @@ async def _poll_scan_job(
 
 async def _run_full_acceptance_render(
     client: httpx.AsyncClient,
-    tmp_path: Path,  # noqa: ARG001  # reserved for output path assertions
 ) -> dict[str, Any]:
     """Seed sample project, render with delivery profile, return QC report dict.
 
@@ -264,23 +263,21 @@ def _evaluate_oc_outcomes(qc_report: dict[str, Any]) -> dict[str, bool]:
 
 class TestUCMediaMPS001Acceptance:
     async def test_acceptance_render_produces_qc_report(
-        self, acceptance_client: httpx.AsyncClient, tmp_path: Path
+        self, acceptance_client: httpx.AsyncClient
     ) -> None:
         """Full render completes and returns a QC report with overall verdict."""
-        qc_report = await _run_full_acceptance_render(acceptance_client, tmp_path)
+        qc_report = await _run_full_acceptance_render(acceptance_client)
         assert "overall_verdict" in qc_report
         assert "checks" in qc_report
 
-    async def test_at_least_14_oc_outcomes_pass(
-        self, acceptance_client: httpx.AsyncClient, tmp_path: Path
-    ) -> None:
+    async def test_at_least_14_oc_outcomes_pass(self, acceptance_client: httpx.AsyncClient) -> None:
         """≥14 of 17 UC-MEDIA-MPS-001 outcomes pass after QC-gated render.
 
         12 machine-verifiable OCs are checked via QC report.
         5 human-only OCs (OC-3, OC-4, OC-5, OC-14, OC-15) require headed review per
         tier2_checklist (docs/uat/tier2-perceptual-checklist.md).
         """
-        qc_report = await _run_full_acceptance_render(acceptance_client, tmp_path)
+        qc_report = await _run_full_acceptance_render(acceptance_client)
         oc_results = _evaluate_oc_outcomes(qc_report)
         passing = [oc for oc, passed in oc_results.items() if passed]
         failing = [oc for oc, passed in oc_results.items() if not passed]
@@ -294,10 +291,10 @@ class TestUCMediaMPS001Acceptance:
 
     @pytest.mark.parametrize("oc", list(OC_TO_QC_CHECK.keys()))
     async def test_machine_verifiable_oc_pass_fail_detail(
-        self, acceptance_client: httpx.AsyncClient, tmp_path: Path, oc: str
+        self, acceptance_client: httpx.AsyncClient, oc: str
     ) -> None:
         """Per-OC pass/fail detail for each machine-verifiable outcome."""
-        qc_report = await _run_full_acceptance_render(acceptance_client, tmp_path)
+        qc_report = await _run_full_acceptance_render(acceptance_client)
         checks = qc_report.get("checks", {})
         check_ids = OC_TO_QC_CHECK[oc]
         for cid in check_ids:

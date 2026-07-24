@@ -10,7 +10,7 @@ from pathlib import Path
 ALLOWLIST = "scripts/license_grep_allowlist.txt"
 # NOSONAR: fixed-width lookarounds around a 3-char literal, linear-time by construction,
 # no nested/unbounded quantifiers, cannot backtrack catastrophically.
-PYTHON_PATTERN = r"(?<![A-Za-z0-9_])MIT(?![A-Za-z0-9_])"  # NOSONAR
+PYTHON_PATTERN = r"(?<!\w)MIT(?!\w)"  # NOSONAR
 
 
 def test_bare_mit_detected_in_synthetic_file(tmp_path: Path) -> None:
