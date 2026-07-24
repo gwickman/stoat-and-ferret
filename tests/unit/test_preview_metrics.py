@@ -11,6 +11,7 @@ Uses the before/after delta pattern for Prometheus metrics.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -170,7 +171,7 @@ class TestPreviewManagerMetrics:
     """Verify PreviewManager instruments metrics on session lifecycle."""
 
     @pytest.fixture()
-    def _mock_settings(self) -> None:
+    def _mock_settings(self) -> Generator[None, None, None]:
         """Patch settings for manager tests."""
         mock_settings = MagicMock()
         mock_settings.preview_cache_max_sessions = 10
@@ -372,7 +373,7 @@ class TestCacheMetricsInstrumentation:
     """Verify PreviewCache instruments cache metrics."""
 
     @pytest.fixture()
-    def _mock_settings(self, tmp_path: Path) -> None:
+    def _mock_settings(self, tmp_path: Path) -> Generator[None, None, None]:
         """Patch settings for cache tests."""
         mock_settings = MagicMock()
         mock_settings.preview_output_dir = str(tmp_path)

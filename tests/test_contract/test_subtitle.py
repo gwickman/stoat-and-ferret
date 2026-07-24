@@ -10,13 +10,14 @@ import os
 import subprocess
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 
 from stoat_ferret.api.schemas.render import SoftSubtitleSpec, bcp47_to_iso639
+from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
 from stoat_ferret_core import (
     BurnedSubtitleBuilder,
@@ -79,21 +80,37 @@ class _FakeClip:
     effects: list[Any] = field(default_factory=list)
 
 
-@dataclass
-class _FakeRenderJob:
-    id: str = "job-sub-001"
-    project_id: str = "proj-sub-001"
-    output_path: str = "/out/result.mp4"
-    output_format: str = "mp4"
-    render_plan: str = (
-        '{"settings": {"soft_subtitles": ['
-        '{"source_asset_id": "00000000-0000-0000-0000-000000000011",'
-        ' "language": "en", "is_default": true},'
-        '{"source_asset_id": "00000000-0000-0000-0000-000000000012",'
-        ' "language": "es-ES"}'
-        ']}, "total_duration": 10.0}'
+_DEFAULT_SOFT_SUB_PLAN = (
+    '{"settings": {"soft_subtitles": ['
+    '{"source_asset_id": "00000000-0000-0000-0000-000000000011",'
+    ' "language": "en", "is_default": true},'
+    '{"source_asset_id": "00000000-0000-0000-0000-000000000012",'
+    ' "language": "es-ES"}'
+    ']}, "total_duration": 10.0}'
+)
+
+
+def _make_render_job(
+    output_format: OutputFormat = OutputFormat.MP4,
+    output_path: str = "/out/result.mp4",
+    render_plan: str = _DEFAULT_SOFT_SUB_PLAN,
+) -> RenderJob:
+    now = datetime.now(timezone.utc)
+    return RenderJob(
+        id="job-sub-001",
+        project_id="proj-sub-001",
+        status=RenderStatus.RUNNING,
+        output_path=output_path,
+        output_format=output_format,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=render_plan,
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
     )
-    quality_preset: str = "standard"
 
 
 def _make_soft_sub_repos() -> tuple[AsyncMock, AsyncMock]:
@@ -486,7 +503,7 @@ class TestWorkerSoftSubtitleCommand:
         """AC FR-006-AC-1/AC-3: soft_subtitles → -c:s mov_text and language metadata."""
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
 
         cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
 
@@ -501,7 +518,7 @@ class TestWorkerSoftSubtitleCommand:
         """AC FR-006-AC-3: is_default=True → -disposition:s:0 default."""
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
 
         cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
 
@@ -513,7 +530,7 @@ class TestWorkerSoftSubtitleCommand:
         """AC FR-006-AC-3/AC-5: subtitle -i inputs appear after source -i."""
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
 
         cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
 
@@ -532,7 +549,7 @@ class TestWorkerSoftSubtitleCommand:
         """AC FR-006-AC-3: subtitle -i inputs appear AFTER TTS -i inputs (Risk 005)."""
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
         tts_input = TtsCueAudioInput(
             cue_id="cue-001",
             audio_path="/tmp/tts.wav",
@@ -556,8 +573,8 @@ class TestWorkerSoftSubtitleCommand:
         """AC FR-006-AC-4: non-mp4/non-mkv container with soft_subtitles raises ValueError."""
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob(
-            output_format="webm",
+        job = _make_render_job(
+            output_format=OutputFormat.WEBM,
             output_path="/out/result.webm",
         )
 
@@ -568,8 +585,8 @@ class TestWorkerSoftSubtitleCommand:
         """AC FR-006-AC-4: mkv container uses -c:s srt instead of mov_text."""
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob(
-            output_format="mkv",
+        job = _make_render_job(
+            output_format=OutputFormat.MKV,
             output_path="/out/result.mkv",
         )
 
@@ -583,7 +600,7 @@ class TestWorkerSoftSubtitleCommand:
     async def test_no_soft_subtitles_no_c_s_flag(self) -> None:
         """Regression: no soft_subtitles → no -c:s flag emitted."""
         clip_repo, video_repo = _make_soft_sub_repos()
-        job = _FakeRenderJob(
+        job = _make_render_job(
             render_plan='{"settings": {}, "total_duration": 10.0}',
         )
 
@@ -598,7 +615,7 @@ class TestWorkerSoftSubtitleCommand:
         """
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
 
         cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
 
@@ -620,7 +637,7 @@ class TestWorkerSoftSubtitleCommand:
         """
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
         tts_input = TtsCueAudioInput(
             cue_id="cue-001",
             audio_path="/tmp/tts.wav",
@@ -653,7 +670,7 @@ class TestWorkerSoftSubtitleCommand:
         """
         clip_repo, video_repo = _make_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
         tts_input = TtsCueAudioInput(
             cue_id="cue-001",
             audio_path="/tmp/tts.wav",
@@ -698,7 +715,7 @@ class TestWorkerSoftSubtitleCommand:
         """
         clip_repo, video_repo = _make_multi_clip_soft_sub_repos()
         asset_repo = _make_soft_sub_asset_repo()
-        job = _FakeRenderJob()
+        job = _make_render_job()
 
         cmd = await build_command_for_job(job, clip_repo, video_repo, asset_repository=asset_repo)
 
@@ -780,7 +797,7 @@ def test_soft_subtitle_ffprobe_streams() -> None:
             return None
 
         asset_repo.get_by_id = _get_asset
-        job = _FakeRenderJob(output_path=output_path, render_plan=render_plan)
+        job = _make_render_job(output_path=output_path, render_plan=render_plan)
 
         async def _build_cmd() -> list[str]:
             return await build_command_for_job(

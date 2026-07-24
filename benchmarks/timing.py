@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 
@@ -68,7 +69,7 @@ class BenchmarkResult:
         return self.python_median / self.rust_median
 
 
-def time_function(func: object, iterations: int) -> list[float]:
+def time_function(func: Callable[[], object], iterations: int) -> list[float]:
     """Time a function over multiple runs, returning per-run times in seconds.
 
     Each run executes the function `iterations` times and records the total
@@ -85,7 +86,7 @@ def time_function(func: object, iterations: int) -> list[float]:
     for _ in range(10):  # 10 runs
         start = time.perf_counter()
         for _ in range(iterations):
-            func()  # type: ignore[operator]
+            func()
         elapsed = time.perf_counter() - start
         times.append(elapsed)
     return times
@@ -93,8 +94,8 @@ def time_function(func: object, iterations: int) -> list[float]:
 
 def run_benchmark(
     name: str,
-    rust_func: object,
-    python_func: object,
+    rust_func: Callable[[], object],
+    python_func: Callable[[], object],
     iterations: int = 1000,
     warmup: int = 100,
 ) -> BenchmarkResult:
@@ -112,9 +113,9 @@ def run_benchmark(
     """
     # Warmup both implementations
     for _ in range(warmup):
-        rust_func()  # type: ignore[operator]
+        rust_func()
     for _ in range(warmup):
-        python_func()  # type: ignore[operator]
+        python_func()
 
     rust_times = time_function(rust_func, iterations)
     python_times = time_function(python_func, iterations)
