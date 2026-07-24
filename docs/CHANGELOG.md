@@ -4,6 +4,49 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v112 — SonarCloud Remediation Wave A — Python Test Quality & Lint Hygiene (2026-07-24)
+
+3 themes, 10 features, PRs #895–#904.
+
+### Theme 1: Ruff Lint Rule Enablement
+
+Enabled three SonarCloud-aligned ruff rules and cleared all violations introduced by those
+rules across the test suite.
+
+- BL-709: Enable ruff rules RUF059, C401, C408 — cleared 123 dead-binding sites (unpacked variables assigned but never used), replaced set-comprehension calls (C401), and resolved unnecessary-dict-call violations (C408) (PR #895)
+
+### Theme 2: Test Quality Improvements
+
+Fixed structural defects in the test suite surfaced by SonarCloud static analysis: vestigial
+async signatures, float equality approximation, pytest.raises scope isolation, test-double
+type drift, assertion gaps, and concurrent-render duration fidelity.
+
+- BL-710: De-async 89 vestigial async test functions — removed `async` from test methods with no `await` expression, eliminating false asyncio coverage hits (PR #896)
+- BL-711: Fix 4 float equality assertions → `pytest.approx` — replaced exact float comparisons with `pytest.approx`; ~200 remaining S1244 sites classification deferred (PR #897)
+- BL-712: Isolate single raising call in 74 `pytest.raises` blocks — each raises-block now contains only the call expected to raise, validating that the right statement raises (PR #898)
+- BL-713: Align 24 test-double type annotations with real interfaces — test doubles updated to match current model field names and types, eliminating silent field-drift (PR #899)
+- BL-714: Fix 9 assertion-gap / empty-body test sites — 9 tests with empty bodies or vacuous assertions given substantive assertions (PR #900)
+- BL-726: Strengthen concurrent-render duration assertion with mutation-verified tolerance — tolerance bounds set to ±1 second with a mutation guard confirming the assertion catches real regressions (PR #901)
+
+### Theme 3: Hygiene Long Tail
+
+Completed SonarCloud hygiene residuals, extracted complexity helpers to reduce Sonar S3776
+cyclomatic complexity, and documented the typed-factory convention for test doubles in AGENTS.md.
+
+- BL-722: Hygiene long tail — 4 mechanical fixes: corrected 2 incorrect-exception-type assertions, eliminated 1 `assertIs(None)` → `assertIsNone`, fixed 1 ambiguous test parametrize id; FFmpeg ACs deferred to CI `ffmpeg-tests` lane (PR #902)
+- BL-723: Extract 2 complexity helpers — `extract_journey_files` extracted from `uat_runner.py`; inline result-builder extracted from `test_effects_procedural_generators.py` (PR #903)
+- BL-724: Add typed-factory convention documentation to AGENTS.md — codifies the test-double typed-factory pattern; cites `make_project()`/`make_render_job()` as in-repo exemplars (PR #904)
+
+### PRs
+
+#895, #896, #897, #898, #899, #900, #901, #902, #903, #904
+
+### Resolved
+
+BL-709 (ruff RUF059/C401/C408 enablement), BL-710 (de-async vestigial test functions), BL-711 (float equality approx — AC-3/4 deferred), BL-712 (pytest.raises single-raise isolation), BL-713 (test-double type alignment), BL-714 (assertion-gap fixes), BL-726 (concurrent-render duration assertion), BL-722 (hygiene long tail — AC-2/6 FFmpeg-deferred), BL-723 (complexity helpers — AC-5 coverage deferred), BL-724 (typed-factory documentation)
+
+---
+
 ## v111 — Verification-Gate Closeout and Agent-Surface/Doc Hygiene (2026-07-23)
 
 5 themes, 22 features, PRs #878–#893. **Final planned version.**
