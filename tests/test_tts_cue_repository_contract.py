@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 import aiosqlite
@@ -65,7 +66,7 @@ async def _seed_project_and_track(db: aiosqlite.Connection, project_id: str, tra
 
 
 @pytest.fixture
-async def sqlite_repo() -> AsyncSQLiteTtsCueRepository:
+async def sqlite_repo() -> AsyncGenerator[AsyncSQLiteTtsCueRepository, None]:
     async with aiosqlite.connect(":memory:") as db:
         await create_tables_async(db)
         await _seed_project_and_track(db, _PROJECT_ID, _TRACK_ID)

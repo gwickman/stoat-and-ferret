@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -54,7 +54,7 @@ def _build_mock_qc_service(repo: InMemoryQCReportRepository) -> QCService:
 
     svc = MagicMock(spec=QCService)
     svc.run_checks = AsyncMock(side_effect=_run_checks)
-    return svc
+    return cast(QCService, svc)
 
 
 @pytest.fixture()

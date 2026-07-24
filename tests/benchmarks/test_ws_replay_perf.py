@@ -17,6 +17,7 @@ Run with::
 from __future__ import annotations
 
 import pytest
+from pytest_benchmark.fixture import BenchmarkFixture
 
 from stoat_ferret.api.websocket.manager import ConnectionManager
 
@@ -25,7 +26,7 @@ REPLAY_MEAN_TARGET_S = 0.200
 
 @pytest.mark.benchmark
 def test_events_after_latency(
-    benchmark: object,
+    benchmark: BenchmarkFixture,
     replay_buffer_1000_events: tuple[ConnectionManager, list[str]],
 ) -> None:
     """replay_since() with last_event_id mid-buffer must mean < 200ms.
@@ -42,11 +43,12 @@ def test_events_after_latency(
         events = manager.replay_since(mid_event_id)
         return len(events)
 
-    returned = benchmark(_call)  # type: ignore[operator]
+    returned = benchmark(_call)
     # Events strictly after index 500 → indices 501..999 → 499 entries.
     assert returned == 499
 
-    stats = benchmark.stats.stats  # type: ignore[attr-defined]
+    assert benchmark.stats is not None
+    stats = benchmark.stats.stats
     assert stats.mean < REPLAY_MEAN_TARGET_S, (
         f"replay_since mean {stats.mean * 1000:.1f}ms exceeds "
         f"{REPLAY_MEAN_TARGET_S * 1000:.0f}ms target"

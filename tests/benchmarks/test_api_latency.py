@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from pytest_benchmark.fixture import BenchmarkFixture
 
 # Targets — keep in sync with docs/benchmarks/baseline.md and the
 # acceptance criteria in BL-288.
@@ -31,7 +32,7 @@ VERSION_P99_TARGET_S = 0.100
 
 @pytest.mark.benchmark
 def test_system_state_latency(
-    benchmark: object,
+    benchmark: BenchmarkFixture,
     benchmark_client: TestClient,
     seeded_100_projects: list[str],
 ) -> None:
@@ -48,10 +49,11 @@ def test_system_state_latency(
         response = benchmark_client.get("/api/v1/system/state")
         return response.status_code
 
-    status_code = benchmark(_call)  # type: ignore[operator]
+    status_code = benchmark(_call)
     assert status_code == 200
 
-    stats = benchmark.stats.stats  # type: ignore[attr-defined]
+    assert benchmark.stats is not None
+    stats = benchmark.stats.stats
     assert stats.mean < SYSTEM_STATE_MEAN_TARGET_S, (
         f"system/state mean {stats.mean * 1000:.1f}ms exceeds "
         f"{SYSTEM_STATE_MEAN_TARGET_S * 1000:.0f}ms target"
@@ -60,7 +62,7 @@ def test_system_state_latency(
 
 @pytest.mark.benchmark
 def test_version_endpoint_latency(
-    benchmark: object,
+    benchmark: BenchmarkFixture,
     benchmark_client: TestClient,
 ) -> None:
     """GET /api/v1/version must complete with P99 < 100ms.
@@ -75,10 +77,11 @@ def test_version_endpoint_latency(
         response = benchmark_client.get("/api/v1/version")
         return response.status_code
 
-    status_code = benchmark(_call)  # type: ignore[operator]
+    status_code = benchmark(_call)
     assert status_code == 200
 
-    stats = benchmark.stats.stats  # type: ignore[attr-defined]
+    assert benchmark.stats is not None
+    stats = benchmark.stats.stats
     # pytest-benchmark does not expose a built-in P99, but max is a
     # strict upper bound on P99 — if max is under target, P99 is too.
     assert stats.max < VERSION_P99_TARGET_S, (

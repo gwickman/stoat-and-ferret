@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
 from typing import Any
 
@@ -200,7 +200,7 @@ def test_multi_pair_non_blocking(client: TestClient) -> None:
 
 
 @pytest.fixture
-async def sqlite_ducking_repo() -> AsyncSQLiteDuckingPairRepository:
+async def sqlite_ducking_repo() -> AsyncGenerator[AsyncSQLiteDuckingPairRepository, None]:
     async with aiosqlite.connect(":memory:") as db:
         await create_tables_async(db)
         yield AsyncSQLiteDuckingPairRepository(db)

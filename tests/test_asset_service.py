@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -79,7 +80,7 @@ CREATE TABLE IF NOT EXISTS assets (
 
 
 @pytest.fixture
-async def repo() -> AsyncSQLiteAssetRepository:
+async def repo() -> AsyncGenerator[AsyncSQLiteAssetRepository, None]:
     async with aiosqlite.connect(":memory:") as db:
         db.row_factory = aiosqlite.Row
         await db.execute(_ASSETS_DDL)
