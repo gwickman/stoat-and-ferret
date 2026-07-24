@@ -303,10 +303,7 @@ class TestGracefulShutdown:
 
         # Make generate block but respond to cancellation
         async def stuck_generate(**kwargs: object) -> Path:
-            try:
-                await asyncio.sleep(3600)
-            except asyncio.CancelledError:
-                raise
+            await asyncio.sleep(3600)
             return Path("/tmp/test-previews/fake")
 
         gen.generate = stuck_generate

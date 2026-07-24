@@ -298,6 +298,8 @@ class TestAutoProxyQueueing:
 
             # Second scan: video already has proxy
             result = await handler("scan", {"path": str(tmp_path), "recursive": True})
+            # Pin the behaviour: re-scanning an already-known video must not count it as new.
+            assert result["new"] == 0
 
         # No new proxy jobs submitted (video already has a proxy)
         proxy_jobs = [(jt, p) for jt, p in submitted_jobs if jt == PROXY_JOB_TYPE]
