@@ -23,6 +23,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from stoat_ferret.api.routers.assets import _validate_image_magic_bytes
 from stoat_ferret.api.schemas.clip import ClipCreate, ClipResponse
@@ -169,7 +170,7 @@ def test_schema_duration_constraint_message_present() -> None:
 
 def test_image_clip_missing_timeline_end_raises() -> None:
     """FR-004-AC-1 = BL-511-AC-4: image clip without timeline_end raises ValidationError."""
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(ValidationError) as exc_info:
         ClipCreate(
             clip_type="image",
             source_asset_id="asset-001",

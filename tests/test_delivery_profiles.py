@@ -436,7 +436,7 @@ async def _submit_render_with_qc_service(
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
-        # NOSONAR: httpx ASGITransport test double — no real network call is made;
+        # Rationale: httpx ASGITransport test double — no real network call is made;
         # base_url is a placeholder string required by the client constructor, same
         # convention used unflagged elsewhere in this file (e.g. lines 164, 198, 550).
         base_url="http://testserver",  # NOSONAR
