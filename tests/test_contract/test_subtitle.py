@@ -438,16 +438,18 @@ class TestSoftSubtitleSpec:
         assert bcp47_to_iso639(spec.language) == "zho"
 
     def test_unsupported_language_raises_value_error(self) -> None:
+        asset_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
         with pytest.raises(ValueError, match="Unsupported BCP-47"):
             SoftSubtitleSpec(
-                source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                source_asset_id=asset_id,
                 language="xx",
             )
 
     def test_unsupported_language_includes_supported_list(self) -> None:
+        asset_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
         with pytest.raises(ValueError, match="en"):
             SoftSubtitleSpec(
-                source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                source_asset_id=asset_id,
                 language="xx",
             )
 
@@ -1220,9 +1222,10 @@ class TestSubtitleScriptSpecBl601Ac7:
     """BL-601-AC-7: font_color backslash rejected; source_path backslash rejected."""
 
     def test_font_color_backslash_raises_value_error(self) -> None:
+        entries = [ScriptEntry(text="hi", start_s=0.0, end_s=1.0)]
         with pytest.raises(ValueError):
             SubtitleScriptSpec(
-                entries=[ScriptEntry(text="hi", start_s=0.0, end_s=1.0)],
+                entries=entries,
                 font_color="white\\",
             )
 

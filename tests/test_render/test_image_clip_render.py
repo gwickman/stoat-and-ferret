@@ -239,8 +239,9 @@ def test_jpeg_format_accepted() -> None:
 
 def test_tiff_format_rejected() -> None:
     """FR-005-AC-1: TIFF bytes raise ValueError from _validate_image_magic_bytes."""
+    tiff_bytes = _make_tiff_bytes()
     with pytest.raises(ValueError, match="not allowed"):
-        _validate_image_magic_bytes(_make_tiff_bytes())
+        _validate_image_magic_bytes(tiff_bytes)
 
 
 # ---------------------------------------------------------------------------

@@ -44,18 +44,20 @@ def test_load_malformed_json(tmp_path: pytest.TempPathFactory) -> None:
     """Malformed JSON raises ValueError with descriptive message."""
     registry_file = tmp_path / "bad.json"
     registry_file.write_text("{invalid json}", encoding="utf-8")
+    registry_path = str(registry_file)
 
     with pytest.raises(ValueError, match="Malformed registry"):
-        load_known_failures(str(registry_file))
+        load_known_failures(registry_path)
 
 
 def test_load_non_list_top_level(tmp_path: pytest.TempPathFactory) -> None:
     """Non-list top-level value raises ValueError naming the canonical bare-array shape."""
     registry_file = tmp_path / "nokey.json"
     registry_file.write_text(json.dumps({"other": []}), encoding="utf-8")
+    registry_path = str(registry_file)
 
     with pytest.raises(ValueError, match="Expected bare JSON array"):
-        load_known_failures(str(registry_file))
+        load_known_failures(registry_path)
 
 
 def test_load_invalid_journey_id(tmp_path: pytest.TempPathFactory) -> None:
@@ -65,9 +67,10 @@ def test_load_invalid_journey_id(tmp_path: pytest.TempPathFactory) -> None:
         json.dumps([{"journey_id": "not_an_int", "reason": "test", "tracking_reference": "ref"}]),
         encoding="utf-8",
     )
+    registry_path = str(registry_file)
 
     with pytest.raises(ValueError, match="journey_id must be integer"):
-        load_known_failures(str(registry_file))
+        load_known_failures(registry_path)
 
 
 def test_load_missing_required_field(tmp_path: pytest.TempPathFactory) -> None:
@@ -77,9 +80,10 @@ def test_load_missing_required_field(tmp_path: pytest.TempPathFactory) -> None:
         json.dumps([{"journey_id": 501, "reason": "test"}]),
         encoding="utf-8",
     )
+    registry_path = str(registry_file)
 
     with pytest.raises(ValueError, match="missing 'reason' or 'tracking_reference'"):
-        load_known_failures(str(registry_file))
+        load_known_failures(registry_path)
 
 
 def test_load_empty_failures_list(tmp_path: pytest.TempPathFactory) -> None:

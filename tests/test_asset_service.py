@@ -135,8 +135,9 @@ def test_validate_bmp_rejected() -> None:
 
     buf = io.BytesIO()
     Image.new("RGB", (1, 1)).save(buf, format="BMP")
+    bmp_bytes = buf.getvalue()
     with pytest.raises(ValueError, match="not allowed"):
-        _validate_image_magic_bytes(buf.getvalue())
+        _validate_image_magic_bytes(bmp_bytes)
 
 
 # ---------------------------------------------------------------------------

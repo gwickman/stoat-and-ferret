@@ -419,8 +419,9 @@ class TestAcrossfadeBuilder:
         """Test AcrossfadeBuilder rejects invalid curve name."""
         from stoat_ferret_core import AcrossfadeBuilder
 
+        builder = AcrossfadeBuilder(2.0)
         with pytest.raises(ValueError):
-            AcrossfadeBuilder(2.0).curve1("invalid_curve")
+            builder.curve1("invalid_curve")
 
     def test_build_returns_filter(self) -> None:
         """Test build() returns a Filter object."""

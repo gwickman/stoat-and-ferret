@@ -75,9 +75,10 @@ class TestEnqueue:
         """Enqueue raises QueueFullError when max_depth is reached."""
         for _ in range(3):
             await queue.enqueue(_make_job())
+        overflow_job = _make_job()
 
         with pytest.raises(QueueFullError) as exc_info:
-            await queue.enqueue(_make_job())
+            await queue.enqueue(overflow_job)
         assert exc_info.value.queue_depth == 3
         assert exc_info.value.max_depth == 3
 
@@ -85,9 +86,10 @@ class TestEnqueue:
         """QueueFullError string contains the depth numbers."""
         for _ in range(3):
             await queue.enqueue(_make_job())
+        overflow_job = _make_job()
 
         with pytest.raises(QueueFullError) as exc_info:
-            await queue.enqueue(_make_job())
+            await queue.enqueue(overflow_job)
         assert "3/3" in str(exc_info.value)
 
 
@@ -251,9 +253,10 @@ class TestStructuredLogging:
         """Capacity reached emits a render_queue.capacity_reached log event."""
         for _ in range(3):
             await queue.enqueue(_make_job())
+        overflow_job = _make_job()
 
         with capture_logs() as cap_logs, pytest.raises(QueueFullError):
-            await queue.enqueue(_make_job())
+            await queue.enqueue(overflow_job)
 
         events = [e for e in cap_logs if e.get("event") == "render_queue.capacity_reached"]
         assert len(events) == 1

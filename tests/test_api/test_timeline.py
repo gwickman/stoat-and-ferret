@@ -1232,20 +1232,23 @@ from stoat_ferret.api.schemas.timeline import TrackCreate  # noqa: E402
 
 def test_weight_rejects_inf() -> None:
     """TrackCreate.weight rejects float('inf')."""
+    inf_weight = float("inf")
     with pytest.raises(ValidationError):
-        TrackCreate(track_type="audio", label="A", weight=float("inf"))
+        TrackCreate(track_type="audio", label="A", weight=inf_weight)
 
 
 def test_weight_rejects_neg_inf() -> None:
     """TrackCreate.weight rejects float('-inf')."""
+    neg_inf_weight = float("-inf")
     with pytest.raises(ValidationError):
-        TrackCreate(track_type="audio", label="A", weight=float("-inf"))
+        TrackCreate(track_type="audio", label="A", weight=neg_inf_weight)
 
 
 def test_weight_rejects_nan() -> None:
     """TrackCreate.weight rejects float('nan')."""
+    nan_weight = float("nan")
     with pytest.raises(ValidationError):
-        TrackCreate(track_type="audio", label="A", weight=float("nan"))
+        TrackCreate(track_type="audio", label="A", weight=nan_weight)
 
 
 def test_weight_rejects_large_overflow() -> None:

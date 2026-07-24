@@ -104,9 +104,10 @@ class TestPreviewAdd:
     ) -> None:
         """Inserting duplicate session ID raises ValueError."""
         await preview_repository.add(_make_session())
+        duplicate_session = _make_session()
 
         with pytest.raises(ValueError, match="already exists"):
-            await preview_repository.add(_make_session())
+            await preview_repository.add(duplicate_session)
 
 
 @pytest.mark.contract

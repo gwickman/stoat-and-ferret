@@ -70,10 +70,12 @@ def test_sub_bass_out_of_range_cutoff_high() -> None:
 
 def test_sub_bass_out_of_range_level_db() -> None:
     """level_db outside [-20, 20] raises ValueError."""
+    builder_high = SubBassBuilder(80.0)
     with pytest.raises(ValueError):
-        SubBassBuilder(80.0).with_level_db(21.0)
+        builder_high.with_level_db(21.0)
+    builder_low = SubBassBuilder(80.0)
     with pytest.raises(ValueError):
-        SubBassBuilder(80.0).with_level_db(-21.0)
+        builder_low.with_level_db(-21.0)
 
 
 def test_sub_bass_boundary_values() -> None:

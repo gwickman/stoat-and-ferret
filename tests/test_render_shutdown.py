@@ -171,6 +171,7 @@ class TestShutdownFlag:
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service()
             service.initiate_shutdown()
+            plan_json = _make_plan_json()
 
             with pytest.raises(RenderUnavailableError, match="shutting down"):
                 await service.submit_job(
@@ -178,7 +179,7 @@ class TestShutdownFlag:
                     output_path="/tmp/out.mp4",
                     output_format=OutputFormat.MP4,
                     quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
+                    render_plan_json=plan_json,
                 )
 
     def test_is_shutting_down_property(self) -> None:
@@ -317,6 +318,7 @@ class TestFFmpegDegradation:
         """FR-001: When FFmpeg not installed, submit raises RenderUnavailableError."""
         with _PATCH_NO_RUST:
             service, _, _, _ = _build_service(ffmpeg_available=False)
+            plan_json = _make_plan_json()
 
             with pytest.raises(RenderUnavailableError, match="FFmpeg is not installed"):
                 await service.submit_job(
@@ -324,7 +326,7 @@ class TestFFmpegDegradation:
                     output_path="/tmp/out.mp4",
                     output_format=OutputFormat.MP4,
                     quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
+                    render_plan_json=plan_json,
                 )
 
     def test_ffmpeg_available_property(self) -> None:
@@ -539,13 +541,14 @@ class TestGracefulShutdownSystem:
                 assert not temp_file.exists()
 
                 # Verify new requests are rejected
+                plan_json = _make_plan_json()
                 with pytest.raises(RenderUnavailableError, match="shutting down"):
                     await service.submit_job(
                         project_id="proj-2",
                         output_path="/tmp/out2.mp4",
                         output_format=OutputFormat.MP4,
                         quality_preset=QualityPreset.STANDARD,
-                        render_plan_json=_make_plan_json(),
+                        render_plan_json=plan_json,
                     )
 
     async def test_ffmpeg_missing_system(self) -> None:
@@ -559,13 +562,14 @@ class TestGracefulShutdownSystem:
             assert service.is_shutting_down is False
 
             # Render requests are rejected
+            plan_json = _make_plan_json()
             with pytest.raises(RenderUnavailableError, match="FFmpeg is not installed"):
                 await service.submit_job(
                     project_id="proj-1",
                     output_path="/tmp/out.mp4",
                     output_format=OutputFormat.MP4,
                     quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
+                    render_plan_json=plan_json,
                 )
 
             # Recovery still works (non-render functionality)

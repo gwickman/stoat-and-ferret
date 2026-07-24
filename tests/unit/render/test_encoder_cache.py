@@ -193,6 +193,7 @@ async def test_sqlite_constraint_error(encoder_cache_repo: _RepositoryType) -> N
         pytest.skip("SQLite-only: InMemory implementation does not enforce UNIQUE constraint")
 
     await encoder_cache_repo.create_many([_make_entry(name="libx264")])
+    duplicate_entries = [_make_entry(name="libx264")]
 
     with pytest.raises(aiosqlite.IntegrityError):
-        await encoder_cache_repo.create_many([_make_entry(name="libx264")])
+        await encoder_cache_repo.create_many(duplicate_entries)
