@@ -91,14 +91,16 @@ def test_pitch_shift_boundary_values_accepted() -> None:
 
 def test_pitch_shift_invalid_formant_raises() -> None:
     """Invalid formant raises ValueError."""
+    builder = PitchShiftBuilder(2.0)
     with pytest.raises(ValueError):
-        PitchShiftBuilder(2.0).with_formant("natural")
+        builder.with_formant("natural")
 
 
 def test_pitch_shift_invalid_quality_raises() -> None:
     """Invalid quality raises ValueError."""
+    builder = PitchShiftBuilder(2.0)
     with pytest.raises(ValueError):
-        PitchShiftBuilder(2.0).with_quality("best")
+        builder.with_quality("best")
 
 
 def test_pitch_shift_repr() -> None:

@@ -47,9 +47,10 @@ async def test_scan_toctou_worker_rejects_retargeted_symlink(tmp_path: Path) -> 
     legit.symlink_to(outside)
 
     handler = make_scan_handler(repo)
+    legit_path = str(legit)
 
     with (
         patch("stoat_ferret.api.services.scan.get_settings", return_value=mock_settings),
         pytest.raises(ValueError, match="not under any allowed scan root"),
     ):
-        await handler("scan", {"path": str(legit)})
+        await handler("scan", {"path": legit_path})

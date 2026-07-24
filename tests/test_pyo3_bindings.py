@@ -220,15 +220,17 @@ class TestFFmpegCommand:
         """Test command validation rejects missing inputs."""
         from stoat_ferret_core import FFmpegCommand
 
+        cmd = FFmpegCommand().output("output.mp4")
         with pytest.raises(ValueError, match="input"):
-            FFmpegCommand().output("output.mp4").build()
+            cmd.build()
 
     def test_command_validation_no_outputs(self) -> None:
         """Test command validation rejects missing outputs."""
         from stoat_ferret_core import FFmpegCommand
 
+        cmd = FFmpegCommand().input("input.mp4")
         with pytest.raises(ValueError, match="output"):
-            FFmpegCommand().input("input.mp4").build()
+            cmd.build()
 
 
 class TestFilter:
@@ -883,8 +885,9 @@ class TestDrawtextBuilder:
         """Test invalid position preset raises ValueError."""
         from stoat_ferret_core import DrawtextBuilder
 
+        builder = DrawtextBuilder("text")
         with pytest.raises(ValueError, match="unknown position preset"):
-            DrawtextBuilder("text").position("invalid_preset")
+            builder.position("invalid_preset")
 
     def test_shadow(self) -> None:
         """Test shadow effect."""
@@ -918,8 +921,9 @@ class TestDrawtextBuilder:
         """Test alpha out of range raises ValueError."""
         from stoat_ferret_core import DrawtextBuilder
 
+        builder = DrawtextBuilder("text")
         with pytest.raises(ValueError, match="alpha must be between"):
-            DrawtextBuilder("text").alpha(1.5)
+            builder.alpha(1.5)
 
     def test_alpha_fade(self) -> None:
         """Test alpha fade animation generates expression."""

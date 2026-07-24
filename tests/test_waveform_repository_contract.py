@@ -108,9 +108,10 @@ class TestWaveformAdd:
     ) -> None:
         """Inserting duplicate ID raises ValueError."""
         await waveform_repository.add(_make_waveform(waveform_id="w1"))
+        duplicate_waveform = _make_waveform(waveform_id="w1")
 
         with pytest.raises(ValueError):
-            await waveform_repository.add(_make_waveform(waveform_id="w1"))
+            await waveform_repository.add(duplicate_waveform)
 
     async def test_add_different_formats_same_video_ok(
         self, waveform_repository: AsyncWaveformRepositoryType

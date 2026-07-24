@@ -115,9 +115,10 @@ class TestThumbnailStripAdd:
     ) -> None:
         """Inserting duplicate ID raises ValueError."""
         await strip_repository.add(_make_strip(strip_id="s1"))
+        duplicate_strip = _make_strip(strip_id="s1")
 
         with pytest.raises(ValueError):
-            await strip_repository.add(_make_strip(strip_id="s1"))
+            await strip_repository.add(duplicate_strip)
 
     async def test_add_different_strips_same_video_ok(
         self, strip_repository: AsyncThumbnailStripRepositoryType

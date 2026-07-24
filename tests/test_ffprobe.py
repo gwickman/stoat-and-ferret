@@ -162,27 +162,30 @@ class TestFFprobeVideoErrors:
         # Create a file to avoid FileNotFoundError
         video_file = tmp_path / "video.mp4"
         video_file.write_bytes(b"not a real video")
+        video_path = str(video_file)
 
         with pytest.raises(FFprobeError, match="ffprobe not found"):
-            await ffprobe_video(str(video_file), ffprobe_path="/nonexistent/ffprobe")
+            await ffprobe_video(video_path, ffprobe_path="/nonexistent/ffprobe")
 
     @requires_ffprobe
     async def test_not_a_video_file(self, tmp_path: Path) -> None:
         """Test ValueError raised for non-video file."""
         text_file = tmp_path / "test.txt"
         text_file.write_text("this is not a video file")
+        text_path = str(text_file)
 
         with pytest.raises((ValueError, FFprobeError)):
-            await ffprobe_video(str(text_file))
+            await ffprobe_video(text_path)
 
     @requires_ffprobe
     async def test_empty_file(self, tmp_path: Path) -> None:
         """Test error handling for empty file."""
         empty_file = tmp_path / "empty.mp4"
         empty_file.write_bytes(b"")
+        empty_path = str(empty_file)
 
         with pytest.raises((ValueError, FFprobeError)):
-            await ffprobe_video(str(empty_file))
+            await ffprobe_video(empty_path)
 
 
 class TestFFprobeExports:

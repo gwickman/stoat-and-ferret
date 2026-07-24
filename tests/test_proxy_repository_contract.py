@@ -112,9 +112,10 @@ class TestProxyAdd:
     ) -> None:
         """Inserting duplicate (video_id, quality) pair raises ValueError."""
         await proxy_repository.add(_make_proxy(proxy_id="p1"))
+        duplicate_proxy = _make_proxy(proxy_id="p2")
 
         with pytest.raises(ValueError, match="already exists"):
-            await proxy_repository.add(_make_proxy(proxy_id="p2"))
+            await proxy_repository.add(duplicate_proxy)
 
     async def test_add_different_quality_same_video_ok(
         self, proxy_repository: AsyncProxyRepositoryType

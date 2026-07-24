@@ -329,13 +329,14 @@ class TestReconcileTo48kStereo:
         ffmpeg_result.returncode = 1
         ffmpeg_result.stderr = b"error"
 
+        dummy_path = str(dummy)
         with (
             patch("subprocess.run", return_value=ffmpeg_result),
             patch("os.path.exists", return_value=True),
             patch("os.unlink"),
             pytest.raises(RuntimeError, match="FFmpeg format reconciliation failed"),
         ):
-            _reconcile_to_48k_stereo(str(dummy))
+            _reconcile_to_48k_stereo(dummy_path)
 
     def test_ffprobe_wrong_channels_raises(self, tmp_path: Path) -> None:
         dummy = tmp_path / "audio.wav"
@@ -348,13 +349,14 @@ class TestReconcileTo48kStereo:
         probe_result.returncode = 0
         probe_result.stdout = probe_bad
 
+        dummy_path = str(dummy)
         with (
             patch("subprocess.run", side_effect=[ffmpeg_result, probe_result]),
             patch("os.path.exists", return_value=True),
             patch("os.unlink"),
             pytest.raises(RuntimeError, match="channels=2 sample_rate=48000"),
         ):
-            _reconcile_to_48k_stereo(str(dummy))
+            _reconcile_to_48k_stereo(dummy_path)
 
     def test_ffprobe_wrong_sample_rate_raises(self, tmp_path: Path) -> None:
         dummy = tmp_path / "audio.wav"
@@ -367,13 +369,14 @@ class TestReconcileTo48kStereo:
         probe_result.returncode = 0
         probe_result.stdout = probe_bad
 
+        dummy_path = str(dummy)
         with (
             patch("subprocess.run", side_effect=[ffmpeg_result, probe_result]),
             patch("os.path.exists", return_value=True),
             patch("os.unlink"),
             pytest.raises(RuntimeError, match="channels=2 sample_rate=48000"),
         ):
-            _reconcile_to_48k_stereo(str(dummy))
+            _reconcile_to_48k_stereo(dummy_path)
 
     def test_ffprobe_no_streams_raises(self, tmp_path: Path) -> None:
         dummy = tmp_path / "audio.wav"
@@ -386,13 +389,14 @@ class TestReconcileTo48kStereo:
         probe_result.returncode = 0
         probe_result.stdout = probe_empty
 
+        dummy_path = str(dummy)
         with (
             patch("subprocess.run", side_effect=[ffmpeg_result, probe_result]),
             patch("os.path.exists", return_value=True),
             patch("os.unlink"),
             pytest.raises(RuntimeError, match="channels=2 sample_rate=48000"),
         ):
-            _reconcile_to_48k_stereo(str(dummy))
+            _reconcile_to_48k_stereo(dummy_path)
 
 
 # ---------------------------------------------------------------------------

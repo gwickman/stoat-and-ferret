@@ -153,6 +153,7 @@ class TestPreflightChecks:
         # Mock disk_usage to return low free space
         mock_usage = MagicMock()
         mock_usage.free = 100  # Only 100 bytes free
+        plan_json = _make_plan_json()
         with (
             patch("stoat_ferret.render.service.shutil.disk_usage", return_value=mock_usage),
             patch("stoat_ferret.render.service.Path.exists", return_value=True),
@@ -163,7 +164,7 @@ class TestPreflightChecks:
                 output_path="/tmp/out.mp4",
                 output_format=OutputFormat.MP4,
                 quality_preset=QualityPreset.STANDARD,
-                render_plan_json=_make_plan_json(),
+                render_plan_json=plan_json,
             )
 
     @patch("stoat_ferret.render.service._HAS_RUST_BINDINGS", True)
@@ -172,6 +173,7 @@ class TestPreflightChecks:
         """Pre-flight rejects when render settings are invalid."""
         mock_validate.side_effect = ValueError("Invalid codec")
         service, _, _, _ = _build_service()
+        plan_json = _make_plan_json()
 
         with pytest.raises(PreflightError, match="Invalid render settings"):
             await service.submit_job(
@@ -179,7 +181,7 @@ class TestPreflightChecks:
                 output_path="/tmp/out.mp4",
                 output_format=OutputFormat.MP4,
                 quality_preset=QualityPreset.STANDARD,
-                render_plan_json=_make_plan_json(),
+                render_plan_json=plan_json,
             )
 
 
@@ -318,13 +320,14 @@ class TestJobLifecycle:
 
             from stoat_ferret.render.service import RenderUnavailableError
 
+            plan_json = _make_plan_json()
             with pytest.raises(RenderUnavailableError, match="FFmpeg is not installed"):
                 await service.submit_job(
                     project_id="proj-1",
                     output_path="/tmp/out.mp4",
                     output_format=OutputFormat.MP4,
                     quality_preset=QualityPreset.STANDARD,
-                    render_plan_json=_make_plan_json(),
+                    render_plan_json=plan_json,
                 )
 
     async def test_full_lifecycle_submit_to_completion(self) -> None:

@@ -93,8 +93,9 @@ class TestVolumeBuilderParity:
         """Test invalid precision raises ValueError."""
         from stoat_ferret_core import VolumeBuilder
 
+        builder = VolumeBuilder(1.0)
         with pytest.raises(ValueError):
-            VolumeBuilder(1.0).precision("invalid")
+            builder.precision("invalid")
 
 
 class TestAfadeBuilderParity:
@@ -167,8 +168,9 @@ class TestAfadeBuilderParity:
         """Test invalid curve raises ValueError."""
         from stoat_ferret_core import AfadeBuilder
 
+        builder = AfadeBuilder("in", 1.0)
         with pytest.raises(ValueError):
-            AfadeBuilder("in", 1.0).curve("invalid")
+            builder.curve("invalid")
 
     def test_zero_duration(self) -> None:
         """Test zero duration raises ValueError."""
@@ -268,8 +270,9 @@ class TestAmixBuilderParity:
         """Test invalid duration mode raises ValueError."""
         from stoat_ferret_core import AmixBuilder
 
+        builder = AmixBuilder(2)
         with pytest.raises(ValueError):
-            AmixBuilder(2).duration_mode("invalid")
+            builder.duration_mode("invalid")
 
 
 class TestDuckingPatternParity:
@@ -312,29 +315,33 @@ class TestDuckingPatternParity:
         """Test invalid threshold raises ValueError."""
         from stoat_ferret_core import DuckingPattern
 
+        pattern = DuckingPattern()
         with pytest.raises(ValueError):
-            DuckingPattern().threshold(2.0)
+            pattern.threshold(2.0)
 
     def test_invalid_ratio(self) -> None:
         """Test invalid ratio raises ValueError."""
         from stoat_ferret_core import DuckingPattern
 
+        pattern = DuckingPattern()
         with pytest.raises(ValueError):
-            DuckingPattern().ratio(25.0)
+            pattern.ratio(25.0)
 
     def test_invalid_attack(self) -> None:
         """Test invalid attack raises ValueError."""
         from stoat_ferret_core import DuckingPattern
 
+        pattern = DuckingPattern()
         with pytest.raises(ValueError):
-            DuckingPattern().attack(3000.0)
+            pattern.attack(3000.0)
 
     def test_invalid_release(self) -> None:
         """Test invalid release raises ValueError."""
         from stoat_ferret_core import DuckingPattern
 
+        pattern = DuckingPattern()
         with pytest.raises(ValueError):
-            DuckingPattern().release(10000.0)
+            pattern.release(10000.0)
 
 
 class TestEdgeCases:
@@ -460,15 +467,17 @@ class TestAudioMixSpecParity:
         """Test single track raises ValueError."""
         from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
 
+        single_track = [TrackAudioConfig(1.0, 0.0, 0.0)]
         with pytest.raises(ValueError, match="2-8"):
-            AudioMixSpec([TrackAudioConfig(1.0, 0.0, 0.0)])
+            AudioMixSpec(single_track)
 
     def test_nine_tracks_rejected(self) -> None:
         """Test nine tracks raises ValueError."""
         from stoat_ferret_core import AudioMixSpec, TrackAudioConfig
 
+        nine_tracks = [TrackAudioConfig(1.0, 0.0, 0.0) for _ in range(9)]
         with pytest.raises(ValueError, match="2-8"):
-            AudioMixSpec([TrackAudioConfig(1.0, 0.0, 0.0) for _ in range(9)])
+            AudioMixSpec(nine_tracks)
 
     def test_unity_volume_skip(self) -> None:
         """Test unity volume (1.0) skips volume filter."""

@@ -536,8 +536,9 @@ def test_hue_rotation_apostrophe_rejection() -> None:
     """h_expr containing a single quote raises ValueError at build time (BL-510-AC-4)."""
     import pytest
 
+    builder = HueRotationBuilder("0'PI")
     with pytest.raises(ValueError, match="single quote"):
-        HueRotationBuilder("0'PI").build()
+        builder.build()
 
 
 def test_hue_rotation_effect_definition_timeline_t_capable_true() -> None:
@@ -872,32 +873,37 @@ def test_arity_if_two_args() -> None:
 
 def test_curves_nan_in_knee_string() -> None:
     """CurvesBuilder rejects NaN in knee string (BL-569)."""
+    builder = CurvesBuilder(red="NaN/0 1/1")
     with pytest.raises(ValueError, match=r"non-finite|NaN"):
-        CurvesBuilder(red="NaN/0 1/1").build()
+        builder.build()
 
 
 def test_curves_inf_in_knee_string_y() -> None:
     """CurvesBuilder rejects infinity in knee string (BL-569)."""
+    builder = CurvesBuilder(red="0/0 inf/1")
     with pytest.raises(ValueError):
-        CurvesBuilder(red="0/0 inf/1").build()
+        builder.build()
 
 
 def test_curves_inf_in_knee_string_x() -> None:
     """CurvesBuilder rejects infinity in x coordinate of knee string (BL-569)."""
+    builder = CurvesBuilder(red="inf/0 1/1")
     with pytest.raises(ValueError):
-        CurvesBuilder(red="inf/0 1/1").build()
+        builder.build()
 
 
 def test_curves_out_of_range_x() -> None:
     """CurvesBuilder rejects out-of-range coordinates in knee string (BL-569)."""
+    builder = CurvesBuilder(red="-1/0 2/1")
     with pytest.raises(ValueError, match=r"out of range|\[0,1\]"):
-        CurvesBuilder(red="-1/0 2/1").build()
+        builder.build()
 
 
 def test_curves_empty_knee_string() -> None:
     """CurvesBuilder rejects empty knee string (BL-569 FR-005)."""
+    builder = CurvesBuilder(red="")
     with pytest.raises(ValueError):
-        CurvesBuilder(red="").build()
+        builder.build()
 
 
 def test_curves_valid_two_points() -> None:
@@ -917,20 +923,23 @@ def test_curves_valid_three_points() -> None:
 
 def test_vignette_nan_angle() -> None:
     """VignetteBuilder rejects NaN angle (BL-570)."""
+    nan_angle = float("nan")
     with pytest.raises(ValueError, match=r"NaN|not finite"):
-        VignetteBuilder("centre", angle=float("nan"))
+        VignetteBuilder("centre", angle=nan_angle)
 
 
 def test_vignette_positive_inf_angle() -> None:
     """VignetteBuilder rejects +inf angle (BL-570)."""
+    inf_angle = float("inf")
     with pytest.raises(ValueError):
-        VignetteBuilder("centre", angle=float("inf"))
+        VignetteBuilder("centre", angle=inf_angle)
 
 
 def test_vignette_negative_inf_angle() -> None:
     """VignetteBuilder rejects -inf angle (BL-570)."""
+    neg_inf_angle = float("-inf")
     with pytest.raises(ValueError):
-        VignetteBuilder("centre", angle=float("-inf"))
+        VignetteBuilder("centre", angle=neg_inf_angle)
 
 
 def test_vignette_zero_angle() -> None:
@@ -952,48 +961,54 @@ def test_concentric_rings_nan_ring_width() -> None:
     """ConcentricRingsGenerator rejects NaN ring_width (BL-572)."""
     from stoat_ferret_core import ConcentricRingsGenerator
 
+    nan_ring_width = float("nan")
     with pytest.raises(ValueError):
-        ConcentricRingsGenerator(8, float("nan"))
+        ConcentricRingsGenerator(8, nan_ring_width)
 
 
 def test_radial_burst_nan_ring_width() -> None:
     """RadialBurstGenerator rejects NaN ray_width (BL-572)."""
     from stoat_ferret_core import RadialBurstGenerator
 
+    nan_ray_width = float("nan")
     with pytest.raises(ValueError):
-        RadialBurstGenerator(12, float("nan"))
+        RadialBurstGenerator(12, nan_ray_width)
 
 
 def test_spiral_nan_turn_count() -> None:
     """SpiralGenerator rejects NaN turn_count (BL-572)."""
     from stoat_ferret_core import SpiralGenerator
 
+    nan_turn_count = float("nan")
     with pytest.raises(ValueError):
-        SpiralGenerator(float("nan"), 2.0)
+        SpiralGenerator(nan_turn_count, 2.0)
 
 
 def test_spiral_inf_turn_count() -> None:
     """SpiralGenerator rejects infinite turn_count (BL-572)."""
     from stoat_ferret_core import SpiralGenerator
 
+    inf_turn_count = float("inf")
     with pytest.raises(ValueError):
-        SpiralGenerator(float("inf"), 2.0)
+        SpiralGenerator(inf_turn_count, 2.0)
 
 
 def test_spiral_nan_thickness() -> None:
     """SpiralGenerator rejects NaN thickness (BL-572)."""
     from stoat_ferret_core import SpiralGenerator
 
+    nan_thickness = float("nan")
     with pytest.raises(ValueError):
-        SpiralGenerator(3.0, float("nan"))
+        SpiralGenerator(3.0, nan_thickness)
 
 
 def test_spiral_inf_thickness() -> None:
     """SpiralGenerator rejects infinite thickness (BL-572)."""
     from stoat_ferret_core import SpiralGenerator
 
+    inf_thickness = float("inf")
     with pytest.raises(ValueError):
-        SpiralGenerator(3.0, float("inf"))
+        SpiralGenerator(3.0, inf_thickness)
 
 
 # ---- BL-567: HueRotationBuilder empty/whitespace expression guards ----
@@ -1002,11 +1017,11 @@ def test_spiral_inf_thickness() -> None:
 class TestHueRotationEmptyExpression:
     def test_empty_expression_raises(self) -> None:
         with pytest.raises(ValueError):
-            HueRotationBuilder("").build()
+            HueRotationBuilder("")
 
     def test_whitespace_expression_raises(self) -> None:
         with pytest.raises(ValueError):
-            HueRotationBuilder("   ").build()
+            HueRotationBuilder("   ")
 
     def test_valid_expression_succeeds(self) -> None:
         HueRotationBuilder("2*PI*t").build()  # must not raise
@@ -1018,15 +1033,15 @@ class TestHueRotationEmptyExpression:
 class TestZoompanEmptyExpression:
     def test_empty_z_expr_raises(self) -> None:
         with pytest.raises(ValueError):
-            ZoompanBuilder("", "0", "0", 1, 100, 100, 30).build()
+            ZoompanBuilder("", "0", "0", 1, 100, 100, 30)
 
     def test_empty_x_expr_raises(self) -> None:
         with pytest.raises(ValueError):
-            ZoompanBuilder("1.0", "", "0", 1, 100, 100, 30).build()
+            ZoompanBuilder("1.0", "", "0", 1, 100, 100, 30)
 
     def test_empty_y_expr_raises(self) -> None:
         with pytest.raises(ValueError):
-            ZoompanBuilder("1.0", "0", "", 1, 100, 100, 30).build()
+            ZoompanBuilder("1.0", "0", "", 1, 100, 100, 30)
 
 
 # ---- BL-568: ZoompanBuilder negative integers raise ValueError (not OverflowError) ----
