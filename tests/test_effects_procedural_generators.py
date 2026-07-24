@@ -665,6 +665,34 @@ def test_shape_generators_invalid_params() -> None:
 # ===========================================================================
 
 
+def _unfilter_png_scanline(filt: int, row_raw: bytearray, prev: bytearray, bpp: int) -> None:
+    """Reverse a PNG scanline filter in place (mutates ``row_raw``).
+
+    ``filt`` follows the PNG spec: 1=Sub, 2=Up, 3=Average, 4=Paeth (0/None is a no-op,
+    since ``row_raw`` already holds unfiltered bytes in that case).
+    """
+    stride = len(row_raw)
+    if filt == 1:  # Sub
+        for i in range(bpp, stride):
+            row_raw[i] = (row_raw[i] + row_raw[i - bpp]) & 0xFF
+    elif filt == 2:  # Up
+        for i in range(stride):
+            row_raw[i] = (row_raw[i] + prev[i]) & 0xFF
+    elif filt == 3:  # Average
+        for i in range(stride):
+            a = row_raw[i - bpp] if i >= bpp else 0
+            row_raw[i] = (row_raw[i] + (a + prev[i]) // 2) & 0xFF
+    elif filt == 4:  # Paeth
+        for i in range(stride):
+            a = row_raw[i - bpp] if i >= bpp else 0
+            b2 = prev[i]
+            c = prev[i - bpp] if i >= bpp else 0
+            p_val = a + b2 - c
+            pa, pb, pc = abs(p_val - a), abs(p_val - b2), abs(p_val - c)
+            pr = a if pa <= pb and pa <= pc else (b2 if pb <= pc else c)
+            row_raw[i] = (row_raw[i] + pr) & 0xFF
+
+
 def _read_png_rgba_row(path: pathlib.Path, row: int = 0) -> list[tuple[int, int, int, int]]:
     """Read RGBA pixels from a specific row of a PNG file using stdlib only."""
     import struct
@@ -699,25 +727,7 @@ def _read_png_rgba_row(path: pathlib.Path, row: int = 0) -> list[tuple[int, int,
         filt = raw[p]
         row_raw = bytearray(raw[p + 1 : p + 1 + stride])
         p += 1 + stride
-        if filt == 1:  # Sub
-            for i in range(bpp, stride):
-                row_raw[i] = (row_raw[i] + row_raw[i - bpp]) & 0xFF
-        elif filt == 2:  # Up
-            for i in range(stride):
-                row_raw[i] = (row_raw[i] + prev[i]) & 0xFF
-        elif filt == 3:  # Average
-            for i in range(stride):
-                a = row_raw[i - bpp] if i >= bpp else 0
-                row_raw[i] = (row_raw[i] + (a + prev[i]) // 2) & 0xFF
-        elif filt == 4:  # Paeth
-            for i in range(stride):
-                a = row_raw[i - bpp] if i >= bpp else 0
-                b2 = prev[i]
-                c = prev[i - bpp] if i >= bpp else 0
-                p_val = a + b2 - c
-                pa, pb, pc = abs(p_val - a), abs(p_val - b2), abs(p_val - c)
-                pr = a if pa <= pb and pa <= pc else (b2 if pb <= pc else c)
-                row_raw[i] = (row_raw[i] + pr) & 0xFF
+        _unfilter_png_scanline(filt, row_raw, prev, bpp)
         if r == row:
             if bpp == 4:
                 result_row = [
