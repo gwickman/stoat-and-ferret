@@ -1010,6 +1010,41 @@ def generate_json_report(
     return path
 
 
+_STATUS_BADGE = {"passed": "PASS", "failed": "FAIL", "skipped": "SKIP", "not_implemented": "NI"}
+
+
+def _build_journey_summary_rows(reports: list[JourneyReport]) -> list[str]:
+    """Build the ``| Journey | Status | Steps |`` table rows for the summary block."""
+    rows: list[str] = []
+    for r in reports:
+        status_badge = _STATUS_BADGE.get(r.status, r.status.upper())
+        steps = f"{r.steps_passed}/{r.steps_total}" if r.steps_total > 0 else "—"
+        rows.append(f"| {r.name} | {status_badge} | {steps} |")
+    return rows
+
+
+def _build_failed_journeys_section(failed_reports: list[JourneyReport]) -> list[str]:
+    """Build the ``## Failed Journeys`` detail block lines, or ``[]`` if none failed."""
+    if not failed_reports:
+        return []
+    lines: list[str] = ["", "## Failed Journeys", ""]
+    for r in failed_reports:
+        lines.append(f"### {r.name}")
+        lines.append("")
+        if r.issues:
+            for issue in r.issues:
+                lines.append(f"- {issue}")
+        else:
+            lines.append(f"- {r.message}")
+        if r.console_errors:
+            lines.append("")
+            lines.append("**Console errors:**")
+            for err in r.console_errors:
+                lines.append(f"- `{err}`")
+        lines.append("")
+    return lines
+
+
 def generate_markdown_report(
     reports: list[JourneyReport],
     output_dir: Path,
@@ -1046,31 +1081,10 @@ def generate_markdown_report(
         "| Journey | Status | Steps |",
         "|---------|--------|-------|",
     ]
+    lines.extend(_build_journey_summary_rows(reports))
 
-    _STATUS_BADGE = {"passed": "PASS", "failed": "FAIL", "skipped": "SKIP", "not_implemented": "NI"}
-    for r in reports:
-        status_badge = _STATUS_BADGE.get(r.status, r.status.upper())
-        steps = f"{r.steps_passed}/{r.steps_total}" if r.steps_total > 0 else "—"
-        lines.append(f"| {r.name} | {status_badge} | {steps} |")
-
-    # Detailed sections for failed journeys
     failed_reports = [r for r in reports if r.status == "failed"]
-    if failed_reports:
-        lines.extend(["", "## Failed Journeys", ""])
-        for r in failed_reports:
-            lines.append(f"### {r.name}")
-            lines.append("")
-            if r.issues:
-                for issue in r.issues:
-                    lines.append(f"- {issue}")
-            else:
-                lines.append(f"- {r.message}")
-            if r.console_errors:
-                lines.append("")
-                lines.append("**Console errors:**")
-                for err in r.console_errors:
-                    lines.append(f"- `{err}`")
-            lines.append("")
+    lines.extend(_build_failed_journeys_section(failed_reports))
 
     lines.append("")
     path = output_dir / "uat-report.md"
