@@ -78,13 +78,13 @@ class ResizeObserverStub {
   disconnect(): void {}
 }
 
-if (typeof globalThis.ResizeObserver === "undefined") {
+if (globalThis.ResizeObserver === undefined) {
   // @ts-expect-error -- assigning a stub to a structural type
   globalThis.ResizeObserver = ResizeObserverStub;
 }
 
 // jsdom does not implement DOMRect, also used by react-resizable-panels.
-if (typeof globalThis.DOMRect === "undefined") {
+if (globalThis.DOMRect === undefined) {
   class DOMRectStub {
     x: number;
     y: number;

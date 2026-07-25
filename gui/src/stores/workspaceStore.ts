@@ -368,7 +368,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
       const state = get()
       const anchor = state.anchorPreset
       const nextOverrides: Partial<PanelSizes> = {
-        ...(state.sizesByPreset[anchor] ?? {}),
+        ...state.sizesByPreset[anchor],
         [panelId]: size,
       }
       set({

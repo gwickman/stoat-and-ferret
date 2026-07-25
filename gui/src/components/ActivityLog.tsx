@@ -14,7 +14,7 @@ function formatTimestamp(iso: string): string {
 }
 
 function formatType(type: string): string {
-  return type.replace(/_/g, ' ')
+  return type.replaceAll('_', ' ')
 }
 
 export default function ActivityLog({ messages }: ActivityLogProps) {

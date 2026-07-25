@@ -3,7 +3,7 @@ import { useEffectFormStore } from '../stores/effectFormStore'
 
 /** Derive a human-readable label from a schema property key. */
 function labelFor(key: string, prop: SchemaProperty): string {
-  return prop.description ?? key.replace(/_/g, ' ')
+  return prop.description ?? key.replaceAll('_', ' ')
 }
 
 function NumberField({

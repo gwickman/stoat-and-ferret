@@ -1,5 +1,4 @@
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import type { PanelId, WorkspacePreset } from '../stores/workspaceStore'
 
 /**
  * Component-level access hook for workspaceStore.
@@ -28,4 +27,4 @@ export function useWorkspace() {
   }
 }
 
-export type { PanelId, WorkspacePreset }
+export type { PanelId, WorkspacePreset } from '../stores/workspaceStore'

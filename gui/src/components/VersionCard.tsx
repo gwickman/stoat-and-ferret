@@ -15,7 +15,7 @@ function Row({ label, value }: RowProps) {
       <span className="text-gray-400">{label}</span>
       <span
         className="font-mono text-gray-100"
-        data-testid={`version-${label.toLowerCase().replace(/\s+/g, '-')}`}
+        data-testid={`version-${label.toLowerCase().replaceAll(/\s+/g, '-')}`}
       >
         {value}
       </span>

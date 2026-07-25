@@ -25,7 +25,7 @@ export default function VolumeSlider({
 }: VolumeSliderProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onVolumeChange(parseFloat(e.target.value))
+      onVolumeChange(Number.parseFloat(e.target.value))
     },
     [onVolumeChange],
   )

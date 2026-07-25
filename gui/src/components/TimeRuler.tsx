@@ -27,7 +27,7 @@ export default function TimeRuler({
       const x = timeToPixel(t, zoom, scrollOffset, pixelsPerSecond)
       if (x > canvasWidth + 10) break
       if (x >= -10) {
-        result.push({ time: parseFloat(t.toFixed(4)), x })
+        result.push({ time: Number.parseFloat(t.toFixed(4)), x })
       }
     }
     return result

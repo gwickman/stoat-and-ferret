@@ -56,12 +56,12 @@ export default function ClipFormModal({
     if (!inPoint.trim()) return 'In point is required'
     if (!outPoint.trim()) return 'Out point is required'
     if (!timelinePosition.trim()) return 'Timeline position is required'
-    const inVal = parseInt(inPoint, 10)
-    const outVal = parseInt(outPoint, 10)
-    const posVal = parseInt(timelinePosition, 10)
-    if (isNaN(inVal) || inVal < 0) return 'In point must be a non-negative number'
-    if (isNaN(outVal) || outVal < 0) return 'Out point must be a non-negative number'
-    if (isNaN(posVal) || posVal < 0) return 'Timeline position must be a non-negative number'
+    const inVal = Number.parseInt(inPoint, 10)
+    const outVal = Number.parseInt(outPoint, 10)
+    const posVal = Number.parseInt(timelinePosition, 10)
+    if (Number.isNaN(inVal) || inVal < 0) return 'In point must be a non-negative number'
+    if (Number.isNaN(outVal) || outVal < 0) return 'Out point must be a non-negative number'
+    if (Number.isNaN(posVal) || posVal < 0) return 'Timeline position must be a non-negative number'
     if (outVal <= inVal) return 'Out point must be greater than in point'
     return null
   }, [sourceVideoId, inPoint, outPoint, timelinePosition, mode])
@@ -81,15 +81,15 @@ export default function ClipFormModal({
       if (mode === 'add') {
         await createClip(projectId, {
           source_video_id: sourceVideoId,
-          in_point: parseInt(inPoint, 10),
-          out_point: parseInt(outPoint, 10),
-          timeline_position: parseInt(timelinePosition, 10),
+          in_point: Number.parseInt(inPoint, 10),
+          out_point: Number.parseInt(outPoint, 10),
+          timeline_position: Number.parseInt(timelinePosition, 10),
         })
       } else if (clip) {
         await updateClip(projectId, clip.id, {
-          in_point: parseInt(inPoint, 10),
-          out_point: parseInt(outPoint, 10),
-          timeline_position: parseInt(timelinePosition, 10),
+          in_point: Number.parseInt(inPoint, 10),
+          out_point: Number.parseInt(outPoint, 10),
+          timeline_position: Number.parseInt(timelinePosition, 10),
         })
       }
       onSaved()
