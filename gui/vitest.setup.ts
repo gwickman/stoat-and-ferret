@@ -73,8 +73,11 @@ if (typeof window !== "undefined") {
 
 // jsdom does not implement ResizeObserver, used by react-resizable-panels.
 class ResizeObserverStub {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- required no-op stub for jsdom missing API
   observe(): void {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- required no-op stub for jsdom missing API
   unobserve(): void {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- required no-op stub for jsdom missing API
   disconnect(): void {}
 }
 

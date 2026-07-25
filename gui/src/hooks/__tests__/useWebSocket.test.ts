@@ -145,8 +145,9 @@ describe('useWebSocket', () => {
       })
     }
 
-    // All reconnects should have happened (max delay is 30s)
-    expect(mockInstances.length).toBeGreaterThan(5)
+    // All 10 reconnects fired within 30_000ms windows, proving the cap is ≤ 30s.
+    // 1 initial connection + 10 reconnects = 11 instances.
+    expect(mockInstances).toHaveLength(11)
   })
 
   it('delivers all messages in a burst without loss (FR-001, FR-002)', async () => {

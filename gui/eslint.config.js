@@ -66,6 +66,17 @@ export default defineConfig([
     rules: {
       'sonarjs/no-collection-size-mischeck': 'error',
       'sonarjs/no-identical-functions': 'error',
+      'sonarjs/no-incomplete-assertions': 'error',
+      'sonarjs/no-ignored-exceptions': 'error',
+    },
+  },
+  {
+    // Scoped to vitest.setup.ts only: the ResizeObserver stub methods are
+    // deliberate empty no-ops for jsdom compatibility; the suppressions below
+    // must be written against an active rule (BL-718-AC-5).
+    files: ['vitest.setup.ts'],
+    rules: {
+      '@typescript-eslint/no-empty-function': 'error',
     },
   },
 ])
