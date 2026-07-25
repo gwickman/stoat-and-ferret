@@ -89,7 +89,7 @@ class EffectDefinition:
         arity: Number of input streams this effect consumes (default 1).
         chain_safe: Whether this effect can be chained with other effects in a single graph.
         timebase_mutating: Whether this effect changes the stream timebase.
-        timeline_T_capable: Whether this effect supports the FFmpeg T (timeline) flag for
+        timeline_t_capable: Whether this effect supports the FFmpeg T (timeline) flag for
             enable expressions. When True and a window is present, the translator emits
             :enable='between(t,start_s,end_s)' instead of split/trim/concat.
         requires_path_escape: Whether this effect requires path escaping for option values.
@@ -110,7 +110,7 @@ class EffectDefinition:
     arity: int = 1
     chain_safe: bool = True
     timebase_mutating: bool = False
-    timeline_T_capable: bool = False
+    timeline_t_capable: bool = False
     requires_path_escape: bool = False
     value_kind_per_option: dict[str, str] = field(default_factory=dict)
 
@@ -2687,7 +2687,7 @@ ZOOMPAN = EffectDefinition(
     ),
     example_prompt="Apply a slow Ken Burns zoom from 1.0x to 1.5x centred on the clip.",
     stream_kind="video",
-    timeline_T_capable=False,
+    timeline_t_capable=False,
     requires_path_escape=False,
 )
 
@@ -2796,7 +2796,7 @@ CURVES = EffectDefinition(
     ),
     example_prompt="Apply a vintage colour grade to this clip.",
     stream_kind="video",
-    timeline_T_capable=True,
+    timeline_t_capable=True,
     requires_path_escape=False,
     value_kind_per_option={
         "preset": "enum_literal",
@@ -2900,7 +2900,7 @@ VIGNETTE = EffectDefinition(
     ),
     example_prompt="Add a cinematic vignette effect centred on the frame.",
     stream_kind="video",
-    timeline_T_capable=True,
+    timeline_t_capable=True,
     requires_path_escape=False,
     value_kind_per_option={
         "position": "enum_literal",
@@ -2972,7 +2972,7 @@ HUE_ROTATION = EffectDefinition(
     ),
     example_prompt="Add a hue rotation effect that cycles through colours every 3 seconds.",
     stream_kind="video",
-    timeline_T_capable=True,
+    timeline_t_capable=True,
     requires_path_escape=False,
     value_kind_per_option={"h_expr": "expression"},
 )
@@ -3096,7 +3096,7 @@ SUBTITLE_SCRIPT = EffectDefinition(
     ),
     example_prompt="Add captions: 'Breathe in' at 0-3s, 'Hold' at 3-6s, 'Release' at 6-9s.",
     stream_kind="video",
-    timeline_T_capable=False,
+    timeline_t_capable=False,
     requires_path_escape=True,
     value_kind_per_option={"font_file": "path"},
 )
@@ -3175,7 +3175,7 @@ BURNED_SUBTITLE_BUILDER = EffectDefinition(
     ),
     example_prompt="Burn English subtitles from subtitles_en.srt onto the video with Fontsize=28.",
     stream_kind="video",
-    timeline_T_capable=False,
+    timeline_t_capable=False,
     requires_path_escape=True,
     value_kind_per_option={"source_path": "path", "inline_text": "path"},
 )

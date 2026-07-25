@@ -283,7 +283,7 @@ def test_all_effects_unchanged_with_window_none() -> None:
         # (no window appended since we don't call apply_effect_to_clip here)
         assert isinstance(baseline, str), f"{effect_type}: preview_fn returned non-string"
         # subtitle_script uses enable= internally (it emits N timed drawtext filters);
-        # it is intentionally excluded from range-window gating (timeline_T_capable=False).
+        # it is intentionally excluded from range-window gating (timeline_t_capable=False).
         _enable_exempt = {"mock_enable_effect", "subtitle_script"}
         assert "enable=" not in baseline or effect_type in _enable_exempt, (
             f"{effect_type}: preview_fn already contains 'enable=' — "

@@ -506,7 +506,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.synthetic_monitoring:
         synthetic_client = httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
-            # NOSONAR: ASGITransport is in-process, no network I/O.
+            # ASGITransport is in-process, no network I/O.
             base_url="http://synthetic-monitor",  # NOSONAR
         )
         synthetic_task = SyntheticMonitoringTask(

@@ -238,7 +238,7 @@ class RenderExecutor:
                 process.stdin.write(b"q")
                 await process.stdin.drain()
                 process.stdin.close()
-        except (BrokenPipeError, ConnectionResetError, OSError):
+        except OSError:
             log.debug("render_executor.cancel_stdin_closed")
 
         # Wait for graceful shutdown. Shield process.wait() so that
@@ -277,7 +277,7 @@ class RenderExecutor:
                     process.stdin.close()
                 cancelled.append(job_id)
                 logger.info("render_executor.shutdown_cancel_sent", job_id=job_id)
-            except (BrokenPipeError, ConnectionResetError, OSError):
+            except OSError:
                 logger.debug("render_executor.shutdown_cancel_stdin_closed", job_id=job_id)
                 cancelled.append(job_id)
         return cancelled

@@ -18,14 +18,14 @@ BL-507 ACs:
 - AC-2: Struct docstring and EffectDefinition description contain "fixed-canvas".
 - AC-3 (deferred): Negative-control test — without pin, render fails. STOAT_TEST_FFMPEG=1.
 - AC-4: Graph-boundary scope boundary in BL-507 description (not BL-507 code).
-- AC-5: ZOOMPAN EffectDefinition has timeline_T_capable=False.
+- AC-5: ZOOMPAN EffectDefinition has timeline_t_capable=False.
 
 BL-508 ACs:
 - AC-1: CurvesBuilder(preset="vintage") produces curves=preset=vintage.
 - AC-2: CurvesBuilder per-channel knee produces quoted curves= string.
 - AC-3: Invalid preset raises ValueError.
 - AC-4: Mutual exclusion (preset + channel) raises ValueError.
-- AC-5: CURVES.timeline_T_capable is True.
+- AC-5: CURVES.timeline_t_capable is True.
 - AC-6: "curves" registered in default registry.
 
 BL-509 ACs:
@@ -33,7 +33,7 @@ BL-509 ACs:
 - AC-2: Position enum resolves to x0/y0 expression strings (AC-2 surface).
 - AC-3: VignetteBuilder emits vignette=angle:x0:y0:mode:eval format.
 - AC-4: Three contract tests: centre default, backward mode, init vs frame eval.
-- AC-5: VIGNETTE EffectDefinition with timeline_T_capable=True.
+- AC-5: VIGNETTE EffectDefinition with timeline_t_capable=True.
 
 BL-510 ACs:
 - AC-1: HueRotationBuilder emits hue=H='<expr>' — single-quote wrap, no comma escape.
@@ -333,8 +333,8 @@ def test_zoompan_builder_zero_d() -> None:
 
 
 def test_zoompan_effect_definition_timeline_t_capable_false() -> None:
-    """ZOOMPAN EffectDefinition has timeline_T_capable=False (BL-507-AC-5)."""
-    assert ZOOMPAN.timeline_T_capable is False
+    """ZOOMPAN EffectDefinition has timeline_t_capable=False (BL-507-AC-5)."""
+    assert ZOOMPAN.timeline_t_capable is False
 
 
 def test_zoompan_effect_definition_description_fixed_canvas() -> None:
@@ -406,8 +406,8 @@ def test_curves_builder_mutual_exclusion() -> None:
 
 
 def test_curves_effect_definition_timeline_t_capable_true() -> None:
-    """CURVES EffectDefinition has timeline_T_capable=True (BL-508-AC-5)."""
-    assert CURVES.timeline_T_capable is True
+    """CURVES EffectDefinition has timeline_t_capable=True (BL-508-AC-5)."""
+    assert CURVES.timeline_t_capable is True
 
 
 def test_curves_registered_in_default_registry() -> None:
@@ -484,8 +484,8 @@ def test_vignette_invalid_position() -> None:
 
 
 def test_vignette_effect_definition_timeline_t_capable_true() -> None:
-    """VIGNETTE EffectDefinition has timeline_T_capable=True (BL-509-AC-5)."""
-    assert VIGNETTE.timeline_T_capable is True
+    """VIGNETTE EffectDefinition has timeline_t_capable=True (BL-509-AC-5)."""
+    assert VIGNETTE.timeline_t_capable is True
 
 
 def test_vignette_registered_in_default_registry() -> None:
@@ -542,8 +542,8 @@ def test_hue_rotation_apostrophe_rejection() -> None:
 
 
 def test_hue_rotation_effect_definition_timeline_t_capable_true() -> None:
-    """HUE_ROTATION EffectDefinition has timeline_T_capable=True (BL-510-AC-1)."""
-    assert HUE_ROTATION.timeline_T_capable is True
+    """HUE_ROTATION EffectDefinition has timeline_t_capable=True (BL-510-AC-1)."""
+    assert HUE_ROTATION.timeline_t_capable is True
 
 
 def test_hue_rotation_registered_in_default_registry() -> None:

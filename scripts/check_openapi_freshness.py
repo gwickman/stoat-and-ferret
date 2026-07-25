@@ -57,7 +57,7 @@ def wait_for_ready(timeout: float = BOOT_TIMEOUT) -> bool:
             resp = urllib.request.urlopen(url, timeout=2)
             if resp.status == 200:
                 return True
-        except (urllib.error.URLError, OSError):
+        except OSError:
             pass
         time.sleep(POLL_INTERVAL)
     return False

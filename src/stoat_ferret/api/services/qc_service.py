@@ -512,7 +512,7 @@ class QCService:
             a_start = float(audio_streams[0].get("start_time", 0))
             v_start = float(video_streams[0].get("start_time", 0))
             measured = abs(a_start - v_start) * 1000.0  # ms
-        except (ValueError, KeyError, json.JSONDecodeError):
+        except (ValueError, KeyError):
             return dict(_NULL_CHECK)
 
         if target is None:
@@ -562,7 +562,7 @@ class QCService:
                 if len(timestamps) > 1
                 else True
             )
-        except (ValueError, KeyError, json.JSONDecodeError):
+        except (ValueError, KeyError):
             return dict(_NULL_CHECK)
 
         effective_target = target if target is not None else 1.0

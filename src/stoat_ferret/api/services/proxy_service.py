@@ -258,7 +258,6 @@ class ProxyService:
         # Build throttled progress callback
         progress_cb = self._make_progress_callback(
             job_id=job_id,
-            video_id=video_id,
             quality=quality,
             target_resolution=f"{target_w}x{target_h}",
             duration_us=duration_us,
@@ -439,7 +438,6 @@ class ProxyService:
         self,
         *,
         job_id: str | None,
-        video_id: str,
         quality: ProxyQuality,
         target_resolution: str,
         duration_us: int,
@@ -448,7 +446,6 @@ class ProxyService:
 
         Args:
             job_id: Job ID for progress reporting.
-            video_id: Source video ID.
             quality: Proxy quality level.
             target_resolution: Target resolution string.
             duration_us: Source duration in microseconds.

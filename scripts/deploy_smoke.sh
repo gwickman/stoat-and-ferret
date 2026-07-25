@@ -33,7 +33,7 @@ echo "Waiting for ${BASE_URL} to be ready (max ${MAX_WAIT}s)..."
 
 # Poll /health/ready for readiness (HTTP 200 with status=ok or status=degraded is success)
 ELAPSED=0
-while [ "${ELAPSED}" -lt "${MAX_WAIT}" ]; do
+while [[ "${ELAPSED}" -lt "${MAX_WAIT}" ]]; do
     if curl -f -s "${BASE_URL}/health/ready" > /dev/null 2>&1; then
         echo "✓ /health/ready returned 200"
         break
@@ -43,7 +43,7 @@ while [ "${ELAPSED}" -lt "${MAX_WAIT}" ]; do
     ELAPSED=$((ELAPSED + INTERVAL))
 done
 
-if [ "${ELAPSED}" -ge "${MAX_WAIT}" ]; then
+if [[ "${ELAPSED}" -ge "${MAX_WAIT}" ]]; then
     echo "✗ /health/ready never returned 200 (timeout after ${MAX_WAIT}s)"
     exit 1
 fi

@@ -4,7 +4,7 @@
 """Unit tests for windowed effect dispatch in the render worker (BL-512).
 
 Tests that:
-- windowed_custom() is dispatched when effect has window AND timeline_T_capable=True
+- windowed_custom() is dispatched when effect has window AND timeline_t_capable=True
 - custom() is dispatched when no window present (regardless of T-capability)
 - custom() is dispatched when effect is non-T-capable (window silently ignored)
 - BL-512-AC-4 stub test for deferred non-T fallback
@@ -106,7 +106,7 @@ async def test_windowed_custom_dispatch_t_capable() -> None:
     """Worker dispatches windowed_custom() for T-capable effect with window.
 
     When effect_data contains a 'window' key AND the EffectDefinition has
-    timeline_T_capable=True, the worker must call RenderEffect.windowed_custom(),
+    timeline_t_capable=True, the worker must call RenderEffect.windowed_custom(),
     causing translate.rs to emit :enable='between(t,s,e)' in the filter_complex.
     """
     effect_data: dict[str, Any] = {
@@ -125,7 +125,7 @@ async def test_windowed_custom_dispatch_t_capable() -> None:
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: "hue=s=0"
-    defn.timeline_T_capable = True
+    defn.timeline_t_capable = True
 
     registry = EffectRegistry()
     registry.register("hue_windowed", defn)
@@ -169,7 +169,7 @@ async def test_no_window_dispatch_uses_custom() -> None:
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: f"gblur=sigma={params.get('sigma', 2.0)}"
-    defn.timeline_T_capable = True  # T-capable, but no window key in effect_data
+    defn.timeline_t_capable = True  # T-capable, but no window key in effect_data
 
     registry = EffectRegistry()
     registry.register("blur_no_window", defn)
@@ -219,7 +219,7 @@ async def test_non_t_capable_effect_ignores_window() -> None:
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: "scale=iw:ih"
-    defn.timeline_T_capable = False  # scale is NOT T-capable
+    defn.timeline_t_capable = False  # scale is NOT T-capable
 
     registry = EffectRegistry()
     registry.register("scale_windowed", defn)
@@ -269,7 +269,7 @@ async def test_nont_window_fallback_split_trim_concat() -> None:
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: "scale=iw*0.5:ih*0.5"
-    defn.timeline_T_capable = False  # scale is NOT T-capable
+    defn.timeline_t_capable = False  # scale is NOT T-capable
 
     registry = EffectRegistry()
     registry.register("scale_nont_windowed", defn)

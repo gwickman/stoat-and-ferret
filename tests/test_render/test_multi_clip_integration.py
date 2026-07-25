@@ -506,7 +506,7 @@ async def test_per_clip_effect_applied(tmp_path: Path) -> None:
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = _desaturate_build_fn
-    defn.timeline_T_capable = True
+    defn.timeline_t_capable = True
 
     registry = EffectRegistry()
     registry.register("windowed_desaturate", defn)
