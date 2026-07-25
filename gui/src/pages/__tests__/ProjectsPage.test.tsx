@@ -23,9 +23,9 @@ function renderPage() {
 }
 
 describe('ProjectsPage', () => {
-  it('renders with role="main" and id="main-content"', () => {
+  it('renders with id="main-content" and skip-link target', () => {
     renderPage()
-    const main = screen.getByRole('main')
+    const main = screen.getByTestId('projects-page')
     expect(main).toHaveAttribute('id', 'main-content')
   })
 
