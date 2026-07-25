@@ -4,10 +4,10 @@
 
 """Dump stoat-and-ferret WebSocket events as newline-delimited JSON.
 
-Connects to ``ws://<host>:<port>/ws`` and prints each frame on its own line.
-Supports ``--last-event-id`` to send a ``Last-Event-ID`` HTTP header during the
-WebSocket handshake — the server then replays buffered frames strictly newer
-than that ``event_id`` (subject to the in-memory replay TTL).
+Connects to ``<scheme>://<host>:<port>/ws`` and prints each frame on its own
+line.  Supports ``--last-event-id`` to send a ``Last-Event-ID`` HTTP header
+during the WebSocket handshake — the server then replays buffered frames
+strictly newer than that ``event_id`` (subject to the in-memory replay TTL).
 
 Installation (websockets is in the optional ``[examples]`` group):
     uv pip install -e ".[examples]"
@@ -17,9 +17,15 @@ Usage:
     python scripts/examples/dump-ws-events.py
     python scripts/examples/dump-ws-events.py --host localhost --port 8765
     python scripts/examples/dump-ws-events.py --last-event-id event-00042
+    python scripts/examples/dump-ws-events.py --scheme wss --host myserver.example.com
 
 Send ``Ctrl+C`` to exit. Each printed line is a complete JSON object suitable
 for piping into ``jq`` (e.g. ``... | jq 'select(.type != "heartbeat")'``).
+
+The ``--scheme`` argument selects ``ws`` (default, plain-text) or ``wss``
+(TLS).  The host allowlist (``_validate_host``) is enforced regardless of
+the chosen scheme; to reach a non-loopback host set
+``STOAT_RENDER_VERIFY_ALLOWED_HOSTS=<host>`` in the environment.
 """
 
 from __future__ import annotations
@@ -70,15 +76,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Send `Last-Event-ID: <id>` header to request replay since this event_id",
     )
+    parser.add_argument(
+        "--scheme",
+        choices=["ws", "wss"],
+        default="ws",
+        help="WebSocket scheme (ws or wss). Defaults to ws for local use.",
+    )
     return parser.parse_args(argv)
 
 
-async def stream_events(host: str, port: int, last_event_id: str | None) -> int:
+async def stream_events(host: str, port: int, last_event_id: str | None, scheme: str = "ws") -> int:
     """Connect to the server's /ws endpoint and stream events to stdout.
 
     Returns 0 on graceful close, 1 on connection error.
     """
-    url = f"ws://{host}:{port}/ws"
+    url = f"{scheme}://{host}:{port}/ws"
     _validate_host(url, {"ws", "wss"})
     headers: list[tuple[str, str]] | None = None
     if last_event_id is not None:
@@ -113,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     """Entry point."""
     args = parse_args(argv)
     try:
-        return asyncio.run(stream_events(args.host, args.port, args.last_event_id))
+        return asyncio.run(stream_events(args.host, args.port, args.last_event_id, args.scheme))
     except KeyboardInterrupt:
         return 0
 
