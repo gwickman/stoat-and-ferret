@@ -80,7 +80,7 @@ describe('EffectParameterForm', () => {
     const select = screen.getByTestId('input-fade_type') as HTMLSelectElement
     expect(select.tagName).toBe('SELECT')
     // "Select..." placeholder + 2 enum options
-    expect(select.options.length).toBe(3)
+    expect(select.options).toHaveLength(3)
     expect(select.options[1].value).toBe('in')
     expect(select.options[2].value).toBe('out')
   })

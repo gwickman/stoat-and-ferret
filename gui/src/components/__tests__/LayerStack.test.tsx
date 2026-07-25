@@ -82,7 +82,7 @@ describe('LayerStack', () => {
     render(<LayerStack />)
 
     const list = screen.getByTestId('layer-list')
-    expect(list.querySelectorAll('li').length).toBe(4)
+    expect(list.querySelectorAll('li')).toHaveLength(4)
   })
 
   it('shows custom position inputs after selecting a preset', () => {

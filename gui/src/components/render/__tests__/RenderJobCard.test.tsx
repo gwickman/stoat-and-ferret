@@ -90,54 +90,28 @@ describe('RenderJobCard', () => {
 
   // --- Cancel button ---
 
-  it('enables cancel button for queued status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'queued' })} />)
+  it.each([
+    ['queued', false],
+    ['running', false],
+    ['completed', true],
+    ['failed', true],
+    ['cancelled', true],
+  ] as const)('%s status: cancel button disabled=%s', (status, expectedDisabled) => {
+    render(<RenderJobCard job={makeJob({ status })} />)
     const btn = screen.getByTestId('cancel-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(false)
-  })
-
-  it('enables cancel button for running status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'running' })} />)
-    const btn = screen.getByTestId('cancel-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(false)
-  })
-
-  it('disables cancel button for completed status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'completed' })} />)
-    const btn = screen.getByTestId('cancel-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
-  })
-
-  it('disables cancel button for failed status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'failed' })} />)
-    const btn = screen.getByTestId('cancel-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
-  })
-
-  it('disables cancel button for cancelled status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'cancelled' })} />)
-    const btn = screen.getByTestId('cancel-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
+    expect(btn.disabled).toBe(expectedDisabled)
   })
 
   // --- Retry button ---
 
-  it('enables retry button for failed status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'failed' })} />)
+  it.each([
+    ['failed', false],
+    ['running', true],
+    ['completed', true],
+  ] as const)('%s status: retry button disabled=%s', (status, expectedDisabled) => {
+    render(<RenderJobCard job={makeJob({ status })} />)
     const btn = screen.getByTestId('retry-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(false)
-  })
-
-  it('disables retry button for running status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'running' })} />)
-    const btn = screen.getByTestId('retry-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
-  })
-
-  it('disables retry button for completed status', () => {
-    render(<RenderJobCard job={makeJob({ status: 'completed' })} />)
-    const btn = screen.getByTestId('retry-btn') as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
+    expect(btn.disabled).toBe(expectedDisabled)
   })
 
   // --- Retry 409 handling ---

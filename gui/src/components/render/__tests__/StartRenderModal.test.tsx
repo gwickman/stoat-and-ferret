@@ -307,7 +307,7 @@ describe('StartRenderModal', () => {
       const submitCalls = fetchSpy.mock.calls.filter(
         (call) => call[0] === '/api/v1/render' && (call[1] as RequestInit)?.method === 'POST',
       )
-      expect(submitCalls.length).toBe(1)
+      expect(submitCalls).toHaveLength(1)
       const body = JSON.parse((submitCalls[0][1] as RequestInit).body as string)
       expect(body).toEqual({
         project_id: 'proj-1',
@@ -644,7 +644,7 @@ describe('StartRenderModal', () => {
       const renderCalls = fetchSpy.mock.calls.filter(
         (call) => call[0] === '/api/v1/render' && (call[1] as RequestInit)?.method === 'POST',
       )
-      expect(renderCalls.length).toBe(1)
+      expect(renderCalls).toHaveLength(1)
       const body = JSON.parse((renderCalls[0][1] as RequestInit).body as string)
       expect(body.render_plan).toBe(JSON.stringify({ total_duration: 90.0, settings: {} }))
     })

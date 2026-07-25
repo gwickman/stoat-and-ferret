@@ -237,7 +237,7 @@ describe('useEffectPreview thumbnail', () => {
     const thumbnailCalls = fetchSpy.mock.calls.filter(
       (c) => c[0] === '/api/v1/effects/preview/thumbnail',
     )
-    expect(thumbnailCalls.length).toBe(0)
+    expect(thumbnailCalls).toHaveLength(0)
     expect(useEffectPreviewStore.getState().thumbnailUrl).toBeNull()
   })
 

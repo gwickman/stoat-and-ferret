@@ -132,7 +132,7 @@ describe('useBatchJobs', () => {
       await vi.advanceTimersByTimeAsync(5 * __test.NORMAL_INTERVAL_MS)
     })
     await settle()
-    expect(fetchSpy.mock.calls.length).toBe(callsAfterImmediate)
+    expect(fetchSpy.mock.calls).toHaveLength(callsAfterImmediate)
   })
 
   it('reports hasError on a single failed poll', async () => {
@@ -204,7 +204,7 @@ describe('useBatchJobs', () => {
       await vi.advanceTimersByTimeAsync(5 * __test.NORMAL_INTERVAL_MS)
     })
     await settle()
-    expect(fetchSpy.mock.calls.length).toBe(before)
+    expect(fetchSpy.mock.calls).toHaveLength(before)
   })
 
   it('does not regress progress under burst (NFR-001 / INV-003)', async () => {

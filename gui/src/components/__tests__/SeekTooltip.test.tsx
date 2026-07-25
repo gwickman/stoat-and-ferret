@@ -21,49 +21,15 @@ const METADATA: ThumbnailMetadata = {
 // ---------------------------------------------------------------------------
 
 describe('calculateFrameOffset', () => {
-  it('returns frame 0 at time 0', () => {
-    expect(calculateFrameOffset(0, METADATA)).toEqual({
-      frameIndex: 0,
-      bgX: 0,
-      bgY: 0,
-    })
-  })
-
-  it('calculates correct column offset within the first row', () => {
-    // hoverTime = 7 => frameIndex = floor(7/2) = 3
-    // col = 3, row = 0 => bgX = -(3*160) = -480
-    const result = calculateFrameOffset(7, METADATA)
-    expect(result).toEqual({ frameIndex: 3, bgX: -480, bgY: 0 })
-  })
-
-  it('calculates correct row offset for frames in the second row', () => {
-    // hoverTime = 20 => frameIndex = floor(20/2) = 10
-    // col = 0, row = 1 => bgY = -(1*90) = -90
-    const result = calculateFrameOffset(20, METADATA)
-    expect(result).toEqual({ frameIndex: 10, bgX: 0, bgY: -90 })
-  })
-
-  it('calculates both column and row offsets', () => {
-    // hoverTime = 25 => frameIndex = floor(25/2) = 12
-    // col = 12 % 10 = 2, row = floor(12/10) = 1
-    const result = calculateFrameOffset(25, METADATA)
-    expect(result).toEqual({ frameIndex: 12, bgX: -(2 * 160), bgY: -90 })
-  })
-
-  it('clamps frameIndex to frame_count - 1 when exceeding total frames', () => {
-    // hoverTime = 100 => frameIndex = 50 >= 30 => clamp to 29
-    // col = 29 % 10 = 9, row = floor(29/10) = 2
-    const result = calculateFrameOffset(100, METADATA)
-    expect(result).toEqual({
-      frameIndex: 29,
-      bgX: -(9 * 160),
-      bgY: -(2 * 90),
-    })
-  })
-
-  it('clamps negative hoverTime to frame 0', () => {
-    const result = calculateFrameOffset(-5, METADATA)
-    expect(result).toEqual({ frameIndex: 0, bgX: 0, bgY: 0 })
+  it.each([
+    [0,   { frameIndex: 0,  bgX: 0,         bgY: 0        }],
+    [7,   { frameIndex: 3,  bgX: -480,       bgY: 0        }],
+    [20,  { frameIndex: 10, bgX: 0,          bgY: -90      }],
+    [25,  { frameIndex: 12, bgX: -(2 * 160), bgY: -90      }],
+    [100, { frameIndex: 29, bgX: -(9 * 160), bgY: -(2 * 90)}],
+    [-5,  { frameIndex: 0,  bgX: 0,          bgY: 0        }],
+  ])('hoverTime=%s maps to correct frame offset', (hoverTime, expected) => {
+    expect(calculateFrameOffset(hoverTime, METADATA)).toEqual(expected)
   })
 })
 

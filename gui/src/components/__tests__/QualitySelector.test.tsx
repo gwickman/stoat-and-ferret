@@ -51,24 +51,14 @@ describe('QualitySelector', () => {
     expect(setQuality).not.toHaveBeenCalled()
   })
 
-  it('is disabled during generating status', () => {
-    usePreviewStore.setState({ status: 'generating' })
+  it.each([
+    ['generating', true],
+    ['initializing', true],
+    ['ready', false],
+  ] as const)('%s status: select.disabled is %s', (status, expectedDisabled) => {
+    usePreviewStore.setState({ status })
     render(<QualitySelector />)
     const select = screen.getByTestId('quality-select') as HTMLSelectElement
-    expect(select.disabled).toBe(true)
-  })
-
-  it('is disabled during initializing status', () => {
-    usePreviewStore.setState({ status: 'initializing' })
-    render(<QualitySelector />)
-    const select = screen.getByTestId('quality-select') as HTMLSelectElement
-    expect(select.disabled).toBe(true)
-  })
-
-  it('is enabled when status is ready', () => {
-    usePreviewStore.setState({ status: 'ready' })
-    render(<QualitySelector />)
-    const select = screen.getByTestId('quality-select') as HTMLSelectElement
-    expect(select.disabled).toBe(false)
+    expect(select.disabled).toBe(expectedDisabled)
   })
 })

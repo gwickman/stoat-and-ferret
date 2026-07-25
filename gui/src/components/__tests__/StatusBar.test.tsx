@@ -7,28 +7,18 @@ beforeEach(() => {
 })
 
 describe('StatusBar', () => {
-  it('shows connected state', () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ source_url: 'https://github.com/gwickman/stoat-and-ferret', version: '0.1.0', commit: 'unknown', license: 'AGPL-3.0-or-later' }), { status: 200 })
-    )
-    render(<StatusBar connectionState="connected" />)
-    expect(screen.getByText('WebSocket: Connected')).toBeDefined()
-  })
+  const INFO = JSON.stringify({ source_url: 'https://github.com/gwickman/stoat-and-ferret', version: '0.1.0', commit: 'unknown', license: 'AGPL-3.0-or-later' })
 
-  it('shows disconnected state', () => {
+  it.each([
+    ['connected', 'WebSocket: Connected'],
+    ['disconnected', 'WebSocket: Disconnected'],
+    ['reconnecting', 'WebSocket: Reconnecting...'],
+  ] as const)('shows %s state', (connectionState, expectedText) => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ source_url: 'https://github.com/gwickman/stoat-and-ferret', version: '0.1.0', commit: 'unknown', license: 'AGPL-3.0-or-later' }), { status: 200 })
+      new Response(INFO, { status: 200 })
     )
-    render(<StatusBar connectionState="disconnected" />)
-    expect(screen.getByText('WebSocket: Disconnected')).toBeDefined()
-  })
-
-  it('shows reconnecting state', () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ source_url: 'https://github.com/gwickman/stoat-and-ferret', version: '0.1.0', commit: 'unknown', license: 'AGPL-3.0-or-later' }), { status: 200 })
-    )
-    render(<StatusBar connectionState="reconnecting" />)
-    expect(screen.getByText('WebSocket: Reconnecting...')).toBeDefined()
+    render(<StatusBar connectionState={connectionState} />)
+    expect(screen.getByText(expectedText)).toBeDefined()
   })
 })
 
@@ -72,40 +62,19 @@ async function renderWithSourceUrl(sourceUrl: unknown): Promise<HTMLElement> {
 }
 
 describe('StatusBar URL scheme validation', () => {
-  it('rejects javascript: scheme', async () => {
-    const link = await renderWithSourceUrl('javascript:alert(1)')
-    expect(link.getAttribute('href')).toBe(FALLBACK)
-  })
+  const HTTPS_URL = 'https://github.com/gwickman/stoat-and-ferret'
+  const HTTP_URL = 'http://internal.host/source'
 
-  it('rejects data: scheme', async () => {
-    const link = await renderWithSourceUrl('data:text/html,x')
-    expect(link.getAttribute('href')).toBe(FALLBACK)
-  })
-
-  it('rejects relative path', async () => {
-    const link = await renderWithSourceUrl('/relative/path')
-    expect(link.getAttribute('href')).toBe(FALLBACK)
-  })
-
-  it('rejects protocol-relative URL', async () => {
-    const link = await renderWithSourceUrl('//host/path')
-    expect(link.getAttribute('href')).toBe(FALLBACK)
-  })
-
-  it('rejects empty string', async () => {
-    const link = await renderWithSourceUrl('')
-    expect(link.getAttribute('href')).toBe(FALLBACK)
-  })
-
-  it('accepts valid https URL', async () => {
-    const url = 'https://github.com/gwickman/stoat-and-ferret'
-    const link = await renderWithSourceUrl(url)
-    expect(link.getAttribute('href')).toBe(url)
-  })
-
-  it('accepts valid http URL', async () => {
-    const url = 'http://internal.host/source'
-    const link = await renderWithSourceUrl(url)
-    expect(link.getAttribute('href')).toBe(url)
+  it.each([
+    ['javascript: scheme', 'javascript:alert(1)', FALLBACK],
+    ['data: scheme', 'data:text/html,x', FALLBACK],
+    ['relative path', '/relative/path', FALLBACK],
+    ['protocol-relative URL', '//host/path', FALLBACK],
+    ['empty string', '', FALLBACK],
+    ['valid https URL', HTTPS_URL, HTTPS_URL],
+    ['valid http URL', HTTP_URL, HTTP_URL],
+  ])('handles %s', async (_label, input, expectedHref) => {
+    const link = await renderWithSourceUrl(input)
+    expect(link.getAttribute('href')).toBe(expectedHref)
   })
 })
