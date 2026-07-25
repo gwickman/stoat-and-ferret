@@ -3,7 +3,7 @@
 
 """Smoke tests for windowed non-T effect fallback (BL-512 split/trim/concat path).
 
-Exercises the full server stack with a zoompan effect (timeline_T_capable=False)
+Exercises the full server stack with a zoompan effect (timeline_t_capable=False)
 applied inside a time window, confirming:
   - FR-001-AC-1: effect is visually present inside the window and absent outside
   - FR-002-AC-1: rendered output pix_fmt is yuv420p (ffprobe assertion)
@@ -152,7 +152,7 @@ async def _setup_windowed_zoompan_project(
     assert clip_resp.status_code == 201
     clip_id: str = clip_resp.json()["id"]
 
-    # Apply zoompan (timeline_T_capable=False) with a 1-2s window.
+    # Apply zoompan (timeline_t_capable=False) with a 1-2s window.
     # Output dimensions match running1.mp4 (960x540) so concat is valid.
     effect_resp = await client.post(
         f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",

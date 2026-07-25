@@ -1108,5 +1108,5 @@ class RenderService:
             plan_data = json.loads(render_plan_json)
             duration_seconds = plan_data.get("total_duration", 0.0)
             return int(duration_seconds * 1_000_000)
-        except (json.JSONDecodeError, TypeError, ValueError):
+        except (TypeError, ValueError):
             return 0

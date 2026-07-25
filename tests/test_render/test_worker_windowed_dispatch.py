@@ -4,7 +4,7 @@
 """Unit tests for single-clip windowed effect dispatch in build_command_for_job (BL-616).
 
 Tests that the single-clip translator path dispatches windowed_custom() when an effect
-carries a window key and timeline_T_capable is True, mirroring the multi-clip path.
+carries a window key and timeline_t_capable is True, mirroring the multi-clip path.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ def _make_repos(
 def _make_t_capable_registry(effect_type: str, filter_str: str) -> EffectRegistry:
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: filter_str
-    defn.timeline_T_capable = True
+    defn.timeline_t_capable = True
     registry = EffectRegistry()
     registry.register(effect_type, defn)
     return registry
@@ -127,7 +127,7 @@ def _make_t_capable_registry(effect_type: str, filter_str: str) -> EffectRegistr
 def _make_non_t_capable_registry(effect_type: str, filter_str: str) -> EffectRegistry:
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: filter_str
-    defn.timeline_T_capable = False
+    defn.timeline_t_capable = False
     registry = EffectRegistry()
     registry.register(effect_type, defn)
     return registry
@@ -180,7 +180,7 @@ async def test_single_clip_windowed_t_capable_emits_enable() -> None:
 async def test_single_clip_non_t_capable_with_window_no_enable() -> None:
     """BL-616-AC-2: single-clip non-T-capable effect + window → no enable=, no crash.
 
-    Mirrors the multi-clip else branch: when timeline_T_capable=False, the window
+    Mirrors the multi-clip else branch: when timeline_t_capable=False, the window
     key is silently ignored and RenderEffect.custom() is used instead.
     """
     effect_data: dict[str, Any] = {

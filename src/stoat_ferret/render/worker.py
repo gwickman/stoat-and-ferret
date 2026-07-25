@@ -374,7 +374,7 @@ def _build_clip_render_effects(
                             filter_str,
                             window["start_s"],
                             window["end_s"],
-                            defn.timeline_T_capable,
+                            defn.timeline_t_capable,
                         )
                     )
                 else:

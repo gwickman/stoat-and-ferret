@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""Hygiene test: cross-checks EffectDefinition.timeline_T_capable against FFmpeg T flag.
+"""Hygiene test: cross-checks EffectDefinition.timeline_t_capable against FFmpeg T flag.
 
-For every EffectDefinition that declares timeline_T_capable=True, this test
+For every EffectDefinition that declares timeline_t_capable=True, this test
 verifies that the corresponding FFmpeg filter has the T (timeline) flag set.
 
 If FFmpeg is not installed, all checks are skipped (not failed).
 
-Per v088 scope: no existing builder sets timeline_T_capable=True, so all
-timeline_T_capable-related assertions pass vacuously in non-FFmpeg environments.
+Per v088 scope: no existing builder sets timeline_t_capable=True, so all
+timeline_t_capable-related assertions pass vacuously in non-FFmpeg environments.
 """
 
 from __future__ import annotations
@@ -51,15 +51,15 @@ def _get_filter_flags(filter_name: str) -> set[str]:
 
 
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg not installed")
-def test_timeline_T_capable_agrees_with_ffmpeg_T_flag() -> None:
-    """Builders declaring timeline_T_capable=True must have the FFmpeg T flag."""
+def test_timeline_t_capable_agrees_with_ffmpeg_T_flag() -> None:
+    """Builders declaring timeline_t_capable=True must have the FFmpeg T flag."""
     registry = create_default_registry()
     all_effects = registry.list_all()
     assert all_effects, "Expected at least one effect in registry"
 
     failures: list[str] = []
     for effect_type, definition in all_effects:
-        if not definition.timeline_T_capable:
+        if not definition.timeline_t_capable:
             continue
         # Extract the filter name from the preview string.
         preview = definition.preview_fn()
@@ -67,12 +67,12 @@ def test_timeline_T_capable_agrees_with_ffmpeg_T_flag() -> None:
         flags = _get_filter_flags(filter_name)
         if "T" not in flags:
             failures.append(
-                f"{effect_type}: timeline_T_capable=True but filter '{filter_name}' "
+                f"{effect_type}: timeline_t_capable=True but filter '{filter_name}' "
                 f"lacks the T flag (flags: {sorted(flags)})"
             )
 
     assert not failures, (
-        "EffectDefinition.timeline_T_capable mismatch with FFmpeg T flag:\n"
+        "EffectDefinition.timeline_t_capable mismatch with FFmpeg T flag:\n"
         + "\n".join(f"  - {f}" for f in failures)
     )
 
@@ -83,5 +83,5 @@ def test_wave3a_t_capable_builders_curves_hue_rotation_vignette() -> None:
     Finalizes the Wave 3a T-capable assertion (BL-510).
     """
     registry = create_default_registry()
-    t_capable = [etype for etype, defn in registry.list_all() if defn.timeline_T_capable]
+    t_capable = [etype for etype, defn in registry.list_all() if defn.timeline_t_capable]
     assert sorted(t_capable) == ["curves", "hue_rotation", "vignette"]

@@ -908,7 +908,7 @@ async def test_single_clip_windowed_effect_emits_enable() -> None:
 
     defn = MagicMock(spec=EffectDefinition)
     defn.build_fn = lambda params: "gblur=sigma=2.0"
-    defn.timeline_T_capable = True
+    defn.timeline_t_capable = True
     registry = EffectRegistry()
     registry.register("gblur", defn)
 

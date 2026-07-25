@@ -8,14 +8,11 @@ from __future__ import annotations
 import copy
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 import aiosqlite
 
 from stoat_ferret.db.models import Project
-
-if TYPE_CHECKING:
-    pass
 
 
 class AsyncProjectRepository(Protocol):

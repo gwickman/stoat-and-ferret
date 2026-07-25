@@ -472,7 +472,7 @@ async def get_manifest(
         )
 
     content = manifest_file.read_text()
-    # NOSONAR: media_type is a hardcoded HLS manifest MIME type (not attacker-influenced)
+    # media_type is a hardcoded HLS manifest MIME type (not attacker-influenced)
     # and X-Content-Type-Options: nosniff prevents browser MIME-sniffing, so the reflected
     # content cannot be interpreted as executable script by any browser (S5131 accepted
     # risk, BL-636).
@@ -534,7 +534,7 @@ async def get_segment(
         )
 
     content = segment_file.read_bytes()
-    # NOSONAR: media_type is a hardcoded MPEG-TS MIME type (not attacker-influenced) and
+    # media_type is a hardcoded MPEG-TS MIME type (not attacker-influenced) and
     # X-Content-Type-Options: nosniff prevents browser MIME-sniffing, so the reflected
     # content cannot be interpreted as executable script by any browser (S5131 accepted
     # risk, BL-636).
