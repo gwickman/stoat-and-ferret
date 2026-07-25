@@ -46,6 +46,7 @@ export default function EffectsPage() {
   // Auto-select first project
   useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: initializes selection from external project list; runs only once (guarded by !selectedProjectId).
       setSelectedProjectId(projects[0].id)
     }
   }, [projects, selectedProjectId])
@@ -107,6 +108,7 @@ export default function EffectsPage() {
   useEffect(() => {
     if (!selectedEffect) {
       resetForm()
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: resets edit state when the selected effect is cleared; derived from external catalog selection.
       setEditIndex(null)
       return
     }

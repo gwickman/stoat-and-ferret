@@ -207,6 +207,10 @@ jobs:
           cd gui && npm run generate:types
           git diff --exit-code -- gui/src/generated/api-types.ts
 
+      - name: Lint
+        run: npx eslint . --max-warnings 0
+        working-directory: gui
+
       - name: Build
         run: npm run build
         working-directory: gui

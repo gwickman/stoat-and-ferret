@@ -382,7 +382,7 @@ export default function StartRenderModal({
           {/* Disk Space Bar */}
           {queueStatus && queueStatus.disk_total_bytes > 0 && (
             <div data-testid="disk-space-section">
-              <label className="mb-1 block text-sm text-gray-400">Disk Space</label>
+              <p className="mb-1 text-sm text-gray-400">Disk Space</p>
               <div className="h-3 w-full overflow-hidden rounded bg-gray-700" data-testid="disk-space-bar">
                 <div
                   className={`h-full ${diskWarning ? 'bg-red-500' : 'bg-blue-500'}`}
@@ -404,7 +404,7 @@ export default function StartRenderModal({
           {/* Command Preview */}
           {previewCommand && (
             <div data-testid="command-preview-section">
-              <label className="mb-1 block text-sm text-gray-400">FFmpeg Command Preview</label>
+              <p className="mb-1 text-sm text-gray-400">FFmpeg Command Preview</p>
               <pre
                 className="overflow-x-auto rounded border border-gray-700 bg-gray-900 p-3 text-xs text-gray-300"
                 data-testid="command-preview"

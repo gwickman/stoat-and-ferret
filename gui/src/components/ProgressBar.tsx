@@ -13,6 +13,7 @@ export interface ProgressBarProps {
 }
 
 /** Format seconds as mm:ss or hh:mm:ss for durations >= 1 hour. */
+// eslint-disable-next-line react-refresh/only-export-components -- formatTime is a utility imported by SeekTooltip; tightly coupled to this module.
 export function formatTime(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds))
   const h = Math.floor(s / 3600)
@@ -67,6 +68,16 @@ export default function ProgressBar({
   const handleMouseEnter = useCallback(() => setHovering(true), [])
   const handleMouseLeave = useCallback(() => setHovering(false), [])
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (duration <= 0) return
+      const step = 5 // seconds per arrow key press
+      if (e.key === 'ArrowLeft') onSeek(Math.max(0, currentTime - step))
+      else if (e.key === 'ArrowRight') onSeek(Math.min(duration, currentTime + step))
+    },
+    [duration, onSeek, currentTime],
+  )
+
   return (
     <div className="flex items-center gap-2" data-testid="progress-bar-container">
       <span className="text-xs text-gray-400 tabular-nums" data-testid="time-current">
@@ -81,7 +92,9 @@ export default function ProgressBar({
         aria-label="Playback progress"
         className="relative h-2 flex-1 cursor-pointer rounded bg-gray-700"
         data-testid="progress-bar-track"
+        tabIndex={0}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -94,9 +107,9 @@ export default function ProgressBar({
         {hovering && duration > 0 && (
           <SeekTooltip
             hoverTime={hoverTime}
-            duration={duration}
             thumbnailMetadata={thumbnailMetadata}
             mouseX={mouseX}
+            // eslint-disable-next-line react-hooks/refs -- Intentional: reads clientWidth during render to position the tooltip; a ResizeObserver would add unnecessary complexity for this single measurement.
             barWidth={trackRef.current?.clientWidth ?? 0}
           />
         )}
