@@ -42,6 +42,7 @@ export default defineConfig([
         },
       ],
       'react/no-array-index-key': 'error',
+      'react/no-unused-prop-types': 'error',
     },
   },
 ])

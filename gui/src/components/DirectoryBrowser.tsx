@@ -69,11 +69,15 @@ export default function DirectoryBrowser({
   }
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Modal backdrop; the real dialog semantics live on the inner container. Keyboard dismissal is handled via onKeyDown Escape.
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
       data-testid="directory-browser-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && e.target === e.currentTarget) onCancel()
       }}
     >
       <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-gray-700 bg-gray-900 p-6">

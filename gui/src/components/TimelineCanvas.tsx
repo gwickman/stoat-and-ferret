@@ -90,6 +90,7 @@ export default function TimelineCanvas({ tracks, duration }: TimelineCanvasProps
             duration={duration}
             zoom={zoom}
             scrollOffset={scrollOffset}
+            // eslint-disable-next-line react-hooks/refs -- Intentional: reads clientWidth from the scroll ref during render to size the canvas; a ResizeObserver would be over-engineered for this static-layout use.
             canvasWidth={scrollRef.current?.clientWidth ?? 800}
           />
           <div className="relative flex flex-col" data-testid="canvas-tracks">

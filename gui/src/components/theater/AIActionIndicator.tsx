@@ -29,6 +29,7 @@ export default function AIActionIndicator() {
     try {
       const event: AIActionEvent = JSON.parse(lastMessage.data)
       if (event.type !== 'ai_action') return
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: subscribes to external WebSocket events; setState is the callback for incoming external state changes.
       setActionText(event.payload.description)
     } catch {
       // Ignore non-JSON messages (NFR-001)

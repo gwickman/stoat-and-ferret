@@ -52,6 +52,7 @@ export function useJobProgress(jobId: string | null): JobProgressState {
         if (event.type !== 'job_progress') continue
         if (event.payload.job_id !== jobId) continue
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: synchronizes state with external WebSocket job-progress events; setState is the callback for incoming external state changes.
         setState({
           progress: event.payload.progress,
           status: event.payload.status,
@@ -65,6 +66,7 @@ export function useJobProgress(jobId: string | null): JobProgressState {
 
   // Reset state when jobId changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset-on-id-change: clears stale progress/status when the tracked jobId switches.
     setState({ progress: null, status: null, error: null })
   }, [jobId])
 

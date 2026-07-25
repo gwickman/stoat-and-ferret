@@ -128,6 +128,7 @@ function WorkspacePanel({
         data-testid={`workspace-panel-${panelId}`}
         data-visible={isVisible ? 'true' : 'false'}
         style={isVisible ? undefined : { display: 'none', pointerEvents: 'none' }}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Intentional: visible panels receive tabIndex=0 to support keyboard focus management when the active panel switches.
         tabIndex={isVisible ? 0 : undefined}
       >
         {/*

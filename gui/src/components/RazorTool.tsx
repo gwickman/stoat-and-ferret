@@ -49,7 +49,7 @@ export default function RazorTool({
 
       const data = await resp.json()
       onSplitComplete?.(data.clip_a.id, data.clip_b.id)
-    } catch (err) {
+    } catch {
       setError('Split request failed')
     } finally {
       setIsLoading(false)

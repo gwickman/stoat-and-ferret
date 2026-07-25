@@ -49,6 +49,7 @@ export function useWebSocket(url: string): WebSocketHook {
         MAX_DELAY,
       )
       retryCount.current += 1
+      // eslint-disable-next-line react-hooks/immutability -- Intentional self-reference: `connect` schedules itself for reconnection; by the time the timer fires, the callback is fully bound and stable.
       timerRef.current = setTimeout(connect, delay)
     }
 

@@ -76,7 +76,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={30}
-        duration={120}
         thumbnailMetadata={null}
         mouseX={100}
         barWidth={400}
@@ -91,7 +90,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={4}
-        duration={60}
         thumbnailMetadata={METADATA}
         mouseX={200}
         barWidth={400}
@@ -107,7 +105,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={4}
-        duration={60}
         thumbnailMetadata={METADATA}
         mouseX={200}
         barWidth={400}
@@ -123,7 +120,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={0}
-        duration={60}
         thumbnailMetadata={METADATA}
         mouseX={10}
         barWidth={400}
@@ -138,7 +134,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={55}
-        duration={60}
         thumbnailMetadata={METADATA}
         mouseX={390}
         barWidth={400}
@@ -153,7 +148,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={30}
-        duration={60}
         thumbnailMetadata={null}
         mouseX={200}
         barWidth={400}
@@ -167,7 +161,6 @@ describe('SeekTooltip', () => {
     render(
       <SeekTooltip
         hoverTime={10}
-        duration={60}
         thumbnailMetadata={null}
         mouseX={100}
         barWidth={400}

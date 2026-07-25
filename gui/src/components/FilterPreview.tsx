@@ -24,6 +24,7 @@ const FILTER_NAMES = [
  * - Filter names get a keyword color.
  * - Everything else stays default.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- Utility tightly coupled to this component; imported by tests and EffectsPage.
 export function highlightFilter(filter: string): React.ReactNode[] {
   // Match pad labels [xxx] or filter names at word boundaries
   const pattern = new RegExp(

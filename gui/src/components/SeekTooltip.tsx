@@ -14,8 +14,6 @@ export interface ThumbnailMetadata {
 export interface SeekTooltipProps {
   /** Hover time in seconds. */
   hoverTime: number
-  /** Total video duration in seconds. */
-  duration: number
   /** Thumbnail strip metadata, or null for time-only fallback. */
   thumbnailMetadata: ThumbnailMetadata | null
   /** Mouse X position relative to the progress bar, in pixels. */
@@ -25,6 +23,7 @@ export interface SeekTooltipProps {
 }
 
 /** Calculate frame index and sprite background offset for a hover time. */
+// eslint-disable-next-line react-refresh/only-export-components -- Utility function also used by ProgressBar tests; tightly coupled to this component.
 export function calculateFrameOffset(
   hoverTime: number,
   metadata: ThumbnailMetadata,

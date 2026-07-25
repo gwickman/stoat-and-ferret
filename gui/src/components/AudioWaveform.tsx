@@ -11,6 +11,7 @@ export default function AudioWaveform({ videoId }: AudioWaveformProps) {
 
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset-before-fetch: clears prior URL/error state synchronously when videoId changes before the async load begins.
     setBgUrl(null)
     setFailed(false)
 

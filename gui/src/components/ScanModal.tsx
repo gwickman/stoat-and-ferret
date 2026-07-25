@@ -172,11 +172,15 @@ export default function ScanModal({
   const isScanning = scanStatus === 'scanning' || scanStatus === 'cancelling'
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Modal backdrop; the real dialog semantics live on the inner container. Keyboard dismissal is handled via onKeyDown Escape.
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="scan-modal-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isScanning) onClose()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && e.target === e.currentTarget && !isScanning) onClose()
       }}
     >
       <div className="w-full max-w-md rounded-lg border border-gray-700 bg-gray-900 p-6">

@@ -54,6 +54,7 @@ export default function PreviewPlayer({
       })
     }
     return ranges
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- videoRef is a stable ref; adding it would cause unnecessary re-creation.
   }, [])
 
   // Buffer tracking via video.buffered (universal for both paths)
@@ -67,6 +68,7 @@ export default function PreviewPlayer({
 
     video.addEventListener('progress', handleProgress)
     return () => video.removeEventListener('progress', handleProgress)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- videoRef is a stable ref; including it would add spurious re-registrations.
   }, [onBufferUpdate, getBufferRanges])
 
   // Safari error handler
@@ -81,6 +83,7 @@ export default function PreviewPlayer({
 
     video.addEventListener('error', handleError)
     return () => video.removeEventListener('error', handleError)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- videoRef is a stable ref; including it would add spurious re-registrations.
   }, [usingSafari, onError])
 
   // HLS.js or Safari native initialization
@@ -132,6 +135,7 @@ export default function PreviewPlayer({
     }
 
     onError?.('HLS playback not supported in this browser')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- videoRef is a stable ref; manifestUrl and onError are the real dependencies that trigger re-initialization.
   }, [manifestUrl, onError])
 
   // Loading state when manifest not ready
@@ -156,7 +160,9 @@ export default function PreviewPlayer({
         data-testid="preview-player-video"
         className="w-full rounded bg-black"
         playsInline
-      />
+      >
+        <track kind="captions" />
+      </video>
     </div>
   )
 }
