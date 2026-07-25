@@ -86,12 +86,12 @@ describe('TimelinePage', () => {
     expect(screen.getByTestId('timeline-page')).toBeDefined()
   })
 
-  it('renders with role="main" and id="main-content"', () => {
+  it('renders with id="main-content" and skip-link target', () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     renderTimelinePage()
 
-    const main = screen.getByRole('main')
+    const main = screen.getByTestId('timeline-page')
     expect(main).toHaveAttribute('id', 'main-content')
   })
 

@@ -30,11 +30,12 @@ function renderPage() {
 }
 
 describe('DashboardPage', () => {
-  it('renders with role="main" and id="main-content"', () => {
+  it('renders with id="main-content" and skip-link target', () => {
     renderPage()
-    const main = screen.getByRole('main')
+    const main = screen.getByTestId('dashboard-page')
     expect(main).toHaveAttribute('id', 'main-content')
     expect(main).toHaveAttribute('data-testid', 'dashboard-page')
+    expect(screen.queryAllByRole('main')).toHaveLength(0)
   })
 
   it('renders dashboard heading', () => {
