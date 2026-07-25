@@ -119,3 +119,27 @@ class TestHostAllowlist:
             result = asyncio.run(dump_ws_events.stream_events("localhost", 8765, None))
         mock_connect.assert_called_once()
         assert result == 0
+
+
+class TestSchemeArgument:
+    """wss:// scheme support (BL-720) — secure connection URL and host guard."""
+
+    def test_wss_scheme_produces_wss_url(self) -> None:
+        """--scheme wss must construct a wss:// URL and pass it to the connect call."""
+        with patch.object(
+            dump_ws_events.websockets, "connect", return_value=_FakeWSConnection()
+        ) as mock_connect:
+            result = asyncio.run(dump_ws_events.stream_events("localhost", 8765, None, "wss"))
+        mock_connect.assert_called_once()
+        call_url: str = mock_connect.call_args[0][0]
+        assert call_url.startswith("wss://"), f"Expected wss:// URL, got: {call_url}"
+        assert result == 0
+
+    def test_non_allowlisted_host_exits_nonzero_with_wss_scheme(self) -> None:
+        """Non-allowlisted host must be rejected before connect regardless of scheme."""
+        # Nested `with` (not combined) works around Sonar S5778 on the combined form.
+        with patch.object(dump_ws_events.websockets, "connect") as mock_connect:  # noqa: SIM117
+            coro = dump_ws_events.stream_events("evil.example.com", 8765, None, "wss")
+            with pytest.raises(SystemExit):
+                asyncio.run(coro)
+        mock_connect.assert_not_called()
