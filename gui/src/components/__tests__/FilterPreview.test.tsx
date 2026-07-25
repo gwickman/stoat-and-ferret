@@ -97,7 +97,7 @@ describe('highlightFilter', () => {
       <span>{highlightFilter('[0:v]fade=t=in:d=1.5[out]')}</span>,
     )
     const padLabels = container.querySelectorAll('[data-testid="pad-label"]')
-    expect(padLabels.length).toBe(2)
+    expect(padLabels).toHaveLength(2)
     expect(padLabels[0].textContent).toBe('[0:v]')
     expect(padLabels[1].textContent).toBe('[out]')
   })
@@ -112,9 +112,9 @@ describe('highlightFilter', () => {
       '[data-testid="filter-name"]',
     )
     const padLabels = container.querySelectorAll('[data-testid="pad-label"]')
-    expect(filterNames.length).toBe(1)
+    expect(filterNames).toHaveLength(1)
     expect(filterNames[0].textContent).toBe('asplit')
-    expect(padLabels.length).toBe(3)
+    expect(padLabels).toHaveLength(3)
   })
 
   it('returns plain text when no patterns match', () => {

@@ -6,6 +6,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import a11y from 'eslint-plugin-jsx-a11y'
 import unicorn from 'eslint-plugin-unicorn'
+import sonarjs from 'eslint-plugin-sonarjs'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -57,6 +58,14 @@ export default defineConfig([
       'unicorn/no-useless-fallback-in-spread': 'error',
       'unicorn/prefer-set-has': 'error',
       'unicorn/prefer-string-raw': 'error',
+    },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: { sonarjs },
+    rules: {
+      'sonarjs/no-collection-size-mischeck': 'error',
+      'sonarjs/no-identical-functions': 'error',
     },
   },
 ])

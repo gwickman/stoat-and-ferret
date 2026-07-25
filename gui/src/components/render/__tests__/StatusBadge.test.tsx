@@ -3,45 +3,17 @@ import { describe, it, expect } from 'vitest'
 import StatusBadge from '../StatusBadge'
 
 describe('StatusBadge', () => {
-  it('renders blue dot for "queued"', () => {
-    render(<StatusBadge status="queued" />)
+  it.each([
+    ['queued', 'bg-blue-500', 'Queued'],
+    ['running', 'bg-yellow-500', 'Rendering'],
+    ['completed', 'bg-green-500', 'Completed'],
+    ['failed', 'bg-red-500', 'Failed'],
+    ['cancelled', 'bg-gray-500', 'Cancelled'],
+    ['unknown_state', 'bg-gray-500', 'unknown_state'],
+  ])('renders %s status with correct dot colour and label', (status, colorClass, label) => {
+    render(<StatusBadge status={status} />)
     const dot = screen.getByTestId('status-badge-dot')
-    expect(dot.className).toContain('bg-blue-500')
-    expect(screen.getByTestId('status-badge-label').textContent).toBe('Queued')
-  })
-
-  it('renders yellow dot for "running" with label "Rendering"', () => {
-    render(<StatusBadge status="running" />)
-    const dot = screen.getByTestId('status-badge-dot')
-    expect(dot.className).toContain('bg-yellow-500')
-    expect(screen.getByTestId('status-badge-label').textContent).toBe('Rendering')
-  })
-
-  it('renders green dot for "completed"', () => {
-    render(<StatusBadge status="completed" />)
-    const dot = screen.getByTestId('status-badge-dot')
-    expect(dot.className).toContain('bg-green-500')
-    expect(screen.getByTestId('status-badge-label').textContent).toBe('Completed')
-  })
-
-  it('renders red dot for "failed"', () => {
-    render(<StatusBadge status="failed" />)
-    const dot = screen.getByTestId('status-badge-dot')
-    expect(dot.className).toContain('bg-red-500')
-    expect(screen.getByTestId('status-badge-label').textContent).toBe('Failed')
-  })
-
-  it('renders gray dot for "cancelled"', () => {
-    render(<StatusBadge status="cancelled" />)
-    const dot = screen.getByTestId('status-badge-dot')
-    expect(dot.className).toContain('bg-gray-500')
-    expect(screen.getByTestId('status-badge-label').textContent).toBe('Cancelled')
-  })
-
-  it('renders gray fallback for unknown status', () => {
-    render(<StatusBadge status="unknown_state" />)
-    const dot = screen.getByTestId('status-badge-dot')
-    expect(dot.className).toContain('bg-gray-500')
-    expect(screen.getByTestId('status-badge-label').textContent).toBe('unknown_state')
+    expect(dot.className).toContain(colorClass)
+    expect(screen.getByTestId('status-badge-label').textContent).toBe(label)
   })
 })

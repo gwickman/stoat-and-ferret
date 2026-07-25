@@ -318,40 +318,16 @@ describe('PlayerControls', () => {
   })
 
   describe('skip buttons', () => {
-    it('skip forward offsets by +5 seconds', () => {
-      video.currentTime = 10
+    it.each([
+      [10, 'skip-fwd-btn',  15],
+      [10, 'skip-back-btn', 5],
+      [2,  'skip-back-btn', 0],
+      [58, 'skip-fwd-btn',  60],
+    ])('currentTime %s + %s → %s', (initialTime, btnId, expectedTime) => {
+      video.currentTime = initialTime
       renderControls()
-
-      fireEvent.click(screen.getByTestId('skip-fwd-btn'))
-
-      expect(video.currentTime).toBe(15)
-    })
-
-    it('skip backward offsets by -5 seconds', () => {
-      video.currentTime = 10
-      renderControls()
-
-      fireEvent.click(screen.getByTestId('skip-back-btn'))
-
-      expect(video.currentTime).toBe(5)
-    })
-
-    it('clamps skip backward to 0', () => {
-      video.currentTime = 2
-      renderControls()
-
-      fireEvent.click(screen.getByTestId('skip-back-btn'))
-
-      expect(video.currentTime).toBe(0)
-    })
-
-    it('clamps skip forward to duration', () => {
-      video.currentTime = 58
-      renderControls()
-
-      fireEvent.click(screen.getByTestId('skip-fwd-btn'))
-
-      expect(video.currentTime).toBe(60)
+      fireEvent.click(screen.getByTestId(btnId))
+      expect(video.currentTime).toBe(expectedTime)
     })
   })
 
@@ -367,64 +343,32 @@ describe('PlayerControls', () => {
       expect(video.play).toHaveBeenCalled()
     })
 
-    it('ArrowRight seeks forward 5 seconds', () => {
-      video.currentTime = 10
+    it.each([
+      ['ArrowRight', 10, 15],
+      ['ArrowLeft',  10, 5],
+    ])('%s seeks currentTime from %s to %s', (key, initialTime, expectedTime) => {
+      video.currentTime = initialTime
       renderControls()
-
       const container = screen.getByTestId('player-controls')
-      fireEvent.keyDown(container, { key: 'ArrowRight' })
-
-      expect(video.currentTime).toBe(15)
+      fireEvent.keyDown(container, { key })
+      expect(video.currentTime).toBe(expectedTime)
     })
 
-    it('ArrowLeft seeks backward 5 seconds', () => {
-      video.currentTime = 10
+    it.each([
+      ['ArrowUp',   0.5,  0.6, 1],
+      ['ArrowDown', 0.5,  0.4, 1],
+      ['ArrowDown', 0.05, 0,   0],
+      ['ArrowUp',   0.95, 1,   0],
+    ])('%s volume %s → %s', (key, initialVolume, expectedVolume, decimals) => {
+      usePreviewStore.setState({ volume: initialVolume })
       renderControls()
-
       const container = screen.getByTestId('player-controls')
-      fireEvent.keyDown(container, { key: 'ArrowLeft' })
-
-      expect(video.currentTime).toBe(5)
-    })
-
-    it('ArrowUp increases volume by 0.1', () => {
-      usePreviewStore.setState({ volume: 0.5 })
-      renderControls()
-
-      const container = screen.getByTestId('player-controls')
-      fireEvent.keyDown(container, { key: 'ArrowUp' })
-
-      expect(video.volume).toBeCloseTo(0.6, 1)
-    })
-
-    it('ArrowDown decreases volume by 0.1', () => {
-      usePreviewStore.setState({ volume: 0.5 })
-      renderControls()
-
-      const container = screen.getByTestId('player-controls')
-      fireEvent.keyDown(container, { key: 'ArrowDown' })
-
-      expect(video.volume).toBeCloseTo(0.4, 1)
-    })
-
-    it('ArrowDown clamps volume to 0', () => {
-      usePreviewStore.setState({ volume: 0.05 })
-      renderControls()
-
-      const container = screen.getByTestId('player-controls')
-      fireEvent.keyDown(container, { key: 'ArrowDown' })
-
-      expect(video.volume).toBe(0)
-    })
-
-    it('ArrowUp clamps volume to 1', () => {
-      usePreviewStore.setState({ volume: 0.95 })
-      renderControls()
-
-      const container = screen.getByTestId('player-controls')
-      fireEvent.keyDown(container, { key: 'ArrowUp' })
-
-      expect(video.volume).toBe(1)
+      fireEvent.keyDown(container, { key })
+      if (decimals > 0) {
+        expect(video.volume).toBeCloseTo(expectedVolume, decimals)
+      } else {
+        expect(video.volume).toBe(expectedVolume)
+      }
     })
   })
 

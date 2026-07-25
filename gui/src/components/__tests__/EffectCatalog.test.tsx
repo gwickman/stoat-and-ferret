@@ -125,7 +125,7 @@ describe('EffectCatalog', () => {
 
     // Check category badges
     const badges = screen.getAllByTestId('effect-category-badge')
-    expect(badges.length).toBe(3)
+    expect(badges).toHaveLength(3)
   })
 
   it('toggles between grid and list view', () => {

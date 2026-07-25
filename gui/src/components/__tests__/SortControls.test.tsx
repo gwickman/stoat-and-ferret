@@ -17,7 +17,7 @@ describe('SortControls', () => {
     expect(select.value).toBe('date')
 
     const options = select.querySelectorAll('option')
-    expect(options.length).toBe(3)
+    expect(options).toHaveLength(3)
     expect(options[0].value).toBe('date')
     expect(options[1].value).toBe('name')
     expect(options[2].value).toBe('duration')
