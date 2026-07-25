@@ -5,6 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import a11y from 'eslint-plugin-jsx-a11y'
+import unicorn from 'eslint-plugin-unicorn'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -43,6 +44,19 @@ export default defineConfig([
       ],
       'react/no-array-index-key': 'error',
       'react/no-unused-prop-types': 'error',
+    },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: { unicorn },
+    rules: {
+      'unicorn/prefer-number-properties': 'error',
+      'unicorn/prefer-export-from': 'error',
+      'unicorn/no-typeof-undefined': 'error',
+      'unicorn/prefer-string-replace-all': 'error',
+      'unicorn/no-useless-fallback-in-spread': 'error',
+      'unicorn/prefer-set-has': 'error',
+      'unicorn/prefer-string-raw': 'error',
     },
   },
 ])

@@ -22,7 +22,7 @@ async function waitForSeparatorReady(page: Page, id: string): Promise<void> {
   await expect(page.locator(`#${id}`)).toBeVisible();
   await page.waitForFunction(
     (sepId) =>
-      parseFloat(
+      Number.parseFloat(
         document.getElementById(sepId)?.getAttribute("aria-valuenow") ?? "0",
       ) > 0,
     id,

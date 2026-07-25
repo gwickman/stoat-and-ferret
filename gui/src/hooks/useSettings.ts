@@ -1,5 +1,4 @@
 import { useSettingsStore } from '../stores/settingsStore'
-import type { Theme, ShortcutMap } from '../stores/settingsStore'
 
 /**
  * Component-level access hook for settingsStore.
@@ -24,4 +23,4 @@ export function useSettings() {
   }
 }
 
-export type { Theme, ShortcutMap }
+export type { Theme, ShortcutMap } from '../stores/settingsStore'

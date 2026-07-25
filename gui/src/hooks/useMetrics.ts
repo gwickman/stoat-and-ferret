@@ -20,14 +20,14 @@ export function parsePrometheus(text: string): Metrics {
     if (line.startsWith('#') || line.trim() === '') continue
 
     if (line.startsWith('http_requests_total')) {
-      const value = parseFloat(line.split(/\s+/).pop() ?? '0')
-      if (!isNaN(value)) requestCount += value
+      const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
+      if (!Number.isNaN(value)) requestCount += value
     } else if (line.startsWith('http_request_duration_seconds_sum')) {
-      const value = parseFloat(line.split(/\s+/).pop() ?? '0')
-      if (!isNaN(value)) durationSum += value
+      const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
+      if (!Number.isNaN(value)) durationSum += value
     } else if (line.startsWith('http_request_duration_seconds_count')) {
-      const value = parseFloat(line.split(/\s+/).pop() ?? '0')
-      if (!isNaN(value)) durationCount += value
+      const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
+      if (!Number.isNaN(value)) durationCount += value
     }
   }
 

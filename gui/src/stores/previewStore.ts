@@ -42,7 +42,7 @@ interface PreviewState {
   reset: () => void
 }
 
-const VALID_QUALITIES: PreviewQuality[] = ['low', 'medium', 'high']
+const VALID_QUALITIES = new Set<PreviewQuality>(['low', 'medium', 'high'])
 
 const initialState = {
   sessionId: null,
@@ -94,7 +94,7 @@ export const usePreviewStore = create<PreviewState>((set, get) => ({
   },
 
   setQuality: async (projectId: string, quality: PreviewQuality) => {
-    if (!VALID_QUALITIES.includes(quality)) return
+    if (!VALID_QUALITIES.has(quality)) return
     // Disconnect existing session and start a new one at the new quality
     const { sessionId } = get()
     if (sessionId) {

@@ -60,8 +60,8 @@ export default function LayerStack() {
                       data-testid={`input-${i}-${field}`}
                       className="mt-0.5 block w-full rounded border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-xs text-white"
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value)
-                        if (!isNaN(val)) {
+                        const val = Number.parseFloat(e.target.value)
+                        if (!Number.isNaN(val)) {
                           updateCustomPosition(i, field, val)
                         }
                       }}

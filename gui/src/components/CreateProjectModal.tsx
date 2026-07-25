@@ -16,8 +16,8 @@ interface FormErrors {
 function parseResolution(value: string): { width: number; height: number } | null {
   const match = value.trim().match(/^(\d+)\s*[xX×]\s*(\d+)$/)
   if (!match) return null
-  const width = parseInt(match[1], 10)
-  const height = parseInt(match[2], 10)
+  const width = Number.parseInt(match[1], 10)
+  const height = Number.parseInt(match[2], 10)
   if (width < 1 || height < 1) return null
   return { width, height }
 }
@@ -30,8 +30,8 @@ function validateForm(name: string, resolution: string, fps: string): FormErrors
   if (!parseResolution(resolution)) {
     errors.resolution = 'Enter a valid resolution (e.g., 1920x1080)'
   }
-  const fpsNum = parseInt(fps, 10)
-  if (isNaN(fpsNum) || fpsNum < 1 || fpsNum > 120) {
+  const fpsNum = Number.parseInt(fps, 10)
+  if (Number.isNaN(fpsNum) || fpsNum < 1 || fpsNum > 120) {
     errors.fps = 'FPS must be between 1 and 120'
   }
   return errors
@@ -85,8 +85,8 @@ export default function CreateProjectModal({
     setFps(value)
     if (errors.fps) {
       const updated = { ...errors }
-      const fpsNum = parseInt(value, 10)
-      if (!isNaN(fpsNum) && fpsNum >= 1 && fpsNum <= 120) delete updated.fps
+      const fpsNum = Number.parseInt(value, 10)
+      if (!Number.isNaN(fpsNum) && fpsNum >= 1 && fpsNum <= 120) delete updated.fps
       setErrors(updated)
     }
   }
@@ -106,7 +106,7 @@ export default function CreateProjectModal({
         name: name.trim(),
         output_width: res.width,
         output_height: res.height,
-        output_fps: parseInt(fps, 10),
+        output_fps: Number.parseInt(fps, 10),
       })
       resetForm()
       onCreated()

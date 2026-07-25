@@ -28,7 +28,7 @@ const FILTER_NAMES = [
 export function highlightFilter(filter: string): React.ReactNode[] {
   // Match pad labels [xxx] or filter names at word boundaries
   const pattern = new RegExp(
-    `(\\[[^\\]]+\\])|(\\b(?:${FILTER_NAMES.join('|')})\\b)`,
+    String.raw`(\[[^\]]+\])|(\b(?:${FILTER_NAMES.join('|')})\b)`,
     'g',
   )
 

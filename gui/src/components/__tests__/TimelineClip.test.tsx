@@ -134,8 +134,8 @@ describe('TimelineClip', () => {
 
     // clip1: left=0, width=200. clip2: left=200, width=300
     // No overlap: clip1 ends at 200, clip2 starts at 200
-    const el1Right = parseFloat(el1.style.left) + parseFloat(el1.style.width)
-    const el2Left = parseFloat(el2.style.left)
+    const el1Right = Number.parseFloat(el1.style.left) + Number.parseFloat(el1.style.width)
+    const el2Left = Number.parseFloat(el2.style.left)
     expect(el2Left).toBeGreaterThanOrEqual(el1Right)
   })
 })
