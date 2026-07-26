@@ -4,6 +4,33 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v113 — SonarCloud Remediation Wave B — GUI/Frontend, Scripts & Security Hygiene (2026-07-26)
+
+4 themes, 9 features, PRs #906–#913.
+
+### Theme 1: GUI Lint and Modernization
+
+- BL-697: Remediate 27 pre-existing ESLint violations across ~15 gui/ components — added ESLint CI gate (`npx eslint . --max-warnings 0`), installed eslint-plugin-unicorn@65, cleared 27 errors + 6 warnings (PR #906)
+- BL-715: Adopt modern JS builtins in the GUI and gate with eslint-plugin-unicorn — enabled 7 unicorn rules, fixed 45 violation sites across 20 GUI files (PR #907)
+- BL-716: Remove the dead duration prop from SeekTooltip and gate unused props locally — dead prop removed, react/no-unused-prop-types rule enabled (included in PR #906 as scope expansion)
+
+### Theme 2: GUI Test Quality and Accessibility
+
+- BL-717: Use specific assertions and parameterised cases in GUI unit tests — 12 length assertions converted to toHaveLength, 10 clusters converted to it.each (43 cases) (PR #908)
+- BL-718: Give the backoff-cap test a real assertion and explain the deliberate no-ops — tautological assertion replaced with toHaveLength(11), stubs annotated (PR #909)
+- BL-719: Remove the duplicate main landmark from the seven page components — 9 role="main" attributes removed from 7 page components (PR #910)
+
+### Theme 3: Scripts and Security Hygiene
+
+- BL-720: Support a secure websocket scheme in the event-dump example script — --scheme wss support added to dump-ws-events.py (PR #911)
+- BL-721: Clear the production and script hygiene long tail flagged by SonarCloud — 6 exception classes removed, dead code cleared, timeline_T_capable renamed, POSIX bracket upgrades (PR #912)
+
+### Theme 4: Python Test Quality Rider
+
+- BL-727: Tighten 4 pytest.approx tolerances from abs=0.1 to abs=1e-9 — tolerances corrected in tests/test_pyo3_bindings.py (PR #913)
+
+---
+
 ## v112 — SonarCloud Remediation Wave A — Python Test Quality & Lint Hygiene (2026-07-24)
 
 3 themes, 10 features, PRs #895–#904.
