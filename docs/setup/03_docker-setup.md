@@ -13,7 +13,7 @@ The project includes a Docker configuration primarily designed for **containeriz
 
 The `Dockerfile` uses a multi-stage build:
 
-1. **Stage 1 (Builder):** Installs the Rust toolchain and maturin in a `python:3.12-slim` image, then builds the Rust extension wheel with `maturin build --release`. The wheel uses the stable ABI (`abi3-py310`), so it works with any CPython 3.10+.
+1. **Stage 1 (Builder):** Uses `COPY --from=rust:1.93.0-slim` to install the Rust toolchain from a pinned official image (no curl|sh installer), then builds the Rust extension wheel with `maturin build --release`. The wheel uses the stable ABI (`abi3-py310`), so it works with any CPython 3.10+.
 
 2. **Stage 2 (Runtime):** Starts from a clean `python:3.12-slim` image, installs Python dependencies via `uv sync`, copies the pre-built wheel from Stage 1, and installs it. The project source, tests, stubs, scripts, and alembic config are copied in. The default command runs `uv run pytest -v`.
 
