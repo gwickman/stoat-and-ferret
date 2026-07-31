@@ -40,7 +40,7 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 # Install maturin for building the PyO3 Rust extension wheel
-RUN pip install --no-cache-dir "maturin>=1.0,<2.0"
+RUN pip install --no-cache-dir "maturin==1.11.5" --only-binary :all:
 
 # Verify toolchains are functional
 RUN rustc --version && cargo --version && maturin --version
@@ -68,7 +68,7 @@ COPY gui/ gui/
 
 # Build the frontend (Node.js 22 installed above)
 WORKDIR /build/gui
-RUN npm ci && npm run build
+RUN npm ci --ignore-scripts && npm run build
 
 # ---------------------------------------------------------------------------
 # Stage 2: Runtime — minimal production image
