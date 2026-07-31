@@ -63,6 +63,7 @@ dev = [
     # Load testing (BL-289) — on-demand only; excluded from default pytest.
     "locust>=2.0",
     "websocket-client>=1.6",
+    "pip-licenses",
 ]
 
 [tool.ruff]

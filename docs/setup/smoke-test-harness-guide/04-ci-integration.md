@@ -32,7 +32,7 @@ Add the following job to `.github/workflows/ci.yml`:
         uses: astral-sh/setup-uv@v3
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Build Rust extension
         run: uv run maturin develop
@@ -154,7 +154,7 @@ UAT journeys run in headless mode in CI. The runner handles the full lifecycle (
         uses: astral-sh/setup-uv@v3
 
       - name: Install dependencies
-        run: uv sync && uv pip install -e ".[uat]"
+        run: uv sync --extra uat --locked
 
       - name: Install Playwright browser
         run: uv run playwright install chromium
