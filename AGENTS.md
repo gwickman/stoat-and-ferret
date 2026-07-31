@@ -720,6 +720,20 @@ name) must be confined to its intended base directory via `resolve()` + `is_rela
 before use in `mkdir`/`rmtree`/`open`/`write_text`. See
 `src/stoat_ferret/preview/_paths.py`'s `confine_child_path()` for the canonical implementation.
 
+## Container Image Hygiene
+
+When adding new toolchain dependencies to `Dockerfile` or `Dockerfile.ci`, use `COPY --from=<official-image>` rather than curl|installer scripts:
+
+```dockerfile
+FROM rust:1.93.0-slim AS rust-src
+# ...
+COPY --from=rust-src /usr/local/cargo /usr/local/cargo
+```
+
+Never use `curl | sh` or `curl | bash` in Dockerfile RUN steps — these create OWASP A08 supply-chain attack surface. Version pins in `FROM` lines must be exact (e.g. `rust:1.93.0-slim`, not `rust:latest` or `rust:1-slim`).
+
+---
+
 ## FFmpeg Production Role
 
 FFmpeg is classified as **non-critical** for production readiness. The render and preview services

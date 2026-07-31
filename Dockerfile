@@ -1,6 +1,7 @@
 # Production Dockerfile for stoat-and-ferret
 #
-# Multi-stage build: the builder stage compiles the Rust extension and
+# Multi-stage build: toolchain stages provide Rust and Node from official images
+# (no curl|sh installers); the builder stage compiles the Rust extension and
 # frontend assets; the runtime stage is a minimal Python image that
 # serves the API with a non-root user and liveness health check.
 #
@@ -9,28 +10,41 @@
 #   docker run -p 8765:8765 stoat-ferret
 
 # ---------------------------------------------------------------------------
+# Toolchain sources — official images, no curl|installer (BL-732)
+# ---------------------------------------------------------------------------
+FROM rust:1.93.0-slim AS rust-src
+FROM node:22-slim AS node-src
+
+# ---------------------------------------------------------------------------
 # Stage 1: Builder — compile Rust extension and frontend assets
 # ---------------------------------------------------------------------------
 FROM python:3.10 AS builder
 
-# Install system build dependencies and Node.js 22 (matches CI)
+# Install system build dependencies (curl removed: Rust/Node via COPY)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl \
         build-essential \
         pkg-config \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust toolchain (minimal profile)
+# Rust toolchain — copied from official image (no curl|sh)
+COPY --from=rust-src /usr/local/rustup /usr/local/rustup
+COPY --from=rust-src /usr/local/cargo /usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH="/usr/local/cargo/bin:$PATH"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-    | sh -s -- -y --default-toolchain stable --profile minimal
+
+# Node.js — copied from official image (no NodeSource installer)
+COPY --from=node-src /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-src /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 # Install maturin for building the PyO3 Rust extension wheel
 RUN pip install --no-cache-dir "maturin>=1.0,<2.0"
+
+# Verify toolchains are functional
+RUN rustc --version && cargo --version && maturin --version
+RUN node --version && npm --version && npx --version
 
 # Copy project metadata first for maximum layer caching on Rust builds
 WORKDIR /build
@@ -66,8 +80,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy uv binary for fast Python dependency installation
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Copy uv binary from pinned official image (no mutable :latest tag)
+COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /usr/local/bin/uv
+RUN uv --version
 
 WORKDIR /app
 
