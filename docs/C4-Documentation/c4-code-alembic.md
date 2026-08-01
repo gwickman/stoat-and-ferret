@@ -89,4 +89,4 @@ graph TD
     ENV -->|"offline mode"| SQL_SCRIPT["SQL Script Output"]
 ```
 
-> **Fixture Origin:** The baseline SQLite schema is stored as an immutable fixture at `tests/fixtures/stoat.seed.db` and tracked in git. On application startup, if the runtime database is absent, the fixture is copied to `data/stoat.db` and Alembic migrations are applied to reach the current schema head.
+> **Fixture Origin:** The baseline SQLite schema is stored as an immutable fixture at `tests/fixtures/stoat.seed.db` and tracked in git. On application startup, if the runtime database is absent, the bootstrap procedure attempts to copy the seed fixture. In containerized environments where the fixture is absent, it gracefully falls back to creating an empty database and running the full Alembic migration chain to establish schema (see `src/stoat_ferret/api/lifespan.py`). The fixture is required in development and CI test contexts.

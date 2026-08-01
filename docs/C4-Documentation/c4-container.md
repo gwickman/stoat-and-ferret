@@ -177,7 +177,15 @@ C4Container
 - **Description**: Embedded file-based database. Not a separate process -- accessed in-process via aiosqlite.
 - **Type**: Database (embedded)
 - **Technology**: SQLite 3, aiosqlite, Alembic
-- **Deployment**: File at `data/stoat.db` (gitignored, ephemeral). On first startup when absent, the fixture at `tests/fixtures/stoat.seed.db` (git-tracked, immutable) is copied here and Alembic migrations are applied to reach head (copy-on-absent bootstrap). Schema managed by 9 Alembic migrations.
+- **Deployment**: File at `data/stoat.db` (gitignored, ephemeral). On first startup when absent, the application attempts to copy the seed fixture from `tests/fixtures/stoat.seed.db` (git-tracked, immutable). If the fixture is absent (containerized environment), the application gracefully falls back to creating an empty database and running the full Alembic migration chain to establish schema. Both paths result in an identical schema. Test fixtures are intentionally omitted from the production runtime image. Schema managed by 9 Alembic migrations.
+
+#### Resilient Bootstrap Strategy
+
+The database bootstrap procedure is resilient to the absence of the seed fixture:
+- **Fixture-present path** (development/test): Copy seed fixture to `data/stoat.db`, then run `alembic upgrade head` to apply any pending migrations
+- **Fixture-absent path** (containerized runtime): Create empty database, run `alembic upgrade head` to establish full schema from scratch
+
+Both paths result in an identical schema and application state. Test fixtures are intentionally omitted from the production runtime image to maintain security and image size constraints. See `src/stoat_ferret/api/lifespan.py` (merge SHA 515a8439) for implementation.
 
 #### Components Deployed
 
