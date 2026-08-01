@@ -87,6 +87,14 @@ On server startup, if `data/stoat.db` is absent, the server automatically copies
 
 The `data/` directory is already in `.gitignore`, so your local runtime database is never committed to or affected by git operations.
 
+> **Container vs local bootstrap:** The behaviour above (fixture copy) applies in
+> local development and CI environments where `tests/fixtures/stoat.seed.db` is
+> present. The production container image intentionally omits the seed fixture; on
+> a container cold-start the server creates an empty database and runs the full
+> Alembic migration chain instead. Both paths produce an identical schema. For
+> container deployment details see
+> [docs/manual/runbook.md](../manual/runbook.md#fixture-vs-runtime-database).
+
 ### Reset Database
 
 To reset your local database to a clean state:
@@ -101,6 +109,21 @@ To reset your local database to a clean state:
    rm -f data/stoat.db-wal data/stoat.db-shm
    ```
 3. Restart the server. It will automatically recreate `data/stoat.db` from `tests/fixtures/stoat.seed.db` and apply any pending migrations.
+
+### Seeding Test Data
+
+For development and test-isolation workflows that need a populated sample project,
+use the seed script against a running server:
+
+```bash
+uv run python scripts/seed_sample_project.py http://localhost:8765
+```
+
+This creates the canonical "Running Montage" sample project (4 clips, 5 effects,
+1 transition) via the API. Add `--force` to re-seed over an existing project.
+The seed fixture (`tests/fixtures/stoat.seed.db`) provides the baseline schema
+and is used automatically on server startup — the seed script is for populating
+additional test data on top of a running instance, not for initialising the database.
 
 ### Developer FAQ
 
