@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v114 — SonarCloud Remediation Wave C, pt.1 — Build & CI Supply-Chain Hardening (2026-08-01)
+
+2 themes, 3 features, PRs #915–#917.
+
+### Theme 1: Container Image Hardening
+
+- BL-732: Replace curl|sh/curl|bash toolchain installers with COPY-from-official-image multi-stage pattern; pin uv to 0.9.26 — eliminates 3 SonarCloud BLOCKER findings (S8482×3) + 1 MAJOR (S6506) (PR #915)
+- BL-734: Pin maturin==1.11.5 with --only-binary :all:; add npm ci --ignore-scripts to Dockerfile builder — esbuild safety verified via real docker build (PR #916)
+
+### Theme 2: CI Workflow Hardening
+
+- BL-747: Add --locked to all 9 uv sync calls; add --ignore-scripts to all 4 npm ci calls; absorb pip-licenses into pyproject.toml dev deps under lockfile governance (PR #917)
+
+---
+
 ## v113 — SonarCloud Remediation Wave B — GUI/Frontend, Scripts & Security Hygiene (2026-07-26)
 
 4 themes, 9 features, PRs #906–#913.
