@@ -19,6 +19,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## v114-hotfix-1 (2026-08-01)
+
+- fix(deps): move httpx to runtime dependencies (BL-751, PR #918). Updated docs/legal/dependency-license-inventory.md to reflect httpx production conveyance.
+
+---
+
 ## v113 — SonarCloud Remediation Wave B — GUI/Frontend, Scripts & Security Hygiene (2026-07-26)
 
 4 themes, 9 features, PRs #906–#913.
