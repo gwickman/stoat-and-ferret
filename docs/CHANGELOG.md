@@ -19,6 +19,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## v114-hotfix-2 — container-bootstrap-resilience (2026-08-01)
+
+- fix(bootstrap): graceful fallback when seed fixture absent in Docker runtime image (BL-752, PR #920). lifespan bootstrap no longer crashes on cold-start when tests/fixtures/stoat.seed.db is absent.
+- docs(bootstrap): update architecture docs for resilient container bootstrap (PR #921). Architecture documentation aligned with graceful-fallback behaviour.
+- docs(operator): update deployment and CI guides for resilient container bootstrap (PR #922). Operator runbook and CI guide updated to document container bootstrap resilience.
+
+---
+
 ## v114-hotfix-1 (2026-08-01)
 
 - fix(deps): move httpx to runtime dependencies (BL-751, PR #918). Updated docs/legal/dependency-license-inventory.md to reflect httpx production conveyance.
