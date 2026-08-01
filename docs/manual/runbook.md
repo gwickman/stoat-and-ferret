@@ -260,10 +260,23 @@ There are two distinct database states:
   on first server start if absent.
 
 **Bootstrap behaviour:** On startup, if `data/stoat.db` does not exist, the server
-automatically copies `tests/fixtures/stoat.seed.db` to `data/stoat.db` and runs
-Alembic migrations to bring the schema to the current head. Subsequent starts
-reuse the existing runtime database and apply only pending migrations (a no-op
-when the schema is already current).
+uses a resilient two-path bootstrap:
+
+- **Fixture present** (local development and CI): Copies
+  `tests/fixtures/stoat.seed.db` to `data/stoat.db`, then runs Alembic migrations
+  to reach the current schema head.
+- **Fixture absent** (production container cold-start): Creates an empty
+  `data/stoat.db` directly and runs the full Alembic migration chain. Both paths
+  produce an identical schema.
+
+Subsequent starts reuse the existing runtime database and apply only pending
+migrations (a no-op when the schema is already current).
+
+The production container image intentionally omits the seed fixture — container
+cold-starts do not require a pre-existing database or operator action. The
+`/health/live` probe should respond within the 30s HEALTHCHECK `start-period`
+defined in the Dockerfile; the full Alembic migration chain typically completes
+well within that window.
 
 Because `data/stoat.db` is gitignored, `git pull` never touches the runtime
 database. See the developer setup guide
@@ -511,6 +524,14 @@ docker run -d --name stoat-ferret \
 # 3. Verify liveness (the smoke script mirrors the container HEALTHCHECK).
 STOAT_HOST=localhost STOAT_PORT=8765 bash scripts/deploy_smoke.sh
 ```
+
+> **First-boot database initialisation:** On a fresh volume mount (no
+> `/app/data/stoat.db`), the container creates an empty database and runs the
+> Alembic migration chain automatically. The Dockerfile `HEALTHCHECK
+> --start-period=30s` provides sufficient time; the full migration chain
+> typically completes well under 30 seconds. No operator action is required — do
+> not attempt to pre-populate the database volume or ship the seed fixture in
+> the production image.
 
 ### Environment variables (mandatory audit)
 

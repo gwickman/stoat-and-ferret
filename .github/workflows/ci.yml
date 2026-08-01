@@ -287,10 +287,11 @@ jobs:
       - name: Initialize database
         run: |
           mkdir -p data
-          # Implicitly bootstraps data/stoat.db from tests/fixtures/stoat.seed.db
-          # if the runtime DB is absent, then applies any pending migrations to
-          # reach the current schema head. See Phase 5 startup sequence in
-          # docs/design/FRAMEWORK_CONTEXT.md for the authoritative description.
+          # Initialises data/stoat.db for E2E tests by running the full Alembic
+          # migration chain against a fresh empty database (same path the production
+          # container takes on cold-start when the seed fixture is absent). In local
+          # development the server lifespan handler copies tests/fixtures/stoat.seed.db
+          # if present; that fixture is not needed here. See FRAMEWORK_CONTEXT-02-startup-db.md.
           uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 
       - name: Run E2E tests
@@ -346,6 +347,10 @@ jobs:
       - name: Run smoke tests
         run: uv run pytest tests/smoke/ -v --timeout=120 --no-cov
 
+  # ffmpeg-tests runs only when source code changes are detected (changes.outputs.code == 'true').
+  # Documentation-only or empty-commit PRs (no src/ or tests/ changes) skip this job;
+  # ci-status still passes because a skipped ffmpeg-tests result is treated as non-blocking.
+  # This is the expected and correct outcome for documentation-only features — see AGENTS.md.
   ffmpeg-tests:
     name: FFmpeg gated tests
     runs-on: ubuntu-latest
@@ -557,6 +562,10 @@ jobs:
         # Size measurement: docker image inspect returns bytes; converts to MB.
         # Threshold read from DOCKER_IMAGE_SIZE_THRESHOLD_MB (job env); fails loudly if unset.
         # Calculate next threshold: ceil(measured_mb * 1.10) after reviewing CI logs.
+        # Bootstrap note: the container does NOT require a pre-existing database. On
+        # cold-start the lifespan handler creates an empty DB and runs alembic upgrade
+        # head automatically. The Dockerfile HEALTHCHECK --start-period=30s allows
+        # sufficient time; the full migration chain typically completes in under 20s.
         run: |
           SIZE_BYTES=$(docker image inspect stoat-ferret:latest --format='{{.Size}}')
           SIZE_MB=$(echo "scale=1; $SIZE_BYTES / 1000000" | bc)
@@ -696,10 +705,11 @@ jobs:
       - name: Initialize database
         run: |
           mkdir -p data
-          # Implicitly bootstraps data/stoat.db from tests/fixtures/stoat.seed.db
-          # if the runtime DB is absent, then applies any pending migrations to
-          # reach the current schema head. See Phase 5 startup sequence in
-          # docs/design/FRAMEWORK_CONTEXT.md for the authoritative description.
+          # Initialises data/stoat.db for E2E tests by running the full Alembic
+          # migration chain against a fresh empty database (same path the production
+          # container takes on cold-start when the seed fixture is absent). In local
+          # development the server lifespan handler copies tests/fixtures/stoat.seed.db
+          # if present; that fixture is not needed here. See FRAMEWORK_CONTEXT-02-startup-db.md.
           uv run alembic -x sqlalchemy.url=sqlite:///data/stoat.db upgrade head
 
       - name: Run accessibility E2E tests
