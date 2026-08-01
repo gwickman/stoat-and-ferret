@@ -31,6 +31,7 @@ Source: `pyproject.toml` `[project.dependencies]`
 | `alembic` | 1.18.4 | MIT | wheel | permissive | compatible | no |
 | `aiosqlite` | 0.22.1 | MIT | wheel | permissive | compatible | no |
 | `fastapi` | 0.128.0 | MIT | wheel | permissive | compatible | no |
+| `httpx` | 0.28.1 | BSD-3-Clause | wheel | permissive | compatible | no |
 | `jsonschema` | 4.26.0 | MIT | wheel | permissive | compatible | no |
 | `pillow` | 12.1.0 | MIT-CMU | wheel | permissive | compatible | no |
 | `prometheus-client` | 0.24.1 | Apache-2.0 AND BSD-2-Clause | wheel | permissive | compatible | no |
@@ -52,7 +53,6 @@ verdict applies to the development environment only.
 | name | version | declared license (SPDX) | conveyance | classification | AGPL-3.0-or-later compat | notice-required |
 |------|---------|------------------------|------------|----------------|--------------------------|-----------------|
 | `coverage` | 7.13.2 | Apache-2.0 | dev-only | permissive | compatible | no |
-| `httpx` | 0.28.1 | BSD-3-Clause | dev-only | permissive | compatible | no |
 | `hypothesis` | 6.152.1 | MPL-2.0 | dev-only | weak-copyleft | compatible (dev-only; not conveyed) | no |
 | `maturin` | 1.11.5 | MIT OR Apache-2.0 | dev-only | permissive | compatible | no |
 | `mypy` | 1.19.1 | MIT | dev-only | permissive | compatible | no |
@@ -119,7 +119,7 @@ Survey of notable transitive deps with weak or strong copyleft licenses (per
 
 | name | version | declared license (SPDX) | role | conveyance | AGPL-3.0-or-later compat | notice-required |
 |------|---------|------------------------|------|------------|--------------------------|-----------------|
-| `certifi` | 2026.1.4 | MPL-2.0 | TLS CA bundle, transitive via httpx (dev) | dev-only | compatible (dev-only) | no |
+| `certifi` | 2026.1.4 | MPL-2.0 | TLS CA bundle, transitive via httpx (runtime) | transitive | compatible | no |
 | `chardet` | 6.0.0.post1 | LGPL-2.1-or-later | Charset detection, transitive | transitive | compatible (LGPL-2.1-or-later + AGPL OK) | no |
 | `CairoSVG` | 2.9.0 | LGPL-3.0-or-later | SVG rendering, transitive | transitive | compatible (LGPL library use) | no |
 | `fpdf2` | 2.8.7 | LGPL-3.0-only | PDF generation, transitive | transitive | compatible (LGPL library use) | no |
@@ -188,7 +188,7 @@ NOTICE.md. If not: document as non-conveyed.
 ## Inventory Completeness Note
 
 This inventory covers:
-- All declared direct Python production dependencies (10 packages)
+- All declared direct Python production dependencies (11 packages)
 - All declared direct Python dev dependencies (8 packages sampled)
 - All declared direct Rust dependencies (4 packages)
 - All Node.js packages (436 packages scanned, notable licenses listed)

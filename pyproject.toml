@@ -15,6 +15,7 @@ dependencies = [
     "prometheus-client>=0.20",
     "aiosqlite>=0.19",
     "fastapi>=0.109",
+    "httpx>=0.26",
     "uvicorn[standard]>=0.27",
     "pydantic-settings>=2.0",
     "jsonschema>=4.26.0",
