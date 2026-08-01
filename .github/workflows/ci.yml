@@ -71,7 +71,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Verify migrations reversible
         run: |
@@ -199,7 +199,7 @@ jobs:
         run: grep -q "cd gui && npx vitest run" AGENTS.md
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: gui
 
       - name: Check generated types are up-to-date
@@ -245,7 +245,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install backend dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Build Python module
         run: uv run maturin develop
@@ -255,7 +255,7 @@ jobs:
           node-version: '22'
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: gui
 
       - name: Build frontend
@@ -338,7 +338,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Build Python module
         run: uv run maturin develop
@@ -374,7 +374,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Build Python module
         run: uv run maturin develop
@@ -409,9 +409,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: |
-          uv sync
-          uv pip install pip
+        run: uv sync --extra uat --locked
 
       - name: Build Python module
         run: uv run maturin develop
@@ -429,15 +427,12 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: gui
 
       - name: Build frontend
         run: npm run build
         working-directory: gui
-
-      - name: Install UAT dependencies
-        run: uv pip install -e ".[uat]"
 
       - name: Get Playwright version
         id: pw-version
@@ -492,7 +487,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Validate OpenAPI spec
         run: uv run openapi-spec-validator gui/openapi.json
@@ -524,7 +519,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Build Python module
         run: uv run maturin develop
@@ -586,10 +581,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
-
-      - name: Install pip-licenses
-        run: uv run pip install pip-licenses
+        run: uv sync --locked
 
       - name: Check dependency license inventory
         run: uv run python scripts/check_dependency_licenses.py --check
@@ -662,7 +654,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install backend dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Build Python module
         run: uv run maturin develop
@@ -672,7 +664,7 @@ jobs:
           node-version: '22'
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: gui
 
       - name: Build frontend
