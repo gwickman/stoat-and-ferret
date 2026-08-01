@@ -42,6 +42,8 @@ FEATURE_FLAG_NAMES: tuple[str, ...] = (
     "batch_rendering",
 )
 
+SEED_FIXTURE_PATH = Path("tests/fixtures/stoat.seed.db")
+
 logger = structlog.get_logger(__name__)
 
 
@@ -68,10 +70,15 @@ async def run_startup_migrations(
     """
     db_path = Path(settings.database_path)
     if not db_path.exists():
-        fixture_path = Path("tests/fixtures/stoat.seed.db")
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(fixture_path, db_path)
-        logger.info("deployment.bootstrap", action="fixture_copy")
+        try:
+            shutil.copy(SEED_FIXTURE_PATH, db_path)
+            logger.info("deployment.bootstrap", action="fixture_copy")
+        except FileNotFoundError:
+            # Fallback: seed fixture absent (containerized environment).
+            # Create empty DB; alembic upgrade head runs via MigrationService below.
+            sqlite3.connect(str(db_path)).close()
+            logger.info("bootstrap_fallback", fixture_absent=True, db_path=str(db_path))
 
     service = MigrationService(
         backup_dir=settings.migration_backup_dir,
@@ -159,6 +166,7 @@ def record_feature_flags(*, settings: Settings, db_path: str) -> None:
 
 __all__ = [
     "FEATURE_FLAG_NAMES",
+    "SEED_FIXTURE_PATH",
     "record_feature_flags",
     "run_startup_migrations",
 ]
