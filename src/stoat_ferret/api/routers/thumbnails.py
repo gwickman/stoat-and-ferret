@@ -37,7 +37,7 @@ router = APIRouter(prefix="/api/v1", tags=["thumbnails"])
 # ---------- Dependency injection ----------
 
 
-async def _get_video_repository(request: Request) -> AsyncVideoRepository:
+def _get_video_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
 
     Args:

@@ -38,7 +38,7 @@ from stoat_ferret.db.project_repository import (
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
 
-async def get_project_repository(request: Request) -> AsyncProjectRepository:
+def get_project_repository(request: Request) -> AsyncProjectRepository:
     """Get project repository from app state.
 
     Returns an injected repository if one was provided to create_app(),
@@ -56,7 +56,7 @@ async def get_project_repository(request: Request) -> AsyncProjectRepository:
     return AsyncSQLiteProjectRepository(request.app.state.db)
 
 
-async def get_clip_repository(request: Request) -> AsyncClipRepository:
+def get_clip_repository(request: Request) -> AsyncClipRepository:
     """Get clip repository from app state.
 
     Returns an injected repository if one was provided to create_app(),
@@ -74,7 +74,7 @@ async def get_clip_repository(request: Request) -> AsyncClipRepository:
     return AsyncSQLiteClipRepository(request.app.state.db)
 
 
-async def get_video_repository(request: Request) -> AsyncVideoRepository:
+def get_video_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
 
     Returns an injected repository if one was provided to create_app(),
@@ -94,7 +94,7 @@ async def get_video_repository(request: Request) -> AsyncVideoRepository:
     return AsyncSQLiteVideoRepository(request.app.state.db)
 
 
-async def get_asset_repository(request: Request) -> AsyncAssetRepository:
+def get_asset_repository(request: Request) -> AsyncAssetRepository:
     """Get asset repository from app state.
 
     Returns an injected repository if one was provided to create_app(),

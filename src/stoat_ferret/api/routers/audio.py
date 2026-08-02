@@ -36,7 +36,7 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["audio"])
 
 
-async def _get_project_repository(request: Request) -> AsyncProjectRepository:
+def _get_project_repository(request: Request) -> AsyncProjectRepository:
     """Get project repository from app state.
 
     Args:
@@ -54,7 +54,7 @@ async def _get_project_repository(request: Request) -> AsyncProjectRepository:
 ProjectRepoDep = Annotated[AsyncProjectRepository, Depends(_get_project_repository)]
 
 
-async def _get_ducking_pair_repository(request: Request) -> AsyncDuckingPairRepository:
+def _get_ducking_pair_repository(request: Request) -> AsyncDuckingPairRepository:
     """Get ducking pair repository from app state.
 
     Args:

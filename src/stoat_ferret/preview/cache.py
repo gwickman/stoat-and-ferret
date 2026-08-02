@@ -158,7 +158,7 @@ class PreviewCache:
 
             now = datetime.now(timezone.utc)
             if now >= entry.expires_at:
-                await self._remove_entry_unlocked(entry, reason="ttl_expired")
+                self._remove_entry_unlocked(entry, reason="ttl_expired")
                 return
 
             entry.last_accessed = now
@@ -255,7 +255,7 @@ class PreviewCache:
             total_bytes=self.used_bytes,
         )
 
-    async def start_cleanup_task(self) -> None:
+    def start_cleanup_task(self) -> None:
         """Start the background periodic cleanup task."""
         if self._cleanup_task is not None:
             return
@@ -282,7 +282,7 @@ class PreviewCache:
         now = datetime.now(timezone.utc)
         expired = [e for e in self._entries.values() if now >= e.expires_at]
         for entry in expired:
-            await self._remove_entry_unlocked(entry, reason="ttl_expired")
+            self._remove_entry_unlocked(entry, reason="ttl_expired")
 
     async def _evict_lru_unlocked(self, needed_bytes: int) -> None:
         """Evict oldest-accessed sessions until there is room. Must be called with lock held.
@@ -301,9 +301,9 @@ class PreviewCache:
         while self._entries and (self.used_bytes + needed_bytes > self._max_bytes):
             # Find the oldest-accessed entry
             oldest = min(self._entries.values(), key=lambda e: e.last_accessed)
-            await self._remove_entry_unlocked(oldest, reason="lru_eviction")
+            self._remove_entry_unlocked(oldest, reason="lru_eviction")
 
-    async def _remove_entry_unlocked(self, entry: CacheEntry, *, reason: str) -> None:
+    def _remove_entry_unlocked(self, entry: CacheEntry, *, reason: str) -> None:
         """Remove a cache entry, deleting its directory. Must be called with lock held.
 
         Args:

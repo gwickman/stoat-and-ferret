@@ -31,7 +31,7 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["tts"])
 
 
-async def _get_tts_cue_repository(request: Request) -> AsyncTtsCueRepository:
+def _get_tts_cue_repository(request: Request) -> AsyncTtsCueRepository:
     """Get TTS cue repository from app state or create one from db connection.
 
     Args:

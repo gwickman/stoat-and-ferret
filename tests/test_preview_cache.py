@@ -334,7 +334,7 @@ class TestBackgroundCleanup:
 
     async def test_cleanup_task_starts_and_stops(self, tmp_path: Path) -> None:
         cache = _make_cache(tmp_path, cleanup_interval_seconds=0.05)
-        await cache.start_cleanup_task()
+        cache.start_cleanup_task()
         assert cache._cleanup_task is not None
         assert not cache._cleanup_task.done()
 
@@ -348,7 +348,7 @@ class TestBackgroundCleanup:
         expires = datetime.now(timezone.utc) + timedelta(seconds=0.1)
         await cache.register("will_expire", expires)
 
-        await cache.start_cleanup_task()
+        cache.start_cleanup_task()
         # Wait for expiry + cleanup interval
         await asyncio.sleep(0.3)
 
@@ -359,10 +359,10 @@ class TestBackgroundCleanup:
 
     async def test_start_cleanup_task_idempotent(self, tmp_path: Path) -> None:
         cache = _make_cache(tmp_path, cleanup_interval_seconds=0.1)
-        await cache.start_cleanup_task()
+        cache.start_cleanup_task()
         first_task = cache._cleanup_task
 
-        await cache.start_cleanup_task()
+        cache.start_cleanup_task()
         assert cache._cleanup_task is first_task  # Same task, not replaced
 
         await cache.stop_cleanup_task()

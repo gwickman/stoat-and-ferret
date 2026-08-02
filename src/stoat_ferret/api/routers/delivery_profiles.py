@@ -37,7 +37,7 @@ router = APIRouter(prefix="/api/v1", tags=["delivery_profiles"])
 # ---------- Dependency injection ----------
 
 
-async def get_delivery_profile_repository(request: Request) -> DeliveryProfileRepository:
+def get_delivery_profile_repository(request: Request) -> DeliveryProfileRepository:
     """Get delivery profile repository from app state.
 
     Args:
