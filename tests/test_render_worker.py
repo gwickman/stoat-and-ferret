@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -23,7 +24,12 @@ import pytest
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
-from stoat_ferret.render.worker import CommandBuildError, RenderWorkerLoop, build_command_for_job
+from stoat_ferret.render.worker import (
+    CommandBuildError,
+    RenderWorkerLoop,
+    TtsCueAudioInput,
+    build_command_for_job,
+)
 
 # ---------------------------------------------------------------------------
 # Test data helpers
@@ -1146,3 +1152,438 @@ class TestWorkerLoopShutdown:
                 await loop.run()
 
         service._handle_failure.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Golden argv helpers (BL-736 AC-1)
+# ---------------------------------------------------------------------------
+
+_G_PROJECT_ID = "proj-golden"
+_G_OUTPUT_PATH = "/renders/golden.mp4"
+_G_VIDEO_PATH_1 = "/media/clip1.mp4"
+_G_VIDEO_PATH_2 = "/media/clip2.mp4"
+_G_VIDEO_PATH_3 = "/media/clip3.mp4"
+_G_SUB_UUID = uuid.UUID("aaaabbbb-cccc-dddd-eeee-000011112222")
+
+
+def _g_make_job(plan: str) -> RenderJob:
+    now = datetime.now(timezone.utc)
+    return RenderJob(
+        id="job-golden",
+        project_id=_G_PROJECT_ID,
+        status=RenderStatus.RUNNING,
+        output_path=_G_OUTPUT_PATH,
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=plan,
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
+    )
+
+
+def _g_make_plan(
+    *,
+    total_duration: float = 30.0,
+    width: int = 1920,
+    height: int = 1080,
+    fps: float = 30.0,
+    codec: str = "libx264",
+    quality_preset: str = "standard",
+    soft_subtitles: list[dict] | None = None,
+) -> str:
+    settings: dict = {
+        "output_format": "mp4",
+        "width": width,
+        "height": height,
+        "codec": codec,
+        "quality_preset": quality_preset,
+        "fps": fps,
+    }
+    if soft_subtitles:
+        settings["soft_subtitles"] = soft_subtitles
+    return json.dumps({"total_duration": total_duration, "settings": settings})
+
+
+def _g_make_clip(
+    cid: str,
+    vid_id: str,
+    *,
+    in_point: int = 0,
+    out_point: int = 900,
+    effects: list[Any] | None = None,
+) -> Clip:
+    now = datetime.now(timezone.utc)
+    return Clip(
+        id=cid,
+        project_id=_G_PROJECT_ID,
+        source_video_id=vid_id,
+        in_point=in_point,
+        out_point=out_point,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+        clip_type="file",
+        effects=effects,
+    )
+
+
+def _g_make_video(vid_id: str, path: str, *, audio_codec: str | None = None) -> Video:
+    now = datetime.now(timezone.utc)
+    return Video(
+        id=vid_id,
+        path=path,
+        filename="source.mp4",
+        duration_frames=1800,
+        frame_rate_numerator=30,
+        frame_rate_denominator=1,
+        width=1920,
+        height=1080,
+        video_codec="h264",
+        file_size=100_000_000,
+        created_at=now,
+        updated_at=now,
+        audio_codec=audio_codec,
+    )
+
+
+def _g_clip_repo(*clips: Clip) -> AsyncMock:
+    r: AsyncMock = AsyncMock()
+    r.list_by_project = AsyncMock(return_value=list(clips))
+    return r
+
+
+def _g_video_repo(*videos: Video) -> AsyncMock:
+    vid_map = {v.id: v for v in videos}
+    r: AsyncMock = AsyncMock()
+
+    async def _get(vid_id: str) -> Video | None:
+        return vid_map.get(vid_id)
+
+    r.get = AsyncMock(side_effect=_get)
+    return r
+
+
+def _g_asset_repo(file_path: str = "/assets/subs/en.srt") -> AsyncMock:
+    r: AsyncMock = AsyncMock()
+    asset = MagicMock()
+    asset.file_path = file_path
+    asset.deleted_at = None
+    r.get_by_id = AsyncMock(return_value=asset)
+    return r
+
+
+# ---------------------------------------------------------------------------
+# TestGoldenArgv — full-list FFmpeg argv characterisation (BL-736 AC-1)
+# ---------------------------------------------------------------------------
+
+
+class TestGoldenArgv:
+    """Full-list golden argv characterisation tests for build_command_for_job.
+
+    Expected values captured by running the real implementation against concrete
+    fixtures; never hand-authored. These lock the full argv contract before the
+    split in Feature 003 (BL-737).
+    """
+
+    @pytest.mark.asyncio
+    async def test_golden_case_1_single_file_no_effects(self) -> None:
+        """Single file clip, no effects -> legacy -vf scale path."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip("clip-1", "vid-1")
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(job, _g_clip_repo(clip), _g_video_repo(vid))
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-vf",
+            "scale=1920:1080",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_2_single_file_with_effects(self) -> None:
+        """Single file clip with effects -> translator filter_complex path."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip(
+            "clip-2", "vid-1", effects=[{"effect_type": "color_filter", "parameters": {}}]
+        )
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(job, _g_clip_repo(clip), _g_video_repo(vid))
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final]",
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_3_single_soft_subtitles_tts(self) -> None:
+        """Single clip + soft subtitles + TTS -> scale+TTS filter_complex + subtitle streams."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip("clip-3", "vid-1")
+        subs = [{"source_asset_id": str(_G_SUB_UUID), "language": "en", "is_default": True}]
+        job = _g_make_job(_g_make_plan(soft_subtitles=subs))
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-1",
+                audio_path="/renders/tts-001.wav",
+                track_id="track-1",
+                start_s=5.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+
+        result = await build_command_for_job(
+            job,
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+            tts_inputs=tts_inputs,
+            asset_repository=_g_asset_repo(),
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/renders/tts-001.wav",
+            "-i",
+            "/assets/subs/en.srt",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]scale=1920:1080[vout];[1:a]adelay=5000|5000,aformat=channel_layouts=stereo[tts0]",
+            "-map",
+            "[vout]",
+            "-map",
+            "[tts0]",
+            "-map",
+            "2:s",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "-c:s",
+            "mov_text",
+            "-metadata:s:s:0",
+            "language=eng",
+            "-disposition:s:0",
+            "default",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_4_multi_clip_no_tts(self) -> None:
+        """Two file clips, no TTS -> multi-clip translator with xfade filter_complex."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-4a", "vid-1")
+        clip_b = _g_make_clip("clip-4b", "vid-2")
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final]"
+            ),
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_5_multi_clip_tts_later_audio(self) -> None:
+        """Two clips, second has audio + TTS -> amix with source_audio_input_idx offset."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid3 = _g_make_video("vid-3", _G_VIDEO_PATH_3, audio_codec="aac")
+        clip_a = _g_make_clip("clip-5a", "vid-1")  # no audio
+        clip_b = _g_make_clip("clip-5b", "vid-3")  # audio_codec="aac"
+        job = _g_make_job(_g_make_plan())
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-5",
+                audio_path="/renders/tts-005.wav",
+                track_id="track-1",
+                start_s=10.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+
+        result = await build_command_for_job(
+            job,
+            _g_clip_repo(clip_a, clip_b),
+            _g_video_repo(vid1, vid3),
+            tts_inputs=tts_inputs,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip3.mp4",
+            "-i",
+            "/renders/tts-005.wav",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final];"
+                "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
+                "[1:a]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_6_multi_clip_soft_subtitles_ffmetadata(self) -> None:
+        """Two clips + soft subtitles + ffmetadata -> subtitle streams + chapter mapping."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-6a", "vid-1")
+        clip_b = _g_make_clip("clip-6b", "vid-2")
+        subs = [{"source_asset_id": str(_G_SUB_UUID), "language": "es", "is_default": False}]
+        job = _g_make_job(_g_make_plan(soft_subtitles=subs))
+
+        result = await build_command_for_job(
+            job,
+            _g_clip_repo(clip_a, clip_b),
+            _g_video_repo(vid1, vid2),
+            ffmetadata_path="/tmp/chapters.ffmetadata",
+            asset_repository=_g_asset_repo(),
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-i",
+            "/tmp/chapters.ffmetadata",
+            "-i",
+            "/assets/subs/en.srt",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final]"
+            ),
+            "-map",
+            "[final]",
+            "-an",
+            "-map",
+            "3:s",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "-map_chapters",
+            "2",
+            "-map_metadata",
+            "2",
+            "-c:s",
+            "mov_text",
+            "-metadata:s:s:0",
+            "language=spa",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_7_no_clips_raises(self) -> None:
+        """No clips in timeline -> CommandBuildError with project-id message."""
+        job = _g_make_job(_g_make_plan())
+        clip_repo: AsyncMock = AsyncMock()
+        clip_repo.list_by_project = AsyncMock(return_value=[])
+
+        with pytest.raises(CommandBuildError) as exc_info:
+            await build_command_for_job(job, clip_repo, AsyncMock())
+
+        assert _G_PROJECT_ID in str(exc_info.value)
+        assert "no clips in timeline" in str(exc_info.value)
