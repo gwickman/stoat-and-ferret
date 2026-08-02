@@ -322,19 +322,20 @@ class RenderExecutor:
         total_duration_us: int,
     ) -> None:
         """Read stdout and report progress until stdout is exhausted."""
-        if process.stdout is not None:
-            while True:
-                try:
-                    chunk = await asyncio.wait_for(process.stdout.readline(), timeout=1.0)
-                except asyncio.TimeoutError:
-                    if process.returncode is not None:
-                        break
-                    continue
-                if not chunk:
+        if process.stdout is None:
+            return
+        while True:
+            try:
+                chunk = await asyncio.wait_for(process.stdout.readline(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if process.returncode is not None:
                     break
+                continue
+            if not chunk:
+                break
 
-                if self._progress_callback and total_duration_us > 0:
-                    await self._parse_and_report_progress(job_id, chunk, total_duration_us)
+            if self._progress_callback and total_duration_us > 0:
+                await self._parse_and_report_progress(job_id, chunk, total_duration_us)
 
     async def _run_process(
         self,
