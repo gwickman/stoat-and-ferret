@@ -171,7 +171,8 @@ def run() -> int:
                 page.wait_for_url("**/gui/render", timeout=10000)
                 render_page = page.locator('[data-testid="render-page"]')
                 render_page.wait_for(timeout=10000)
-                assert render_page.is_visible(), "render-page container is not visible"
+                if not render_page.is_visible():
+                    raise RuntimeError("render-page container is not visible")
                 screenshot(page, journey_dir, 3, "render_page")
                 steps_passed += 1
                 print("  Step 3: Navigate to /gui/render - PASSED")
@@ -191,7 +192,8 @@ def run() -> int:
                 start_btn.click()
                 modal = page.locator('[data-testid="start-render-modal"]')
                 modal.wait_for(timeout=10000)
-                assert modal.is_visible(), "start-render-modal did not open"
+                if not modal.is_visible():
+                    raise RuntimeError("start-render-modal did not open")
                 screenshot(page, journey_dir, 4, "modal_opened")
                 steps_passed += 1
                 print("  Step 4: Start Render modal opened - PASSED")
@@ -213,7 +215,8 @@ def run() -> int:
                 command_preview = page.locator('[data-testid="command-preview"]')
                 command_preview.wait_for(timeout=10000)
                 initial_command = command_preview.text_content() or ""
-                assert initial_command, "Initial command-preview is empty"
+                if not initial_command:
+                    raise RuntimeError("Initial command-preview is empty")
                 screenshot(page, journey_dir, 5, "initial_preview")
                 steps_passed += 1
                 print("  Step 5: Initial command-preview visible - PASSED")
@@ -230,9 +233,10 @@ def run() -> int:
             post_format_command: str = ""
             try:
                 format_options = get_select_options(page, "select-format")
-                assert len(format_options) >= 2, (
-                    f"Expected >=2 format options, got {len(format_options)}: {format_options}"
-                )
+                if len(format_options) < 2:
+                    raise RuntimeError(
+                        f"Expected >=2 format options, got {len(format_options)}: {format_options}"
+                    )
                 # Select the second format (different from auto-selected first)
                 new_format = format_options[1]
                 page.locator('[data-testid="select-format"]').select_option(value=new_format)
@@ -242,11 +246,13 @@ def run() -> int:
                 command_preview = page.locator('[data-testid="command-preview"]')
                 command_preview.wait_for(timeout=8000)
                 post_format_command = command_preview.text_content() or ""
-                assert post_format_command, "Command preview empty after format change"
-                assert post_format_command != initial_command, (
-                    f"Command preview did not change after format change to '{new_format}' "
-                    f"(still: {post_format_command!r})"
-                )
+                if not post_format_command:
+                    raise RuntimeError("Command preview empty after format change")
+                if post_format_command == initial_command:
+                    raise RuntimeError(
+                        f"Command preview did not change after format change to '{new_format}' "
+                        f"(still: {post_format_command!r})"
+                    )
                 screenshot(page, journey_dir, 6, f"format_changed_to_{new_format}")
                 steps_passed += 1
                 print(f"  Step 6: Format changed to '{new_format}', preview updated - PASSED")
@@ -264,9 +270,11 @@ def run() -> int:
             try:
                 quality_select = page.locator('[data-testid="select-quality"]')
                 quality_options = get_select_options(page, "select-quality")
-                assert len(quality_options) >= 2, (
-                    f"Expected >=2 quality options, got {len(quality_options)}: {quality_options}"
-                )
+                if len(quality_options) < 2:
+                    raise RuntimeError(
+                        f"Expected >=2 quality options, got "
+                        f"{len(quality_options)}: {quality_options}"
+                    )
                 # Pick a quality different from the currently-selected one
                 current_quality = quality_select.input_value()
                 other_qualities = [q for q in quality_options if q != current_quality]
@@ -277,11 +285,13 @@ def run() -> int:
                 command_preview = page.locator('[data-testid="command-preview"]')
                 command_preview.wait_for(timeout=8000)
                 post_quality_command = command_preview.text_content() or ""
-                assert post_quality_command, "Command preview empty after quality change"
-                assert post_quality_command != post_format_command, (
-                    f"Command preview did not change after quality change to '{new_quality}' "
-                    f"(still: {post_quality_command!r})"
-                )
+                if not post_quality_command:
+                    raise RuntimeError("Command preview empty after quality change")
+                if post_quality_command == post_format_command:
+                    raise RuntimeError(
+                        f"Command preview did not change after quality change to '{new_quality}' "
+                        f"(still: {post_quality_command!r})"
+                    )
                 screenshot(page, journey_dir, 7, f"quality_changed_to_{new_quality}")
                 steps_passed += 1
                 print(f"  Step 7: Quality changed to '{new_quality}', preview updated - PASSED")
@@ -318,11 +328,13 @@ def run() -> int:
                     command_preview = page.locator('[data-testid="command-preview"]')
                     command_preview.wait_for(timeout=8000)
                     post_encoder_command = command_preview.text_content() or ""
-                    assert post_encoder_command, "Command preview empty after encoder change"
-                    assert post_encoder_command != post_quality_command, (
-                        f"Command preview did not change after encoder change to '{new_encoder}' "
-                        f"(still: {post_encoder_command!r})"
-                    )
+                    if not post_encoder_command:
+                        raise RuntimeError("Command preview empty after encoder change")
+                    if post_encoder_command == post_quality_command:
+                        raise RuntimeError(
+                            f"Command preview did not change after encoder change "
+                            f"to '{new_encoder}' (still: {post_encoder_command!r})"
+                        )
                     screenshot(page, journey_dir, 8, f"encoder_changed_to_{new_encoder}")
                     steps_passed += 1
                     print(f"  Step 8: Encoder changed to '{new_encoder}', preview updated - PASSED")
@@ -338,7 +350,7 @@ def run() -> int:
             steps_total += 1
             try:
                 if console_errors:
-                    raise AssertionError(
+                    raise RuntimeError(
                         f"Found {len(console_errors)} console error(s): "
                         + "; ".join(console_errors[:5])
                     )

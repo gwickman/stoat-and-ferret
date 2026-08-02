@@ -6,6 +6,9 @@
 from __future__ import annotations
 
 import ast
+import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -42,3 +45,44 @@ def test_journey_names_match_script_constants(monkeypatch: pytest.MonkeyPatch) -
                 f"script JOURNEY_NAME={journey_name_value!r}"
             )
     assert not mismatches, "\n".join(mismatches)
+
+
+def test_journey_fails_under_pythonoptimize(tmp_path: Path) -> None:
+    """Verify that converted if/raise checks survive PYTHONOPTIMIZE=1.
+
+    When -O is used, bare assert is elided; if/raise still executes.
+    Forces a step to fail via UAT_SERVER_URL=http://localhost:0 and
+    confirms the journey exits non-zero with steps_failed >= 1.
+    """
+    pytest.importorskip("playwright")
+
+    uat_out = tmp_path / "uat-out"
+    env = os.environ.copy()
+    env["PYTHONOPTIMIZE"] = "1"
+    env["UAT_SERVER_URL"] = "http://localhost:0"
+    env["UAT_OUTPUT_DIR"] = str(uat_out)
+
+    result = subprocess.run(
+        ["python", str(SCRIPTS_DIR / "uat_journey_501.py")],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 1, (
+        f"Expected exit 1 under PYTHONOPTIMIZE=1, got {result.returncode}.\n"
+        f"stdout: {result.stdout[:500]}"
+    )
+
+    # Verify steps_failed >= 1 from JSON result file or stdout
+    result_file = uat_out / "render-export-journey" / "journey_result.json"
+    if result_file.exists():
+        data = json.loads(result_file.read_text(encoding="utf-8"))
+        assert data.get("steps_failed", 0) >= 1, (
+            f"Expected steps_failed >= 1 in result JSON, got: {data}"
+        )
+    else:
+        assert "FAILED" in result.stdout or "FAILED" in result.stderr, (
+            f"Expected FAILED step in output. stdout: {result.stdout[:500]}"
+        )
