@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 import aiosqlite
+import pytest
 
 from stoat_ferret.api.app import create_app, lifespan
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
@@ -69,38 +70,37 @@ class TestCreateTablesAsync:
 class TestLifespanSchemaCreation:
     """Integration tests for schema creation during application lifespan."""
 
-    async def test_lifespan_creates_schema_on_fresh_db(self, tmp_path: object) -> None:
+    async def test_lifespan_creates_schema_on_fresh_db(
+        self, tmp_path: object, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Application lifespan creates schema on a fresh database."""
         from stoat_ferret.api.settings import get_settings
 
         db_path = os.path.join(str(tmp_path), "test.db")
-        os.environ["STOAT_DATABASE_PATH"] = db_path
+        monkeypatch.setenv("STOAT_DATABASE_PATH", db_path)
+        request.addfinalizer(get_settings.cache_clear)
         get_settings.cache_clear()
 
         app = create_app()
 
-        try:
-            async with lifespan(app):
-                # Lifespan has started — schema should be created
-                assert hasattr(app.state, "db")
+        async with lifespan(app):
+            # Lifespan has started — schema should be created
+            assert hasattr(app.state, "db")
 
-            # Verify tables exist by connecting directly
-            db = await aiosqlite.connect(db_path)
-            try:
-                cursor = await db.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-                )
-                tables = {row[0] for row in await cursor.fetchall()}
-                assert "videos" in tables
-                assert "projects" in tables
-                assert "clips" in tables
-                assert "audit_log" in tables
-                assert "tracks" in tables
-            finally:
-                await db.close()
+        # Verify tables exist by connecting directly
+        db = await aiosqlite.connect(db_path)
+        try:
+            cursor = await db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+            tables = {row[0] for row in await cursor.fetchall()}
+            assert "videos" in tables
+            assert "projects" in tables
+            assert "clips" in tables
+            assert "audit_log" in tables
+            assert "tracks" in tables
         finally:
-            os.environ.pop("STOAT_DATABASE_PATH", None)
-            get_settings.cache_clear()
+            await db.close()
 
     async def test_deps_injected_skips_schema_creation(self) -> None:
         """_deps_injected=True bypass skips schema creation (test mode)."""

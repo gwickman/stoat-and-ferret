@@ -9,9 +9,8 @@ full HTTP stack.
 
 from __future__ import annotations
 
-import os
-
 import httpx
+import pytest
 
 from stoat_ferret.api.settings import get_settings
 
@@ -158,40 +157,35 @@ async def test_version_default_retains_all(smoke_client: httpx.AsyncClient) -> N
 
 async def test_version_retention_prunes(
     tmp_path: object,
+    request: pytest.FixtureRequest,
     smoke_client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Retention count prunes old versions through the full stack."""
     client = smoke_client
 
     # Set retention and refresh settings
-    orig = os.environ.get("STOAT_VERSION_RETENTION_COUNT")
-    os.environ["STOAT_VERSION_RETENTION_COUNT"] = "2"
+    monkeypatch.setenv("STOAT_VERSION_RETENTION_COUNT", "2")
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
-    try:
-        resp = await client.post("/api/v1/projects", json={"name": "Retention Prune Project"})
+    resp = await client.post("/api/v1/projects", json={"name": "Retention Prune Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    for i in range(4):
+        resp = await client.post(
+            f"/api/v1/projects/{project_id}/versions",
+            json={"timeline_json": f'{{"v": {i + 1}}}'},
+        )
         assert resp.status_code == 201
-        project_id = resp.json()["id"]
 
-        for i in range(4):
-            resp = await client.post(
-                f"/api/v1/projects/{project_id}/versions",
-                json={"timeline_json": f'{{"v": {i + 1}}}'},
-            )
-            assert resp.status_code == 201
-
-        resp = await client.get(f"/api/v1/projects/{project_id}/versions")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["total"] == 2
-        assert body["versions"][0]["version_number"] == 4
-        assert body["versions"][1]["version_number"] == 3
-    finally:
-        if orig is None:
-            os.environ.pop("STOAT_VERSION_RETENTION_COUNT", None)
-        else:
-            os.environ["STOAT_VERSION_RETENTION_COUNT"] = orig
-        get_settings.cache_clear()
+    resp = await client.get(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert body["versions"][0]["version_number"] == 4
+    assert body["versions"][1]["version_number"] == 3
 
 
 async def test_version_save_no_body_list_restore_round_trip(
@@ -238,36 +232,31 @@ async def test_version_save_no_body_list_restore_round_trip(
 
 
 async def test_version_retention_keep_more_than_total(
+    request: pytest.FixtureRequest,
     smoke_client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """keep_count > total versions is a no-op."""
     client = smoke_client
 
-    orig = os.environ.get("STOAT_VERSION_RETENTION_COUNT")
-    os.environ["STOAT_VERSION_RETENTION_COUNT"] = "10"
+    monkeypatch.setenv("STOAT_VERSION_RETENTION_COUNT", "10")
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
-    try:
-        resp = await client.post("/api/v1/projects", json={"name": "Keep More Project"})
+    resp = await client.post("/api/v1/projects", json={"name": "Keep More Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    for i in range(3):
+        resp = await client.post(
+            f"/api/v1/projects/{project_id}/versions",
+            json={"timeline_json": f'{{"v": {i + 1}}}'},
+        )
         assert resp.status_code == 201
-        project_id = resp.json()["id"]
 
-        for i in range(3):
-            resp = await client.post(
-                f"/api/v1/projects/{project_id}/versions",
-                json={"timeline_json": f'{{"v": {i + 1}}}'},
-            )
-            assert resp.status_code == 201
-
-        resp = await client.get(f"/api/v1/projects/{project_id}/versions")
-        assert resp.status_code == 200
-        assert resp.json()["total"] == 3
-    finally:
-        if orig is None:
-            os.environ.pop("STOAT_VERSION_RETENTION_COUNT", None)
-        else:
-            os.environ["STOAT_VERSION_RETENTION_COUNT"] = orig
-        get_settings.cache_clear()
+    resp = await client.get(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 3
 
 
 async def test_create_version_with_no_body(smoke_client: httpx.AsyncClient) -> None:

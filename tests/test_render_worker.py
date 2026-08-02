@@ -1118,14 +1118,12 @@ class TestWorkerLoopShutdown:
         queue.dequeue = AsyncMock(return_value=None)
         loop = _make_worker_loop(queue=queue)
 
-        with (
-            patch("stoat_ferret.render.worker.asyncio.sleep", new_callable=AsyncMock),
-            pytest.raises(asyncio.CancelledError),
-        ):
+        with patch("stoat_ferret.render.worker.asyncio.sleep", new_callable=AsyncMock):
             task = asyncio.create_task(loop.run())
             await asyncio.sleep(0)  # Yield to let the task start
             task.cancel()
-            await task
+            with pytest.raises(asyncio.CancelledError):
+                await task
 
     @pytest.mark.asyncio
     async def test_no_failure_handler_when_run_job_raises_cancelled(self) -> None:
