@@ -388,37 +388,39 @@ async def _apply_qc_gate(
     Returns:
         Potentially updated job (status set to QC_FAILED when QC check fails).
     """
-    if delivery_profile is not None and job.status == RenderStatus.COMPLETED:
-        qc_service: QCService | None = _get_qc_service(request)
-        render_repo = render_repo_getter(request)
-        if qc_service is not None:
-            try:
-                assertions: dict[str, float | None] = {
-                    "loudness_integrated": delivery_profile.loudness_target_lufs,
-                    "true_peak": delivery_profile.true_peak_ceiling_dbtp,
-                }
-                qc_report = await qc_service.run_checks(
-                    artifact_path=job.output_path,
-                    job_id=job.id,
-                    assertions=assertions,
-                )
-                if qc_report.overall_verdict != "pass":
-                    checks_dict = json.loads(qc_report.checks)
-                    failed_ids = [cid for cid, c in checks_dict.items() if c.get("pass") is False]
-                    error_message = (
-                        "QC failed: " + ", ".join(failed_ids)
-                        if failed_ids
-                        else "QC failed: overall_verdict=fail with no individually-failing "
-                        "checks (assertions may be missing)"
-                    )
-                    await render_repo.update_status(
-                        job.id, RenderStatus.QC_FAILED, error_message=error_message
-                    )
-                    refreshed = await render_repo.get(job.id)
-                    if refreshed is not None:
-                        job = refreshed
-            except FileNotFoundError:
-                pass  # artifact not present in noop/test mode without real render
+    if delivery_profile is None or job.status != RenderStatus.COMPLETED:
+        return job
+    qc_service: QCService | None = _get_qc_service(request)
+    render_repo = render_repo_getter(request)
+    if qc_service is None:
+        return job
+    try:
+        assertions: dict[str, float | None] = {
+            "loudness_integrated": delivery_profile.loudness_target_lufs,
+            "true_peak": delivery_profile.true_peak_ceiling_dbtp,
+        }
+        qc_report = await qc_service.run_checks(
+            artifact_path=job.output_path,
+            job_id=job.id,
+            assertions=assertions,
+        )
+        if qc_report.overall_verdict != "pass":
+            checks_dict = json.loads(qc_report.checks)
+            failed_ids = [cid for cid, c in checks_dict.items() if c.get("pass") is False]
+            error_message = (
+                "QC failed: " + ", ".join(failed_ids)
+                if failed_ids
+                else "QC failed: overall_verdict=fail with no individually-failing "
+                "checks (assertions may be missing)"
+            )
+            await render_repo.update_status(
+                job.id, RenderStatus.QC_FAILED, error_message=error_message
+            )
+            refreshed = await render_repo.get(job.id)
+            if refreshed is not None:
+                job = refreshed
+    except FileNotFoundError:
+        pass  # artifact not present in noop/test mode without real render
     return job
 
 
