@@ -9,6 +9,7 @@ import ast
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -63,7 +64,7 @@ def test_journey_fails_under_pythonoptimize(tmp_path: Path) -> None:
     env["UAT_OUTPUT_DIR"] = str(uat_out)
 
     result = subprocess.run(
-        ["python", str(SCRIPTS_DIR / "uat_journey_501.py")],
+        [sys.executable, str(SCRIPTS_DIR / "uat_journey_501.py")],
         env=env,
         capture_output=True,
         text=True,
