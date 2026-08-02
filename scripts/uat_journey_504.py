@@ -230,7 +230,8 @@ def run() -> int:
                 page.wait_for_url("**/gui/render", timeout=10000)
                 render_page = page.locator('[data-testid="render-page"]')
                 render_page.wait_for(timeout=10000)
-                assert render_page.is_visible(), "render-page container is not visible"
+                if not render_page.is_visible():
+                    raise RuntimeError("render-page container is not visible")
                 screenshot(page, journey_dir, 3, "render_page")
                 steps_passed += 1
                 print("  Step 3: Navigate to /gui/render - PASSED")
@@ -256,14 +257,16 @@ def run() -> int:
                 start_btn.click()
                 modal = page.locator('[data-testid="start-render-modal"]')
                 modal.wait_for(timeout=10000)
-                assert modal.is_visible(), "start-render-modal did not open"
+                if not modal.is_visible():
+                    raise RuntimeError("start-render-modal did not open")
 
                 # Wait for format to auto-select
                 page.wait_for_timeout(500)
                 format_select = page.locator('[data-testid="select-format"]')
                 format_select.wait_for(timeout=5000)
                 format_val = format_select.input_value()
-                assert format_val, f"Format not auto-selected (got '{format_val}')"
+                if not format_val:
+                    raise RuntimeError(f"Format not auto-selected (got '{format_val}')")
 
                 # Submit the render job
                 submit_btn = page.locator('[data-testid="btn-start-render"]')
@@ -275,7 +278,8 @@ def run() -> int:
                 # Wait for a job card to appear
                 job_card_any = page.locator('[data-testid^="render-job-card-"]')
                 job_card_any.first.wait_for(timeout=15000)
-                assert job_card_any.first.is_visible(), "Render job card not visible"
+                if not job_card_any.first.is_visible():
+                    raise RuntimeError("Render job card not visible")
 
                 # Extract job ID from the data-testid of the most recent card
                 # Prefer API lookup for reliability (handles multiple pre-existing cards)
@@ -287,7 +291,8 @@ def run() -> int:
                     testid = job_card_any.first.get_attribute("data-testid") or ""
                     job_id = testid.replace("render-job-card-", "").strip() or None
 
-                assert job_id, "Could not determine render job ID"
+                if not job_id:
+                    raise RuntimeError("Could not determine render job ID")
                 screenshot(page, journey_dir, 4, f"render_job_submitted_id_{job_id[:8]}")
                 steps_passed += 1
                 print(
@@ -351,12 +356,14 @@ def run() -> int:
                     status_label = job_card.locator('[data-testid="status-badge-label"]')
                     status_label.wait_for(timeout=5000)
                     status_text = status_label.text_content() or ""
-                    assert status_text == "Failed", f"Expected status 'Failed', got '{status_text}'"
+                    if status_text != "Failed":
+                        raise RuntimeError(f"Expected status 'Failed', got '{status_text}'")
 
                     # Verify retry button is enabled (only enabled for failed jobs)
                     retry_btn = job_card.locator('[data-testid="retry-btn"]')
                     retry_btn.wait_for(timeout=5000)
-                    assert retry_btn.is_enabled(), "retry-btn should be enabled for a FAILED job"
+                    if not retry_btn.is_enabled():
+                        raise RuntimeError("retry-btn should be enabled for a FAILED job")
 
                     screenshot(page, journey_dir, 6, "failure_state")
                     steps_passed += 1
@@ -383,7 +390,8 @@ def run() -> int:
                     job_card = page.locator(f'[data-testid="render-job-card-{job_id}"]')
                     retry_btn = job_card.locator('[data-testid="retry-btn"]')
                     retry_btn.wait_for(timeout=5000)
-                    assert retry_btn.is_enabled(), "retry-btn not enabled before click"
+                    if not retry_btn.is_enabled():
+                        raise RuntimeError("retry-btn not enabled before click")
                     retry_btn.click()
 
                     # Poll for status to change to "Queued"
@@ -399,10 +407,11 @@ def run() -> int:
                             queued_confirmed = True
                             break
 
-                    assert queued_confirmed, (
-                        f"Status did not return to 'Queued' after retry "
-                        f"(last: '{status_label.text_content()}')"
-                    )
+                    if not queued_confirmed:
+                        raise RuntimeError(
+                            f"Status did not return to 'Queued' after retry "
+                            f"(last: '{status_label.text_content()}')"
+                        )
 
                     screenshot(page, journey_dir, 7, "retry_queued")
                     steps_passed += 1
@@ -419,7 +428,7 @@ def run() -> int:
             steps_total += 1
             try:
                 if console_errors:
-                    raise AssertionError(
+                    raise RuntimeError(
                         f"Found {len(console_errors)} console error(s): "
                         + "; ".join(console_errors[:5])
                     )

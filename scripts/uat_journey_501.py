@@ -150,7 +150,8 @@ def run() -> int:
             try:
                 render_tab = page.locator('[data-testid="nav-tab-render"]')
                 render_tab.wait_for(timeout=10000)
-                assert render_tab.is_visible(), "Render tab is not visible"
+                if not render_tab.is_visible():
+                    raise RuntimeError("Render tab is not visible")
                 screenshot(page, journey_dir, 3, "render_tab_visible")
                 steps_passed += 1
                 print("  Step 3: Render tab visible - PASSED")
@@ -183,7 +184,8 @@ def run() -> int:
             try:
                 render_page = page.locator('[data-testid="render-page"]')
                 render_page.wait_for(timeout=10000)
-                assert render_page.is_visible(), "render-page container is not visible"
+                if not render_page.is_visible():
+                    raise RuntimeError("render-page container is not visible")
                 screenshot(page, journey_dir, 5, "render_page_container")
                 steps_passed += 1
                 print("  Step 5: render-page container rendered - PASSED")
@@ -200,7 +202,8 @@ def run() -> int:
             try:
                 status_bar = page.locator('[data-testid="queue-status-bar"]')
                 status_bar.wait_for(timeout=10000)
-                assert status_bar.is_visible(), "queue-status-bar is not visible"
+                if not status_bar.is_visible():
+                    raise RuntimeError("queue-status-bar is not visible")
                 screenshot(page, journey_dir, 6, "queue_status_bar")
                 steps_passed += 1
                 print("  Step 6: queue-status-bar visible - PASSED")
@@ -217,7 +220,8 @@ def run() -> int:
             try:
                 start_btn = page.locator('[data-testid="start-render-btn"]')
                 start_btn.wait_for(timeout=10000)
-                assert start_btn.is_visible(), "start-render-btn is not visible"
+                if not start_btn.is_visible():
+                    raise RuntimeError("start-render-btn is not visible")
                 screenshot(page, journey_dir, 7, "start_render_btn")
                 steps_passed += 1
                 print("  Step 7: start-render-btn visible - PASSED")
@@ -235,7 +239,8 @@ def run() -> int:
                 page.click('[data-testid="start-render-btn"]')
                 modal = page.locator('[data-testid="start-render-modal"]')
                 modal.wait_for(timeout=10000)
-                assert modal.is_visible(), "start-render-modal did not open"
+                if not modal.is_visible():
+                    raise RuntimeError("start-render-modal did not open")
                 screenshot(page, journey_dir, 8, "render_modal_opened")
                 steps_passed += 1
                 print("  Step 8: Start Render modal opened - PASSED")
@@ -261,8 +266,10 @@ def run() -> int:
 
                 format_val = format_select.input_value()
                 quality_val = quality_select.input_value()
-                assert format_val, f"Format not auto-selected (got '{format_val}')"
-                assert quality_val, f"Quality not auto-selected (got '{quality_val}')"
+                if not format_val:
+                    raise RuntimeError(f"Format not auto-selected (got '{format_val}')")
+                if not quality_val:
+                    raise RuntimeError(f"Quality not auto-selected (got '{quality_val}')")
 
                 screenshot(page, journey_dir, 9, "render_modal_filled")
                 steps_passed += 1
@@ -307,7 +314,8 @@ def run() -> int:
                 # The render job should appear in pending or active section
                 job_card = page.locator('[data-testid^="render-job-card-"]')
                 job_card.first.wait_for(timeout=10000)
-                assert job_card.first.is_visible(), "Render job card not visible in queue"
+                if not job_card.first.is_visible():
+                    raise RuntimeError("Render job card not visible in queue")
                 screenshot(page, journey_dir, 11, "render_job_in_queue")
                 steps_passed += 1
                 print("  Step 11: Render job appears in queue - PASSED")
@@ -325,11 +333,12 @@ def run() -> int:
                 status_label = page.locator('[data-testid="status-badge-label"]').first
                 status_label.wait_for(timeout=5000)
                 label_text = status_label.text_content() or ""
-                assert label_text in (
+                if label_text not in (
                     "Queued",
                     "Rendering",
                     "Completed",
-                ), f"Unexpected status badge: '{label_text}'"
+                ):
+                    raise RuntimeError(f"Unexpected status badge: '{label_text}'")
                 screenshot(page, journey_dir, 12, "render_status_badge")
                 steps_passed += 1
                 print(f"  Step 12: Status badge shows '{label_text}' - PASSED")
@@ -345,7 +354,7 @@ def run() -> int:
             steps_total += 1
             try:
                 if console_errors:
-                    raise AssertionError(
+                    raise RuntimeError(
                         f"Found {len(console_errors)} console error(s): "
                         + "; ".join(console_errors[:5])
                     )

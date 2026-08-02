@@ -218,13 +218,15 @@ def run() -> int:
                 status_bar = page.locator('[data-testid="queue-status-bar"]')
                 status_bar.wait_for(timeout=10000)
                 bar_text = status_bar.text_content() or ""
-                assert "Capacity:" in bar_text, (
-                    f"queue-status-bar missing 'Capacity:' text. Got: '{bar_text}'"
-                )
+                if "Capacity:" not in bar_text:
+                    raise RuntimeError(
+                        f"queue-status-bar missing 'Capacity:' text. Got: '{bar_text}'"
+                    )
                 # Verify max_concurrent is displayed as 4
-                assert "4" in bar_text, (
-                    f"queue-status-bar does not show capacity=4. Got: '{bar_text}'"
-                )
+                if "4" not in bar_text:
+                    raise RuntimeError(
+                        f"queue-status-bar does not show capacity=4. Got: '{bar_text}'"
+                    )
                 screenshot(page, journey_dir, 5, "queue_status_bar_capacity")
                 steps_passed += 1
                 print(f"  Step 5: queue-status-bar shows capacity — '{bar_text.strip()}' - PASSED")
@@ -245,9 +247,10 @@ def run() -> int:
                 # Active job cards would have data-testid matching render-job-card-*
                 active_cards = active_section.locator('[data-testid^="render-job-card-"]')
                 active_count = active_cards.count()
-                assert active_count == 0, (
-                    f"Expected 0 active jobs (no render worker), found {active_count}"
-                )
+                if active_count != 0:
+                    raise RuntimeError(
+                        f"Expected 0 active jobs (no render worker), found {active_count}"
+                    )
                 screenshot(page, journey_dir, 6, "active_section_empty")
                 steps_passed += 1
                 print("  Step 6: active-jobs-section shows no active jobs - PASSED")
@@ -278,9 +281,8 @@ def run() -> int:
                         break
                     page.wait_for_timeout(500)
 
-                assert actual_count >= NUM_JOBS, (
-                    f"Expected >= {NUM_JOBS} pending jobs, found {actual_count}"
-                )
+                if actual_count < NUM_JOBS:
+                    raise RuntimeError(f"Expected >= {NUM_JOBS} pending jobs, found {actual_count}")
                 screenshot(page, journey_dir, 7, f"pending_section_{actual_count}_jobs")
                 steps_passed += 1
                 print(f"  Step 7: pending-jobs-section shows {actual_count} pending jobs - PASSED")
@@ -296,7 +298,7 @@ def run() -> int:
             steps_total += 1
             try:
                 if console_errors:
-                    raise AssertionError(
+                    raise RuntimeError(
                         f"Found {len(console_errors)} console error(s): "
                         + "; ".join(console_errors[:5])
                     )
