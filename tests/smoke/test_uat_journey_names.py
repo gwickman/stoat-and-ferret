@@ -8,14 +8,14 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 SCRIPTS_DIR = Path(__file__).parent.parent.parent / "scripts"
 
 
-def test_journey_names_match_script_constants() -> None:
+def test_journey_names_match_script_constants(monkeypatch: pytest.MonkeyPatch) -> None:
     """Assert every JOURNEY_NAMES entry matches its script's JOURNEY_NAME constant."""
-    import sys
-
-    sys.path.insert(0, str(SCRIPTS_DIR.parent))
+    monkeypatch.syspath_prepend(str(SCRIPTS_DIR.parent))
     from scripts.uat_runner import JOURNEY_NAMES  # type: ignore[import]
 
     mismatches: list[str] = []

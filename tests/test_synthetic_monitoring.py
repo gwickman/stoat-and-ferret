@@ -374,9 +374,12 @@ def _isolated_env(tmp_path: Path) -> Generator[None, None, None]:
 
 async def test_monitoring_does_not_start_when_flag_false(
     _isolated_env: None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """STOAT_SYNTHETIC_MONITORING=false (default) creates no task."""
-    os.environ["STOAT_SYNTHETIC_MONITORING"] = "false"
+    monkeypatch.setenv("STOAT_SYNTHETIC_MONITORING", "false")
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
     app = create_app()
@@ -387,10 +390,13 @@ async def test_monitoring_does_not_start_when_flag_false(
 
 async def test_monitoring_starts_when_flag_true(
     _isolated_env: None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """STOAT_SYNTHETIC_MONITORING=true creates the asyncio task and client."""
-    os.environ["STOAT_SYNTHETIC_MONITORING"] = "true"
-    os.environ["STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS"] = "60"
+    monkeypatch.setenv("STOAT_SYNTHETIC_MONITORING", "true")
+    monkeypatch.setenv("STOAT_SYNTHETIC_MONITORING_INTERVAL_SECONDS", "60")
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
     app = create_app()

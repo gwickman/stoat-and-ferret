@@ -12,7 +12,6 @@ Verifies observable HTTP behaviour of the /health/ready endpoint:
 
 from __future__ import annotations
 
-import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,10 +37,12 @@ async def not_ready_client() -> AsyncGenerator[httpx.AsyncClient, None]:
 
 
 @pytest.fixture
-async def ready_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None]:
+async def ready_client(
+    tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> AsyncGenerator[httpx.AsyncClient, None]:
     """App with startup gate open, db path in tmp_path, no real services injected."""
-    orig_db = os.environ.get("STOAT_DATABASE_PATH")
-    os.environ["STOAT_DATABASE_PATH"] = str(tmp_path / "contract_test.db")
+    monkeypatch.setenv("STOAT_DATABASE_PATH", str(tmp_path / "contract_test.db"))
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
     app = create_app()
@@ -54,12 +55,6 @@ async def ready_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None
         base_url="http://testserver",
     ) as client:
         yield client
-
-    if orig_db is None:
-        os.environ.pop("STOAT_DATABASE_PATH", None)
-    else:
-        os.environ["STOAT_DATABASE_PATH"] = orig_db
-    get_settings.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -185,22 +180,18 @@ async def test_rust_core_check_in_response(ready_client: httpx.AsyncClient) -> N
 # ---------------------------------------------------------------------------
 
 
-async def test_filesystem_check_returns_ok(tmp_path: Path) -> None:
+async def test_filesystem_check_returns_ok(
+    tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """_check_filesystem returns ok when data directory is writable."""
-    orig_db = os.environ.get("STOAT_DATABASE_PATH")
-    os.environ["STOAT_DATABASE_PATH"] = str(tmp_path / "fs_test.db")
+    monkeypatch.setenv("STOAT_DATABASE_PATH", str(tmp_path / "fs_test.db"))
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
     from stoat_ferret.api.routers.health import _check_filesystem
 
     result = await _check_filesystem()
     assert result["status"] == "ok"
-
-    if orig_db is None:
-        os.environ.pop("STOAT_DATABASE_PATH", None)
-    else:
-        os.environ["STOAT_DATABASE_PATH"] = orig_db
-    get_settings.cache_clear()
 
 
 async def test_filesystem_check_in_response(ready_client: httpx.AsyncClient) -> None:

@@ -271,7 +271,8 @@ def test_chromatic_aberration_build_encodes_all_params() -> None:
 def test_chromatic_aberration_deterministic() -> None:
     """build() called twice on the same instance returns the same string."""
     b = ChromaticAberrationBuilder(5, 0, 0, 0, -5, 0)
-    assert str(b.build()) == str(b.build())
+    first = str(b.build())
+    assert first == str(b.build())
 
 
 def test_chromatic_aberration_registered_in_default_registry() -> None:

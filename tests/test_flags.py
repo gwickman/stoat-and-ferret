@@ -171,26 +171,27 @@ def test_record_feature_flags_self_heals_missing_table(
     assert row[0] == 4
 
 
-async def test_startup_audit_inserts_rows(tmp_path: Path, clear_flag_env: None) -> None:
+async def test_startup_audit_inserts_rows(
+    tmp_path: Path,
+    clear_flag_env: None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Running the full lifespan writes exactly four feature_flag_log rows."""
     db_path = tmp_path / "startup.db"
-    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
-    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+    monkeypatch.setenv("STOAT_THUMBNAIL_DIR", str(tmp_path / "thumbnails"))
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
-    try:
-        app = create_app()
-        async with lifespan(app):
-            pass
+    app = create_app()
+    async with lifespan(app):
+        pass
 
-        with sqlite3.connect(str(db_path)) as conn:
-            rows = conn.execute(
-                "SELECT flag_name, flag_value, logged_at FROM feature_flag_log"
-            ).fetchall()
-    finally:
-        os.environ.pop("STOAT_DATABASE_PATH", None)
-        os.environ.pop("STOAT_THUMBNAIL_DIR", None)
-        get_settings.cache_clear()
+    with sqlite3.connect(str(db_path)) as conn:
+        rows = conn.execute(
+            "SELECT flag_name, flag_value, logged_at FROM feature_flag_log"
+        ).fetchall()
 
     assert len(rows) == 4
     names = {r[0] for r in rows}
@@ -206,15 +207,21 @@ async def test_startup_audit_inserts_rows(tmp_path: Path, clear_flag_env: None) 
 
 
 @pytest.fixture
-async def flags_client(tmp_path: Path, clear_flag_env: None) -> httpx.AsyncClient:
+async def flags_client(
+    tmp_path: Path,
+    clear_flag_env: None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> httpx.AsyncClient:
     """Async client exercising the real lifespan, isolated to tmp_path.
 
     The caller may set STOAT_* env vars before entering the fixture; they
     are cleared by ``clear_flag_env`` on teardown.
     """
     db_path = tmp_path / "flags_api.db"
-    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
-    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+    monkeypatch.setenv("STOAT_THUMBNAIL_DIR", str(tmp_path / "thumbnails"))
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
     app = create_app()
@@ -226,10 +233,6 @@ async def flags_client(tmp_path: Path, clear_flag_env: None) -> httpx.AsyncClien
         ) as client,
     ):
         yield client
-
-    os.environ.pop("STOAT_DATABASE_PATH", None)
-    os.environ.pop("STOAT_THUMBNAIL_DIR", None)
-    get_settings.cache_clear()
 
 
 async def test_flags_endpoint_schema(flags_client: httpx.AsyncClient) -> None:
@@ -245,33 +248,33 @@ async def test_flags_endpoint_schema(flags_client: httpx.AsyncClient) -> None:
     assert parsed.batch_rendering is True
 
 
-async def test_flags_endpoint_returns_correct_values(tmp_path: Path, clear_flag_env: None) -> None:
+async def test_flags_endpoint_returns_correct_values(
+    tmp_path: Path,
+    clear_flag_env: None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """With STOAT_TESTING_MODE=true the endpoint returns ``testing_mode: true``.
 
     Re-creates its own app within the test rather than reusing the fixture
     so the env var is in place before ``get_settings()`` is cached.
     """
-    os.environ["STOAT_TESTING_MODE"] = "true"
     db_path = tmp_path / "flags_api.db"
-    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
-    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    monkeypatch.setenv("STOAT_TESTING_MODE", "true")
+    monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+    monkeypatch.setenv("STOAT_THUMBNAIL_DIR", str(tmp_path / "thumbnails"))
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
-    try:
-        app = create_app()
-        async with (
-            lifespan(app),
-            httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://testserver",
-            ) as client,
-        ):
-            resp = await client.get("/api/v1/flags")
-    finally:
-        os.environ.pop("STOAT_TESTING_MODE", None)
-        os.environ.pop("STOAT_DATABASE_PATH", None)
-        os.environ.pop("STOAT_THUMBNAIL_DIR", None)
-        get_settings.cache_clear()
+    app = create_app()
+    async with (
+        lifespan(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client,
+    ):
+        resp = await client.get("/api/v1/flags")
 
     assert resp.status_code == 200
     body = resp.json()

@@ -11,7 +11,6 @@ Also verifies batch state survives a simulated server restart.
 from __future__ import annotations
 
 import asyncio
-import os
 from pathlib import Path
 
 import httpx
@@ -99,7 +98,9 @@ async def test_batch_submit_and_poll(batch_client: httpx.AsyncClient) -> None:
     raise asyncio.TimeoutError(f"Batch {batch_id} did not reach terminal status within 60s")
 
 
-async def test_batch_persists_across_restart(tmp_path: Path) -> None:
+async def test_batch_persists_across_restart(
+    tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Batch state survives a simulated server restart.
 
     Submits a batch job via the first app instance, shuts it down,
@@ -108,11 +109,9 @@ async def test_batch_persists_across_restart(tmp_path: Path) -> None:
     """
     db_path = tmp_path / "restart_test.db"
 
-    orig_db = os.environ.get("STOAT_DATABASE_PATH")
-    orig_thumb = os.environ.get("STOAT_THUMBNAIL_DIR")
-
-    os.environ["STOAT_DATABASE_PATH"] = str(db_path)
-    os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+    monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+    monkeypatch.setenv("STOAT_THUMBNAIL_DIR", str(tmp_path / "thumbnails"))
+    request.addfinalizer(get_settings.cache_clear)
     get_settings.cache_clear()
 
     # --- First app instance: submit batch ---
@@ -175,16 +174,3 @@ async def test_batch_persists_across_restart(tmp_path: Path) -> None:
         assert data["jobs"][0]["project_id"] == project_id
         assert data["jobs"][0]["status"] == "completed"
         assert data["jobs"][0]["progress"] == pytest.approx(1.0)
-
-    # Restore env
-    if orig_db is None:
-        os.environ.pop("STOAT_DATABASE_PATH", None)
-    else:
-        os.environ["STOAT_DATABASE_PATH"] = orig_db
-
-    if orig_thumb is None:
-        os.environ.pop("STOAT_THUMBNAIL_DIR", None)
-    else:
-        os.environ["STOAT_THUMBNAIL_DIR"] = orig_thumb
-
-    get_settings.cache_clear()

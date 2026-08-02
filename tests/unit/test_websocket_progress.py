@@ -14,6 +14,8 @@ import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from stoat_ferret.api.websocket.events import EventType
 from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.preview_repository import InMemoryPreviewRepository
@@ -136,7 +138,9 @@ class TestProgressThrottling:
         # Only the first call should have broadcast
         assert ws.broadcast.call_count == 1
 
-    async def test_calls_after_throttle_interval_broadcast(self) -> None:
+    async def test_calls_after_throttle_interval_broadcast(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Calls after the throttle interval should broadcast."""
         manager, _repo, _gen, ws = _make_manager()
         callback = manager._make_progress_callback("session-123")
@@ -144,13 +148,10 @@ class TestProgressThrottling:
         await callback(0.1)
         assert ws.broadcast.call_count == 1
 
-        # Monkey-patch monotonic to simulate time passing
+        # Capture reference before monkeypatch.setattr to preserve lambda reference
         original_monotonic = time.monotonic
-        try:
-            time.monotonic = lambda: original_monotonic() + 1.0  # type: ignore[assignment]
-            await callback(0.5)
-        finally:
-            time.monotonic = original_monotonic  # type: ignore[assignment]
+        monkeypatch.setattr(time, "monotonic", lambda: original_monotonic() + 1.0)
+        await callback(0.5)
 
         assert ws.broadcast.call_count == 2
 

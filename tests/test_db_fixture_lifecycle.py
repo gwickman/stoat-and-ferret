@@ -10,10 +10,11 @@ Verifies:
 
 from __future__ import annotations
 
-import os
 import sqlite3
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 FIXTURE_PATH = Path("tests/fixtures/stoat.seed.db")
 
@@ -59,7 +60,9 @@ class TestSeedFixture:
 class TestBootstrapLifecycle:
     """Verify bootstrap copy-then-migrate logic via the application lifespan."""
 
-    async def test_lifespan_bootstrap_creates_db_from_fixture(self, tmp_path: Path) -> None:
+    async def test_lifespan_bootstrap_creates_db_from_fixture(
+        self, tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Lifespan creates the database by copying fixture when db path is absent."""
         from stoat_ferret.api.app import create_app, lifespan
         from stoat_ferret.api.settings import get_settings
@@ -67,31 +70,29 @@ class TestBootstrapLifecycle:
         db_path = tmp_path / "test_bootstrap.db"
         assert not db_path.exists(), "Pre-condition: db must be absent"
 
-        os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+        monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+        request.addfinalizer(get_settings.cache_clear)
         get_settings.cache_clear()
 
         app = create_app()
-        try:
-            async with lifespan(app):
-                assert db_path.exists(), "Database must exist after lifespan startup"
-                # Verify the copied+migrated db has expected tables
-                conn = sqlite3.connect(str(db_path))
-                try:
-                    cursor = conn.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table'"
-                        " AND name NOT LIKE 'sqlite_%'"
-                    )
-                    tables = {row[0] for row in cursor.fetchall()}
-                    assert FULL_SCHEMA_TABLES.issubset(tables), (
-                        f"Missing tables after bootstrap: {FULL_SCHEMA_TABLES - tables}"
-                    )
-                finally:
-                    conn.close()
-        finally:
-            os.environ.pop("STOAT_DATABASE_PATH", None)
-            get_settings.cache_clear()
+        async with lifespan(app):
+            assert db_path.exists(), "Database must exist after lifespan startup"
+            # Verify the copied+migrated db has expected tables
+            conn = sqlite3.connect(str(db_path))
+            try:
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                )
+                tables = {row[0] for row in cursor.fetchall()}
+                assert FULL_SCHEMA_TABLES.issubset(tables), (
+                    f"Missing tables after bootstrap: {FULL_SCHEMA_TABLES - tables}"
+                )
+            finally:
+                conn.close()
 
-    async def test_lifespan_bootstrap_fallback_when_fixture_absent(self, tmp_path: Path) -> None:
+    async def test_lifespan_bootstrap_fallback_when_fixture_absent(
+        self, tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Fallback path: absent seed fixture triggers empty-DB + Alembic migration."""
         from stoat_ferret.api.app import create_app, lifespan
         from stoat_ferret.api.settings import get_settings
@@ -102,31 +103,30 @@ class TestBootstrapLifecycle:
         assert not db_path.exists(), "Pre-condition: db must be absent"
         assert not absent_fixture.exists(), "Pre-condition: fake fixture must not exist"
 
-        os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+        monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+        request.addfinalizer(get_settings.cache_clear)
         get_settings.cache_clear()
 
         app = create_app()
-        try:
-            with patch("stoat_ferret.api.lifespan.SEED_FIXTURE_PATH", absent_fixture):
-                async with lifespan(app):
-                    assert db_path.exists(), "Database must exist after fallback bootstrap"
-                    conn = sqlite3.connect(str(db_path))
-                    try:
-                        cursor = conn.execute(
-                            "SELECT name FROM sqlite_master WHERE type='table'"
-                            " AND name NOT LIKE 'sqlite_%'"
-                        )
-                        tables = {row[0] for row in cursor.fetchall()}
-                        assert FULL_SCHEMA_TABLES.issubset(tables), (
-                            f"Missing tables after fallback: {FULL_SCHEMA_TABLES - tables}"
-                        )
-                    finally:
-                        conn.close()
-        finally:
-            os.environ.pop("STOAT_DATABASE_PATH", None)
-            get_settings.cache_clear()
+        with patch("stoat_ferret.api.lifespan.SEED_FIXTURE_PATH", absent_fixture):
+            async with lifespan(app):
+                assert db_path.exists(), "Database must exist after fallback bootstrap"
+                conn = sqlite3.connect(str(db_path))
+                try:
+                    cursor = conn.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                        " AND name NOT LIKE 'sqlite_%'"
+                    )
+                    tables = {row[0] for row in cursor.fetchall()}
+                    assert FULL_SCHEMA_TABLES.issubset(tables), (
+                        f"Missing tables after fallback: {FULL_SCHEMA_TABLES - tables}"
+                    )
+                finally:
+                    conn.close()
 
-    async def test_lifespan_skips_copy_when_db_already_exists(self, tmp_path: Path) -> None:
+    async def test_lifespan_skips_copy_when_db_already_exists(
+        self, tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Lifespan does not overwrite an existing database on startup."""
         from stoat_ferret.api.app import create_app, lifespan
         from stoat_ferret.api.settings import get_settings
@@ -136,16 +136,13 @@ class TestBootstrapLifecycle:
         conn = sqlite3.connect(str(db_path))
         conn.close()
 
-        os.environ["STOAT_DATABASE_PATH"] = str(db_path)
+        monkeypatch.setenv("STOAT_DATABASE_PATH", str(db_path))
+        request.addfinalizer(get_settings.cache_clear)
         get_settings.cache_clear()
 
         app = create_app()
-        try:
-            async with lifespan(app):
-                pass
-        finally:
-            os.environ.pop("STOAT_DATABASE_PATH", None)
-            get_settings.cache_clear()
+        async with lifespan(app):
+            pass
 
         # File must not have been replaced (mtime unchanged or only grown by alembic writes)
         # The key invariant: the original file was not deleted and recreated from fixture.
