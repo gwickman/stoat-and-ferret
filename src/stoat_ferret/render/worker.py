@@ -442,136 +442,188 @@ async def build_command_for_job(
     if not clips:
         raise CommandBuildError(f"Project {job.project_id} has no clips in timeline")
 
-    # --- Multi-clip path: use RenderGraphTranslator (BL-505) ---
+    # --- Dispatch to sub-function ---
     if len(clips) > 1:
-        from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
+        return await _build_multi_clip_command(
+            job,
+            clips,
+            settings,
+            render_settings,
+            ffmetadata_path,
+            tts_inputs,
+            video_repository,
+            asset_repository,
+            effect_registry,
+        )
+    return await _build_single_clip_command(
+        job,
+        clips,
+        settings,
+        segments,
+        total_duration,
+        render_settings,
+        ffmetadata_path,
+        tts_inputs,
+        video_repository,
+        asset_repository,
+        effect_registry,
+    )
 
-        codec_mc: str = settings.get("codec", "libx264")
-        fps_mc: float = settings.get("fps", 30.0)
-        quality_preset_mc: str = settings.get("quality_preset", "standard")
 
-        multi_cmd: list[str] = ["ffmpeg"]
-        source_audio_codec_mc: str | None = None
-        source_audio_input_idx_mc: int = 0
-        cwe_list = []
-        clip_durations_mc: list[float] = []
-        for i, clip in enumerate(clips):
-            source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
-                clip, job.project_id, video_repository, asset_repository, fps_mc
+async def _build_multi_clip_command(
+    job: RenderJob,
+    clips: list[Clip],
+    settings: dict[str, Any],
+    render_settings: RenderPlanSettings,
+    ffmetadata_path: str | None,
+    tts_inputs: list[TtsCueAudioInput] | None,
+    video_repository: AsyncVideoRepository,
+    asset_repository: AsyncAssetRepository | None,
+    effect_registry: EffectRegistry | None,
+) -> list[str]:
+    """Assemble FFmpeg argv for a multi-clip (filter_complex / RenderGraphTranslator) render."""
+    from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
+
+    codec_mc: str = settings.get("codec", "libx264")
+    fps_mc: float = settings.get("fps", 30.0)
+    quality_preset_mc: str = settings.get("quality_preset", "standard")
+
+    multi_cmd: list[str] = ["ffmpeg"]
+    source_audio_codec_mc: str | None = None
+    source_audio_input_idx_mc: int = 0
+    cwe_list = []
+    clip_durations_mc: list[float] = []
+    for i, clip in enumerate(clips):
+        source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
+            clip, job.project_id, video_repository, asset_repository, fps_mc
+        )
+        if clip.clip_type == "image":
+            timeline_start_mc = clip.timeline_start or 0.0
+            timeline_end_mc = clip.timeline_end or 0.0
+            duration_secs = timeline_end_mc - timeline_start_mc
+        elif clip.clip_type == "generator":
+            duration_secs = (clip.out_point - clip.in_point) / fps_mc
+        else:  # file
+            duration_secs = (clip.out_point - clip.in_point) / framerate_mc
+            if source_audio_codec_mc is None and clip_audio_codec:
+                source_audio_codec_mc = clip_audio_codec
+                source_audio_input_idx_mc = i
+        if duration_secs <= 0:
+            raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
+        clip_durations_mc.append(duration_secs)
+        render_effects = _build_clip_render_effects(clip, effect_registry)
+        cwe_list.append(
+            ClipWithEffects(
+                input_index=i,
+                duration_secs=duration_secs,
+                framerate=framerate_mc,
+                source_path=source_path_mc,
+                effects=render_effects,
             )
-            if clip.clip_type == "image":
-                timeline_start_mc = clip.timeline_start or 0.0
-                timeline_end_mc = clip.timeline_end or 0.0
-                duration_secs = timeline_end_mc - timeline_start_mc
-            elif clip.clip_type == "generator":
-                duration_secs = (clip.out_point - clip.in_point) / fps_mc
-            else:  # file
-                duration_secs = (clip.out_point - clip.in_point) / framerate_mc
-                if source_audio_codec_mc is None and clip_audio_codec:
-                    source_audio_codec_mc = clip_audio_codec
-                    source_audio_input_idx_mc = i
-            if duration_secs <= 0:
-                raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
-            clip_durations_mc.append(duration_secs)
-            render_effects = _build_clip_render_effects(clip, effect_registry)
-            cwe_list.append(
-                ClipWithEffects(
-                    input_index=i,
-                    duration_secs=duration_secs,
-                    framerate=framerate_mc,
-                    source_path=source_path_mc,
-                    effects=render_effects,
-                )
-            )
+        )
 
-        translator = RenderGraphTranslator()
-        filter_complex_str, input_paths = translator.translate(cwe_list)
+    translator = RenderGraphTranslator()
+    filter_complex_str, input_paths = translator.translate(cwe_list)
 
-        for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
-            if clip.clip_type == "image":
-                multi_cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
-            elif clip.clip_type == "generator":
-                multi_cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
-            else:
-                multi_cmd.extend(["-i", path])
-
-        if ffmetadata_path:
-            multi_cmd.extend(["-i", ffmetadata_path])
-
-        tts_base: int = 0
-        if tts_inputs:
-            tts_base = len(input_paths) + (1 if ffmetadata_path else 0)
-            for inp in tts_inputs:
-                multi_cmd.extend(["-i", inp.audio_path])
-
-        # Soft subtitle -i inputs: declared BEFORE filter_complex/output -map section (BL-618).
-        # subtitle_base_mc = clip_count + ffmetadata_offset + tts_count
-        subtitle_base_mc: int = 0
-        if render_settings.soft_subtitles:
-            subtitle_base_mc = (
-                len(input_paths)
-                + (1 if ffmetadata_path else 0)
-                + (len(tts_inputs) if tts_inputs else 0)
-            )
-            for spec in render_settings.soft_subtitles:
-                sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
-                multi_cmd.extend(["-i", sub_path])
-
-        if tts_inputs:
-            tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
-            combined_filter = filter_complex_str + ";" + tts_filter_seg
-            if source_audio_codec_mc is not None:
-                src_a = f"[{source_audio_input_idx_mc}:a]"
-                mix_seg = (
-                    f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
-                )
-                combined_filter_with_mix = combined_filter + ";" + mix_seg
-                multi_cmd.extend(
-                    [
-                        "-filter_complex",
-                        combined_filter_with_mix,
-                        "-map",
-                        _LABEL_FINAL,
-                        "-map",
-                        _LABEL_AOUT,
-                    ]
-                )
-            else:
-                multi_cmd.extend(
-                    [
-                        "-filter_complex",
-                        combined_filter,
-                        "-map",
-                        _LABEL_FINAL,
-                        "-map",
-                        tts_audio_label,
-                    ]
-                )
+    for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
+        if clip.clip_type == "image":
+            multi_cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
+        elif clip.clip_type == "generator":
+            multi_cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
         else:
-            multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
+            multi_cmd.extend(["-i", path])
 
-        # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
-        if render_settings.soft_subtitles:
-            for idx, _ in enumerate(render_settings.soft_subtitles):
-                multi_cmd.extend(["-map", f"{subtitle_base_mc + idx}:s"])
+    if ffmetadata_path:
+        multi_cmd.extend(["-i", ffmetadata_path])
 
-        multi_cmd.extend(["-c:v", codec_mc])
-        if codec_mc in ("libx264", "libx265") and quality_preset_mc in _QUALITY_CRF:
-            multi_cmd.extend(["-crf", _QUALITY_CRF[quality_preset_mc]])
-        multi_cmd.extend(["-r", str(fps_mc)])
-        multi_cmd.extend(["-progress", "pipe:1"])
-        if ffmetadata_path:
-            ffmeta_idx = len(input_paths)
-            multi_cmd.extend(["-map_chapters", str(ffmeta_idx), "-map_metadata", str(ffmeta_idx)])
-        if render_settings.soft_subtitles:
-            _add_soft_subtitle_output_flags(
-                multi_cmd, job.output_format, render_settings.soft_subtitles
+    tts_base: int = 0
+    if tts_inputs:
+        tts_base = len(input_paths) + (1 if ffmetadata_path else 0)
+        for inp in tts_inputs:
+            multi_cmd.extend(["-i", inp.audio_path])
+
+    # Soft subtitle -i inputs: declared BEFORE filter_complex/output -map section (BL-618).
+    # subtitle_base_mc = clip_count + ffmetadata_offset + tts_count
+    subtitle_base_mc: int = 0
+    if render_settings.soft_subtitles:
+        subtitle_base_mc = (
+            len(input_paths)
+            + (1 if ffmetadata_path else 0)
+            + (len(tts_inputs) if tts_inputs else 0)
+        )
+        for spec in render_settings.soft_subtitles:
+            sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
+            multi_cmd.extend(["-i", sub_path])
+
+    if tts_inputs:
+        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
+        combined_filter = filter_complex_str + ";" + tts_filter_seg
+        if source_audio_codec_mc is not None:
+            src_a = f"[{source_audio_input_idx_mc}:a]"
+            mix_seg = (
+                f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
             )
-        multi_cmd.append(job.output_path)
-        return multi_cmd
+            combined_filter_with_mix = combined_filter + ";" + mix_seg
+            multi_cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_filter_with_mix,
+                    "-map",
+                    _LABEL_FINAL,
+                    "-map",
+                    _LABEL_AOUT,
+                ]
+            )
+        else:
+            multi_cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_filter,
+                    "-map",
+                    _LABEL_FINAL,
+                    "-map",
+                    tts_audio_label,
+                ]
+            )
+    else:
+        multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
 
-    # --- Single-clip path ---
+    # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
+    if render_settings.soft_subtitles:
+        for idx, _ in enumerate(render_settings.soft_subtitles):
+            multi_cmd.extend(["-map", f"{subtitle_base_mc + idx}:s"])
+
+    multi_cmd.extend(["-c:v", codec_mc])
+    if codec_mc in ("libx264", "libx265") and quality_preset_mc in _QUALITY_CRF:
+        multi_cmd.extend(["-crf", _QUALITY_CRF[quality_preset_mc]])
+    multi_cmd.extend(["-r", str(fps_mc)])
+    multi_cmd.extend(["-progress", "pipe:1"])
+    if ffmetadata_path:
+        ffmeta_idx = len(input_paths)
+        multi_cmd.extend(["-map_chapters", str(ffmeta_idx), "-map_metadata", str(ffmeta_idx)])
+    if render_settings.soft_subtitles:
+        _add_soft_subtitle_output_flags(
+            multi_cmd, job.output_format, render_settings.soft_subtitles
+        )
+    multi_cmd.append(job.output_path)
+    return multi_cmd
+
+
+async def _build_single_clip_command(
+    job: RenderJob,
+    clips: list[Clip],
+    settings: dict[str, Any],
+    segments: list[dict[str, Any]],
+    total_duration: float,
+    render_settings: RenderPlanSettings,
+    ffmetadata_path: str | None,
+    tts_inputs: list[TtsCueAudioInput] | None,
+    video_repository: AsyncVideoRepository,
+    asset_repository: AsyncAssetRepository | None,
+    effect_registry: EffectRegistry | None,
+) -> list[str]:
+    """Assemble FFmpeg argv for a single-clip render."""
     first_clip = clips[0]
     use_translator_sc = first_clip.clip_type in ("image", "generator") or bool(first_clip.effects)
 
