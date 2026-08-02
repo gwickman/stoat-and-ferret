@@ -4,6 +4,27 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v115 — Python Test-Net Strengthening (2026-08-02)
+
+1 theme, 3 features, PRs #924–#925. Test-only changes — zero product code mutations. 3,843 tests
+pass, 0 regressions.
+
+### Theme 1: Test-Net Strengthening
+
+- BL-731: Migrate env/path/attr mutations to monkeypatch fixture — converted 24 S8997 direct
+  `os.environ`/`sys.path`/module-attr mutation sites and 2 assertion-hygiene sites across 11 test
+  files; `request.addfinalizer(get_settings.cache_clear)` added to all settings-mutating tests
+  (PR #924)
+- BL-730: Convert UAT journey assert statements to if/raise for PYTHONOPTIMIZE=1 safety —
+  replaced 33 bare `assert` statements and 4 `raise AssertionError` sites across 4 journey scripts
+  with explicit `if not condition: raise RuntimeError(msg)` forms; added
+  `test_journey_fails_under_pythonoptimize` characterization test (PR #925)
+- BL-711: Classify ~198 float equality assertions across 57 test files (analytical-only, no PR) —
+  10 computed-exact-domain sites, ~188 passthrough/round-trip sites, 0 computed-inexact sites; all
+  207 SonarCloud S1244 issues confirmed closed following v112 rescan
+
+---
+
 ## v114 — SonarCloud Remediation Wave C, pt.1 — Build & CI Supply-Chain Hardening (2026-08-01)
 
 2 themes, 3 features, PRs #915–#917.
