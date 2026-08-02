@@ -71,7 +71,7 @@ class ProxyBatchResponse(BaseModel):
 # ---------- Dependency injection ----------
 
 
-async def get_proxy_repository(request: Request) -> AsyncProxyRepository:
+def get_proxy_repository(request: Request) -> AsyncProxyRepository:
     """Get proxy repository from app state.
 
     Args:
@@ -86,7 +86,7 @@ async def get_proxy_repository(request: Request) -> AsyncProxyRepository:
     return SQLiteProxyRepository(request.app.state.db)
 
 
-async def get_video_repository(request: Request) -> AsyncVideoRepository:
+def get_video_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
 
     Args:

@@ -101,7 +101,7 @@ _ENCODER_TYPE_NAMES: dict[str, str] = {
 # ---------- Dependency injection ----------
 
 
-async def get_encoder_cache_repository(request: Request) -> AsyncEncoderCacheRepository:
+def get_encoder_cache_repository(request: Request) -> AsyncEncoderCacheRepository:
     """Get encoder cache repository from app state.
 
     Args:
@@ -118,7 +118,7 @@ async def get_encoder_cache_repository(request: Request) -> AsyncEncoderCacheRep
     return AsyncSQLiteEncoderCacheRepository(request.app.state.db)
 
 
-async def get_render_repository(request: Request) -> AsyncRenderRepository:
+def get_render_repository(request: Request) -> AsyncRenderRepository:
     """Get render repository from app state.
 
     Args:
@@ -133,7 +133,7 @@ async def get_render_repository(request: Request) -> AsyncRenderRepository:
     return AsyncSQLiteRenderRepository(request.app.state.db)
 
 
-async def get_render_service(request: Request) -> RenderService:
+def get_render_service(request: Request) -> RenderService:
     """Get render service from app state.
 
     Args:
@@ -154,7 +154,7 @@ async def get_render_service(request: Request) -> RenderService:
     return service
 
 
-async def get_render_queue(request: Request) -> RenderQueue:
+def get_render_queue(request: Request) -> RenderQueue:
     """Get render queue from app state.
 
     Args:
@@ -181,12 +181,12 @@ RenderQueueDep = Annotated[RenderQueue, Depends(get_render_queue)]
 EncoderCacheDep = Annotated[AsyncEncoderCacheRepository, Depends(get_encoder_cache_repository)]
 
 
-async def _get_qc_service(request: Request) -> QCService | None:
+def _get_qc_service(request: Request) -> QCService | None:
     """Return QCService from app state, or None if not configured."""
     return getattr(request.app.state, "qc_service", None)
 
 
-async def _get_delivery_profile_repository(request: Request) -> DeliveryProfileRepository | None:
+def _get_delivery_profile_repository(request: Request) -> DeliveryProfileRepository | None:
     """Return delivery profile repository from app state, or None if not configured."""
     return getattr(request.app.state, "delivery_profile_repository", None)
 
@@ -350,7 +350,7 @@ async def _resolve_delivery_profile(request: Request, name: str | None) -> Any:
     """
     if name is None:
         return None
-    dp_repo = await _get_delivery_profile_repository(request)
+    dp_repo = _get_delivery_profile_repository(request)
     if dp_repo is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -389,8 +389,8 @@ async def _apply_qc_gate(
         Potentially updated job (status set to QC_FAILED when QC check fails).
     """
     if delivery_profile is not None and job.status == RenderStatus.COMPLETED:
-        qc_service: QCService | None = await _get_qc_service(request)
-        render_repo = await render_repo_getter(request)
+        qc_service: QCService | None = _get_qc_service(request)
+        render_repo = render_repo_getter(request)
         if qc_service is not None:
             try:
                 assertions: dict[str, float | None] = {

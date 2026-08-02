@@ -35,7 +35,7 @@ from stoat_ferret.db.version_repository import (
 router = APIRouter(prefix="/api/v1", tags=["versions"])
 
 
-async def get_project_repository(request: Request) -> AsyncProjectRepository:
+def get_project_repository(request: Request) -> AsyncProjectRepository:
     """Get project repository from app state.
 
     Args:
@@ -50,7 +50,7 @@ async def get_project_repository(request: Request) -> AsyncProjectRepository:
     return AsyncSQLiteProjectRepository(request.app.state.db)
 
 
-async def get_version_repository(request: Request) -> AsyncVersionRepository:
+def get_version_repository(request: Request) -> AsyncVersionRepository:
     """Get version repository from app state.
 
     Args:
@@ -65,7 +65,7 @@ async def get_version_repository(request: Request) -> AsyncVersionRepository:
     return AsyncSQLiteVersionRepository(request.app.state.db)
 
 
-async def get_timeline_repository(request: Request) -> AsyncTimelineRepository:
+def get_timeline_repository(request: Request) -> AsyncTimelineRepository:
     """Get timeline repository from app state.
 
     Args:
@@ -80,7 +80,7 @@ async def get_timeline_repository(request: Request) -> AsyncTimelineRepository:
     return AsyncSQLiteTimelineRepository(request.app.state.db)
 
 
-async def get_clip_repository(request: Request) -> AsyncClipRepository:
+def get_clip_repository(request: Request) -> AsyncClipRepository:
     """Get clip repository from app state.
 
     Args:

@@ -59,7 +59,7 @@ router = APIRouter(prefix="/api/v1", tags=["effects"])
 _default_registry: EffectRegistry | None = None
 
 
-async def get_effect_registry(request: Request) -> EffectRegistry:
+def get_effect_registry(request: Request) -> EffectRegistry:
     """Get effect registry from app state.
 
     Falls back to a default registry if not injected via create_app().
@@ -81,7 +81,7 @@ async def get_effect_registry(request: Request) -> EffectRegistry:
     return _default_registry
 
 
-async def _get_project_repository(request: Request) -> AsyncProjectRepository:
+def _get_project_repository(request: Request) -> AsyncProjectRepository:
     """Get project repository from app state."""
     repo: AsyncProjectRepository | None = getattr(request.app.state, "project_repository", None)
     if repo is not None:
@@ -89,7 +89,7 @@ async def _get_project_repository(request: Request) -> AsyncProjectRepository:
     return AsyncSQLiteProjectRepository(request.app.state.db)
 
 
-async def _get_clip_repository(request: Request) -> AsyncClipRepository:
+def _get_clip_repository(request: Request) -> AsyncClipRepository:
     """Get clip repository from app state."""
     repo: AsyncClipRepository | None = getattr(request.app.state, "clip_repository", None)
     if repo is not None:
@@ -97,7 +97,7 @@ async def _get_clip_repository(request: Request) -> AsyncClipRepository:
     return AsyncSQLiteClipRepository(request.app.state.db)
 
 
-async def _get_thumbnail_service(request: Request) -> ThumbnailService:
+def _get_thumbnail_service(request: Request) -> ThumbnailService:
     """Get or create a ThumbnailService for effect preview thumbnails."""
     service: ThumbnailService | None = getattr(request.app.state, "effect_thumbnail_service", None)
     if service is not None:

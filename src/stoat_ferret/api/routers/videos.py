@@ -42,7 +42,7 @@ router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 
 
-async def get_repository(request: Request) -> AsyncVideoRepository:
+def get_repository(request: Request) -> AsyncVideoRepository:
     """Get video repository from app state.
 
     Returns an injected repository if one was provided to create_app(),

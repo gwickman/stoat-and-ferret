@@ -75,7 +75,7 @@ def _get_preview_manager(request: Request) -> PreviewManager:
     return manager
 
 
-async def _get_project_repository(request: Request) -> AsyncProjectRepository:
+def _get_project_repository(request: Request) -> AsyncProjectRepository:
     """Get project repository from app state.
 
     Args:
@@ -90,7 +90,7 @@ async def _get_project_repository(request: Request) -> AsyncProjectRepository:
     return AsyncSQLiteProjectRepository(request.app.state.db)
 
 
-async def _get_clip_repository(request: Request) -> AsyncClipRepository:
+def _get_clip_repository(request: Request) -> AsyncClipRepository:
     """Get clip repository from app state.
 
     Args:
@@ -228,8 +228,8 @@ async def start_preview(
     """
     _check_ffmpeg_available()
     manager = _get_preview_manager(request)
-    project_repo = await _get_project_repository(request)
-    clip_repo = await _get_clip_repository(request)
+    project_repo = _get_project_repository(request)
+    clip_repo = _get_clip_repository(request)
 
     # Verify project exists
     project = await project_repo.get(project_id)
