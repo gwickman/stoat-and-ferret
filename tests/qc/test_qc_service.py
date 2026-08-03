@@ -868,7 +868,9 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(sample_video_pat
     measured = result.get("measured")
     if measured is not None:
         assert isinstance(measured, float), f"Expected float, got {type(measured)}: {measured!r}"
-        assert -1.0 <= measured <= 1.0, f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
+        assert -1.0 <= measured <= 1.0, (
+            f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
+        )
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
