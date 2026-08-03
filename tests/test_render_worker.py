@@ -1215,6 +1215,9 @@ def _g_make_clip(
     in_point: int = 0,
     out_point: int = 900,
     effects: list[Any] | None = None,
+    clip_type: str = "file",
+    source_asset_id: str | None = None,
+    generator_params: dict[str, Any] | None = None,
 ) -> Clip:
     now = datetime.now(timezone.utc)
     return Clip(
@@ -1226,8 +1229,10 @@ def _g_make_clip(
         timeline_position=0,
         created_at=now,
         updated_at=now,
-        clip_type="file",
+        clip_type=clip_type,
         effects=effects,
+        source_asset_id=source_asset_id,
+        generator_params=generator_params,
     )
 
 
@@ -1585,5 +1590,99 @@ class TestGoldenArgv:
         with pytest.raises(CommandBuildError) as exc_info:
             await build_command_for_job(job, clip_repo, AsyncMock())
 
-        assert _G_PROJECT_ID in str(exc_info.value)
-        assert "no clips in timeline" in str(exc_info.value)
+        assert str(exc_info.value) == f"Project {_G_PROJECT_ID} has no clips in timeline"
+
+    @pytest.mark.asyncio
+    async def test_golden_case_8_single_image_clip(self) -> None:
+        """Single image clip -> translator filter_complex path with -loop 1."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip(
+            "clip-8",
+            "vid-1",
+            clip_type="image",
+            source_asset_id="img-asset-1",
+        )
+        job = _g_make_job(_g_make_plan())
+
+        img_asset_repo: AsyncMock = AsyncMock()
+        img_asset = MagicMock()
+        img_asset.file_path = "/assets/images/photo.jpg"
+        img_asset.deleted_at = None
+        img_asset_repo.get_by_id = AsyncMock(return_value=img_asset)
+
+        result = await build_command_for_job(
+            job,
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+            asset_repository=img_asset_repo,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-loop",
+            "1",
+            "-i",
+            "/assets/images/photo.jpg",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final]",
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_9_single_generator_clip(self) -> None:
+        """Single generator clip -> translator filter_complex path with -f lavfi."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip(
+            "clip-9",
+            "vid-1",
+            clip_type="generator",
+            generator_params={"lavfi_string": "color=c=black:s=1920x1080:r=30"},
+        )
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(
+            job,
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=1920x1080:r=30",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final]",
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
