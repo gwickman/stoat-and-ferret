@@ -4,6 +4,19 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v117 — FastAPI Declaration Conventions (2026-08-03)
+
+1 theme, 4 features, PRs #932–#935. 20/20 ACs verified, 0 quality gate failures.
+
+### Theme 1: fastapi-declaration-conventions
+
+- BL-740: Remove 92 redundant `response_model=` decorators (PR #932)
+- BL-743: Convert 11 parameters to Annotated form + FAST002 lint gate (PR #933)
+- BL-745: Document HTTPException responses with full `$ref` blocks + machine-checked test (PR #934)
+- Update smoke-test-harness guide to document schema contract validation tests (PR #935)
+
+---
+
 ## v116 — SonarCloud Wave C pt.3 — Backend Behaviour-Preserving Refactors (2026-08-02)
 
 2 themes, 6 features, PRs #926–#931.
