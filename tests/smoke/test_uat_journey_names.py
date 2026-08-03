@@ -87,3 +87,12 @@ def test_journey_fails_under_pythonoptimize(tmp_path: Path) -> None:
         assert "FAILED" in result.stdout or "FAILED" in result.stderr, (
             f"Expected FAILED step in output. stdout: {result.stdout[:500]}"
         )
+
+
+def test_pythonoptimize_converted_guard_fires() -> None:
+    """Under python -O, converted if/raise guards still fire (unlike bare assert)."""
+    result = subprocess.run(
+        [sys.executable, "-O", str(SCRIPTS_DIR / "uat_guard_check.py")],
+        capture_output=True,
+    )
+    assert result.returncode != 0
