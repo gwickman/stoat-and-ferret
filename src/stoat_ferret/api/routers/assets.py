@@ -16,7 +16,7 @@ import io
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
@@ -226,7 +226,7 @@ async def _sniff_content(
 async def upload_asset(
     request: Request,
     file: UploadFile,
-    kind: Literal["image", "audio", "subtitle", "font", "lut"] = Query(default="image"),
+    kind: Annotated[Literal["image", "audio", "subtitle", "font", "lut"], Query()] = "image",
 ) -> AssetRead:
     """Upload an asset file (multipart/form-data).
 
@@ -303,9 +303,9 @@ async def upload_asset(
 @router.get("")
 async def list_assets(
     request: Request,
-    kind: str | None = Query(default=None, description="Filter by asset kind."),
-    offset: int = Query(default=0, ge=0, description="Pagination offset."),
-    limit: int = Query(default=50, ge=1, le=200, description="Page size."),
+    kind: Annotated[str | None, Query(description="Filter by asset kind.")] = None,
+    offset: Annotated[int, Query(ge=0, description="Pagination offset.")] = 0,
+    limit: Annotated[int, Query(ge=1, le=200, description="Page size.")] = 50,
 ) -> AssetListResponse:
     """List active (non-deleted) assets with optional kind filter."""
     repo = _get_repo(request)
