@@ -200,6 +200,17 @@ async def clear_cache(
 @router.post(
     "/projects/{project_id}/preview/start",
     status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        404: {"description": "Project not found"},
+        422: {
+            "description": "Validation error",
+            "content": {
+                "application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}
+            },
+        },
+        429: {"description": "Session limit reached"},
+        503: {"description": "FFmpeg unavailable or preview service not running"},
+    },
 )
 async def start_preview(
     project_id: str,

@@ -5828,7 +5828,21 @@ export interface operations {
                     "application/json": components["schemas"]["AssetRead"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unsupported media type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5836,6 +5850,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Upload processing error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5858,6 +5879,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AssetRead"];
                 };
+            };
+            /** @description Asset not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -5883,6 +5911,13 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Asset not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5918,6 +5953,13 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Asset not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -6642,6 +6684,13 @@ export interface operations {
                     "application/json": components["schemas"]["MarkerResponse"][];
                 };
             };
+            /** @description Project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -6677,7 +6726,14 @@ export interface operations {
                     "application/json": components["schemas"]["MarkerResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6702,6 +6758,13 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Marker not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6743,7 +6806,14 @@ export interface operations {
                     "application/json": components["schemas"]["MarkerResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Marker not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8166,7 +8236,14 @@ export interface operations {
                     "application/json": components["schemas"]["PreviewStartResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8174,6 +8251,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Session limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description FFmpeg unavailable or preview service not running */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
