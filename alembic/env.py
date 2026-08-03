@@ -22,11 +22,13 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = None
 
+_SQLALCHEMY_URL_KEY = "sqlalchemy.url"
+
 # Support -x sqlalchemy.url=... override from CLI
-cmd_line_url = config.get_main_option("sqlalchemy.url")
-x_url = context.get_x_argument(as_dictionary=True).get("sqlalchemy.url")
+cmd_line_url = config.get_main_option(_SQLALCHEMY_URL_KEY)
+x_url = context.get_x_argument(as_dictionary=True).get(_SQLALCHEMY_URL_KEY)
 if x_url:
-    config.set_main_option("sqlalchemy.url", x_url)
+    config.set_main_option(_SQLALCHEMY_URL_KEY, x_url)
 
 
 def run_migrations_offline() -> None:
@@ -41,7 +43,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option(_SQLALCHEMY_URL_KEY)
     context.configure(
         url=url,
         target_metadata=target_metadata,

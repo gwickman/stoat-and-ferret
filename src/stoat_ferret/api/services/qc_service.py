@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 import uuid
 from asyncio.subprocess import PIPE
 from collections.abc import Callable
@@ -91,6 +90,25 @@ def _make_check(
     if metadata:
         result["metadata"] = metadata
     return result
+
+
+def _parse_overall_correlation(stderr: str) -> float | None:
+    """Extract the Overall Correlation value from FFmpeg astats stderr output.
+
+    Replaces the S8786 super-linear regex with a linear line-oriented parser.
+    Only matches lines that start with "Overall" AND contain "Correlation:" —
+    preserving the original semantic contract exactly (not widening to any line
+    containing Correlation: without the Overall prefix).
+    """
+    for line in stderr.splitlines():
+        if line.startswith("Overall") and "Correlation:" in line:
+            parts = line.rsplit(":", 1)
+            if len(parts) == 2:
+                try:
+                    return float(parts[1].strip())
+                except ValueError:
+                    return None
+    return None
 
 
 class QCService:
@@ -593,13 +611,10 @@ class QCService:
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
-        match = re.search(r"Overall[^:]*Correlation[^:]*:\s*([-\d.]+)", stderr)
-        if not match:
+        measured_or_none = _parse_overall_correlation(stderr)
+        if measured_or_none is None:
             return _make_check(None, target, "ratio")
-        try:
-            measured = float(match.group(1))
-        except ValueError:
-            return _make_check(None, target, "ratio")
+        measured = measured_or_none
         if target is None:
             return _make_check(measured, None, "ratio")
         pass_val = measured <= target

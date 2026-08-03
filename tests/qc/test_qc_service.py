@@ -786,6 +786,91 @@ async def test_decode_integrity_corrupt_artifact_fails() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Unit tests — BL-738-AC-4 linear parser for _check_spatial_correlation
+# ---------------------------------------------------------------------------
+
+
+def test_parse_overall_correlation_corpus_equivalence() -> None:
+    """Linear parser and old regex agree on a representative corpus (BL-738-AC-4).
+
+    Verifies the contract-preservation invariant: the new parser must return
+    identical accepts/rejects/captures as the original regex on all inputs.
+    """
+    import re
+
+    from stoat_ferret.api.services.qc_service import _parse_overall_correlation
+
+    old_regex = re.compile(r"Overall[^:]*Correlation[^:]*:\s*([-\d.]+)")
+
+    def _old_parse(stderr: str) -> float | None:
+        m = old_regex.search(stderr)
+        if not m:
+            return None
+        try:
+            return float(m.group(1))
+        except ValueError:
+            return None
+
+    corpus = [
+        # (description, stderr_snippet)
+        ("exact match", "Overall Correlation: 0.9999\n"),
+        ("negative value", "Overall Correlation: -0.15\n"),
+        ("with noise before", "some noise\nOverall Correlation: 0.5\n"),
+        ("no correlation line", "Overall RMS level (dB): -23.0\n"),
+        ("empty string", ""),
+        ("non-overall correlation", "Channel 1 Correlation: 0.8\n"),
+        ("only Other lines", "Overall Peak: 0.1\nDC offset: 0.0\n"),
+        ("whitespace trimmed value", "Overall Correlation:   1.000000\n"),
+        ("int-like value", "Overall Correlation: 1\n"),
+        ("multi-line with match", "Overall RMS: -20.0\nOverall Correlation: 0.75\n"),
+    ]
+
+    for description, stderr in corpus:
+        expected = _old_parse(stderr)
+        got = _parse_overall_correlation(stderr)
+        assert got == expected, (
+            f"Corpus mismatch on '{description}': old_regex={expected!r}, parser={got!r}"
+        )
+
+
+def test_parse_overall_correlation_adversarial_no_colon_trigger() -> None:
+    """Adversarial no-colon trigger returns None in O(n) time (BL-738-AC-4).
+
+    The old regex has a super-linear backtracking path on inputs that start
+    with 'Overall' and repeat 'Correlation' without a colon. The linear
+    parser must correctly return None for this input in bounded time.
+    """
+    from stoat_ferret.api.services.qc_service import _parse_overall_correlation
+
+    # n=5000 triggers super-linear backtracking in the old regex (129ms measured
+    # by codex at this scale). Linear parser must handle it instantly.
+    n = 5000
+    adversarial = "Overall" + (" abc Correlation" * n)
+    result = _parse_overall_correlation(adversarial)
+    assert result is None, f"Expected None for no-colon trigger, got {result!r}"
+
+
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
+async def test_spatial_correlation_linear_parser_ffmpeg8_output(sample_video_path: Path) -> None:
+    """Parser handles actual FFmpeg-8 astats stderr output (BL-738-AC-4).
+
+    Uses the session-scoped sample_video_path fixture (H.264+AAC, 1 second).
+    Runs the real _check_spatial_correlation method against FFmpeg and verifies
+    the linear parser extracts a valid float in [-1.0, 1.0].
+    """
+    svc, _, _ = _make_service(asyncio.create_subprocess_exec)
+    result = await svc._check_spatial_correlation(artifact_path=str(sample_video_path), target=None)
+    measured = result.get("measured")
+    # The parser must extract a float (not None) from actual FFmpeg-8 astats output.
+    assert measured is not None, (
+        f"Linear parser returned None for actual FFmpeg output; "
+        f"astats may have changed format or audio is mono-only. result={result!r}"
+    )
+    assert isinstance(measured, float), f"Expected float, got {type(measured)}: {measured!r}"
+    assert -1.0 <= measured <= 1.0, f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
+
+
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
 async def test_decode_integrity_valid_artifact_passes(sample_video_path: Path) -> None:
     """Valid artifact returns decode_integrity.measured=0.0 under null-decode (BL-626-AC-3).

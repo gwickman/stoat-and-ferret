@@ -306,7 +306,12 @@ def run() -> int:
 
                 screenshot(page, journey_dir, 6, "keyboard_space")
                 steps_passed += 1
-                paused_desc = "n/a" if is_paused is None else "paused" if is_paused else "playing"
+                if is_paused is None:
+                    paused_desc = "n/a"
+                elif is_paused:
+                    paused_desc = "paused"
+                else:
+                    paused_desc = "playing"
                 print(f"  Step 6: Space shortcut (video {paused_desc}) - PASSED")
             except Exception as exc:
                 steps_failed += 1

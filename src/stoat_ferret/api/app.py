@@ -149,6 +149,7 @@ async def _cancel_task_with_timeout(
 
     LRN-406: asyncio.wait() with timeout prevents indefinite stall on Python 3.10.
     """
+    logger.debug("task.cancel_initiated", task_name=name)
     task.cancel()
     await asyncio.wait({task}, timeout=timeout)
 
