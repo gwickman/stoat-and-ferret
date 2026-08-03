@@ -443,50 +443,45 @@ async def build_command_for_job(
         raise CommandBuildError(f"Project {job.project_id} has no clips in timeline")
 
     # --- Dispatch to sub-function ---
-    if len(clips) > 1:
-        return await _build_multi_clip_command(
-            job,
-            clips,
-            settings,
-            render_settings,
-            ffmetadata_path,
-            tts_inputs,
-            video_repository,
-            asset_repository,
-            effect_registry,
-        )
-    return await _build_single_clip_command(
-        job,
-        clips,
-        settings,
-        segments,
-        total_duration,
-        render_settings,
-        ffmetadata_path,
-        tts_inputs,
-        video_repository,
-        asset_repository,
-        effect_registry,
+    ctx = _RenderCommandContext(
+        job=job,
+        settings=settings,
+        render_settings=render_settings,
+        ffmetadata_path=ffmetadata_path,
+        tts_inputs=tts_inputs,
+        video_repository=video_repository,
+        asset_repository=asset_repository,
+        effect_registry=effect_registry,
     )
+    if len(clips) > 1:
+        return await _build_multi_clip_command(ctx, clips)
+    return await _build_single_clip_command(ctx, clips, segments, total_duration)
+
+
+@dataclass
+class _RenderCommandContext:
+    """Shared render-command parameters bundled to resolve S107 parameter-count findings."""
+
+    job: RenderJob
+    settings: dict[str, Any]
+    render_settings: RenderPlanSettings
+    ffmetadata_path: str | None
+    tts_inputs: list[TtsCueAudioInput] | None
+    video_repository: AsyncVideoRepository
+    asset_repository: AsyncAssetRepository | None
+    effect_registry: EffectRegistry | None
 
 
 async def _build_multi_clip_command(
-    job: RenderJob,
+    ctx: _RenderCommandContext,
     clips: list[Clip],
-    settings: dict[str, Any],
-    render_settings: RenderPlanSettings,
-    ffmetadata_path: str | None,
-    tts_inputs: list[TtsCueAudioInput] | None,
-    video_repository: AsyncVideoRepository,
-    asset_repository: AsyncAssetRepository | None,
-    effect_registry: EffectRegistry | None,
 ) -> list[str]:
     """Assemble FFmpeg argv for a multi-clip (filter_complex / RenderGraphTranslator) render."""
     from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
 
-    codec_mc: str = settings.get("codec", "libx264")
-    fps_mc: float = settings.get("fps", 30.0)
-    quality_preset_mc: str = settings.get("quality_preset", "standard")
+    codec_mc: str = ctx.settings.get("codec", "libx264")
+    fps_mc: float = ctx.settings.get("fps", 30.0)
+    quality_preset_mc: str = ctx.settings.get("quality_preset", "standard")
 
     multi_cmd: list[str] = ["ffmpeg"]
     source_audio_codec_mc: str | None = None
@@ -495,7 +490,7 @@ async def _build_multi_clip_command(
     clip_durations_mc: list[float] = []
     for i, clip in enumerate(clips):
         source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
-            clip, job.project_id, video_repository, asset_repository, fps_mc
+            clip, ctx.job.project_id, ctx.video_repository, ctx.asset_repository, fps_mc
         )
         if clip.clip_type == "image":
             timeline_start_mc = clip.timeline_start or 0.0
@@ -511,7 +506,7 @@ async def _build_multi_clip_command(
         if duration_secs <= 0:
             raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
         clip_durations_mc.append(duration_secs)
-        render_effects = _build_clip_render_effects(clip, effect_registry)
+        render_effects = _build_clip_render_effects(clip, ctx.effect_registry)
         cwe_list.append(
             ClipWithEffects(
                 input_index=i,
@@ -533,30 +528,30 @@ async def _build_multi_clip_command(
         else:
             multi_cmd.extend(["-i", path])
 
-    if ffmetadata_path:
-        multi_cmd.extend(["-i", ffmetadata_path])
+    if ctx.ffmetadata_path:
+        multi_cmd.extend(["-i", ctx.ffmetadata_path])
 
     tts_base: int = 0
-    if tts_inputs:
-        tts_base = len(input_paths) + (1 if ffmetadata_path else 0)
-        for inp in tts_inputs:
+    if ctx.tts_inputs:
+        tts_base = len(input_paths) + (1 if ctx.ffmetadata_path else 0)
+        for inp in ctx.tts_inputs:
             multi_cmd.extend(["-i", inp.audio_path])
 
     # Soft subtitle -i inputs: declared BEFORE filter_complex/output -map section (BL-618).
     # subtitle_base_mc = clip_count + ffmetadata_offset + tts_count
     subtitle_base_mc: int = 0
-    if render_settings.soft_subtitles:
+    if ctx.render_settings.soft_subtitles:
         subtitle_base_mc = (
             len(input_paths)
-            + (1 if ffmetadata_path else 0)
-            + (len(tts_inputs) if tts_inputs else 0)
+            + (1 if ctx.ffmetadata_path else 0)
+            + (len(ctx.tts_inputs) if ctx.tts_inputs else 0)
         )
-        for spec in render_settings.soft_subtitles:
-            sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
+        for spec in ctx.render_settings.soft_subtitles:
+            sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
             multi_cmd.extend(["-i", sub_path])
 
-    if tts_inputs:
-        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
+    if ctx.tts_inputs:
+        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(ctx.tts_inputs, tts_base)
         combined_filter = filter_complex_str + ";" + tts_filter_seg
         if source_audio_codec_mc is not None:
             src_a = f"[{source_audio_input_idx_mc}:a]"
@@ -590,8 +585,8 @@ async def _build_multi_clip_command(
         multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
 
     # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
-    if render_settings.soft_subtitles:
-        for idx, _ in enumerate(render_settings.soft_subtitles):
+    if ctx.render_settings.soft_subtitles:
+        for idx, _ in enumerate(ctx.render_settings.soft_subtitles):
             multi_cmd.extend(["-map", f"{subtitle_base_mc + idx}:s"])
 
     multi_cmd.extend(["-c:v", codec_mc])
@@ -599,36 +594,33 @@ async def _build_multi_clip_command(
         multi_cmd.extend(["-crf", _QUALITY_CRF[quality_preset_mc]])
     multi_cmd.extend(["-r", str(fps_mc)])
     multi_cmd.extend(["-progress", "pipe:1"])
-    if ffmetadata_path:
+    if ctx.ffmetadata_path:
         ffmeta_idx = len(input_paths)
         multi_cmd.extend(["-map_chapters", str(ffmeta_idx), "-map_metadata", str(ffmeta_idx)])
-    if render_settings.soft_subtitles:
+    if ctx.render_settings.soft_subtitles:
         _add_soft_subtitle_output_flags(
-            multi_cmd, job.output_format, render_settings.soft_subtitles
+            multi_cmd, ctx.job.output_format, ctx.render_settings.soft_subtitles
         )
-    multi_cmd.append(job.output_path)
+    multi_cmd.append(ctx.job.output_path)
     return multi_cmd
 
 
 async def _build_single_clip_command(
-    job: RenderJob,
+    ctx: _RenderCommandContext,
     clips: list[Clip],
-    settings: dict[str, Any],
     segments: list[dict[str, Any]],
     total_duration: float,
-    render_settings: RenderPlanSettings,
-    ffmetadata_path: str | None,
-    tts_inputs: list[TtsCueAudioInput] | None,
-    video_repository: AsyncVideoRepository,
-    asset_repository: AsyncAssetRepository | None,
-    effect_registry: EffectRegistry | None,
 ) -> list[str]:
     """Assemble FFmpeg argv for a single-clip render."""
     first_clip = clips[0]
     use_translator_sc = first_clip.clip_type in ("image", "generator") or bool(first_clip.effects)
 
     input_path, source_audio_codec, _ = await _resolve_clip_source(
-        first_clip, job.project_id, video_repository, asset_repository, settings.get("fps", 30.0)
+        first_clip,
+        ctx.job.project_id,
+        ctx.video_repository,
+        ctx.asset_repository,
+        ctx.settings.get("fps", 30.0),
     )
 
     # --- Select segment ---
@@ -637,7 +629,7 @@ async def _build_single_clip_command(
             logger.warning(
                 "render_worker.multi_segment_truncated",
                 segments_count=len(segments),
-                job_id=job.id,
+                job_id=ctx.job.id,
             )
         segment = segments[0]
     else:
@@ -654,12 +646,12 @@ async def _build_single_clip_command(
     seg_duration = timeline_end - timeline_start
 
     # --- Extract encoder settings ---
-    codec: str = settings.get("codec", "libx264")
-    fps: float = settings.get("fps", 30.0)
-    width: int = settings.get("width", 1920)
-    height: int = settings.get("height", 1080)
-    quality_preset: str = settings.get("quality_preset", "standard")
-    filter_graph: str | None = settings.get("filter_graph")
+    codec: str = ctx.settings.get("codec", "libx264")
+    fps: float = ctx.settings.get("fps", 30.0)
+    width: int = ctx.settings.get("width", 1920)
+    height: int = ctx.settings.get("height", 1080)
+    quality_preset: str = ctx.settings.get("quality_preset", "standard")
+    filter_graph: str | None = ctx.settings.get("filter_graph")
 
     # --- Assemble FFmpeg command ---
     if first_clip.clip_type == "image":
@@ -670,21 +662,21 @@ async def _build_single_clip_command(
         cmd = ["ffmpeg", "-i", input_path]
 
     # Second input: ffmetadata file for chapter embedding (must precede output options)
-    if ffmetadata_path:
-        cmd.extend(["-i", ffmetadata_path])
+    if ctx.ffmetadata_path:
+        cmd.extend(["-i", ctx.ffmetadata_path])
 
     # TTS audio inputs: must follow other -i flags, before output options
     tts_base_single: int = 0
-    if tts_inputs:
-        tts_base_single = 1 + (1 if ffmetadata_path else 0)
-        for inp in tts_inputs:
+    if ctx.tts_inputs:
+        tts_base_single = 1 + (1 if ctx.ffmetadata_path else 0)
+        for inp in ctx.tts_inputs:
             cmd.extend(["-i", inp.audio_path])
 
     # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
     # subtitle_base = 1 (source) + ffmetadata_offset + tts_count
-    if render_settings.soft_subtitles:
-        for spec in render_settings.soft_subtitles:
-            sub_path = await _resolve_subtitle_asset_path(spec, asset_repository)
+    if ctx.render_settings.soft_subtitles:
+        for spec in ctx.render_settings.soft_subtitles:
+            sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
             cmd.extend(["-i", sub_path])
 
     # Segment timing
@@ -694,7 +686,7 @@ async def _build_single_clip_command(
     if use_translator_sc:
         from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
 
-        render_effects_sc = _build_clip_render_effects(first_clip, effect_registry)
+        render_effects_sc = _build_clip_render_effects(first_clip, ctx.effect_registry)
         cwe_sc = ClipWithEffects(
             input_index=0,
             duration_secs=seg_duration,
@@ -704,8 +696,10 @@ async def _build_single_clip_command(
         )
         translator_sc = RenderGraphTranslator()
         filter_complex_sc, _ = translator_sc.translate([cwe_sc])
-        if tts_inputs:
-            tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
+        if ctx.tts_inputs:
+            tts_filter_seg, tts_audio_label = _build_tts_audio_filter(
+                ctx.tts_inputs, tts_base_single
+            )
             combined_sc = filter_complex_sc + ";" + tts_filter_seg
             if source_audio_codec is not None:
                 mix_seg = (
@@ -725,14 +719,21 @@ async def _build_single_clip_command(
                 )
             else:
                 cmd.extend(
-                    ["-filter_complex", combined_sc, "-map", _LABEL_FINAL, "-map", tts_audio_label]
+                    [
+                        "-filter_complex",
+                        combined_sc,
+                        "-map",
+                        _LABEL_FINAL,
+                        "-map",
+                        tts_audio_label,
+                    ]
                 )
         else:
             cmd.extend(["-filter_complex", filter_complex_sc, "-map", _LABEL_FINAL, "-an"])
-    elif tts_inputs:
+    elif ctx.tts_inputs:
         # Video + TTS audio filter: merge into filter_complex when TTS is active to avoid
         # -vf / -filter_complex conflict on the same stream.
-        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
+        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(ctx.tts_inputs, tts_base_single)
         if source_audio_codec is not None:
             # Source video has audio — mix with TTS narration into [aout]
             mix_seg = (
@@ -787,15 +788,17 @@ async def _build_single_clip_command(
 
     # Soft subtitle stream mapping (BL-583): emit -map <N>:s for each subtitle input.
     # Subtitle inputs follow source (0), optional ffmetadata, and TTS inputs.
-    if render_settings.soft_subtitles:
-        subtitle_base = 1 + (1 if ffmetadata_path else 0) + (len(tts_inputs) if tts_inputs else 0)
-        if not tts_inputs and not use_translator_sc:
+    if ctx.render_settings.soft_subtitles:
+        subtitle_base = (
+            1 + (1 if ctx.ffmetadata_path else 0) + (len(ctx.tts_inputs) if ctx.tts_inputs else 0)
+        )
+        if not ctx.tts_inputs and not use_translator_sc:
             # No TTS, no translator — explicit video/audio maps required before subtitle maps
             # (FFmpeg auto-selection is superseded when any explicit -map is present)
             cmd.extend(["-map", "0:v"])
             if source_audio_codec is not None:
                 cmd.extend(["-map", "0:a"])
-        for idx, _ in enumerate(render_settings.soft_subtitles):
+        for idx, _ in enumerate(ctx.render_settings.soft_subtitles):
             cmd.extend(["-map", f"{subtitle_base + idx}:s"])
 
     # Video codec
@@ -812,15 +815,17 @@ async def _build_single_clip_command(
     cmd.extend(["-progress", "pipe:1"])
 
     # Chapter and container metadata from ffmetadata second input (index 1)
-    if ffmetadata_path:
+    if ctx.ffmetadata_path:
         cmd.extend(["-map_chapters", "1", "-map_metadata", "1"])
 
     # Soft subtitle codec, per-stream language metadata, and default disposition
-    if render_settings.soft_subtitles:
-        _add_soft_subtitle_output_flags(cmd, job.output_format, render_settings.soft_subtitles)
+    if ctx.render_settings.soft_subtitles:
+        _add_soft_subtitle_output_flags(
+            cmd, ctx.job.output_format, ctx.render_settings.soft_subtitles
+        )
 
     # Output path (must be last)
-    cmd.append(job.output_path)
+    cmd.append(ctx.job.output_path)
 
     return cmd
 
