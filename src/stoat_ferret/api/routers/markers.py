@@ -24,7 +24,19 @@ def _get_repo(request: Request) -> AsyncSQLiteMarkerRepository:
     return repo
 
 
-@router.post("", status_code=201)
+@router.post(
+    "",
+    status_code=201,
+    responses={
+        404: {"description": "Project not found"},
+        422: {
+            "description": "Validation error",
+            "content": {
+                "application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}
+            },
+        },
+    },
+)
 async def create_marker(pid: str, body: MarkerCreate, request: Request) -> MarkerResponse:
     """Create a new timeline marker for a project."""
     repo = _get_repo(request)
@@ -70,7 +82,12 @@ async def create_marker(pid: str, body: MarkerCreate, request: Request) -> Marke
     )
 
 
-@router.get("")
+@router.get(
+    "",
+    responses={
+        404: {"description": "Project not found"},
+    },
+)
 async def list_markers(pid: str, request: Request) -> list[MarkerResponse]:
     """List all timeline markers for a project ordered by start_time ASC."""
     repo = _get_repo(request)
@@ -100,7 +117,18 @@ async def list_markers(pid: str, request: Request) -> list[MarkerResponse]:
     ]
 
 
-@router.patch("/{mid}")
+@router.patch(
+    "/{mid}",
+    responses={
+        404: {"description": "Marker not found"},
+        422: {
+            "description": "Validation error",
+            "content": {
+                "application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}
+            },
+        },
+    },
+)
 async def update_marker(pid: str, mid: str, body: MarkerUpdate, request: Request) -> MarkerResponse:
     """Update mutable fields of a timeline marker."""
     repo = _get_repo(request)
@@ -148,7 +176,13 @@ async def update_marker(pid: str, mid: str, body: MarkerUpdate, request: Request
     )
 
 
-@router.delete("/{mid}", status_code=204)
+@router.delete(
+    "/{mid}",
+    status_code=204,
+    responses={
+        404: {"description": "Marker not found"},
+    },
+)
 async def delete_marker(pid: str, mid: str, request: Request) -> Response:
     """Delete a timeline marker."""
     repo = _get_repo(request)

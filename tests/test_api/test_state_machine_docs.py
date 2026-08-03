@@ -154,6 +154,37 @@ def test_wait_endpoint_documents_408_timeout_response(static_spec: dict) -> None
 
 
 @pytest.mark.api
+def test_httpexception_422_ref_preservation(static_spec: dict) -> None:
+    """Verify 422 responses added by BL-745 preserve HTTPValidationError $ref (BL-745-AC-4)."""
+    # Routes where v117 Feature 003 added 422 documentation.
+    # Tuples of (http_method_lowercase, openapi_path)
+    documented_422_routes = [
+        ("post", "/api/v1/assets"),
+        ("post", "/api/v1/projects/{pid}/markers"),
+        ("patch", "/api/v1/projects/{pid}/markers/{mid}"),
+        ("post", "/api/v1/projects/{project_id}/preview/start"),
+    ]
+
+    for method, path in documented_422_routes:
+        assert path in static_spec["paths"], f"Path {path} not found in OpenAPI spec"
+        operation = static_spec["paths"][path].get(method)
+        assert operation is not None, f"{method.upper()} {path} not found in OpenAPI spec"
+        responses = operation.get("responses", {})
+        assert "422" in responses, f"{method.upper()} {path} missing 422 response entry"
+        schema_ref = (
+            responses["422"]
+            .get("content", {})
+            .get("application/json", {})
+            .get("schema", {})
+            .get("$ref")
+        )
+        assert schema_ref == "#/components/schemas/HTTPValidationError", (
+            f"{method.upper()} {path} has 422 but $ref is {schema_ref!r}, "
+            "expected '#/components/schemas/HTTPValidationError'"
+        )
+
+
+@pytest.mark.api
 def test_live_openapi_matches_static_state_machine_docs(live_spec: dict) -> None:
     """Live ``/openapi.json`` and gui/openapi.json agree on state machine docs."""
     # Both must expose the injected JobStatus enum and WebSocketEvent schema

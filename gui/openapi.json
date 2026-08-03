@@ -58,8 +58,14 @@
               }
             }
           },
+          "413": {
+            "description": "Payload too large"
+          },
+          "415": {
+            "description": "Unsupported media type"
+          },
           "422": {
-            "description": "Validation Error",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -67,6 +73,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Upload processing error"
           }
         }
       },
@@ -178,6 +187,9 @@
               }
             }
           },
+          "404": {
+            "description": "Asset not found"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -211,6 +223,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "Asset not found"
           },
           "422": {
             "description": "Validation Error",
@@ -252,6 +267,9 @@
                 "schema": {}
               }
             }
+          },
+          "404": {
+            "description": "Asset not found"
           },
           "422": {
             "description": "Validation Error",
@@ -1278,8 +1296,11 @@
               }
             }
           },
+          "404": {
+            "description": "Project not found"
+          },
           "422": {
-            "description": "Validation Error",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1322,6 +1343,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Project not found"
           },
           "422": {
             "description": "Validation Error",
@@ -1385,8 +1409,11 @@
               }
             }
           },
+          "404": {
+            "description": "Marker not found"
+          },
           "422": {
-            "description": "Validation Error",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1427,6 +1454,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "Marker not found"
           },
           "422": {
             "description": "Validation Error",
@@ -3534,8 +3564,11 @@
               }
             }
           },
+          "404": {
+            "description": "Project not found"
+          },
           "422": {
-            "description": "Validation Error",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -3543,6 +3576,12 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Session limit reached"
+          },
+          "503": {
+            "description": "FFmpeg unavailable or preview service not running"
           }
         }
       }

@@ -222,7 +222,21 @@ async def _sniff_content(
 # ---------------------------------------------------------------------------
 
 
-@router.post("", status_code=201)
+@router.post(
+    "",
+    status_code=201,
+    responses={
+        413: {"description": "Payload too large"},
+        415: {"description": "Unsupported media type"},
+        422: {
+            "description": "Validation error",
+            "content": {
+                "application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}
+            },
+        },
+        500: {"description": "Upload processing error"},
+    },
+)
 async def upload_asset(
     request: Request,
     file: UploadFile,
@@ -318,7 +332,12 @@ async def list_assets(
     )
 
 
-@router.get("/{asset_id}")
+@router.get(
+    "/{asset_id}",
+    responses={
+        404: {"description": "Asset not found"},
+    },
+)
 async def get_asset(asset_id: str, request: Request) -> AssetRead:
     """Get asset metadata by UUID. Soft-deleted assets return 404."""
     repo = _get_repo(request)
@@ -328,7 +347,12 @@ async def get_asset(asset_id: str, request: Request) -> AssetRead:
     return _to_schema(record)
 
 
-@router.get("/{asset_id}/file")
+@router.get(
+    "/{asset_id}/file",
+    responses={
+        404: {"description": "Asset not found"},
+    },
+)
 async def download_asset(asset_id: str, request: Request) -> FileResponse:
     """Download the raw file for an asset. Soft-deleted assets return 404."""
     repo = _get_repo(request)
@@ -341,7 +365,13 @@ async def download_asset(asset_id: str, request: Request) -> FileResponse:
     return FileResponse(path=file_path, media_type=record.mime_type)
 
 
-@router.delete("/{asset_id}", status_code=204)
+@router.delete(
+    "/{asset_id}",
+    status_code=204,
+    responses={
+        404: {"description": "Asset not found"},
+    },
+)
 async def delete_asset(asset_id: str, request: Request) -> None:
     """Soft-delete an asset. The physical file is not removed."""
     repo = _get_repo(request)
