@@ -119,7 +119,7 @@ VideoRepoDep = Annotated[AsyncVideoRepository, Depends(get_video_repository)]
 AssetRepoDep = Annotated[AsyncAssetRepository, Depends(get_asset_repository)]
 
 
-@router.get("", response_model=ProjectListResponse)
+@router.get("")
 async def list_projects(
     repo: ProjectRepoDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -143,7 +143,7 @@ async def list_projects(
     )
 
 
-@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_data: ProjectCreate,
     request: Request,
@@ -185,7 +185,7 @@ async def create_project(
     return ProjectResponse.model_validate(project)
 
 
-@router.get("/{project_id}", response_model=ProjectResponse)
+@router.get("/{project_id}")
 async def get_project(
     project_id: str,
     repo: ProjectRepoDep,
@@ -211,7 +211,7 @@ async def get_project(
     return ProjectResponse.model_validate(project)
 
 
-@router.patch("/{project_id}", response_model=ProjectResponse)
+@router.patch("/{project_id}")
 async def update_project(
     project_id: str,
     project_data: ProjectUpdate,
@@ -281,7 +281,7 @@ async def delete_project(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{project_id}/clips", response_model=ClipListResponse)
+@router.get("/{project_id}/clips")
 async def list_clips(
     project_id: str,
     project_repo: ProjectRepoDep,
@@ -314,7 +314,7 @@ async def list_clips(
     )
 
 
-@router.get("/{project_id}/clips/{clip_id}", response_model=ClipResponse)
+@router.get("/{project_id}/clips/{clip_id}")
 async def get_clip(
     project_id: str,
     clip_id: str,
@@ -342,9 +342,7 @@ async def get_clip(
     return ClipResponse.model_validate(clip)
 
 
-@router.post(
-    "/{project_id}/clips", response_model=ClipResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/{project_id}/clips", status_code=status.HTTP_201_CREATED)
 async def add_clip(
     project_id: str,
     request: ClipCreate,
@@ -469,7 +467,7 @@ async def add_clip(
     return ClipResponse.model_validate(clip)
 
 
-@router.patch("/{project_id}/clips/{clip_id}", response_model=ClipResponse)
+@router.patch("/{project_id}/clips/{clip_id}")
 async def update_clip(
     project_id: str,
     clip_id: str,
@@ -541,7 +539,7 @@ async def update_clip(
     return ClipResponse.model_validate(clip)
 
 
-@router.post("/{project_id}/clips/{clip_id}/split", response_model=ClipSplitResponse)
+@router.post("/{project_id}/clips/{clip_id}/split")
 async def split_clip(
     project_id: str,
     clip_id: str,

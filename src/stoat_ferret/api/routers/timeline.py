@@ -208,7 +208,7 @@ async def _get_clips_by_track(
 # ---------------------------------------------------------------------------
 
 
-@router.put("/{project_id}/timeline", response_model=TimelineResponse)
+@router.put("/{project_id}/timeline")
 async def put_timeline(
     project_id: str,
     tracks_data: list[TrackCreate],
@@ -270,7 +270,7 @@ async def put_timeline(
     return response
 
 
-@router.get("/{project_id}/timeline", response_model=TimelineResponse)
+@router.get("/{project_id}/timeline")
 async def get_timeline(
     project_id: str,
     project_repo: ProjectRepoDep,
@@ -314,7 +314,6 @@ async def get_timeline(
 
 @router.post(
     "/{project_id}/timeline/clips",
-    response_model=TimelineClipResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def add_timeline_clip(
@@ -415,7 +414,6 @@ async def add_timeline_clip(
 
 @router.patch(
     "/{project_id}/timeline/clips/{clip_id}",
-    response_model=TimelineClipResponse,
 )
 async def update_timeline_clip(
     project_id: str,
@@ -571,7 +569,6 @@ async def remove_timeline_clip(
 
 @router.post(
     "/{project_id}/timeline/transitions",
-    response_model=TransitionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def add_transition(
@@ -742,7 +739,6 @@ async def add_transition(
 
 @router.delete(
     "/{project_id}/timeline/transitions/{transition_id}",
-    response_model=TimelineResponse,
 )
 async def delete_transition(
     project_id: str,

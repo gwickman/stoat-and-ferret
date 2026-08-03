@@ -30,7 +30,7 @@ def _settings_from_request(request: Request) -> Settings:
     return get_settings()
 
 
-@router.get("/flags", response_model=FlagsResponse)
+@router.get("/flags")
 async def get_flags(request: Request) -> FlagsResponse:
     """Return the current STOAT_* feature flag state.
 

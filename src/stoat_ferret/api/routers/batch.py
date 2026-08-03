@@ -127,7 +127,7 @@ async def _run_batch_job(
             task_registry.pop(job_id, None)
 
 
-@router.post("/batch", status_code=status.HTTP_202_ACCEPTED, response_model=BatchResponse)
+@router.post("/batch", status_code=status.HTTP_202_ACCEPTED)
 async def submit_batch(
     batch_request: BatchRequest,
     request: Request,
@@ -201,7 +201,7 @@ async def submit_batch(
     )
 
 
-@router.get("/batch/{batch_id}", response_model=BatchProgressResponse)
+@router.get("/batch/{batch_id}")
 async def get_batch_progress(
     batch_id: str,
     request: Request,
@@ -257,7 +257,7 @@ async def get_batch_progress(
 _TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "failed", "cancelled"})
 
 
-@router.delete("/batch/{job_id}", response_model=BatchJobStatusResponse)
+@router.delete("/batch/{job_id}")
 async def cancel_batch_job(
     job_id: str,
     request: Request,

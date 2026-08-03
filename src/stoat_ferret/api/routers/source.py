@@ -23,7 +23,7 @@ class SourceResponse(BaseModel):
     license: str
 
 
-@router.get("/source", response_model=SourceResponse)
+@router.get("/source")
 async def get_source() -> SourceResponse:
     """Return source URL, version, commit, and license for AGPL §13 compliance.
 

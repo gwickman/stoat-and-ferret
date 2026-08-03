@@ -254,7 +254,7 @@ def _build_filter_helper(
         ) from None
 
 
-@router.get("/effects", response_model=EffectListResponse)
+@router.get("/effects")
 async def list_effects(registry: RegistryDep) -> EffectListResponse:
     """List all available effects with metadata, schemas, and previews.
 
@@ -295,7 +295,7 @@ async def list_effects(registry: RegistryDep) -> EffectListResponse:
     return EffectListResponse(effects=effects, total=len(effects))
 
 
-@router.post("/effects/preview", response_model=EffectPreviewResponse)
+@router.post("/effects/preview")
 async def preview_effect(
     request: EffectPreviewRequest,
     registry: RegistryDep,
@@ -401,7 +401,6 @@ async def preview_effect_thumbnail(
 
 @router.get(
     "/projects/{project_id}/clips/{clip_id}/effects",
-    response_model=ClipEffectsResponse,
 )
 async def get_clip_effects(
     project_id: str,
@@ -432,7 +431,6 @@ async def get_clip_effects(
 
 @router.post(
     "/projects/{project_id}/clips/{clip_id}/effects",
-    response_model=EffectApplyResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def apply_effect_to_clip(
@@ -578,7 +576,6 @@ async def apply_effect_to_clip(
 
 @router.patch(
     "/projects/{project_id}/clips/{clip_id}/effects/{index}",
-    response_model=EffectApplyResponse,
 )
 async def update_clip_effect(
     project_id: str,
@@ -670,7 +667,6 @@ async def update_clip_effect(
 
 @router.delete(
     "/projects/{project_id}/clips/{clip_id}/effects/{index}",
-    response_model=EffectDeleteResponse,
 )
 async def delete_clip_effect(
     project_id: str,
@@ -741,7 +737,6 @@ async def delete_clip_effect(
 
 @router.post(
     "/projects/{project_id}/effects/transition",
-    response_model=EffectTransitionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def apply_transition(

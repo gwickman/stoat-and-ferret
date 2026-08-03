@@ -36,7 +36,7 @@ from stoat_ferret.jobs.queue import JobStatus
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 
-@router.get("/{job_id}", response_model=JobStatusResponse)
+@router.get("/{job_id}")
 async def get_job_status(
     job_id: str,
     request: Request,
@@ -84,7 +84,7 @@ async def get_job_status(
 _TERMINAL_STATUSES = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMEOUT, JobStatus.CANCELLED}
 
 
-@router.post("/{job_id}/cancel", response_model=JobStatusResponse)
+@router.post("/{job_id}/cancel")
 async def cancel_job(
     job_id: str,
     request: Request,
@@ -144,7 +144,6 @@ async def cancel_job(
 
 @router.get(
     "/{job_id}/wait",
-    response_model=JobStatusResponse,
     responses={
         404: {
             "description": (

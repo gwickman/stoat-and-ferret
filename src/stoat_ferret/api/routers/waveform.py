@@ -85,7 +85,6 @@ WaveformServiceDep = Annotated[WaveformService, Depends(_get_waveform_service)]
 
 @router.post(
     "/videos/{video_id}/waveform",
-    response_model=WaveformGenerateResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def generate_waveform(
@@ -149,7 +148,6 @@ async def generate_waveform(
 
 @router.get(
     "/videos/{video_id}/waveform",
-    response_model=WaveformMetadataResponse,
 )
 async def get_waveform_metadata(
     video_id: str,
