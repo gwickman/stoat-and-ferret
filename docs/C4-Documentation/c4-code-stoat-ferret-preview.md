@@ -52,7 +52,7 @@
     - `async status() -> CacheStatus` - Get current cache snapshot
     - `async clear_all() -> tuple[int, int]` - Remove all sessions and free disk
     - `async rebuild_from_disk() -> None` - Restore cache state from filesystem
-    - `async start_cleanup_task() -> None` - Start background periodic cleanup
+    - `start_cleanup_task() -> None` - Start background periodic cleanup
     - `async stop_cleanup_task() -> None` - Stop cleanup task
   - Properties: used_bytes (int), max_bytes (int)
   - Dependencies: asyncio, structlog, pathlib, metrics

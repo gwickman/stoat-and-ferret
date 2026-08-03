@@ -91,7 +91,7 @@ Provides hardware encoder detection result caching using SQLite.
 - `RenderWorkerLoop` — background async loop that dequeues and executes render jobs
 
 **Key functions:**
-- `build_command_for_job(job, project, clips, video_repo, clip_repo, effect_registry, settings) -> list[str]` — constructs FFmpeg argument list from RenderJob render_plan JSON; dispatches through RenderGraphTranslator for multi-clip plans
+- `async build_command_for_job(job: RenderJob, clip_repository: AsyncClipRepository, video_repository: AsyncVideoRepository, ffmetadata_path: str | None = None, effect_registry: EffectRegistry | None = None, tts_inputs: list[TtsCueAudioInput] | None = None, asset_repository: AsyncAssetRepository | None = None) -> list[str]` — constructs FFmpeg argument list from RenderJob render_plan JSON; dispatches to `_build_multi_clip_command` (multi-clip path) or `_build_single_clip_command` (single-clip path) based on clip count
 - `_maybe_route_filter_to_file(command, job, executor) -> tuple[list[str], Path | None]` (`worker.py:78`) — on Windows: routes long `-vf`/`-filter_complex` arguments to a temp file via `-filter_script`/`-filter_complex_script` when filter string length exceeds `WINDOWS_ARGV_LIMIT - COMMAND_OVERHEAD_CHARS`
 
 **Constants:** `WINDOWS_ARGV_LIMIT = 32767`, `COMMAND_OVERHEAD_CHARS = 500`
