@@ -124,6 +124,39 @@ The test harness has three tiers:
 |------|-------------------|
 | `tests/smoke/test_security_smoke.py` | Scan path confinement (BL-699): `test_scan_rejects_out_of_root_path` asserts 403 `PATH_NOT_ALLOWED` for out-of-root paths when `STOAT_ALLOWED_SCAN_ROOTS` is set; `test_scan_accepts_valid_path` confirms the happy path is unbroken (202). Concurrent job completion (BL-700): `test_concurrent_waiters_both_receive_completion` submits a noop render job and asserts two concurrent pollers launched via `asyncio.gather` both receive terminal status. All tests run without FFmpeg. |
 
+### Phase 14 — v117 OpenAPI Schema Contract Tests (BL-740, BL-743, BL-745)
+
+These tests validate the structural integrity of the OpenAPI schema — not endpoint behaviour but
+the accuracy of the published API contract. Run them before merging any change that touches route
+decorators, Pydantic models, or FastAPI parameter declarations.
+
+| File | What it tells you |
+|------|-------------------|
+| `tests/test_api/test_state_machine_docs.py` | API state machine and schema documentation tests. `test_httpexception_422_ref_preservation` (added v117, BL-745) verifies that every route with a hand-written 422 response entry carries the full `HTTPValidationError` `$ref` in the OpenAPI spec — not a description-only stub — so generated TypeScript clients retain the validation-error schema. Reads from the static `gui/openapi.json` via the `static_spec` fixture; no server start required. Also covers job state transition documentation, WebSocket event schema, and live-vs-static spec parity. |
+| `tests/test_c4_yaml_drift.py` | Schema parity gate. `test_c4_yaml_source_route_drift` asserts that the committed `gui/openapi.json` matches the spec FastAPI would generate from the current source — without running `export_openapi.py`. Run this **before** regenerating the spec after any route decorator change (BL-740 AC-2, BL-743 AC-3). A failure here means a decorator change unexpectedly altered the API shape; restore the problematic decorator before regenerating. |
+
+**OpenAPI freshness script** (`scripts/check_openapi_freshness.py`): Not a pytest test — run it as a
+standalone quality gate after regenerating `gui/openapi.json`:
+
+```bash
+uv run python scripts/check_openapi_freshness.py
+```
+
+Output: `PASS: Committed spec matches live spec (N paths, M schemas)` or a diff of what drifted.
+Run this after every `export_openapi.py` regeneration to confirm the committed spec is current
+before pushing.
+
+**Operator responsibilities for route/schema changes:**
+
+1. Before editing route decorators or Pydantic models: run `uv run pytest tests/test_c4_yaml_drift.py tests/test_api/test_app.py -v` to establish a clean baseline.
+2. After edits (before regenerating): re-run the above to confirm the change is schema-neutral, or diagnose unexpected drift.
+3. After `uv run python -m scripts.export_openapi`: run `uv run python scripts/check_openapi_freshness.py` to confirm the committed spec is current.
+4. After any merge that adds or modifies documented `responses=` entries: run `uv run pytest tests/test_api/test_state_machine_docs.py -v` to confirm 422 `$ref` contracts are intact.
+
+**Why this matters**: A 422 response entry without the full `HTTPValidationError` `$ref` silently
+removes validation error details from generated client types. The OpenAPI spec drift gate prevents
+silent schema regressions from reaching `main` undetected.
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
