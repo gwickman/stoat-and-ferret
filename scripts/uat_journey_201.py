@@ -33,6 +33,8 @@ VIDEOS_DIR = str((PROJECT_ROOT / "videos" / "demo").resolve())
 # Benign console error patterns to ignore
 BENIGN_PATTERNS = ["favicon"]
 
+VIDEO_CARD_SEL = '[data-testid^="video-card-"]'
+
 
 def screenshot(
     page: Any,
@@ -162,7 +164,7 @@ def run() -> int:
                 page.wait_for_selector('[data-testid="video-grid"]', timeout=10000)
 
                 # Verify at least one video card exists
-                cards = page.locator('[data-testid^="video-card-"]')
+                cards = page.locator(VIDEO_CARD_SEL)
                 card_count = cards.count()
                 if card_count < 1:
                     raise AssertionError(f"Expected at least 1 video card, found {card_count}")
@@ -182,7 +184,7 @@ def run() -> int:
             steps_total += 1
             try:
                 # Check first video card has filename and duration
-                first_card = page.locator('[data-testid^="video-card-"]').first
+                first_card = page.locator(VIDEO_CARD_SEL).first
                 first_card.wait_for(timeout=5000)
 
                 # Extract the video ID from the card's testid
@@ -226,7 +228,7 @@ def run() -> int:
                 page.wait_for_selector('[data-testid="video-grid"]', timeout=10000)
 
                 # Verify the grid has results
-                result_cards = page.locator('[data-testid^="video-card-"]')
+                result_cards = page.locator(VIDEO_CARD_SEL)
                 result_count = result_cards.count()
                 if result_count < 1:
                     raise AssertionError(

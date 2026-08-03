@@ -41,6 +41,8 @@ EXPECTED_TRANSITIONS = 1
 # Benign console error patterns to ignore
 BENIGN_PATTERNS = ["favicon"]
 
+SAMPLE_PROJECT_NAME = "Running Montage"
+
 
 def screenshot(
     page: Any,
@@ -181,7 +183,7 @@ def run() -> int:
                 for i in range(card_count):
                     card = project_cards.nth(i)
                     card_text = card.text_content() or ""
-                    if "Running Montage" in card_text:
+                    if SAMPLE_PROJECT_NAME in card_text:
                         found_project = True
                         break
 
@@ -211,7 +213,7 @@ def run() -> int:
                 for i in range(name_count):
                     name_el = project_names.nth(i)
                     name_text = name_el.text_content() or ""
-                    if "Running Montage" in name_text:
+                    if SAMPLE_PROJECT_NAME in name_text:
                         name_el.click()
                         clicked = True
                         break
@@ -223,7 +225,7 @@ def run() -> int:
 
                 # Verify project name on detail page
                 detail_name = page.locator('[data-testid="project-detail-name"]').text_content()
-                if "Running Montage" not in (detail_name or ""):
+                if SAMPLE_PROJECT_NAME not in (detail_name or ""):
                     raise AssertionError(
                         f"Expected 'Running Montage' in detail name, got '{detail_name}'"
                     )
@@ -293,7 +295,7 @@ def run() -> int:
                 selected = False
                 for i in range(option_count):
                     opt_text = options.nth(i).text_content() or ""
-                    if "Running Montage" in opt_text:
+                    if SAMPLE_PROJECT_NAME in opt_text:
                         project_select.select_option(index=i)
                         selected = True
                         break
