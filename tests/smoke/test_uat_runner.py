@@ -292,3 +292,55 @@ def test_exit_code_nonzero_when_only_some_failures_registered() -> None:
     known = {703: {"reason": "x", "tracking_reference": "BL-480"}}
     results = [_jr(703, "failed"), _jr(704, "failed")]
     assert compute_exit_code(results, known) == 1
+
+
+# ---------------------------------------------------------------------------
+# Report generation — BL-723-AC-5
+# ---------------------------------------------------------------------------
+
+
+def test_build_journey_reports_basic(tmp_path: Path) -> None:
+    """build_journey_reports returns a JourneyReport list from JourneyResult list."""
+    from scripts.uat_runner import JourneyResult, build_journey_reports
+
+    result = JourneyResult(journey_id=201, status="passed", message="")
+    # No journey_result.json on disk → fallback path
+    reports = build_journey_reports([result], output_dir=tmp_path)
+    assert isinstance(reports, list)
+    assert len(reports) == 1
+
+
+def test_generate_json_report_creates_file(tmp_path: Path) -> None:
+    """generate_json_report writes uat-report.json with expected top-level keys."""
+    import json
+
+    from scripts.uat_runner import JourneyReport, generate_json_report
+
+    report = JourneyReport(
+        journey_id=201,
+        name="test-journey",
+        status="passed",
+        message="",
+    )
+    generate_json_report([report], output_dir=tmp_path, mode="headless", duration_seconds=0.1)
+    report_file = tmp_path / "uat-report.json"
+    assert report_file.exists()
+    data = json.loads(report_file.read_text())
+    assert "journeys" in data
+
+
+def test_generate_markdown_report_creates_file(tmp_path: Path) -> None:
+    """generate_markdown_report writes uat-report.md with pass/fail content."""
+    from scripts.uat_runner import JourneyReport, generate_markdown_report
+
+    report = JourneyReport(
+        journey_id=201,
+        name="test-journey",
+        status="failed",
+        message="assertion failed",
+    )
+    generate_markdown_report([report], output_dir=tmp_path, mode="headless", duration_seconds=0.1)
+    report_file = tmp_path / "uat-report.md"
+    assert report_file.exists()
+    content = report_file.read_text()
+    assert "test-journey" in content
