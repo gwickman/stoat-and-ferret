@@ -41,6 +41,8 @@ BENIGN_PATTERNS = ["favicon"]
 # Accounts for the 300ms debounce in StartRenderModal plus API round-trip.
 PREVIEW_UPDATE_WAIT_MS = 2000
 
+COMMAND_PREVIEW_SEL = '[data-testid="command-preview"]'
+
 
 def screenshot(
     page: Any,
@@ -212,7 +214,7 @@ def run() -> int:
             try:
                 # Allow time for auto-select useEffects and debounce to fire
                 page.wait_for_timeout(500)
-                command_preview = page.locator('[data-testid="command-preview"]')
+                command_preview = page.locator(COMMAND_PREVIEW_SEL)
                 command_preview.wait_for(timeout=10000)
                 initial_command = command_preview.text_content() or ""
                 if not initial_command:
@@ -243,7 +245,7 @@ def run() -> int:
 
                 # Wait for debounce (300ms) + API round-trip + margin
                 page.wait_for_timeout(PREVIEW_UPDATE_WAIT_MS)
-                command_preview = page.locator('[data-testid="command-preview"]')
+                command_preview = page.locator(COMMAND_PREVIEW_SEL)
                 command_preview.wait_for(timeout=8000)
                 post_format_command = command_preview.text_content() or ""
                 if not post_format_command:
@@ -282,7 +284,7 @@ def run() -> int:
                 quality_select.select_option(value=new_quality)
 
                 page.wait_for_timeout(PREVIEW_UPDATE_WAIT_MS)
-                command_preview = page.locator('[data-testid="command-preview"]')
+                command_preview = page.locator(COMMAND_PREVIEW_SEL)
                 command_preview.wait_for(timeout=8000)
                 post_quality_command = command_preview.text_content() or ""
                 if not post_quality_command:
@@ -325,7 +327,7 @@ def run() -> int:
                     encoder_select.select_option(value=new_encoder)
 
                     page.wait_for_timeout(PREVIEW_UPDATE_WAIT_MS)
-                    command_preview = page.locator('[data-testid="command-preview"]')
+                    command_preview = page.locator(COMMAND_PREVIEW_SEL)
                     command_preview.wait_for(timeout=8000)
                     post_encoder_command = command_preview.text_content() or ""
                     if not post_encoder_command:

@@ -37,6 +37,9 @@ JOURNEY_ID = 403
 # Benign console error patterns to ignore
 BENIGN_PATTERNS = ["favicon"]
 
+THEATER_CONTAINER_SEL = '[data-testid="theater-container"]'
+THEATER_HUD_WRAPPER_SEL = '[data-testid="theater-hud-wrapper"]'
+
 
 def screenshot(
     page: Any,
@@ -161,7 +164,7 @@ def run() -> int:
                     # In headless mode, fullscreen API may not actually enter
                     # fullscreen but the store state should update. Check for
                     # the theater container which renders when isFullscreen=true.
-                    theater_container = page.locator('[data-testid="theater-container"]')
+                    theater_container = page.locator(THEATER_CONTAINER_SEL)
                     has_theater = theater_container.count() > 0
 
                     if headed:
@@ -193,16 +196,15 @@ def run() -> int:
             # ----------------------------------------------------------
             steps_total += 1
             try:
-                hud_wrapper = page.locator('[data-testid="theater-hud-wrapper"]')
+                hud_wrapper = page.locator(THEATER_HUD_WRAPPER_SEL)
                 if hud_wrapper.count() > 0:
                     # HUD should be visible initially
                     hud_opacity = page.evaluate(
-                        """() => {
-                            const el = document.querySelector(
-                                '[data-testid="theater-hud-wrapper"]'
-                            );
+                        """(sel) => {
+                            const el = document.querySelector(sel);
                             return el ? getComputedStyle(el).opacity : '0';
-                        }"""
+                        }""",
+                        THEATER_HUD_WRAPPER_SEL,
                     )
                     screenshot(page, journey_dir, 3, "hud_visible")
                     steps_passed += 1
@@ -223,17 +225,16 @@ def run() -> int:
             # ----------------------------------------------------------
             steps_total += 1
             try:
-                hud_wrapper = page.locator('[data-testid="theater-hud-wrapper"]')
+                hud_wrapper = page.locator(THEATER_HUD_WRAPPER_SEL)
                 if hud_wrapper.count() > 0:
                     # Wait 4 seconds for auto-hide (3s timer + buffer)
                     page.wait_for_timeout(4000)
                     hud_opacity = page.evaluate(
-                        """() => {
-                            const el = document.querySelector(
-                                '[data-testid="theater-hud-wrapper"]'
-                            );
+                        """(sel) => {
+                            const el = document.querySelector(sel);
                             return el ? getComputedStyle(el).opacity : '1';
-                        }"""
+                        }""",
+                        THEATER_HUD_WRAPPER_SEL,
                     )
                     screenshot(page, journey_dir, 4, "hud_hidden")
                     steps_passed += 1
@@ -253,7 +254,7 @@ def run() -> int:
             # ----------------------------------------------------------
             steps_total += 1
             try:
-                theater_container = page.locator('[data-testid="theater-container"]')
+                theater_container = page.locator(THEATER_CONTAINER_SEL)
                 if theater_container.count() > 0:
                     # Move mouse over the theater container to trigger HUD show
                     box = theater_container.bounding_box()
@@ -265,12 +266,11 @@ def run() -> int:
                     page.wait_for_timeout(500)
 
                     hud_opacity = page.evaluate(
-                        """() => {
-                            const el = document.querySelector(
-                                '[data-testid="theater-hud-wrapper"]'
-                            );
+                        """(sel) => {
+                            const el = document.querySelector(sel);
                             return el ? getComputedStyle(el).opacity : '0';
-                        }"""
+                        }""",
+                        THEATER_HUD_WRAPPER_SEL,
                     )
                     screenshot(page, journey_dir, 5, "hud_reappeared")
                     steps_passed += 1
@@ -328,7 +328,7 @@ def run() -> int:
                 page.wait_for_timeout(1000)
 
                 # Verify theater container is gone or fullscreen exited
-                theater_container = page.locator('[data-testid="theater-container"]')
+                theater_container = page.locator(THEATER_CONTAINER_SEL)
                 theater_gone = theater_container.count() == 0
 
                 if headed:

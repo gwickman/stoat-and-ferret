@@ -33,6 +33,8 @@ JOURNEY_ID = 404
 # Benign console error patterns to ignore
 BENIGN_PATTERNS = ["favicon"]
 
+PREVIEW_PLAYER_VIDEO_SEL = '[data-testid="preview-player-video"]'
+
 
 def screenshot(
     page: Any,
@@ -159,15 +161,16 @@ def run() -> int:
                     steps_passed += 1
                     print("  Step 2: Play video skipped (no player in CI) - PASSED")
                 else:
-                    video = page.locator('[data-testid="preview-player-video"]')
+                    video = page.locator(PREVIEW_PLAYER_VIDEO_SEL)
                     video.wait_for(timeout=10000)
 
                     # Wait for video to be ready
                     page.wait_for_function(
-                        """() => {
-                        const v = document.querySelector('[data-testid="preview-player-video"]');
+                        """(s) => {
+                        const v = document.querySelector(s);
                         return v && v.readyState >= 3;
                     }""",
+                        PREVIEW_PLAYER_VIDEO_SEL,
                         timeout=30000,
                     )
 
@@ -177,10 +180,11 @@ def run() -> int:
 
                     # Verify playing
                     page.wait_for_function(
-                        """() => {
-                        const v = document.querySelector('[data-testid="preview-player-video"]');
+                        """(s) => {
+                        const v = document.querySelector(s);
                         return v && !v.paused;
                     }""",
+                        PREVIEW_PLAYER_VIDEO_SEL,
                         timeout=10000,
                     )
 
@@ -250,13 +254,12 @@ def run() -> int:
                     progress_track.wait_for(timeout=5000)
 
                     # Record current time
-                    sel = '[data-testid="preview-player-video"]'
                     time_before = page.evaluate(
                         """(s) => {
                             const v = document.querySelector(s);
                             return v ? v.currentTime : 0;
                         }""",
-                        sel,
+                        PREVIEW_PLAYER_VIDEO_SEL,
                     )
 
                     # Click at 25% of the progress bar
@@ -276,7 +279,7 @@ def run() -> int:
                             const v = document.querySelector(s);
                             return v ? v.currentTime : 0;
                         }""",
-                        sel,
+                        PREVIEW_PLAYER_VIDEO_SEL,
                     )
 
                     screenshot(page, journey_dir, 4, "timeline_seek")
@@ -319,13 +322,12 @@ def run() -> int:
 
                 if current_display.count() > 0:
                     display_text = current_display.text_content() or ""
-                    sel = '[data-testid="preview-player-video"]'
                     video_time = page.evaluate(
                         """(s) => {
                             const v = document.querySelector(s);
                             return v ? v.currentTime : -1;
                         }""",
-                        sel,
+                        PREVIEW_PLAYER_VIDEO_SEL,
                     )
 
                     screenshot(page, journey_dir, 5, "time_sync_verified")

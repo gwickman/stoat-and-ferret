@@ -34,6 +34,12 @@ JOURNEY_ID = 203
 # Benign console error patterns to ignore
 BENIGN_PATTERNS = ["favicon"]
 
+APPLY_EFFECT_BTN_SEL = '[data-testid="apply-effect-btn"]'
+EFFECT_ENTRY_SEL = '[data-testid^="effect-entry-"]'
+EFFECT_PARAMETER_FORM_SEL = '[data-testid="effect-parameter-form"]'
+INPUT_TEXT_SEL = '[data-testid="input-text"]'
+PREVIEW_RECT_SEL = '[data-testid^="preview-rect-"]'
+
 
 def screenshot(
     page: Any,
@@ -123,10 +129,10 @@ def run_effects_sub_journey(
     try:
         # Click the Text Overlay effect card
         page.click('[data-testid="effect-card-text_overlay"]')
-        page.wait_for_selector('[data-testid="effect-parameter-form"]', timeout=5000)
+        page.wait_for_selector(EFFECT_PARAMETER_FORM_SEL, timeout=5000)
 
         # Fill effect parameters
-        text_input = page.locator('[data-testid="input-text"]')
+        text_input = page.locator(INPUT_TEXT_SEL)
         if text_input.count() > 0:
             text_input.first.fill("UAT Test Overlay")
 
@@ -145,7 +151,7 @@ def run_effects_sub_journey(
         screenshot(page, journey_dir, step, "effect_applied_filter_preview")
 
         # Apply the effect
-        apply_btn = page.locator('[data-testid="apply-effect-btn"]')
+        apply_btn = page.locator(APPLY_EFFECT_BTN_SEL)
         if apply_btn.count() > 0:
             apply_btn.first.click()
         page.wait_for_timeout(1000)
@@ -153,7 +159,7 @@ def run_effects_sub_journey(
         # Verify effect stack shows 1 entry
         stack = page.locator('[data-testid="effect-stack"]')
         stack.wait_for(timeout=5000)
-        stack_items = page.locator('[data-testid^="effect-entry-"]')
+        stack_items = page.locator(EFFECT_ENTRY_SEL)
         stack_count = stack_items.count()
         if stack_count != 1:
             raise AssertionError(f"Expected 1 effect in stack after apply, found {stack_count}")
@@ -175,15 +181,15 @@ def run_effects_sub_journey(
         # Click edit on the first effect in the stack
         edit_btn = page.locator('[data-testid^="edit-effect-"]').first
         edit_btn.click()
-        page.wait_for_selector('[data-testid="effect-parameter-form"]', timeout=5000)
+        page.wait_for_selector(EFFECT_PARAMETER_FORM_SEL, timeout=5000)
 
         # Modify a parameter
-        text_input = page.locator('[data-testid="input-text"]')
+        text_input = page.locator(INPUT_TEXT_SEL)
         if text_input.count() > 0:
             text_input.first.fill("UAT Edited Overlay")
 
         # Save changes
-        save_btn = page.locator('[data-testid="apply-effect-btn"]')
+        save_btn = page.locator(APPLY_EFFECT_BTN_SEL)
         if save_btn.count() > 0:
             save_btn.first.click()
         page.wait_for_timeout(1000)
@@ -205,19 +211,19 @@ def run_effects_sub_journey(
     try:
         # Click a different effect card (or same one again for a second instance)
         page.click('[data-testid="effect-card-text_overlay"]')
-        page.wait_for_selector('[data-testid="effect-parameter-form"]', timeout=5000)
+        page.wait_for_selector(EFFECT_PARAMETER_FORM_SEL, timeout=5000)
 
-        text_input = page.locator('[data-testid="input-text"]')
+        text_input = page.locator(INPUT_TEXT_SEL)
         if text_input.count() > 0:
             text_input.first.fill("Second Overlay")
 
-        apply_btn = page.locator('[data-testid="apply-effect-btn"]')
+        apply_btn = page.locator(APPLY_EFFECT_BTN_SEL)
         if apply_btn.count() > 0:
             apply_btn.first.click()
         page.wait_for_timeout(1000)
 
         # Verify stack count = 2
-        stack_items = page.locator('[data-testid^="effect-entry-"]')
+        stack_items = page.locator(EFFECT_ENTRY_SEL)
         stack_count = stack_items.count()
         if stack_count != 2:
             raise AssertionError(
@@ -250,7 +256,7 @@ def run_effects_sub_journey(
         page.wait_for_timeout(1000)
 
         # Verify stack count = 1
-        stack_items = page.locator('[data-testid^="effect-entry-"]')
+        stack_items = page.locator(EFFECT_ENTRY_SEL)
         stack_count = stack_items.count()
         if stack_count != 1:
             raise AssertionError(f"Expected 1 effect in stack after removal, found {stack_count}")
@@ -461,7 +467,7 @@ def run_layout_sub_journey(
         page.wait_for_timeout(500)
         preview = page.locator('[data-testid="layout-preview"]')
         preview.wait_for(timeout=5000)
-        sbs_rects = page.locator('[data-testid^="preview-rect-"]')
+        sbs_rects = page.locator(PREVIEW_RECT_SEL)
         sbs_count = sbs_rects.count()
         screenshot(page, journey_dir, step, "preset_side_by_side")
         print(f"    Side-by-Side: {sbs_count} rectangles")
@@ -469,7 +475,7 @@ def run_layout_sub_journey(
         # PIP preset
         page.click('[data-testid="preset-PipTopLeft"]')
         page.wait_for_timeout(500)
-        pip_rects = page.locator('[data-testid^="preview-rect-"]')
+        pip_rects = page.locator(PREVIEW_RECT_SEL)
         pip_count = pip_rects.count()
         screenshot(page, journey_dir, step + 1, "preset_pip")
         print(f"    PIP: {pip_count} rectangles")
@@ -477,7 +483,7 @@ def run_layout_sub_journey(
         # Grid preset
         page.click('[data-testid="preset-Grid2x2"]')
         page.wait_for_timeout(500)
-        grid_rects = page.locator('[data-testid^="preview-rect-"]')
+        grid_rects = page.locator(PREVIEW_RECT_SEL)
         grid_count = grid_rects.count()
         screenshot(page, journey_dir, step + 2, "preset_grid")
         print(f"    Grid: {grid_count} rectangles")
