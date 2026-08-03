@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v116 — SonarCloud Wave C pt.3 — Backend Behaviour-Preserving Refactors (2026-08-02)
+
+2 themes, 6 features, PRs #926–#931.
+
+### Theme 1: render-command-refactor
+- BL-754: Replace literal 'python' with sys.executable in test subprocess (PR #926)
+- BL-736: Add 7 golden characterization tests for build_command_for_job; split into dispatcher + sub-functions (PRs #927–#928)
+- BL-741: Guard-clause inversion in _read_stdout_with_progress (PR #929)
+
+### Theme 2: api-and-qc-refactor
+- BL-733: De-async 32 FastAPI DI getters + 2 PreviewCache methods (PR #930)
+- BL-737: Guard-clause inversion in _apply_qc_gate post-BL-733 (PR #931)
+
+---
+
 ## v115 — Python Test-Net Strengthening (2026-08-02)
 
 1 theme, 3 features, PRs #924–#925. Test-only changes — zero product code mutations. 3,843 tests
