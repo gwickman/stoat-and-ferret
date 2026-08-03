@@ -27,6 +27,8 @@ See :class:`stoat_ferret.jobs.queue.JobStatus` for the authoritative enum.
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from stoat_ferret.api.schemas.job import JobStatusResponse
@@ -171,16 +173,18 @@ async def cancel_job(
 async def wait_for_job_completion(
     job_id: str,
     request: Request,
-    timeout: float = Query(
-        30.0,
-        ge=1.0,
-        le=3600.0,
-        description=(
-            "Maximum seconds to wait for the job to reach a terminal state. "
-            "Server returns HTTP 408 if the job is still non-terminal when "
-            "the deadline expires."
+    timeout: Annotated[
+        float,
+        Query(
+            ge=1.0,
+            le=3600.0,
+            description=(
+                "Maximum seconds to wait for the job to reach a terminal state. "
+                "Server returns HTTP 408 if the job is still non-terminal when "
+                "the deadline expires."
+            ),
         ),
-    ),
+    ] = 30.0,
 ) -> JobStatusResponse:
     """Block until the job reaches a terminal state, then return its final status.
 

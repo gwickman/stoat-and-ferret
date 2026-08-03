@@ -194,15 +194,22 @@ async def create_seed_fixture(
 async def delete_seed_fixture(
     _settings: TestingModeDep,
     project_repo: ProjectRepoDep,
-    fixture_id: str = Path(
-        description="Identifier returned by ``POST /api/v1/testing/seed``.",
-        examples=["proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X"],
-    ),
-    fixture_type: str = Query(
-        default="project",
-        description=("Repository that owns the fixture. Currently only ``project`` is supported."),
-        examples=["project"],
-    ),
+    fixture_id: Annotated[
+        str,
+        Path(
+            description="Identifier returned by ``POST /api/v1/testing/seed``.",
+            examples=["proj_01HXZ2T9CK3Q4R5S6T7U8V9W0X"],
+        ),
+    ],
+    fixture_type: Annotated[
+        str,
+        Query(
+            description=(
+                "Repository that owns the fixture. Currently only ``project`` is supported."
+            ),
+            examples=["project"],
+        ),
+    ] = "project",
 ) -> Response:
     """Remove a previously seeded fixture (FR-004).
 

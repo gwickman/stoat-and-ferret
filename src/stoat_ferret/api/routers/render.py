@@ -1220,9 +1220,11 @@ async def get_render_job(
 @router.get("/render")
 async def list_render_jobs(
     repo: RenderRepoDep,
-    limit: int = Query(default=20, ge=1, le=100, description="Maximum results"),
-    offset: int = Query(default=0, ge=0, description="Number of results to skip"),
-    status_filter: str | None = Query(default=None, alias="status", description="Filter by status"),
+    limit: Annotated[int, Query(ge=1, le=100, description="Maximum results")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of results to skip")] = 0,
+    status_filter: Annotated[
+        str | None, Query(alias="status", description="Filter by status")
+    ] = None,
 ) -> RenderListResponse:
     """List all render jobs with pagination and optional status filtering.
 

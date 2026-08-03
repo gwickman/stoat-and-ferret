@@ -46,7 +46,7 @@ def _list_dirs(path: str) -> list[DirectoryEntry]:
 
 @router.get("/directories")
 async def list_directories(
-    path: str | None = Query(default=None, description="Directory path to list"),
+    path: Annotated[str | None, Query(description="Directory path to list")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> DirectoryListResponse:
