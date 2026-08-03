@@ -64,7 +64,7 @@ def _python_version_string() -> str:
     return f"{info.major}.{info.minor}.{info.micro}"
 
 
-@router.get("/version", response_model=AppVersionResponse)
+@router.get("/version")
 async def get_version(request: Request) -> AppVersionResponse:
     """Return deployment version metadata for the running build (BL-267).
 

@@ -64,7 +64,7 @@ def get_repository(request: Request) -> AsyncVideoRepository:
 RepoDep = Annotated[AsyncVideoRepository, Depends(get_repository)]
 
 
-@router.get("", response_model=VideoListResponse)
+@router.get("")
 async def list_videos(
     repo: RepoDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -91,7 +91,7 @@ async def list_videos(
     )
 
 
-@router.get("/search", response_model=VideoSearchResponse)
+@router.get("/search")
 async def search_videos(
     repo: RepoDep,
     q: Annotated[str, Query(min_length=1, description="Search query")],
@@ -149,7 +149,7 @@ async def get_thumbnail(
     return FileResponse(str(_PLACEHOLDER_PATH), media_type="image/jpeg")
 
 
-@router.get("/{video_id}", response_model=VideoResponse)
+@router.get("/{video_id}")
 async def get_video(
     video_id: str,
     repo: RepoDep,
@@ -175,7 +175,7 @@ async def get_video(
     return VideoResponse.model_validate(video)
 
 
-@router.post("/scan", response_model=JobSubmitResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/scan", status_code=status.HTTP_202_ACCEPTED)
 async def scan_videos(
     scan_request: ScanRequest,
     request: Request,

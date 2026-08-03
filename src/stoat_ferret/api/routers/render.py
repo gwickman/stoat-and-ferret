@@ -553,7 +553,6 @@ async def _run_detection_and_cache(
 
 @router.post(
     "/render",
-    response_model=RenderJobResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_render_job(
@@ -661,7 +660,7 @@ async def create_render_job(
 # These must be registered before /render/{job_id} to avoid path conflicts.
 
 
-@router.get("/render/encoders", response_model=EncoderListResponse)
+@router.get("/render/encoders")
 async def get_encoders(
     encoder_repo: EncoderCacheDep,
 ) -> EncoderListResponse:
@@ -708,7 +707,7 @@ async def get_encoders(
     )
 
 
-@router.post("/render/encoders/refresh", response_model=EncoderListResponse)
+@router.post("/render/encoders/refresh")
 async def refresh_encoders(
     encoder_repo: EncoderCacheDep,
 ) -> EncoderListResponse:
@@ -870,7 +869,7 @@ def _encoder_codec_family(encoder: str) -> str | None:
     return None
 
 
-@router.get("/render/formats", response_model=FormatListResponse)
+@router.get("/render/formats")
 async def get_output_formats() -> FormatListResponse:
     """Return all supported output formats with codecs, capability flags, and quality presets.
 
@@ -892,7 +891,7 @@ async def get_output_formats() -> FormatListResponse:
 _QUALITY_PRESET_NAMES = ("draft", "standard", "high")
 
 
-@router.post("/render/preview", response_model=RenderPreviewResponse)
+@router.post("/render/preview")
 def render_preview(body: RenderPreviewRequest) -> RenderPreviewResponse:
     """Return a representative FFmpeg command string for the given render settings.
 
@@ -1034,7 +1033,7 @@ def render_preview(body: RenderPreviewRequest) -> RenderPreviewResponse:
 # ---------- Queue status ----------
 
 
-@router.get("/render/queue", response_model=QueueStatusResponse)
+@router.get("/render/queue")
 async def get_queue_status(
     queue: RenderQueueDep,
     repo: RenderRepoDep,
@@ -1093,7 +1092,7 @@ async def get_queue_status(
 # /render/{job_id} to avoid path-parameter conflicts with FastAPI's router.
 
 
-@router.get("/render/{job_id}/evidence", response_model=RenderJobEvidenceResponse)
+@router.get("/render/{job_id}/evidence")
 async def get_render_job_evidence(
     job_id: str,
     repo: RenderRepoDep,
@@ -1192,7 +1191,7 @@ async def get_render_frame_preview(
     return Response(content=frame_bytes, media_type="image/jpeg")
 
 
-@router.get("/render/{job_id}", response_model=RenderJobResponse)
+@router.get("/render/{job_id}")
 async def get_render_job(
     job_id: str,
     repo: RenderRepoDep,
@@ -1218,7 +1217,7 @@ async def get_render_job(
     return _job_to_response(job)
 
 
-@router.get("/render", response_model=RenderListResponse)
+@router.get("/render")
 async def list_render_jobs(
     repo: RenderRepoDep,
     limit: int = Query(default=20, ge=1, le=100, description="Maximum results"),
@@ -1262,7 +1261,7 @@ async def list_render_jobs(
     )
 
 
-@router.post("/render/{job_id}/cancel", response_model=RenderJobResponse)
+@router.post("/render/{job_id}/cancel")
 async def cancel_render_job(
     job_id: str,
     repo: RenderRepoDep,
@@ -1327,7 +1326,7 @@ async def cancel_render_job(
     return _job_to_response(updated)  # type: ignore[arg-type]
 
 
-@router.post("/render/{job_id}/retry", response_model=RenderJobResponse)
+@router.post("/render/{job_id}/retry")
 async def retry_render_job(
     job_id: str,
     repo: RenderRepoDep,
@@ -1391,7 +1390,7 @@ async def retry_render_job(
     return _job_to_response(updated)  # type: ignore[arg-type]
 
 
-@router.delete("/render/{job_id}", response_model=RenderJobResponse)
+@router.delete("/render/{job_id}")
 async def delete_render_job(
     job_id: str,
     repo: RenderRepoDep,

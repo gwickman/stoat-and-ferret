@@ -24,7 +24,7 @@ def _get_repo(request: Request) -> AsyncSQLiteMarkerRepository:
     return repo
 
 
-@router.post("", status_code=201, response_model=MarkerResponse)
+@router.post("", status_code=201)
 async def create_marker(pid: str, body: MarkerCreate, request: Request) -> MarkerResponse:
     """Create a new timeline marker for a project."""
     repo = _get_repo(request)
@@ -70,7 +70,7 @@ async def create_marker(pid: str, body: MarkerCreate, request: Request) -> Marke
     )
 
 
-@router.get("", response_model=list[MarkerResponse])
+@router.get("")
 async def list_markers(pid: str, request: Request) -> list[MarkerResponse]:
     """List all timeline markers for a project ordered by start_time ASC."""
     repo = _get_repo(request)
@@ -100,7 +100,7 @@ async def list_markers(pid: str, request: Request) -> list[MarkerResponse]:
     ]
 
 
-@router.patch("/{mid}", response_model=MarkerResponse)
+@router.patch("/{mid}")
 async def update_marker(pid: str, mid: str, body: MarkerUpdate, request: Request) -> MarkerResponse:
     """Update mutable fields of a timeline marker."""
     repo = _get_repo(request)

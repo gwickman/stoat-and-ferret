@@ -147,7 +147,6 @@ def _check_ffmpeg_available() -> None:
 
 @router.get(
     "/preview/cache",
-    response_model=PreviewCacheStatusResponse,
 )
 async def get_cache_status(
     request: Request,
@@ -177,7 +176,6 @@ async def get_cache_status(
 
 @router.delete(
     "/preview/cache",
-    response_model=PreviewCacheClearResponse,
 )
 async def clear_cache(
     request: Request,
@@ -201,7 +199,6 @@ async def clear_cache(
 
 @router.post(
     "/projects/{project_id}/preview/start",
-    response_model=PreviewStartResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def start_preview(
@@ -287,7 +284,6 @@ async def start_preview(
 
 @router.get(
     "/preview/{session_id}",
-    response_model=PreviewStatusResponse,
 )
 async def get_preview_status(
     session_id: str,
@@ -336,7 +332,6 @@ async def get_preview_status(
 
 @router.post(
     "/preview/{session_id}/seek",
-    response_model=PreviewSeekResponse,
 )
 async def seek_preview(
     session_id: str,
@@ -394,7 +389,6 @@ async def seek_preview(
 
 @router.delete(
     "/preview/{session_id}",
-    response_model=PreviewStopResponse,
 )
 async def stop_preview(
     session_id: str,

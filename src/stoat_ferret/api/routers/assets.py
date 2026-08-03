@@ -222,7 +222,7 @@ async def _sniff_content(
 # ---------------------------------------------------------------------------
 
 
-@router.post("", status_code=201, response_model=AssetRead)
+@router.post("", status_code=201)
 async def upload_asset(
     request: Request,
     file: UploadFile,
@@ -300,7 +300,7 @@ async def upload_asset(
     return _to_schema(saved)
 
 
-@router.get("", response_model=AssetListResponse)
+@router.get("")
 async def list_assets(
     request: Request,
     kind: str | None = Query(default=None, description="Filter by asset kind."),
@@ -318,7 +318,7 @@ async def list_assets(
     )
 
 
-@router.get("/{asset_id}", response_model=AssetRead)
+@router.get("/{asset_id}")
 async def get_asset(asset_id: str, request: Request) -> AssetRead:
     """Get asset metadata by UUID. Soft-deleted assets return 404."""
     repo = _get_repo(request)

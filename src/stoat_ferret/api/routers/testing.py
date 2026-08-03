@@ -83,7 +83,6 @@ TestingModeDep = Annotated[Settings, Depends(require_testing_mode)]
 
 @router.post(
     "/seed",
-    response_model=SeedResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
         403: {

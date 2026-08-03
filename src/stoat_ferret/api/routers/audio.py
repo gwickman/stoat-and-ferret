@@ -152,7 +152,6 @@ def _build_filter_preview(request: AudioMixRequest) -> str:
 
 @router.put(
     "/projects/{project_id}/audio/mix",
-    response_model=AudioMixResponse,
 )
 async def configure_audio_mix(
     project_id: str,
@@ -236,7 +235,6 @@ async def configure_audio_mix(
 
 @router.post(
     "/audio/mix/preview",
-    response_model=AudioMixResponse,
 )
 async def preview_audio_mix(
     request: AudioMixRequest,
@@ -273,7 +271,6 @@ async def preview_audio_mix(
 
 @router.post(
     "/projects/{project_id}/ducking_pairs",
-    response_model=DuckingPairResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_ducking_pair(
@@ -332,7 +329,6 @@ async def create_ducking_pair(
 
 @router.get(
     "/projects/{project_id}/ducking_pairs",
-    response_model=list[DuckingPairResponse],
 )
 async def list_ducking_pairs(
     project_id: str,
@@ -381,7 +377,6 @@ async def list_ducking_pairs(
 
 @router.get(
     "/projects/{project_id}/ducking_pairs/{pair_id}",
-    response_model=DuckingPairResponse,
 )
 async def get_ducking_pair(
     project_id: str,
@@ -435,7 +430,6 @@ async def get_ducking_pair(
 
 @router.patch(
     "/projects/{project_id}/ducking_pairs/{pair_id}",
-    response_model=DuckingPairResponse,
 )
 async def update_ducking_pair(
     project_id: str,

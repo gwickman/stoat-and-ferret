@@ -110,7 +110,6 @@ VideoRepoDep = Annotated[AsyncVideoRepository, Depends(get_video_repository)]
 
 @router.post(
     "/videos/{video_id}/proxy",
-    response_model=JobSubmitResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def generate_proxy(
@@ -167,7 +166,7 @@ async def generate_proxy(
     return JobSubmitResponse(job_id=job_id)
 
 
-@router.get("/videos/{video_id}/proxy", response_model=ProxyResponse)
+@router.get("/videos/{video_id}/proxy")
 async def get_proxy_status(
     video_id: str,
     proxy_repo: ProxyRepoDep,
@@ -211,7 +210,7 @@ async def get_proxy_status(
     )
 
 
-@router.delete("/videos/{video_id}/proxy", response_model=ProxyDeleteResponse)
+@router.delete("/videos/{video_id}/proxy")
 async def delete_proxy(
     video_id: str,
     proxy_repo: ProxyRepoDep,
@@ -253,7 +252,6 @@ async def delete_proxy(
 
 @router.post(
     "/proxy/batch",
-    response_model=ProxyBatchResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def batch_generate_proxies(

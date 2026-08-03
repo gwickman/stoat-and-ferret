@@ -80,7 +80,6 @@ def _profile_to_response(profile: DeliveryProfile) -> DeliveryProfileResponse:
 
 @router.post(
     "/delivery_profiles",
-    response_model=DeliveryProfileResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_delivery_profile(
@@ -125,7 +124,6 @@ async def create_delivery_profile(
 
 @router.get(
     "/delivery_profiles",
-    response_model=DeliveryProfileListResponse,
 )
 async def list_delivery_profiles(
     repo: DeliveryProfileRepoDep,
@@ -147,7 +145,6 @@ async def list_delivery_profiles(
 
 @router.get(
     "/delivery_profiles/{profile_id}",
-    response_model=DeliveryProfileResponse,
 )
 async def get_delivery_profile(
     profile_id: str,

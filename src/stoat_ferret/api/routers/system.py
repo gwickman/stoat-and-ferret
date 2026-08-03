@@ -47,7 +47,7 @@ def _compute_uptime_seconds(app_state: object) -> float:
     return max(0.0, (now - started).total_seconds())
 
 
-@router.get("/state", response_model=SystemState)
+@router.get("/state")
 async def get_system_state(request: Request) -> SystemState:
     """Return aggregate in-memory system state.
 

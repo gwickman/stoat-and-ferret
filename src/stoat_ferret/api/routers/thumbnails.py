@@ -82,7 +82,6 @@ ThumbnailServiceDep = Annotated[ThumbnailService, Depends(_get_thumbnail_service
 
 @router.post(
     "/videos/{video_id}/thumbnails/strip",
-    response_model=ThumbnailStripGenerateResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def generate_strip(
@@ -136,7 +135,6 @@ async def generate_strip(
 
 @router.get(
     "/videos/{video_id}/thumbnails/strip",
-    response_model=ThumbnailStripMetadataResponse,
 )
 async def get_strip_metadata(
     video_id: str,

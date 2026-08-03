@@ -85,7 +85,6 @@ async def _validate_voice_track(request: Request, track_id: str) -> None:
 
 @router.post(
     "/projects/{project_id}/tts_cues",
-    response_model=TtsCueResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a TTS cue",
 )
@@ -134,7 +133,6 @@ async def create_tts_cue(
 
 @router.get(
     "/projects/{project_id}/tts_cues",
-    response_model=TtsCueListResponse,
     summary="List TTS cues for a project",
 )
 async def list_tts_cues(
@@ -156,7 +154,6 @@ async def list_tts_cues(
 
 @router.get(
     "/projects/{project_id}/tts_cues/{cue_id}",
-    response_model=TtsCueResponse,
     summary="Get a TTS cue",
 )
 async def get_tts_cue(
@@ -185,7 +182,6 @@ async def get_tts_cue(
 
 @router.patch(
     "/projects/{project_id}/tts_cues/{cue_id}",
-    response_model=TtsCueResponse,
     summary="Update a TTS cue",
 )
 async def update_tts_cue(
@@ -327,7 +323,6 @@ async def synthesise_tts_cue(
 
 @router.get(
     "/tts/voices",
-    response_model=VoicesResponse,
     summary="List available TTS voices",
 )
 async def list_tts_voices(

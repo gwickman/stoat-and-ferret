@@ -102,7 +102,7 @@ TimelineRepoDep = Annotated[AsyncTimelineRepository, Depends(get_timeline_reposi
 ClipRepoDep = Annotated[AsyncClipRepository, Depends(get_clip_repository)]
 
 
-@router.get("/projects/{project_id}/versions", response_model=VersionListResponse)
+@router.get("/projects/{project_id}/versions")
 async def list_versions(
     project_id: str,
     project_repo: ProjectRepoDep,
@@ -153,7 +153,6 @@ async def list_versions(
 
 @router.post(
     "/projects/{project_id}/versions",
-    response_model=VersionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_version(
@@ -213,7 +212,6 @@ async def create_version(
 
 @router.post(
     "/projects/{project_id}/versions/{version}/restore",
-    response_model=RestoreResponse,
 )
 async def restore_version(
     project_id: str,

@@ -66,7 +66,7 @@ def _record_to_response(record: QCReportRecord) -> QCReportResponse:
     )
 
 
-@router.post("/qc/run", status_code=status.HTTP_201_CREATED, response_model=QCReportResponse)
+@router.post("/qc/run", status_code=status.HTTP_201_CREATED)
 async def run_qc(body: QCRunRequest, request: Request) -> QCReportResponse:
     """Run all 12 QC checks over a rendered artifact and return a QCReport.
 
@@ -116,7 +116,7 @@ async def run_qc(body: QCRunRequest, request: Request) -> QCReportResponse:
     return _record_to_response(record)
 
 
-@router.get("/qc/reports/{report_id}", response_model=QCReportResponse)
+@router.get("/qc/reports/{report_id}")
 async def get_qc_report(report_id: str, request: Request) -> QCReportResponse:
     """Fetch a QCReport by UUID.
 
@@ -133,7 +133,7 @@ async def get_qc_report(report_id: str, request: Request) -> QCReportResponse:
     return _record_to_response(record)
 
 
-@router.get("/render/{job_id}/qc", response_model=QCReportResponse)
+@router.get("/render/{job_id}/qc")
 async def get_render_job_qc(job_id: str, request: Request) -> QCReportResponse:
     """Return the latest QCReport for a render job.
 

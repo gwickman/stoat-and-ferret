@@ -134,7 +134,7 @@ def _build_preset_list() -> list[LayoutPresetResponse]:
     return presets
 
 
-@router.get("/compose/presets", response_model=LayoutPresetListResponse)
+@router.get("/compose/presets")
 async def list_presets() -> LayoutPresetListResponse:
     """List all available layout presets with metadata.
 
@@ -155,7 +155,7 @@ _PRESET_BY_NAME: dict[str, tuple[LayoutPreset, int]] = {
 }
 
 
-@router.post("/projects/{project_id}/compose/layout", response_model=LayoutResponse)
+@router.post("/projects/{project_id}/compose/layout")
 async def apply_layout(
     project_id: str,
     request: LayoutRequest,
