@@ -207,7 +207,7 @@ class PreviewCache:
             cleared = len(self._entries)
             freed = sum(e.size_bytes for e in self._entries.values())
 
-            for entry in list(self._entries.values()):
+            for entry in self._entries.values():
                 session_dir = self._base_dir / entry.session_id
                 if session_dir.exists():
                     shutil.rmtree(session_dir, ignore_errors=True)
