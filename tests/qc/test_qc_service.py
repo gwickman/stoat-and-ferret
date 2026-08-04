@@ -824,6 +824,13 @@ def test_parse_overall_correlation_corpus_equivalence() -> None:
         ("whitespace trimmed value", "Overall Correlation:   1.000000\n"),
         ("int-like value", "Overall Correlation: 1\n"),
         ("multi-line with match", "Overall RMS: -20.0\nOverall Correlation: 0.75\n"),
+        # log-prefixed entries — regression cases (LRN-956 caveat; see BL-758)
+        ("log-prefixed single-line", "[Parsed_astats_0 @ 0x7f001] Overall Correlation: 0.999842\n"),
+        (
+            "log-prefixed two-line",
+            "[Parsed_astats_0 @ 0x7f001] Overall\n"
+            "[Parsed_astats_0 @ 0x7f001]   Correlation: 0.999842\n",
+        ),
     ]
 
     for description, stderr in corpus:
@@ -852,7 +859,10 @@ def test_parse_overall_correlation_adversarial_no_colon_trigger() -> None:
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
-async def test_spatial_correlation_linear_parser_ffmpeg8_output(sample_video_path: Path) -> None:
+async def test_spatial_correlation_linear_parser_ffmpeg8_output(
+    sample_video_path: Path,
+    sample_stereo_video_path: Path,
+) -> None:
     """Parser handles actual FFmpeg-8 astats stderr output without crashing (BL-738-AC-4).
 
     Uses the session-scoped sample_video_path fixture (H.264+AAC, 1 second).
@@ -861,6 +871,8 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(sample_video_pat
     full pipeline (real FFmpeg → linear parser) runs without error and returns
     a structurally valid result dict; when a value is present it must be a float
     in [-1.0, 1.0].
+
+    Also verifies BL-758: stereo audio must return a non-None measured float.
     """
     svc, _, _ = _make_service(asyncio.create_subprocess_exec)
     result = await svc._check_spatial_correlation(artifact_path=str(sample_video_path), target=None)
@@ -871,6 +883,22 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(sample_video_pat
         assert -1.0 <= measured <= 1.0, (
             f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
         )
+
+    # BL-758: stereo audio must yield a real float (not None)
+    stereo_result = await svc._check_spatial_correlation(
+        artifact_path=str(sample_stereo_video_path), target=None
+    )
+    stereo_measured = stereo_result.get("measured")
+    assert stereo_measured is not None, (
+        "BL-758: _parse_overall_correlation returned None for stereo audio — "
+        "startswith fix may not be applied or FFmpeg astats format has changed"
+    )
+    assert isinstance(stereo_measured, float), (
+        f"BL-758: expected float, got {type(stereo_measured)}"
+    )
+    assert -1.0 <= stereo_measured <= 1.0, (
+        f"BL-758: correlation {stereo_measured} out of [-1.0, 1.0] range"
+    )
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")

@@ -95,19 +95,34 @@ def _make_check(
 def _parse_overall_correlation(stderr: str) -> float | None:
     """Extract the Overall Correlation value from FFmpeg astats stderr output.
 
-    Replaces the S8786 super-linear regex with a linear line-oriented parser.
-    Only matches lines that start with "Overall" AND contain "Correlation:" —
-    preserving the original semantic contract exactly (not widening to any line
-    containing Correlation: without the Overall prefix).
+    Uses substring search and two-line lookahead to handle real FFmpeg-8 astats
+    stderr, which carries a [Parsed_astats_0 @ addr] log prefix on every line
+    and may split the metric across an "Overall" header line and a separate
+    "Correlation:" value line. O(n) — no regex, preserving S8786 compliance.
     """
-    for line in stderr.splitlines():
-        if line.startswith("Overall") and "Correlation:" in line:
-            parts = line.rsplit(":", 1)
+    lines = stderr.splitlines()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if "Overall" not in stripped:
+            continue
+        if "Correlation:" in stripped:
+            # Single-line format: "[prefix] Overall Correlation: 0.999842"
+            parts = stripped.rsplit(":", 1)
             if len(parts) == 2:
                 try:
                     return float(parts[1].strip())
                 except ValueError:
                     return None
+        elif i + 1 < len(lines):
+            # Two-line format: "[prefix] Overall" / "[prefix]   Correlation: 0.999842"
+            next_stripped = lines[i + 1].strip()
+            if "Correlation:" in next_stripped:
+                parts = next_stripped.rsplit(":", 1)
+                if len(parts) == 2:
+                    try:
+                        return float(parts[1].strip())
+                    except ValueError:
+                        return None
     return None
 
 
