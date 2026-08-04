@@ -117,6 +117,51 @@ def sample_video_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="session")
+def sample_stereo_video_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Generate a stereo video file for testing spatial correlation (BL-758).
+
+    Creates a 1-second stereo video using two distinct tones (440 Hz + 880 Hz)
+    to ensure non-trivial cross-channel correlation.  Session-scoped to avoid
+    per-test FFmpeg overhead in the ffmpeg-tests CI lane.
+
+    Returns:
+        Path to the generated stereo_sample.mp4 file.
+
+    Raises:
+        pytest.skip: If FFmpeg is not available or fixture generation fails.
+    """
+    if not _ffmpeg_available():
+        pytest.skip("FFmpeg not available")
+    tmp_path = tmp_path_factory.mktemp("stereo_video")
+    output = tmp_path / "stereo_sample.mp4"
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc=sin(440*2*PI*t)|sin(880*2*PI*t):c=stereo:s=44100:d=1",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=64x64:r=25:d=1",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            str(output),
+        ],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr_text = result.stderr.decode(errors="replace")
+        pytest.skip(f"FFmpeg stereo fixture generation failed: {stderr_text}")
+    return output
+
+
+@pytest.fixture(scope="session")
 def video_only_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Generate a video file without audio for testing.
 

@@ -95,14 +95,29 @@ def _make_check(
 def _parse_overall_correlation(stderr: str) -> float | None:
     """Extract the Overall Correlation value from FFmpeg astats stderr output.
 
-    Replaces the S8786 super-linear regex with a linear line-oriented parser.
-    Only matches lines that start with "Overall" AND contain "Correlation:" —
-    preserving the original semantic contract exactly (not widening to any line
-    containing Correlation: without the Overall prefix).
+    Uses substring search and stateful scanning to handle real FFmpeg-8 astats
+    stderr, which carries a [Parsed_astats_0 @ addr] log prefix on every line
+    and may output many stats between the "Overall" header line and the
+    "Correlation:" value line. O(n) — no regex, preserving S8786 compliance.
     """
+    in_overall = False
     for line in stderr.splitlines():
-        if line.startswith("Overall") and "Correlation:" in line:
-            parts = line.rsplit(":", 1)
+        stripped = line.strip()
+        if "Overall" in stripped:
+            if "Correlation:" in stripped:
+                # Single-line format: "[prefix] Overall Correlation: 0.999842"
+                parts = stripped.rsplit(":", 1)
+                if len(parts) == 2:
+                    try:
+                        return float(parts[1].strip())
+                    except ValueError:
+                        return None
+            else:
+                # Overall section header — subsequent lines belong to this section
+                in_overall = True
+        elif in_overall and "Correlation:" in stripped:
+            # "[prefix]   Correlation: 0.999842" within the Overall section
+            parts = stripped.rsplit(":", 1)
             if len(parts) == 2:
                 try:
                     return float(parts[1].strip())
@@ -606,7 +621,7 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "astats=measure_overall=Correlation",
+            "astats",
             *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
