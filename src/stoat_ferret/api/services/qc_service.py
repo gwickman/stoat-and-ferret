@@ -621,7 +621,7 @@ class QCService:
             "-i",
             artifact_path,
             "-af",
-            "astats=measure_overall=Correlation",
+            "astats",
             *_FFMPEG_NULL_SINK,
         )
         if rc != 0 and not stderr:
