@@ -626,7 +626,6 @@ class QCService:
         )
         if rc != 0 and not stderr:
             return dict(_NULL_CHECK)
-        print(f"DEBUG BL-758 stereo stderr: {stderr!r}", flush=True)  # temporary — remove after CI confirms
         measured_or_none = _parse_overall_correlation(stderr)
         if measured_or_none is None:
             return _make_check(None, target, "ratio")

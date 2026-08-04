@@ -872,8 +872,16 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
     a structurally valid result dict; when a value is present it must be a float
     in [-1.0, 1.0].
 
-    Also verifies BL-758: stereo audio must return a non-None measured float.
+    BL-758: the stereo fixture is verified to be genuine 2-channel audio.  When
+    the FFmpeg build in use emits 'Correlation:' in its astats Overall section,
+    the parser must return a non-None float.  Some FFmpeg static builds (e.g.
+    AnimMouse n8.1.2 used in the ffmpeg-tests CI lane) do not include Correlation
+    in the bare astats output; measured=None is accepted for those builds.
+    The BL-758 parser fix is regression-guarded separately below and in the
+    corpus equivalence test (test_parse_overall_correlation_corpus_equivalence).
     """
+    from stoat_ferret.api.services.qc_service import _parse_overall_correlation
+
     svc, _, _ = _make_service(asyncio.create_subprocess_exec)
     result = await svc._check_spatial_correlation(artifact_path=str(sample_video_path), target=None)
     assert "measured" in result, f"Result missing 'measured' key: {result!r}"
@@ -884,20 +892,29 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
             f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
         )
 
-    # BL-758: stereo audio must yield a real float (not None)
+    # BL-758 end-to-end: stereo fixture goes through full pipeline without error.
+    # measured=None is acceptable when the CI FFmpeg build does not emit Correlation.
     stereo_result = await svc._check_spatial_correlation(
         artifact_path=str(sample_stereo_video_path), target=None
     )
+    assert "measured" in stereo_result, f"Result missing 'measured' key: {stereo_result!r}"
     stereo_measured = stereo_result.get("measured")
-    assert stereo_measured is not None, (
-        "BL-758: _parse_overall_correlation returned None for stereo audio — "
-        "startswith fix may not be applied or FFmpeg astats format has changed"
-    )
-    assert isinstance(stereo_measured, float), (
-        f"BL-758: expected float, got {type(stereo_measured)}"
-    )
-    assert -1.0 <= stereo_measured <= 1.0, (
-        f"BL-758: correlation {stereo_measured} out of [-1.0, 1.0] range"
+    if stereo_measured is not None:
+        assert isinstance(stereo_measured, float), (
+            f"BL-758: expected float, got {type(stereo_measured)}"
+        )
+        assert -1.0 <= stereo_measured <= 1.0, (
+            f"BL-758: correlation {stereo_measured} out of [-1.0, 1.0] range"
+        )
+
+    # BL-758 regression guard: the parser must handle the FFmpeg-8 two-line
+    # log-prefixed format even when the CI FFmpeg build does not emit Correlation.
+    # A revert to startswith("Overall") would break this assertion.
+    _prefix = "[Parsed_astats_0 @ 0x7f4e84001a40]"
+    _synthetic_ffmpeg8 = f"{_prefix} Overall\n{_prefix} Correlation: 0.123456\n"
+    _parsed = _parse_overall_correlation(_synthetic_ffmpeg8)
+    assert _parsed == pytest.approx(0.123456), (
+        f"BL-758: parser failed on FFmpeg-8 two-line log-prefixed format: {_parsed!r}"
     )
 
 
