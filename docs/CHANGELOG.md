@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v118 — SonarCloud Wave C pt.5 — Python Lint & Script Hygiene (2026-08-03)
+
+3 themes, 8 features (1 deferred_with_plan), PRs #937–#943. 28/32 ACs supported, 0 quality gate failures.
+
+### Theme 1: python-lint-longtail
+
+- BL-738: Clear LINT-1 production smells — extracted `_SQLALCHEMY_URL_KEY` constant, added `task.cancel_initiated` debug log, removed defensive `list()` copy in `clear_all()`, replaced super-linear regex with `_parse_overall_correlation` linear parser, flattened nested ternary in `uat_journey_403.py` (PR #937)
+- BL-735: Extract repeated UAT selector constants — 6 journey scripts refactored with module-level constants; JS argument threading applied in `uat_journey_403.py` (PR #938)
+- BL-755: `_RenderCommandContext` dataclass bundles render worker sub-function parameters; reduces `_build_multi_clip_command` and `_build_single_clip_command` to 2 params each, resolving S107 (PR #939)
+
+### Theme 2: test-and-helper-hygiene
+
+- BL-723 AC-5: Smoke tests for `generate_markdown_report`, `generate_json_report`, `build_journey_reports` in `tests/smoke/test_uat_runner.py` (PR #940)
+- BL-753: Strengthen PYTHONOPTIMIZE guard — new `scripts/uat_guard_check.py` helper with converted if/raise guard; `test_pythonoptimize_converted_guard_fires` characterization test added (PR #941)
+- BL-757: Harden `TestGoldenArgv` — image clip (case 8) and generator clip (case 9) added; no-clips assertion tightened to exact equality (PR #942)
+- BL-722: Clear test-side hygiene long tail — DEFERRED_WITH_PLAN; `tests/acceptance/uc_media_mps_001_harness.py` not collected by ffmpeg-tests CI lane (non-standard filename); discharge requires manual invocation per BL-722 notes
+
+### Theme 3: c4-doc-residual-rider
+
+- BL-756: Refresh C4 docs for v116 signature drift — corrected `start_cleanup_task() -> None` (removed `async` prefix) in `c4-code-stoat-ferret-preview.md:55`; updated `_build_multi_clip_command` dispatcher-split entry in `c4-code-stoat-ferret-render.md:94` (PR #943)
+
+---
+
 ## v117 — FastAPI Declaration Conventions (2026-08-03)
 
 1 theme, 4 features, PRs #932–#935. 20/20 ACs verified, 0 quality gate failures.
