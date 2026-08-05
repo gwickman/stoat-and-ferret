@@ -31,6 +31,11 @@ export default defineConfig([
     plugins: {
       react: reactPlugin,
     },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
     rules: {
       // Allow role on interactive div/span elements when aria-label is present.
       // The codebase uses role="button" on divs for custom interactive controls.

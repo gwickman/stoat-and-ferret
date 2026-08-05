@@ -4,6 +4,25 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v120] — 2026-08-05
+
+### Features
+
+- BL-762 (zero-modification): SonarCloud API confirmed all S6759/S2933/S6582 issues CLOSED/FIXED on main at current sonarjs/SonarCloud versions; `Readonly<T>` wrapper satisfies both engines; no code change required
+- BL-763: Added `gui/tsconfig.eslint.node.json` to provide Node ambient types for playwright/vitest/setup config files; `tsconfig.eslint.node.json` listed before `tsconfig.eslint.json` in `parserOptions.project` array per first-match semantics (PR #949)
+- BL-744: `react/button-has-type: 'error'` gated; 21 `<button>` elements across 9 production and 2 test files given explicit `type=` attributes (PR #950)
+- BL-746: `jsx-a11y/prefer-tag-over-role: 'error'` gated; 5 semantic element swaps (ProgressBar: slider with justify-suppress, TimelineClip: div→button, BatchJobList: div→progress, ThemeSelector: div→fieldset, PanelVisibilityToggle: div→fieldset); 4 justified suppressions (PR #951)
+- BL-647 (zero-modification): `react/no-array-index-key: 'error'` already present from PR #831; all 3 ACs satisfied at HEAD; ESLint `--max-warnings 0` clean
+
+### Quality
+
+- All 887 vitest tests passing (99/99 test files)
+- TypeScript type checking clean (tsc exit 0)
+- ESLint conformance: zero violations with all new rules enabled
+- GUI-only version; no Python or Rust changes
+
+---
+
 ## [v119] — 2026-08-05
 
 ### Features
