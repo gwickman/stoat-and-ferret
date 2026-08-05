@@ -154,10 +154,11 @@ export default function RenderPage() {
 
   // Clean up progress debounce timer on unmount.
   useEffect(() => {
+    const ref = progressDebounceRef
     return () => {
-      if (progressDebounceRef.current) clearTimeout(progressDebounceRef.current)
+      if (ref.current) clearTimeout(ref.current)
     }
-  }, [])
+  }, [progressDebounceRef])
 
   useBatchJobs(activeTab === 'batch' ? activeBatchId : null)
 
