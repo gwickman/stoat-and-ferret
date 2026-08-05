@@ -1,4 +1,5 @@
 {
+  // Lint-time type project: App/DOM types (src/, e2e/). Root config files use tsconfig.eslint.node.json.
   "extends": "./tsconfig.app.json",
   "compilerOptions": { "noEmit": true },
   "include": ["src", "e2e", "*.ts"]
