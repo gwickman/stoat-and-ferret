@@ -235,6 +235,24 @@ function sanitizeSizesByPreset(value: unknown): SizesByPreset {
   return out
 }
 
+function loadPanelSizes(source: unknown): PanelSizes {
+  const sizes: PanelSizes = { ...DEFAULT_PANEL_SIZES }
+  if (!source || typeof source !== 'object') return sizes
+  for (const [key, value] of Object.entries(source as Record<string, unknown>)) {
+    if (isPanelId(key) && isFiniteSize(value)) sizes[key] = value
+  }
+  return sizes
+}
+
+function loadPanelVisibility(source: unknown): PanelVisibility {
+  const visibility: PanelVisibility = { ...DEFAULT_PANEL_VISIBILITY }
+  if (!source || typeof source !== 'object') return visibility
+  for (const [key, value] of Object.entries(source as Record<string, unknown>)) {
+    if (isPanelId(key) && typeof value === 'boolean') visibility[key] = value
+  }
+  return visibility
+}
+
 /**
  * Hydrate workspace state from localStorage. Discards malformed JSON or
  * out-of-range values; affected fields fall back to defaults.
@@ -255,19 +273,8 @@ export function loadWorkspaceState(): WorkspaceState {
 
     const anchorPreset: NamedPreset = resolveAnchorPreset(preset, parsed.anchorPreset)
 
-    const panelSizes: PanelSizes = { ...DEFAULT_PANEL_SIZES }
-    if (parsed.panelSizes && typeof parsed.panelSizes === 'object') {
-      for (const [key, value] of Object.entries(parsed.panelSizes as Record<string, unknown>)) {
-        if (isPanelId(key) && isFiniteSize(value)) panelSizes[key] = value
-      }
-    }
-
-    const panelVisibility: PanelVisibility = { ...DEFAULT_PANEL_VISIBILITY }
-    if (parsed.panelVisibility && typeof parsed.panelVisibility === 'object') {
-      for (const [key, value] of Object.entries(parsed.panelVisibility as Record<string, unknown>)) {
-        if (isPanelId(key) && typeof value === 'boolean') panelVisibility[key] = value
-      }
-    }
+    const panelSizes = loadPanelSizes(parsed.panelSizes)
+    const panelVisibility = loadPanelVisibility(parsed.panelVisibility)
 
     return {
       preset,

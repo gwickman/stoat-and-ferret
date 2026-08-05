@@ -5,6 +5,11 @@ export interface Metrics {
   avgDurationMs: number | null
 }
 
+function extractMetricValue(line: string): number | null {
+  const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
+  return Number.isNaN(value) ? null : value
+}
+
 /**
  * Parse Prometheus text format to extract key metrics.
  *
@@ -20,14 +25,14 @@ export function parsePrometheus(text: string): Metrics {
     if (line.startsWith('#') || line.trim() === '') continue
 
     if (line.startsWith('http_requests_total')) {
-      const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
-      if (!Number.isNaN(value)) requestCount += value
+      const v = extractMetricValue(line)
+      if (v !== null) requestCount += v
     } else if (line.startsWith('http_request_duration_seconds_sum')) {
-      const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
-      if (!Number.isNaN(value)) durationSum += value
+      const v = extractMetricValue(line)
+      if (v !== null) durationSum += v
     } else if (line.startsWith('http_request_duration_seconds_count')) {
-      const value = Number.parseFloat(line.split(/\s+/).pop() ?? '0')
-      if (!Number.isNaN(value)) durationCount += value
+      const v = extractMetricValue(line)
+      if (v !== null) durationCount += v
     }
   }
 
