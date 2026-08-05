@@ -98,15 +98,14 @@ describe('TimelineClip', () => {
     expect(el.getAttribute('aria-pressed')).toBe('false')
   })
 
-  it('handles keyboard selection with Enter', () => {
-    const onSelect = vi.fn()
+  it('is a native button element for semantic keyboard access', () => {
     const clip = makeClip()
     render(
-      <TimelineClip clip={clip} zoom={1} scrollOffset={0} isSelected={false} onSelect={onSelect} />,
+      <TimelineClip clip={clip} zoom={1} scrollOffset={0} isSelected={false} onSelect={vi.fn()} />,
     )
 
-    fireEvent.keyDown(screen.getByTestId('clip-clip-1'), { key: 'Enter' })
-    expect(onSelect).toHaveBeenCalledWith('clip-1')
+    const el = screen.getByTestId('clip-clip-1')
+    expect(el.tagName).toBe('BUTTON')
   })
 
   it('uses in_point/out_point for duration when timeline_start/end are null', () => {

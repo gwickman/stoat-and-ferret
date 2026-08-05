@@ -6,6 +6,31 @@ import {
   type BatchJobStatus,
 } from '../../stores/batchStore'
 
+// Tailwind utilities cannot target pseudo-elements like ::-webkit-progress-value,
+// so cross-browser progress bar styling is injected here as a scoped style block.
+const BATCH_PROGRESS_STYLES = `
+  progress.batch-progress {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+  }
+  progress.batch-progress::-webkit-progress-bar {
+    background: transparent;
+  }
+  progress.batch-progress::-webkit-progress-value {
+    background-color: rgb(59 130 246);
+    transition: width 150ms;
+  }
+  progress.batch-progress::-moz-progress-bar {
+    background-color: rgb(59 130 246);
+    transition: width 150ms;
+  }
+`
+
 interface BatchJobListProps {
   /**
    * Optional batch_id filter — when provided, only jobs in that batch
@@ -95,14 +120,11 @@ function JobRow({ job, now }: Readonly<JobRowProps>) {
       </div>
       <div className="col-span-4">
         <div className="h-2 w-full overflow-hidden rounded bg-gray-700">
-          <div
+          <progress
             data-testid={`batch-progress-bar-${job.job_id}`}
-            className="h-full bg-blue-500 transition-[width] duration-150"
-            style={{ width: `${progressPct}%` }}
-            role="progressbar"
-            aria-valuenow={progressPct}
-            aria-valuemin={0}
-            aria-valuemax={100}
+            className="batch-progress"
+            value={progressPct}
+            max={100}
             aria-label={`Job ${job.job_id} progress`}
           />
         </div>
@@ -167,10 +189,13 @@ export default function BatchJobList({ batchId, now = Date.now }: Readonly<Batch
   }
 
   return (
-    <div data-testid="batch-job-list" className="space-y-2">
-      {jobs.map((job) => (
-        <JobRow key={job.job_id} job={job} now={now} />
-      ))}
-    </div>
+    <>
+      <style>{BATCH_PROGRESS_STYLES}</style>
+      <div data-testid="batch-job-list" className="space-y-2">
+        {jobs.map((job) => (
+          <JobRow key={job.job_id} job={job} now={now} />
+        ))}
+      </div>
+    </>
   )
 }

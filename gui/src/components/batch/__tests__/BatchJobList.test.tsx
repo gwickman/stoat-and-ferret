@@ -49,9 +49,9 @@ describe('BatchJobList', () => {
     useBatchStore.getState().addJob(makeJob({ job_id: 'a', status: 'running', progress: 0.42 }))
     render(<BatchJobList />)
     expect(screen.getByTestId('batch-progress-pct-a').textContent).toBe('42%')
-    const bar = screen.getByTestId('batch-progress-bar-a') as HTMLDivElement
-    expect(bar.style.width).toBe('42%')
-    expect(bar.getAttribute('aria-valuenow')).toBe('42')
+    const bar = screen.getByTestId('batch-progress-bar-a') as HTMLProgressElement
+    expect(bar.value).toBe(42)
+    expect(bar.max).toBe(100)
   })
 
   it('clamps progress to [0, 100]', () => {
