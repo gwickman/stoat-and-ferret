@@ -4,6 +4,32 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v119] — 2026-08-05
+
+### Features
+
+- Type-aware ESLint configuration (BL-742 AC-1): Added `tsconfig.eslint.json` and `parserOptions.project` array to enable TypeScript-aware parsing across all lint targets
+- Type-aware ESLint rule enablement (BL-742 AC-2-8): Enabled `sonarjs/sonar-prefer-read-only-props` (S6759), `@typescript-eslint/prefer-readonly` (S2933), and `sonarjs/sonar-prefer-optional-chain` (S6582); applied `Readonly<T>` wrappers to 60 component prop signatures across 51 files
+- C4 documentation update: Updated `docs/C4-Documentation/c4-code-gui.md` to document type-aware ESLint configuration, tsconfig.eslint.json structure, and rule IDs
+
+### Quality
+
+- All 887 vitest tests passing
+- TypeScript type checking clean
+- ESLint conformance: zero violations with new rules enabled
+- GUI-only version; no Python changes
+
+---
+
+## [v118-hotfix-1] - 2026-08-04
+
+### Fixed
+
+- BL-758: Restore stereo spatial-correlation parsing under FFmpeg-8 log-prefixed astats output. Parser now uses substring search (`output.find("Overall")`) instead of position-dependent `startswith` checks to handle `[Parsed_astats_0 @ addr]` log prefix. Two-line `Overall:` / `Correlation:` format is also handled correctly. (PR #944, commit 9e8f705b)
+- Note: AC-4 stereo FFmpeg-8-gated fixture test deferred post-merge — AnimMouse FFmpeg 8 aevalsrc fixture may produce mono AAC; diagnosis and fixture update tracked in BL-758.
+
+---
+
 ## v118 — SonarCloud Wave C pt.5 — Python Lint & Script Hygiene (2026-08-03)
 
 3 themes, 8 features (1 deferred_with_plan), PRs #937–#943. 28/32 ACs supported, 0 quality gate failures.
