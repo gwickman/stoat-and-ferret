@@ -83,12 +83,14 @@ export default function ProgressBar({
       <span className="text-xs text-gray-400 tabular-nums" data-testid="time-current">
         {formatTime(currentTime)}
       </span>
+      {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- Custom seek bar needs pixel-accurate click handling and hover-preview tooltip; <input type="range"> cannot support the required mouse-position-based seeking pattern */}
       <div
         ref={trackRef}
-        role="progressbar"
+        role="slider"
         aria-valuenow={Math.round(currentTime)}
         aria-valuemin={0}
         aria-valuemax={Math.round(duration)}
+        aria-orientation="horizontal"
         aria-label="Playback progress"
         className="relative h-2 flex-1 cursor-pointer rounded bg-gray-700"
         data-testid="progress-bar-track"

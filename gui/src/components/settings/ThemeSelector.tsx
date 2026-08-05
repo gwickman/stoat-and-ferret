@@ -17,12 +17,12 @@ const THEMES: ReadonlyArray<{ value: Theme; label: string }> = [
 export default function ThemeSelector() {
   const { theme, setTheme } = useSettings()
   return (
-    <div
-      role="group"
+    <fieldset
       aria-label="Theme"
       data-testid="theme-selector"
-      className="flex items-center gap-2"
+      className="m-0 flex min-w-0 items-center gap-2 border-0 p-0"
     >
+      <legend className="sr-only">Theme</legend>
       {THEMES.map((option) => {
         const active = theme === option.value
         return (
@@ -42,6 +42,6 @@ export default function ThemeSelector() {
           </button>
         )
       })}
-    </div>
+    </fieldset>
   )
 }

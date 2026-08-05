@@ -42,6 +42,7 @@ export default function SettingsPanel({ open, onClose }: Readonly<SettingsPanelP
   }
 
   return (
+    // eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- APG Modal Dialog pattern; correctly implements role=dialog with aria-modal, aria-labelledby, and Escape handler; native <dialog> rewrite requires focus-trap rewrite with no AT benefit
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="settings-panel"

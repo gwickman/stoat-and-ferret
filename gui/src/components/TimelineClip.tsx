@@ -22,23 +22,16 @@ export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onS
   const width = right - left
 
   return (
-    <div
+    <button
+      type="button"
       data-testid={`clip-${clip.id}`}
-      className={`absolute top-0.5 bottom-0.5 flex cursor-pointer items-center overflow-hidden rounded text-xs ${
+      className={`absolute top-0.5 bottom-0.5 flex cursor-pointer appearance-none items-center overflow-hidden rounded border-0 bg-transparent p-0 text-left text-xs ${
         isSelected
           ? 'border-2 border-blue-400 bg-blue-700/80'
           : 'border border-gray-600 bg-indigo-800/70 hover:bg-indigo-700/80'
       }`}
       style={{ left: `${left}px`, width: `${width}px` }}
       onClick={() => onSelect(clip.id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect(clip.id)
-        }
-      }}
       aria-pressed={isSelected}
     >
       {trackType === 'audio' && clip.source_video_id && (
@@ -50,6 +43,6 @@ export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onS
       >
         {duration.toFixed(1)}s
       </span>
-    </div>
+    </button>
   )
 }

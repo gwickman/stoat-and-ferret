@@ -19,12 +19,12 @@ export default function PanelVisibilityToggle() {
   const { panelVisibility, togglePanel, resetLayout } = useWorkspace()
 
   return (
-    <div
-      className="flex items-center gap-1 rounded border border-gray-700 bg-gray-900 px-2 py-1"
+    <fieldset
+      className="m-0 flex min-w-0 items-center gap-1 rounded border border-gray-700 bg-gray-900 px-2 py-1"
       data-testid="panel-visibility-toggle"
-      role="group"
       aria-label="Panel visibility toggles"
     >
+      <legend className="sr-only">Panel visibility</legend>
       {PANEL_IDS.map((panelId) => {
         const isVisible = panelVisibility[panelId] !== false
         return (
@@ -54,6 +54,6 @@ export default function PanelVisibilityToggle() {
       >
         Reset
       </button>
-    </div>
+    </fieldset>
   )
 }

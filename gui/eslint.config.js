@@ -47,6 +47,7 @@ export default defineConfig([
           ],
         },
       ],
+      'jsx-a11y/prefer-tag-over-role': 'error',
       'react/button-has-type': 'error',
       'react/no-array-index-key': 'error',
       'react/no-unused-prop-types': 'error',

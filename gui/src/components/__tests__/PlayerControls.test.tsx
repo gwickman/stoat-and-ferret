@@ -156,7 +156,7 @@ describe('ProgressBar', () => {
     render(<ProgressBar currentTime={30} duration={120} onSeek={vi.fn()} />)
 
     const bar = screen.getByTestId('progress-bar-track')
-    expect(bar.getAttribute('role')).toBe('progressbar')
+    expect(bar.getAttribute('role')).toBe('slider')
     expect(bar.getAttribute('aria-valuenow')).toBe('30')
     expect(bar.getAttribute('aria-valuemin')).toBe('0')
     expect(bar.getAttribute('aria-valuemax')).toBe('120')

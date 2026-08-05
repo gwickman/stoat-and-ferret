@@ -60,6 +60,7 @@ function OverlayContent({ shortcuts, onClose }: Readonly<OverlayContentProps>) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       data-testid="keyboard-shortcut-overlay-backdrop"
     >
+      {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- APG Modal Dialog pattern; correctly implements role=dialog with aria-modal, aria-labelledby, Escape handler, and useFocusTrap; native <dialog> rewrite requires focus-trap rewrite with no AT benefit */}
       <div
         ref={containerRef}
         role="dialog"
