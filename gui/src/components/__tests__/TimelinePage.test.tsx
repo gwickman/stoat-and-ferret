@@ -11,8 +11,8 @@ vi.mock('../../components/render/StartRenderModal', () => ({
     if (!open) return null
     return (
       <div data-testid="start-render-modal">
-        <button data-testid="modal-close" onClick={onClose}>Close</button>
-        <button data-testid="modal-submit" onClick={onSubmitted}>Submit</button>
+        <button type="button" data-testid="modal-close" onClick={onClose}>Close</button>
+        <button type="button" data-testid="modal-submit" onClick={onSubmitted}>Submit</button>
       </div>
     )
   },

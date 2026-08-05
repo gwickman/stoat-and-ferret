@@ -38,6 +38,7 @@ export default function LibraryPage() {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Library</h2>
         <button
+          type="button"
           onClick={() => setScanOpen(true)}
           className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
           data-testid="scan-button"
@@ -66,6 +67,7 @@ export default function LibraryPage() {
           data-testid="pagination"
         >
           <button
+            type="button"
             onClick={() => setPage(page - 1)}
             disabled={page === 0}
             className="rounded border border-gray-700 px-3 py-1 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"
@@ -77,6 +79,7 @@ export default function LibraryPage() {
             Page {page + 1} of {totalPages}
           </span>
           <button
+            type="button"
             onClick={() => setPage(page + 1)}
             disabled={page >= totalPages - 1}
             className="rounded border border-gray-700 px-3 py-1 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"

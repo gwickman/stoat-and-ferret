@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 
 describe("jest-dom global setup", () => {
   it("provides toBeInTheDocument without explicit import", () => {
-    render(<button>Click me</button>);
+    render(<button type="button">Click me</button>);
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
@@ -17,7 +17,7 @@ describe("jest-dom global setup", () => {
   });
 
   it("provides toBeDisabled without explicit import", () => {
-    render(<button disabled>Disabled</button>);
+    render(<button type="button" disabled>Disabled</button>);
     expect(screen.getByRole("button")).toBeDisabled();
   });
 });

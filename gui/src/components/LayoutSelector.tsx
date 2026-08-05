@@ -16,6 +16,7 @@ export default function LayoutSelector() {
         {presets.map((preset: LayoutPreset) => (
           <button
             key={preset.name}
+            type="button"
             data-testid={`preset-${preset.name}`}
             className={`rounded border px-3 py-2 text-left text-sm transition-colors ${
               selectedPreset === preset.name

@@ -47,6 +47,7 @@ export default defineConfig([
           ],
         },
       ],
+      'react/button-has-type': 'error',
       'react/no-array-index-key': 'error',
       'react/no-unused-prop-types': 'error',
       '@typescript-eslint/prefer-readonly': 'error',

@@ -99,6 +99,7 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={onBack}
             className="rounded px-2 py-1 text-sm text-gray-400 hover:bg-gray-700 hover:text-gray-200"
             data-testid="btn-back"
@@ -110,6 +111,7 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
           </h2>
         </div>
         <button
+          type="button"
           onClick={() => onDelete(project.id)}
           className="rounded border border-red-700 px-3 py-1 text-sm text-red-400 hover:bg-red-900/30"
           data-testid="btn-delete-project"
@@ -131,6 +133,7 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
           Clips ({clips.length})
         </h3>
         <button
+          type="button"
           onClick={handleAddClip}
           disabled={clipStoreIsLoading}
           className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
@@ -194,6 +197,7 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
                   <td className="py-2">
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={() => handleEditClip(clip)}
                         disabled={clipStoreIsLoading}
                         className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-50"
@@ -202,6 +206,7 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
                         Edit
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDeleteClipClick(clip)}
                         disabled={clipStoreIsLoading}
                         className="rounded border border-red-700 px-2 py-1 text-xs text-red-400 hover:bg-red-900/30 disabled:opacity-50"

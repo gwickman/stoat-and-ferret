@@ -35,6 +35,7 @@ export default function SortControls({
         ))}
       </select>
       <button
+        type="button"
         onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
         className="rounded border border-gray-700 bg-gray-800 px-2 py-2 text-sm text-gray-200 hover:bg-gray-700"
         data-testid="sort-order"
