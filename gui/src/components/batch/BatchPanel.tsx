@@ -20,7 +20,7 @@ interface BatchSubmitResponse {
 
 interface BatchPanelProps {
   /** Called with the new batch_id after a successful submission. */
-  onBatchSubmitted?: (batchId: string) => void
+  readonly onBatchSubmitted?: (batchId: string) => void
 }
 
 function emptyEntry(): BatchEntry {
@@ -41,7 +41,7 @@ function uuid(): string {
  * output_path before submission. Surfaces 422 errors inline; 5xx
  * errors via a banner that preserves form state for retry.
  */
-export default function BatchPanel({ onBatchSubmitted }: BatchPanelProps) {
+export default function BatchPanel({ onBatchSubmitted }: Readonly<BatchPanelProps>) {
   const submitting = useBatchStore((s) => s.submitting)
   const submitError = useBatchStore((s) => s.submitError)
   const setSubmitting = useBatchStore((s) => s.setSubmitting)

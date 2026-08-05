@@ -4,11 +4,11 @@ import { useVideos } from '../hooks/useVideos'
 import { useClipStore } from '../stores/clipStore'
 
 interface ClipFormModalProps {
-  mode: 'add' | 'edit'
-  clip?: Clip
-  projectId: string
-  onClose: () => void
-  onSaved: () => void
+  readonly mode: 'add' | 'edit'
+  readonly clip?: Clip
+  readonly projectId: string
+  readonly onClose: () => void
+  readonly onSaved: () => void
 }
 
 /** Label for the submit button, reflecting submission state and add-vs-edit mode. */
@@ -23,7 +23,7 @@ export default function ClipFormModal({
   projectId,
   onClose,
   onSaved,
-}: ClipFormModalProps) {
+}: Readonly<ClipFormModalProps>) {
   const [sourceVideoId, setSourceVideoId] = useState(clip?.source_video_id ?? '')
   const [inPoint, setInPoint] = useState(clip?.in_point?.toString() ?? '')
   const [outPoint, setOutPoint] = useState(clip?.out_point?.toString() ?? '')

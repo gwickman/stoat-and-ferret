@@ -2,7 +2,7 @@ import type { Video } from '../generated/types'
 import ProxyStatusBadge from './library/ProxyStatusBadge'
 
 interface VideoCardProps {
-  video: Video
+  readonly video: Video
 }
 
 function formatDuration(video: Video): string {
@@ -21,7 +21,7 @@ function formatDuration(video: Video): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-export default function VideoCard({ video }: VideoCardProps) {
+export default function VideoCard({ video }: Readonly<VideoCardProps>) {
   return (
     <div
       className="group rounded border border-gray-700 bg-gray-900 overflow-hidden"

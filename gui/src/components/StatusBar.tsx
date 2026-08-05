@@ -27,10 +27,10 @@ const STATE_COLORS: Record<ConnectionState, string> = {
 }
 
 interface StatusBarProps {
-  connectionState: ConnectionState
+  readonly connectionState: ConnectionState
 }
 
-export default function StatusBar({ connectionState }: StatusBarProps) {
+export default function StatusBar({ connectionState }: Readonly<StatusBarProps>) {
   const linkRef = React.useRef<HTMLAnchorElement>(null)
 
   React.useEffect(() => {

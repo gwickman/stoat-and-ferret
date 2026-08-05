@@ -4,9 +4,9 @@ import ThemeSelector from './ThemeSelector'
 
 interface SettingsPanelProps {
   /** Whether the panel is currently visible. */
-  open: boolean
+  readonly open: boolean
   /** Callback invoked when the user dismisses the panel. */
-  onClose: () => void
+  readonly onClose: () => void
 }
 
 /**
@@ -22,7 +22,7 @@ interface SettingsPanelProps {
  * role/aria-modal from the sentinel ensures Chrome processes the attribute
  * removal and cleanly releases the focus scope before the next Tab event.
  */
-export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
+export default function SettingsPanel({ open, onClose }: Readonly<SettingsPanelProps>) {
   useEffect(() => {
     if (!open) return
     const handleKey = (event: KeyboardEvent) => {

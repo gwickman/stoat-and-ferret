@@ -1,10 +1,10 @@
 interface ZoomControlsProps {
-  zoom: number
-  onZoomIn: () => void
-  onZoomOut: () => void
-  onReset: () => void
-  minZoom?: number
-  maxZoom?: number
+  readonly zoom: number
+  readonly onZoomIn: () => void
+  readonly onZoomOut: () => void
+  readonly onReset: () => void
+  readonly minZoom?: number
+  readonly maxZoom?: number
 }
 
 /** Zoom in/out controls for the timeline canvas. */
@@ -15,7 +15,7 @@ export default function ZoomControls({
   onReset,
   minZoom = 0.1,
   maxZoom = 10,
-}: ZoomControlsProps) {
+}: Readonly<ZoomControlsProps>) {
   return (
     <div data-testid="zoom-controls" className="flex items-center gap-1">
       <button

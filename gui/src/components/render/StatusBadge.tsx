@@ -26,10 +26,10 @@ const STATUS_LABELS: Record<string, string> = {
 const FALLBACK_COLOR = 'bg-gray-500'
 
 interface StatusBadgeProps {
-  status: string
+  readonly status: string
 }
 
-export default function StatusBadge({ status }: StatusBadgeProps) {
+export default function StatusBadge({ status }: Readonly<StatusBadgeProps>) {
   const color = STATUS_COLORS[status] ?? FALLBACK_COLOR
   const label = STATUS_LABELS[status] ?? status
 

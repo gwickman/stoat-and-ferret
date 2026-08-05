@@ -1,11 +1,11 @@
 import { useState } from 'react'
 
 interface RazorToolProps {
-  projectId: string
-  clipId: string
-  splitFrame: number
-  onSplitComplete?: (clipAId: string, clipBId: string) => void
-  disabled?: boolean
+  readonly projectId: string
+  readonly clipId: string
+  readonly splitFrame: number
+  readonly onSplitComplete?: (clipAId: string, clipBId: string) => void
+  readonly disabled?: boolean
 }
 
 /**
@@ -18,7 +18,7 @@ export default function RazorTool({
   splitFrame,
   onSplitComplete,
   disabled = false,
-}: RazorToolProps) {
+}: Readonly<RazorToolProps>) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

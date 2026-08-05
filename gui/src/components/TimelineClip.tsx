@@ -3,16 +3,16 @@ import { timeToPixel } from '../utils/timeline'
 import AudioWaveform from './AudioWaveform'
 
 interface TimelineClipProps {
-  clip: ClipType
-  zoom: number
-  scrollOffset: number
-  isSelected: boolean
-  onSelect: (clipId: string) => void
-  trackType?: string
+  readonly clip: ClipType
+  readonly zoom: number
+  readonly scrollOffset: number
+  readonly isSelected: boolean
+  readonly onSelect: (clipId: string) => void
+  readonly trackType?: string
 }
 
 /** Renders a single clip on a timeline track with position-accurate placement. */
-export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onSelect, trackType }: TimelineClipProps) {
+export default function TimelineClip({ clip, zoom, scrollOffset, isSelected, onSelect, trackType }: Readonly<TimelineClipProps>) {
   const start = clip.timeline_start ?? 0
   const end = clip.timeline_end ?? start + (clip.out_point - clip.in_point)
   const duration = end - start

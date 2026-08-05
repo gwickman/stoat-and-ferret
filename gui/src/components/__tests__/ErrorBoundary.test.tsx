@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ErrorBoundary from '../ErrorBoundary'
 
-function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
+function ThrowingChild({ shouldThrow }: Readonly<{ shouldThrow: boolean }>) {
   if (shouldThrow) throw new Error('Test render error')
   return <div data-testid="child-content">Child content</div>
 }

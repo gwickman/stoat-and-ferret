@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react'
 import { createProject } from '../hooks/useProjects'
 
 interface CreateProjectModalProps {
-  open: boolean
-  onClose: () => void
-  onCreated: () => void
+  readonly open: boolean
+  readonly onClose: () => void
+  readonly onCreated: () => void
 }
 
 interface FormErrors {
@@ -41,7 +41,7 @@ export default function CreateProjectModal({
   open,
   onClose,
   onCreated,
-}: CreateProjectModalProps) {
+}: Readonly<CreateProjectModalProps>) {
   const [name, setName] = useState('')
   const [resolution, setResolution] = useState('1920x1080')
   const [fps, setFps] = useState('30')

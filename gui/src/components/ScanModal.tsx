@@ -4,9 +4,9 @@ import { useAnnounce } from '../hooks/useAnnounce'
 import DirectoryBrowser from './DirectoryBrowser'
 
 interface ScanModalProps {
-  open: boolean
-  onClose: () => void
-  onScanComplete: () => void
+  readonly open: boolean
+  readonly onClose: () => void
+  readonly onScanComplete: () => void
 }
 
 type ScanStatus = 'idle' | 'scanning' | 'cancelling' | 'cancelled' | 'complete' | 'error'
@@ -15,7 +15,7 @@ export default function ScanModal({
   open,
   onClose,
   onScanComplete,
-}: ScanModalProps) {
+}: Readonly<ScanModalProps>) {
   const [directory, setDirectory] = useState('')
   const [recursive, setRecursive] = useState(true)
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')

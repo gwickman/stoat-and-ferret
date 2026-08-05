@@ -2,13 +2,13 @@ import { useCallback } from 'react'
 
 export interface VolumeSliderProps {
   /** Volume level from 0 to 1. */
-  volume: number
+  readonly volume: number
   /** Whether audio is muted. */
-  muted: boolean
+  readonly muted: boolean
   /** Called when volume changes. */
-  onVolumeChange: (volume: number) => void
+  readonly onVolumeChange: (volume: number) => void
   /** Called when mute state toggles. */
-  onMuteToggle: () => void
+  readonly onMuteToggle: () => void
 }
 
 /**
@@ -22,7 +22,7 @@ export default function VolumeSlider({
   muted,
   onVolumeChange,
   onMuteToggle,
-}: VolumeSliderProps) {
+}: Readonly<VolumeSliderProps>) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       onVolumeChange(Number.parseFloat(e.target.value))

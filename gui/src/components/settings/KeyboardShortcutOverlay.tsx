@@ -33,11 +33,11 @@ function sortedSections(groups: Map<string, ShortcutBinding[]>): string[] {
 }
 
 interface OverlayContentProps {
-  shortcuts: ShortcutBinding[]
-  onClose: () => void
+  readonly shortcuts: ShortcutBinding[]
+  readonly onClose: () => void
 }
 
-function OverlayContent({ shortcuts, onClose }: OverlayContentProps) {
+function OverlayContent({ shortcuts, onClose }: Readonly<OverlayContentProps>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const groups = useMemo(() => groupBySection(shortcuts), [shortcuts])
   const sections = useMemo(() => sortedSections(groups), [groups])

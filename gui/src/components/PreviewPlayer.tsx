@@ -9,13 +9,13 @@ export interface BufferRange {
 
 export interface PreviewPlayerProps {
   /** HLS manifest URL, or null/undefined when not yet available. */
-  manifestUrl: string | null | undefined
+  readonly manifestUrl: string | null | undefined
   /** Called when buffer state changes. */
-  onBufferUpdate?: (ranges: BufferRange[]) => void
+  readonly onBufferUpdate?: (ranges: BufferRange[]) => void
   /** Called on playback error. */
-  onError?: (message: string) => void
+  readonly onError?: (message: string) => void
   /** External ref for the video element, used by player controls. */
-  videoRef?: React.RefObject<HTMLVideoElement | null>
+  readonly videoRef?: React.RefObject<HTMLVideoElement | null>
 }
 
 /** HLS.js VOD configuration per NFR-002. */
@@ -37,7 +37,7 @@ export default function PreviewPlayer({
   onBufferUpdate,
   onError,
   videoRef: externalRef,
-}: PreviewPlayerProps) {
+}: Readonly<PreviewPlayerProps>) {
   const internalRef = useRef<HTMLVideoElement>(null)
   const videoRef = externalRef ?? internalRef
   const hlsRef = useRef<Hls | null>(null)

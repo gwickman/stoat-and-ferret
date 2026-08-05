@@ -10,7 +10,7 @@ function formatEta(seconds: number): string {
 
 export interface BottomHUDProps {
   /** Ref to the video element for playback control. */
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  readonly videoRef: React.RefObject<HTMLVideoElement | null>
 }
 
 /**
@@ -19,7 +19,7 @@ export interface BottomHUDProps {
  * Includes full playback controls (reusing PlayerControls) and a render
  * progress bar with percentage and ETA, driven by renderStore state.
  */
-export default function BottomHUD({ videoRef }: BottomHUDProps) {
+export default function BottomHUD({ videoRef }: Readonly<BottomHUDProps>) {
   const activeJob = useRenderStore((s) => s.jobs.find((j) => j.status === 'running') ?? null)
   const progress = activeJob?.progress ?? null
   const etaSeconds = activeJob?.eta_seconds ?? null

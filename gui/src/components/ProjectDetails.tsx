@@ -5,9 +5,9 @@ import { useClipStore } from '../stores/clipStore'
 import ClipFormModal from './ClipFormModal'
 
 interface ProjectDetailsProps {
-  project: Project
-  onBack: () => void
-  onDelete: (id: string) => void
+  readonly project: Project
+  readonly onBack: () => void
+  readonly onDelete: (id: string) => void
 }
 
 function formatTimecode(frames: number, fps: number): string {
@@ -17,7 +17,7 @@ function formatTimecode(frames: number, fps: number): string {
   return `${minutes}:${seconds.toFixed(2).padStart(5, '0')}`
 }
 
-export default function ProjectDetails({ project, onBack, onDelete }: ProjectDetailsProps) {
+export default function ProjectDetails({ project, onBack, onDelete }: Readonly<ProjectDetailsProps>) {
   const [clips, setClips] = useState<Clip[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

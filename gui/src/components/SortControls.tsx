@@ -1,10 +1,10 @@
 import type { SortField, SortOrder } from '../generated/types'
 
 interface SortControlsProps {
-  sortField: SortField
-  sortOrder: SortOrder
-  onSortFieldChange: (field: SortField) => void
-  onSortOrderChange: (order: SortOrder) => void
+  readonly sortField: SortField
+  readonly sortOrder: SortOrder
+  readonly onSortFieldChange: (field: SortField) => void
+  readonly onSortOrderChange: (order: SortOrder) => void
 }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
@@ -18,7 +18,7 @@ export default function SortControls({
   sortOrder,
   onSortFieldChange,
   onSortOrderChange,
-}: SortControlsProps) {
+}: Readonly<SortControlsProps>) {
   return (
     <div className="flex items-center gap-2" data-testid="sort-controls">
       <select

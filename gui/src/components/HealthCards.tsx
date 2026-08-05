@@ -1,8 +1,8 @@
 import type { HealthState } from '../hooks/useHealth'
 
 interface HealthCardProps {
-  name: string
-  status: string
+  readonly name: string
+  readonly status: string
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -23,7 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
   error: 'Error',
 }
 
-function HealthCard({ name, status }: HealthCardProps) {
+function HealthCard({ name, status }: Readonly<HealthCardProps>) {
   const colors = STATUS_COLORS[status] ?? 'bg-yellow-900/50 border-yellow-700'
   const dot = DOT_COLORS[status] ?? 'bg-yellow-500'
   const label = STATUS_LABELS[status] ?? 'Unknown'
@@ -56,10 +56,10 @@ const COMPONENTS: Record<string, string> = {
 }
 
 interface HealthCardsProps {
-  health: HealthState
+  readonly health: HealthState
 }
 
-export default function HealthCards({ health }: HealthCardsProps) {
+export default function HealthCards({ health }: Readonly<HealthCardsProps>) {
   return (
     <div data-testid="health-cards">
       <h3 className="mb-3 text-lg font-semibold">System Health</h3>

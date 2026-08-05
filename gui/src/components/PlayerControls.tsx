@@ -5,7 +5,7 @@ import VolumeSlider from './VolumeSlider'
 
 export interface PlayerControlsProps {
   /** Ref to the video element for direct playback control. */
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  readonly videoRef: React.RefObject<HTMLVideoElement | null>
 }
 
 const SKIP_SECONDS = 5
@@ -18,7 +18,7 @@ const VOLUME_STEP = 0.1
  * with mute toggle, time display, and keyboard accessibility (Space,
  * arrow keys) meeting WCAG AA.
  */
-export default function PlayerControls({ videoRef }: PlayerControlsProps) {
+export default function PlayerControls({ videoRef }: Readonly<PlayerControlsProps>) {
   const [playing, setPlaying] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 

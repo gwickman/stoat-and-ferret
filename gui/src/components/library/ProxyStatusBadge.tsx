@@ -4,8 +4,8 @@ import { useWebSocket } from '../../hooks/useWebSocket'
 export type ProxyStatusValue = 'ready' | 'generating' | 'none'
 
 interface ProxyStatusBadgeProps {
-  videoId: string
-  proxyStatus?: ProxyStatusValue
+  readonly videoId: string
+  readonly proxyStatus?: ProxyStatusValue
 }
 
 const STATUS_COLORS: Record<ProxyStatusValue, string> = {
@@ -34,7 +34,7 @@ function wsUrl(): string {
 export default function ProxyStatusBadge({
   videoId,
   proxyStatus = 'none',
-}: ProxyStatusBadgeProps) {
+}: Readonly<ProxyStatusBadgeProps>) {
   const [status, setStatus] = useState<ProxyStatusValue>(proxyStatus)
   const { lastMessage } = useWebSocket(wsUrl())
 

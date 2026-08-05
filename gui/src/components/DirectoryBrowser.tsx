@@ -14,16 +14,16 @@ interface DirectoryListResponse {
 }
 
 interface DirectoryBrowserProps {
-  onSelect: (path: string) => void
-  onCancel: () => void
-  initialPath?: string
+  readonly onSelect: (path: string) => void
+  readonly onCancel: () => void
+  readonly initialPath?: string
 }
 
 export default function DirectoryBrowser({
   onSelect,
   onCancel,
   initialPath,
-}: DirectoryBrowserProps) {
+}: Readonly<DirectoryBrowserProps>) {
   const [currentPath, setCurrentPath] = useState(initialPath ?? '')
   const [directories, setDirectories] = useState<DirectoryEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)

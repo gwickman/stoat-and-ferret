@@ -4,7 +4,7 @@ import type { BufferRange } from './PreviewPlayer'
 
 export interface PreviewStatusProps {
   /** Ref to the video element for reading buffered data. */
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  readonly videoRef: React.RefObject<HTMLVideoElement | null>
 }
 
 /**
@@ -14,7 +14,7 @@ export interface PreviewStatusProps {
  * generation progress during preview creation. Updates at ~4Hz
  * via the video element's timeupdate event.
  */
-export default function PreviewStatus({ videoRef }: PreviewStatusProps) {
+export default function PreviewStatus({ videoRef }: Readonly<PreviewStatusProps>) {
   const status = usePreviewStore((s) => s.status)
   const progress = usePreviewStore((s) => s.progress)
   const duration = usePreviewStore((s) => s.duration)

@@ -1,9 +1,9 @@
 interface SearchBarProps {
-  value: string
-  onChange: (value: string) => void
+  readonly value: string
+  readonly onChange: (value: string) => void
 }
 
-export default function SearchBar({ value, onChange }: SearchBarProps) {
+export default function SearchBar({ value, onChange }: Readonly<SearchBarProps>) {
   return (
     <input
       type="text"

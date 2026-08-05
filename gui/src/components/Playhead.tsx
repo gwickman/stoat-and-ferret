@@ -1,14 +1,14 @@
 import { timeToPixel } from '../utils/timeline'
 
 interface PlayheadProps {
-  position: number
-  zoom: number
-  scrollOffset: number
-  height: number
+  readonly position: number
+  readonly zoom: number
+  readonly scrollOffset: number
+  readonly height: number
 }
 
 /** Renders a vertical playhead indicator at the current playback position. */
-export default function Playhead({ position, zoom, scrollOffset, height }: PlayheadProps) {
+export default function Playhead({ position, zoom, scrollOffset, height }: Readonly<PlayheadProps>) {
   const x = timeToPixel(position, zoom, scrollOffset)
 
   return (

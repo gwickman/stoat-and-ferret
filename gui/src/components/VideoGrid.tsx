@@ -2,12 +2,12 @@ import type { Video } from '../generated/types'
 import VideoCard from './VideoCard'
 
 interface VideoGridProps {
-  videos: Video[]
-  loading: boolean
-  error: string | null
+  readonly videos: Video[]
+  readonly loading: boolean
+  readonly error: string | null
 }
 
-export default function VideoGrid({ videos, loading, error }: VideoGridProps) {
+export default function VideoGrid({ videos, loading, error }: Readonly<VideoGridProps>) {
   if (loading) {
     return (
       <div className="py-12 text-center text-gray-400" data-testid="video-grid-loading">

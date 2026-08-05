@@ -11,9 +11,9 @@ interface BatchJobListProps {
    * Optional batch_id filter — when provided, only jobs in that batch
    * are rendered. Unset means render all jobs in the store.
    */
-  batchId?: string
+  readonly batchId?: string
   /** Override clock for deterministic elapsed-time tests. */
-  now?: () => number
+  readonly now?: () => number
 }
 
 const STATUS_BADGE_CLASSES: Record<BatchJobStatus, string> = {
@@ -32,11 +32,11 @@ function formatElapsed(ms: number): string {
 }
 
 interface JobRowProps {
-  job: BatchJob
-  now: () => number
+  readonly job: BatchJob
+  readonly now: () => number
 }
 
-function JobRow({ job, now }: JobRowProps) {
+function JobRow({ job, now }: Readonly<JobRowProps>) {
   const removeJob = useBatchStore((s) => s.removeJob)
   const updateJob = useBatchStore((s) => s.updateJob)
   const [cancelling, setCancelling] = useState(false)
@@ -151,7 +151,7 @@ function JobRow({ job, now }: JobRowProps) {
  * bar, status badge, elapsed time, and a Cancel button (only for
  * non-terminal jobs).
  */
-export default function BatchJobList({ batchId, now = Date.now }: BatchJobListProps) {
+export default function BatchJobList({ batchId, now = Date.now }: Readonly<BatchJobListProps>) {
   const allJobs = useBatchStore((s) => s.jobs)
   const jobs = useMemo(
     () => (batchId === undefined ? allJobs : allJobs.filter((j) => j.batch_id === batchId)),
