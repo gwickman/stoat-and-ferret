@@ -208,6 +208,8 @@ cd gui && npx vitest run     # Run tests
 > root. Invoking vitest with a directory argument from the root bypasses `gui/vitest.config.ts`,
 > which means the jsdom environment is not loaded and DOM-dependent tests fail.
 
+> **ESLint `parserOptions.project` ordering:** When modifying the `parserOptions.project` array in `gui/eslint.config.js`, maintain first-match semantics — more-specific tsconfigs (e.g., `tsconfig.eslint.node.json`) must appear **before** more-general ones (e.g., `tsconfig.eslint.json`). Reversing the order silently applies wrong ambient types to config files. The current ordering and rationale is documented via JSONC comment in `gui/tsconfig.eslint.json`.
+
 ### Rust (clippy, cargo test)
 
 ```bash
