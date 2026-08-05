@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { deleteProject } from '../hooks/useProjects'
 
 interface DeleteConfirmationProps {
-  open: boolean
-  projectId: string
-  projectName: string
-  onClose: () => void
-  onDeleted: () => void
+  readonly open: boolean
+  readonly projectId: string
+  readonly projectName: string
+  readonly onClose: () => void
+  readonly onDeleted: () => void
 }
 
 export default function DeleteConfirmation({
@@ -15,7 +15,7 @@ export default function DeleteConfirmation({
   projectName,
   onClose,
   onDeleted,
-}: DeleteConfirmationProps) {
+}: Readonly<DeleteConfirmationProps>) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

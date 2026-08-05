@@ -1,17 +1,17 @@
 import type { Clip } from '../generated/types'
 
 interface ClipSelectorProps {
-  clips: Clip[]
-  selectedClipId: string | null
-  onSelect: (clipId: string) => void
+  readonly clips: Clip[]
+  readonly selectedClipId: string | null
+  readonly onSelect: (clipId: string) => void
   /** Enable pair-mode for selecting source/target clips. */
-  pairMode?: boolean
+  readonly pairMode?: boolean
   /** Selected "from" (source) clip ID in pair-mode. */
-  selectedFromId?: string | null
+  readonly selectedFromId?: string | null
   /** Selected "to" (target) clip ID in pair-mode. */
-  selectedToId?: string | null
+  readonly selectedToId?: string | null
   /** Callback for pair-mode selection. */
-  onSelectPair?: (clipId: string, role: 'from' | 'to') => void
+  readonly onSelectPair?: (clipId: string, role: 'from' | 'to') => void
 }
 
 /** Renders a list of clips for selection as an effect target. */
@@ -23,7 +23,7 @@ export default function ClipSelector({
   selectedFromId,
   selectedToId,
   onSelectPair,
-}: ClipSelectorProps) {
+}: Readonly<ClipSelectorProps>) {
   if (clips.length === 0) {
     return (
       <div data-testid="clip-selector-empty" className="rounded border border-gray-700 p-4">

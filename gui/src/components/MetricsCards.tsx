@@ -1,10 +1,10 @@
 import type { Metrics } from '../hooks/useMetrics'
 
 interface MetricsCardsProps {
-  metrics: Metrics
+  readonly metrics: Metrics
 }
 
-export default function MetricsCards({ metrics }: MetricsCardsProps) {
+export default function MetricsCards({ metrics }: Readonly<MetricsCardsProps>) {
   return (
     <div data-testid="metrics-cards">
       <h3 className="mb-3 text-lg font-semibold">Metrics</h3>

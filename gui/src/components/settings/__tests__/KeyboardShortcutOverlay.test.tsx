@@ -29,10 +29,10 @@ function fireKey(
 }
 
 interface HostBindings {
-  bindings: ShortcutBinding[]
+  readonly bindings: ShortcutBinding[]
 }
 
-function HostWithExtraBindings({ bindings }: HostBindings) {
+function HostWithExtraBindings({ bindings }: Readonly<HostBindings>) {
   const stable = useMemo(() => bindings, [bindings])
   useKeyboardShortcuts(stable)
   return <KeyboardShortcutOverlay />

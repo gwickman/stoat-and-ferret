@@ -49,6 +49,7 @@ export default defineConfig([
       ],
       'react/no-array-index-key': 'error',
       'react/no-unused-prop-types': 'error',
+      '@typescript-eslint/prefer-readonly': 'error',
     },
   },
   {
@@ -72,6 +73,8 @@ export default defineConfig([
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-incomplete-assertions': 'error',
       'sonarjs/no-ignored-exceptions': 'error',
+      'sonarjs/sonar-prefer-read-only-props': 'error',
+      'sonarjs/sonar-prefer-optional-chain': 'error',
     },
   },
   {

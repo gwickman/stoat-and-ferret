@@ -1,10 +1,10 @@
 import React from 'react'
 
 interface AccessibilityWrapperProps {
-  children: React.ReactNode
+  readonly children: React.ReactNode
 }
 
-export function AccessibilityWrapper({ children }: AccessibilityWrapperProps): React.ReactElement {
+export function AccessibilityWrapper({ children }: Readonly<AccessibilityWrapperProps>): React.ReactElement {
   return (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only">

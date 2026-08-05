@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useActivityStore } from '../stores/activityStore'
 
 interface ActivityLogProps {
-  messages: MessageEvent[]
+  readonly messages: MessageEvent[]
 }
 
 function formatTimestamp(iso: string): string {
@@ -17,7 +17,7 @@ function formatType(type: string): string {
   return type.replaceAll('_', ' ')
 }
 
-export default function ActivityLog({ messages }: ActivityLogProps) {
+export default function ActivityLog({ messages }: Readonly<ActivityLogProps>) {
   const entries = useActivityStore((s) => s.entries)
   const addEntry = useActivityStore((s) => s.addEntry)
 

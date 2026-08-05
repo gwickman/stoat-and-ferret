@@ -13,13 +13,13 @@ export interface ThumbnailMetadata {
 
 export interface SeekTooltipProps {
   /** Hover time in seconds. */
-  hoverTime: number
+  readonly hoverTime: number
   /** Thumbnail strip metadata, or null for time-only fallback. */
-  thumbnailMetadata: ThumbnailMetadata | null
+  readonly thumbnailMetadata: ThumbnailMetadata | null
   /** Mouse X position relative to the progress bar, in pixels. */
-  mouseX: number
+  readonly mouseX: number
   /** Width of the progress bar in pixels. */
-  barWidth: number
+  readonly barWidth: number
 }
 
 /** Calculate frame index and sprite background offset for a hover time. */
@@ -52,7 +52,7 @@ export default function SeekTooltip({
   thumbnailMetadata,
   mouseX,
   barWidth,
-}: SeekTooltipProps) {
+}: Readonly<SeekTooltipProps>) {
   const tooltipWidth = thumbnailMetadata ? thumbnailMetadata.frame_width : 60
   const halfTooltip = tooltipWidth / 2
   const clampedX = Math.max(halfTooltip, Math.min(mouseX, barWidth - halfTooltip))

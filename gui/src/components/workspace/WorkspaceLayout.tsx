@@ -21,7 +21,7 @@ const ROUTE_COMPONENTS: Record<string, ComponentType> = {
   '/': DashboardPage,
 }
 
-function PanelContent({ route }: { route: string }) {
+function PanelContent({ route }: Readonly<{ readonly route: string }>) {
   const Component = ROUTE_COMPONENTS[route]
   if (!Component) return null
   return <Component />
@@ -81,12 +81,12 @@ function computeRelativeSizes(
 }
 
 interface WorkspacePanelProps {
-  panelId: PanelId
-  label: string
-  minSize?: number
-  guardRef: React.MutableRefObject<boolean>
-  defaultSize: number
-  children?: React.ReactNode
+  readonly panelId: PanelId
+  readonly label: string
+  readonly minSize?: number
+  readonly guardRef: React.MutableRefObject<boolean>
+  readonly defaultSize: number
+  readonly children?: React.ReactNode
 }
 
 /**
@@ -102,7 +102,7 @@ function WorkspacePanel({
   guardRef,
   defaultSize,
   children,
-}: WorkspacePanelProps) {
+}: Readonly<WorkspacePanelProps>) {
   const { panelVisibility, resizePanel } = useWorkspace()
   const isVisible = panelVisibility[panelId] !== false
   const min = isVisible ? minSize : 0

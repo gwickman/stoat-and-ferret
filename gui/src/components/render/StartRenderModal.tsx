@@ -5,9 +5,9 @@ import { useDebounce } from '../../hooks/useDebounce'
 import { useRenderModal } from '../../hooks/useRenderModal'
 
 interface StartRenderModalProps {
-  open: boolean
-  onClose: () => void
-  onSubmitted: () => void
+  readonly open: boolean
+  readonly onClose: () => void
+  readonly onSubmitted: () => void
 }
 
 interface FormErrors {
@@ -64,7 +64,7 @@ export default function StartRenderModal({
   open,
   onClose,
   onSubmitted,
-}: StartRenderModalProps) {
+}: Readonly<StartRenderModalProps>) {
   const formats = useRenderStore((s) => s.formats)
   const encoders = useRenderStore((s) => s.encoders)
   const queueStatus = useRenderStore((s) => s.queueStatus)

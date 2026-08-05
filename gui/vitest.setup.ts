@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 // (`clear`, `getItem`, `setItem`, etc.), which breaks tests that round-trip
 // through localStorage. Replace it with a Storage-compatible shim.
 class MemoryStorage implements Storage {
-  private store = new Map<string, string>();
+  private readonly store = new Map<string, string>();
 
   get length(): number {
     return this.store.size;

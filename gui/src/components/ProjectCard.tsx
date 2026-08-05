@@ -1,10 +1,10 @@
 import type { Project } from '../generated/types'
 
 interface ProjectCardProps {
-  project: Project
-  clipCount: number
-  onSelect: (id: string) => void
-  onDelete: (id: string) => void
+  readonly project: Project
+  readonly clipCount: number
+  readonly onSelect: (id: string) => void
+  readonly onDelete: (id: string) => void
 }
 
 function formatDate(iso: string): string {
@@ -16,7 +16,7 @@ function formatDate(iso: string): string {
   })
 }
 
-export default function ProjectCard({ project, clipCount, onSelect, onDelete }: ProjectCardProps) {
+export default function ProjectCard({ project, clipCount, onSelect, onDelete }: Readonly<ProjectCardProps>) {
   return (
     <div
       className="rounded-lg border border-gray-700 bg-gray-800 p-4 transition-colors hover:border-gray-500"

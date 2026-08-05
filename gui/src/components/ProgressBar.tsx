@@ -3,13 +3,13 @@ import SeekTooltip, { type ThumbnailMetadata } from './SeekTooltip'
 
 export interface ProgressBarProps {
   /** Current playback position in seconds. */
-  currentTime: number
+  readonly currentTime: number
   /** Total duration in seconds. */
-  duration: number
+  readonly duration: number
   /** Called when user clicks to seek. */
-  onSeek: (time: number) => void
+  readonly onSeek: (time: number) => void
   /** Thumbnail strip metadata for seek preview, or null/undefined for time-only tooltip. */
-  thumbnailMetadata?: ThumbnailMetadata | null
+  readonly thumbnailMetadata?: ThumbnailMetadata | null
 }
 
 /** Format seconds as mm:ss or hh:mm:ss for durations >= 1 hour. */
@@ -35,7 +35,7 @@ export default function ProgressBar({
   duration,
   onSeek,
   thumbnailMetadata = null,
-}: ProgressBarProps) {
+}: Readonly<ProgressBarProps>) {
   const fraction = duration > 0 ? currentTime / duration : 0
   const [hovering, setHovering] = useState(false)
   const [mouseX, setMouseX] = useState(0)

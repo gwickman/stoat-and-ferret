@@ -1,15 +1,15 @@
 import type { VersionState } from '../hooks/useVersion'
 
 interface VersionCardProps {
-  version: VersionState
+  readonly version: VersionState
 }
 
 interface RowProps {
-  label: string
-  value: string
+  readonly label: string
+  readonly value: string
 }
 
-function Row({ label, value }: RowProps) {
+function Row({ label, value }: Readonly<RowProps>) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-gray-400">{label}</span>
@@ -23,7 +23,7 @@ function Row({ label, value }: RowProps) {
   )
 }
 
-export default function VersionCard({ version }: VersionCardProps) {
+export default function VersionCard({ version }: Readonly<VersionCardProps>) {
   return (
     <div
       className="rounded border border-gray-700 bg-gray-900/50 p-4"

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 
 interface AudioWaveformProps {
-  videoId: string
+  readonly videoId: string
 }
 
 /** Displays waveform PNG as a background image for audio track clips. */
-export default function AudioWaveform({ videoId }: AudioWaveformProps) {
+export default function AudioWaveform({ videoId }: Readonly<AudioWaveformProps>) {
   const [bgUrl, setBgUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 

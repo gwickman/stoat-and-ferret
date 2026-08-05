@@ -2,11 +2,11 @@ import { useMemo } from 'react'
 import { timeToPixel, getMarkerInterval, formatRulerTime, BASE_PIXELS_PER_SECOND } from '../utils/timeline'
 
 interface TimeRulerProps {
-  duration: number
-  zoom: number
-  scrollOffset: number
-  canvasWidth: number
-  pixelsPerSecond?: number
+  readonly duration: number
+  readonly zoom: number
+  readonly scrollOffset: number
+  readonly canvasWidth: number
+  readonly pixelsPerSecond?: number
 }
 
 /** Horizontal time ruler with zoom-responsive markers above the tracks. */
@@ -16,7 +16,7 @@ export default function TimeRuler({
   scrollOffset,
   canvasWidth,
   pixelsPerSecond = BASE_PIXELS_PER_SECOND,
-}: TimeRulerProps) {
+}: Readonly<TimeRulerProps>) {
   const interval = useMemo(() => getMarkerInterval(zoom, pixelsPerSecond), [zoom, pixelsPerSecond])
 
   const markers = useMemo(() => {

@@ -7,8 +7,8 @@ import ZoomControls from './ZoomControls'
 import { useTimelineStore } from '../stores/timelineStore'
 
 interface TimelineCanvasProps {
-  tracks: TrackType[]
-  duration: number
+  readonly tracks: TrackType[]
+  readonly duration: number
 }
 
 const MIN_ZOOM = 0.1
@@ -16,7 +16,7 @@ const MAX_ZOOM = 10
 const ZOOM_STEP = 0.25
 
 /** Main timeline canvas container with ruler, tracks, zoom, and horizontal scroll. */
-export default function TimelineCanvas({ tracks, duration }: TimelineCanvasProps) {
+export default function TimelineCanvas({ tracks, duration }: Readonly<TimelineCanvasProps>) {
   const [zoom, setZoom] = useState(1)
   const [scrollOffset, setScrollOffset] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)

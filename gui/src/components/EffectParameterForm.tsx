@@ -12,13 +12,13 @@ function NumberField({
   value,
   error,
   onChange,
-}: {
-  name: string
-  prop: SchemaProperty
-  value: unknown
-  error?: string
-  onChange: (key: string, value: unknown) => void
-}) {
+}: Readonly<{
+  readonly name: string
+  readonly prop: SchemaProperty
+  readonly value: unknown
+  readonly error?: string
+  readonly onChange: (key: string, value: unknown) => void
+}>) {
   const hasRange = prop.minimum !== undefined && prop.maximum !== undefined
   const numValue = typeof value === 'number' ? value : 0
   const label = labelFor(name, prop)
@@ -72,13 +72,13 @@ function StringField({
   value,
   error,
   onChange,
-}: {
-  name: string
-  prop: SchemaProperty
-  value: unknown
-  error?: string
-  onChange: (key: string, value: unknown) => void
-}) {
+}: Readonly<{
+  readonly name: string
+  readonly prop: SchemaProperty
+  readonly value: unknown
+  readonly error?: string
+  readonly onChange: (key: string, value: unknown) => void
+}>) {
   const label = labelFor(name, prop)
 
   return (
@@ -113,13 +113,13 @@ function EnumField({
   value,
   error,
   onChange,
-}: {
-  name: string
-  prop: SchemaProperty
-  value: unknown
-  error?: string
-  onChange: (key: string, value: unknown) => void
-}) {
+}: Readonly<{
+  readonly name: string
+  readonly prop: SchemaProperty
+  readonly value: unknown
+  readonly error?: string
+  readonly onChange: (key: string, value: unknown) => void
+}>) {
   const label = labelFor(name, prop)
 
   return (
@@ -159,13 +159,13 @@ function BooleanField({
   value,
   error,
   onChange,
-}: {
-  name: string
-  prop: SchemaProperty
-  value: unknown
-  error?: string
-  onChange: (key: string, value: unknown) => void
-}) {
+}: Readonly<{
+  readonly name: string
+  readonly prop: SchemaProperty
+  readonly value: unknown
+  readonly error?: string
+  readonly onChange: (key: string, value: unknown) => void
+}>) {
   const label = labelFor(name, prop)
 
   return (
@@ -196,13 +196,13 @@ function ColorField({
   value,
   error,
   onChange,
-}: {
-  name: string
-  prop: SchemaProperty
-  value: unknown
-  error?: string
-  onChange: (key: string, value: unknown) => void
-}) {
+}: Readonly<{
+  readonly name: string
+  readonly prop: SchemaProperty
+  readonly value: unknown
+  readonly error?: string
+  readonly onChange: (key: string, value: unknown) => void
+}>) {
   const label = labelFor(name, prop)
 
   return (
@@ -237,13 +237,13 @@ function SchemaField({
   value,
   error,
   onChange,
-}: {
-  name: string
-  prop: SchemaProperty
-  value: unknown
-  error?: string
-  onChange: (key: string, value: unknown) => void
-}) {
+}: Readonly<{
+  readonly name: string
+  readonly prop: SchemaProperty
+  readonly value: unknown
+  readonly error?: string
+  readonly onChange: (key: string, value: unknown) => void
+}>) {
   // Color picker: format: "color"
   if (prop.format === 'color') {
     return (
@@ -315,7 +315,7 @@ export default function EffectParameterForm() {
   const { schema, parameters, validationErrors, setParameter } =
     useEffectFormStore()
 
-  if (!schema || !schema.properties) {
+  if (!schema?.properties) {
     return null
   }
 

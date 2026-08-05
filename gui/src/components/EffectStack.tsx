@@ -4,14 +4,14 @@ import { useEffectStackStore } from '../stores/effectStackStore'
 import { highlightFilter } from './FilterPreview'
 
 interface EffectStackProps {
-  effects: AppliedEffect[]
-  isLoading: boolean
-  onEdit: (index: number, effect: AppliedEffect) => void
-  onRemove: (index: number) => void
+  readonly effects: AppliedEffect[]
+  readonly isLoading: boolean
+  readonly onEdit: (index: number, effect: AppliedEffect) => void
+  readonly onRemove: (index: number) => void
 }
 
 /** Renders the ordered list of effects applied to a clip with edit/remove actions. */
-export default function EffectStack({ effects, isLoading, onEdit, onRemove }: EffectStackProps) {
+export default function EffectStack({ effects, isLoading, onEdit, onRemove }: Readonly<EffectStackProps>) {
   const [confirmIndex, setConfirmIndex] = useState<number | null>(null)
   const clientIds = useEffectStackStore((s) => s.clientIds)
 

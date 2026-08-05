@@ -2,15 +2,15 @@ import type { Track as TrackType } from '../generated/types'
 import TimelineClip from './TimelineClip'
 
 interface TrackProps {
-  track: TrackType
-  zoom: number
-  scrollOffset: number
-  selectedClipId: string | null
-  onSelectClip: (clipId: string) => void
+  readonly track: TrackType
+  readonly zoom: number
+  readonly scrollOffset: number
+  readonly selectedClipId: string | null
+  readonly onSelectClip: (clipId: string) => void
 }
 
 /** Renders a single timeline track with label and clips. */
-export default function Track({ track, zoom, scrollOffset, selectedClipId, onSelectClip }: TrackProps) {
+export default function Track({ track, zoom, scrollOffset, selectedClipId, onSelectClip }: Readonly<TrackProps>) {
   return (
     <div
       data-testid={`track-${track.id}`}

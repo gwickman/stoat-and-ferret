@@ -9,9 +9,9 @@ const HUD_HIDE_DELAY_MS = 3000
 
 interface TheaterModeProps {
   /** Content to render inside the fullscreen container (e.g. PreviewPlayer). */
-  children: React.ReactNode
+  readonly children: React.ReactNode
   /** Ref to the video element for playback controls in theater HUD. */
-  videoRef?: React.RefObject<HTMLVideoElement | null>
+  readonly videoRef?: React.RefObject<HTMLVideoElement | null>
 }
 
 /**
@@ -21,7 +21,7 @@ interface TheaterModeProps {
  * wraps children in a theater container with mouse-tracking HUD overlay
  * that auto-hides after 3 seconds of inactivity.
  */
-export default function TheaterMode({ children, videoRef }: TheaterModeProps) {
+export default function TheaterMode({ children, videoRef }: Readonly<TheaterModeProps>) {
   const isFullscreen = useTheaterStore((s) => s.isFullscreen)
   const isHUDVisible = useTheaterStore((s) => s.isHUDVisible)
   const showHUD = useTheaterStore((s) => s.showHUD)

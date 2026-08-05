@@ -8,12 +8,12 @@ import ClipSelector from './ClipSelector'
 import EffectParameterForm from './EffectParameterForm'
 
 interface TransitionPanelProps {
-  projectId: string
-  clips: Clip[]
+  readonly projectId: string
+  readonly clips: Clip[]
 }
 
 /** Panel for applying transitions between adjacent clips. */
-export default function TransitionPanel({ projectId, clips }: TransitionPanelProps) {
+export default function TransitionPanel({ projectId, clips }: Readonly<TransitionPanelProps>) {
   const { effects } = useEffects()
   const sourceClipId = useTransitionStore((s) => s.sourceClipId)
   const targetClipId = useTransitionStore((s) => s.targetClipId)

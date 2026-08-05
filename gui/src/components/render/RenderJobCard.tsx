@@ -15,10 +15,10 @@ function formatEta(seconds: number): string {
 }
 
 interface RenderJobCardProps {
-  job: RenderJob
+  readonly job: RenderJob
 }
 
-export default function RenderJobCard({ job }: RenderJobCardProps) {
+export default function RenderJobCard({ job }: Readonly<RenderJobCardProps>) {
   const fetchJobs = useRenderStore((s) => s.fetchJobs)
   const [retryError, setRetryError] = useState<string | null>(null)
   const [retryDisabled, setRetryDisabled] = useState(false)

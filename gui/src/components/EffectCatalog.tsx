@@ -9,7 +9,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   transition: 'Transition',
 }
 
-function CategoryBadge({ category }: { category: string }) {
+function CategoryBadge({ category }: Readonly<{ readonly category: string }>) {
   const colors: Record<string, string> = {
     video: 'bg-blue-600',
     audio: 'bg-green-600',
@@ -30,12 +30,12 @@ function EffectCard({
   selected,
   viewMode,
   onSelect,
-}: {
-  effect: Effect
-  selected: boolean
-  viewMode: 'grid' | 'list'
-  onSelect: (effectType: string) => void
-}) {
+}: Readonly<{
+  readonly effect: Effect
+  readonly selected: boolean
+  readonly viewMode: 'grid' | 'list'
+  readonly onSelect: (effectType: string) => void
+}>) {
   const category = deriveCategory(effect.effect_type)
   const hintText = Object.values(effect.ai_hints).join(' ')
 

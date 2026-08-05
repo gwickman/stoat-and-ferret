@@ -2,12 +2,12 @@ import type { Project } from '../generated/types'
 import ProjectCard from './ProjectCard'
 
 interface ProjectListProps {
-  projects: Project[]
-  clipCounts: Record<string, number>
-  loading: boolean
-  error: string | null
-  onSelect: (id: string) => void
-  onDelete: (id: string) => void
+  readonly projects: Project[]
+  readonly clipCounts: Record<string, number>
+  readonly loading: boolean
+  readonly error: string | null
+  readonly onSelect: (id: string) => void
+  readonly onDelete: (id: string) => void
 }
 
 export default function ProjectList({
@@ -17,7 +17,7 @@ export default function ProjectList({
   error,
   onSelect,
   onDelete,
-}: ProjectListProps) {
+}: Readonly<ProjectListProps>) {
   if (loading) {
     return (
       <div className="py-12 text-center text-gray-400" data-testid="project-list-loading">
