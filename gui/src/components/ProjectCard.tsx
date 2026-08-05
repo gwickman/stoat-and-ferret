@@ -24,6 +24,7 @@ export default function ProjectCard({ project, clipCount, onSelect, onDelete }: 
     >
       <div className="mb-2 flex items-start justify-between">
         <button
+          type="button"
           onClick={() => onSelect(project.id)}
           className="text-left text-lg font-medium text-gray-200 hover:text-white"
           data-testid={`project-name-${project.id}`}
@@ -31,6 +32,7 @@ export default function ProjectCard({ project, clipCount, onSelect, onDelete }: 
           {project.name}
         </button>
         <button
+          type="button"
           onClick={() => onDelete(project.id)}
           className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-900/30 hover:text-red-300"
           data-testid={`project-delete-${project.id}`}

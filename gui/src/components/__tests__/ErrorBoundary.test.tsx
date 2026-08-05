@@ -69,7 +69,7 @@ describe('ErrorBoundary', () => {
       const [shouldThrow, setShouldThrow] = useState(true)
       return (
         <>
-          <button data-testid="fix-error" onClick={() => setShouldThrow(false)}>Fix</button>
+          <button type="button" data-testid="fix-error" onClick={() => setShouldThrow(false)}>Fix</button>
           <ErrorBoundary>
             <ThrowingChild shouldThrow={shouldThrow} />
           </ErrorBoundary>

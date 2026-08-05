@@ -81,6 +81,7 @@ export default function TimelinePage() {
       <div className="mb-4 flex items-center gap-4">
         <h2 className="text-2xl font-semibold">Timeline</h2>
         <button
+          type="button"
           onClick={() => setStartModalOpen(true)}
           disabled={!selectedProjectId}
           title={!selectedProjectId ? 'Select a project first' : undefined}
