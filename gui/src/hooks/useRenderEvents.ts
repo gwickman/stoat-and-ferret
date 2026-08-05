@@ -21,6 +21,20 @@ function wsUrl(): string {
   return `${proto}//${window.location.host}/ws`
 }
 
+function buildProgressOptions(payload: Record<string, unknown>): SetProgressOptions {
+  const opts: SetProgressOptions = {
+    jobId: payload.job_id as string,
+    progress: payload.progress as number,
+    etaSeconds: (payload.eta_seconds as number | undefined) ?? null,
+    speedRatio: (payload.speed_ratio as number | undefined) ?? null,
+  }
+  if (payload.frame_count !== undefined) opts.frameCount = payload.frame_count as number | null
+  if (payload.fps !== undefined) opts.fps = payload.fps as number | null
+  if (payload.encoder_name !== undefined) opts.encoderName = payload.encoder_name as string | null
+  if (payload.encoder_type !== undefined) opts.encoderType = payload.encoder_type as string | null
+  return opts
+}
+
 /**
  * Subscribe to render-related WebSocket events and dispatch them to the renderStore.
  *
@@ -70,21 +84,8 @@ export function useRenderEvents(): void {
           break
 
         case 'render_progress': {
-          // BL-702: split into two groups matching the BL-659 setProgress contract.
-          // Always-overwrite: etaSeconds/speedRatio use ?? null (absent means "not applicable").
-          // Preserve-prior-value: frameCount/fps/encoderName/encoderType use conditional
-          // assignment so absent payload fields do not clear previously-stored values.
-          const progressOpts: SetProgressOptions = {
-            jobId: payload.job_id as string,
-            progress: payload.progress as number,
-            etaSeconds: (payload.eta_seconds as number | undefined) ?? null,
-            speedRatio: (payload.speed_ratio as number | undefined) ?? null,
-          }
-          if (payload.frame_count !== undefined) progressOpts.frameCount = payload.frame_count as number | null
-          if (payload.fps !== undefined) progressOpts.fps = payload.fps as number | null
-          if (payload.encoder_name !== undefined) progressOpts.encoderName = payload.encoder_name as string | null
-          if (payload.encoder_type !== undefined) progressOpts.encoderType = payload.encoder_type as string | null
-          store.setProgress(progressOpts)
+          // BL-702: buildProgressOptions preserves the omit-vs-null contract.
+          store.setProgress(buildProgressOptions(payload))
           break
         }
 
