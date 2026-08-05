@@ -78,8 +78,14 @@ npm run test:e2e    # Run Playwright E2E tests (via playwright.config.ts)
 
 ### Linting Configuration
 
+- **tsconfig.eslint.json**
+  - Description: Dedicated TypeScript project file that scopes type-aware ESLint parsing to `src/`, `e2e/`, and root `*.ts` config files without touching the production build graph (`tsc -b`).
+  - Location: gui/tsconfig.eslint.json
+  - Structure: `{ "extends": "./tsconfig.app.json", "compilerOptions": { "noEmit": true }, "include": ["src", "e2e", "*.ts"] }`
+  - Purpose: provides the TypeScript project graph for `parserOptions.project` in `eslint.config.js`, covering files outside `tsconfig.app.json`/`tsconfig.node.json` (Playwright `e2e/*.ts` specs, `playwright.config.ts`, `vitest.config.ts`, `vitest.setup.ts`). Not referenced in `tsconfig.json`'s `references`; excluded from the `tsc -b` composite build graph.
+
 - **eslint.config.js**
-  - Description: ESLint flat configuration for TypeScript and React code quality checks.
+  - Description: ESLint flat configuration for TypeScript and React code quality checks with type-aware parsing enabled.
   - Location: gui/eslint.config.js
   - Extends:
     - @eslint/js recommended
@@ -88,6 +94,11 @@ npm run test:e2e    # Run Playwright E2E tests (via playwright.config.ts)
     - react-refresh/vite
   - Applies to: **/*.{ts,tsx}
   - Language: ES2020, browser globals
+  - Parser options: `parserOptions.project: ['./tsconfig.app.json', './tsconfig.node.json', './tsconfig.eslint.json']`, `tsconfigRootDir: import.meta.dirname` — enables type-aware lint rules across all linted files including out-of-project config files.
+  - Type-aware rules enabled (BL-742):
+    - `sonarjs/sonar-prefer-read-only-props` (SonarCloud S6759): flags React function component props that can use `Readonly<T>`
+    - `@typescript-eslint/prefer-readonly` (SonarCloud S2933): flags class fields that can be `private readonly`
+    - `sonarjs/sonar-prefer-optional-chain` (SonarCloud S6582): flags manual null/undefined checks replaceable with `?.` optional chaining
 
 ### Dependency Management
 
@@ -186,6 +197,7 @@ graph TB
     subgraph Config["Configuration Files"]
         ViteConfig["vite.config.ts"]
         TSConfig["tsconfig.app.json"]
+        TSConfigESLint["tsconfig.eslint.json"]
         ESLintConfig["eslint.config.js"]
         VitestConfig["vitest.config.ts"]
         PlaywrightConfig["playwright.config.ts"]
@@ -201,6 +213,7 @@ graph TB
     ViteConfig --> Vite
     ViteConfig --> Tailwind
     TSConfig --> TSCompiler
+    TSConfigESLint --> ESLintConfig
     ESLintConfig --> ESLint
     VitestConfig --> Vitest
     VitestConfig --> TestingLib
