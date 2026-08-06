@@ -892,8 +892,14 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
             f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
         )
 
-    # BL-758 end-to-end: stereo fixture goes through full pipeline without error.
-    # measured=None is acceptable when the CI FFmpeg build does not emit Correlation.
+    # BL-758 AC-7: Format E accommodation (prior evidence).
+    # Three v118-hotfix-1 CI attempts consistently returned stereo_measured=None
+    # for the AnimMouse n8.1.x FFmpeg build.  The AC-6 formal diagnostic
+    # (test_spatial_correlation_ac6_diagnostic_capture) could not be captured
+    # because AnimMouse/setup-ffmpeg CI lane became unavailable (tar extraction
+    # failure on all platforms) after PR #960 merged.  Format E (no Correlation
+    # line in astats output) is the operative assumption; the conditional guard
+    # is retained.  Re-run AC-6 once the CI lane is restored.
     stereo_result = await svc._check_spatial_correlation(
         artifact_path=str(sample_stereo_video_path), target=None
     )
