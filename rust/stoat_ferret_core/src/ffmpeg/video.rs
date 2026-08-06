@@ -1107,7 +1107,7 @@ fn resolve_vignette_position(position: &str, x_offset: i32, y_offset: i32) -> (S
     }
 }
 
-/// Cinematic corner-darkening vignette effect builder. timeline_T_capable=True.
+/// Cinematic corner-darkening vignette effect builder. timeline_t_capable=True.
 ///
 /// Uses the AC-2 position-enum surface. Accepts a position enum that resolves
 /// to x0/y0 expression strings internally — no raw FFmpeg expressions exposed.
@@ -1189,7 +1189,7 @@ impl VignetteBuilder {
     }
 }
 
-/// Hue rotation / colour cycling effect builder. timeline_T_capable=True.
+/// Hue rotation / colour cycling effect builder. timeline_t_capable=True.
 ///
 /// Emits `hue=H='<h_expr>'`. Single-quote wrap is the complete escaping
 /// strategy for the H= expression (PoC-4 verified). No backslash-comma

@@ -55,7 +55,7 @@ This component contains:
   - `arity: int` -- Number of input streams consumed (default 1)
   - `chain_safe: bool` -- Whether effect can be chained with others in a single graph
   - `timebase_mutating: bool` -- Whether effect changes the stream timebase
-  - `timeline_T_capable: bool` -- Whether filter supports the FFmpeg T flag for enable expressions
+  - `timeline_t_capable: bool` -- Whether filter supports the FFmpeg T flag for enable expressions
   - `requires_path_escape: bool` -- Whether option values need path escaping
   - `value_kind_per_option: dict[str, str]` -- Maps option names to ValueKind for escape dispatch
 

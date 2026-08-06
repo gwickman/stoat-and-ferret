@@ -25,7 +25,7 @@
   - `build_fn: Callable[[dict[str, Any]], str]` -- Function receiving params, returning filter string
   - `automatable: frozenset[str]` -- Set of parameter names that support automation envelope (keyframe-based time-varying values). Empty frozenset means no parameters support automation.
   - `automation_filter_template: str | None` -- Optional FFmpeg filter string template used when building automation filter chains; None means no template override.
-  - `timeline_T_capable: bool` -- Whether the effect supports FFmpeg `T` flag for `enable=between(t,start,end)` time-windowed activation expressions.
+  - `timeline_t_capable: bool` -- Whether the effect supports FFmpeg `T` flag for `enable=between(t,start,end)` time-windowed activation expressions.
 
 #### EffectValidationError (registry.py)
 - **Type**: Class
@@ -109,7 +109,7 @@ classDiagram
         +arity: int
         +chain_safe: bool
         +timebase_mutating: bool
-        +timeline_T_capable: bool
+        +timeline_t_capable: bool
         +requires_path_escape: bool
         +value_kind_per_option: dict
     }

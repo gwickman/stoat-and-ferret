@@ -4476,7 +4476,7 @@ class CurvesBuilder:
         ...
 
 class VignetteBuilder:
-    """Cinematic corner-darkening vignette effect builder. timeline_T_capable=True.
+    """Cinematic corner-darkening vignette effect builder. timeline_t_capable=True.
 
     Uses the AC-2 position-enum surface. The position enum resolves to x0/y0
     expression strings internally — no raw FFmpeg expression strings exposed to
@@ -4523,7 +4523,7 @@ class VignetteBuilder:
         ...
 
 class HueRotationBuilder:
-    """Hue rotation / colour cycling effect builder. timeline_T_capable=True.
+    """Hue rotation / colour cycling effect builder. timeline_t_capable=True.
 
     Delegates to ``emit_filter_value(ValueKind::Expression, ...)``.
     Single-quote wrap is the complete escaping strategy. Comma-bearing
