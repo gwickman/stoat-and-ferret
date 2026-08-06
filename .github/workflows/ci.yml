@@ -414,7 +414,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --extra uat --locked
+        run: uv sync --extra uat --locked  # NOSONAR S8541
 
       - name: Build Python module
         run: uv run maturin develop
@@ -492,7 +492,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked  # NOSONAR S8541
 
       - name: Validate OpenAPI spec
         run: uv run openapi-spec-validator gui/openapi.json
@@ -524,7 +524,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked  # NOSONAR S8541
 
       - name: Build Python module
         run: uv run maturin develop
@@ -590,7 +590,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked  # NOSONAR S8541
 
       - name: Check dependency license inventory
         run: uv run python scripts/check_dependency_licenses.py --check
@@ -663,7 +663,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install backend dependencies
-        run: uv sync --locked
+        run: uv sync --locked  # NOSONAR S8541
 
       - name: Build Python module
         run: uv run maturin develop
