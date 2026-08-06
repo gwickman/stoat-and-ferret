@@ -106,32 +106,16 @@ describe('useTheaterShortcuts', () => {
 
   // FR-005: Left/Right arrows seek ±5 seconds
   describe('Arrow keys — seek', () => {
-    it('ArrowLeft seeks backward 5 seconds', () => {
-      const video = createMockVideo({ currentTime: 10, duration: 60 })
+    it.each([
+      ['ArrowLeft',  10, 60, 5],
+      ['ArrowRight', 10, 60, 15],
+      ['ArrowLeft',  2,  60, 0],
+      ['ArrowRight', 58, 60, 60],
+    ])('%s currentTime=%s duration=%s → %s', (key, currentTime, duration, expected) => {
+      const video = createMockVideo({ currentTime, duration })
       renderWithVideo(video)
-      fireKey('ArrowLeft')
-      expect(video.currentTime).toBe(5)
-    })
-
-    it('ArrowRight seeks forward 5 seconds', () => {
-      const video = createMockVideo({ currentTime: 10, duration: 60 })
-      renderWithVideo(video)
-      fireKey('ArrowRight')
-      expect(video.currentTime).toBe(15)
-    })
-
-    it('ArrowLeft clamps to 0', () => {
-      const video = createMockVideo({ currentTime: 2, duration: 60 })
-      renderWithVideo(video)
-      fireKey('ArrowLeft')
-      expect(video.currentTime).toBe(0)
-    })
-
-    it('ArrowRight clamps to duration', () => {
-      const video = createMockVideo({ currentTime: 58, duration: 60 })
-      renderWithVideo(video)
-      fireKey('ArrowRight')
-      expect(video.currentTime).toBe(60)
+      fireKey(key)
+      expect(video.currentTime).toBe(expected)
     })
   })
 
