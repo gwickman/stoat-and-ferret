@@ -155,16 +155,17 @@ describe('useBatchJobs', () => {
   })
 
   it('caps exponential backoff at MAX_BACKOFF_MS', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'))
     renderHook(() => useBatchJobs('b1'))
     await settle()
+    const callsAfterMount = fetchSpy.mock.calls.length
     for (let i = 0; i < 6; i++) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(__test.MAX_BACKOFF_MS + 100)
       })
       await settle()
     }
-    expect(true).toBe(true)
+    expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsAfterMount + 4)
   })
 
   it('coerces unknown statuses to "queued" defensively', () => {
