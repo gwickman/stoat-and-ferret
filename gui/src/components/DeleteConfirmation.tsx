@@ -46,8 +46,7 @@ export default function DeleteConfirmation({
           Are you sure you want to delete{' '}
           <span className="font-medium text-gray-200" data-testid="delete-project-name">
             {projectName}
-          </span>
-          ? This action cannot be undone.
+          </span>{'? This action cannot be undone.'}
         </p>
 
         {error && (

@@ -228,7 +228,7 @@ export default function ScanModal({
                 disabled={isScanning}
                 data-testid="scan-recursive"
               />
-              Scan subdirectories
+              {' '}Scan subdirectories
             </label>
           </div>
 

@@ -44,6 +44,13 @@ function coerceStatus(raw: string): BatchJobStatus {
   return 'queued'
 }
 
+/** Compute polling backoff delay based on consecutive error count. */
+function computeBackoff(errors: number): number {
+  if (errors === 0) return NORMAL_INTERVAL_MS
+  const delay = INITIAL_BACKOFF_MS * 2 ** (errors - 1)
+  return Math.min(delay, MAX_BACKOFF_MS)
+}
+
 /** Public state surface of the hook. */
 export interface UseBatchJobsResult {
   /** True if the most recent poll request failed (>=1 consecutive errors). */
@@ -114,56 +121,50 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
     return jobs.every((j) => TERMINAL_BATCH_STATUSES.has(j.status))
   }, [])
 
+  const pollOnce = useCallback(async (): Promise<void> => {
+    if (cancelledRef.current) return
+    if (pollingRef.current) return
+    pollingRef.current = true
+    try {
+      const res = await fetch(`/api/v1/render/batch/${batchId}`)
+      if (!res.ok) {
+        throw new Error(`status ${res.status}`)
+      }
+      const json = (await res.json()) as BatchProgressApiResponse
+      queueUpdates(json.jobs)
+      if (cancelledRef.current) return
+      errorCountRef.current = 0
+      setHasError(false)
+      setIsReconnecting(false)
+    } catch {
+      if (cancelledRef.current) return
+      errorCountRef.current += 1
+      setHasError(true)
+      if (errorCountRef.current >= RECONNECTING_THRESHOLD) setIsReconnecting(true)
+    } finally {
+      pollingRef.current = false
+    }
+  }, [batchId, queueUpdates])
+
+  const schedule = useCallback((delay: number): void => {
+    if (timerRef.current !== null) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      if (cancelledRef.current) return
+      if (allJobsTerminal(batchId!)) return
+      void pollOnce().then(() => {
+        if (cancelledRef.current) return
+        if (allJobsTerminal(batchId!)) return
+        schedule(computeBackoff(errorCountRef.current))
+      })
+    }, delay)
+  }, [batchId, allJobsTerminal, pollOnce])
+
   useEffect(() => {
     if (batchId === null) return undefined
     cancelledRef.current = false
     errorCountRef.current = 0
     setHasError(false)
     setIsReconnecting(false)
-
-    const computeBackoff = (errors: number): number => {
-      if (errors === 0) return NORMAL_INTERVAL_MS
-      const delay = INITIAL_BACKOFF_MS * 2 ** (errors - 1)
-      return Math.min(delay, MAX_BACKOFF_MS)
-    }
-
-    const pollOnce = async (): Promise<void> => {
-      if (cancelledRef.current) return
-      if (pollingRef.current) return
-      pollingRef.current = true
-      try {
-        const res = await fetch(`/api/v1/render/batch/${batchId}`)
-        if (!res.ok) {
-          throw new Error(`status ${res.status}`)
-        }
-        const json = (await res.json()) as BatchProgressApiResponse
-        queueUpdates(json.jobs)
-        if (cancelledRef.current) return
-        errorCountRef.current = 0
-        setHasError(false)
-        setIsReconnecting(false)
-      } catch {
-        if (cancelledRef.current) return
-        errorCountRef.current += 1
-        setHasError(true)
-        if (errorCountRef.current >= RECONNECTING_THRESHOLD) setIsReconnecting(true)
-      } finally {
-        pollingRef.current = false
-      }
-    }
-
-    const schedule = (delay: number): void => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => {
-        if (cancelledRef.current) return
-        if (allJobsTerminal(batchId)) return
-        void pollOnce().then(() => {
-          if (cancelledRef.current) return
-          if (allJobsTerminal(batchId)) return
-          schedule(computeBackoff(errorCountRef.current))
-        })
-      }, delay)
-    }
 
     void pollOnce().then(() => {
       if (cancelledRef.current) return
@@ -178,7 +179,7 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
         timerRef.current = null
       }
     }
-  }, [batchId, allJobsTerminal, queueUpdates])
+  }, [batchId, allJobsTerminal, queueUpdates, pollOnce, schedule])
 
   const refresh = useCallback(() => {
     errorCountRef.current = 0
