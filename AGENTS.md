@@ -197,6 +197,18 @@ BL-503's per-effect gated-contract DoD gate is enforced by the `ffmpeg-tests` CI
 
 The `ffmpeg-tests` job is enforced by the required `ci-status` aggregator — it is in `ci-status.needs` (ci.yml:723), so a failing or cancelled ffmpeg-tests run blocks the required ci-status check and cannot merge.
 
+#### Multi-Channel Audio Test Fixtures
+
+Use `amerge` of two independent `sine` sources for guaranteed-stereo fixtures:
+
+```bash
+ffmpeg -f lavfi -i sine=frequency=440 -f lavfi -i sine=frequency=880 \
+  -filter_complex amerge=inputs=2 -ac 2 -c:a aac output.m4a
+```
+
+Do **not** use `aevalsrc=...:c=stereo` — on some static FFmpeg builds this produces mono output.
+The `amerge` pattern is verified 2-channel. (Motivating incident: BL-758/v118-hotfix-1 AC-4.)
+
 ### Frontend (TypeScript, Vitest)
 
 ```bash
