@@ -70,6 +70,7 @@ export default function ProgressBar({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      e.stopPropagation()
       if (duration <= 0) return
       const step = 5 // seconds per arrow key press
       if (e.key === 'ArrowLeft') onSeek(Math.max(0, currentTime - step))

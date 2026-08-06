@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import TimelineClip from '../TimelineClip'
 import type { TimelineClip as ClipType } from '../../generated/types'
@@ -106,6 +107,20 @@ describe('TimelineClip', () => {
 
     const el = screen.getByTestId('clip-clip-1')
     expect(el.tagName).toBe('BUTTON')
+  })
+
+  it('calls onSelect when Enter key activates the native button', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const clip = makeClip()
+    render(
+      <TimelineClip clip={clip} zoom={1} scrollOffset={0} isSelected={false} onSelect={onSelect} />,
+    )
+
+    const button = screen.getByTestId('clip-clip-1')
+    button.focus()
+    await user.keyboard('{Enter}')
+    expect(onSelect).toHaveBeenCalledWith('clip-1')
   })
 
   it('uses in_point/out_point for duration when timeline_start/end are null', () => {
