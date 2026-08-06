@@ -45,17 +45,21 @@ describe('useRenderEvents', () => {
     expect(jobs[0].status).toBe('pending')
   })
 
-  it('dispatches render_started to updateJob', () => {
+  it.each([
+    ['render_started',   'running'],
+    ['render_failed',    'failed'],
+    ['render_cancelled', 'cancelled'],
+  ])('dispatches %s to updateJob', (eventType, status) => {
     renderHook(() => useRenderEvents())
     act(() => { mockInstances[0].simulateOpen() })
 
     act(() => {
       mockInstances[0].simulateMessage(
-        makeEvent('render_started', { job_id: 'j1', project_id: 'p1', status: 'running' }),
+        makeEvent(eventType, { job_id: 'j1', project_id: 'p1', status }),
       )
     })
 
-    expect(useRenderStore.getState().jobs[0].status).toBe('running')
+    expect(useRenderStore.getState().jobs[0].status).toBe(status)
   })
 
   it('dispatches render_completed to updateJob', async () => {
@@ -79,31 +83,6 @@ describe('useRenderEvents', () => {
     expect(job.output_path).toBe('/tmp/j1.mp4')
   })
 
-  it('dispatches render_failed to updateJob', () => {
-    renderHook(() => useRenderEvents())
-    act(() => { mockInstances[0].simulateOpen() })
-
-    act(() => {
-      mockInstances[0].simulateMessage(
-        makeEvent('render_failed', { job_id: 'j1', project_id: 'p1', status: 'failed' }),
-      )
-    })
-
-    expect(useRenderStore.getState().jobs[0].status).toBe('failed')
-  })
-
-  it('dispatches render_cancelled to updateJob', () => {
-    renderHook(() => useRenderEvents())
-    act(() => { mockInstances[0].simulateOpen() })
-
-    act(() => {
-      mockInstances[0].simulateMessage(
-        makeEvent('render_cancelled', { job_id: 'j1', project_id: 'p1', status: 'cancelled' }),
-      )
-    })
-
-    expect(useRenderStore.getState().jobs[0].status).toBe('cancelled')
-  })
 
   // -- Progress and queue status --
 

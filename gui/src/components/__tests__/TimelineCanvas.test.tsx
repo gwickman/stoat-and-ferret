@@ -39,16 +39,13 @@ describe('TimelineCanvas', () => {
     expect(screen.getByTestId('canvas-duration').textContent).toContain('15.5s')
   })
 
-  it('includes zoom controls', () => {
+  it.each([
+    ['zoom-controls'],
+    ['time-ruler'],
+    ['canvas-scroll-area'],
+  ])('renders %s element', (testId) => {
     render(<TimelineCanvas tracks={makeTracks(1)} duration={10} />)
-
-    expect(screen.getByTestId('zoom-controls')).toBeDefined()
-  })
-
-  it('includes time ruler', () => {
-    render(<TimelineCanvas tracks={makeTracks(1)} duration={10} />)
-
-    expect(screen.getByTestId('time-ruler')).toBeDefined()
+    expect(screen.getByTestId(testId)).toBeDefined()
   })
 
   it('zoom in increases zoom percentage', () => {
@@ -95,9 +92,4 @@ describe('TimelineCanvas', () => {
     expect(trackElements[2].getAttribute('data-testid')).toBe('track-high')
   })
 
-  it('has scrollable area', () => {
-    render(<TimelineCanvas tracks={makeTracks(1)} duration={10} />)
-
-    expect(screen.getByTestId('canvas-scroll-area')).toBeDefined()
-  })
 })

@@ -288,30 +288,24 @@ describe('PlayerControls', () => {
       expect(btn.getAttribute('aria-label')).toBe('Play')
     })
 
-    it('toggles to pause on click', async () => {
+    it('toggles to pause on click', () => {
       renderControls()
 
       const btn = screen.getByTestId('play-pause-btn')
-      await act(async () => {
-        fireEvent.click(btn)
-      })
+      fireEvent.click(btn)
 
       expect(video.play).toHaveBeenCalled()
       expect(btn.getAttribute('aria-label')).toBe('Pause')
     })
 
-    it('toggles back to play on second click', async () => {
+    it('toggles back to play on second click', () => {
       renderControls()
 
       const btn = screen.getByTestId('play-pause-btn')
-      await act(async () => {
-        fireEvent.click(btn)
-      })
+      fireEvent.click(btn)
       expect(btn.getAttribute('aria-label')).toBe('Pause')
 
-      await act(async () => {
-        fireEvent.click(btn)
-      })
+      fireEvent.click(btn)
       expect(video.pause).toHaveBeenCalled()
       expect(btn.getAttribute('aria-label')).toBe('Play')
     })
@@ -332,13 +326,11 @@ describe('PlayerControls', () => {
   })
 
   describe('keyboard accessibility', () => {
-    it('Space toggles play/pause', async () => {
+    it('Space toggles play/pause', () => {
       renderControls()
 
       const container = screen.getByTestId('player-controls')
-      await act(async () => {
-        fireEvent.keyDown(container, { key: ' ' })
-      })
+      fireEvent.keyDown(container, { key: ' ' })
 
       expect(video.play).toHaveBeenCalled()
     })
