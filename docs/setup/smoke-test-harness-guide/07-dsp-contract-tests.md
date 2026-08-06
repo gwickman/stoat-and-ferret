@@ -109,7 +109,7 @@ STOAT_REVERSE_MAX_DURATION_S=5.0 STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/t
 
 v089 (Wave 3a) adds 4 new effect types, expanding `EXPECTED_EFFECT_TYPES` from 34 to 38 entries. The smoke tests for these types live in `tests/smoke/test_effects.py`.
 
-| Effect Type | Smoke Tests | timeline_T_capable | FFmpeg Required |
+| Effect Type | Smoke Tests | timeline_t_capable | FFmpeg Required |
 |---|---|---|---|
 | `zoompan` | `test_zoompan_in_effect_catalog`, `test_zoompan_preview_generation` | False | Yes (preview generation) |
 | `curves` | `test_curves_in_effect_catalog`, `test_curves_preview_generation` | True | Yes (preview generation) |
@@ -118,13 +118,13 @@ v089 (Wave 3a) adds 4 new effect types, expanding `EXPECTED_EFFECT_TYPES` from 3
 
 The catalog tests (`test_*_in_effect_catalog`) do not require FFmpeg — they validate API catalog registration only. The preview generation tests (`test_*_preview_generation`) exercise the full filter-string generation path and require a real video file in `videos/demo/`.
 
-#### timeline_T_capable=True Behavior
+#### timeline_t_capable=True Behavior
 
-`timeline_T_capable=True` on an `EffectDefinition` means the effect builder supports FFmpeg's `enable=` timeline windowing when a `WindowSpec` is provided on the effect. When windowed, these effects emit an `enable='between(t,<start>,<end>)'` expression that activates the effect only within the specified time window — without splitting the clip.
+`timeline_t_capable=True` on an `EffectDefinition` means the effect builder supports FFmpeg's `enable=` timeline windowing when a `WindowSpec` is provided on the effect. When windowed, these effects emit an `enable='between(t,<start>,<end>)'` expression that activates the effect only within the specified time window — without splitting the clip.
 
-Three Wave 3a builders have `timeline_T_capable=True`: **curves**, **vignette**, and **hue_rotation**.
+Three Wave 3a builders have `timeline_t_capable=True`: **curves**, **vignette**, and **hue_rotation**.
 
-`zoompan` is `timeline_T_capable=False`. Windowed zoompan application routes through the split/trim/concat fallback (BL-512, shipped in v110 F009).
+`zoompan` is `timeline_t_capable=False`. Windowed zoompan application routes through the split/trim/concat fallback (BL-512, shipped in v110 F009).
 
 #### Wave 3a smoke discharge command
 
@@ -145,8 +145,8 @@ translator routes them through a **split/trim/concat fallback**:
 3. Concatenate the three segments with `concat=n=3:v=1:a=0`.
 4. Each segment junction adds `format=yuv420p` to ensure pixel format consistency.
 
-The non-T condition is: `defn.timeline_T_capable=False` AND a `WindowSpec` is present on the
-effect. Effects with `timeline_T_capable=True` continue to use `enable='between(t,...)'`
+The non-T condition is: `defn.timeline_t_capable=False` AND a `WindowSpec` is present on the
+effect. Effects with `timeline_t_capable=True` continue to use `enable='between(t,...)'`
 without splitting the clip.
 
 **Smoke tests** (added in v110, BL-512):
