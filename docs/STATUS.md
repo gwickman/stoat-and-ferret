@@ -516,12 +516,12 @@ None required. Pending_ci items (BL-478-AC-1/2, BL-479-AC-1) discharge automatic
 |------|-------------|-----------|
 | BL-457-AC-2 (FR-002-AC-2) | j_reverse_split.py headless UAT run | `python scripts/uat_runner.py --journey 705 --headless` (requires live server) |
 | BL-457-AC-3 (FR-003-AC-1) | J-QC-Fail journey | Blocked by BL-480 (qc-status-fail/remaster-btn testids absent from GUI) |
-| BL-459-AC-1/2/4 | Full acceptance harness (FFmpeg-gated) | `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py -v` |
+| BL-459-AC-1/2/4 | Full acceptance harness (FFmpeg-gated) | `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/test_uc_media_mps_001.py -v` |
 
 ### User Actions Required
 
 1. **BL-457-AC-2** — Run `python scripts/uat_runner.py --journey 705 --headless` to discharge j_reverse_split.py UAT (requires live server)
-2. **BL-459-AC-1/2/4** — Run `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/uc_media_mps_001_harness.py -v` to discharge full acceptance harness (FFmpeg-gated)
+2. **BL-459-AC-1/2/4** — Run `STOAT_TEST_FFMPEG=1 uv run pytest tests/acceptance/test_uc_media_mps_001.py -v` to discharge full acceptance harness (FFmpeg-gated)
 
 ## v078 — QC Integrity, DSP Correctness & R2 Doc Parity
 
