@@ -57,7 +57,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -233,7 +233,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -327,7 +327,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -367,7 +367,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -402,7 +402,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -512,7 +512,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -651,7 +651,7 @@ jobs:
       - name: Install FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          ffmpeg-version: "8"
+          version: "8"
 
       - uses: dtolnay/rust-toolchain@stable
 
