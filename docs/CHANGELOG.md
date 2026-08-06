@@ -4,6 +4,37 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v122] — 2026-08-06
+
+SonarCloud remediation Wave C, pt.9 — frontend test quality & doc/process residuals. 3 themes, 10 features, 8 PRs (#955–#962). 53/59 source ACs supported (1 weakened, 5 unverifiable pending AnimMouse/setup-ffmpeg CDN recovery); intent_fulfilment=partial.
+
+### Theme 1: gui-test-quality
+
+- BL-749, BL-750: Parameterize 10 near-identical `it()` cases to `it.each` across TimelineCanvas.test.tsx, useRenderEvents.test.ts, useTheaterShortcuts.test.ts; remove 4 redundant `await act()` wrappers from PlayerControls.test.tsx (PR #955)
+- BL-766: Fix ProgressBar slider ArrowLeft/ArrowRight double-fire into PlayerControls toolbar handler — add `e.stopPropagation()` to `handleKeyDown`; add focused-slider keyboard tests; add TimelineClip Enter-key activation test using `@testing-library/user-event` v14 (PR #956)
+- BL-767: Move `cancelledRef` guard before `queueUpdates` in `useBatchJobs` `pollOnce`; add `activeBatchIdRef` for batchId-change stale-response race; strengthen unmount-race test to assert store invariant; add batchId-change test (PR #957)
+- BL-729: Replace vacuous `expect(true).toBe(true)` in useBatchJobs backoff-cap test with fetch-count assertion tied to `__test.MAX_BACKOFF_MS` (PR #958)
+
+### Theme 2: doc-and-design-residuals
+
+- BL-728: Update docs/C4-Documentation/ (4 files), smoke-test-harness-guide/07-dsp-contract-tests.md (7 occurrences), rust/stoat_ferret_core/src/ffmpeg/video.rs (2 doc comments), src/stoat_ferret_core/_core.pyi (2 docstrings) to lowercase `timeline_t_capable` after BL-721 rename (PR #959)
+- BL-759: Rename `tests/acceptance/uc_media_mps_001_harness.py` → `test_uc_media_mps_001.py` for pytest collection; add `tests/acceptance/conftest.py` with 600s per-test timeout override; update 4 doc references; close BL-722 (PR #960)
+- BL-758, BL-761: Verify `qc_service.py` stereo-correlation parser uses substring search (immune to `[Parsed_astats_0 @ addr]` log-prefix); add AGENTS.md multi-channel audio fixture guidance (`amerge` over `aevalsrc c=stereo`) (PR #961)
+- BL-760: Measure `test_app_lifespan` constructor timing (p95=199ms across 10 CI runs; 300ms threshold justified with data citation per AGENTS.md §Windows CI Timing) (PR #961)
+- BL-491: Correct v079 design source-intent-ledger.json `target_tree` for BL-489 from `api/routers/` to `api/schemas/` (design artifact correction) (PR #961)
+
+### Theme 3: ci-residual
+
+- BL-764: Clear SonarCloud `githubactions:S8541` — apply `# NOSONAR S8541` annotations on 5 `uv sync --locked` steps in .github/workflows/ci.yml; fix AnimMouse/setup-ffmpeg `ffmpeg-version:` → `version:` input rename (PR #962)
+
+### Quality
+
+- Python: 3855 tests passing, 140 skipped (FFmpeg-gated); ruff and mypy clean
+- GUI: 894 vitest tests passing (100 test files); tsc and ESLint clean
+- 5 ACs unverifiable pending CDN recovery for ffmpeg-tests lane (BL-758-AC-6/7, BL-759-AC-2/3, BL-491-AC-3)
+
+---
+
 ## [v121] — 2026-08-06
 
 ### Features
