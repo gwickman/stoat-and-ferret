@@ -19,10 +19,10 @@ Run after automated QC checks pass. A human reviewer listens to / views the outp
 
 - Before release sign-off
 - After re-mastering a rejected deliverable
-- When `tier2_checklist` is referenced by the acceptance harness (`tests/acceptance/uc_media_mps_001_harness.py`)
+- When `tier2_checklist` is referenced by the acceptance harness (`tests/acceptance/test_uc_media_mps_001.py`)
 
 ## Related
 
 - Machine-verifiable OC mapping: `tests/qc/oc_mapping.py`
-- Acceptance harness: `tests/acceptance/uc_media_mps_001_harness.py`
+- Acceptance harness: `tests/acceptance/test_uc_media_mps_001.py`
 - UAT journeys: `tests/uat/journeys/j_mastering.py`, `j_qc_fail.py`
