@@ -919,6 +919,45 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
 
 
 @pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
+def test_spatial_correlation_ac6_diagnostic_capture(
+    sample_stereo_video_path: Path,
+) -> None:
+    """AC-6 one-shot CI diagnostic: capture raw FFmpeg astats stderr (BL-758-AC-6).
+
+    Emits the full FFmpeg stderr via warnings.warn() so it appears in pytest's
+    warnings summary (visible in CI logs even for passing tests without -s).
+    Also writes to tests/fixtures/ffmpeg-astats-ci-sample.txt for Phase 2
+    evidence commit.  The warning output determines which AC-7 branch to apply:
+    Format C/D (Correlation present) → hard-assert; Format E → accommodation comment.
+    """
+    import subprocess
+    import warnings
+
+    result = subprocess.run(
+        ["ffmpeg", "-y", "-i", str(sample_stereo_video_path), "-af", "astats", "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    stderr = result.stderr
+    has_overall = "Overall" in stderr
+    has_correlation = "Correlation:" in stderr
+
+    fixture_path = Path(__file__).parent.parent / "fixtures" / "ffmpeg-astats-ci-sample.txt"
+    fixture_path.parent.mkdir(exist_ok=True)
+    fixture_path.write_text(stderr, encoding="utf-8")
+
+    warnings.warn(
+        f"BL-758-AC-6 diagnostic | rc={result.returncode} | "
+        f"has_Overall={has_overall} | has_Correlation={has_correlation}\n"
+        f"--- stderr (first 3000 chars) ---\n{stderr[:3000]}\n--- end ---",
+        stacklevel=2,
+    )
+
+    assert result.returncode == 0 or stderr, f"FFmpeg failed with no output: rc={result.returncode}"
+
+
+@pytest.mark.skipif(not STOAT_TEST_FFMPEG, reason="requires STOAT_TEST_FFMPEG=1")
 async def test_decode_integrity_valid_artifact_passes(sample_video_path: Path) -> None:
     """Valid artifact returns decode_integrity.measured=0.0 under null-decode (BL-626-AC-3).
 
