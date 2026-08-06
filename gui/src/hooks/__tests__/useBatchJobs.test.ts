@@ -207,6 +207,37 @@ describe('useBatchJobs', () => {
     expect(fetchSpy.mock.calls).toHaveLength(before)
   })
 
+  it('does not schedule further polling when in-flight poll resolves after unmount', async () => {
+    let resolveFetch!: (r: Response) => void
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValueOnce(
+      new Promise<Response>((resolve) => { resolveFetch = resolve }),
+    )
+
+    const { unmount } = renderHook(() => useBatchJobs('b1'))
+    // Hook started; initial poll is in-flight (fetch not yet resolved)
+
+    // Unmount before fetch resolves — sets cancelledRef.current = true via cleanup
+    unmount()
+
+    // Resolve the in-flight fetch after unmount
+    resolveFetch(
+      makeResponse([
+        { job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.5, error: null },
+      ]),
+    )
+
+    await settle()
+
+    // cancelledRef.current is true; no timer should be scheduled
+    expect(vi.getTimerCount()).toBe(0)
+    // Advance past NORMAL_INTERVAL_MS and verify no additional fetches occurred
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3 * __test.NORMAL_INTERVAL_MS)
+    })
+    await settle()
+    expect(fetchSpy.mock.calls).toHaveLength(1)
+  })
+
   it('does not regress progress under burst (NFR-001 / INV-003)', async () => {
     let progress = 0.1
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {

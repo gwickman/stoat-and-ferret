@@ -207,7 +207,11 @@ describe('RenderJobCard', () => {
     let resolveFetch!: () => void
     const okResponse = new Response('{}', { status: 200 })
     vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
-      () => new Promise<Response>((res) => { resolveFetch = () => res(okResponse) }),
+      () => {
+        let capturedResolve!: (r: Response) => void
+        resolveFetch = () => capturedResolve(okResponse)
+        return new Promise<Response>((resolve) => { capturedResolve = resolve })
+      },
     )
 
     render(<RenderJobCard job={makeJob({ status: 'running' })} />)
@@ -225,7 +229,11 @@ describe('RenderJobCard', () => {
     let resolveFetch!: () => void
     const okResponse = new Response('{}', { status: 200 })
     vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
-      () => new Promise<Response>((res) => { resolveFetch = () => res(okResponse) }),
+      () => {
+        let capturedResolve!: (r: Response) => void
+        resolveFetch = () => capturedResolve(okResponse)
+        return new Promise<Response>((resolve) => { capturedResolve = resolve })
+      },
     )
 
     render(<RenderJobCard job={makeJob({ status: 'failed' })} />)
@@ -244,7 +252,11 @@ describe('RenderJobCard', () => {
     let resolveFetch!: () => void
     const okResponse = new Response('{}', { status: 200 })
     vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
-      () => new Promise<Response>((res) => { resolveFetch = () => res(okResponse) }),
+      () => {
+        let capturedResolve!: (r: Response) => void
+        resolveFetch = () => capturedResolve(okResponse)
+        return new Promise<Response>((resolve) => { capturedResolve = resolve })
+      },
     )
 
     render(<RenderJobCard job={makeJob({ status: 'completed' })} />)

@@ -14,7 +14,7 @@ interface FormErrors {
 }
 
 function parseResolution(value: string): { width: number; height: number } | null {
-  const match = value.trim().match(/^(\d+)\s*[xX×]\s*(\d+)$/)
+  const match = /^(\d+)\s*[xX×]\s*(\d+)$/.exec(value.trim())
   if (!match) return null
   const width = Number.parseInt(match[1], 10)
   const height = Number.parseInt(match[2], 10)

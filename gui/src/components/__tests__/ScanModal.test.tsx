@@ -374,7 +374,7 @@ describe('ScanModal', () => {
           status: 202,
         })
       }
-      if (String(url).match(/\/api\/v1\/jobs\/[^/]+$/)) {
+      if (/\/api\/v1\/jobs\/[^/]+$/.exec(String(url))) {
         return new Response(JSON.stringify({ status: 'running', progress: 0.5 }), {
           status: 200,
         })
@@ -405,7 +405,7 @@ describe('ScanModal', () => {
 
     // No fallback poll needed — WebSocket delivered completion
     const jobStatusCalls = fetchSpy.mock.calls.filter(
-      (call) => String(call[0]).match(/\/api\/v1\/jobs\/[^/]+$/)
+      (call) => /\/api\/v1\/jobs\/[^/]+$/.exec(String(call[0]))
     )
     expect(jobStatusCalls).toHaveLength(0)
   })
@@ -418,7 +418,7 @@ describe('ScanModal', () => {
           status: 202,
         })
       }
-      if (String(url).match(/\/api\/v1\/jobs\/[^/]+$/)) {
+      if (/\/api\/v1\/jobs\/[^/]+$/.exec(String(url))) {
         return new Response(JSON.stringify({ status: 'completed', progress: 1.0 }), {
           status: 200,
         })
