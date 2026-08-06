@@ -84,6 +84,7 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollingRef = useRef(false)
   const cancelledRef = useRef(false)
+  const activeBatchIdRef = useRef<string | null>(null)
 
   const flushQueue = useCallback(() => {
     flushScheduledRef.current = false
@@ -131,8 +132,9 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
         throw new Error(`status ${res.status}`)
       }
       const json = (await res.json()) as BatchProgressApiResponse
-      queueUpdates(json.jobs)
       if (cancelledRef.current) return
+      if (activeBatchIdRef.current !== batchId) return
+      queueUpdates(json.jobs)
       errorCountRef.current = 0
       setHasError(false)
       setIsReconnecting(false)
@@ -161,6 +163,7 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
 
   useEffect(() => {
     if (batchId === null) return undefined
+    activeBatchIdRef.current = batchId
     cancelledRef.current = false
     errorCountRef.current = 0
     setHasError(false)
