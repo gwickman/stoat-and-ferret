@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v121] — 2026-08-06
+
+### Features
+
+- BL-739: Extract module-private helpers (`extractMetricValue`, `buildProgressOptions`, `announceJobTransition`, `loadPanelSizes`, `loadPanelVisibility`) across 4 TypeScript hook/page/store files to reduce SonarCloud CC violations (PR #953)
+- BL-748: Mechanical SonarCloud singleton fixes (S6594: `.match()` → `.exec()`; S6606: `??=` nullish assignment; S6772×2: explicit JSX whitespace; S2004: `pollOnce`/`schedule` extracted to `useCallback`) plus unmount-race characterization test for `useBatchJobs`; enabled `sonarjs/sonar-prefer-regexp-exec`, `sonarjs/no-nested-functions`, `react/jsx-child-element-spacing` ESLint rule gates (PR #954)
+
+### Quality
+
+- All 888 vitest tests passing (99/99 test files)
+- TypeScript type checking clean (tsc exit 0)
+- ESLint conformance: zero violations with all new rules enabled
+- GUI-only version; no Python or Rust changes
+
+---
+
 ## [v120] — 2026-08-05
 
 ### Features
