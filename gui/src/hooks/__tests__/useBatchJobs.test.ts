@@ -228,6 +228,13 @@ describe('useBatchJobs', () => {
 
     await settle()
 
+    // Store-invariant assertion (BL-767-AC-2): the post-unmount update must NOT reach the store.
+    // Before the fix, queueUpdates ran before the guard, so flushQueue mutated the store.
+    // After the fix, the guard fires before queueUpdates, keeping j1 at its pre-unmount value.
+    expect(
+      useBatchStore.getState().jobs.find((j) => j.job_id === 'j1')?.status,
+    ).toBe('queued')
+
     // cancelledRef.current is true; no timer should be scheduled
     expect(vi.getTimerCount()).toBe(0)
     // Advance past NORMAL_INTERVAL_MS and verify no additional fetches occurred
@@ -236,6 +243,54 @@ describe('useBatchJobs', () => {
     })
     await settle()
     expect(fetchSpy.mock.calls).toHaveLength(1)
+  })
+
+  it('ignores stale b1 fetch resolving after batchId changes to b2', async () => {
+    let resolveB1Fetch!: (r: Response) => void
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveB1Fetch = resolve
+        }),
+      )
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            batch_id: 'b2',
+            overall_progress: 0,
+            completed_jobs: 0,
+            failed_jobs: 0,
+            total_jobs: 0,
+            jobs: [],
+          }),
+          { status: 200 },
+        ),
+      )
+
+    const { rerender } = renderHook(
+      ({ batchId }: { batchId: string | null }) => useBatchJobs(batchId),
+      { initialProps: { batchId: 'b1' as string | null } },
+    )
+    // b1 initial poll is in-flight (fetch not yet resolved)
+
+    // Switch to b2: triggers b1 cleanup (cancelledRef.current=true) then b2 effect
+    // (cancelledRef.current=false). b1's stale response must not mutate the store.
+    await act(async () => {
+      rerender({ batchId: 'b2' })
+    })
+
+    // Resolve b1's stale fetch — guard (now before queueUpdates) must catch this
+    resolveB1Fetch(
+      makeResponse([
+        { job_id: 'j1', project_id: 'p1', status: 'running', progress: 0.5, error: null },
+      ]),
+    )
+    await settle()
+
+    // j1 was 'queued' before the batchId switch; b1's stale 'running' update must not reach the store
+    expect(
+      useBatchStore.getState().jobs.find((j) => j.job_id === 'j1')?.status,
+    ).toBe('queued')
   })
 
   it('does not regress progress under burst (NFR-001 / INV-003)', async () => {
