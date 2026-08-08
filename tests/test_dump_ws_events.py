@@ -22,7 +22,8 @@ from tests.host_allowlist_vectors import host_allowlist_vectors
 # with the hyphenated filename).
 _SCRIPT = pathlib.Path(__file__).parent.parent / "scripts" / "examples" / "dump-ws-events.py"
 _spec = importlib.util.spec_from_file_location("dump_ws_events_ssrf", _SCRIPT)
-assert _spec is not None and _spec.loader is not None
+assert _spec is not None
+assert _spec.loader is not None
 dump_ws_events = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(dump_ws_events)  # type: ignore[arg-type]
 

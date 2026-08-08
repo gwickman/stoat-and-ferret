@@ -1325,7 +1325,8 @@ def test_subtitle_script_builder_ffmpeg_contract() -> None:
             f"Filter string: {filter_str}\n"
             f"FFmpeg stderr (last 1000 chars):\n{result.stderr[-1000:]}"
         )
-        assert os.path.exists(output_path) and os.path.getsize(output_path) > 0
+        assert os.path.exists(output_path)
+        assert os.path.getsize(output_path) > 0
 
 
 @pytest.mark.skipif(

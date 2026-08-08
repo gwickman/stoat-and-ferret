@@ -77,7 +77,8 @@ def test_geq_parses_on_ffmpeg(tmp_path: Path) -> None:
     assert result.returncode == 0, (
         f"FFmpeg rejected geq opacity filter:\nfilter={filter_str!r}\n{result.stderr}"
     )
-    assert output.exists() and output.stat().st_size > 0
+    assert output.exists()
+    assert output.stat().st_size > 0
 
 
 @_FFMPEG_SKIP
@@ -161,7 +162,8 @@ def test_geq_composition_survival(tmp_path: Path) -> None:
     assert result.returncode == 0, (
         f"FFmpeg overlay with geq animated opacity failed:\n{result.stderr}"
     )
-    assert output.exists() and output.stat().st_size > 0, "Composed output is empty"
+    assert output.exists(), "Composed output is empty"
+    assert output.stat().st_size > 0, "Composed output is empty"
 
     def _center_luma(t_secs: float) -> int:
         res = subprocess.run(
@@ -187,7 +189,8 @@ def test_geq_composition_survival(tmp_path: Path) -> None:
 
     luma_early = _center_luma(0.5)  # alpha≈10 % → blend≈213 (mostly white)
     luma_late = _center_luma(4.5)  # alpha≈90 % → blend≈38  (mostly black)
-    assert luma_early >= 0 and luma_late >= 0, "Center-pixel extraction failed"
+    assert luma_early >= 0, "Center-pixel extraction failed"
+    assert luma_late >= 0, "Center-pixel extraction failed"
     assert abs(luma_early - luma_late) > 50, (
         f"Expected |{luma_early} - {luma_late}| > 50 but got {abs(luma_early - luma_late)}"
     )
@@ -273,7 +276,8 @@ def test_geq_render_graph_ramp(tmp_path: Path) -> None:
     early_alpha = _mean_alpha_at_frame(3)  # t≈0.10 s → expected ≈  8
     late_alpha = _mean_alpha_at_frame(54)  # t≈1.80 s → expected ≈153
 
-    assert early_alpha >= 0 and late_alpha >= 0, "RGBA frame extraction failed"
+    assert early_alpha >= 0, "RGBA frame extraction failed"
+    assert late_alpha >= 0, "RGBA frame extraction failed"
     assert late_alpha > early_alpha + 10, (
         f"Expected late ({late_alpha:.1f}) > early ({early_alpha:.1f}) + 10"
     )

@@ -37,7 +37,8 @@ class TestOcMapping:
         for oc, check_ids in OC_TO_QC_CHECK.items():
             assert check_ids, f"{oc} has empty check list"
             for cid in check_ids:
-                assert isinstance(cid, str) and cid, f"{oc} has blank check id"
+                assert isinstance(cid, str), f"{oc} has blank check id"
+                assert cid, f"{oc} has blank check id"
 
     def test_oc_human_only_has_five_entries(self) -> None:
         assert len(OC_HUMAN_ONLY) == 5

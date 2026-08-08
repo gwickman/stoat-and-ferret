@@ -22,7 +22,8 @@ from tests.host_allowlist_vectors import host_allowlist_vectors
 # with the hyphenated filename).
 _SCRIPT = pathlib.Path(__file__).parent.parent / "scripts" / "examples" / "wait-for-render.py"
 _spec = importlib.util.spec_from_file_location("wait_for_render_ssrf", _SCRIPT)
-assert _spec is not None and _spec.loader is not None
+assert _spec is not None
+assert _spec.loader is not None
 wait_for_render = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(wait_for_render)  # type: ignore[arg-type]
 

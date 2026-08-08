@@ -335,7 +335,10 @@ async def test_concurrent_waiters_mixed_timeout_short_expires_first(
     )
 
     # (a) short waiter observed a timeout/408 result
-    assert isinstance(short_result, HTTPException) and short_result.status_code == 408, (
+    assert isinstance(short_result, HTTPException), (
+        f"expected HTTPException(408) from short waiter, got {short_result!r}"
+    )
+    assert short_result.status_code == 408, (
         f"expected HTTPException(408) from short waiter, got {short_result!r}"
     )
     # (b) long waiter observed COMPLETED, not a timeout

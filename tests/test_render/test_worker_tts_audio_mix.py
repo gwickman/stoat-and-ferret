@@ -728,7 +728,8 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
 
     rc = _run_ffmpeg(cmd)
     assert rc.returncode == 0, rc.stderr.decode()[-800:]
-    assert out.exists() and out.stat().st_size > 0, "Output file missing or empty"
+    assert out.exists(), "Output file missing or empty"
+    assert out.stat().st_size > 0, "Output file missing or empty"
 
     # Both bands should be present simultaneously: source audio (100Hz) and TTS (3000Hz)
     # are both active from the audio timeline start (FFmpeg does not delay src audio).
@@ -789,7 +790,8 @@ async def test_tts_source_two_band_amix_proof(tmp_path: Path) -> None:
 
     rc = _run_ffmpeg(cmd)
     assert rc.returncode == 0, rc.stderr.decode()[-800:]
-    assert out.exists() and out.stat().st_size > 0, "Output file missing or empty"
+    assert out.exists(), "Output file missing or empty"
+    assert out.stat().st_size > 0, "Output file missing or empty"
 
     # Measure both bands in [0.5, 1.5]s — both sources are active in this window.
     # Bandpass at 200Hz (1 octave wide) covers ~141–283 Hz; at 3000Hz covers ~2121–4243 Hz.

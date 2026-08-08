@@ -327,7 +327,8 @@ async def test_window_stored_in_effect_entry() -> None:
 
     assert response.status_code == 201, response.text
     clip = await clip_repo.get("clip-w")
-    assert clip is not None and clip.effects is not None
+    assert clip is not None
+    assert clip.effects is not None
     entry = clip.effects[0]
     assert "window" in entry, f"Expected 'window' key in effect entry; got keys: {list(entry)}"
     assert entry["window"]["start_s"] == 2.0
@@ -350,7 +351,8 @@ async def test_no_window_key_without_windowspec() -> None:
 
     assert response.status_code == 201, response.text
     clip = await clip_repo.get("clip-w")
-    assert clip is not None and clip.effects is not None
+    assert clip is not None
+    assert clip.effects is not None
     entry = clip.effects[0]
     assert "window" not in entry, f"'window' key must not appear without WindowSpec; got: {entry}"
 
@@ -437,7 +439,10 @@ def test_window_render_ffmpeg_contract(tmp_path: object) -> None:
             ],
             capture_output=True,
         )
-        assert result.returncode == 0 and len(result.stdout) >= 3, (
+        assert result.returncode == 0, (
+            f"pixel extraction at t={t} failed: {result.stderr.decode()[-500:]}"
+        )
+        assert len(result.stdout) >= 3, (
             f"pixel extraction at t={t} failed: {result.stderr.decode()[-500:]}"
         )
         return int(result.stdout[0]), int(result.stdout[1]), int(result.stdout[2])

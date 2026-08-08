@@ -260,8 +260,10 @@ async def test_concurrent_render_distinct_outputs(tmp_path: Path) -> None:
     assert str(out1) != str(out2), "Output paths must be distinct"
 
     # Output files exist and are non-zero (BL-686-AC-2 file-existence check)
-    assert out1.exists() and out1.stat().st_size > 0, "Output 1 missing or empty"
-    assert out2.exists() and out2.stat().st_size > 0, "Output 2 missing or empty"
+    assert out1.exists(), "Output 1 missing or empty"
+    assert out1.stat().st_size > 0, "Output 1 missing or empty"
+    assert out2.exists(), "Output 2 missing or empty"
+    assert out2.stat().st_size > 0, "Output 2 missing or empty"
 
     # FR-002-AC-1: frame hashes differ — content-distinct, no cross-contamination
     hash1 = _sha256_frame(out1, timestamp="00:00:01")

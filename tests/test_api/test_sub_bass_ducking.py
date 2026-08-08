@@ -125,7 +125,8 @@ def test_ducking_schema_all_have_bounds() -> None:
 def test_ducking_schema_threshold_range() -> None:
     """Threshold bounds match the DuckingPattern validation range."""
     schema = next(s for s in ducking_effect_schema() if s.name == "threshold")
-    assert schema.min_value is not None and schema.min_value > 0.0
+    assert schema.min_value is not None
+    assert schema.min_value > 0.0
     assert schema.max_value == 1.0
 
 
