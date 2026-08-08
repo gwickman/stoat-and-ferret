@@ -1587,8 +1587,9 @@ class TestGoldenArgv:
         clip_repo: AsyncMock = AsyncMock()
         clip_repo.list_by_project = AsyncMock(return_value=[])
 
+        encoder_mock = AsyncMock()
         with pytest.raises(CommandBuildError) as exc_info:
-            await build_command_for_job(job, clip_repo, AsyncMock())
+            await build_command_for_job(job, clip_repo, encoder_mock)
 
         assert str(exc_info.value) == f"Project {_G_PROJECT_ID} has no clips in timeline"
 
