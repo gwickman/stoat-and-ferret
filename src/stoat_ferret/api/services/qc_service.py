@@ -92,6 +92,20 @@ def _make_check(
     return result
 
 
+def _parse_colon_float(stripped: str) -> float | None:
+    """Parse a colon-separated float value from a stripped log line.
+
+    Returns None if the format is wrong or the value is not a valid float.
+    """
+    parts = stripped.rsplit(":", 1)
+    if len(parts) != 2:
+        return None
+    try:
+        return float(parts[1].strip())
+    except ValueError:
+        return None
+
+
 def _parse_overall_correlation(stderr: str) -> float | None:
     """Extract the Overall Correlation value from FFmpeg astats stderr output.
 
@@ -103,27 +117,19 @@ def _parse_overall_correlation(stderr: str) -> float | None:
     in_overall = False
     for line in stderr.splitlines():
         stripped = line.strip()
+        if "Overall" not in stripped and not in_overall:
+            continue
+        if "Overall" in stripped and "Correlation:" in stripped:
+            # Case (a): single-line format
+            return _parse_colon_float(stripped)
         if "Overall" in stripped:
-            if "Correlation:" in stripped:
-                # Single-line format: "[prefix] Overall Correlation: 0.999842"
-                parts = stripped.rsplit(":", 1)
-                if len(parts) == 2:
-                    try:
-                        return float(parts[1].strip())
-                    except ValueError:
-                        return None
-            else:
-                # Overall section header — subsequent lines belong to this section
-                in_overall = True
-        elif in_overall and "Correlation:" in stripped:
-            # "[prefix]   Correlation: 0.999842" within the Overall section
-            parts = stripped.rsplit(":", 1)
-            if len(parts) == 2:
-                try:
-                    return float(parts[1].strip())
-                except ValueError:
-                    return None
-    return None
+            # Set state for case (b): two-line format
+            in_overall = True
+            continue
+        if in_overall and "Correlation:" in stripped:
+            # Case (b): two-line format — Correlation line follows Overall line
+            return _parse_colon_float(stripped)
+    return None  # Case (c): mono/absent
 
 
 class QCService:
