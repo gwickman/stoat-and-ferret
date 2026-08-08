@@ -42,7 +42,7 @@ Dev tools:
 | pytest-timeout | >=2.0 | execution timeout guard |
 | httpx | >=0.26 | async HTTP test client |
 | hypothesis | >=6.100 | property-based testing |
-| ruff | >=0.4 | lint + format (rules: E F I UP B SIM ASYNC) |
+| ruff | >=0.4 | lint + format (rules: E F I UP B SIM ASYNC PLR0124 RUF006 RUF059 C401 C408 FAST002 PT001 PT018) |
 | mypy | >=1.10 | strict mode, python_version=3.10 |
 | maturin | >=1.0 | Rust extension build |
 | types-jsonschema | >=4.26.0.20260202 | mypy stubs for jsonschema |
