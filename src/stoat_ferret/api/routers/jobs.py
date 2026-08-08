@@ -173,7 +173,7 @@ async def cancel_job(
 async def wait_for_job_completion(
     job_id: str,
     request: Request,
-    timeout: Annotated[
+    timeout: Annotated[  # NOSONAR S7483 — FastAPI Query param, not asyncio timeout (BL-776)
         float,
         Query(
             ge=1.0,
