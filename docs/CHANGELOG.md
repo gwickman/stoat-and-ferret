@@ -4,6 +4,26 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v124 — SonarCloud post-Wave-C pt.2 — backend complexity reduction + async/GUI residual (2026-08-08)
+
+2 themes, 3 features, PRs #968–#970. Backend refactoring and test parameterization — no product behaviour changes.
+
+### Theme 1: backend-complexity-reduction
+
+- BL-774: Extract helpers from `render/worker.py` command builders to reduce S3776 cyclomatic complexity from 65/43 → 12/13; extract `_parse_colon_float` and `_parse_overall_correlation` helpers in `qc_service.py` to reduce CC from 25 → 9 (PRs #968, #969)
+
+### Theme 2: async-gui-residual-rider
+
+- BL-775: De-async cache eviction helpers in `cache.py` (remove async/await overhead per BL-733 pattern); reduce `parsePrometheus` CC in `useMetrics.ts`; parameterize `ProgressBar.test.tsx` test suite to eliminate duplicated assertions (PR #970)
+
+### Quality
+
+- 3855 pytest tests passing (141 skipped, 0 failed); ruff, mypy clean
+- All 3 PRs SonarCloud PR gate green; BL-774-AC-4 and BL-775-AC-4 (main-branch dashboard confirmation) deferred to operator (UA-1, UA-2)
+- Behaviour-preserving; zero product code mutations in GUI
+
+---
+
 ## v123 — SonarCloud post-Wave-C pt.1 — Python test-hygiene sweep + Sonar transitions (2026-08-08)
 
 2 themes, 5 features, PRs #963–#967. Test-only and config-only changes — zero product code mutations. All PRs CDN-outage admin-merged.
