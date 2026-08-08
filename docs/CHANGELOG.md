@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v123 — SonarCloud post-Wave-C pt.1 — Python test-hygiene sweep + Sonar transitions (2026-08-08)
+
+2 themes, 5 features, PRs #963–#967. Test-only and config-only changes — zero product code mutations. All PRs CDN-outage admin-merged.
+
+### Theme 1: python-test-hygiene-fixes
+
+- BL-770: Split 38 composite assertions (S9073) into ordered sequential asserts across the test suite; non-autofixable load-bearing change (PR #963)
+- BL-771: Remove empty decorator parens (S9083) from 29 pytest.fixture() sites via ruff PT001 autofix (PR #964). AC-4 (SonarCloud main-branch scan confirmation) unverifiable due to CDN outage; BL-771 remains open pending SonarCloud confirmation (UA-001).
+- BL-772: Hoist AsyncMock() before pytest.raises block at test_render_worker.py:1590 to narrow S5778 scope (PR #965)
+
+### Theme 2: sonar-gate-and-transitions
+
+- BL-773: Enable PT001+PT018 ruff recurrence gates; update FRAMEWORK_CONTEXT.md ruff row; fix-first gate-second sequencing validated by Theme 1 completing before gate enablement (PR #966)
+- BL-776+BL-777: Add NOSONAR annotations for S7483 false-positive at jobs.py:176 (FastAPI Query param, not asyncio.timeout — real asyncio.timeout in job_completion.py per BL-654) and S2589 accept at uat_guard_check.py:6 (PYTHONOPTIMIZE guard fixture, by-design per BL-730/BL-753); no source logic changed (PR #967)
+
+### Quality
+
+- All 5 PRs (#963–#967) admin-merged due to AnimMouse/setup-ffmpeg CDN outage blocking ffmpeg-tests CI lane (UA-001 carryover protocol applied)
+- 3855/3996 pytest tests passing; ruff, mypy clean
+- Test-only and config-only version; no product code mutations; no Rust or GUI changes
+
+---
+
 ## [v121] — 2026-08-06
 
 ### Features
