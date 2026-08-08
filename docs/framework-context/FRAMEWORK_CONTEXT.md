@@ -226,7 +226,8 @@ The framework stack is current and patterns are well-established. No legacy comp
 
 ## 6. Maintenance Trigger
 
-Status: idle
+Status: Pending maintenance
+Reason: Next Quarterly Review date 2026-07-30 has passed (detected 2026-08-08 — 9 days overdue). Perform standard quarterly review: verify all sections against current codebase patterns, update Next Quarterly Review to 2026-10-30, and update Last Updated in §8 to the review date.
 Next Quarterly Review: 2026-07-30
 
 ---
