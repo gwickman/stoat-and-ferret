@@ -113,7 +113,7 @@ def _generate_sine_wav(path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 async def worker_path_client() -> httpx.AsyncClient:  # type: ignore[misc]
     """ASGI client in noop render mode with mock QCService — no FFmpeg required."""
     from stoat_ferret.api.app import create_app, lifespan

@@ -173,7 +173,7 @@ async def test_sample_project_structure(
     assert render_resp.status_code == 201
 
 
-@pytest.fixture()
+@pytest.fixture
 async def smoke_client_noop(tmp_path: Path) -> httpx.AsyncClient:
     """ASGI client with STOAT_RENDER_MODE=noop for noop-mode render tests."""
     db_path = tmp_path / "noop_test.db"

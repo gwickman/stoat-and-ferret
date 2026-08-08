@@ -53,7 +53,7 @@ def _make_tiff_bytes() -> bytes:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 async def asset_smoke_client(tmp_path: Path) -> httpx.AsyncClient:
     """Async httpx client with isolated database and assets directory.
 
@@ -103,7 +103,7 @@ async def asset_smoke_client(tmp_path: Path) -> httpx.AsyncClient:
     get_settings.cache_clear()
 
 
-@pytest.fixture()
+@pytest.fixture
 async def asset_smoke_client_small_limit(tmp_path: Path) -> httpx.AsyncClient:
     """Async httpx client with STOAT_ASSETS_MAX_SIZE_BYTES=10 for oversize tests.
 

@@ -170,7 +170,7 @@ class TestCacheMetricDefinitions:
 class TestPreviewManagerMetrics:
     """Verify PreviewManager instruments metrics on session lifecycle."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def _mock_settings(self) -> Generator[None, None, None]:
         """Patch settings for manager tests."""
         mock_settings = MagicMock()
@@ -372,7 +372,7 @@ class TestPreviewManagerMetrics:
 class TestCacheMetricsInstrumentation:
     """Verify PreviewCache instruments cache metrics."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def _mock_settings(self, tmp_path: Path) -> Generator[None, None, None]:
         """Patch settings for cache tests."""
         mock_settings = MagicMock()

@@ -123,7 +123,7 @@ def videos_dir() -> Path:
     return VIDEOS_DIR
 
 
-@pytest.fixture()
+@pytest.fixture
 async def smoke_client(tmp_path: Path) -> httpx.AsyncClient:
     """Async httpx client connected to a fresh FastAPI app with isolated database.
 
@@ -177,7 +177,7 @@ async def smoke_client(tmp_path: Path) -> httpx.AsyncClient:
     get_settings.cache_clear()
 
 
-@pytest.fixture()
+@pytest.fixture
 async def smoke_client_noop(tmp_path: Path) -> httpx.AsyncClient:
     """Async httpx client with STOAT_RENDER_MODE=noop for noop-mode render tests.
 
@@ -465,7 +465,7 @@ async def create_adjacent_clips_timeline(
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 async def sample_project(
     smoke_client: httpx.AsyncClient,
     videos_dir: Path,

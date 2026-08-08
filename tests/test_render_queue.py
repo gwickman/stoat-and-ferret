@@ -33,13 +33,13 @@ def _make_job(project_id: str = "proj-1") -> RenderJob:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def repo() -> InMemoryRenderRepository:
     """Fresh in-memory render repository."""
     return InMemoryRenderRepository()
 
 
-@pytest.fixture()
+@pytest.fixture
 def queue(repo: InMemoryRenderRepository) -> RenderQueue:
     """Queue with small limits for testing (max_concurrent=2, max_depth=3)."""
     return RenderQueue(repo, max_concurrent=2, max_depth=3)

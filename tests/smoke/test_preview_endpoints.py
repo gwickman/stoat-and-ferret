@@ -21,7 +21,7 @@ from stoat_ferret.api.settings import get_settings
 from .conftest import create_adjacent_clips_timeline, scan_videos_and_wait
 
 
-@pytest.fixture()
+@pytest.fixture
 async def background_safe_client(tmp_path: Path) -> httpx.AsyncClient:
     """Async client with raise_app_exceptions=False for background-task endpoints.
 

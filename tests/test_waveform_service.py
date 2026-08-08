@@ -544,7 +544,7 @@ class TestFinalizeResult:
 class TestGeneratePng:
     """Tests for PNG waveform generation via WaveformService."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def fake_async_executor(self) -> FakeAsyncFFmpegExecutor:
         """Return a fake async executor configured for success."""
         return FakeAsyncFFmpegExecutor(returncode=0)
@@ -680,7 +680,7 @@ class TestGeneratePng:
 class TestGenerateJson:
     """Tests for JSON waveform generation via WaveformService."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def fake_ffprobe_executor(self) -> FakeAsyncFFmpegExecutor:
         """Return a fake ffprobe executor with astats output."""
         astats_output = json.dumps(

@@ -15,7 +15,7 @@ import httpx
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def dir_tree(tmp_path: Path) -> Path:
     """Create a deterministic directory structure for filesystem tests.
 

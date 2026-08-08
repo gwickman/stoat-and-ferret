@@ -78,7 +78,7 @@ async def _seed_clip_for_project(client: httpx.AsyncClient, project_id: str) -> 
     await repo.add(clip)
 
 
-@pytest.fixture()
+@pytest.fixture
 async def smoke_client_confined(tmp_path: Path) -> tuple[httpx.AsyncClient, Path]:
     """Async client with STOAT_ALLOWED_SCAN_ROOTS set to a single subdirectory of tmp_path.
 
