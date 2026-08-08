@@ -21,18 +21,18 @@ export function parsePrometheus(text: string): Metrics {
   let durationSum = 0
   let durationCount = 0
 
+  const METRIC_HANDLERS: Array<{ prefix: string; update: (v: number) => void }> = [
+    { prefix: 'http_requests_total', update: (v) => { requestCount += v } },
+    { prefix: 'http_request_duration_seconds_sum', update: (v) => { durationSum += v } },
+    { prefix: 'http_request_duration_seconds_count', update: (v) => { durationCount += v } },
+  ]
+
   for (const line of text.split('\n')) {
     if (line.startsWith('#') || line.trim() === '') continue
-
-    if (line.startsWith('http_requests_total')) {
+    const handler = METRIC_HANDLERS.find((h) => line.startsWith(h.prefix))
+    if (handler !== undefined) {
       const v = extractMetricValue(line)
-      if (v !== null) requestCount += v
-    } else if (line.startsWith('http_request_duration_seconds_sum')) {
-      const v = extractMetricValue(line)
-      if (v !== null) durationSum += v
-    } else if (line.startsWith('http_request_duration_seconds_count')) {
-      const v = extractMetricValue(line)
-      if (v !== null) durationCount += v
+      if (v !== null) handler.update(v)
     }
   }
 

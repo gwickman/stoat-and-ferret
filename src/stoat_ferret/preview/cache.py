@@ -116,10 +116,10 @@ class PreviewCache:
 
         async with self._lock:
             # Evict expired sessions first
-            await self._evict_expired_unlocked()
+            self._evict_expired_unlocked()
 
             # LRU eviction to make room
-            await self._evict_lru_unlocked(size)
+            self._evict_lru_unlocked(size)
 
             now = datetime.now(timezone.utc)
             self._entries[session_id] = CacheEntry(
@@ -275,16 +275,16 @@ class PreviewCache:
         while True:
             await asyncio.sleep(self._cleanup_interval)
             async with self._lock:
-                await self._evict_expired_unlocked()
+                self._evict_expired_unlocked()
 
-    async def _evict_expired_unlocked(self) -> None:
+    def _evict_expired_unlocked(self) -> None:
         """Remove all TTL-expired entries. Must be called with lock held."""
         now = datetime.now(timezone.utc)
         expired = [e for e in self._entries.values() if now >= e.expires_at]
         for entry in expired:
             self._remove_entry_unlocked(entry, reason="ttl_expired")
 
-    async def _evict_lru_unlocked(self, needed_bytes: int) -> None:
+    def _evict_lru_unlocked(self, needed_bytes: int) -> None:
         """Evict oldest-accessed sessions until there is room. Must be called with lock held.
 
         Args:
