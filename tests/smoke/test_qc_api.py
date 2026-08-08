@@ -57,7 +57,7 @@ def _build_mock_qc_service(repo: InMemoryQCReportRepository) -> QCService:
     return cast(QCService, svc)
 
 
-@pytest.fixture()
+@pytest.fixture
 async def qc_smoke_client() -> httpx.AsyncClient:  # type: ignore[misc]
     """Async httpx client with mock QCService injected — no FFmpeg required.
 
@@ -140,7 +140,7 @@ async def test_smoke_get_render_job_qc(qc_smoke_client: httpx.AsyncClient) -> No
     assert "detail" in body
 
 
-@pytest.fixture()
+@pytest.fixture
 async def qc_smoke_client_with_dp() -> httpx.AsyncClient:  # type: ignore[misc]
     """Async httpx client with mock QCService and delivery_profile_repository injected.
 
@@ -291,7 +291,7 @@ async def _seed_stub_project_with_clip(client: httpx.AsyncClient) -> str:
     return project_id
 
 
-@pytest.fixture()
+@pytest.fixture
 async def qc_worker_path_client() -> httpx.AsyncClient:  # type: ignore[misc]
     """Async client with mock QCService wired into noop RenderService (worker-path test).
 

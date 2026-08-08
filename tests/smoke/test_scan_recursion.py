@@ -15,14 +15,14 @@ import httpx
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def multi_level_dir(tmp_path: Path) -> Path:
     """Temporary directory with one subdirectory."""
     (tmp_path / "subdir").mkdir()
     return tmp_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def flat_dir(tmp_path: Path) -> Path:
     """Temporary directory with no subdirectories (files only)."""
     (tmp_path / "video.mp4").touch()

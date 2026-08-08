@@ -23,7 +23,7 @@ from stoat_ferret.effects.registry import EffectRegistry
 from tests.factories import make_test_video
 
 
-@pytest.fixture()
+@pytest.fixture
 def registry() -> EffectRegistry:
     """Fully-populated EffectRegistry for automation dispatch tests."""
     return create_default_registry()

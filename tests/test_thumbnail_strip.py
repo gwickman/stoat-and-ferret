@@ -225,12 +225,12 @@ class TestExtractFrameArgs:
 class TestGenerateStrip:
     """Tests for sprite sheet generation via ThumbnailService."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def fake_async_executor(self) -> FakeAsyncFFmpegExecutor:
         """Return a fake async executor configured for success."""
         return FakeAsyncFFmpegExecutor(returncode=0)
 
-    @pytest.fixture()
+    @pytest.fixture
     def fake_sync_executor(self) -> FakeFFmpegExecutor:
         """Return a fake sync executor."""
         return FakeFFmpegExecutor(_make_success_recording())

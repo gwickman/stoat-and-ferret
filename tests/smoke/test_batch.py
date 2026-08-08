@@ -24,7 +24,7 @@ async def _noop_render_handler(project_id: str, output_path: str, quality: str) 
     """No-op render handler for smoke testing batch infrastructure."""
 
 
-@pytest.fixture()
+@pytest.fixture
 async def batch_client(smoke_client: httpx.AsyncClient) -> httpx.AsyncClient:
     """Smoke client with a batch render handler injected.
 

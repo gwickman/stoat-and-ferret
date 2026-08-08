@@ -77,7 +77,7 @@ _DEFERRED_UAT_ACS: list[str] = [
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 async def acceptance_client(tmp_path: Path) -> httpx.AsyncClient:  # type: ignore[misc]
     """In-process async client backed by a fresh app instance with isolated DB."""
     from stoat_ferret.api.app import create_app, lifespan

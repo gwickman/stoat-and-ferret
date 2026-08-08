@@ -701,7 +701,7 @@ async def test_render_preview_codec_name_rejected_with_discovery_message(
 # ---------- Noop mode smoke tests (BL-355 AC-4, AC-5) ----------
 
 
-@pytest.fixture()
+@pytest.fixture
 async def smoke_client_noop(tmp_path: Path) -> httpx.AsyncClient:
     """Async httpx client with STOAT_RENDER_MODE=noop for noop-mode render tests."""
     db_path = tmp_path / "noop_smoke_test.db"
@@ -927,7 +927,7 @@ async def test_preflight_single_clip_with_effects_no_warning(
 # -- BL-554: Evidence API smoke tests --
 
 
-@pytest.fixture()
+@pytest.fixture
 async def smoke_client_evidence(tmp_path: Path) -> httpx.AsyncClient:
     """Async httpx client with STOAT_RENDER_EVIDENCE_FULL_ACCESS=true for evidence tests."""
     from stoat_ferret.api.app import create_app as _create_app
