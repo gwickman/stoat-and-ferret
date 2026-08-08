@@ -472,22 +472,19 @@ class _RenderCommandContext:
     effect_registry: EffectRegistry | None
 
 
-async def _build_multi_clip_command(
+async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
-) -> list[str]:
-    """Assemble FFmpeg argv for a multi-clip (filter_complex / RenderGraphTranslator) render."""
-    from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
+    fps_mc: float,
+) -> tuple[list[Any], list[float], str | None, int]:
+    """Build per-clip ClipWithEffects list, durations, and audio codec info."""
+    from stoat_ferret_core import ClipWithEffects
 
-    codec_mc: str = ctx.settings.get("codec", "libx264")
-    fps_mc: float = ctx.settings.get("fps", 30.0)
-    quality_preset_mc: str = ctx.settings.get("quality_preset", "standard")
-
-    multi_cmd: list[str] = ["ffmpeg"]
+    cwe_list: list[Any] = []
+    clip_durations_mc: list[float] = []
     source_audio_codec_mc: str | None = None
     source_audio_input_idx_mc: int = 0
-    cwe_list = []
-    clip_durations_mc: list[float] = []
+
     for i, clip in enumerate(clips):
         source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
             clip, ctx.job.project_id, ctx.video_repository, ctx.asset_repository, fps_mc
@@ -516,26 +513,112 @@ async def _build_multi_clip_command(
                 effects=render_effects,
             )
         )
+    return cwe_list, clip_durations_mc, source_audio_codec_mc, source_audio_input_idx_mc
+
+
+def _assemble_multi_tts_filter(
+    cmd: list[str],
+    tts_inputs: list[TtsCueAudioInput] | None,
+    tts_base: int,
+    filter_complex_str: str,
+    source_audio_codec_mc: str | None,
+    source_audio_input_idx_mc: int,
+) -> None:
+    """Assemble filter_complex and -map flags for multi-clip TTS/no-TTS paths."""
+    if tts_inputs:
+        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
+        combined_filter = filter_complex_str + ";" + tts_filter_seg
+        if source_audio_codec_mc is not None:
+            src_a = f"[{source_audio_input_idx_mc}:a]"
+            mix_seg = (
+                f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+            )
+            combined_filter_with_mix = combined_filter + ";" + mix_seg
+            cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_filter_with_mix,
+                    "-map",
+                    _LABEL_FINAL,
+                    "-map",
+                    _LABEL_AOUT,
+                ]
+            )
+        else:
+            cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_filter,
+                    "-map",
+                    _LABEL_FINAL,
+                    "-map",
+                    tts_audio_label,
+                ]
+            )
+    else:
+        cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
+
+
+def _build_mc_clip_input_args(
+    cmd: list[str],
+    clips: list[Clip],
+    input_paths: list[str],
+    clip_durations_mc: list[float],
+) -> None:
+    """Append per-clip -i flags (with -loop/-lavfi for image/generator) to cmd."""
+    for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
+        if clip.clip_type == "image":
+            cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
+        elif clip.clip_type == "generator":
+            cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
+        else:
+            cmd.extend(["-i", path])
+
+
+def _build_mc_tts_inputs(
+    cmd: list[str],
+    tts_inputs: list[TtsCueAudioInput],
+    input_paths: list[str],
+    ffmetadata_path: str | None,
+) -> int:
+    """Append TTS audio -i inputs to cmd and return tts_base stream index."""
+    tts_base = len(input_paths) + (1 if ffmetadata_path else 0)
+    for inp in tts_inputs:
+        cmd.extend(["-i", inp.audio_path])
+    return tts_base
+
+
+async def _build_multi_clip_command(
+    ctx: _RenderCommandContext,
+    clips: list[Clip],
+) -> list[str]:
+    """Assemble FFmpeg argv for a multi-clip (filter_complex / RenderGraphTranslator) render."""
+    from stoat_ferret_core import RenderGraphTranslator
+
+    codec_mc: str = ctx.settings.get("codec", "libx264")
+    fps_mc: float = ctx.settings.get("fps", 30.0)
+    quality_preset_mc: str = ctx.settings.get("quality_preset", "standard")
+
+    multi_cmd: list[str] = ["ffmpeg"]
+    (
+        cwe_list,
+        clip_durations_mc,
+        source_audio_codec_mc,
+        source_audio_input_idx_mc,
+    ) = await _build_clip_input_list(ctx, clips, fps_mc)
 
     translator = RenderGraphTranslator()
     filter_complex_str, input_paths = translator.translate(cwe_list)
 
-    for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
-        if clip.clip_type == "image":
-            multi_cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
-        elif clip.clip_type == "generator":
-            multi_cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
-        else:
-            multi_cmd.extend(["-i", path])
+    _build_mc_clip_input_args(multi_cmd, clips, input_paths, clip_durations_mc)
 
     if ctx.ffmetadata_path:
         multi_cmd.extend(["-i", ctx.ffmetadata_path])
 
     tts_base: int = 0
     if ctx.tts_inputs:
-        tts_base = len(input_paths) + (1 if ctx.ffmetadata_path else 0)
-        for inp in ctx.tts_inputs:
-            multi_cmd.extend(["-i", inp.audio_path])
+        tts_base = _build_mc_tts_inputs(multi_cmd, ctx.tts_inputs, input_paths, ctx.ffmetadata_path)
 
     # Soft subtitle -i inputs: declared BEFORE filter_complex/output -map section (BL-618).
     # subtitle_base_mc = clip_count + ffmetadata_offset + tts_count
@@ -550,39 +633,14 @@ async def _build_multi_clip_command(
             sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
             multi_cmd.extend(["-i", sub_path])
 
-    if ctx.tts_inputs:
-        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(ctx.tts_inputs, tts_base)
-        combined_filter = filter_complex_str + ";" + tts_filter_seg
-        if source_audio_codec_mc is not None:
-            src_a = f"[{source_audio_input_idx_mc}:a]"
-            mix_seg = (
-                f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
-            )
-            combined_filter_with_mix = combined_filter + ";" + mix_seg
-            multi_cmd.extend(
-                [
-                    "-filter_complex",
-                    combined_filter_with_mix,
-                    "-map",
-                    _LABEL_FINAL,
-                    "-map",
-                    _LABEL_AOUT,
-                ]
-            )
-        else:
-            multi_cmd.extend(
-                [
-                    "-filter_complex",
-                    combined_filter,
-                    "-map",
-                    _LABEL_FINAL,
-                    "-map",
-                    tts_audio_label,
-                ]
-            )
-    else:
-        multi_cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
+    _assemble_multi_tts_filter(
+        multi_cmd,
+        ctx.tts_inputs,
+        tts_base,
+        filter_complex_str,
+        source_audio_codec_mc,
+        source_audio_input_idx_mc,
+    )
 
     # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
     if ctx.render_settings.soft_subtitles:
@@ -605,6 +663,201 @@ async def _build_multi_clip_command(
     return multi_cmd
 
 
+def _build_sc_cmd_init(first_clip: Clip, input_path: str) -> list[str]:
+    """Return the initial FFmpeg argv for a single-clip command based on clip type."""
+    if first_clip.clip_type == "image":
+        return ["ffmpeg", "-loop", "1", "-i", input_path]
+    if first_clip.clip_type == "generator":
+        return ["ffmpeg", "-f", "lavfi", "-i", input_path]
+    return ["ffmpeg", "-i", input_path]
+
+
+async def _build_sc_subtitle_inputs(
+    cmd: list[str],
+    ctx: _RenderCommandContext,
+) -> None:
+    """Append soft subtitle -i inputs to cmd, resolving each asset path."""
+    for spec in ctx.render_settings.soft_subtitles:
+        sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
+        cmd.extend(["-i", sub_path])
+
+
+def _add_sc_subtitle_stream_maps(
+    cmd: list[str],
+    soft_subtitles: list[SoftSubtitleSpec],
+    tts_inputs: list[TtsCueAudioInput] | None,
+    use_translator_sc: bool,
+    source_audio_codec: str | None,
+    ffmetadata_path: str | None,
+) -> None:
+    """Append -map flags for soft subtitle streams and explicit video/audio maps when needed."""
+    subtitle_base = 1 + (1 if ffmetadata_path else 0) + (len(tts_inputs) if tts_inputs else 0)
+    if not tts_inputs and not use_translator_sc:
+        cmd.extend(["-map", "0:v"])
+        if source_audio_codec is not None:
+            cmd.extend(["-map", "0:a"])
+    for idx, _ in enumerate(soft_subtitles):
+        cmd.extend(["-map", f"{subtitle_base + idx}:s"])
+
+
+def _assemble_sc_filter_translator(
+    cmd: list[str],
+    first_clip: Clip,
+    source_audio_codec: str | None,
+    tts_inputs: list[TtsCueAudioInput] | None,
+    tts_base_single: int,
+    seg_duration: float,
+    fps: float,
+    width: int,
+    height: int,
+    effect_registry: EffectRegistry | None,
+    input_path: str,
+) -> None:
+    """Assemble filter_complex and -map flags for the single-clip translator path."""
+    from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
+
+    render_effects_sc = _build_clip_render_effects(first_clip, effect_registry)
+    cwe_sc = ClipWithEffects(
+        input_index=0,
+        duration_secs=seg_duration,
+        framerate=fps,
+        source_path=input_path,
+        effects=render_effects_sc,
+    )
+    translator_sc = RenderGraphTranslator()
+    filter_complex_sc, _ = translator_sc.translate([cwe_sc])
+    if tts_inputs:
+        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
+        combined_sc = filter_complex_sc + ";" + tts_filter_seg
+        if source_audio_codec is not None:
+            mix_seg = (
+                f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+            )
+            combined_sc_with_mix = combined_sc + ";" + mix_seg
+            cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_sc_with_mix,
+                    "-map",
+                    _LABEL_FINAL,
+                    "-map",
+                    _LABEL_AOUT,
+                ]
+            )
+        else:
+            cmd.extend(
+                [
+                    "-filter_complex",
+                    combined_sc,
+                    "-map",
+                    _LABEL_FINAL,
+                    "-map",
+                    tts_audio_label,
+                ]
+            )
+    else:
+        cmd.extend(["-filter_complex", filter_complex_sc, "-map", _LABEL_FINAL, "-an"])
+
+
+def _assemble_sc_filter_tts_only(
+    cmd: list[str],
+    source_audio_codec: str | None,
+    tts_inputs: list[TtsCueAudioInput],
+    tts_base_single: int,
+    filter_graph: str | None,
+    fps: float,
+    width: int,
+    height: int,
+) -> None:
+    """Assemble filter_complex and -map flags for single-clip TTS-only path (no translator)."""
+    tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
+    if source_audio_codec is not None:
+        mix_seg = (
+            f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
+            f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+        )
+        if filter_graph:
+            combined = f"[0:v]{filter_graph}{_LABEL_VOUT};{tts_filter_seg};{mix_seg}"
+            cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", _LABEL_AOUT])
+        elif width and height:
+            combined = f"[0:v]scale={width}:{height}{_LABEL_VOUT};{tts_filter_seg};{mix_seg}"
+            cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", _LABEL_AOUT])
+        else:
+            cmd.extend(
+                [
+                    "-filter_complex",
+                    f"{tts_filter_seg};{mix_seg}",
+                    "-map",
+                    "0:v",
+                    "-map",
+                    _LABEL_AOUT,
+                ]
+            )
+    else:
+        if filter_graph:
+            combined = f"[0:v]{filter_graph}{_LABEL_VOUT};{tts_filter_seg}"
+            cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", tts_audio_label])
+        elif width and height:
+            combined = f"[0:v]scale={width}:{height}{_LABEL_VOUT};{tts_filter_seg}"
+            cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", tts_audio_label])
+        else:
+            cmd.extend(
+                [
+                    "-filter_complex",
+                    tts_filter_seg,
+                    "-map",
+                    "0:v",
+                    "-map",
+                    tts_audio_label,
+                ]
+            )
+
+
+def _assemble_sc_filter_legacy(
+    cmd: list[str],
+    filter_graph: str | None,
+    width: int,
+    height: int,
+) -> None:
+    """Assemble -vf flag for single-clip legacy path (no translator, no TTS)."""
+    if filter_graph:
+        cmd.extend(["-vf", filter_graph])
+    elif width and height:
+        cmd.extend(["-vf", f"scale={width}:{height}"])
+
+
+def _resolve_segment(
+    segments: list[dict[str, Any]],
+    total_duration: float,
+    job_id: str,
+) -> dict[str, Any]:
+    """Return the active render segment, warning when multiple segments are present."""
+    if segments:
+        if len(segments) > 1:
+            logger.warning(
+                "render_worker.multi_segment_truncated",
+                segments_count=len(segments),
+                job_id=job_id,
+            )
+        return segments[0]
+    if total_duration <= 0:
+        raise ValueError("render_plan has no renderable content")
+    return {"index": 0, "timeline_start": 0.0, "timeline_end": total_duration}
+
+
+def _append_sc_tts_inputs(
+    cmd: list[str],
+    tts_inputs: list[TtsCueAudioInput],
+    ffmetadata_path: str | None,
+) -> int:
+    """Append TTS audio -i inputs to cmd and return tts_base_single stream index."""
+    tts_base = 1 + (1 if ffmetadata_path else 0)
+    for inp in tts_inputs:
+        cmd.extend(["-i", inp.audio_path])
+    return tts_base
+
+
 async def _build_single_clip_command(
     ctx: _RenderCommandContext,
     clips: list[Clip],
@@ -624,22 +877,7 @@ async def _build_single_clip_command(
     )
 
     # --- Select segment ---
-    if segments:
-        if len(segments) > 1:
-            logger.warning(
-                "render_worker.multi_segment_truncated",
-                segments_count=len(segments),
-                job_id=ctx.job.id,
-            )
-        segment = segments[0]
-    else:
-        if total_duration <= 0:
-            raise ValueError("render_plan has no renderable content")
-        segment = {
-            "index": 0,
-            "timeline_start": 0.0,
-            "timeline_end": total_duration,
-        }
+    segment = _resolve_segment(segments, total_duration, ctx.job.id)
 
     timeline_start: float = segment.get("timeline_start", 0.0)
     timeline_end: float = segment.get("timeline_end", total_duration)
@@ -654,12 +892,7 @@ async def _build_single_clip_command(
     filter_graph: str | None = ctx.settings.get("filter_graph")
 
     # --- Assemble FFmpeg command ---
-    if first_clip.clip_type == "image":
-        cmd: list[str] = ["ffmpeg", "-loop", "1", "-i", input_path]
-    elif first_clip.clip_type == "generator":
-        cmd = ["ffmpeg", "-f", "lavfi", "-i", input_path]
-    else:
-        cmd = ["ffmpeg", "-i", input_path]
+    cmd = _build_sc_cmd_init(first_clip, input_path)
 
     # Second input: ffmetadata file for chapter embedding (must precede output options)
     if ctx.ffmetadata_path:
@@ -668,138 +901,56 @@ async def _build_single_clip_command(
     # TTS audio inputs: must follow other -i flags, before output options
     tts_base_single: int = 0
     if ctx.tts_inputs:
-        tts_base_single = 1 + (1 if ctx.ffmetadata_path else 0)
-        for inp in ctx.tts_inputs:
-            cmd.extend(["-i", inp.audio_path])
+        tts_base_single = _append_sc_tts_inputs(cmd, ctx.tts_inputs, ctx.ffmetadata_path)
 
     # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
     # subtitle_base = 1 (source) + ffmetadata_offset + tts_count
     if ctx.render_settings.soft_subtitles:
-        for spec in ctx.render_settings.soft_subtitles:
-            sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
-            cmd.extend(["-i", sub_path])
+        await _build_sc_subtitle_inputs(cmd, ctx)
 
     # Segment timing
     cmd.extend(["-ss", str(timeline_start), "-t", str(seg_duration)])
 
     # Filter assembly: translator path for image/generator/effects clips; legacy -vf for file.
     if use_translator_sc:
-        from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
-
-        render_effects_sc = _build_clip_render_effects(first_clip, ctx.effect_registry)
-        cwe_sc = ClipWithEffects(
-            input_index=0,
-            duration_secs=seg_duration,
-            framerate=fps,
-            source_path=input_path,
-            effects=render_effects_sc,
+        _assemble_sc_filter_translator(
+            cmd,
+            first_clip,
+            source_audio_codec,
+            ctx.tts_inputs,
+            tts_base_single,
+            seg_duration,
+            fps,
+            width,
+            height,
+            ctx.effect_registry,
+            input_path,
         )
-        translator_sc = RenderGraphTranslator()
-        filter_complex_sc, _ = translator_sc.translate([cwe_sc])
-        if ctx.tts_inputs:
-            tts_filter_seg, tts_audio_label = _build_tts_audio_filter(
-                ctx.tts_inputs, tts_base_single
-            )
-            combined_sc = filter_complex_sc + ";" + tts_filter_seg
-            if source_audio_codec is not None:
-                mix_seg = (
-                    f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                    f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
-                )
-                combined_sc_with_mix = combined_sc + ";" + mix_seg
-                cmd.extend(
-                    [
-                        "-filter_complex",
-                        combined_sc_with_mix,
-                        "-map",
-                        _LABEL_FINAL,
-                        "-map",
-                        _LABEL_AOUT,
-                    ]
-                )
-            else:
-                cmd.extend(
-                    [
-                        "-filter_complex",
-                        combined_sc,
-                        "-map",
-                        _LABEL_FINAL,
-                        "-map",
-                        tts_audio_label,
-                    ]
-                )
-        else:
-            cmd.extend(["-filter_complex", filter_complex_sc, "-map", _LABEL_FINAL, "-an"])
     elif ctx.tts_inputs:
-        # Video + TTS audio filter: merge into filter_complex when TTS is active to avoid
-        # -vf / -filter_complex conflict on the same stream.
-        tts_filter_seg, tts_audio_label = _build_tts_audio_filter(ctx.tts_inputs, tts_base_single)
-        if source_audio_codec is not None:
-            # Source video has audio — mix with TTS narration into [aout]
-            mix_seg = (
-                f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
-            )
-            if filter_graph:
-                combined = f"[0:v]{filter_graph}{_LABEL_VOUT};{tts_filter_seg};{mix_seg}"
-                cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", _LABEL_AOUT])
-            elif width and height:
-                combined = f"[0:v]scale={width}:{height}{_LABEL_VOUT};{tts_filter_seg};{mix_seg}"
-                cmd.extend(["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", _LABEL_AOUT])
-            else:
-                cmd.extend(
-                    [
-                        "-filter_complex",
-                        f"{tts_filter_seg};{mix_seg}",
-                        "-map",
-                        "0:v",
-                        "-map",
-                        _LABEL_AOUT,
-                    ]
-                )
-        else:
-            # Video-only source — TTS audio only (existing behavior)
-            if filter_graph:
-                combined = f"[0:v]{filter_graph}{_LABEL_VOUT};{tts_filter_seg}"
-                cmd.extend(
-                    ["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", tts_audio_label]
-                )
-            elif width and height:
-                combined = f"[0:v]scale={width}:{height}{_LABEL_VOUT};{tts_filter_seg}"
-                cmd.extend(
-                    ["-filter_complex", combined, "-map", _LABEL_VOUT, "-map", tts_audio_label]
-                )
-            else:
-                cmd.extend(
-                    [
-                        "-filter_complex",
-                        tts_filter_seg,
-                        "-map",
-                        "0:v",
-                        "-map",
-                        tts_audio_label,
-                    ]
-                )
+        _assemble_sc_filter_tts_only(
+            cmd,
+            source_audio_codec,
+            ctx.tts_inputs,
+            tts_base_single,
+            filter_graph,
+            fps,
+            width,
+            height,
+        )
     else:
-        if filter_graph:
-            cmd.extend(["-vf", filter_graph])
-        elif width and height:
-            cmd.extend(["-vf", f"scale={width}:{height}"])
+        _assemble_sc_filter_legacy(cmd, filter_graph, width, height)
 
     # Soft subtitle stream mapping (BL-583): emit -map <N>:s for each subtitle input.
     # Subtitle inputs follow source (0), optional ffmetadata, and TTS inputs.
     if ctx.render_settings.soft_subtitles:
-        subtitle_base = (
-            1 + (1 if ctx.ffmetadata_path else 0) + (len(ctx.tts_inputs) if ctx.tts_inputs else 0)
+        _add_sc_subtitle_stream_maps(
+            cmd,
+            ctx.render_settings.soft_subtitles,
+            ctx.tts_inputs,
+            use_translator_sc,
+            source_audio_codec,
+            ctx.ffmetadata_path,
         )
-        if not ctx.tts_inputs and not use_translator_sc:
-            # No TTS, no translator — explicit video/audio maps required before subtitle maps
-            # (FFmpeg auto-selection is superseded when any explicit -map is present)
-            cmd.extend(["-map", "0:v"])
-            if source_audio_codec is not None:
-                cmd.extend(["-map", "0:a"])
-        for idx, _ in enumerate(ctx.render_settings.soft_subtitles):
-            cmd.extend(["-map", f"{subtitle_base + idx}:s"])
 
     # Video codec
     cmd.extend(["-c:v", codec])
