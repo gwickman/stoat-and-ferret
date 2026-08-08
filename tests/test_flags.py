@@ -198,7 +198,8 @@ async def test_startup_audit_inserts_rows(
     assert names == set(FEATURE_FLAG_NAMES)
     for _name, value, logged_at in rows:
         assert value in (0, 1)
-        assert isinstance(logged_at, str) and len(logged_at) > 0
+        assert isinstance(logged_at, str)
+        assert len(logged_at) > 0
 
 
 # ---------------------------------------------------------------------------

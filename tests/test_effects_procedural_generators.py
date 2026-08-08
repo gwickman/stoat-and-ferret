@@ -766,7 +766,8 @@ def test_generic_procedural_linear_gradient(tmp_path: pathlib.Path) -> None:
 
     out = tmp_path / "gradient.png"
     GenericProceduralImageBuilder("x", 64, 64).synthesise(str(out))
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
     row = _read_png_rgba_row(out, row=0)
     first_r = row[0][0]
@@ -781,7 +782,8 @@ def test_generic_procedural_radial(tmp_path: pathlib.Path) -> None:
 
     out = tmp_path / "radial.png"
     GenericProceduralImageBuilder("hypot(x-0.5,y-0.5)", 64, 64).synthesise(str(out))
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
     # Read row 32 (middle row) to get center pixel at col 32
     row_mid = _read_png_rgba_row(out, row=32)
@@ -836,7 +838,8 @@ def test_generic_procedural_performance(tmp_path: pathlib.Path) -> None:
 
     out = tmp_path / "perf.png"
     GenericProceduralImageBuilder("sin(x*6.28)*cos(y*6.28)", 256, 256).synthesise(str(out))
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
 
 # ===========================================================================

@@ -268,7 +268,8 @@ async def test_per_clip_effects_on_image_clip(tmp_path: Path) -> None:
     cmd.append("-y")
     r = subprocess.run(cmd, capture_output=True, timeout=60)  # noqa: ASYNC221
     assert r.returncode == 0, f"Image clip render failed: {r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
 
 @_FFMPEG_SKIP
@@ -311,7 +312,8 @@ async def test_per_clip_effects_on_generator_clip(tmp_path: Path) -> None:
     cmd.append("-y")
     r = subprocess.run(cmd, capture_output=True, timeout=60)  # noqa: ASYNC221
     assert r.returncode == 0, f"Generator clip render failed: {r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
 
 # ---------------------------------------------------------------------------
@@ -393,7 +395,8 @@ async def test_r3_maya_compressed(tmp_path: Path) -> None:
     assert r.returncode == 0, (
         f"Maya compressed render failed (exit {r.returncode}):\n{r.stderr.decode()[-800:]}"
     )
-    assert out.exists() and out.stat().st_size > 0, "Maya output must be non-empty"
+    assert out.exists(), "Maya output must be non-empty"
+    assert out.stat().st_size > 0, "Maya output must be non-empty"
 
 
 # ---------------------------------------------------------------------------
@@ -481,4 +484,5 @@ async def test_r3_devon_compressed(tmp_path: Path) -> None:
     assert r.returncode == 0, (
         f"Devon compressed render failed (exit {r.returncode}):\n{r.stderr.decode()[-800:]}"
     )
-    assert out.exists() and out.stat().st_size > 0, "Devon output must be non-empty"
+    assert out.exists(), "Devon output must be non-empty"
+    assert out.stat().st_size > 0, "Devon output must be non-empty"

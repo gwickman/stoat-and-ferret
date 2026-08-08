@@ -474,7 +474,8 @@ async def test_multi_clip_render_ssim_proof(tmp_path: Path) -> None:
 
     r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
     assert r.returncode == 0, f"Render failed (exit {r.returncode}):\n{r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0, "Output file must exist and be non-empty"
+    assert out.exists(), "Output file must exist and be non-empty"
+    assert out.stat().st_size > 0, "Output file must exist and be non-empty"
 
     # Clip 1 midpoint at t=1.5s in output — solid blue, compare to source clip 1
     ssim1 = _compute_ssim(out, 1.5, src1, 1.5)
@@ -534,7 +535,8 @@ async def test_per_clip_effect_applied(tmp_path: Path) -> None:
 
     r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
     assert r.returncode == 0, f"Render failed:\n{r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
     for seek, dest in [("1.5", frame_inside), ("0.2", frame_outside)]:
         subprocess.run(  # noqa: ASYNC221
@@ -590,7 +592,8 @@ async def test_fps_settb_normalization(tmp_path: Path) -> None:
     r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
     stderr = r.stderr.decode()
     assert r.returncode == 0, f"Render failed (exit {r.returncode}):\n{stderr[-800:]}"
-    assert out.exists() and out.stat().st_size > 0, "Output must be non-empty"
+    assert out.exists(), "Output must be non-empty"
+    assert out.stat().st_size > 0, "Output must be non-empty"
     assert "uninitialized" not in stderr.lower(), "Unexpected timebase error in ffmpeg stderr"
 
 
@@ -681,7 +684,8 @@ async def test_format_yuv420p_terminal(tmp_path: Path) -> None:
 
     r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
     assert r.returncode == 0, f"Render failed:\n{r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
     probe = subprocess.run(  # noqa: ASYNC221
         [

@@ -430,7 +430,8 @@ async def test_windowed_negate_effect_real_render(tmp_path: Path) -> None:
 
     rc = _run_render(cmd)
     assert rc.returncode == 0, f"FFmpeg failed:\n{rc.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0, "Output file missing or empty"
+    assert out.exists(), "Output file missing or empty"
+    assert out.stat().st_size > 0, "Output file missing or empty"
 
     luma_outside = _extract_frame_mean_luma(out, t=0.5, tmp=tmp_path)
     luma_inside = _extract_frame_mean_luma(out, t=2.5, tmp=tmp_path)

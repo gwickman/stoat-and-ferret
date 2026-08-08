@@ -85,9 +85,8 @@ def _extract_frame(output_path: str, time_s: float, tmp_dir: Path) -> Image.Imag
     assert result.returncode == 0, (
         f"ffmpeg frame extraction failed at t={time_s}s: {result.stderr.decode(errors='replace')}"
     )
-    assert out_file.exists() and out_file.stat().st_size > 0, (
-        f"ffmpeg produced empty frame at t={time_s}s"
-    )
+    assert out_file.exists(), f"ffmpeg produced empty frame at t={time_s}s"
+    assert out_file.stat().st_size > 0, f"ffmpeg produced empty frame at t={time_s}s"
     return Image.open(out_file).convert("RGB")
 
 

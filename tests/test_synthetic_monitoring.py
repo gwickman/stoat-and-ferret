@@ -408,4 +408,5 @@ async def test_monitoring_starts_when_flag_true(
         assert not handle.done()
 
     # After lifespan exit the task handle should be cancelled/finalised.
-    assert handle is not None and handle.done()
+    assert handle is not None
+    assert handle.done()

@@ -223,7 +223,8 @@ async def test_generator_clip_multi_clip_render(tmp_path: Path) -> None:
 
     r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
     assert r.returncode == 0, f"Render failed: {r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
 
 
 @_FFMPEG_SKIP
@@ -243,4 +244,5 @@ async def test_generator_clip_single_clip_render(tmp_path: Path) -> None:
 
     r = subprocess.run(cmd, capture_output=True, timeout=60)  # noqa: ASYNC221
     assert r.returncode == 0, f"Render failed: {r.stderr.decode()[-800:]}"
-    assert out.exists() and out.stat().st_size > 0
+    assert out.exists()
+    assert out.stat().st_size > 0
