@@ -1,6 +1,10 @@
 # stoat-and-ferret
 
 [![CI](https://github.com/gwickman/stoat-and-ferret/actions/workflows/ci.yml/badge.svg)](https://github.com/gwickman/stoat-and-ferret/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gwickman_stoat-and-ferret&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=gwickman_stoat-and-ferret)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=gwickman_stoat-and-ferret&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=gwickman_stoat-and-ferret)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=gwickman_stoat-and-ferret&metric=security_rating)](https://sonarcloud.io/summary/overall?id=gwickman_stoat-and-ferret)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=gwickman_stoat-and-ferret&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=gwickman_stoat-and-ferret)
 [![License: AGPL v3 or later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gwickman/stoat-and-ferret)
 
