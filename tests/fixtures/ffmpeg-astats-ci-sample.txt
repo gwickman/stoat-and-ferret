@@ -1,0 +1,123 @@
+ffmpeg version 8.0.1-full_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers
+  built with gcc 15.2.0 (Rev8, Built by MSYS2 project)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-lcms2 --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-sdl2 --enable-libaribb24 --enable-libaribcaption --enable-libdav1d --enable-libdavs2 --enable-libopenjpeg --enable-libquirc --enable-libuavs3d --enable-libxevd --enable-libzvbi --enable-liboapv --enable-libqrencode --enable-librav1e --enable-libsvtav1 --enable-libvvenc --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxeve --enable-libxvid --enable-libaom --enable-libjxl --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-openal --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-liblc3 --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint --enable-whisper
+  libavutil      60.  8.100 / 60.  8.100
+  libavcodec     62. 11.100 / 62. 11.100
+  libavformat    62.  3.100 / 62.  3.100
+  libavdevice    62.  1.100 / 62.  1.100
+  libavfilter    11.  4.100 / 11.  4.100
+  libswscale      9.  1.100 /  9.  1.100
+  libswresample   6.  1.100 /  6.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\grant\AppData\Local\Temp\pytest-of-grant\pytest-6132\stereo_video0\stereo_sample.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf62.3.100
+  Duration: 00:00:01.00, start: 0.000000, bitrate: 153 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 64x64 [SAR 1:1 DAR 1:1], 8 kb/s, 25 fps, 25 tbr, 12800 tbn (default)
+    Metadata:
+      handler_name    : VideoHandler
+      vendor_id       : [0][0][0][0]
+      encoder         : Lavc62.11.100 libx264
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 123 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+      vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:0 -> #0:0 (h264 (native) -> wrapped_avframe (native))
+  Stream #0:1 -> #0:1 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+[Parsed_astats_0 @ 00000177780b5b80] Channel: 1
+[Parsed_astats_0 @ 00000177780b5b80] DC offset: 0.000038
+[Parsed_astats_0 @ 00000177780b5b80] Min level: -1.509119
+[Parsed_astats_0 @ 00000177780b5b80] Max level: 1.449370
+[Parsed_astats_0 @ 00000177780b5b80] Min difference: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Max difference: 0.103115
+[Parsed_astats_0 @ 00000177780b5b80] Mean difference: 0.036387
+[Parsed_astats_0 @ 00000177780b5b80] RMS difference: 0.040943
+[Parsed_astats_0 @ 00000177780b5b80] Peak level dB: 3.574471
+[Parsed_astats_0 @ 00000177780b5b80] RMS level dB: -3.701050
+[Parsed_astats_0 @ 00000177780b5b80] RMS peak dB: -3.056603
+[Parsed_astats_0 @ 00000177780b5b80] RMS through dB: -5.424188
+[Parsed_astats_0 @ 00000177780b5b80] Crest factor: 2.310873
+[Parsed_astats_0 @ 00000177780b5b80] Flat factor: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Peak count: 2
+[Parsed_astats_0 @ 00000177780b5b80] Abs Peak count: 1
+[Parsed_astats_0 @ 00000177780b5b80] Noise floor dB: -0.681417
+[Parsed_astats_0 @ 00000177780b5b80] Noise floor count: 800
+[Parsed_astats_0 @ 00000177780b5b80] Entropy: 0.967521
+[Parsed_astats_0 @ 00000177780b5b80] Bit depth: 32/32/32/32
+[Parsed_astats_0 @ 00000177780b5b80] Dynamic range: 133.013440
+[Parsed_astats_0 @ 00000177780b5b80] Zero crossings: 910
+[Parsed_astats_0 @ 00000177780b5b80] Zero crossings rate: 0.020197
+[Parsed_astats_0 @ 00000177780b5b80] Number of NaNs: 0
+[Parsed_astats_0 @ 00000177780b5b80] Number of Infs: 0
+[Parsed_astats_0 @ 00000177780b5b80] Number of denormals: 0
+Output #0, null, to 'pipe:':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf62.3.100
+  Stream #0:0(und): Video: wrapped_avframe, yuv420p(progressive), 64x64 [SAR 1:1 DAR 1:1], q=2-31, 200 kb/s, 25 fps, 25 tbn (default)
+    Metadata:
+      encoder         : Lavc62.11.100 wrapped_avframe
+      handler_name    : VideoHandler
+      vendor_id       : [0][0][0][0]
+  Stream #0:1(und): Audio: pcm_s16le, 44100 Hz, stereo, s16, 1411 kb/s (default)
+    Metadata:
+      encoder         : Lavc62.11.100 pcm_s16le
+      handler_name    : SoundHandler
+      vendor_id       : [0][0][0][0]
+[Parsed_astats_0 @ 00000177780b5b80] Channel: 2
+[Parsed_astats_0 @ 00000177780b5b80] DC offset: 0.000040
+[Parsed_astats_0 @ 00000177780b5b80] Min level: -1.415212
+[Parsed_astats_0 @ 00000177780b5b80] Max level: 1.416526
+[Parsed_astats_0 @ 00000177780b5b80] Min difference: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Max difference: 0.177530
+[Parsed_astats_0 @ 00000177780b5b80] Mean difference: 0.073568
+[Parsed_astats_0 @ 00000177780b5b80] RMS difference: 0.083016
+[Parsed_astats_0 @ 00000177780b5b80] Peak level dB: 3.024491
+[Parsed_astats_0 @ 00000177780b5b80] RMS level dB: -3.577239
+[Parsed_astats_0 @ 00000177780b5b80] RMS peak dB: -2.343539
+[Parsed_astats_0 @ 00000177780b5b80] RMS through dB: -5.598151
+[Parsed_astats_0 @ 00000177780b5b80] Crest factor: 2.138388
+[Parsed_astats_0 @ 00000177780b5b80] Flat factor: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Peak count: 2
+[Parsed_astats_0 @ 00000177780b5b80] Abs Peak count: 1
+[Parsed_astats_0 @ 00000177780b5b80] Noise floor dB: -0.848254
+[Parsed_astats_0 @ 00000177780b5b80] Noise floor count: 450
+[Parsed_astats_0 @ 00000177780b5b80] Entropy: 0.954183
+[Parsed_astats_0 @ 00000177780b5b80] Bit depth: 32/32/32/32
+[Parsed_astats_0 @ 00000177780b5b80] Dynamic range: 122.834573
+[Parsed_astats_0 @ 00000177780b5b80] Zero crossings: 1801
+[Parsed_astats_0 @ 00000177780b5b80] Zero crossings rate: 0.039972
+[Parsed_astats_0 @ 00000177780b5b80] Number of NaNs: 0
+[Parsed_astats_0 @ 00000177780b5b80] Number of Infs: 0
+[Parsed_astats_0 @ 00000177780b5b80] Number of denormals: 0
+[Parsed_astats_0 @ 00000177780b5b80] Overall
+[Parsed_astats_0 @ 00000177780b5b80] DC offset: 0.000040
+[Parsed_astats_0 @ 00000177780b5b80] Min level: -1.509119
+[Parsed_astats_0 @ 00000177780b5b80] Max level: 1.449370
+[Parsed_astats_0 @ 00000177780b5b80] Min difference: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Max difference: 0.177530
+[Parsed_astats_0 @ 00000177780b5b80] Mean difference: 0.054978
+[Parsed_astats_0 @ 00000177780b5b80] RMS difference: 0.065452
+[Parsed_astats_0 @ 00000177780b5b80] Peak level dB: 3.574471
+[Parsed_astats_0 @ 00000177780b5b80] RMS level dB: -3.638703
+[Parsed_astats_0 @ 00000177780b5b80] RMS peak dB: -2.343539
+[Parsed_astats_0 @ 00000177780b5b80] RMS through dB: -5.598151
+[Parsed_astats_0 @ 00000177780b5b80] Flat factor: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Peak count: 2.000000
+[Parsed_astats_0 @ 00000177780b5b80] Abs Peak count: 1.000000
+[Parsed_astats_0 @ 00000177780b5b80] Noise floor dB: -0.681417
+[Parsed_astats_0 @ 00000177780b5b80] Noise floor count: 625.000000
+[Parsed_astats_0 @ 00000177780b5b80] Entropy: 0.960852
+[Parsed_astats_0 @ 00000177780b5b80] Bit depth: 32/32/32/32
+[Parsed_astats_0 @ 00000177780b5b80] Number of samples: 45056
+[Parsed_astats_0 @ 00000177780b5b80] Number of NaNs: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Number of Infs: 0.000000
+[Parsed_astats_0 @ 00000177780b5b80] Number of denormals: 0.000000
+[out#0/null @ 0000017776d257c0] video:10KiB audio:176KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+frame=   25 fps=0.0 q=-0.0 Lsize=N/A time=00:00:01.00 bitrate=N/A speed= 186x elapsed=0:00:00.00    

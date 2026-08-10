@@ -124,47 +124,37 @@ def sample_video_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 @pytest.fixture(scope="session")
 def sample_stereo_video_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Generate a stereo video file for testing spatial correlation (BL-758).
+    """Generate guaranteed-stereo audio using amerge of two sine sources.
 
-    Creates a 1-second stereo video using two distinct tones (440 Hz + 880 Hz)
-    to ensure non-trivial cross-channel correlation.  Session-scoped to avoid
-    per-test FFmpeg overhead in the ffmpeg-tests CI lane.
-
-    Returns:
-        Path to the generated stereo_sample.mp4 file.
-
-    Raises:
-        pytest.skip: If FFmpeg is not available or fixture generation fails.
+    Uses amerge (not aevalsrc) per AGENTS.md:205-210 — aevalsrc produces mono
+    on some static FFmpeg builds. AC-6 evidence (tests/fixtures/ffmpeg-astats-ci-sample.txt)
+    confirmed sample_stereo_video_path was mono-downmixed.
     """
-    if not _ffmpeg_available():
-        pytest.skip("FFmpeg not available")
-    tmp_path = tmp_path_factory.mktemp("stereo_video")
-    output = tmp_path / "stereo_sample.mp4"
-    result = subprocess.run(
+    out = tmp_path_factory.mktemp("stereo") / "stereo.m4a"
+    subprocess.run(
         [
             "ffmpeg",
             "-y",
             "-f",
             "lavfi",
             "-i",
-            "aevalsrc=sin(440*2*PI*t)|sin(880*2*PI*t):c=stereo:s=44100:d=1",
+            "sine=frequency=440",
             "-f",
             "lavfi",
             "-i",
-            "color=c=black:s=64x64:r=25:d=1",
-            "-c:v",
-            "libx264",
+            "sine=frequency=880",
+            "-filter_complex",
+            "amerge=inputs=2",
+            "-ac",
+            "2",
             "-c:a",
             "aac",
-            str(output),
+            str(out),
         ],
+        check=True,
         capture_output=True,
-        check=False,
     )
-    if result.returncode != 0:
-        stderr_text = result.stderr.decode(errors="replace")
-        pytest.skip(f"FFmpeg stereo fixture generation failed: {stderr_text}")
-    return output
+    return out
 
 
 @pytest.fixture(scope="session")
