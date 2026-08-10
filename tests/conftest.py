@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re as _re
 import shutil
 import subprocess
 import sys
@@ -216,3 +217,33 @@ def project_factory() -> ProjectFactory:
         A new ProjectFactory instance ready for chaining.
     """
     return ProjectFactory()
+
+
+def pytest_collection_finish(session: pytest.Session) -> None:
+    """Guard: bare elapsed_ms < N assertions must have platform split or justification comment."""
+    tests_root = Path(__file__).parent
+    violations: list[str] = []
+    pattern = _re.compile(r"\belapsed_ms\s*<\s*\d+")
+    exemptions = (_re.compile(r"sys\.platform"), _re.compile(r"#.*(?:BL-|\bjustification\b)"))
+    for py_file in tests_root.rglob("*.py"):
+        lines = py_file.read_text(encoding="utf-8", errors="replace").splitlines()
+        for i, line in enumerate(lines):
+            if line.lstrip().startswith("#"):
+                continue
+            if not pattern.search(line):
+                continue
+            if _re.search(r"sys\.platform", line):
+                continue
+            context = "\n".join(lines[max(0, i - 3) : i])
+            if any(e.search(context) for e in exemptions):
+                continue
+            violations.append(
+                f"{py_file.relative_to(tests_root)}:{i + 1}: "
+                "bare elapsed_ms < N (no platform split or justification)"
+            )
+    if violations:
+        pytest.fail(
+            "Bare millisecond timing assertions found without platform split or justification:\n"
+            + "\n".join(violations),
+            pytrace=False,
+        )

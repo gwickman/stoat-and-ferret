@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import copy
+import sys
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -171,7 +172,10 @@ def test_system_state_returns_under_500ms_with_many_jobs(
 
     assert response.status_code == 200
     assert len(response.json()["active_jobs"]) >= 100
-    assert elapsed_ms < 500, f"snapshot latency {elapsed_ms:.1f}ms exceeded 500ms"
+    _THRESHOLD_MS = 750 if sys.platform == "win32" else 500  # BL-594: PyO3 cold-path overhead
+    assert elapsed_ms < _THRESHOLD_MS, (
+        f"snapshot latency {elapsed_ms:.1f}ms exceeded {_THRESHOLD_MS}ms (platform={sys.platform})"
+    )
 
 
 @pytest.mark.api
