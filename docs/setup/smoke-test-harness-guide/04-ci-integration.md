@@ -23,7 +23,9 @@ Add the following job to `.github/workflows/ci.yml`:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          ffmpeg-version: "8"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -140,7 +142,9 @@ UAT journeys run in headless mode in CI. The runner handles the full lifecycle (
           python-version: "3.12"
 
       - name: Set up FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          ffmpeg-version: "8"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -200,7 +204,7 @@ The `ffmpeg-tests` CI job is a dedicated lane that runs gated tests requiring a 
 
 - **Job name:** `ffmpeg-tests`
 - **Runner:** `ubuntu-latest`
-- **FFmpeg:** version 8, installed via `AnimMouse/setup-ffmpeg@v1`
+- **FFmpeg:** version 8, installed via `FedericoCarboni/setup-ffmpeg@v3`
 - **Trigger:** runs on every push/PR alongside the standard test matrix
 
 ### STOAT_TEST_FFMPEG=1
