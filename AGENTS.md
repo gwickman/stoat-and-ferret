@@ -709,6 +709,8 @@ measurement-backed constant ≤ 250ms, and record the data in the PR. Do NOT jus
 - `tests/smoke/test_system_state_smoke.py` — active-jobs poll deadline: 4.0s (Windows) /
   2.0s (linux/mac). Windows cancellation latency causes the 2s window to race on
   windows-latest.
+- `tests/test_api/test_system_state.py` — snapshot latency threshold: 750ms (Windows) / 500ms (linux/mac). v074 data: median≈180ms, p95≈215ms. BL-594 overhead accommodation.
+- `tests/test_render_worker.py` — command builder threshold: 750ms (Windows) / 500ms (linux/mac). v094 data: PyO3 cold-path overhead, raised from <10ms original.
 
 ---
 
