@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
@@ -65,6 +66,10 @@ def _ffprobe_available() -> bool:
 # Skip markers
 requires_ffmpeg = pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg not available")
 requires_ffprobe = pytest.mark.skipif(not _ffprobe_available(), reason="ffprobe not available")
+requires_fontconfig = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="drawtext filter requires fontconfig config files not present on Windows CI runners",
+)
 
 
 @pytest.fixture(scope="session")

@@ -25,7 +25,7 @@ Add the following job to `.github/workflows/ci.yml`:
       - name: Set up FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v3
         with:
-          ffmpeg-version: "8"
+          ffmpeg-version: "release/7"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -144,7 +144,7 @@ UAT journeys run in headless mode in CI. The runner handles the full lifecycle (
       - name: Set up FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v3
         with:
-          ffmpeg-version: "8"
+          ffmpeg-version: "release/7"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -204,7 +204,7 @@ The `ffmpeg-tests` CI job is a dedicated lane that runs gated tests requiring a 
 
 - **Job name:** `ffmpeg-tests`
 - **Runner:** `ubuntu-latest`
-- **FFmpeg:** version 8, installed via `FedericoCarboni/setup-ffmpeg@v3`
+- **FFmpeg:** version 7 (release/7), installed via `FedericoCarboni/setup-ffmpeg@v3`
 - **Trigger:** runs on every push/PR alongside the standard test matrix
 
 ### STOAT_TEST_FFMPEG=1
