@@ -248,7 +248,8 @@ describe('useBatchJobs', () => {
 
   it('ignores stale b1 fetch resolving after batchId changes to b2', async () => {
     let resolveB1Fetch!: (r: Response) => void
-    vi.spyOn(globalThis, 'fetch')
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
       .mockReturnValueOnce(
         new Promise<Response>((resolve) => {
           resolveB1Fetch = resolve
@@ -267,6 +268,18 @@ describe('useBatchJobs', () => {
           { status: 200 },
         ),
       )
+
+    // b2 already has a known job in the store so a later store update is observable
+    // (updateJob only merges onto an existing job_id; it does not insert new rows).
+    useBatchStore.getState().addJob({
+      job_id: 'j-b2',
+      batch_id: 'b2',
+      project_id: 'p3',
+      status: 'queued',
+      progress: 0,
+      error: null,
+      submitted_at: 0,
+    })
 
     const { rerender } = renderHook(
       ({ batchId }: { batchId: string | null }) => useBatchJobs(batchId),
@@ -292,6 +305,67 @@ describe('useBatchJobs', () => {
     expect(
       useBatchStore.getState().jobs.find((j) => j.job_id === 'j1')?.status,
     ).toBe('queued')
+
+    // Also verify b2 polling independently reflects in the store (LRN-978:
+    // characterization-scope gap) — proves b2 is live, not only that b1's stale
+    // response was blocked. Mounted as a fresh hook instance (own refs) rather
+    // than driven through the first instance's pending schedule() timer, since the
+    // first instance's stale-but-unresolved b1 poll still holds pollingRef.current
+    // exclusively (only one fetch in flight per hook instance by design) — a second
+    // instance is the direct way to observe an unblocked b2 poll reaching the store.
+    fetchSpy.mockResolvedValueOnce(
+      makeResponse([
+        { job_id: 'j-b2', project_id: 'p3', status: 'running', progress: 0.4, error: null },
+      ]),
+    )
+    renderHook(() => useBatchJobs('b2'))
+    await settle()
+    expect(
+      useBatchStore.getState().jobs.find((j) => j.job_id === 'j-b2')?.status,
+    ).toBe('running')
+  })
+
+  it('stale b1 rejection after batchId change does not pollute b2 error state', async () => {
+    let rejectB1Fetch!: (err: Error) => void
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(
+        new Promise<Response>((_, reject) => {
+          rejectB1Fetch = reject
+        }),
+      )
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            batch_id: 'b2',
+            overall_progress: 0,
+            completed_jobs: 0,
+            failed_jobs: 0,
+            total_jobs: 0,
+            jobs: [],
+          }),
+          { status: 200 },
+        ),
+      )
+
+    const { result, rerender } = renderHook(
+      ({ batchId }: { batchId: string | null }) => useBatchJobs(batchId),
+      { initialProps: { batchId: 'b1' as string | null } },
+    )
+    // b1 initial poll is in-flight (fetch not yet resolved/rejected)
+
+    // Switch to b2: triggers b1 cleanup (cancelledRef.current=true) then b2 effect
+    // (cancelledRef.current=false, activeBatchIdRef.current='b2')
+    await act(async () => {
+      rerender({ batchId: 'b2' })
+    })
+
+    // Reject the stale b1 fetch — the catch-block guard (BL-769) must catch this
+    rejectB1Fetch(new Error('network error'))
+    await settle()
+
+    // b2 error state must remain clean — the stale b1 rejection must not set it
+    expect(result.current.hasError).toBe(false)
+    expect(result.current.isReconnecting).toBe(false)
   })
 
   it('does not regress progress under burst (NFR-001 / INV-003)', async () => {

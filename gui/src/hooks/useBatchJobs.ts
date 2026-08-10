@@ -140,6 +140,7 @@ export function useBatchJobs(batchId: string | null): UseBatchJobsResult {
       setIsReconnecting(false)
     } catch {
       if (cancelledRef.current) return
+      if (activeBatchIdRef.current !== batchId) return
       errorCountRef.current += 1
       setHasError(true)
       if (errorCountRef.current >= RECONNECTING_THRESHOLD) setIsReconnecting(true)
