@@ -20,7 +20,7 @@ from stoat_ferret.ffmpeg.executor import (
     RealFFmpegExecutor,
     RecordingFFmpegExecutor,
 )
-from tests.conftest import requires_ffmpeg
+from tests.conftest import requires_ffmpeg, requires_fontconfig
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -311,6 +311,7 @@ class TestStrictModeContract:
 # ---------------------------------------------------------------------------
 
 
+@requires_fontconfig
 @requires_ffmpeg
 @pytest.mark.contract
 class TestDrawtextContract:

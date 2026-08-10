@@ -55,9 +55,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -231,9 +235,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -325,9 +333,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -365,9 +377,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -400,9 +416,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -510,9 +530,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -649,9 +673,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: "8"
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
+            macOS)   brew install ffmpeg ;;
+            Windows) choco install ffmpeg --no-progress -y ;;
+          esac
 
       - uses: dtolnay/rust-toolchain@stable
 
