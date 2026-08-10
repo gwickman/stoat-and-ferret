@@ -892,26 +892,18 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
             f"Correlation {measured!r} out of expected range [-1.0, 1.0]"
         )
 
-    # BL-758 AC-7: Format E accommodation (prior evidence).
-    # Three v118-hotfix-1 CI attempts consistently returned stereo_measured=None
-    # for the AnimMouse n8.1.x FFmpeg build.  The AC-6 formal diagnostic
-    # (test_spatial_correlation_ac6_diagnostic_capture) could not be captured
-    # because AnimMouse/setup-ffmpeg CI lane became unavailable (tar extraction
-    # failure on all platforms) after PR #960 merged.  Format E (no Correlation
-    # line in astats output) is the operative assumption; the conditional guard
-    # is retained.  Re-run AC-6 once the CI lane is restored.
     stereo_result = await svc._check_spatial_correlation(
         artifact_path=str(sample_stereo_video_path), target=None
     )
     assert "measured" in stereo_result, f"Result missing 'measured' key: {stereo_result!r}"
     stereo_measured = stereo_result.get("measured")
-    if stereo_measured is not None:
-        assert isinstance(stereo_measured, float), (
-            f"BL-758: expected float, got {type(stereo_measured)}"
-        )
-        assert -1.0 <= stereo_measured <= 1.0, (
-            f"BL-758: correlation {stereo_measured} out of [-1.0, 1.0] range"
-        )
+    # AC-6: amerge fixture is guaranteed stereo — Correlation must be present
+    assert stereo_measured is not None, (
+        "stereo_measured is None — amerge fixture should yield Overall Correlation "
+        "(AC-6 evidence: tests/fixtures/ffmpeg-astats-ci-sample.txt)"
+    )
+    assert isinstance(stereo_measured, float)
+    assert -1.0 <= stereo_measured <= 1.0
 
     # BL-758 regression guard: the parser must handle the FFmpeg-8 two-line
     # log-prefixed format even when the CI FFmpeg build does not emit Correlation.
