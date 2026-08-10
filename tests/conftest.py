@@ -138,11 +138,11 @@ def sample_stereo_video_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
             "-f",
             "lavfi",
             "-i",
-            "sine=frequency=440",
+            "sine=frequency=440:duration=1",
             "-f",
             "lavfi",
             "-i",
-            "sine=frequency=880",
+            "sine=frequency=880:duration=1",
             "-filter_complex",
             "amerge=inputs=2",
             "-ac",
@@ -153,6 +153,7 @@ def sample_stereo_video_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
         ],
         check=True,
         capture_output=True,
+        timeout=30,
     )
     return out
 

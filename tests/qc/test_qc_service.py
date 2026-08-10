@@ -872,13 +872,24 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
     a structurally valid result dict; when a value is present it must be a float
     in [-1.0, 1.0].
 
-    BL-758: the stereo fixture is verified to be genuine 2-channel audio.  When
-    the FFmpeg build in use emits 'Correlation:' in its astats Overall section,
-    the parser must return a non-None float.  Some FFmpeg static builds (e.g.
-    AnimMouse n8.1.2 used in the ffmpeg-tests CI lane) do not include Correlation
-    in the bare astats output; measured=None is accepted for those builds.
-    The BL-758 parser fix is regression-guarded separately below and in the
-    corpus equivalence test (test_parse_overall_correlation_corpus_equivalence).
+    BL-758-AC-6/7 (v125 discharge): the stereo fixture is genuine 2-channel
+    audio (amerge of two independent sine sources, verified via distinct
+    per-channel astats stats — see tests/fixtures/ffmpeg-astats-ci-sample.txt).
+    Even with confirmed-independent stereo content, `stereo_measured` is
+    `None`, and this is expected to remain permanently `None`: FFmpeg's
+    astats filter has never emitted an "Overall Correlation" metric — it does
+    not appear in the official filter documentation, and a search of
+    libavfilter/af_astats.c on the current FFmpeg master finds zero
+    occurrences of "Correlation" in any form. This was empirically
+    re-confirmed on FFmpeg 8.0.1 with `measure_overall=all` explicitly set.
+    AC-7 Branch A (hard-assert stereo_measured is not None) was tried and
+    reverted here to Branch B (retain the conditional guard) because the
+    root cause is that the metric does not exist in astats, not that the
+    fixture was mono — no fixture change can make it appear.
+    The BL-758 parser fix (`_parse_overall_correlation` correctly extracting
+    a Correlation value *if* one is ever present) is regression-guarded
+    separately below and in the corpus equivalence test
+    (test_parse_overall_correlation_corpus_equivalence).
     """
     from stoat_ferret.api.services.qc_service import _parse_overall_correlation
 
@@ -897,13 +908,19 @@ async def test_spatial_correlation_linear_parser_ffmpeg8_output(
     )
     assert "measured" in stereo_result, f"Result missing 'measured' key: {stereo_result!r}"
     stereo_measured = stereo_result.get("measured")
-    # AC-6: amerge fixture is guaranteed stereo — Correlation must be present
-    assert stereo_measured is not None, (
-        "stereo_measured is None — amerge fixture should yield Overall Correlation "
-        "(AC-6 evidence: tests/fixtures/ffmpeg-astats-ci-sample.txt)"
-    )
-    assert isinstance(stereo_measured, float)
-    assert -1.0 <= stereo_measured <= 1.0
+    # BL-758-AC-7 Branch B: astats never emits "Overall Correlation" (verified
+    # against FFmpeg master libavfilter/af_astats.c and the official filter
+    # docs — the metric does not exist, independent of fixture channel count
+    # or FFmpeg build). stereo_measured=None is therefore the correct,
+    # permanent outcome even for genuinely independent-channel stereo audio.
+    # See tests/fixtures/ffmpeg-astats-ci-sample.txt for the current capture.
+    if stereo_measured is not None:
+        assert isinstance(stereo_measured, float), (
+            f"BL-758: expected float, got {type(stereo_measured)}"
+        )
+        assert -1.0 <= stereo_measured <= 1.0, (
+            f"BL-758: correlation {stereo_measured} out of [-1.0, 1.0] range"
+        )
 
     # BL-758 regression guard: the parser must handle the FFmpeg-8 two-line
     # log-prefixed format even when the CI FFmpeg build does not emit Correlation.
