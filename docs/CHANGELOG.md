@@ -4,6 +4,27 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v125 — CI hygiene, correctness residuals (2026-08-11)
+
+2 themes, 5 features, PRs #971–#976.
+
+### Theme 1: ci-and-test-hygiene
+
+- BL-768: Restore the `ffmpeg-tests` CI lane (PR #971)
+- BL-765: Convert flat ms timing thresholds to platform-aware constants; add regression guard (PR #972)
+
+### Theme 2: correctness-residuals
+
+- BL-758: Correct `_parse_overall_correlation` branch decision — `astats` never emits `Correlation` (PR #973, follow-up correction PR #974)
+- BL-769: Add `activeBatchIdRef` guard in `useBatchJobs` catch block (PR #975)
+- BL-491: Add `drift_fix_scope_scan_query` regression guard for design-artifact path correction (PR #976)
+
+### Quality
+
+- 3853 pytest tests passing (146 skipped, 0 failed); ruff, mypy clean; tsc clean; 895 vitest tests passing
+
+---
+
 ## v124 — SonarCloud post-Wave-C pt.2 — backend complexity reduction + async/GUI residual (2026-08-08)
 
 2 themes, 3 features, PRs #968–#970. Backend refactoring and test parameterization — no product behaviour changes.
