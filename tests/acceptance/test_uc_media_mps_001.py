@@ -15,11 +15,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
+import pytest_asyncio
 
 from tests.qc.oc_mapping import OC_HUMAN_ONLY, OC_TO_QC_CHECK
 
@@ -51,8 +53,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
-async def acceptance_client(tmp_path: Path) -> httpx.AsyncClient:  # type: ignore[misc]
+@pytest_asyncio.fixture
+async def acceptance_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None]:
     """In-process async client backed by a fresh app instance with isolated DB."""
     from stoat_ferret.api.app import create_app, lifespan
     from stoat_ferret.api.settings import get_settings
@@ -85,6 +87,51 @@ async def acceptance_client(tmp_path: Path) -> httpx.AsyncClient:  # type: ignor
     get_settings.cache_clear()
 
 
+@pytest.fixture(scope="module")
+def qc_report(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+    """Run one full acceptance render at module scope; share result across all tests.
+
+    Uses asyncio.run() in a sync fixture to avoid event-loop scope conflicts with
+    pytest-asyncio's function-scoped event loops. This reduces render count from 14
+    independent renders (~70 min) to a single shared render (~5 min), making the full
+    acceptance suite fit within the ffmpeg-tests CI job budget (BL-785).
+    """
+    tmp_path = tmp_path_factory.mktemp("acceptance_shared")
+
+    async def _run() -> dict[str, Any]:
+        from stoat_ferret.api.app import create_app, lifespan
+        from stoat_ferret.api.settings import get_settings
+
+        orig_db = os.environ.get("STOAT_DATABASE_PATH")
+        orig_thumb = os.environ.get("STOAT_THUMBNAIL_DIR")
+        os.environ["STOAT_DATABASE_PATH"] = str(tmp_path / "acceptance.db")
+        os.environ["STOAT_THUMBNAIL_DIR"] = str(tmp_path / "thumbnails")
+        get_settings.cache_clear()
+
+        app = create_app()
+        try:
+            async with (
+                lifespan(app),
+                httpx.AsyncClient(
+                    transport=httpx.ASGITransport(app=app),
+                    base_url="http://testserver",
+                ) as client,
+            ):
+                return await _run_full_acceptance_render(client)
+        finally:
+            for key, orig in [
+                ("STOAT_DATABASE_PATH", orig_db),
+                ("STOAT_THUMBNAIL_DIR", orig_thumb),
+            ]:
+                if orig is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = orig
+            get_settings.cache_clear()
+
+    return asyncio.run(_run())
+
+
 async def _poll_render_job(
     client: httpx.AsyncClient,
     job_id: str,
@@ -94,9 +141,9 @@ async def _poll_render_job(
 ) -> str:
     """Poll GET /api/v1/render/{job_id} until terminal; return final status."""
     terminal = {"completed", "failed", "cancelled", "qc_failed"}
-    deadline = asyncio.get_event_loop().time() + timeout
+    deadline = asyncio.get_running_loop().time() + timeout
     status = ""
-    while asyncio.get_event_loop().time() < deadline:
+    while asyncio.get_running_loop().time() < deadline:
         resp = await client.get(f"/api/v1/render/{job_id}")
         resp.raise_for_status()
         status = str(resp.json()["status"])
@@ -116,8 +163,8 @@ async def _poll_scan_job(
 ) -> None:
     """Poll GET /api/v1/jobs/{job_id} until the scan job reaches terminal state."""
     terminal = {"completed", "failed", "timeout", "cancelled"}
-    deadline = asyncio.get_event_loop().time() + timeout
-    while asyncio.get_event_loop().time() < deadline:
+    deadline = asyncio.get_running_loop().time() + timeout
+    while asyncio.get_running_loop().time() < deadline:
         resp = await client.get(f"/api/v1/jobs/{job_id}")
         resp.raise_for_status()
         if resp.json()["status"].lower() in terminal:
@@ -262,22 +309,18 @@ def _evaluate_oc_outcomes(qc_report: dict[str, Any]) -> dict[str, bool]:
 
 
 class TestUCMediaMPS001Acceptance:
-    async def test_acceptance_render_produces_qc_report(
-        self, acceptance_client: httpx.AsyncClient
-    ) -> None:
+    async def test_acceptance_render_produces_qc_report(self, qc_report: dict[str, Any]) -> None:
         """Full render completes and returns a QC report with overall verdict."""
-        qc_report = await _run_full_acceptance_render(acceptance_client)
         assert "overall_verdict" in qc_report
         assert "checks" in qc_report
 
-    async def test_at_least_14_oc_outcomes_pass(self, acceptance_client: httpx.AsyncClient) -> None:
+    async def test_at_least_14_oc_outcomes_pass(self, qc_report: dict[str, Any]) -> None:
         """≥14 of 17 UC-MEDIA-MPS-001 outcomes pass after QC-gated render.
 
         12 machine-verifiable OCs are checked via QC report.
         5 human-only OCs (OC-3, OC-4, OC-5, OC-14, OC-15) require headed review per
         tier2_checklist (docs/uat/tier2-perceptual-checklist.md).
         """
-        qc_report = await _run_full_acceptance_render(acceptance_client)
         oc_results = _evaluate_oc_outcomes(qc_report)
         passing = [oc for oc, passed in oc_results.items() if passed]
         failing = [oc for oc, passed in oc_results.items() if not passed]
@@ -291,10 +334,9 @@ class TestUCMediaMPS001Acceptance:
 
     @pytest.mark.parametrize("oc", list(OC_TO_QC_CHECK.keys()))
     async def test_machine_verifiable_oc_pass_fail_detail(
-        self, acceptance_client: httpx.AsyncClient, oc: str
+        self, qc_report: dict[str, Any], oc: str
     ) -> None:
         """Per-OC pass/fail detail for each machine-verifiable outcome."""
-        qc_report = await _run_full_acceptance_render(acceptance_client)
         checks = qc_report.get("checks", {})
         check_ids = OC_TO_QC_CHECK[oc]
         for cid in check_ids:
