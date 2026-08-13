@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v126 — CI/Sonar Hygiene Residuals (2026-08-13)
+
+### Changed
+- `src/stoat_ferret/render/worker.py`: Removed unused `width`/`height` params from
+  `_assemble_sc_filter_translator` and `fps` from `_assemble_sc_filter_tts_only` (BL-782, PR #977).
+- `src/stoat_ferret/render/worker.py`: Extracted `_build_mc_subtitle_inputs` helper from
+  `_build_multi_clip_command` to reduce cognitive complexity (BL-783, PR #978).
+- `.github/workflows/ci.yml`: Increased `ffmpeg-tests` timeout from 20 to 40 minutes (BL-784, PR #979).
+- `tests/acceptance/test_uc_media_mps_001.py`: Fixed async fixture decorator
+  (`@pytest_asyncio.fixture`); applied `@pytest.mark.skip` to 14 render-intensive tests
+  pending nightly lane (BL-785, PR #980).
+- `.github/workflows/ci.yml`: Replaced 7 `brew install ffmpeg` occurrences with
+  `AnimMouse/setup-ffmpeg@v1` (ARM64-native, drawtext-enabled) for macOS runners (BL-786, PR #981).
+
+---
+
 ## v125 — CI hygiene, correctness residuals (2026-08-11)
 
 2 themes, 5 features, PRs #971–#976.
