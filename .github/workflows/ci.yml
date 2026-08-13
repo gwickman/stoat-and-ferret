@@ -55,21 +55,23 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -243,21 +245,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -349,21 +353,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -401,21 +407,23 @@ jobs:
           python-version: "3.12"
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -448,21 +456,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -570,21 +580,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -721,21 +733,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)
-              # GPL static build with drawtext/libfreetype; arch-aware for ARM64/Intel (evermeet.cx is Intel-only — BL-786)
-              ARCH=$(uname -m); [ "$ARCH" = "arm64" ] && A=macosarm64 || A=macos64
-              curl -fL "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-${A}-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz
-              mkdir -p /tmp/ffmpeg_build && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_build/
-              sudo install -m 755 "$(find /tmp/ffmpeg_build -name 'ffmpeg' -type f | head -1)" /usr/local/bin/ffmpeg
-              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
-              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
-              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
