@@ -1,5 +1,32 @@
 # STATUS.md
 
+## v126 — CI/Sonar Hygiene (BL-782/783/784/785/786)
+
+**Delivered:** 2026-08-13
+**PRs:** #977–#981 (5 merged; 3 admin-merged)
+**Tests:** 3855 passed, 146 skipped (0 regressions)
+
+### Highlights
+
+- **Theme 1 — sonar-quality-residuals:** Removed 3 dead parameters (S1172) from `worker.py` helpers (`_assemble_sc_filter_translator`, `_assemble_sc_filter_tts_only`); extracted `_build_mc_subtitle_inputs` async helper to reduce `_build_multi_clip_command` CC from 16→~9 (S3776). `TestGoldenArgv` (9 cases) confirmed byte-identical FFmpeg argv in both features — BL-782, BL-783 — PRs #977, #978
+- **Theme 2 — ci-ffmpeg-infrastructure:** Increased `ffmpeg-tests` timeout 20→40 min; diagnosed and fixed async-fixture root cause (`@pytest.fixture` → `@pytest_asyncio.fixture`, 14 render-intensive tests explicitly skipped pending nightly lane); replaced Homebrew FFmpeg with `AnimMouse/setup-ffmpeg@v1` on macOS ARM64 (confirmed drawtext/libfreetype; first v126 PR to merge without admin-merge) — BL-784, BL-785, BL-786 — PRs #979, #980, #981
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| sonar-quality-residuals | BL-782, BL-783 | #977–#978 | partial (admin-merged; code complete) |
+| ci-ffmpeg-infrastructure | BL-784, BL-785, BL-786 | #979–#981 | partial (1 admin-merged, 2 complete) |
+
+### AC Status
+
+- 2 themes, 5 features; 16/18 source ACs supported; 2 unverifiable (BL-783-AC-4 SonarCloud post-merge; BL-784-AC-2 behavioral timeout); 5 deferred post-merge pending retrospective Task 003 discharge
+
+### Outstanding User Actions
+
+- Retrospective Task 003: discharge 5 deferred ACs (BL-782-AC-4, BL-783-AC-4 SonarCloud; BL-784-AC-2, BL-785-AC-2/AC-3 ffmpeg-tests CI)
+- BL-785 follow-up: create nightly/on-demand CI lane for 14 skipped render-intensive acceptance tests
+
 ## v109 — Sonar COMPLEX-1 Refactors pt.2
 
 **Delivered:** 2026-07-19
