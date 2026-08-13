@@ -59,7 +59,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
@@ -239,7 +246,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
@@ -337,7 +351,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
@@ -381,7 +402,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
@@ -420,7 +448,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
@@ -534,7 +569,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
@@ -677,7 +719,14 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
+            macOS)
+              # Static build with drawtext/libfreetype (Homebrew 8.1.2 lacks libfreetype — BL-786)
+              curl -fsSL "https://evermeet.cx/ffmpeg/getrelease/snapshot" -o /tmp/ffmpeg.zip
+              unzip /tmp/ffmpeg.zip -d /tmp/ffmpeg_build/
+              sudo mv /tmp/ffmpeg_build/ffmpeg /usr/local/bin/ffmpeg
+              ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+              ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
+              ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
