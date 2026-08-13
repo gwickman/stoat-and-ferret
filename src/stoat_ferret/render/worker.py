@@ -708,8 +708,6 @@ def _assemble_sc_filter_translator(
     tts_base_single: int,
     seg_duration: float,
     fps: float,
-    width: int,
-    height: int,
     effect_registry: EffectRegistry | None,
     input_path: str,
 ) -> None:
@@ -766,7 +764,6 @@ def _assemble_sc_filter_tts_only(
     tts_inputs: list[TtsCueAudioInput],
     tts_base_single: int,
     filter_graph: str | None,
-    fps: float,
     width: int,
     height: int,
 ) -> None:
@@ -921,8 +918,6 @@ async def _build_single_clip_command(
             tts_base_single,
             seg_duration,
             fps,
-            width,
-            height,
             ctx.effect_registry,
             input_path,
         )
@@ -933,7 +928,6 @@ async def _build_single_clip_command(
             ctx.tts_inputs,
             tts_base_single,
             filter_graph,
-            fps,
             width,
             height,
         )
