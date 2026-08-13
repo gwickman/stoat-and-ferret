@@ -55,13 +55,23 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -235,13 +245,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -333,13 +353,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -377,13 +407,23 @@ jobs:
           python-version: "3.12"
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -416,13 +456,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -530,13 +580,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -673,13 +733,23 @@ jobs:
           python-version: '3.12'
 
       - name: Install FFmpeg
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           case "$RUNNER_OS" in
             Linux)   sudo apt-get update -q && sudo apt-get install -y ffmpeg ;;
-            macOS)   brew install ffmpeg ;;
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
+
+      - uses: AnimMouse/setup-ffmpeg@v1
+        if: runner.os == 'macOS'
+
+      - name: Verify FFmpeg drawtext (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ffmpeg -filters | grep drawtext || (echo "ERROR: drawtext filter not available" && exit 1)
+          ffmpeg -buildconf | grep libfreetype || (echo "ERROR: libfreetype not in buildconf" && exit 1)
 
       - uses: dtolnay/rust-toolchain@stable
 
