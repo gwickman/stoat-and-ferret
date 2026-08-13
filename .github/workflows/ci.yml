@@ -368,7 +368,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes]
     if: needs.changes.outputs.code == 'true'
-    timeout-minutes: 20
+    timeout-minutes: 40  # Increased from 20: apt-get install takes 2-4 min; full suite ~26-35 min cold-cache (v125 LRN-1001)
     steps:
       - uses: actions/checkout@v4
 
