@@ -589,6 +589,25 @@ def _build_mc_tts_inputs(
     return tts_base
 
 
+async def _build_mc_subtitle_inputs(
+    cmd: list[str],
+    ctx: _RenderCommandContext,
+    input_paths: list[str],
+    ffmetadata_path: str | None,
+    tts_inputs: list[TtsCueAudioInput] | None,
+) -> int:
+    """Append soft subtitle -i inputs to cmd and return the subtitle stream base index."""
+    if not ctx.render_settings.soft_subtitles:
+        return 0
+    subtitle_base_mc = (
+        len(input_paths) + (1 if ffmetadata_path else 0) + (len(tts_inputs) if tts_inputs else 0)
+    )
+    for spec in ctx.render_settings.soft_subtitles:
+        sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
+        cmd.extend(["-i", sub_path])
+    return subtitle_base_mc
+
+
 async def _build_multi_clip_command(
     ctx: _RenderCommandContext,
     clips: list[Clip],
@@ -621,17 +640,9 @@ async def _build_multi_clip_command(
         tts_base = _build_mc_tts_inputs(multi_cmd, ctx.tts_inputs, input_paths, ctx.ffmetadata_path)
 
     # Soft subtitle -i inputs: declared BEFORE filter_complex/output -map section (BL-618).
-    # subtitle_base_mc = clip_count + ffmetadata_offset + tts_count
-    subtitle_base_mc: int = 0
-    if ctx.render_settings.soft_subtitles:
-        subtitle_base_mc = (
-            len(input_paths)
-            + (1 if ctx.ffmetadata_path else 0)
-            + (len(ctx.tts_inputs) if ctx.tts_inputs else 0)
-        )
-        for spec in ctx.render_settings.soft_subtitles:
-            sub_path = await _resolve_subtitle_asset_path(spec, ctx.asset_repository)
-            multi_cmd.extend(["-i", sub_path])
+    subtitle_base_mc = await _build_mc_subtitle_inputs(
+        multi_cmd, ctx, input_paths, ctx.ffmetadata_path, ctx.tts_inputs
+    )
 
     _assemble_multi_tts_filter(
         multi_cmd,

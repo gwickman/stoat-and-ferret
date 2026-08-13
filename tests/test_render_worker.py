@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from stoat_ferret.api.schemas.render import SoftSubtitleSpec
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
@@ -29,6 +30,7 @@ from stoat_ferret.render.worker import (
     CommandBuildError,
     RenderWorkerLoop,
     TtsCueAudioInput,
+    _build_mc_subtitle_inputs,
     build_command_for_job,
 )
 
@@ -1692,3 +1694,52 @@ class TestGoldenArgv:
             "pipe:1",
             "/renders/golden.mp4",
         ]
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for _build_mc_subtitle_inputs helper (NFR-003)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildMcSubtitleInputs:
+    """Unit tests for the _build_mc_subtitle_inputs async helper."""
+
+    @pytest.mark.asyncio
+    async def test_no_subtitles_returns_zero_cmd_unchanged(self) -> None:
+        """soft_subtitles=None -> returns 0, cmd unchanged."""
+        ctx = MagicMock()
+        ctx.render_settings.soft_subtitles = None
+
+        cmd: list[str] = ["-i", "video.mp4"]
+        result = await _build_mc_subtitle_inputs(cmd, ctx, ["/video.mp4"], None, None)
+
+        assert result == 0
+        assert cmd == ["-i", "video.mp4"]
+
+    @pytest.mark.asyncio
+    async def test_with_subtitle_spec_returns_base_and_extends_cmd(self) -> None:
+        """soft_subtitles=[spec] -> correct subtitle_base_mc index and -i in cmd."""
+        spec = SoftSubtitleSpec(
+            source_asset_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            language="en",
+            is_default=True,
+        )
+        ctx = MagicMock()
+        ctx.render_settings.soft_subtitles = [spec]
+
+        asset = MagicMock()
+        asset.file_path = "/assets/subs/en.srt"
+        asset.deleted_at = None
+        asset_repo: AsyncMock = AsyncMock()
+        asset_repo.get_by_id = AsyncMock(return_value=asset)
+        ctx.asset_repository = asset_repo
+
+        input_paths = ["/video1.mp4", "/video2.mp4"]
+        cmd: list[str] = []
+        result = await _build_mc_subtitle_inputs(
+            cmd, ctx, input_paths, "/tmp/chapters.ffmetadata", None
+        )
+
+        # subtitle_base_mc = 2 (clips) + 1 (ffmetadata) + 0 (no tts) = 3
+        assert result == 3
+        assert cmd == ["-i", "/assets/subs/en.srt"]
