@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v128 — Render-Correctness Infrastructure: Oracle Hardening + In-Point Trim (2026-08-14)
+
+1 theme, 2 features, PRs #986–#987.
+
+### Theme 1: render-correctness-infrastructure
+
+- BL-807: Harden render-output oracle — replace weak `assert_stream_inventory` with full `ffprobe -show_streams` JSON check enforcing all four flag combinations; wire `assert_seam_frame_order` into `test_multi_clip_render_ssim_proof`; document `assert_frame_count` accuracy boundary (PR #986)
+- BL-790: Fix multi-clip and single-clip in_point seek gap — add `-ss <in_point>` / `-t <duration>` seek flags to `_build_mc_clip_input_args` and `_build_single_clip_command`; 2 new golden-argv cases; FFmpeg-gated acceptance test (`test_uc_media_range_extract.py`) and UAT journey proving frame identity via oracle (PR #987)
+
+### Quality
+
+- 3859 pytest tests passing (156 skipped, 0 failed); ruff, mypy clean
+- BL-807 admin-merged past AnimMouse/setup-ffmpeg CDN outage (Windows lanes); all other lanes and BL-790 CI clean
+
+---
+
 ## v127 — Render-Output Oracle and Doc-Truth CI Gate (2026-08-14)
 
 1 theme, 3 features, PRs #982–#984.
