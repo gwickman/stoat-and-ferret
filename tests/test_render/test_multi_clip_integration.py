@@ -29,6 +29,7 @@ from tests.render_oracle import (
     assert_frame_count,
     assert_frame_rate,
     assert_inpoint_identity,
+    assert_seam_frame_order,
     assert_stream_inventory,
 )
 from tests.render_oracle import (
@@ -467,6 +468,16 @@ async def test_multi_clip_render_ssim_proof(tmp_path: Path) -> None:
     await assert_stream_inventory(out, video=True, audio=False)  # lavfi color= is video-only
     assert_inpoint_identity(out, output_t=1.5, source=src1, source_start=0.0, source_end=3.0)
     assert_inpoint_identity(out, output_t=4.0, source=src2, source_start=0.0, source_end=3.0)
+    # threshold=0.0: guard-only — solid-color xfade frames won't SSIM-match at 0.99
+    assert_seam_frame_order(
+        out,
+        seam_t=3.0,
+        pre_source=src1,
+        pre_t=1.5,
+        post_source=src2,
+        post_t=1.5,
+        threshold=0.0,
+    )
 
 
 @_FFMPEG_SKIP

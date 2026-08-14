@@ -230,6 +230,52 @@ async def test_compute_ssim_returns_float(tmp_path: Path) -> None:
     assert 0.0 < result <= 1.0, f"SSIM {result} out of range (0, 1]"
 
 
+@_FFMPEG_SKIP
+async def test_assert_stream_inventory_audio_absent_fails(tmp_path: Path) -> None:
+    """Assert stream inventory raises AssertionError for audio-bearing file when audio=False."""
+    audio_file = tmp_path / "audio_only.m4a"
+    subprocess.run(  # noqa: ASYNC221
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1",
+            "-c:a",
+            "aac",
+            "-y",
+            str(audio_file),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    with pytest.raises(AssertionError):
+        await assert_stream_inventory(audio_file, audio=False)
+
+
+@_FFMPEG_SKIP
+async def test_assert_stream_inventory_video_absent_fails(tmp_path: Path) -> None:
+    """Assert stream inventory raises AssertionError for audio-only file when video=True."""
+    audio_file = tmp_path / "audio_only.m4a"
+    subprocess.run(  # noqa: ASYNC221
+        [
+            "ffmpeg",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1",
+            "-c:a",
+            "aac",
+            "-y",
+            str(audio_file),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    with pytest.raises(AssertionError):
+        await assert_stream_inventory(audio_file, video=True)
+
+
 # ---------------------------------------------------------------------------
 # No-FFmpeg tests (always run)
 # ---------------------------------------------------------------------------
