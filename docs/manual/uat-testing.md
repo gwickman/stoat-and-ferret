@@ -369,11 +369,11 @@ These journeys validate the v087 feature set: multi-clip rendering via `RenderGr
 
 ---
 
-### J-MULTICL-02: Multi-Clip Render — SSIM Visual Verification (FFmpeg-gated, deferred)
+### J-MULTICL-02: Multi-Clip Render — Frame Content and Structural Verification (FFmpeg-gated)
 
-**Feature:** BL-505 — render output content verification
+**Feature:** BL-505/BL-788 — render output content verification
 
-**Pre-conditions:** FFmpeg available (`STOAT_TEST_FFMPEG=1`); real video source files accessible to the server.
+**Pre-conditions:** FFmpeg available; `STOAT_TEST_FFMPEG=1` environment variable set.
 
 **Steps:**
 
@@ -384,20 +384,17 @@ These journeys validate the v087 feature set: multi-clip rendering via `RenderGr
 
 2. Read `output_path` from the job response.
 
-3. Extract a frame from the first clip's time region and the second clip's time region:
-   ```bash
-   ffmpeg -ss 1.5 -i "$OUTPUT_PATH" -vframes 1 -q:v 2 /tmp/frame_clip1.jpg
-   ffmpeg -ss 4.5 -i "$OUTPUT_PATH" -vframes 1 -q:v 2 /tmp/frame_clip2.jpg
-   ```
-
-4. Visually verify that `frame_clip1.jpg` shows content from the first source clip and `frame_clip2.jpg` shows content from the second source clip.
+**Automated verification:** Run the STOAT_TEST_FFMPEG-gated pytest suite:
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render/test_multi_clip_integration.py::test_multi_clip_render_ssim_proof -v
+```
+The test asserts frame count (150 frames ± 2), r_frame_rate (30/1), stream inventory (video-only for lavfi fixtures), and in-point identity (SSIM > 0.99) for both clips. Manual frame extraction is no longer required.
 
 **Expected outcome:**
-- Frame at ~1.5 s shows clip 1 source content
-- Frame at ~4.5 s shows clip 2 source content
-- Total output duration is approximately 6.0 s
+- All oracle assertions pass
+- SSIM > 0.99 at clip midpoints vs source
 
-**Discharge status:** Deferred — requires FFmpeg and real video sources. Discharge via `STOAT_TEST_FFMPEG=1` smoke run post-release.
+**Discharge status:** Automated via STOAT_TEST_FFMPEG-gated pytest (ffmpeg-tests CI lane).
 
 ---
 
@@ -574,6 +571,6 @@ The following UAT scenarios require a Windows headed environment or FFmpeg and a
 | Journey | Reason | Discharge Procedure |
 |---------|--------|---------------------|
 | J-EVIDENCE-04 (GUI evidence inspector) | Requires Windows headed browser | Manual UAT on Windows post-release |
-| J-MULTICL-02 (SSIM visual verification) | Requires FFmpeg + real video sources | `STOAT_TEST_FFMPEG=1` smoke run post-release |
+| J-MULTICL-02 (frame content and structural verification) | Automated via ffmpeg-tests CI lane | `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render/test_multi_clip_integration.py::test_multi_clip_render_ssim_proof -v` |
 | J-PREFLIGHT-03 (zero-byte output detection) | Requires FFmpeg + controlled corrupted input | `STOAT_TEST_FFMPEG=1` with truncated source file |
 | J-EVIDENCE-02 (full evidence with real FFmpeg) | Requires FFmpeg for completed render | `STOAT_TEST_FFMPEG=1` smoke run post-release |
