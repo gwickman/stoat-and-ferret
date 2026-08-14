@@ -267,6 +267,7 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 | 704 | `tests/uat/journeys/j_automation.py` | **R2 Automation (stub)** — Placeholder for Release 2 automation envelope journey. Passes headlessly. Independent. |
 | 705 | `tests/uat/journeys/j_reverse_split.py` | **R2 Reverse/Split (stub)** — Placeholder for Release 2 reverse and split capability journey. Passes headlessly. Independent. |
 | 706 | `tests/uat/journeys/j_grade.py` | **R2 Grade (stub)** — Placeholder for Release 2 color grading capability journey. Passes headlessly. Independent. |
+| 711 | `tests/uat/journeys/j_in_point_trim.py` | **In-Point Trim** — Creates a multi-clip project with a non-zero in_point clip via the HTTP API, submits a render, and (when STOAT_TEST_FFMPEG=1) asserts frame identity via the render-output oracle. Skipped if FFmpeg unavailable. Independent. |
 
 ### Dependency graph
 
@@ -296,9 +297,10 @@ uv run python scripts/uat_runner.py --headless --skip-build --journey 201
 704 (r2-automation)         ← independent
 705 (r2-reverse-split)      ← independent
 706 (r2-grade)              ← independent
+711 (in-point-trim)         ← independent (STOAT_TEST_FFMPEG=1 required for oracle assertions)
 ```
 
-If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically. Journeys 604 and 605 always run regardless of other journey results. If journey 701 fails, journeys 702 and 703 are skipped. Journeys 704, 705, and 706 always run regardless of other journey results.
+If journey 201 fails, journeys 202, 203, and 402 are skipped automatically. If journey 205 fails, journey 401 is skipped. Journeys 204, 403, 404, and 501 always run regardless of other journey results. If journey 501 fails, journeys 502, 503, and 504 are skipped automatically. Journeys 604 and 605 always run regardless of other journey results. If journey 701 fails, journeys 702 and 703 are skipped. Journeys 704, 705, 706, and 711 always run regardless of other journey results. Journey 711 (in-point-trim) requires STOAT_TEST_FFMPEG=1 for full oracle verification; without it, the browser navigation step still executes.
 
 ## Manual GUI Verification Steps
 

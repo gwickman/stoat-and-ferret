@@ -476,14 +476,15 @@ async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
     fps_mc: float,
-) -> tuple[list[Any], list[float], str | None, int]:
-    """Build per-clip ClipWithEffects list, durations, and audio codec info."""
+) -> tuple[list[Any], list[float], str | None, int, list[float]]:
+    """Build per-clip ClipWithEffects list, durations, audio codec info, and in-point offsets."""
     from stoat_ferret_core import ClipWithEffects
 
     cwe_list: list[Any] = []
     clip_durations_mc: list[float] = []
     source_audio_codec_mc: str | None = None
     source_audio_input_idx_mc: int = 0
+    in_point_secs_list: list[float] = []
 
     for i, clip in enumerate(clips):
         source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
@@ -503,6 +504,10 @@ async def _build_clip_input_list(
         if duration_secs <= 0:
             raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
         clip_durations_mc.append(duration_secs)
+        if clip.clip_type == "file":
+            in_point_secs_list.append(clip.in_point / framerate_mc)
+        else:
+            in_point_secs_list.append(0.0)  # image and generator clips: no source seek
         render_effects = _build_clip_render_effects(clip, ctx.effect_registry)
         cwe_list.append(
             ClipWithEffects(
@@ -513,7 +518,13 @@ async def _build_clip_input_list(
                 effects=render_effects,
             )
         )
-    return cwe_list, clip_durations_mc, source_audio_codec_mc, source_audio_input_idx_mc
+    return (
+        cwe_list,
+        clip_durations_mc,
+        source_audio_codec_mc,
+        source_audio_input_idx_mc,
+        in_point_secs_list,
+    )
 
 
 def _assemble_multi_tts_filter(
@@ -565,15 +576,21 @@ def _build_mc_clip_input_args(
     clips: list[Clip],
     input_paths: list[str],
     clip_durations_mc: list[float],
+    in_point_secs_list: list[float],
 ) -> None:
     """Append per-clip -i flags (with -loop/-lavfi for image/generator) to cmd."""
-    for clip, path, dur in zip(clips, input_paths, clip_durations_mc, strict=True):
+    for clip, path, dur, in_pt_secs in zip(
+        clips, input_paths, clip_durations_mc, in_point_secs_list, strict=True
+    ):
         if clip.clip_type == "image":
             cmd.extend(["-loop", "1", "-t", str(dur), "-i", path])
         elif clip.clip_type == "generator":
             cmd.extend(["-f", "lavfi", "-t", str(dur), "-i", path])
         else:
-            cmd.extend(["-i", path])
+            if in_pt_secs > 0:
+                cmd.extend(["-ss", str(in_pt_secs), "-t", str(dur), "-i", path])
+            else:
+                cmd.extend(["-i", path])
 
 
 def _build_mc_tts_inputs(
@@ -625,12 +642,13 @@ async def _build_multi_clip_command(
         clip_durations_mc,
         source_audio_codec_mc,
         source_audio_input_idx_mc,
+        in_point_secs_list,
     ) = await _build_clip_input_list(ctx, clips, fps_mc)
 
     translator = RenderGraphTranslator()
     filter_complex_str, input_paths = translator.translate(cwe_list)
 
-    _build_mc_clip_input_args(multi_cmd, clips, input_paths, clip_durations_mc)
+    _build_mc_clip_input_args(multi_cmd, clips, input_paths, clip_durations_mc, in_point_secs_list)
 
     if ctx.ffmetadata_path:
         multi_cmd.extend(["-i", ctx.ffmetadata_path])
@@ -916,8 +934,9 @@ async def _build_single_clip_command(
     if ctx.render_settings.soft_subtitles:
         await _build_sc_subtitle_inputs(cmd, ctx)
 
-    # Segment timing
-    cmd.extend(["-ss", str(timeline_start), "-t", str(seg_duration)])
+    # Segment timing: seek to in_point + timeline_start so the correct source frames are read.
+    in_point_secs = first_clip.in_point / fps  # fps already extracted above
+    cmd.extend(["-ss", str(in_point_secs + timeline_start), "-t", str(seg_duration)])
 
     # Filter assembly: translator path for image/generator/effects clips; legacy -vf for file.
     if use_translator_sc:

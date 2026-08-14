@@ -51,6 +51,9 @@ End-to-end happy path: scan a directory, build a one-clip project, render to dis
 // 5. Clip create — in_point/out_point/timeline_position are frame counts (integers)
 { "source_video_id": "<video_id>", "in_point": 0, "out_point": 300, "timeline_position": 0 }
 
+// 5b. Clip with non-zero in_point — trim the source so the render starts at frame 90 (3s at 30fps)
+{ "source_video_id": "<video_id>", "in_point": 90, "out_point": 270, "timeline_position": 0 }
+
 // 6. Timeline fetch (GET — no body); response: { "duration": <seconds>, "tracks": [...] }
 // Use .duration as render_plan.total_duration in step 7.
 
