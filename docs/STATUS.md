@@ -1,5 +1,34 @@
 # STATUS.md
 
+## v127 — Verification Foundation (BL-787/788/789)
+
+**Delivered:** 2026-08-14
+**PRs:** #982–#984 (3 merged)
+**Tests:** 3858 passed, 156 skipped (0 regressions)
+
+### Highlights
+
+- **Theme 1 — verification-foundation:** Created shared render-output oracle (`tests/render_oracle.py`) with 7 FFmpeg-gated assertion functions and 13 tests; consolidated `_compute_ssim` import — BL-787 — PR #982
+- Extended `test_multi_clip_render_ssim_proof` with 5 oracle assertions (frame count, frame rate, stream inventory, in-point identity × 2); updated J-MULTICL-02 UAT doc from "Deferred / visually verify" to automated-gate discharge — BL-788 — PR #983
+- Created `tests/test_contract/test_doc_truth.py` CI gate (standard lane, no FFmpeg) + `scripts/generate_capability_tables.py` generator; corrected 6 manual docs from 17→40 effects with `<!-- effects-count: 40 -->` markers — BL-789 — PR #984
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| verification-foundation | BL-787, BL-788, BL-789 | #982–#984 | complete |
+
+### AC Status
+
+- 1 theme, 3 features; 13/13 source ACs supported; 0 weakened, 0 contradicted
+- 2 pre-confirmed design deviations (seam probe duration; xfade-zone assertion substitution) — no AC semantics weakened
+- Dependency blocker for v128–v136 (render-correctness track) cleared
+
+### Outstanding Items
+
+- Route-inventory drift gate (BL-789 FR-002-AC-4) deferred to future version — current gate covers effect-count drift only
+- `prompt-recipes.md` not added to EFFECT_DOCS gate (text-only file; accepted gap documented)
+
 ## v126 — CI/Sonar Hygiene (BL-782/783/784/785/786)
 
 **Delivered:** 2026-08-13
