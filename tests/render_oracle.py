@@ -184,7 +184,7 @@ def assert_seam_frame_order(
     file_duration = float(data["format"]["duration"])
     if seam_t + 0.05 > file_duration:
         raise ValueError(f"seam_t {seam_t} exceeds file duration {file_duration}")
-    pre_ssim = compute_ssim(output, seam_t - 0.05, pre_source, pre_t)
+    pre_ssim = compute_ssim(output, seam_t - 0.05, pre_source, pre_t, duration=0.05)
     assert pre_ssim >= threshold, f"pre-seam SSIM {pre_ssim:.4f} < threshold {threshold}"
-    post_ssim = compute_ssim(output, seam_t + 0.05, post_source, post_t)
+    post_ssim = compute_ssim(output, seam_t + 0.05, post_source, post_t, duration=0.05)
     assert post_ssim >= threshold, f"post-seam SSIM {post_ssim:.4f} < threshold {threshold}"
