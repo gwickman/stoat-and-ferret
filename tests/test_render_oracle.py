@@ -198,6 +198,8 @@ async def test_assert_seam_frame_order_passes(tmp_path: Path) -> None:
             "[vout]",
             "-c:v",
             "libx264",
+            "-crf",
+            "0",
             "-pix_fmt",
             "yuv420p",
             "-y",
