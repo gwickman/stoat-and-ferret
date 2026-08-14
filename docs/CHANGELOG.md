@@ -4,6 +4,23 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v127 — Render-Output Oracle and Doc-Truth CI Gate (2026-08-14)
+
+1 theme, 3 features, PRs #982–#984.
+
+### Theme 1: verification-foundation
+
+- BL-787: Add shared `tests/render_oracle.py` oracle module — 7 assertion functions (`compute_ssim`, `assert_frame_count`, `assert_frame_rate`, `assert_stream_inventory`, `assert_av_duration_alignment`, `assert_inpoint_identity`, `assert_seam_frame_order`) gated via `STOAT_TEST_FFMPEG`; 13 oracle unit tests; consolidates existing `_compute_ssim` from multi-clip integration test (PR #982)
+- BL-788: Fold oracle assertions into gated multi-clip suite — `test_multi_clip_render_ssim_proof` extended with frame count, frame rate, stream inventory, and in-point identity assertions; `docs/manual/uat-testing.md` J-MULTICL-02 updated to cite automated gated test (PR #983)
+- BL-789: Add doc-truth CI gate and correct effect counts — `scripts/generate_capability_tables.py` generates effect + route tables from live registry/OpenAPI; `tests/test_contract/test_doc_truth.py` CI gate fails on effect count drift; 5 manual docs corrected 17→40 effects with `<!-- effects-count: 40 -->` markers (PR #984)
+
+### Quality
+
+- 3859 pytest tests passing (156 skipped, 0 failed); ruff, mypy clean
+- BL-787 admin-merged past AnimMouse/setup-ffmpeg CDN outage (Windows lanes); all other lanes clean
+
+---
+
 ## v126 — CI/Sonar Hygiene Residuals (2026-08-13)
 
 ### Changed
