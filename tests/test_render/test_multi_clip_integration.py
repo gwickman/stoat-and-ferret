@@ -25,7 +25,15 @@ from stoat_ferret.effects.definitions import EffectDefinition
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import build_command_for_job
-from tests.render_oracle import compute_ssim as _compute_ssim
+from tests.render_oracle import (
+    assert_frame_count,
+    assert_frame_rate,
+    assert_inpoint_identity,
+    assert_stream_inventory,
+)
+from tests.render_oracle import (
+    compute_ssim as _compute_ssim,
+)
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
 _FFMPEG_SKIP = pytest.mark.skipif(
@@ -450,6 +458,15 @@ async def test_multi_clip_render_ssim_proof(tmp_path: Path) -> None:
     # Clip 2 midpoint at t≈4.5s in output (pure region after 1s xfade) — solid red
     ssim2 = _compute_ssim(out, 4.5, src2, 1.5)
     assert ssim2 > 0.99, f"SSIM at clip 2 midpoint: {ssim2:.4f} (expected > 0.99)"
+
+    # Oracle assertions — BL-788-AC-1
+    # assert_av_duration_alignment omitted: lavfi color= generates video-only output
+    # (no audio stream present); A/V alignment exercised in Feature 001 oracle suite.
+    await assert_frame_count(out, expected_frames=150, tolerance=2)
+    await assert_frame_rate(out, expected_num=30, expected_den=1)
+    await assert_stream_inventory(out, video=True, audio=False)  # lavfi color= is video-only
+    assert_inpoint_identity(out, output_t=1.5, source=src1, source_start=0.0, source_end=3.0)
+    assert_inpoint_identity(out, output_t=4.0, source=src2, source_start=0.0, source_end=3.0)
 
 
 @_FFMPEG_SKIP
