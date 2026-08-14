@@ -1695,6 +1695,81 @@ class TestGoldenArgv:
             "/renders/golden.mp4",
         ]
 
+    @pytest.mark.asyncio
+    async def test_golden_case_single_clip_nonzero_inpoint(self) -> None:
+        """Single file clip with in_point=30 (1s at 30fps) -> -ss 1.0 seek in argv (BL-790)."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip("clip-sc-nz", "vid-1", in_point=30, out_point=930)
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(job, _g_clip_repo(clip), _g_video_repo(vid))
+
+        # -t reflects the render plan duration (timeline_end - timeline_start),
+        # not the clip content span ((out_point - in_point) / fps).
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "1.0",
+            "-t",
+            "30.0",
+            "-vf",
+            "scale=1920:1080",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_multi_clip_file_nonzero_inpoint(self) -> None:
+        """Multi-clip: clip_b has in_point=30 -> -ss 1.0 -t 4.0 prepended before -i (BL-790)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-mc-nz-a", "vid-1")  # in_point=0: no -ss
+        # in_pt=1.0s (30/30), dur=4.0s ((150-30)/30)
+        clip_b = _g_make_clip("clip-mc-nz-b", "vid-2", in_point=30, out_point=150)
+        job = _g_make_job(_g_make_plan(total_duration=34.0))
+
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "1.0",
+            "-t",
+            "4.0",
+            "-i",
+            "/media/clip2.mp4",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1]"
+            ";[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1]"
+            ";[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0]"
+            ";[xf0]format=yuv420p[final]",
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Unit tests for _build_mc_subtitle_inputs helper (NFR-003)
