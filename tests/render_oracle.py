@@ -56,6 +56,8 @@ async def assert_frame_count(path: Path, expected_frames: int, tolerance: int = 
     """Assert decoded frame count matches expected_frames within tolerance.
 
     Uses format.duration * fps (not nb_frames) for actual count.
+    Accurate for constant-FPS H.264 output. Not suitable for VFR sources
+    where accumulated rounding error may cause the count to drift beyond tolerance.
     Raises ValueError for negative expected_frames; AssertionError when count is out of tolerance.
     """
     if expected_frames < 0:
@@ -81,10 +83,35 @@ async def assert_frame_rate(path: Path, expected_num: int, expected_den: int) ->
 
 
 async def assert_stream_inventory(path: Path, video: bool = True, audio: bool = True) -> None:
-    """Assert the file's stream inventory satisfies expected video/audio presence flags."""
-    meta = await ffprobe_video(str(path))
+    """Assert the file's stream inventory satisfies expected video/audio presence flags.
+
+    Uses ffprobe -show_streams JSON (codec_type field). All four flag combinations enforced.
+    """
+    result = await asyncio.to_thread(
+        subprocess.run,
+        ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(path)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        raise AssertionError(f"ffprobe failed for {path}: {result.stderr[-400:]}")
+    data = json.loads(result.stdout)
+    streams = data.get("streams", [])
+    video_streams = [s for s in streams if s.get("codec_type") == "video"]
+    audio_streams = [s for s in streams if s.get("codec_type") == "audio"]
+    if video:
+        assert len(video_streams) > 0, f"expected video stream in {path}, but none found"
+    else:
+        assert len(video_streams) == 0, (
+            f"expected no video stream in {path}, but found {len(video_streams)}"
+        )
     if audio:
-        assert meta.audio_codec is not None, f"expected audio stream in {path}, but none found"
+        assert len(audio_streams) > 0, f"expected audio stream in {path}, but none found"
+    else:
+        assert len(audio_streams) == 0, (
+            f"expected no audio stream in {path}, but found {len(audio_streams)}"
+        )
 
 
 async def assert_av_duration_alignment(path: Path, max_delta_ms: float = 100.0) -> None:
@@ -162,8 +189,8 @@ def assert_seam_frame_order(
     seam_t + 0.05 matches post_source at post_t.
     Raises ValueError when seam_t + 0.05 exceeds file duration or threshold is invalid.
     """
-    if not 0 < threshold <= 1:
-        raise ValueError("threshold must be in (0, 1]")
+    if not 0 <= threshold <= 1:
+        raise ValueError("threshold must be in [0, 1]")
     r = subprocess.run(
         [
             "ffprobe",
