@@ -237,7 +237,7 @@ Find an existing project, locate one of its clips, and append an effect by type.
 
 ### Error Notes
 
-- Effect type discovery: `GET /api/v1/effects` returns all 17 supported effects with parameter schemas. DSP categories include voice processing (`noise_reduction`, `deesser`, `deplosive`, `time_stretch`) and mastering (`mastering_limiter`, `loudness_normalize`, `parametric_eq`, `multiband_compressor`).
+- Effect type discovery: `GET /api/v1/effects` returns all 40 supported effects with parameter schemas. DSP categories include voice processing (`noise_reduction`, `deesser`, `deplosive`, `time_stretch`) and mastering (`mastering_limiter`, `loudness_normalize`, `parametric_eq`, `multiband_compressor`).
 - `GET /api/v1/effects/{effect_type}/preview` (POST in some builds) lets you validate parameters before persisting.
 - Step 3 returns `422` for parameter schema violations — payload includes the offending field path.
 

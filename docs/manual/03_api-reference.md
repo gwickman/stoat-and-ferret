@@ -811,7 +811,8 @@ curl http://localhost:8765/api/v1/effects
 
 #### Effect Parameter Schemas
 
-The 17 available effects and their parameter schemas are listed below. Discover the full live schemas via `GET /api/v1/effects`.
+<!-- effects-count: 40 -->
+The 40 available effects and their parameter schemas are listed below. Discover the full live schemas via `GET /api/v1/effects`.
 
 **Voice / Audio Processing Effects (v077+)**
 
