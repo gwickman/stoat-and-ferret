@@ -25,6 +25,7 @@ from stoat_ferret.effects.definitions import EffectDefinition
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import build_command_for_job
+from tests.render_oracle import compute_ssim as _compute_ssim
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
 _FFMPEG_SKIP = pytest.mark.skipif(
@@ -390,41 +391,6 @@ def _make_gated_job(
         updated_at=now,
         completed_at=None,
     )
-
-
-def _compute_ssim(
-    output: Path, t_out: float, ref: Path, t_ref: float, duration: float = 0.3
-) -> float:
-    """Return overall SSIM between a segment of output and a reference via ffmpeg."""
-    r = subprocess.run(
-        [
-            "ffmpeg",
-            "-ss",
-            str(t_out),
-            "-t",
-            str(duration),
-            "-i",
-            str(output),
-            "-ss",
-            str(t_ref),
-            "-t",
-            str(duration),
-            "-i",
-            str(ref),
-            "-filter_complex",
-            "[0:v][1:v]ssim=f=-",
-            "-f",
-            "null",
-            "-",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    m = re.search(r"All:(\d+\.\d+)", r.stderr)
-    if not m:
-        raise RuntimeError(f"Could not parse SSIM from ffmpeg output:\n{r.stderr[-600:]}")
-    return float(m.group(1))
 
 
 def _chroma_mad(frame_path: Path) -> float:
