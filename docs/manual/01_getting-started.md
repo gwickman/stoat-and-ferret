@@ -253,7 +253,8 @@ Response (HTTP 201):
 ## Next Steps
 
 - [API Reference](03_api-reference.md) -- complete endpoint documentation
-- [Effects Guide](04_effects-guide.md) -- all 17 available effects with parameter details
+<!-- effects-count: 40 -->
+- [Effects Guide](04_effects-guide.md) -- all 40 available effects with parameter details
 - [Timeline Guide](05_timeline-guide.md) -- frame-based clip management
 - [GUI Guide](06_gui-guide.md) -- using the web interface
 - [AI Integration](08_ai-integration.md) -- programmatic and AI-driven workflows
