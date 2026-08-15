@@ -159,6 +159,22 @@ While rendering is not yet implemented, the building blocks are in place:
 - **Job queue** provides async job execution infrastructure
 - **FFmpeg executor** wraps FFmpeg process management with timeout and error handling
 
+## Multi-clip Audio Policy
+
+When rendering a multi-clip project, the render engine sequences source audio to
+match the video timeline using an acrossfade chain:
+
+- **Clips with audio tracks:** Audio is cross-faded between clips using the same
+  transition timing as the video (default: 1 second fade).
+- **Clips without audio tracks:** A corresponding silent segment is synthesized to
+  maintain A/V alignment (`anullsrc`, 48kHz stereo, matching clip duration).
+- **Deliberately silent output:** When no clips have an audio track,
+  the render produces video-only output (`-an`). A future `audio_policy: "silent"`
+  render setting will allow explicit suppression.
+- **Duration constraint:** The acrossfade duration `d` must satisfy
+  `d ≤ min(duration_clip_a, duration_clip_b)`. FFmpeg raises a filter error
+  (non-zero exit) if this constraint is violated — no silent failure.
+
 ## Next Steps
 
 - [Effects Guide](04_effects-guide.md) -- current effect system that generates filter strings

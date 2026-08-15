@@ -213,8 +213,8 @@ async def test_multi_clip_tts_later_clip_audio_uses_amix() -> None:
 
 
 @pytest.mark.asyncio
-async def test_multi_clip_no_tts_no_amix() -> None:
-    """BL-578-AC-3 (multi-clip): no TTS → no amix, no filter_complex audio stream (regression)."""
+async def test_multi_clip_no_tts_audio_capable() -> None:
+    """BL-791-AC-1 (multi-clip): no TTS, audio-capable clips → acrossfade chain, no -an."""
     videos = {
         "vid-a": _make_video("vid-a", "/media/clip_a.mp4", audio_codec="aac"),
         "vid-b": _make_video("vid-b", "/media/clip_b.mp4", audio_codec="aac"),
@@ -231,8 +231,32 @@ async def test_multi_clip_no_tts_no_amix() -> None:
     cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[])
 
     cmd_str = " ".join(cmd)
-    assert "amix" not in cmd_str
+    assert "acrossfade" in cmd_str
+    assert "[aout]" in cmd_str
+    assert "-an" not in cmd
+
+
+@pytest.mark.asyncio
+async def test_multi_clip_no_tts_no_audio() -> None:
+    """BL-578-AC-3 (multi-clip): no TTS, no-audio clips → -an (deliberately_silent path)."""
+    videos = {
+        "vid-a": _make_video("vid-a", "/media/clip_a.mp4", audio_codec=None),
+        "vid-b": _make_video("vid-b", "/media/clip_b.mp4", audio_codec=None),
+    }
+    clips = [
+        _make_clip("clip-a", "vid-a", timeline_position=0),
+        _make_clip("clip-b", "vid-b", timeline_position=300),
+    ]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[])
+
+    cmd_str = " ".join(cmd)
     assert "-an" in cmd
+    assert "acrossfade" not in cmd_str
 
 
 # ---------------------------------------------------------------------------
