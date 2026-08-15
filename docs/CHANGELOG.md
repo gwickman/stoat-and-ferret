@@ -4,6 +4,24 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v129 — Multi-Clip Audio Correctness (2026-08-15)
+
+1 theme, 4 features, PRs #989–#992.
+
+### Theme 1: multi-clip-audio-correctness
+
+- BL-791: Wire acrossfade audio chain into multi-clip render path — add `_build_audio_acrossfade_chain` and `_get_transition_duration` helpers; extend `_build_clip_input_list` to track audio-capable input indices; update `_assemble_multi_tts_filter` no-TTS branch to emit `-map [aout]` (sequenced audio) instead of unconditional `-an` (silence); `deliberately_silent` policy for clips with no audio codec; golden-argv case; audio policy doc (PR #989)
+- BL-791: Add `test_uc_media_multiclip_assemble` acceptance test (FFmpeg-gated, BL-787 oracle: `assert_stream_inventory` + `assert_av_duration_alignment`) and `uc_media_multiclip_audio` chatbot scenario (PR #990)
+- BL-791: Add `test_multi_clip_audio_render_contract` argv-level smoke test; update smoke-test harness guide (PR #991)
+- BL-791: Add UAT journey 712 (`j_multi_clip_audio`) — registers in `JOURNEY_MODULE_MAP`, navigates render page, drives real render when `STOAT_TEST_FFMPEG=1`, asserts oracle; update `uat-testing.md` (PR #992)
+
+### Quality
+
+- 3868 pytest tests passing (159 skipped, 0 failed); ruff, mypy clean
+- Windows CI stuck runners (UA-001 pattern) across all 4 PRs; ci-status gate unaffected
+
+---
+
 ## v128 — Render-Correctness Infrastructure: Oracle Hardening + In-Point Trim (2026-08-14)
 
 1 theme, 2 features, PRs #986–#987.
