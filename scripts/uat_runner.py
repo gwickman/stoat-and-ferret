@@ -127,6 +127,7 @@ JOURNEY_MODULE_MAP: dict[int, str] = {
     708: "tests.uat.journeys.j_chroma_key",
     709: "tests.uat.journeys.j_lens_distort",
     710: "tests.uat.journeys.j_gradient_generator",
+    712: "tests.uat.journeys.j_multi_clip_audio",
 }
 
 KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "tests" / "fixtures" / "baseline-uat-failures.json"
