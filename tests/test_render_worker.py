@@ -1770,6 +1770,53 @@ class TestGoldenArgv:
             "/renders/golden.mp4",
         ]
 
+    @pytest.mark.asyncio
+    async def test_golden_case_multi_clip_audio_capable(self) -> None:
+        """Two audio-capable clips, no TTS -> acrossfade chain in filter_complex (BL-791-AC-6)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2, audio_codec="aac")
+        clip_a = _g_make_clip("clip-audio-a", "vid-1")
+        clip_b = _g_make_clip("clip-audio-b", "vid-2")
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final];"
+                "[0:a][1:a]acrossfade=d=1[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+        # FR-007-AC-1: acrossfade with d=1 (not d=1.0) and -map [aout] present; -an absent
+        assert "acrossfade=d=1[aout]" in result[result.index("-filter_complex") + 1]
+        assert "-map" in result
+        assert "[aout]" in result
+        assert "-an" not in result
+
 
 # ---------------------------------------------------------------------------
 # Unit tests for _build_mc_subtitle_inputs helper (NFR-003)

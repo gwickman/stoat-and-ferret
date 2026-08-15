@@ -476,7 +476,7 @@ async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
     fps_mc: float,
-) -> tuple[list[Any], list[float], str | None, int, list[float]]:
+) -> tuple[list[Any], list[float], str | None, int, list[float], list[int]]:
     """Build per-clip ClipWithEffects list, durations, audio codec info, and in-point offsets."""
     from stoat_ferret_core import ClipWithEffects
 
@@ -485,6 +485,7 @@ async def _build_clip_input_list(
     source_audio_codec_mc: str | None = None
     source_audio_input_idx_mc: int = 0
     in_point_secs_list: list[float] = []
+    audio_input_indices_mc: list[int] = []
 
     for i, clip in enumerate(clips):
         source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
@@ -501,6 +502,8 @@ async def _build_clip_input_list(
             if source_audio_codec_mc is None and clip_audio_codec:
                 source_audio_codec_mc = clip_audio_codec
                 source_audio_input_idx_mc = i
+            if clip_audio_codec is not None:
+                audio_input_indices_mc.append(i)
         if duration_secs <= 0:
             raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
         clip_durations_mc.append(duration_secs)
@@ -524,7 +527,53 @@ async def _build_clip_input_list(
         source_audio_codec_mc,
         source_audio_input_idx_mc,
         in_point_secs_list,
+        audio_input_indices_mc,
     )
+
+
+def _get_transition_duration(cwe_list: list[Any], k: int) -> float:
+    """Return the outgoing transition duration for cwe_list[k-1], defaulting to 1.0s.
+
+    Uses getattr because outgoing_transition has no #[pyo3(get)] in the current binding;
+    it evaluates to None until the binding is extended, producing the correct 1.0s default.
+    """
+    t = getattr(cwe_list[k - 1], "outgoing_transition", None)
+    return t.duration_secs if t is not None else 1.0
+
+
+def _build_audio_acrossfade_chain(
+    audio_input_indices_mc: list[int],
+    all_input_count: int,
+    clip_durations_mc: list[float],
+    cwe_list: list[Any],
+) -> str | None:
+    """Build an acrossfade audio filter chain for all_input_count inputs.
+
+    Returns None when no clips have audio (deliberately_silent case).
+    For file clips without audio, synthesizes silence via anullsrc to maintain
+    A/V duration alignment. Chains N-1 acrossfade nodes ending at [aout].
+    """
+    if not audio_input_indices_mc:
+        return None
+    audio_set = set(audio_input_indices_mc)
+    parts: list[str] = []
+    labels: list[str] = []
+    for i in range(all_input_count):
+        if i in audio_set:
+            labels.append(f"[{i}:a]")
+        else:
+            dur = clip_durations_mc[i]
+            src_label = f"[a{i}_silent]"
+            parts.append(f"anullsrc=r=48000:cl=stereo:d={dur}{src_label}")
+            labels.append(src_label)
+    current = labels[0]
+    for k in range(1, all_input_count):
+        t = _get_transition_duration(cwe_list, k)
+        d_str = str(int(t)) if t == int(t) else str(t)
+        intermediate = f"[xa{k - 1}]" if k < all_input_count - 1 else _LABEL_AOUT
+        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}{intermediate}")
+        current = intermediate
+    return ";".join(parts)
 
 
 def _assemble_multi_tts_filter(
@@ -534,6 +583,9 @@ def _assemble_multi_tts_filter(
     filter_complex_str: str,
     source_audio_codec_mc: str | None,
     source_audio_input_idx_mc: int,
+    audio_input_indices_mc: list[int],
+    clip_durations_mc: list[float],
+    cwe_list: list[Any],
 ) -> None:
     """Assemble filter_complex and -map flags for multi-clip TTS/no-TTS paths."""
     if tts_inputs:
@@ -568,7 +620,16 @@ def _assemble_multi_tts_filter(
                 ]
             )
     else:
-        cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
+        deliberately_silent = len(audio_input_indices_mc) == 0
+        if not deliberately_silent:
+            audio_chain = _build_audio_acrossfade_chain(
+                audio_input_indices_mc, len(clip_durations_mc), clip_durations_mc, cwe_list
+            )
+            assert audio_chain is not None  # non-empty audio_input_indices_mc → not None
+            combined = filter_complex_str + ";" + audio_chain
+            cmd.extend(["-filter_complex", combined, "-map", _LABEL_FINAL, "-map", _LABEL_AOUT])
+        else:
+            cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
 
 
 def _build_mc_clip_input_args(
@@ -643,6 +704,7 @@ async def _build_multi_clip_command(
         source_audio_codec_mc,
         source_audio_input_idx_mc,
         in_point_secs_list,
+        audio_input_indices_mc,
     ) = await _build_clip_input_list(ctx, clips, fps_mc)
 
     translator = RenderGraphTranslator()
@@ -669,6 +731,9 @@ async def _build_multi_clip_command(
         filter_complex_str,
         source_audio_codec_mc,
         source_audio_input_idx_mc,
+        audio_input_indices_mc,
+        clip_durations_mc,
+        cwe_list,
     )
 
     # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
