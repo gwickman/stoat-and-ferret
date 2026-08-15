@@ -215,3 +215,35 @@ def assert_seam_frame_order(
     assert pre_ssim >= threshold, f"pre-seam SSIM {pre_ssim:.4f} < threshold {threshold}"
     post_ssim = compute_ssim(output, seam_t + 0.05, post_source, post_t, duration=0.02)
     assert post_ssim >= threshold, f"post-seam SSIM {post_ssim:.4f} < threshold {threshold}"
+
+
+def assert_transition_reference(
+    output: Path,
+    seam_t: float,
+    transition_type: str,
+    duration_secs: float,
+    ref: Path,
+    tolerance: float = 0.95,
+) -> None:
+    """Assert that the transition window at seam_t in *output* matches *ref*.
+
+    Compares SSIM of frames sampled from [seam_t, seam_t + duration_secs] in
+    *output* vs the same window in *ref* (a pre-rendered output produced with
+    the expected transition type).
+
+    Raises AssertionError if mean SSIM < tolerance.
+
+    Note: Distinguishing visually similar transitions requires high-contrast
+    fixture content (e.g. testsrc2 with distinct patterns per clip). Low-contrast
+    fixtures may fail to discriminate fade/1.0 from wipeleft/0.35 reliably.
+    """
+    try:
+        ssim = compute_ssim(output, seam_t, ref, seam_t, duration=duration_secs)
+    except RuntimeError as exc:
+        raise AssertionError(
+            f"no frames extracted from transition window at seam_t={seam_t}: {exc}"
+        ) from exc
+    assert ssim >= tolerance, (
+        f"transition window SSIM {ssim:.4f} < tolerance {tolerance} "
+        f"(expected {transition_type!r} at seam_t={seam_t}, window={duration_secs}s)"
+    )
