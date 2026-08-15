@@ -157,6 +157,12 @@ before pushing.
 removes validation error details from generated client types. The OpenAPI spec drift gate prevents
 silent schema regressions from reaching `main` undetected.
 
+### Phase 15 — v129 Multi-Clip Audio Render Smoke Tests (BL-791)
+
+| Test function | Coverage tier | Note |
+|--------------|---------------|------|
+| test_multi_clip_audio_render_contract | no-TTS source-audio argv | Argv-level only; end-to-end audio requires STOAT_TEST_FFMPEG=1 |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)

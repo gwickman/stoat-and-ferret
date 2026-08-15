@@ -934,3 +934,43 @@ async def test_single_clip_windowed_effect_emits_enable() -> None:
     assert "enable='between(t,1.0,3.0)'" in filter_complex, (
         f"Expected enable='between(t,1.0,3.0)' in filter_complex, got:\n{filter_complex}"
     )
+
+
+async def test_multi_clip_audio_render_contract() -> None:
+    """Smoke: multi-clip render with audio-capable clips produces acrossfade argv."""
+    videos = {
+        "vid-audio-e": _cmd_make_video("vid-audio-e", "/media/audio_e.mp4", audio_codec="aac"),
+        "vid-audio-f": _cmd_make_video("vid-audio-f", "/media/audio_f.mp4", audio_codec="aac"),
+    }
+    clips = [
+        _cmd_make_clip("clip-audio-e", "vid-audio-e", 0),
+        _cmd_make_clip("clip-audio-f", "vid-audio-f", 300),
+    ]
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 20.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan, job_id="job-smoke-mc-audio")
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo)
+    cmd_str = " ".join(cmd)
+
+    assert "acrossfade" in cmd_str, (
+        f"Expected 'acrossfade' in render command for audio-capable clips; got: {cmd_str!r}"
+    )
+    assert "-map" in cmd, f"-map not found in command: {cmd}"
+    assert "[aout]" in cmd, f"[aout] not found in command: {cmd}"
+    assert "-an" not in cmd, f"-an must be absent for audio-capable clips; got: {cmd}"
