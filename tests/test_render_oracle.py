@@ -20,6 +20,7 @@ from tests.render_oracle import (
     assert_inpoint_identity,
     assert_seam_frame_order,
     assert_stream_inventory,
+    assert_transition_reference,
     compute_ssim,
 )
 
@@ -274,6 +275,90 @@ async def test_assert_stream_inventory_video_absent_fails(tmp_path: Path) -> Non
     )
     with pytest.raises(AssertionError):
         await assert_stream_inventory(audio_file, video=True)
+
+
+# ---------------------------------------------------------------------------
+# Transition reference oracle tests (BL-808)
+# ---------------------------------------------------------------------------
+
+
+def _render_xfade(
+    clip_a: Path,
+    clip_b: Path,
+    out: Path,
+    transition: str,
+    duration: float,
+    offset: float,
+) -> None:
+    """Render two clips joined by an xfade transition into *out*."""
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-i",
+            str(clip_a),
+            "-i",
+            str(clip_b),
+            "-filter_complex",
+            f"[0:v][1:v]xfade=transition={transition}:duration={duration}:offset={offset}[vout]",
+            "-map",
+            "[vout]",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-y",
+            str(out),
+        ],
+        capture_output=True,
+        timeout=60,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"xfade render failed: {r.stderr.decode()[-800:]}")
+
+
+@_FFMPEG_SKIP
+async def test_assert_transition_reference_passing(tmp_path: Path) -> None:
+    """Assert transition reference passes when output and ref have identical wipeleft/0.35."""
+    clip_a = tmp_path / "a.mp4"
+    clip_b = tmp_path / "b.mp4"
+    output = tmp_path / "output_wipeleft.mp4"
+    ref = tmp_path / "ref_wipeleft.mp4"
+
+    # High-contrast testsrc2 → solid red: distinct patterns for SSIM discrimination
+    _gen_lavfi_video(clip_a, "testsrc2=duration=2:size=320x240:rate=30")
+    _gen_lavfi_video(clip_b, "color=c=red:s=320x240:r=30:d=2")
+
+    # Both output and ref: wipeleft/0.35 starting at offset=1.65
+    _render_xfade(clip_a, clip_b, output, "wipeleft", 0.35, 1.65)
+    _render_xfade(clip_a, clip_b, ref, "wipeleft", 0.35, 1.65)
+
+    # Same transition → high SSIM → no AssertionError
+    assert_transition_reference(
+        output, seam_t=1.65, transition_type="wipeleft", duration_secs=0.35, ref=ref
+    )
+
+
+@_FFMPEG_SKIP
+async def test_assert_transition_reference_failing(tmp_path: Path) -> None:
+    """Raises AssertionError when output uses fade/1.0 but ref expects wipeleft/0.35."""
+    clip_a = tmp_path / "a.mp4"
+    clip_b = tmp_path / "b.mp4"
+    output = tmp_path / "output_fade.mp4"
+    ref = tmp_path / "ref_wipeleft.mp4"
+
+    # High-contrast testsrc2 → solid red: distinct patterns for SSIM discrimination
+    _gen_lavfi_video(clip_a, "testsrc2=duration=2:size=320x240:rate=30")
+    _gen_lavfi_video(clip_b, "color=c=red:s=320x240:r=30:d=2")
+
+    # output: fade/1.0 starting at offset=1.65; ref: wipeleft/0.35 starting at offset=1.65
+    _render_xfade(clip_a, clip_b, output, "fade", 1.0, 1.65)
+    _render_xfade(clip_a, clip_b, ref, "wipeleft", 0.35, 1.65)
+
+    # Different transitions → low SSIM in the [1.65, 2.0] window → AssertionError
+    with pytest.raises(AssertionError):
+        assert_transition_reference(
+            output, seam_t=1.65, transition_type="wipeleft", duration_secs=0.35, ref=ref
+        )
 
 
 # ---------------------------------------------------------------------------
