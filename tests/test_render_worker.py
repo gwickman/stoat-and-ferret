@@ -12,6 +12,7 @@ RenderWorkerLoop async class (loop iteration, error handling, shutdown).
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import sys
 import time
@@ -1756,6 +1757,43 @@ class TestGoldenArgv:
             "/media/clip1.mp4",
             "-ss",
             "1.0",
+            "-t",
+            "30.0",
+            "-vf",
+            "scale=1920:1080",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_single_clip_nonzero_inpoint_mismatched_fps(self) -> None:
+        """Single-clip in_point=48 with 24fps source at 30fps render -> -ss 2.0 (BL-811).
+
+        in_point_secs = 48 / source_fps(24) = 2.0, not 48 / render_fps(30) = 1.6.
+        """
+        vid = dataclasses.replace(
+            _g_make_video("vid-1", _G_VIDEO_PATH_1),
+            frame_rate_numerator=24,
+            frame_rate_denominator=1,
+        )
+        clip = _g_make_clip("clip-sc-mfps", "vid-1", in_point=48, out_point=948)
+        job = _g_make_job(_g_make_plan())
+
+        result = await build_command_for_job(job, _g_clip_repo(clip), _g_video_repo(vid))
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "2.0",
             "-t",
             "30.0",
             "-vf",

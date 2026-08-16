@@ -11,6 +11,7 @@ match any offset).
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import subprocess
@@ -164,3 +165,47 @@ async def test_uc_media_range_extract_nonzero_inpoint(tmp_path: Path) -> None:
     assert_inpoint_identity(out, output_t=3.0, source=src, source_start=3.0, source_end=9.0)
     await assert_stream_inventory(out, video=True, audio=False)
     await assert_frame_count(out, expected_frames=180, tolerance=2)
+
+
+@_FFMPEG_SKIP
+async def test_uc_media_range_extract_mismatched_fps(tmp_path: Path) -> None:
+    """24fps source with 30fps render uses source fps for in_point seek (BL-811).
+
+    Source: testsrc2=size=320x240:rate=24:duration=10 (time-varying, 240 frames).
+    Clip: in_point=48 (2.0s at 24fps), out_point=144 (6.0s at 24fps) -> 4.0s output.
+    Render plan: fps=30.0 (output cadence differs from source fps).
+    Oracle: SSIM identity at output midpoint vs source midpoint; threshold >= 0.95.
+    """
+    src = tmp_path / "src_testsrc2_24fps.mp4"
+    out = tmp_path / "output_mismatched_fps.mp4"
+
+    _gen_lavfi_video(src, "testsrc2=size=320x240:rate=24:duration=10")
+
+    # 24fps source: 240 frames over 10s
+    video = dataclasses.replace(
+        _make_video("vid-mm-001", str(src)),
+        frame_rate_numerator=24,
+        frame_rate_denominator=1,
+        duration_frames=240,
+    )
+    clip = _make_clip("clip-mm-001", "vid-mm-001", in_point=48, out_point=144)
+
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    # total_duration = (out_point - in_point) / source_fps = (144 - 48) / 24 = 4.0s
+    job = _make_job(str(out), total_duration=4.0)
+    cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+    r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
+    assert r.returncode == 0, f"Render failed (exit {r.returncode}):\n{r.stderr.decode()[-800:]}"
+    assert out.exists(), "Output file must exist"
+    assert out.stat().st_size > 0, "Output file must be non-empty"
+
+    # output_t=2.0s is the midpoint of the 4s output (= source midpoint at (2.0+6.0)/2 = 4.0s)
+    assert_inpoint_identity(
+        out, output_t=2.0, source=src, source_start=2.0, source_end=6.0, threshold=0.95
+    )
+    await assert_stream_inventory(out, video=True, audio=False)

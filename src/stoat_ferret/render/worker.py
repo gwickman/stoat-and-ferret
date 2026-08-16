@@ -995,7 +995,7 @@ async def _build_single_clip_command(
     first_clip = clips[0]
     use_translator_sc = first_clip.clip_type in ("image", "generator") or bool(first_clip.effects)
 
-    input_path, source_audio_codec, _ = await _resolve_clip_source(
+    input_path, source_audio_codec, source_fps = await _resolve_clip_source(
         first_clip,
         ctx.job.project_id,
         ctx.video_repository,
@@ -1036,7 +1036,7 @@ async def _build_single_clip_command(
         await _build_sc_subtitle_inputs(cmd, ctx)
 
     # Segment timing: seek to in_point + timeline_start so the correct source frames are read.
-    in_point_secs = first_clip.in_point / fps  # fps already extracted above
+    in_point_secs = first_clip.in_point / source_fps
     cmd.extend(["-ss", str(in_point_secs + timeline_start), "-t", str(seg_duration)])
 
     # Filter assembly: translator path for image/generator/effects clips; legacy -vf for file.
