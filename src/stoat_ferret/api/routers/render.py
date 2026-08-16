@@ -608,6 +608,8 @@ async def create_render_job(
     # Inject delivery profile ID for worker-path QC resolution (BL-477)
     if delivery_profile is not None:
         plan_data["settings"]["delivery_profile_id"] = str(delivery_profile.id)
+    # Inject persisted transitions into render_plan settings (BL-792)
+    plan_data["settings"]["transitions"] = project.transitions or []
     render_plan_json = json.dumps(plan_data)
 
     # Empty timeline check (FR-002)

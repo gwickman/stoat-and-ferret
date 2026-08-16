@@ -478,7 +478,10 @@ async def _build_clip_input_list(
     fps_mc: float,
 ) -> tuple[list[Any], list[float], str | None, int, list[float], list[int]]:
     """Build per-clip ClipWithEffects list, durations, audio codec info, and in-point offsets."""
-    from stoat_ferret_core import ClipWithEffects
+    from stoat_ferret_core import ClipWithEffects, RenderTransition
+
+    transitions_list: list[dict[str, Any]] = ctx.settings.get("transitions", [])
+    transition_lookup: dict[str, dict[str, Any]] = {t["clip_a_id"]: t for t in transitions_list}
 
     cwe_list: list[Any] = []
     clip_durations_mc: list[float] = []
@@ -512,6 +515,10 @@ async def _build_clip_input_list(
         else:
             in_point_secs_list.append(0.0)  # image and generator clips: no source seek
         render_effects = _build_clip_render_effects(clip, ctx.effect_registry)
+        outgoing: Any = None
+        if clip.id in transition_lookup:
+            t = transition_lookup[clip.id]
+            outgoing = RenderTransition(t["transition_type"], t["duration"])
         cwe_list.append(
             ClipWithEffects(
                 input_index=i,
@@ -519,6 +526,7 @@ async def _build_clip_input_list(
                 framerate=framerate_mc,
                 source_path=source_path_mc,
                 effects=render_effects,
+                outgoing_transition=outgoing,
             )
         )
     return (
