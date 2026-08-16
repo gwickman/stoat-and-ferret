@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v130 — Transition-Correctness: Oracle + Persisted Transitions (2026-08-16)
+
+1 theme, 4 features, PRs #993–#997.
+
+### Theme 1: transition-correctness
+
+- BL-808: Add `assert_transition_reference` oracle assertion — FFmpeg-gated function comparing SSIM of transition window against an independently rendered reference; two discriminative test cases (SSIM=1.0000 matching vs SSIM=0.8254 type mismatch); 0.95 threshold (PR #993; docstring-fix PR #994)
+- BL-792: Wire persisted `transitions_json` into render path — `render.py` injects project transitions into plan; `worker.py` builds per-clip `RenderTransition`; `clip_transition_durations` list threads audio acrossfade duration; new golden-argv wipeleft case; acceptance test + UAT journey 713 + chatbot scenario (PR #995; smoke PR #996; docs PR #997)
+
+### Quality
+
+- 3865 pytest tests passing (163 skipped, 0 failed); ruff, mypy clean
+- Windows CI runners stuck on PR #993 (windows-latest 3.11/3.12); merged with gate-pass policy
+
+---
+
 ## v129 — Multi-Clip Audio Correctness (2026-08-15)
 
 1 theme, 4 features, PRs #989–#992.
