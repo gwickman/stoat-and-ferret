@@ -352,9 +352,9 @@ If the token is absent, the render pipeline has regressed.
 #### xfade Timebase Normalization
 
 Multi-clip renders with xfade transitions require all input clips to share the same timebase.
-The render pipeline normalizes this via `fps=30,settb=1/30` applied to every input stream
-before the xfade filter. Without this step, xfade may produce a 0-byte output or corrupt
-the duration of the transition.
+The render pipeline normalizes this via `fps=N,settb=1/N` (where N is `project.output_fps`,
+defaulting to 30) applied to every input stream before the xfade filter. Without this step,
+xfade may produce a 0-byte output or corrupt the duration of the transition.
 
 Symptom: output file exists but is 0 bytes or shorter than expected. Check the FFmpeg
 stderr tail in the evidence API for `[Parsed_xfade]` warnings.

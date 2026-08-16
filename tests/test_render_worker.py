@@ -1920,6 +1920,50 @@ class TestGoldenArgv:
         assert "acrossfade=d=0.35[aout]" in fc
         assert "-an" not in result
 
+    @pytest.mark.asyncio
+    async def test_golden_case_multi_clip_nondefault_fps(self) -> None:
+        """Two file clips with fps=24.0 plan -> filter_complex uses fps=24,settb=1/24 (BL-793-AC-6).
+
+        Source clips are 30fps; clip duration = 900/30 = 30s; xfade offset = 30 - 1 = 29.
+        Only the plan fps changes — source frame count and xfade offset are unaffected.
+        """
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-ndfps-a", "vid-1")
+        clip_b = _g_make_clip("clip-ndfps-b", "vid-2")
+        job = _g_make_job(_g_make_plan(fps=24.0))
+
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-filter_complex",
+            (
+                "[0:v]fps=24,settb=1/24[v0];[1:v]fps=24,settb=1/24[v1];"
+                "[v0]fps=24,settb=1/24[pv0];[v1]fps=24,settb=1/24[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final]"
+            ),
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "24.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Unit tests for _build_mc_subtitle_inputs helper (NFR-003)

@@ -4720,7 +4720,7 @@ class RenderGraphTranslator:
         """Creates a new RenderGraphTranslator."""
         ...
 
-    def translate(self, clips: list[ClipWithEffects]) -> tuple[str, list[str]]:
+    def translate(self, clips: list[ClipWithEffects], fps: float) -> tuple[str, list[str]]:
         """Translates a list of clips with effects into a (filter_complex, input_paths) tuple.
 
         Args:

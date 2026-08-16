@@ -477,7 +477,7 @@ def test_image_clip_animated_opacity(tmp_path: Path) -> None:
         effects=[effect],
     )
     translator = RenderGraphTranslator()
-    filter_complex, _ = translator.translate([cwe])
+    filter_complex, _ = translator.translate([cwe], 30.0)
 
     cmd = [
         "ffmpeg",
