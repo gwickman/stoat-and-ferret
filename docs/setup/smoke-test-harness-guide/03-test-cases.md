@@ -622,6 +622,26 @@ Verifies the `GET /api/v1/system/state` reconnect-recovery surface: render job v
 
 ---
 
+## Phase 16 — v130 Non-Default Transition Smoke Tests (`test_render_contract.py`, BL-792)
+
+Verifies that wiring persisted transitions into `ClipWithEffects.outgoing_transition` produces the correct `xfade` filter fragment in the Rust translator's `filter_complex` output.
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_non_default_transition_in_filter_complex` | Non-default `outgoing_transition` (`wipeleft/0.35`) produces `xfade=transition=wipeleft:duration=0.35` in `filter_complex` |
+
+**Test function:** `test_non_default_transition_in_filter_complex`
+**File:** `tests/smoke/test_render_contract.py`
+**CI lane:** Unconditional unit lane — no `STOAT_TEST_FFMPEG` required (pure Rust translation call, no FFmpeg invocation)
+
+**What it tests:** Constructs two `ClipWithEffects` instances via the Rust core, setting `outgoing_transition=RenderTransition("wipeleft", 0.35)` on the first clip. Calls `RenderGraphTranslator().translate(clips)` and unpacks the result as `(filter_complex, _)`. Asserts `"xfade=transition=wipeleft:duration=0.35" in filter_complex`.
+
+**Purpose:** Closes the smoke coverage gap for non-default transition types introduced by BL-792 (wire persisted transitions). Before this test, all existing `test_render_contract.py` multi-clip smoke tests exercised the default `fade/1.0s` fallback path only — a non-default `outgoing_transition` was never verified at the Rust translator level in the unconditional CI lane.
+
+**Complementary tests:** This smoke test covers the Rust translator output directly. The golden-argv test `test_golden_case_wipeleft_transition` in `tests/test_render_worker.py` covers the full Python command-builder argv path (including `offset=29.65`) for the same `wipeleft/0.35` case.
+
+---
+
 ## Endpoint Coverage Map
 
 Shows which endpoints are tested by which test file. Endpoints without smoke test coverage are listed at the bottom.

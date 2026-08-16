@@ -163,6 +163,12 @@ silent schema regressions from reaching `main` undetected.
 |--------------|---------------|------|
 | test_multi_clip_audio_render_contract | no-TTS source-audio argv | Argv-level only; end-to-end audio requires STOAT_TEST_FFMPEG=1 |
 
+### Phase 16 — v130 Non-Default Transition Smoke Tests (BL-792)
+
+| Test function | Coverage tier | Note |
+|--------------|---------------|------|
+| `test_non_default_transition_in_filter_complex` | unconditional unit lane | Calls `RenderGraphTranslator().translate(clips)` directly with `outgoing_transition=RenderTransition("wipeleft", 0.35)` on the first clip and asserts `"xfade=transition=wipeleft:duration=0.35" in filter_complex`. No STOAT_TEST_FFMPEG gate — pure Rust translation call with no FFmpeg invocation. Part of BL-792 (wire persisted transitions). |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
