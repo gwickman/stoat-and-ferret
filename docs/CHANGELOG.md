@@ -4,6 +4,27 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v131 — Render FPS Correctness (2026-08-16)
+
+1 theme, 5 features, PRs #998–#1000.
+
+### Theme 1: render-fps-correctness
+
+- BL-811: `fix(render): use source fps for single-clip in_point division` — corrects
+  `_build_single_clip_command` to use `source_fps` from `_resolve_clip_source` instead of the
+  render fps for in-point seek (PR #998)
+- BL-793: `feat(render): wire project.output_fps through translate() pipeline` —
+  `RenderGraphTranslator.translate()` now takes `fps: f64`; `render.py:600` injects
+  `project.output_fps`; smoke-test call sites migrated atomically alongside the signature
+  change (PR #999); UAT journey `j_nondefault_fps` added for 24fps render cadence (PR #1000)
+
+### Quality
+
+- 3867 pytest tests passing (165 skipped, 0 failed); ruff, mypy clean; tsc clean; 895/895 vitest
+  passing; cargo clippy clean; cargo test 136 passing
+
+---
+
 ## v130 — Transition-Correctness: Oracle + Persisted Transitions (2026-08-16)
 
 1 theme, 4 features, PRs #993–#997.
