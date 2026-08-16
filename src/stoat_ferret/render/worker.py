@@ -476,8 +476,14 @@ async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
     fps_mc: float,
-) -> tuple[list[Any], list[float], str | None, int, list[float], list[int]]:
-    """Build per-clip ClipWithEffects list, durations, audio codec info, and in-point offsets."""
+) -> tuple[list[Any], list[float], str | None, int, list[float], list[int], list[float | None]]:
+    """Build per-clip ClipWithEffects list, durations, audio codec info, and in-point offsets.
+
+    Returns an extra list `clip_transition_durations` (one entry per clip) containing the
+    saved outgoing transition duration for that clip boundary, or None if no transition was
+    saved.  This is used by the Python-side audio acrossfade builder — ClipWithEffects has no
+    #[pyo3(get)] on outgoing_transition, so Python cannot read it back from the object.
+    """
     from stoat_ferret_core import ClipWithEffects, RenderTransition
 
     transitions_list: list[dict[str, Any]] = ctx.settings.get("transitions", [])
@@ -485,6 +491,7 @@ async def _build_clip_input_list(
 
     cwe_list: list[Any] = []
     clip_durations_mc: list[float] = []
+    clip_transition_durations: list[float | None] = []
     source_audio_codec_mc: str | None = None
     source_audio_input_idx_mc: int = 0
     in_point_secs_list: list[float] = []
@@ -519,6 +526,9 @@ async def _build_clip_input_list(
         if clip.id in transition_lookup:
             t = transition_lookup[clip.id]
             outgoing = RenderTransition(t["transition_type"], t["duration"])
+            clip_transition_durations.append(t["duration"])
+        else:
+            clip_transition_durations.append(None)
         cwe_list.append(
             ClipWithEffects(
                 input_index=i,
@@ -536,15 +546,25 @@ async def _build_clip_input_list(
         source_audio_input_idx_mc,
         in_point_secs_list,
         audio_input_indices_mc,
+        clip_transition_durations,
     )
 
 
-def _get_transition_duration(cwe_list: list[Any], k: int) -> float:
+def _get_transition_duration(
+    cwe_list: list[Any],
+    k: int,
+    clip_transition_durations: list[float | None] | None = None,
+) -> float:
     """Return the outgoing transition duration for cwe_list[k-1], defaulting to 1.0s.
 
-    Uses getattr because outgoing_transition has no #[pyo3(get)] in the current binding;
-    it evaluates to None until the binding is extended, producing the correct 1.0s default.
+    Checks clip_transition_durations[k-1] first (the Python-side persisted durations).
+    Falls back to getattr on the ClipWithEffects object; outgoing_transition has no
+    #[pyo3(get)] in the current binding so getattr always returns None → 1.0 default.
     """
+    if clip_transition_durations is not None and k - 1 < len(clip_transition_durations):
+        d = clip_transition_durations[k - 1]
+        if d is not None:
+            return d
     t = getattr(cwe_list[k - 1], "outgoing_transition", None)
     return t.duration_secs if t is not None else 1.0
 
@@ -554,6 +574,7 @@ def _build_audio_acrossfade_chain(
     all_input_count: int,
     clip_durations_mc: list[float],
     cwe_list: list[Any],
+    clip_transition_durations: list[float | None] | None = None,
 ) -> str | None:
     """Build an acrossfade audio filter chain for all_input_count inputs.
 
@@ -576,7 +597,7 @@ def _build_audio_acrossfade_chain(
             labels.append(src_label)
     current = labels[0]
     for k in range(1, all_input_count):
-        t = _get_transition_duration(cwe_list, k)
+        t = _get_transition_duration(cwe_list, k, clip_transition_durations)
         d_str = str(int(t)) if t == int(t) else str(t)
         intermediate = f"[xa{k - 1}]" if k < all_input_count - 1 else _LABEL_AOUT
         parts.append(f"{current}{labels[k]}acrossfade=d={d_str}{intermediate}")
@@ -594,6 +615,7 @@ def _assemble_multi_tts_filter(
     audio_input_indices_mc: list[int],
     clip_durations_mc: list[float],
     cwe_list: list[Any],
+    clip_transition_durations: list[float | None] | None = None,
 ) -> None:
     """Assemble filter_complex and -map flags for multi-clip TTS/no-TTS paths."""
     if tts_inputs:
@@ -631,7 +653,11 @@ def _assemble_multi_tts_filter(
         deliberately_silent = len(audio_input_indices_mc) == 0
         if not deliberately_silent:
             audio_chain = _build_audio_acrossfade_chain(
-                audio_input_indices_mc, len(clip_durations_mc), clip_durations_mc, cwe_list
+                audio_input_indices_mc,
+                len(clip_durations_mc),
+                clip_durations_mc,
+                cwe_list,
+                clip_transition_durations,
             )
             assert audio_chain is not None  # non-empty audio_input_indices_mc → not None
             combined = filter_complex_str + ";" + audio_chain
@@ -713,6 +739,7 @@ async def _build_multi_clip_command(
         source_audio_input_idx_mc,
         in_point_secs_list,
         audio_input_indices_mc,
+        clip_transition_durations,
     ) = await _build_clip_input_list(ctx, clips, fps_mc)
 
     translator = RenderGraphTranslator()
@@ -742,6 +769,7 @@ async def _build_multi_clip_command(
         audio_input_indices_mc,
         clip_durations_mc,
         cwe_list,
+        clip_transition_durations,
     )
 
     # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
