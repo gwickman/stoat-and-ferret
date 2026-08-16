@@ -233,9 +233,8 @@ def assert_transition_reference(
 
     Raises AssertionError if mean SSIM < tolerance.
 
-    Note: Distinguishing visually similar transitions requires high-contrast
-    fixture content (e.g. testsrc2 with distinct patterns per clip). Low-contrast
-    fixtures may fail to discriminate fade/1.0 from wipeleft/0.35 reliably.
+    Note: Distinguishing similar transitions requires high-contrast fixture content
+    (e.g. testsrc2). Low-contrast fixtures may fail to discriminate transition types.
     """
     try:
         ssim = compute_ssim(output, seam_t, ref, seam_t, duration=duration_secs)
