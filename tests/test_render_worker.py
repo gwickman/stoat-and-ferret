@@ -1597,12 +1597,8 @@ class TestGoldenArgv:
         vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
         clip_a = _g_make_clip("clip-wt-a", "vid-1")  # out_point=900, in_point=0 -> 30.0s
         clip_b = _g_make_clip("clip-wt-b", "vid-2")
-        transitions = [
-            {"clip_a_id": "clip-wt-a", "transition_type": "wipeleft", "duration": 0.35}
-        ]
-        job = _g_make_job(
-            _g_make_plan(total_duration=29.65, transitions=transitions)
-        )
+        transitions = [{"clip_a_id": "clip-wt-a", "transition_type": "wipeleft", "duration": 0.35}]
+        job = _g_make_job(_g_make_plan(total_duration=29.65, transitions=transitions))
 
         result = await build_command_for_job(
             job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
