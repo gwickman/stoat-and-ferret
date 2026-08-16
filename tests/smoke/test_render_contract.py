@@ -974,3 +974,41 @@ async def test_multi_clip_audio_render_contract() -> None:
     assert "-map" in cmd, f"-map not found in command: {cmd}"
     assert "[aout]" in cmd, f"[aout] not found in command: {cmd}"
     assert "-an" not in cmd, f"-an must be absent for audio-capable clips; got: {cmd}"
+
+
+def test_non_default_transition_in_filter_complex() -> None:
+    """Non-default outgoing_transition produces xfade=transition=<type>:duration=<d> (BL-792).
+
+    Calls the Rust translator directly with a wipeleft/0.35 outgoing_transition on the
+    first clip and asserts the filter_complex string contains the correct xfade fragment.
+    No STOAT_TEST_FFMPEG gate — pure Rust translation call with no FFmpeg invocation.
+    """
+    from stoat_ferret_core import (
+        ClipWithEffects,
+        RenderEffect,
+        RenderGraphTranslator,
+        RenderTransition,
+    )
+
+    clips = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip0.mp4",
+            effects=[RenderEffect.none()],
+            outgoing_transition=RenderTransition("wipeleft", 0.35),
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=5.0,
+            framerate=30.0,
+            source_path="/clip1.mp4",
+            effects=[RenderEffect.none()],
+        ),
+    ]
+    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    assert "xfade=transition=wipeleft:duration=0.35" in filter_complex, (
+        f"filter_complex must contain 'xfade=transition=wipeleft:duration=0.35';"
+        f" got: {filter_complex!r}"
+    )
