@@ -1201,6 +1201,7 @@ def _g_make_plan(
     codec: str = "libx264",
     quality_preset: str = "standard",
     soft_subtitles: list[dict] | None = None,
+    transitions: list[dict] | None = None,
 ) -> str:
     settings: dict = {
         "output_format": "mp4",
@@ -1212,6 +1213,8 @@ def _g_make_plan(
     }
     if soft_subtitles:
         settings["soft_subtitles"] = soft_subtitles
+    if transitions is not None:
+        settings["transitions"] = transitions
     return json.dumps({"total_duration": total_duration, "settings": settings})
 
 
@@ -1588,6 +1591,47 @@ class TestGoldenArgv:
         ]
 
     @pytest.mark.asyncio
+    async def test_golden_case_wipeleft_transition(self) -> None:
+        """Two clips with wipeleft/0.35 saved transition -> xfade offset=29.65 (BL-792 AC-6)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-wt-a", "vid-1")  # out_point=900, in_point=0 -> 30.0s
+        clip_b = _g_make_clip("clip-wt-b", "vid-2")
+        transitions = [{"clip_a_id": "clip-wt-a", "transition_type": "wipeleft", "duration": 0.35}]
+        job = _g_make_job(_g_make_plan(total_duration=29.65, transitions=transitions))
+
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=wipeleft:duration=0.35:offset=29.65[xf0];"
+                "[xf0]format=yuv420p[final]"
+            ),
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
     async def test_golden_case_7_no_clips_raises(self) -> None:
         """No clips in timeline -> CommandBuildError with project-id message."""
         job = _g_make_job(_g_make_plan())
@@ -1815,6 +1859,27 @@ class TestGoldenArgv:
         assert "acrossfade=d=1[aout]" in result[result.index("-filter_complex") + 1]
         assert "-map" in result
         assert "[aout]" in result
+        assert "-an" not in result
+
+    @pytest.mark.asyncio
+    async def test_golden_case_wipeleft_transition_audio(self) -> None:
+        """Two audio-capable clips with wipeleft/0.35 -> acrossfade=d=0.35 (BL-792)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2, audio_codec="aac")
+        clip_a = _g_make_clip("clip-wt-audio-a", "vid-1")
+        clip_b = _g_make_clip("clip-wt-audio-b", "vid-2")
+        transitions = [
+            {"clip_a_id": "clip-wt-audio-a", "transition_type": "wipeleft", "duration": 0.35}
+        ]
+        job = _g_make_job(_g_make_plan(total_duration=29.65, transitions=transitions))
+
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        fc = result[result.index("-filter_complex") + 1]
+        assert "xfade=transition=wipeleft:duration=0.35:offset=29.65" in fc
+        assert "acrossfade=d=0.35[aout]" in fc
         assert "-an" not in result
 
 

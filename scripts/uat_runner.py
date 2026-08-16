@@ -75,6 +75,7 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     708: [],
     709: [],
     710: [],
+    713: [],
 }
 
 # Human-readable journey names for screenshot directories and reports
@@ -105,6 +106,7 @@ JOURNEY_NAMES: dict[int, str] = {
     708: "r2-chroma-key",
     709: "r2-lens-distort",
     710: "r2-gradient-generator",
+    713: "transitions-wiring",
 }
 
 # Known benign console error patterns to exclude from reports
@@ -128,6 +130,7 @@ JOURNEY_MODULE_MAP: dict[int, str] = {
     709: "tests.uat.journeys.j_lens_distort",
     710: "tests.uat.journeys.j_gradient_generator",
     712: "tests.uat.journeys.j_multi_clip_audio",
+    713: "tests.uat.journeys.j_transitions",
 }
 
 KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "tests" / "fixtures" / "baseline-uat-failures.json"
