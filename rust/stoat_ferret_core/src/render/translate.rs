@@ -462,8 +462,12 @@ impl RenderGraphTranslator {
     /// Raises:
     ///     ValueError: If clips is empty, exceeds 100, or contains invalid data.
     #[pyo3(name = "translate")]
-    fn py_translate(&self, clips: Vec<ClipWithEffects>) -> PyResult<(String, Vec<String>)> {
-        self.translate(clips)
+    fn py_translate(
+        &self,
+        clips: Vec<ClipWithEffects>,
+        fps: f64,
+    ) -> PyResult<(String, Vec<String>)> {
+        self.translate(clips, fps)
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
@@ -477,6 +481,7 @@ impl RenderGraphTranslator {
     pub fn translate(
         &self,
         clips: Vec<ClipWithEffects>,
+        fps: f64,
     ) -> Result<(String, Vec<String>), TranslateError> {
         // N > 100 guard — checked before any allocation.
         if clips.len() > 100 {
@@ -515,7 +520,7 @@ impl RenderGraphTranslator {
         // Stage 1: per-clip fps/settb normalization (all clips → 30 fps).
         for clip in &clips {
             let i = clip.input_index;
-            parts.push(format!("[{i}:v]fps=30,settb=1/30[v{i}]"));
+            parts.push(format!("[{i}:v]fps={fps},settb=1/{fps}[v{i}]"));
         }
 
         // Stage 2: per-clip effect sub-chains.
@@ -561,8 +566,10 @@ impl RenderGraphTranslator {
                 // fps/settb re-pin at every boundary feeding xfade (BL-507 cross-segment rule).
                 let pinned_current = format!("[pv{}]", k - 1);
                 let pinned_next = format!("[pn{}]", k);
-                parts.push(format!("{current_label}fps=30,settb=1/30{pinned_current}"));
-                parts.push(format!("{next_label}fps=30,settb=1/30{pinned_next}"));
+                parts.push(format!(
+                    "{current_label}fps={fps},settb=1/{fps}{pinned_current}"
+                ));
+                parts.push(format!("{next_label}fps={fps},settb=1/{fps}{pinned_next}"));
 
                 // Determine xfade parameters from outgoing_transition (clip k-1).
                 let (transition_type, duration) = if let Some(t) = &clips[k - 1].outgoing_transition
@@ -746,7 +753,7 @@ mod tests {
     #[test]
     fn test_single_clip_has_fps_settb_and_format() {
         let clips = vec![clip(0, 5.0, 30.0, "/a.mp4")];
-        let (result, paths) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, paths) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert!(
             result.contains("fps=30"),
             "should contain fps=30, got: {result}"
@@ -772,7 +779,7 @@ mod tests {
             clip(0, 5.0, 30.0, "/clip0.mp4"),
             clip(1, 5.0, 30.0, "/clip1.mp4"),
         ];
-        let (_filter, paths) = RenderGraphTranslator.translate(clips).unwrap();
+        let (_filter, paths) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert_eq!(paths, vec!["/clip0.mp4", "/clip1.mp4"]);
     }
 
@@ -782,7 +789,7 @@ mod tests {
             clip_with_alpha(0, 5.0, "/a.mp4", 0.0, 1.0),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         let effect_pos = result
             .find("geq")
             .expect("should contain geq effect sub-chain");
@@ -799,7 +806,7 @@ mod tests {
             clip_with_alpha(0, 5.0, "/a.mp4", 0.0, 1.0),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert!(
             result.contains("min(1,T/"),
             "AnimatedAlpha geq expression must use uppercase T (FFmpeg geq timestamp variable), got: {result}"
@@ -813,7 +820,7 @@ mod tests {
     #[test]
     fn test_mixed_framerate_normalizes() {
         let clips = vec![clip(0, 5.0, 24.0, "/a.mp4"), clip(1, 5.0, 60.0, "/b.mp4")];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         let fps_count = result.matches("fps=30").count();
         assert!(
             fps_count >= 2,
@@ -827,7 +834,7 @@ mod tests {
 
     #[test]
     fn test_empty_clips_returns_error() {
-        let result = RenderGraphTranslator.translate(vec![]);
+        let result = RenderGraphTranslator.translate(vec![], 30.0);
         assert!(
             matches!(result, Err(TranslateError::EmptyClipList)),
             "empty clips should return EmptyClipList error"
@@ -838,7 +845,7 @@ mod tests {
     fn test_too_many_clips_returns_error() {
         let clips: Vec<ClipWithEffects> =
             (0..101).map(|i| clip(i, 1.0, 30.0, "/clip.mp4")).collect();
-        let result = RenderGraphTranslator.translate(clips);
+        let result = RenderGraphTranslator.translate(clips, 30.0);
         assert!(
             matches!(result, Err(TranslateError::TooManyClips(101))),
             "101 clips should return TooManyClips(101)"
@@ -848,7 +855,7 @@ mod tests {
     #[test]
     fn test_invalid_source_path_returns_error() {
         let clips = vec![clip(0, 5.0, 30.0, "")];
-        let result = RenderGraphTranslator.translate(clips);
+        let result = RenderGraphTranslator.translate(clips, 30.0);
         assert!(
             matches!(result, Err(TranslateError::InvalidSourcePath(0))),
             "empty source_path should return InvalidSourcePath(0)"
@@ -861,7 +868,7 @@ mod tests {
             clip_with_transition(0, 5.0, "/a.mp4", "fade", 0.0),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let result = RenderGraphTranslator.translate(clips);
+        let result = RenderGraphTranslator.translate(clips, 30.0);
         assert!(
             matches!(result, Err(TranslateError::InvalidTransitionDuration(0))),
             "zero transition duration should return InvalidTransitionDuration(0)"
@@ -874,7 +881,7 @@ mod tests {
             clip_with_transition(0, 5.0, "/a.mp4", "not_a_real_transition", 1.0),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let result = RenderGraphTranslator.translate(clips);
+        let result = RenderGraphTranslator.translate(clips, 30.0);
         assert!(
             matches!(result, Err(TranslateError::InvalidTransitionType(0, _))),
             "unknown transition type should return InvalidTransitionType(0, ...)"
@@ -887,7 +894,7 @@ mod tests {
             clip_with_transition(0, 5.0, "/a.mp4", "fade", 1.0),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert!(
             result.contains("xfade"),
             "two clips should produce xfade, got: {result}"
@@ -904,7 +911,7 @@ mod tests {
             clip_with_transition(0, 5.0, "/a.mp4", "wipeleft", 2.5),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert!(
             result.contains("transition=wipeleft"),
             "should use specified transition type, got: {result}"
@@ -922,7 +929,7 @@ mod tests {
             clip_with_transition(0, 3.0, "/a.mp4", "fade", 1.0),
             clip(1, 3.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         let fmt_pos = result
             .rfind("format=yuv420p")
             .expect("format=yuv420p not found");
@@ -940,7 +947,7 @@ mod tests {
             clip_with_transition(0, 5.0, "/a.mp4", "fade", 1.0),
             clip(1, 5.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         // Stage 1 gives one fps=30 per clip; re-pins at xfade boundary give more.
         let fps_count = result.matches("fps=30").count();
         assert!(
@@ -956,7 +963,7 @@ mod tests {
             clip_with_transition(0, 3.0, "/a.mp4", "fade", 1.0),
             clip(1, 3.0, 30.0, "/b.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert!(
             result.contains("offset=2"),
             "xfade must include offset=2 for 3s clip with 1s transition; got: {result}"
@@ -972,7 +979,7 @@ mod tests {
             clip_with_transition(1, 3.0, "/b.mp4", "fade", 1.0),
             clip(2, 5.0, 30.0, "/c.mp4"),
         ];
-        let (result, _) = RenderGraphTranslator.translate(clips).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
         assert!(
             result.contains("offset=3"),
             "first xfade must include offset=3; got: {result}"
@@ -987,7 +994,7 @@ mod tests {
     fn test_100_clips_is_accepted() {
         let clips: Vec<ClipWithEffects> =
             (0..100).map(|i| clip(i, 1.0, 30.0, "/clip.mp4")).collect();
-        let result = RenderGraphTranslator.translate(clips);
+        let result = RenderGraphTranslator.translate(clips, 30.0);
         assert!(result.is_ok(), "100 clips should be accepted");
     }
 
@@ -1008,7 +1015,7 @@ mod tests {
             }],
             outgoing_transition: None,
         };
-        let (result, _) = RenderGraphTranslator.translate(vec![clip]).unwrap();
+        let (result, _) = RenderGraphTranslator.translate(vec![clip], 30.0).unwrap();
         assert!(
             result.contains(&filter_str),
             "Custom filter_chain must appear verbatim in output; got: {result}"

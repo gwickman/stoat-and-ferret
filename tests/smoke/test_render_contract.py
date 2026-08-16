@@ -518,7 +518,7 @@ def test_multi_clip_translator_xfade_present() -> None:
             effects=[RenderEffect.none()],
         ),
     ]
-    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    filter_complex, _ = RenderGraphTranslator().translate(clips, 30.0)
     assert "xfade" in filter_complex, (
         f"filter_complex must contain 'xfade' for a 2-clip project; got: {filter_complex!r}"
     )
@@ -551,7 +551,7 @@ def test_multi_clip_translator_input_paths_count_matches_clips() -> None:
             effects=[RenderEffect.none()],
         ),
     ]
-    _, input_paths = RenderGraphTranslator().translate(clips)
+    _, input_paths = RenderGraphTranslator().translate(clips, 30.0)
     assert len(input_paths) == len(clips), (
         f"input_paths count ({len(input_paths)}) must match clip count ({len(clips)})"
     )
@@ -583,7 +583,7 @@ def test_multi_clip_per_clip_effect_appears_in_filter_complex() -> None:
             effects=[RenderEffect.none()],
         ),
     ]
-    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    filter_complex, _ = RenderGraphTranslator().translate(clips, 30.0)
     assert "geq" in filter_complex, (
         f"animated_alpha effect must produce 'geq' in filter_complex; got: {filter_complex!r}"
     )
@@ -620,7 +620,7 @@ def test_multi_clip_custom_effect_appears_in_filter_complex() -> None:
             effects=[RenderEffect.none()],
         ),
     ]
-    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    filter_complex, _ = RenderGraphTranslator().translate(clips, 30.0)
     assert custom_filter in filter_complex, (
         f"custom filter_chain must appear verbatim in filter_complex; got: {filter_complex!r}"
     )
@@ -1007,7 +1007,7 @@ def test_non_default_transition_in_filter_complex() -> None:
             effects=[RenderEffect.none()],
         ),
     ]
-    filter_complex, _ = RenderGraphTranslator().translate(clips)
+    filter_complex, _ = RenderGraphTranslator().translate(clips, 30.0)
     assert "xfade=transition=wipeleft:duration=0.35" in filter_complex, (
         f"filter_complex must contain 'xfade=transition=wipeleft:duration=0.35';"
         f" got: {filter_complex!r}"

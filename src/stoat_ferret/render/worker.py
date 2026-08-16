@@ -743,7 +743,7 @@ async def _build_multi_clip_command(
     ) = await _build_clip_input_list(ctx, clips, fps_mc)
 
     translator = RenderGraphTranslator()
-    filter_complex_str, input_paths = translator.translate(cwe_list)
+    filter_complex_str, input_paths = translator.translate(cwe_list, fps_mc)
 
     _build_mc_clip_input_args(multi_cmd, clips, input_paths, clip_durations_mc, in_point_secs_list)
 
@@ -853,7 +853,7 @@ def _assemble_sc_filter_translator(
         effects=render_effects_sc,
     )
     translator_sc = RenderGraphTranslator()
-    filter_complex_sc, _ = translator_sc.translate([cwe_sc])
+    filter_complex_sc, _ = translator_sc.translate([cwe_sc], fps)
     if tts_inputs:
         tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
         combined_sc = filter_complex_sc + ";" + tts_filter_seg

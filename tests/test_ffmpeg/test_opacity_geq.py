@@ -240,7 +240,7 @@ def test_geq_render_graph_ramp(tmp_path: Path) -> None:
             effects=[RenderEffect.none()],
         ),
     ]
-    filter_complex, input_paths = RenderGraphTranslator().translate(clips)
+    filter_complex, input_paths = RenderGraphTranslator().translate(clips, 30.0)
     filter_complex_rgba = filter_complex.replace("format=yuv420p[final]", "format=rgba[final]")
 
     output_rgba = tmp_path / "ramp.bin"
