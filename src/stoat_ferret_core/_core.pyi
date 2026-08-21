@@ -4601,6 +4601,16 @@ class RenderEffect:
         end_s: float,
         timeline_t_capable: bool = True,
     ) -> RenderEffect: ...
+    @staticmethod
+    def audio_custom(filter_chain: str) -> RenderEffect:
+        """Creates an audio-custom effect from a raw FFmpeg audio filter chain string.
+
+        Args:
+            filter_chain: A valid FFmpeg audio filter chain string (e.g. ``"volume=2.0"``).
+                Produced by ``EffectDefinition.build_fn()`` for ``stream_kind="a"`` effects.
+        """
+        ...
+
     def __repr__(self) -> str: ...
 
 class RenderTransition:

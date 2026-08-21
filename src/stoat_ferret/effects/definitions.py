@@ -494,6 +494,7 @@ AUDIO_MIX = EffectDefinition(
     build_fn=_build_audio_mix,
     ai_summary="Combine multiple audio tracks into a single mixed stream.",
     example_prompt="Mix the narration and background music tracks into one output.",
+    stream_kind="a",
 )
 
 VOLUME = EffectDefinition(
@@ -528,6 +529,7 @@ VOLUME = EffectDefinition(
     example_prompt="Reduce the audio volume on this clip to 50%.",
     automatable=frozenset({"volume"}),
     automation_filter_template="volume='{expr}':eval=frame",
+    stream_kind="a",
 )
 
 AUDIO_FADE = EffectDefinition(
@@ -584,6 +586,7 @@ AUDIO_FADE = EffectDefinition(
     build_fn=_build_audio_fade,
     ai_summary="Fade audio in from silence or out to silence over a duration.",
     example_prompt="Fade the audio in over 2 seconds at the start of the clip.",
+    stream_kind="a",
 )
 
 AUDIO_DUCKING = EffectDefinition(
@@ -632,6 +635,7 @@ AUDIO_DUCKING = EffectDefinition(
     build_fn=_build_audio_ducking,
     ai_summary="Automatically lower music volume when a voice track is active.",
     example_prompt="Duck the background music whenever the narrator is speaking.",
+    stream_kind="a",
 )
 
 VIDEO_FADE = EffectDefinition(
@@ -857,6 +861,7 @@ NOISE_REDUCTION = EffectDefinition(
     build_fn=_build_noise_reduction,
     ai_summary="Reduce background noise or remove clicks from audio using FFmpeg adaptive filters.",
     example_prompt="Remove the background hum from the narration track.",
+    stream_kind="a",
 )
 
 
@@ -917,6 +922,7 @@ DEESSER = EffectDefinition(
     build_fn=_build_deesser,
     ai_summary="Remove harsh 's' and 'sh' sounds from voice audio using FFmpeg de-esser filter.",
     example_prompt="The narration sounds too sibilant, fix the harshness on the 's' sounds.",
+    stream_kind="a",
 )
 
 
@@ -990,6 +996,7 @@ DEPLOSIVE = EffectDefinition(
     example_prompt=(
         "There are loud plosive pops when the narrator says 'p' and 'b' sounds, please fix."
     ),
+    stream_kind="a",
 )
 
 

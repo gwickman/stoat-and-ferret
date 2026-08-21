@@ -26,6 +26,8 @@ import pytest
 from stoat_ferret.api.schemas.render import SoftSubtitleSpec
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
+from stoat_ferret.effects.definitions import VOLUME
+from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import (
     CommandBuildError,
@@ -1959,6 +1961,110 @@ class TestGoldenArgv:
             "23",
             "-r",
             "24.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_sc_audio_effect_dispatch(self) -> None:
+        """Single audio-capable clip with volume=2.0 -> audio chain in filter_complex (BL-794 AC-1).
+
+        Verifies that _build_clip_render_effects dispatches stream_kind='a' effects to the
+        audio chain ([0:a]<chain>[aout]) instead of the video filtergraph.
+        """
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        clip = _g_make_clip(
+            "clip-sc-audio-eff",
+            "vid-1",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 2.0}}],
+        )
+        reg = EffectRegistry()
+        reg.register("volume", VOLUME)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()), _g_clip_repo(clip), _g_video_repo(vid), effect_registry=reg
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];[0:a]volume=volume=2[aout]",
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_mc_audio_effect_dispatch(self) -> None:
+        """Two audio clips with volume=2.0 -> per-clip [i:a]chain[ai_eff] labels (BL-794 AC-2).
+
+        Verifies that multi-clip audio effect dispatch produces [0:a]…[a0_eff] and
+        [1:a]…[a1_eff] segments routed into acrossfade rather than the video filtergraph.
+        """
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2, audio_codec="aac")
+        clip_a = _g_make_clip(
+            "clip-mc-audio-eff-a",
+            "vid-1",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 2.0}}],
+        )
+        clip_b = _g_make_clip(
+            "clip-mc-audio-eff-b",
+            "vid-2",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 2.0}}],
+        )
+        reg = EffectRegistry()
+        reg.register("volume", VOLUME)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan(total_duration=60.0)),
+            _g_clip_repo(clip_a, clip_b),
+            _g_video_repo(vid1, vid2),
+            effect_registry=reg,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final];"
+                "[0:a]volume=volume=2[a0_eff];[1:a]volume=volume=2[a1_eff];"
+                "[a0_eff][a1_eff]acrossfade=d=1[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
             "-progress",
             "pipe:1",
             "/renders/golden.mp4",

@@ -222,6 +222,8 @@ pub enum RenderEffectKind {
     AnimatedAlpha { start: f64, end: f64 },
     /// Raw FFmpeg filter chain string injected directly (from EffectDefinition.build_fn output).
     Custom { filter_chain: String },
+    /// Audio-only filter chain string (stream_kind="a"); kept out of the video filtergraph.
+    AudioCustom { filter_chain: String },
 }
 
 /// An effect applied to a single render clip.
@@ -319,6 +321,21 @@ impl RenderEffect {
         })
     }
 
+    /// Creates an audio-custom effect from a raw FFmpeg audio filter chain string.
+    ///
+    /// Args:
+    ///     filter_chain: A valid FFmpeg audio filter chain string (e.g. "volume=2.0").
+    ///                   Produced by EffectDefinition.build_fn() for stream_kind="a" effects.
+    #[staticmethod]
+    #[pyo3(name = "audio_custom")]
+    pub fn py_audio_custom(filter_chain: String) -> Self {
+        Self {
+            kind: RenderEffectKind::AudioCustom { filter_chain },
+            timeline_t_capable: false,
+            enable_window: None,
+        }
+    }
+
     fn __repr__(&self) -> String {
         match &self.kind {
             RenderEffectKind::None => "RenderEffect.none()".to_string(),
@@ -327,6 +344,9 @@ impl RenderEffect {
             }
             RenderEffectKind::Custom { filter_chain } => {
                 format!("RenderEffect.custom({filter_chain:?})")
+            }
+            RenderEffectKind::AudioCustom { filter_chain } => {
+                format!("RenderEffect.audio_custom({filter_chain:?})")
             }
         }
     }
@@ -528,10 +548,12 @@ impl RenderGraphTranslator {
         let mut effective_labels: Vec<String> = Vec::new();
         for clip in &clips {
             let i = clip.input_index;
-            let has_effect = clip
-                .effects
-                .iter()
-                .any(|e| !matches!(e.kind, RenderEffectKind::None));
+            let has_effect = clip.effects.iter().any(|e| {
+                !matches!(
+                    e.kind,
+                    RenderEffectKind::None | RenderEffectKind::AudioCustom { .. }
+                )
+            });
 
             if has_effect {
                 let chain_result = build_effect_chain(clip);
@@ -679,6 +701,9 @@ fn build_effect_chain(clip: &ClipWithEffects) -> EffectChainResult {
                     filter_chain.clone()
                 };
                 filters.push(filter);
+            }
+            RenderEffectKind::AudioCustom { .. } => {
+                // Audio-only effect: handled by Python-side audio chain assembly; no-op here.
             }
         }
     }

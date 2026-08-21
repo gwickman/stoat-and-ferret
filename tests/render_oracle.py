@@ -217,6 +217,57 @@ def assert_seam_frame_order(
     assert post_ssim >= threshold, f"post-seam SSIM {post_ssim:.4f} < threshold {threshold}"
 
 
+async def measure_audio_rms_db(path: Path) -> float:
+    """Return the overall RMS level dB from ffmpeg astats stderr output.
+
+    Runs ``ffmpeg -i <path> -af astats -f null -`` via asyncio.to_thread, then parses
+    "RMS level dB:" from the "Overall" block in stderr.
+
+    Raises:
+        RuntimeError: If ffmpeg fails or the Overall block is not found in output.
+        ValueError: If the RMS level line is malformed or not present in the Overall block.
+    """
+    result = await asyncio.to_thread(
+        subprocess.run,
+        ["ffmpeg", "-i", str(path), "-af", "astats", "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    stderr = result.stderr
+    overall_idx = stderr.find("] Overall\n")
+    if overall_idx == -1:
+        overall_idx = stderr.find("] Overall\r\n")
+    if overall_idx == -1:
+        raise RuntimeError(
+            f"Overall block not found in ffmpeg astats output for {path}:\n{stderr[-800:]}"
+        )
+    overall_section = stderr[overall_idx:]
+    m = re.search(r"RMS level dB:\s*([-\d.]+)", overall_section)
+    if not m:
+        raise ValueError(
+            f"RMS level dB not found in Overall block for {path}:\n{overall_section[:400]}"
+        )
+    return float(m.group(1))
+
+
+def assert_audio_rms_changed(
+    measured_db: float,
+    baseline_db: float,
+    min_delta_db: float = 5.0,
+) -> None:
+    """Assert that measured_db differs from baseline_db by at least min_delta_db.
+
+    Raises:
+        AssertionError: If abs(measured_db - baseline_db) < min_delta_db.
+    """
+    delta = abs(measured_db - baseline_db)
+    assert delta >= min_delta_db, (
+        f"audio RMS delta {delta:.2f} dB < threshold {min_delta_db} dB "
+        f"(measured={measured_db:.2f} dB, baseline={baseline_db:.2f} dB)"
+    )
+
+
 def assert_transition_reference(
     output: Path,
     seam_t: float,
