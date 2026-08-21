@@ -24,7 +24,7 @@ from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.effects.definitions import EffectDefinition
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
-from stoat_ferret.render.worker import build_command_for_job
+from stoat_ferret.render.worker import CommandBuildError, build_command_for_job
 from tests.render_oracle import (
     assert_frame_count,
     assert_frame_rate,
@@ -219,14 +219,13 @@ async def test_multi_clip_clip_sort_order() -> None:
 
 
 @pytest.mark.asyncio
-async def test_multi_clip_real_effects_fetched_from_registry() -> None:
-    """BL-553-AC-1/AC-2: worker fetches real per-clip effects and calls translator.
+async def test_multi_clip_unknown_effect_raises_command_build_error_fail_closed() -> None:
+    """BL-795: unknown effect type on a clip raises CommandBuildError (fail-closed contract).
 
     Verifies:
-    - Worker iterates ALL clips, not just clips[0].
-    - Per-clip effects are resolved via the effect registry and passed to translator.
-    - Unknown effect_type falls back to RenderEffect.none() without crashing.
-    - The resulting command still contains valid filter_complex and -i inputs.
+    - Worker raises CommandBuildError when clip B has an unknown effect type.
+    - The error message names the effect type and clip id (agent-actionable).
+    - The render NEVER silently succeeds with the effect omitted.
     """
     blur_filter_str = "boxblur=luma_radius=5:luma_power=1"
 
@@ -266,30 +265,13 @@ async def test_multi_clip_real_effects_fetched_from_registry() -> None:
     video_repo.get = AsyncMock(side_effect=lambda vid_id: videos.get(vid_id))
 
     job = _make_job()
-    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+    with pytest.raises(CommandBuildError) as exc_info:
+        await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
 
-    assert isinstance(cmd, list)
-    assert cmd[0] == "ffmpeg"
-
-    # Both clips must appear in -i args (worker iterates ALL clips)
-    input_flags = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-i"]
-    assert "/media/clip_a.mp4" in input_flags
-    assert "/media/clip_b.mp4" in input_flags
-
-    # filter_complex must be present (translator was called)
-    assert "-filter_complex" in cmd
-    fc_idx = cmd.index("-filter_complex")
-    filter_complex = cmd[fc_idx + 1]
-    assert isinstance(filter_complex, str)
-    assert len(filter_complex) > 0
-
-    # The blur effect string must appear in filter_complex (BL-553-AC-2 / BL-606-AC-2)
-    assert blur_filter_str in filter_complex, (
-        f"Expected {blur_filter_str!r} in filter_complex but got: {filter_complex!r}"
-    )
-
-    # Output path must be last
-    assert cmd[-1] == _OUTPUT_PATH
+    # Error message must name the unknown effect type and clip id
+    error_msg = str(exc_info.value)
+    assert "unknown_effect" in error_msg, f"Expected effect type in error: {error_msg!r}"
+    assert "clip-b" in error_msg, f"Expected clip id in error: {error_msg!r}"
 
 
 # ---------------------------------------------------------------------------

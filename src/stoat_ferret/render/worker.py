@@ -367,11 +367,7 @@ def _build_clip_render_effects(
             effect_type = effect_data.get("effect_type", "")
             defn = effect_registry.get(effect_type)
             if defn is None:
-                logger.warning(
-                    "render_worker.unknown_effect_type",
-                    effect_type=effect_type,
-                    clip_id=clip.id,
-                )
+                raise CommandBuildError(f"Unknown effect type {effect_type!r} on clip {clip.id!r}")
             else:
                 filter_str = defn.build_fn(effect_data.get("parameters", {}))
                 window = effect_data.get("window")
