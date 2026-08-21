@@ -936,6 +936,70 @@ async def test_single_clip_windowed_effect_emits_enable() -> None:
     )
 
 
+@pytest.mark.skipif(
+    os.getenv("STOAT_TEST_FFMPEG") != "1",
+    reason="audio-effect dispatch smoke test requires STOAT_TEST_FFMPEG=1",
+)
+async def test_single_clip_audio_effect_routes_to_audio_chain() -> None:
+    """Single-clip audio effect routes to audio chain, not video chain (BL-794).
+
+    Verifies that _build_clip_render_effects dispatches stream_kind='a' effects
+    to the audio filtergraph segment ([0:a]...[aout]) and not the video segment.
+    """
+    effect_data: dict[str, Any] = {
+        "effect_type": "volume",
+        "parameters": {},
+    }
+    clip = _cmd_make_clip("clip-smoke-audio-sc", "vid-smoke-audio-sc", 0, effects=[effect_data])
+    video = _cmd_make_video("vid-smoke-audio-sc", "/media/smoke_audio_sc.mp4")
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    defn = MagicMock(spec=EffectDefinition)
+    defn.build_fn = lambda params: "volume=2.0"
+    defn.stream_kind = "a"
+    defn.timeline_t_capable = False
+    registry = EffectRegistry()
+    registry.register("volume", defn)
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 10.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan, job_id="job-smoke-audio-dispatch")
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+
+    assert "-filter_complex" in cmd, f"-filter_complex not found in command: {cmd}"
+    fc_idx = cmd.index("-filter_complex")
+    filter_complex = cmd[fc_idx + 1]
+
+    # Audio effect must be routed to the audio chain.
+    assert "[0:a]volume=2.0[aout]" in filter_complex, (
+        f"Expected '[0:a]volume=2.0[aout]' in filter_complex for audio-routed effect;"
+        f" got: {filter_complex!r}"
+    )
+
+    # Audio effect must NOT appear in the video filter chain segment.
+    assert "[0:v]volume=2.0" not in filter_complex, (
+        f"Audio effect 'volume=2.0' must not appear in the video chain; got: {filter_complex!r}"
+    )
+
+    # The command maps [aout] (not -an), confirming audio stream is output.
+    assert "[aout]" in cmd, f"[aout] must be in -map flags; got command: {cmd}"
+    assert "-an" not in cmd, f"-an must not be present when audio effect routes to [aout]: {cmd}"
+
+
 async def test_multi_clip_audio_render_contract() -> None:
     """Smoke: multi-clip render with audio-capable clips produces acrossfade argv."""
     videos = {
