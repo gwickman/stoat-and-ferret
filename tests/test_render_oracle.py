@@ -414,17 +414,29 @@ def test_assert_seam_frame_order_seam_exceeds_duration(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 _ASTATS_FIXTURE = Path(__file__).parent / "fixtures" / "ffmpeg-astats-ci-sample.txt"
-_EXPECTED_RMS_DB = -21.172768
 
 
 async def test_measure_audio_rms_db_parses_fixture() -> None:
     """measure_audio_rms_db extracts RMS level dB from the CI astats fixture (BL-794 AC-4).
 
     Mocks asyncio.to_thread so no FFmpeg binary is required.
+    The expected value is derived from the fixture's Overall block at test time so
+    the test stays correct regardless of which FFmpeg version last regenerated the
+    fixture (test_spatial_correlation_ac6_diagnostic_capture rewrites it on CI).
     """
+    import re as _re
     from unittest.mock import AsyncMock
 
     fixture_text = _ASTATS_FIXTURE.read_text(encoding="utf-8", errors="replace")
+
+    # Derive expected value independently from the fixture's Overall block.
+    overall_idx = fixture_text.find("] Overall\n")
+    if overall_idx == -1:
+        overall_idx = fixture_text.find("] Overall\r\n")
+    assert overall_idx != -1, "Fixture is missing the Overall block"
+    m = _re.search(r"RMS level dB:\s*([-\d.]+)", fixture_text[overall_idx:])
+    assert m, "Fixture Overall block is missing RMS level dB line"
+    expected_rms_db = float(m.group(1))
 
     fake_result = MagicMock()
     fake_result.returncode = 0
@@ -434,7 +446,9 @@ async def test_measure_audio_rms_db_parses_fixture() -> None:
         mock_th.return_value = fake_result
         result = await measure_audio_rms_db(Path("/fake/video.mp4"))
 
-    assert abs(result - _EXPECTED_RMS_DB) < 0.001, f"Expected RMS ~{_EXPECTED_RMS_DB}, got {result}"
+    assert abs(result - expected_rms_db) < 0.001, (
+        f"Parser returned {result!r}; fixture Overall says {expected_rms_db!r}"
+    )
 
 
 async def test_measure_audio_rms_db_raises_when_overall_absent() -> None:
