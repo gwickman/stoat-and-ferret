@@ -4,6 +4,29 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v132 — Audio Effect Dispatch Fix (2026-08-21)
+
+1 theme, 3 features, PRs #1001–#1003.
+
+### Theme 1: audio-effect-dispatch
+
+- BL-794: Fix audio effect dispatch — `AudioCustom { filter_chain: String }` Rust variant added
+  to `RenderEffectKind`; `_build_clip_render_effects` returns `(video_effects, audio_effects)`
+  tuple; audio effects route to audio filtergraph via `[{i}:a]<chain>[a{i}_eff]` pattern; 7
+  effect definitions updated with `stream_kind="a"` (PR #1001)
+- BL-794: Add smoke test `test_single_clip_audio_effect_routes_to_audio_chain` to
+  `tests/smoke/test_render_contract.py` — four assertions covering audio chain routing, video
+  chain exclusion, `-an` absence, and `[aout]` label presence (PR #1002)
+- BL-794: Update smoke-test harness guide with Phase 17 documentation for the audio-effect
+  dispatch smoke test (PR #1003)
+
+### Quality
+
+- 3873 pytest tests passing (166 skipped, 0 failed); ruff, mypy, tsc clean; 895/895 vitest
+  passing; cargo clippy clean; cargo test 136 passing
+
+---
+
 ## v131 — Render FPS Correctness (2026-08-16)
 
 1 theme, 5 features, PRs #998–#1000.
