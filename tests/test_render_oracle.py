@@ -14,6 +14,7 @@ import pytest
 
 from tests.render_oracle import (
     STOAT_TEST_FFMPEG,
+    assert_audio_rms_changed,
     assert_av_duration_alignment,
     assert_frame_count,
     assert_frame_rate,
@@ -22,6 +23,7 @@ from tests.render_oracle import (
     assert_stream_inventory,
     assert_transition_reference,
     compute_ssim,
+    measure_audio_rms_db,
 )
 
 _FFMPEG_SKIP = pytest.mark.skipif(
@@ -405,3 +407,56 @@ def test_assert_seam_frame_order_seam_exceeds_duration(tmp_path: Path) -> None:
             post_source=post_src,
             post_t=0.5,
         )
+
+
+# ---------------------------------------------------------------------------
+# Audio RMS oracle tests (BL-794)
+# ---------------------------------------------------------------------------
+
+_ASTATS_FIXTURE = Path(__file__).parent / "fixtures" / "ffmpeg-astats-ci-sample.txt"
+_EXPECTED_RMS_DB = -21.172768
+
+
+async def test_measure_audio_rms_db_parses_fixture() -> None:
+    """measure_audio_rms_db extracts RMS level dB from the CI astats fixture (BL-794 AC-4).
+
+    Mocks asyncio.to_thread so no FFmpeg binary is required.
+    """
+    from unittest.mock import AsyncMock
+
+    fixture_text = _ASTATS_FIXTURE.read_text(encoding="utf-8", errors="replace")
+
+    fake_result = MagicMock()
+    fake_result.returncode = 0
+    fake_result.stderr = fixture_text
+
+    with patch("tests.render_oracle.asyncio.to_thread", new_callable=AsyncMock) as mock_th:
+        mock_th.return_value = fake_result
+        result = await measure_audio_rms_db(Path("/fake/video.mp4"))
+
+    assert abs(result - _EXPECTED_RMS_DB) < 0.001, f"Expected RMS ~{_EXPECTED_RMS_DB}, got {result}"
+
+
+async def test_measure_audio_rms_db_raises_when_overall_absent() -> None:
+    """Raises RuntimeError when Overall block is missing in stderr."""
+    from unittest.mock import AsyncMock
+
+    fake_result = MagicMock()
+    fake_result.returncode = 0
+    fake_result.stderr = "[ffmpeg] some output without the Overall block\n"
+
+    with patch("tests.render_oracle.asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
+        mock_thread.return_value = fake_result
+        with pytest.raises(RuntimeError, match="Overall block not found"):
+            await measure_audio_rms_db(Path("/fake/video.mp4"))
+
+
+def test_assert_audio_rms_changed_passes_when_delta_sufficient() -> None:
+    """assert_audio_rms_changed passes when abs(measured - baseline) >= threshold."""
+    assert_audio_rms_changed(measured_db=-15.0, baseline_db=-21.0, min_delta_db=5.0)
+
+
+def test_assert_audio_rms_changed_fails_when_delta_insufficient() -> None:
+    """assert_audio_rms_changed raises AssertionError when abs(measured - baseline) < threshold."""
+    with pytest.raises(AssertionError, match="audio RMS delta"):
+        assert_audio_rms_changed(measured_db=-21.0, baseline_db=-21.0, min_delta_db=5.0)

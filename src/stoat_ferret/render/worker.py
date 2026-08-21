@@ -350,11 +350,18 @@ async def _resolve_clip_source(
 def _build_clip_render_effects(
     clip: Clip,
     effect_registry: EffectRegistry | None,
-) -> list[Any]:
-    """Build the RenderEffect list for a clip; returns ``[RenderEffect.none()]`` if empty."""
+) -> tuple[list[Any], list[str]]:
+    """Build the RenderEffect list and audio filter chains for a clip.
+
+    Returns ``([RenderEffect.none()], [])`` when no effects are present.
+    Audio effects (stream_kind="a") are collected as filter chain strings in the
+    second element of the tuple; they must be assembled into an audio filtergraph
+    segment by the caller.
+    """
     from stoat_ferret_core import RenderEffect
 
     render_effects: list[Any] = []
+    audio_filter_chains: list[str] = []
     if effect_registry and clip.effects:
         for effect_data in clip.effects:
             effect_type = effect_data.get("effect_type", "")
@@ -368,7 +375,15 @@ def _build_clip_render_effects(
             else:
                 filter_str = defn.build_fn(effect_data.get("parameters", {}))
                 window = effect_data.get("window")
-                if window:
+                if defn.stream_kind == "a":
+                    audio_filter_chains.append(filter_str)
+                    if window:
+                        logger.warning(
+                            "audio_effect_windowed_skipped",
+                            effect_type=effect_type,
+                            clip_id=clip.id,
+                        )
+                elif window:
                     render_effects.append(
                         RenderEffect.windowed_custom(
                             filter_str,
@@ -381,7 +396,7 @@ def _build_clip_render_effects(
                     render_effects.append(RenderEffect.custom(filter_str))
     if not render_effects:
         render_effects.append(RenderEffect.none())
-    return render_effects
+    return render_effects, audio_filter_chains
 
 
 async def build_command_for_job(
@@ -476,13 +491,25 @@ async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
     fps_mc: float,
-) -> tuple[list[Any], list[float], str | None, int, list[float], list[int], list[float | None]]:
+) -> tuple[
+    list[Any],
+    list[float],
+    str | None,
+    int,
+    list[float],
+    list[int],
+    list[float | None],
+    list[list[str]],
+]:
     """Build per-clip ClipWithEffects list, durations, audio codec info, and in-point offsets.
 
     Returns an extra list `clip_transition_durations` (one entry per clip) containing the
     saved outgoing transition duration for that clip boundary, or None if no transition was
     saved.  This is used by the Python-side audio acrossfade builder — ClipWithEffects has no
     #[pyo3(get)] on outgoing_transition, so Python cannot read it back from the object.
+
+    Also returns `per_clip_audio_filters` (one list[str] per clip) containing audio filter
+    chain strings collected from effects with stream_kind="a".
     """
     from stoat_ferret_core import ClipWithEffects, RenderTransition
 
@@ -492,6 +519,7 @@ async def _build_clip_input_list(
     cwe_list: list[Any] = []
     clip_durations_mc: list[float] = []
     clip_transition_durations: list[float | None] = []
+    per_clip_audio_filters: list[list[str]] = []
     source_audio_codec_mc: str | None = None
     source_audio_input_idx_mc: int = 0
     in_point_secs_list: list[float] = []
@@ -521,7 +549,8 @@ async def _build_clip_input_list(
             in_point_secs_list.append(clip.in_point / framerate_mc)
         else:
             in_point_secs_list.append(0.0)  # image and generator clips: no source seek
-        render_effects = _build_clip_render_effects(clip, ctx.effect_registry)
+        render_effects, audio_filter_chains = _build_clip_render_effects(clip, ctx.effect_registry)
+        per_clip_audio_filters.append(audio_filter_chains)
         outgoing: Any = None
         if clip.id in transition_lookup:
             t = transition_lookup[clip.id]
@@ -547,6 +576,7 @@ async def _build_clip_input_list(
         in_point_secs_list,
         audio_input_indices_mc,
         clip_transition_durations,
+        per_clip_audio_filters,
     )
 
 
@@ -575,21 +605,32 @@ def _build_audio_acrossfade_chain(
     clip_durations_mc: list[float],
     cwe_list: list[Any],
     clip_transition_durations: list[float | None] | None = None,
+    per_clip_audio_filters: list[list[str]] | None = None,
 ) -> str | None:
     """Build an acrossfade audio filter chain for all_input_count inputs.
 
     Returns None when no clips have audio (deliberately_silent case).
     For file clips without audio, synthesizes silence via anullsrc to maintain
     A/V duration alignment. Chains N-1 acrossfade nodes ending at [aout].
+    When per_clip_audio_filters is provided and a clip has non-empty audio filter
+    chains, emits [i:a]<joined_chain>[a{i}_eff] and uses [a{i}_eff] as the input.
     """
     if not audio_input_indices_mc:
         return None
     audio_set = set(audio_input_indices_mc)
+    filters: list[list[str]] = per_clip_audio_filters or [[] for _ in range(all_input_count)]
     parts: list[str] = []
     labels: list[str] = []
     for i in range(all_input_count):
         if i in audio_set:
-            labels.append(f"[{i}:a]")
+            clip_filters = filters[i] if i < len(filters) else []
+            if clip_filters:
+                joined = ",".join(clip_filters)
+                eff_label = f"[a{i}_eff]"
+                parts.append(f"[{i}:a]{joined}{eff_label}")
+                labels.append(eff_label)
+            else:
+                labels.append(f"[{i}:a]")
         else:
             dur = clip_durations_mc[i]
             src_label = f"[a{i}_silent]"
@@ -616,6 +657,7 @@ def _assemble_multi_tts_filter(
     clip_durations_mc: list[float],
     cwe_list: list[Any],
     clip_transition_durations: list[float | None] | None = None,
+    per_clip_audio_filters: list[list[str]] | None = None,
 ) -> None:
     """Assemble filter_complex and -map flags for multi-clip TTS/no-TTS paths."""
     if tts_inputs:
@@ -658,6 +700,7 @@ def _assemble_multi_tts_filter(
                 clip_durations_mc,
                 cwe_list,
                 clip_transition_durations,
+                per_clip_audio_filters,
             )
             assert audio_chain is not None  # non-empty audio_input_indices_mc → not None
             combined = filter_complex_str + ";" + audio_chain
@@ -740,6 +783,7 @@ async def _build_multi_clip_command(
         in_point_secs_list,
         audio_input_indices_mc,
         clip_transition_durations,
+        per_clip_audio_filters_mc,
     ) = await _build_clip_input_list(ctx, clips, fps_mc)
 
     translator = RenderGraphTranslator()
@@ -770,6 +814,7 @@ async def _build_multi_clip_command(
         clip_durations_mc,
         cwe_list,
         clip_transition_durations,
+        per_clip_audio_filters_mc,
     )
 
     # Subtitle stream mappings: after filter_complex/map output section (BL-618 fix).
@@ -844,7 +889,9 @@ def _assemble_sc_filter_translator(
     """Assemble filter_complex and -map flags for the single-clip translator path."""
     from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
 
-    render_effects_sc = _build_clip_render_effects(first_clip, effect_registry)
+    render_effects_sc, audio_filter_chains_sc = _build_clip_render_effects(
+        first_clip, effect_registry
+    )
     cwe_sc = ClipWithEffects(
         input_index=0,
         duration_secs=seg_duration,
@@ -884,6 +931,11 @@ def _assemble_sc_filter_translator(
                     tts_audio_label,
                 ]
             )
+    elif audio_filter_chains_sc:
+        joined = ",".join(audio_filter_chains_sc)
+        audio_seg = f"[0:a]{joined}{_LABEL_AOUT}"
+        combined_sc = filter_complex_sc + ";" + audio_seg
+        cmd.extend(["-filter_complex", combined_sc, "-map", _LABEL_FINAL, "-map", _LABEL_AOUT])
     else:
         cmd.extend(["-filter_complex", filter_complex_sc, "-map", _LABEL_FINAL, "-an"])
 
