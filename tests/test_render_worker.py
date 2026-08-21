@@ -26,7 +26,7 @@ import pytest
 from stoat_ferret.api.schemas.render import SoftSubtitleSpec
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import VOLUME
+from stoat_ferret.effects.definitions import TIME_STRETCH, VOLUME
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import (
@@ -2055,6 +2055,51 @@ class TestGoldenArgv:
                 "[0:a]volume=volume=2[a0_eff];[1:a]volume=volume=2[a1_eff];"
                 "[a0_eff][a1_eff]acrossfade=d=1[aout]"
             ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_golden_time_stretch_audio_routing(self) -> None:
+        """time_stretch routes to audio chain in filter_complex (BL-823 AC-2).
+
+        Verifies that a newly-annotated stream_kind='a' effect (TIME_STRETCH) dispatches
+        to the audio chain ([0:a]atempo=0.8[aout]) and NOT the video filtergraph.
+        """
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        clip = _g_make_clip(
+            "clip-sc-time-stretch",
+            "vid-1",
+            effects=[{"effect_type": "time_stretch", "parameters": {"factor": 0.8}}],
+        )
+        reg = EffectRegistry()
+        reg.register("time_stretch", TIME_STRETCH)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()), _g_clip_repo(clip), _g_video_repo(vid), effect_registry=reg
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];[0:a]atempo=0.8[aout]",
             "-map",
             "[final]",
             "-map",
