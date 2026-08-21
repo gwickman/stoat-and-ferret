@@ -169,6 +169,12 @@ silent schema regressions from reaching `main` undetected.
 |--------------|---------------|------|
 | `test_non_default_transition_in_filter_complex` | unconditional unit lane | Calls `RenderGraphTranslator().translate(clips)` directly with `outgoing_transition=RenderTransition("wipeleft", 0.35)` on the first clip and asserts `"xfade=transition=wipeleft:duration=0.35" in filter_complex`. No STOAT_TEST_FFMPEG gate — pure Rust translation call with no FFmpeg invocation. Part of BL-792 (wire persisted transitions). |
 
+### Phase 17 — v132 Audio-Effect Dispatch Smoke Tests (BL-794)
+
+| Test function | Coverage tier | Note |
+|--------------|---------------|------|
+| `test_single_clip_audio_effect_routes_to_audio_chain` | `STOAT_TEST_FFMPEG=1` gated | Calls `build_command_for_job()` with a local registry containing a `stream_kind="a"` mock effect. Asserts `[0:a]volume=2.0[aout]` in `filter_complex`, absence of `-an`, and exclusion of the effect from the video chain. Part of BL-794 (audio-effect dispatch fix). Run: `STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_render_contract.py -x -q`. |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)

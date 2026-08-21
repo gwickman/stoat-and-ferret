@@ -642,6 +642,36 @@ Verifies that wiring persisted transitions into `ClipWithEffects.outgoing_transi
 
 ---
 
+## Phase 17 — v132 Audio-Effect Dispatch Smoke Tests (`test_render_contract.py`, BL-794)
+
+Verifies that the audio-effect dispatch fix in BL-794 correctly routes `stream_kind="a"` effects to the audio filter chain (`[0:a]...[aout]`) rather than the video chain.
+
+| Test Function | What It Tests |
+|---------------|---------------|
+| `test_single_clip_audio_effect_routes_to_audio_chain` | Audio effect with `stream_kind="a"` routes to `[0:a]volume=2.0[aout]` in `filter_complex`; `-an` flag absent; audio effect absent from video chain |
+
+**Test function:** `test_single_clip_audio_effect_routes_to_audio_chain`
+**File:** `tests/smoke/test_render_contract.py`
+**CI lane:** `STOAT_TEST_FFMPEG=1` required — skipped when FFmpeg is unavailable (blanket gate for the `test_render_contract.py` smoke file)
+
+**What it tests:** Constructs a single-clip render job with a local `EffectRegistry` containing a mock `EffectDefinition` with `stream_kind="a"` (whose `build_fn` returns `"volume=2.0"`). Calls `build_command_for_job(…, effect_registry=registry)` end-to-end and makes four assertions:
+
+1. `[0:a]volume=2.0[aout]` is present in `-filter_complex` — confirms audio-chain routing.
+2. `[0:v]volume=2.0` is NOT present in `-filter_complex` — confirms the effect was excluded from the video chain.
+3. `-an` is absent — confirms the audio stream is passed through, not suppressed.
+4. `[aout]` appears in the command (in a `-map` argument) — confirms the audio output label is wired to the output.
+
+**How to run locally:**
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_render_contract.py -x -q
+```
+
+**Purpose:** Closes the smoke coverage gap for audio-effect dispatch introduced by BL-794. Before this test, a regression in `_build_clip_render_effects`'s `stream_kind` dispatch would not be caught until the ffmpeg-tests acceptance layer — this test catches it at the command-builder level.
+
+**Complementary tests:** The golden-argv tests `test_golden_sc_audio_effect_dispatch` and `test_golden_mc_audio_effect_dispatch` in `tests/test_render_worker.py` verify the full single-clip and multi-clip audio dispatch paths at argv level. The acceptance test `test_audio_effect_dispatch_single_clip` in `tests/acceptance/test_uc_media_audio_effect.py` verifies the audible change and video-stream stability end-to-end via the render oracle.
+
+---
+
 ## Endpoint Coverage Map
 
 Shows which endpoints are tested by which test file. Endpoints without smoke test coverage are listed at the bottom.
