@@ -1,7 +1,7 @@
 # Effects Guide
 
-<!-- effects-count: 40 -->
-Stoat & Ferret provides 40 built-in effects powered by a Rust core that generates FFmpeg filter strings. Effects are applied non-destructively to clips and can be previewed, stacked, updated, and removed at any time.
+<!-- effects-count: 41 -->
+Stoat & Ferret provides 41 built-in effects powered by a Rust core that generates FFmpeg filter strings. Effects are applied non-destructively to clips and can be previewed, stacked, updated, and removed at any time.
 
 ## How Effects Work
 

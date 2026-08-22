@@ -31,8 +31,8 @@ Async jobs return `202 Accepted` with `{"job_id": ...}`. Poll or long-poll to co
 
 #### Available Effect Types
 
-<!-- effects-count: 40 -->
-`GET /api/v1/effects` returns all 40 effects with full parameter schemas and AI hints. The complete set of effect type keys:
+<!-- effects-count: 41 -->
+`GET /api/v1/effects` returns all 41 effects with full parameter schemas and AI hints. The complete set of effect type keys:
 
 | Category | Effect Types |
 |----------|-------------|

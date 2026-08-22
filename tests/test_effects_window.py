@@ -274,7 +274,7 @@ def test_all_effects_unchanged_with_window_none() -> None:
     """
     registry = create_default_registry()
     all_effects = registry.list_all()
-    assert len(all_effects) == 40, f"Expected 40 effects, got {len(all_effects)}"
+    assert len(all_effects) == 41, f"Expected 41 effects, got {len(all_effects)}"
 
     for effect_type, definition in all_effects:
         # Build the baseline (no-window) filter string via preview_fn
