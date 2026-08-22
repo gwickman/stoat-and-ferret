@@ -97,9 +97,6 @@ def _make_clip(
         timeline_position=int(timeline_start * 30),
         timeline_start=timeline_start,
         timeline_end=timeline_end,
-        track_index=0,
-        z_index=0,
-        effects=[],
         created_at=now,
         updated_at=now,
     )
