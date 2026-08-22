@@ -657,3 +657,51 @@ class TestInputPathsResolution:
         await asyncio.sleep(0.05)
 
         assert captured.get("input_paths") == ["/legacy.mp4"]
+
+
+class TestSeekPosition:
+    """Tests for position parameter forwarding in seek() (BL-798)."""
+
+    async def test_seek_position_forwarded_to_generator(self) -> None:
+        """seek(position=5.0) forwards start_offset_s=5.0 to generator.generate()."""
+        gen = AsyncMock()
+        captured: dict[str, object] = {}
+
+        async def _capture(**kwargs: object) -> Path:
+            captured.update(kwargs)
+            return Path("/tmp/previews/fake-session")
+
+        gen.generate = AsyncMock(side_effect=_capture)
+        manager, _repo, _, _ws = _make_manager(generator=gen)
+
+        session = await manager.start(project_id="p1", input_paths=["/v.mp4"])
+        await asyncio.sleep(0.05)
+
+        captured.clear()
+        with patch("shutil.rmtree"):
+            await manager.seek(session.id, input_paths=["/v.mp4"], position=5.0)
+        await asyncio.sleep(0.05)
+
+        assert captured.get("start_offset_s") == 5.0
+
+    async def test_seek_position_none_passes_none_to_generator(self) -> None:
+        """seek() with no position passes start_offset_s=None to generator.generate()."""
+        gen = AsyncMock()
+        captured: dict[str, object] = {}
+
+        async def _capture(**kwargs: object) -> Path:
+            captured.update(kwargs)
+            return Path("/tmp/previews/fake-session")
+
+        gen.generate = AsyncMock(side_effect=_capture)
+        manager, _repo, _, _ws = _make_manager(generator=gen)
+
+        session = await manager.start(project_id="p1", input_paths=["/v.mp4"])
+        await asyncio.sleep(0.05)
+
+        captured.clear()
+        with patch("shutil.rmtree"):
+            await manager.seek(session.id, input_paths=["/v.mp4"])
+        await asyncio.sleep(0.05)
+
+        assert captured.get("start_offset_s") is None

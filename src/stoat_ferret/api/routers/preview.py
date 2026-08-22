@@ -405,16 +405,16 @@ async def seek_preview(
         200 with status "seeking".
 
     Raises:
-        HTTPException: 404 if session not found.
+        HTTPException: 404 if session not found, 422 if composition cannot be built.
     """
     _check_ffmpeg_available()
     manager = _get_preview_manager(request)
+    project_repo = _get_project_repository(request)
+    clip_repo = _get_clip_repository(request)
 
+    # Resolve the project_id from the live session record.
     try:
-        session = await manager.seek(
-            session_id,
-            input_path="",  # Regeneration uses session context
-        )
+        existing_session = await manager.get_status(session_id)
     except SessionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -424,6 +424,78 @@ async def seek_preview(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "SESSION_EXPIRED", "message": f"Session {session_id} has expired"},
+        ) from None
+
+    project_id = existing_session.project_id
+
+    # Clip set is re-derived from live DB; a seek after clip modifications will reflect
+    # the modified composition, not the original.
+    clips = await clip_repo.list_by_project(project_id)
+
+    video_repo = getattr(request.app.state, "video_repository", None)
+    comp_clips: list[CompositionClip] = []
+    input_paths: list[str] = []
+
+    for clip in clips:
+        if clip.timeline_start is None or clip.timeline_end is None:
+            continue
+        if clip.source_video_id is None:
+            continue
+        video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
+        if video is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "MISSING_VIDEO",
+                    "message": f"Source video for clip {clip.id} not found",
+                },
+            )
+        input_paths.append(video.path)
+        idx = len(comp_clips)
+        comp_clips.append(CompositionClip(idx, clip.timeline_start, clip.timeline_end, 0, 0))
+
+    if not comp_clips:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "NO_PLACEABLE_CLIPS",
+                "message": "No placeable clips found on the timeline",
+            },
+        )
+
+    project = await project_repo.get(project_id)
+    raw_transitions: list[dict[str, object]] = []
+    output_width = 1920
+    output_height = 1080
+    if project is not None:
+        raw_transitions = project.transitions or []
+        output_width = project.output_width
+        output_height = project.output_height
+
+    transitions: list[TransitionSpec] = [
+        TransitionSpec(
+            TransitionType.from_str(str(t["transition_type"])),
+            float(t["duration"]),  # type: ignore[arg-type]
+            0.0,
+        )
+        for t in raw_transitions
+    ]
+
+    filter_graph = build_composition_graph(
+        comp_clips, transitions, None, None, output_width, output_height
+    )
+
+    try:
+        session = await manager.seek(
+            session_id,
+            input_paths=input_paths,
+            filter_graph=filter_graph,
+            position=body.position,
+        )
+    except (SessionNotFoundError, SessionExpiredError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Session {session_id} not found"},
         ) from None
     except InvalidTransitionError:
         raise HTTPException(

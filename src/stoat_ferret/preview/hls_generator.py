@@ -57,6 +57,7 @@ def build_hls_args(
     output_dir: Path,
     filter_complex: str | None,
     segment_duration: float,
+    start_offset_s: float | None = None,
 ) -> list[str]:
     """Build FFmpeg arguments for HLS VOD segment generation.
 
@@ -65,6 +66,7 @@ def build_hls_args(
         output_dir: Directory for manifest and segment files.
         filter_complex: Optional simplified filter graph string.
         segment_duration: Target segment duration in seconds.
+        start_offset_s: Output-side seek offset in seconds; omitted when None or 0.
 
     Returns:
         List of FFmpeg arguments (excluding the ffmpeg command itself).
@@ -75,6 +77,9 @@ def build_hls_args(
     args: list[str] = []
     for path in input_paths:
         args.extend(["-i", path])
+
+    if start_offset_s is not None and start_offset_s > 0:
+        args.extend(["-ss", str(start_offset_s)])
 
     if filter_complex:
         args.extend(["-filter_complex", filter_complex])
@@ -181,6 +186,7 @@ class HLSGenerator:
         input_paths: list[str],
         filter_graph: FilterGraph | None = None,
         duration_us: int | None = None,
+        start_offset_s: float | None = None,
         progress_callback: Callable[[float], Awaitable[None]] | None = None,
         cancel_event: asyncio.Event | None = None,
     ) -> Path:
@@ -191,6 +197,7 @@ class HLSGenerator:
             input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object to simplify for preview.
             duration_us: Total duration in microseconds for progress calculation.
+            start_offset_s: Output-side seek offset in seconds; None starts from beginning.
             progress_callback: Optional async callback receiving progress (0.0-1.0).
             cancel_event: Optional event for cooperative cancellation.
 
@@ -211,6 +218,7 @@ class HLSGenerator:
             output_dir=output_dir,
             filter_complex=simplified_filter,
             segment_duration=segment_duration,
+            start_offset_s=start_offset_s,
         )
 
         logger.info(
