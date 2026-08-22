@@ -4,6 +4,43 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v133 — Effect Fail-Closed + Crop Effect + Audio Routing (2026-08-22)
+
+2 themes, 6 features, PRs #1005–#1010.
+
+### Theme 1: render-correctness
+
+- BL-795: `fix(render): raise CommandBuildError for unknown/unrenderable effect types` —
+  `_build_clip_render_effects` now raises `CommandBuildError` for unregistered effect types rather
+  than silently skipping; existing permissive test inverted; acceptance test, UAT journey, chatbot
+  scenario added (PR #1005)
+- BL-823: `fix(render): annotate 7 audio-only effects with stream_kind="a"` — `pan`, `alimiter`,
+  `loudnorm`, `anequalizer`, `acompressor`, `afir`, `atempo` annotated in `definitions.py`; registry
+  completeness assertion added using token-level extraction; smoke test un-gated; acceptance test
+  added (PR #1006)
+- BL-824: `fix(render): guard audio effects on video-only clip in single-clip path` — preflight
+  guard at `worker.py:932` raises `CommandBuildError` when audio effects present but
+  `source_audio_codec` is None/empty; error-path `TestGoldenArgv` case added; acceptance test added
+  (PR #1007)
+
+### Theme 2: crop-effect-and-harness
+
+- BL-796: `feat(effects): register crop as first-class effect` — new Rust `CropBuilder` in
+  `rust/stoat_ferret_core/src/ffmpeg/crop.rs` with PyO3 bindings (`py_new(w,h,x,y)`,
+  `py_build()->str`); `crop` registered as 41st effect in `definitions.py`; effects-count markers
+  updated 40→41 in 5 docs; doc-truth gate passes; acceptance test, UAT journey, chatbot scenario
+  added (PR #1008)
+- Impact-A: Add smoke tests for fail-closed unknown-effect and crop pipeline argv contracts in
+  `tests/smoke/test_render_contract.py` (PR #1009)
+- Impact-B: Document v133 smoke contracts in `docs/setup/smoke-test-harness-guide/07-dsp-contract-tests.md`
+  (PR #1010)
+
+### Quality
+
+- 3877 pytest tests passing (169 skipped, 0 failed); ruff, mypy clean; cargo clippy clean
+
+---
+
 ## v132 — Audio Effect Dispatch Fix (2026-08-21)
 
 1 theme, 3 features, PRs #1001–#1003.
