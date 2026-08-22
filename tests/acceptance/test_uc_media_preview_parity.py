@@ -174,18 +174,12 @@ async def test_preview_start_receives_multiple_inputs(tmp_path: Path) -> None:
         assert proj_resp.status_code == 201, proj_resp.text
         project_id = proj_resp.json()["id"]
 
-        # Add two clips
-        for vid_id, t_start, _t_end in [("vid-a", 0.0, 2.0), ("vid-b", 2.0, 4.0)]:
-            cr = await client.post(
-                f"/api/v1/projects/{project_id}/clips",
-                json={
-                    "source_video_id": vid_id,
-                    "in_point": 0,
-                    "out_point": 60,
-                    "timeline_position": int(t_start * 30),
-                },
-            )
-            assert cr.status_code == 201, cr.text
+        # Seed clips directly: the HTTP clip creation endpoint does not set
+        # timeline_start/timeline_end for file clips; preview requires them.
+        clip_a = _make_clip("clip-a", project_id, "vid-a", 0.0, 2.0)
+        clip_b = _make_clip("clip-b", project_id, "vid-b", 2.0, 4.0)
+        await clip_repo.add(clip_a)
+        await clip_repo.add(clip_b)
 
         with patch("stoat_ferret.api.routers.preview.shutil.which", return_value="/usr/bin/ffmpeg"):
             start_resp = await client.post(f"/api/v1/projects/{project_id}/preview/start")
