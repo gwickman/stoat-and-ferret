@@ -34,7 +34,7 @@ class TestHLSGenerationContract:
         output_dir.mkdir()
 
         args = build_hls_args(
-            input_path=str(sample_video_path),
+            input_paths=[str(sample_video_path)],
             output_dir=output_dir,
             filter_complex=None,
             segment_duration=2.0,
@@ -64,7 +64,7 @@ class TestHLSGenerationContract:
         output_dir.mkdir()
 
         args = build_hls_args(
-            input_path=str(sample_video_path),
+            input_paths=[str(sample_video_path)],
             output_dir=output_dir,
             filter_complex="scale=160:120",
             segment_duration=2.0,

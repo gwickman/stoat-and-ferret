@@ -264,7 +264,8 @@ class PreviewManager:
         self,
         *,
         project_id: str,
-        input_path: str,
+        input_path: str = "",
+        input_paths: list[str] | None = None,
         filter_graph: FilterGraph | None = None,
         duration_us: int | None = None,
         quality_level: PreviewQuality = PreviewQuality.MEDIUM,
@@ -276,7 +277,8 @@ class PreviewManager:
 
         Args:
             project_id: The project this preview belongs to.
-            input_path: Path to the source media file.
+            input_path: Path to a single source media file (legacy, kept for backward compat).
+            input_paths: Paths to all source media files for multi-clip composition.
             filter_graph: Optional FilterGraph for preview simplification.
             duration_us: Total duration in microseconds for progress.
             quality_level: Quality level for the preview.
@@ -287,6 +289,7 @@ class PreviewManager:
         Raises:
             SessionLimitError: If the concurrent session limit is reached.
         """
+        resolved = input_paths if input_paths is not None else ([input_path] if input_path else [])
         # Enforce concurrent session limit
         count = await self._repository.count()
         if count >= self._max_sessions:
@@ -326,7 +329,7 @@ class PreviewManager:
         logger.info(
             "preview_generation_started",
             session_id=session.id,
-            input_path=input_path,
+            input_paths=resolved,
             correlation_id=get_correlation_id(),
         )
 
@@ -338,7 +341,7 @@ class PreviewManager:
         task = asyncio.create_task(
             self._run_generation(
                 session_id=session.id,
-                input_path=input_path,
+                input_paths=resolved,
                 filter_graph=filter_graph,
                 duration_us=duration_us,
                 cancel_event=cancel_event,
@@ -352,7 +355,7 @@ class PreviewManager:
         self,
         *,
         session_id: str,
-        input_path: str,
+        input_paths: list[str],
         filter_graph: FilterGraph | None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
@@ -361,7 +364,7 @@ class PreviewManager:
 
         Args:
             session_id: The session to generate for.
-            input_path: Path to the source media file.
+            input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
@@ -371,7 +374,7 @@ class PreviewManager:
             progress_callback = self._make_progress_callback(session_id)
             output_dir = await self._generator.generate(
                 session_id=session_id,
-                input_path=input_path,
+                input_paths=input_paths,
                 filter_graph=filter_graph,
                 duration_us=duration_us,
                 progress_callback=progress_callback,
@@ -442,7 +445,8 @@ class PreviewManager:
         self,
         session_id: str,
         *,
-        input_path: str,
+        input_path: str = "",
+        input_paths: list[str] | None = None,
         filter_graph: FilterGraph | None = None,
         duration_us: int | None = None,
     ) -> PreviewSession:
@@ -454,7 +458,8 @@ class PreviewManager:
 
         Args:
             session_id: The session to seek.
-            input_path: Path to the source media file.
+            input_path: Path to a single source media file (legacy, kept for backward compat).
+            input_paths: Paths to all source media files for multi-clip composition.
             filter_graph: Optional FilterGraph for preview simplification.
             duration_us: Duration in microseconds for progress.
 
@@ -466,6 +471,7 @@ class PreviewManager:
             SessionExpiredError: If the session has expired.
             InvalidTransitionError: If the session is not in a seekable state.
         """
+        resolved = input_paths if input_paths is not None else ([input_path] if input_path else [])
         logger.info(
             "preview_seek_requested",
             session_id=session_id,
@@ -523,7 +529,7 @@ class PreviewManager:
             gen_task = asyncio.create_task(
                 self._run_seek_generation(
                     session_id=session_id,
-                    input_path=input_path,
+                    input_paths=resolved,
                     filter_graph=filter_graph,
                     duration_us=duration_us,
                     cancel_event=new_cancel,
@@ -537,7 +543,7 @@ class PreviewManager:
         self,
         *,
         session_id: str,
-        input_path: str,
+        input_paths: list[str],
         filter_graph: FilterGraph | None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
@@ -546,7 +552,7 @@ class PreviewManager:
 
         Args:
             session_id: The session to generate for.
-            input_path: Path to the source media file.
+            input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
@@ -556,7 +562,7 @@ class PreviewManager:
             progress_callback = self._make_progress_callback(session_id)
             output_dir = await self._generator.generate(
                 session_id=session_id,
-                input_path=input_path,
+                input_paths=input_paths,
                 filter_graph=filter_graph,
                 duration_us=duration_us,
                 progress_callback=progress_callback,
