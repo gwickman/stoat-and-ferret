@@ -2115,6 +2115,34 @@ class TestGoldenArgv:
             "/renders/golden.mp4",
         ]
 
+    @pytest.mark.asyncio
+    async def test_golden_audio_effect_on_video_only_raises(self) -> None:
+        """Audio effect on video-only clip raises CommandBuildError before FFmpeg (BL-824 AC-2).
+
+        Verifies that the single-clip path raises CommandBuildError when audio_codec is None
+        and an audio effect is present, before any FFmpeg subprocess is started.
+        """
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)  # audio_codec=None (video-only)
+        clip = _g_make_clip(
+            "clip-sc-no-audio",
+            "vid-1",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+        )
+        reg = EffectRegistry()
+        reg.register("volume", VOLUME)
+
+        with pytest.raises(CommandBuildError) as exc_info:
+            await build_command_for_job(
+                _g_make_job(_g_make_plan()),
+                _g_clip_repo(clip),
+                _g_video_repo(vid),
+                effect_registry=reg,
+            )
+
+        assert "clip-sc-no-audio" in str(exc_info.value)
+        assert "audio effects" in str(exc_info.value)
+        assert "no audio stream" in str(exc_info.value)
+
 
 # ---------------------------------------------------------------------------
 # Unit tests for _build_mc_subtitle_inputs helper (NFR-003)

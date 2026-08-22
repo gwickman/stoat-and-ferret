@@ -928,6 +928,8 @@ def _assemble_sc_filter_translator(
                 ]
             )
     elif audio_filter_chains_sc:
+        if not source_audio_codec:
+            raise CommandBuildError(f"Clip {first_clip.id!r} has audio effects but no audio stream")
         joined = ",".join(audio_filter_chains_sc)
         audio_seg = f"[0:a]{joined}{_LABEL_AOUT}"
         combined_sc = filter_complex_sc + ";" + audio_seg
