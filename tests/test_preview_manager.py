@@ -613,3 +613,47 @@ class TestSessionDirConfinement:
         manager, _, _, _ = _make_manager(output_base_dir=str(tmp_path))
         with pytest.raises(ValueError, match="escapes base directory"):
             manager._session_dir("../../escape")
+
+
+class TestInputPathsResolution:
+    """Tests for input_paths / input_path resolution in start() (BL-797 backward compat)."""
+
+    async def test_input_paths_passed_through_to_generator(self) -> None:
+        """start(input_paths=[...]) forwards the list to generator.generate unchanged."""
+        gen = AsyncMock()
+        captured: dict[str, object] = {}
+
+        async def _capture(**kwargs: object) -> Path:
+            captured.update(kwargs)
+            return Path("/tmp/previews/fake-session")
+
+        gen.generate = AsyncMock(side_effect=_capture)
+        manager, _repo, _, _ws = _make_manager(generator=gen)
+
+        await manager.start(
+            project_id="p1",
+            input_paths=["/clip_a.mp4", "/clip_b.mp4"],
+        )
+        await asyncio.sleep(0.05)
+
+        assert captured.get("input_paths") == ["/clip_a.mp4", "/clip_b.mp4"]
+
+    async def test_legacy_input_path_wrapped_as_list(self) -> None:
+        """start(input_path=...) wraps the single path in a list for backward compat."""
+        gen = AsyncMock()
+        captured: dict[str, object] = {}
+
+        async def _capture(**kwargs: object) -> Path:
+            captured.update(kwargs)
+            return Path("/tmp/previews/fake-session")
+
+        gen.generate = AsyncMock(side_effect=_capture)
+        manager, _repo, _, _ws = _make_manager(generator=gen)
+
+        await manager.start(
+            project_id="p1",
+            input_path="/legacy.mp4",
+        )
+        await asyncio.sleep(0.05)
+
+        assert captured.get("input_paths") == ["/legacy.mp4"]

@@ -160,6 +160,8 @@ async def _seed_clip(
         in_point=0,
         out_point=100,
         timeline_position=0,
+        timeline_start=0.0,
+        timeline_end=100 / 30,
         created_at=now,
         updated_at=now,
     )
