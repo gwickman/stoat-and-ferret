@@ -175,6 +175,13 @@ silent schema regressions from reaching `main` undetected.
 |--------------|---------------|------|
 | `test_single_clip_audio_effect_routes_to_audio_chain` | `STOAT_TEST_FFMPEG=1` gated | Calls `build_command_for_job()` with a local registry containing a `stream_kind="a"` mock effect. Asserts `[0:a]volume=2.0[aout]` in `filter_complex`, absence of `-an`, and exclusion of the effect from the video chain. Part of BL-794 (audio-effect dispatch fix). Run: `STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_render_contract.py -x -q`. |
 
+### Phase 18 — v134 Preview Fidelity Smoke Tests (BL-797, BL-798)
+
+| Test function | Coverage tier | Note |
+|--------------|---------------|------|
+| `test_multi_clip_preview_start` (`tests/smoke/test_preview.py`) | unconditional smoke lane | Calls `POST /api/v1/projects/{project_id}/preview/start` with a 2-clip project and asserts HTTP 202 with a valid `session_id`. No `STOAT_TEST_FFMPEG` gate — smoke tests run in FFmpeg-capable environments as a precondition. Covers BL-797 (multi-clip composition graph for preview). |
+| `test_seek_position_returns_200` (`tests/smoke/test_preview_endpoints.py`) | unconditional smoke lane | Calls `POST /api/v1/preview/{session_id}/seek` with `{"position": 3.0}` and asserts HTTP 200. No `STOAT_TEST_FFMPEG` gate. Covers BL-798 (seek-position forwarding to FFmpeg `-ss` flag). |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)
