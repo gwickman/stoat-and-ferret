@@ -314,12 +314,20 @@ class TestGetPreviewStatus:
 class TestSeekPreview:
     """Tests for POST /preview/{session_id}/seek."""
 
-    def test_returns_seeking_status(
+    async def test_returns_seeking_status(
         self,
         client: TestClient,
+        clip_repository: AsyncInMemoryClipRepository,
+        video_repository: AsyncInMemoryVideoRepository,
         mock_preview_manager: MagicMock,
     ) -> None:
-        """POST seek returns 200 with seeking status."""
+        """POST seek returns 200 with seeking status.
+
+        The seek endpoint (BL-798) re-fetches clips before calling manager.seek(),
+        so we seed a clip and configure get_status to return a matching session.
+        """
+        await _seed_clip(clip_repository, video_repository, "test-project-id")
+        mock_preview_manager.get_status.return_value = _make_session(status=PreviewStatus.READY)
         session = _make_session(status=PreviewStatus.SEEKING)
         mock_preview_manager.seek.return_value = session
 
@@ -359,8 +367,11 @@ class TestSeekPreview:
         client: TestClient,
         mock_preview_manager: MagicMock,
     ) -> None:
-        """POST seek for non-existent session returns 404."""
-        mock_preview_manager.seek.side_effect = SessionNotFoundError("not found")
+        """POST seek for non-existent session returns 404.
+
+        With BL-798, get_status() is called first; the 404 now originates there.
+        """
+        mock_preview_manager.get_status.side_effect = SessionNotFoundError("not found")
 
         response = client.post(
             "/api/v1/preview/nonexistent/seek",
@@ -368,12 +379,21 @@ class TestSeekPreview:
         )
         assert response.status_code == 404
 
-    def test_error_state_seek_returns_409(
+    async def test_error_state_seek_returns_409(
         self,
         client: TestClient,
+        clip_repository: AsyncInMemoryClipRepository,
+        video_repository: AsyncInMemoryVideoRepository,
         mock_preview_manager: MagicMock,
     ) -> None:
-        """POST seek on error-state session returns 409 with structured error body."""
+        """POST seek on error-state session returns 409 with structured error body.
+
+        The seek endpoint re-fetches clips before calling manager.seek(), so we seed
+        a clip and configure get_status to return a session; InvalidTransitionError
+        is raised by manager.seek() after composition is built.
+        """
+        await _seed_clip(clip_repository, video_repository, "test-project-id")
+        mock_preview_manager.get_status.return_value = _make_session()
         mock_preview_manager.seek.side_effect = InvalidTransitionError(
             "invalid transition from error to seeking"
         )

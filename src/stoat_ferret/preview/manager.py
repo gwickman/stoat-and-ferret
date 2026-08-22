@@ -445,10 +445,11 @@ class PreviewManager:
         self,
         session_id: str,
         *,
-        input_path: str = "",
+        input_path: str = "",  # deprecated — use input_paths
         input_paths: list[str] | None = None,
         filter_graph: FilterGraph | None = None,
         duration_us: int | None = None,
+        position: float | None = None,
     ) -> PreviewSession:
         """Seek to a new position, regenerating HLS segments.
 
@@ -462,6 +463,7 @@ class PreviewManager:
             input_paths: Paths to all source media files for multi-clip composition.
             filter_graph: Optional FilterGraph for preview simplification.
             duration_us: Duration in microseconds for progress.
+            position: Seek position in seconds; None or 0.0 starts from beginning.
 
         Returns:
             The updated PreviewSession.
@@ -533,6 +535,7 @@ class PreviewManager:
                     filter_graph=filter_graph,
                     duration_us=duration_us,
                     cancel_event=new_cancel,
+                    position=position,
                 )
             )
             self._generation_tasks[session_id] = gen_task
@@ -547,6 +550,7 @@ class PreviewManager:
         filter_graph: FilterGraph | None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
+        position: float | None = None,
     ) -> None:
         """Run HLS generation after a seek and transition to ready.
 
@@ -556,6 +560,7 @@ class PreviewManager:
             filter_graph: Optional FilterGraph object.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
+            position: Seek position in seconds; None or 0.0 starts from beginning.
         """
         seek_start = time.monotonic()
         try:
@@ -565,6 +570,7 @@ class PreviewManager:
                 input_paths=input_paths,
                 filter_graph=filter_graph,
                 duration_us=duration_us,
+                start_offset_s=position,
                 progress_callback=progress_callback,
                 cancel_event=cancel_event,
             )

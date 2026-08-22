@@ -3676,7 +3676,7 @@
           "preview"
         ],
         "summary": "Seek Preview",
-        "description": "Seek to a new position in a preview session.\n\nTriggers regeneration of HLS segments from the new position.\n\nArgs:\n    session_id: The preview session ID.\n    body: Seek request with position.\n    request: The FastAPI request object.\n\nReturns:\n    200 with status \"seeking\".\n\nRaises:\n    HTTPException: 404 if session not found.",
+        "description": "Seek to a new position in a preview session.\n\nTriggers regeneration of HLS segments from the new position.\n\nArgs:\n    session_id: The preview session ID.\n    body: Seek request with position.\n    request: The FastAPI request object.\n\nReturns:\n    200 with status \"seeking\".\n\nRaises:\n    HTTPException: 404 if session not found, 422 if composition cannot be built.",
         "operationId": "seek_preview_api_v1_preview__session_id__seek_post",
         "parameters": [
           {
