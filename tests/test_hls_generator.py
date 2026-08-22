@@ -30,7 +30,7 @@ class TestBuildHlsArgs:
     def test_basic_args_without_filter(self, tmp_path: Path) -> None:
         """Build args with no filter graph."""
         args = build_hls_args(
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             output_dir=tmp_path,
             filter_complex=None,
             segment_duration=2.0,
@@ -56,7 +56,7 @@ class TestBuildHlsArgs:
     def test_args_with_filter_complex(self, tmp_path: Path) -> None:
         """Build args includes -filter_complex when provided."""
         args = build_hls_args(
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             output_dir=tmp_path,
             filter_complex="scale=640:360",
             segment_duration=2.0,
@@ -69,7 +69,7 @@ class TestBuildHlsArgs:
     def test_no_filter_complex_when_none(self, tmp_path: Path) -> None:
         """Build args omits -filter_complex when None."""
         args = build_hls_args(
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             output_dir=tmp_path,
             filter_complex=None,
             segment_duration=2.0,
@@ -80,7 +80,7 @@ class TestBuildHlsArgs:
     def test_custom_segment_duration(self, tmp_path: Path) -> None:
         """Build args uses the provided segment duration."""
         args = build_hls_args(
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             output_dir=tmp_path,
             filter_complex=None,
             segment_duration=4.0,
@@ -93,7 +93,7 @@ class TestBuildHlsArgs:
     def test_segment_filename_pattern(self, tmp_path: Path) -> None:
         """Segment filename uses segment_%03d.ts pattern."""
         args = build_hls_args(
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             output_dir=tmp_path,
             filter_complex=None,
             segment_duration=2.0,
@@ -106,7 +106,7 @@ class TestBuildHlsArgs:
     def test_manifest_filename(self, tmp_path: Path) -> None:
         """Output manifest is named manifest.m3u8."""
         args = build_hls_args(
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             output_dir=tmp_path,
             filter_complex=None,
             segment_duration=2.0,
@@ -114,6 +114,21 @@ class TestBuildHlsArgs:
 
         # Last arg is the output file
         assert args[-1] == str(tmp_path / "manifest.m3u8")
+
+    def test_multiple_input_paths_emit_multiple_i_flags(self, tmp_path: Path) -> None:
+        """build_hls_args emits one -i flag per entry in input_paths (BL-797)."""
+        args = build_hls_args(
+            input_paths=["/clip_a.mp4", "/clip_b.mp4", "/clip_c.mp4"],
+            output_dir=tmp_path,
+            filter_complex=None,
+            segment_duration=2.0,
+        )
+
+        i_positions = [idx for idx, a in enumerate(args) if a == "-i"]
+        assert len(i_positions) == 3
+        assert args[i_positions[0] + 1] == "/clip_a.mp4"
+        assert args[i_positions[1] + 1] == "/clip_b.mp4"
+        assert args[i_positions[2] + 1] == "/clip_c.mp4"
 
 
 class TestConfineChildPath:
@@ -226,7 +241,7 @@ class TestHLSGenerator:
         with pytest.raises(ValueError, match="escapes base directory"):
             await generator.generate(
                 session_id="../../escape",
-                input_path="/media/video.mp4",
+                input_paths=["/media/video.mp4"],
             )
 
         assert len(executor.calls) == 0
@@ -242,7 +257,7 @@ class TestHLSGenerator:
 
         result = await generator.generate(
             session_id="test-session",
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
         )
 
         assert result == tmp_path / "test-session"
@@ -258,7 +273,7 @@ class TestHLSGenerator:
 
         await generator.generate(
             session_id="test-session",
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
         )
 
         assert len(executor.calls) == 1
@@ -281,7 +296,7 @@ class TestHLSGenerator:
         with pytest.raises(RuntimeError, match="HLS generation failed"):
             await generator.generate(
                 session_id="fail-session",
-                input_path="/media/video.mp4",
+                input_paths=["/media/video.mp4"],
             )
 
         # Output directory should be cleaned up
@@ -301,7 +316,7 @@ class TestHLSGenerator:
         with pytest.raises(RuntimeError, match="cancelled"):
             await generator.generate(
                 session_id="cancel-session",
-                input_path="/media/video.mp4",
+                input_paths=["/media/video.mp4"],
                 cancel_event=cancel_event,
             )
 
@@ -328,7 +343,7 @@ class TestHLSGenerator:
 
         await generator.generate(
             session_id="progress-session",
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             duration_us=10_000_000,
             progress_callback=on_progress,
         )
@@ -358,7 +373,7 @@ class TestHLSGenerator:
 
         await generator.generate(
             session_id="cap-session",
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             duration_us=10_000_000,
             progress_callback=on_progress,
         )
@@ -380,7 +395,7 @@ class TestHLSGenerator:
 
         await generator.generate(
             session_id="no-dur-session",
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             progress_callback=on_progress,
         )
 
@@ -401,7 +416,7 @@ class TestHLSGenerator:
 
         await generator.generate(
             session_id="filter-session",
-            input_path="/media/video.mp4",
+            input_paths=["/media/video.mp4"],
             filter_graph=graph,
         )
 

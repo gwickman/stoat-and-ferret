@@ -283,7 +283,7 @@ class TestPreviewManagerMetrics:
 
         await manager._run_generation(
             session_id="err-session",
-            input_path="/input.mp4",
+            input_paths=["/input.mp4"],
             filter_graph=None,
             duration_us=None,
             cancel_event=cancel_event,
@@ -321,7 +321,7 @@ class TestPreviewManagerMetrics:
 
         await manager._run_generation(
             session_id="gen-session",
-            input_path="/input.mp4",
+            input_paths=["/input.mp4"],
             filter_graph=None,
             duration_us=None,
             cancel_event=cancel_event,
@@ -359,7 +359,7 @@ class TestPreviewManagerMetrics:
 
         await manager._run_seek_generation(
             session_id="seek-session",
-            input_path="/input.mp4",
+            input_paths=["/input.mp4"],
             filter_graph=None,
             duration_us=None,
             cancel_event=cancel_event,

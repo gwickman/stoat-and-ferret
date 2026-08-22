@@ -41,6 +41,12 @@ from stoat_ferret.preview.manager import (
     SessionLimitError,
     SessionNotFoundError,
 )
+from stoat_ferret_core import (
+    CompositionClip,
+    TransitionSpec,
+    TransitionType,
+    build_composition_graph,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -264,20 +270,57 @@ async def start_preview(
     }
     quality = quality_map.get(quality_str, PreviewQuality.MEDIUM)
 
-    # Use the first clip's source video path as input
-    # (full timeline composition is handled by the filter graph)
-    first_clip = clips[0]
+    # Build full multi-clip composition graph (mirrors render path)
     video_repo = getattr(request.app.state, "video_repository", None)
-    input_path = ""
-    if video_repo is not None:
-        video = await video_repo.get(first_clip.source_video_id)
-        if video is not None:
-            input_path = video.path
+    comp_clips: list[CompositionClip] = []
+    input_paths: list[str] = []
+
+    for _i, clip in enumerate(clips):
+        if clip.timeline_start is None or clip.timeline_end is None:
+            continue
+        if clip.source_video_id is None:
+            continue
+        video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
+        if video is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "MISSING_VIDEO",
+                    "message": f"Source video for clip {clip.id} not found",
+                },
+            )
+        input_paths.append(video.path)
+        idx = len(comp_clips)
+        comp_clips.append(CompositionClip(idx, clip.timeline_start, clip.timeline_end, 0, 0))
+
+    if not comp_clips:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "NO_PLACEABLE_CLIPS",
+                "message": "No placeable clips found on the timeline",
+            },
+        )
+
+    raw_transitions: list[dict[str, object]] = project.transitions or []
+    transitions: list[TransitionSpec] = [
+        TransitionSpec(
+            TransitionType.from_str(str(t["transition_type"])),
+            float(t["duration"]),  # type: ignore[arg-type]
+            0.0,
+        )
+        for t in raw_transitions
+    ]
+
+    filter_graph = build_composition_graph(
+        comp_clips, transitions, None, None, project.output_width, project.output_height
+    )
 
     try:
         session = await manager.start(
             project_id=project_id,
-            input_path=input_path,
+            input_paths=input_paths,
+            filter_graph=filter_graph,
             quality_level=quality,
         )
     except SessionLimitError:

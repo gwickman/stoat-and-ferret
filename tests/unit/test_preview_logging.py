@@ -547,7 +547,7 @@ class TestFFmpegCommandLogging:
         ):
             await gen.generate(
                 session_id="sess-1",
-                input_path="/media/video.mp4",
+                input_paths=["/media/video.mp4"],
             )
 
             calls = _find_log_calls(mock_logger, "hls_generation_started")

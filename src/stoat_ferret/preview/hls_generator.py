@@ -53,7 +53,7 @@ def get_segment_duration() -> float:
 
 
 def build_hls_args(
-    input_path: str,
+    input_paths: list[str],
     output_dir: Path,
     filter_complex: str | None,
     segment_duration: float,
@@ -61,7 +61,7 @@ def build_hls_args(
     """Build FFmpeg arguments for HLS VOD segment generation.
 
     Args:
-        input_path: Path to the source media file.
+        input_paths: Paths to the source media files (one -i flag per entry).
         output_dir: Directory for manifest and segment files.
         filter_complex: Optional simplified filter graph string.
         segment_duration: Target segment duration in seconds.
@@ -72,10 +72,9 @@ def build_hls_args(
     manifest_path = str(output_dir / MANIFEST_FILENAME)
     segment_pattern = str(output_dir / SEGMENT_FILENAME_PATTERN)
 
-    args = [
-        "-i",
-        input_path,
-    ]
+    args: list[str] = []
+    for path in input_paths:
+        args.extend(["-i", path])
 
     if filter_complex:
         args.extend(["-filter_complex", filter_complex])
@@ -179,7 +178,7 @@ class HLSGenerator:
         self,
         *,
         session_id: str,
-        input_path: str,
+        input_paths: list[str],
         filter_graph: FilterGraph | None = None,
         duration_us: int | None = None,
         progress_callback: Callable[[float], Awaitable[None]] | None = None,
@@ -189,7 +188,7 @@ class HLSGenerator:
 
         Args:
             session_id: Unique session identifier for output directory.
-            input_path: Path to the source media file.
+            input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object to simplify for preview.
             duration_us: Total duration in microseconds for progress calculation.
             progress_callback: Optional async callback receiving progress (0.0-1.0).
@@ -208,7 +207,7 @@ class HLSGenerator:
         simplified_filter = simplify_filter_for_preview(filter_graph)
 
         args = build_hls_args(
-            input_path=input_path,
+            input_paths=input_paths,
             output_dir=output_dir,
             filter_complex=simplified_filter,
             segment_duration=segment_duration,
@@ -217,7 +216,7 @@ class HLSGenerator:
         logger.info(
             "hls_generation_started",
             session_id=session_id,
-            input_path=input_path,
+            input_paths=input_paths,
             segment_duration=segment_duration,
             ffmpeg_command=" ".join(args),
         )
