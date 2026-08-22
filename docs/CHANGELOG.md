@@ -55,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+
 ## v134 — Preview Fidelity (2026-08-22)
 
 1 theme, 2 features, PRs #1012–#1016.
