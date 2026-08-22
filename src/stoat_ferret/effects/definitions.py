@@ -1062,6 +1062,7 @@ TIME_STRETCH = EffectDefinition(
         "Stretch or compress audio duration without pitch change using FFmpeg atempo/rubberband."
     ),
     example_prompt="Speed up the narration by 25% without changing the pitch.",
+    stream_kind="a",
 )
 
 
@@ -1116,6 +1117,7 @@ MASTERING_LIMITER = EffectDefinition(
     build_fn=_build_mastering_limiter,
     ai_summary=("Limit master bus true-peak to a configured dBTP ceiling using FFmpeg alimiter."),
     example_prompt="Limit the master to -1 dBTP true peak for streaming delivery.",
+    stream_kind="a",
 )
 
 
@@ -1327,6 +1329,7 @@ LOUDNESS_NORMALIZE = EffectDefinition(
         "Normalize audio loudness to a target LUFS level using two-pass EBU R128 measurement."
     ),
     example_prompt="Normalize the audio to -16 LUFS for podcast delivery.",
+    stream_kind="a",
 )
 
 
@@ -1402,6 +1405,7 @@ PARAMETRIC_EQ = EffectDefinition(
         "Apply multi-band parametric EQ to boost or cut specific frequency ranges in audio."
     ),
     example_prompt="Boost presence at 3 kHz by 4 dB and cut muddiness at 200 Hz by 3 dB.",
+    stream_kind="a",
 )
 
 
@@ -1489,6 +1493,7 @@ MULTIBAND_COMPRESSOR = EffectDefinition(
         "mid, and high frequency bands for broadcast-quality mastering."
     ),
     example_prompt="Apply gentle multiband compression with 3 bands for mastering.",
+    stream_kind="a",
 )
 
 
@@ -1544,6 +1549,7 @@ PAN = EffectDefinition(
     example_prompt="Pan the voice slightly to the right at position 0.3.",
     automatable=frozenset({"position"}),
     automation_filter_template="aeval=exprs=max(0\\,1-({expr}))*val(0)|max(0\\,1+({expr}))*val(1)",
+    stream_kind="a",
 )
 
 
@@ -1606,6 +1612,7 @@ CONVOLUTION_REVERB = EffectDefinition(
         "Supports hall, room, and plate presets with adjustable wet/dry mix."
     ),
     example_prompt="Add a small hall reverb at 40% wet to the narration track.",
+    stream_kind="a",
 )
 
 

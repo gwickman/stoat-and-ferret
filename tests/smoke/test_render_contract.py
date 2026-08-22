@@ -936,10 +936,6 @@ async def test_single_clip_windowed_effect_emits_enable() -> None:
     )
 
 
-@pytest.mark.skipif(
-    os.getenv("STOAT_TEST_FFMPEG") != "1",
-    reason="audio-effect dispatch smoke test requires STOAT_TEST_FFMPEG=1",
-)
 async def test_single_clip_audio_effect_routes_to_audio_chain() -> None:
     """Single-clip audio effect routes to audio chain, not video chain (BL-794).
 
