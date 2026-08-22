@@ -32,3 +32,22 @@ async def test_preview_session_creation(
     assert "session_id" in body
     assert isinstance(body["session_id"], str)
     assert len(body["session_id"]) > 0
+
+
+async def test_multi_clip_preview_start(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Verify preview/start returns 202 with session_id for a 2-clip project (BL-797)."""
+    timeline_data = await create_adjacent_clips_timeline(smoke_client, videos_dir)
+    project_id = timeline_data["project_id"]
+    assert timeline_data["clip_a_id"] != timeline_data["clip_b_id"]
+
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/preview/start",
+    )
+    assert resp.status_code == 202
+    body = resp.json()
+    assert "session_id" in body
+    assert isinstance(body["session_id"], str)
+    assert len(body["session_id"]) > 0

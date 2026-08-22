@@ -166,3 +166,24 @@ async def test_waveform_generate_returns_202(
     assert body["status"] == "pending"
     assert isinstance(body["waveform_id"], str)
     assert len(body["waveform_id"]) > 0
+
+
+async def test_seek_position_returns_200(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /api/v1/preview/{session_id}/seek with position=3.0 returns 200 (BL-798)."""
+    timeline_data = await create_adjacent_clips_timeline(smoke_client, videos_dir)
+    project_id = timeline_data["project_id"]
+
+    start_resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/preview/start",
+    )
+    assert start_resp.status_code == 202
+    session_id = start_resp.json()["session_id"]
+
+    seek_resp = await smoke_client.post(
+        f"/api/v1/preview/{session_id}/seek",
+        json={"position": 3.0},
+    )
+    assert seek_resp.status_code == 200
