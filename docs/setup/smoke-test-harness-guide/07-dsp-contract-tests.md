@@ -158,3 +158,39 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_smoke_windowed_non_t.py -v
 Tests confirm:
 - The effect is visibly present inside the window and absent outside it (frame comparison).
 - Output `pix_fmt` is `yuv420p` (ffprobe assertion).
+
+## v133 Contracts
+
+v133 (Theme 02, Impact A) adds two argv-only smoke tests to `tests/smoke/test_render_contract.py`.
+Both tests call `build_command_for_job()` directly — no FFmpeg binary is invoked.
+
+### Fail-closed unknown-effect contract (`test_unknown_effect_raises_command_build_error_smoke`)
+
+**What it tests:** A render job submitted with an unregistered (unknown) effect type raises
+`CommandBuildError` at command-build time, before any FFmpeg invocation, instead of silently
+succeeding. This is the fail-closed contract introduced by BL-795.
+
+**What "argv-only" means:** The test constructs a single-clip job with `effect_type:
+"nonexistent_effect_xyz"` and passes an empty `EffectRegistry` to `build_command_for_job()`. Because
+the registry has no entry for the effect type, the worker raises `CommandBuildError` immediately.
+`STOAT_TEST_FFMPEG=1` is not required — no FFmpeg process is started.
+
+**When to extend:** Add a variant if a new unknown-effect code path is introduced (e.g., a different
+effect schema structure that bypasses the existing detection). Always use an empty or deliberately
+mismatched `EffectRegistry` so the unknown-type detection is the only path under test.
+
+### Crop pipeline contract (`test_crop_effect_filter_complex_smoke`)
+
+**What it tests:** A render job with a crop effect (parameters `x`, `y`, `width`, `height`) produces
+a `filter_complex` string containing `crop=`. This verifies that `CropBuilder` is reachable through
+the full Rust→Python→FFmpeg-argv pipeline (BL-796).
+
+**What the `filter_complex` assertion verifies:** The test calls `build_command_for_job()` with the
+default production registry (`create_default_registry()`) and inspects the resulting argv for the
+`-filter_complex` argument. Finding `"crop="` in that string confirms the crop effect is registered,
+dispatched correctly, and emits a valid FFmpeg crop filter string — without requiring FFmpeg to be
+installed.
+
+**When to extend:** Add parameter-variant cases (non-zero offsets, different dimensions, or
+`aspect_policy` variants) when the `CropBuilder` parameter schema changes, or add similar
+argv-only coverage for any new shape-based effect that follows the same dispatch pattern.
