@@ -29,11 +29,11 @@ import pytest
 
 from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import EffectDefinition
+from stoat_ferret.effects.definitions import EffectDefinition, create_default_registry
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import AsyncSQLiteRenderRepository
-from stoat_ferret.render.worker import TtsCueAudioInput, build_command_for_job
+from stoat_ferret.render.worker import CommandBuildError, TtsCueAudioInput, build_command_for_job
 from tests.conftest import requires_ffmpeg
 from tests.smoke.conftest import poll_job_until_terminal, scan_videos_and_wait
 
@@ -1071,4 +1071,90 @@ def test_non_default_transition_in_filter_complex() -> None:
     assert "xfade=transition=wipeleft:duration=0.35" in filter_complex, (
         f"filter_complex must contain 'xfade=transition=wipeleft:duration=0.35';"
         f" got: {filter_complex!r}"
+    )
+
+
+# ── Fail-closed and crop pipeline smoke tests (v133 Theme 02, Features 005) ──
+# Argv-only regression coverage for the fail-closed unknown-effect contract
+# (BL-795) and the crop effect filter pipeline contract (BL-796). Both call
+# build_command_for_job() directly; no FFmpeg execution.
+
+
+async def test_unknown_effect_raises_command_build_error_smoke() -> None:
+    """FR-001-AC-1: unknown effect type raises CommandBuildError (fail-closed contract).
+
+    Smoke test: a single-clip render job with an unregistered effect type causes
+    CommandBuildError at command-build time, before any FFmpeg invocation.
+    Argv-only; no STOAT_TEST_FFMPEG gate.
+    """
+    effect_data: dict[str, Any] = {
+        "effect_type": "nonexistent_effect_xyz",
+    }
+    clip = _cmd_make_clip("clip-smoke-fc", "vid-smoke-fc", 0, effects=[effect_data])
+    video = _cmd_make_video("vid-smoke-fc", "/media/smoke_fc.mp4")
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    registry = EffectRegistry()  # empty — effect type is not registered
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 10.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan, job_id="job-smoke-failclosed")
+
+    with pytest.raises(CommandBuildError):
+        await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+
+
+async def test_crop_effect_filter_complex_smoke() -> None:
+    """FR-002-AC-1: crop effect produces crop= filter string in filter_complex.
+
+    Smoke test: a single-clip render job with a crop effect produces a
+    filter_complex containing the crop= filter. Argv-only; no STOAT_TEST_FFMPEG gate.
+    """
+    effect_data: dict[str, Any] = {
+        "effect_type": "crop",
+        "parameters": {"x": 0, "y": 0, "width": 100, "height": 100},
+    }
+    clip = _cmd_make_clip("clip-smoke-crop", "vid-smoke-crop", 0, effects=[effect_data])
+    video = _cmd_make_video("vid-smoke-crop", "/media/smoke_crop.mp4")
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    registry = create_default_registry()
+
+    render_plan = json.dumps(
+        {
+            "total_duration": 10.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 1920,
+                "height": 1080,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = _cmd_make_job(render_plan, job_id="job-smoke-crop")
+
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=registry)
+
+    assert "-filter_complex" in cmd, f"-filter_complex not found in command: {cmd}"
+    fc_idx = cmd.index("-filter_complex")
+    filter_complex = cmd[fc_idx + 1]
+    assert "crop=" in filter_complex, (
+        f"Expected 'crop=' in filter_complex for crop effect; got: {filter_complex!r}"
     )
