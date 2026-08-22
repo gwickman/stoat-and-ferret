@@ -64,6 +64,7 @@
 pub mod audio;
 pub mod automation;
 mod command;
+pub mod crop;
 pub mod drawtext;
 pub mod expression;
 pub mod filter;

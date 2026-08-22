@@ -27,6 +27,7 @@ from stoat_ferret_core import (
     ColorKeyBuilder,
     ColorLutBuilder,
     ConvolutionReverbBuilder,
+    CropBuilder,
     CurvesBuilder,
     DeesserBuilder,
     DeplosiveBuilder,
@@ -3195,6 +3196,88 @@ BURNED_SUBTITLE_BUILDER = EffectDefinition(
 )
 
 
+def _crop_preview() -> str:
+    """Generate a filter preview for crop with default parameters."""
+    return str(CropBuilder(1280, 720, 0, 0).build())
+
+
+def _build_crop(parameters: dict[str, Any]) -> str:
+    """Build FFmpeg filter string for crop effect.
+
+    Args:
+        parameters: Effect parameters with width, height, x, y, and aspect_policy.
+
+    Returns:
+        FFmpeg crop filter string.
+
+    Raises:
+        ValueError: If aspect_policy is not "clamp".
+    """
+    aspect_policy = str(parameters.get("aspect_policy", "clamp"))
+    if aspect_policy != "clamp":
+        raise ValueError(f"unknown aspect_policy: {aspect_policy!r}")
+    width = int(parameters.get("width", 1))
+    height = int(parameters.get("height", 1))
+    x = int(parameters.get("x", 0))
+    y = int(parameters.get("y", 0))
+    return str(CropBuilder(width, height, x, y).build())
+
+
+CROP_EFFECT = EffectDefinition(
+    name="Crop",
+    description=(
+        "Crop a video clip to a pixel-coordinate region. "
+        "Emits crop=w:h:x:y; out-of-bounds x/y are clamped by FFmpeg at runtime."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "width": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Output width in pixels (must be > 0).",
+            },
+            "height": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Output height in pixels (must be > 0).",
+            },
+            "x": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0,
+                "description": "Left edge of the crop region in pixels.",
+            },
+            "y": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0,
+                "description": "Top edge of the crop region in pixels.",
+            },
+            "aspect_policy": {
+                "type": "string",
+                "enum": ["clamp"],
+                "default": "clamp",
+                "description": "Out-of-bounds policy. Only 'clamp' is supported (FFmpeg runtime clamping).",  # noqa: E501
+            },
+        },
+        "required": ["width", "height"],
+        "additionalProperties": False,
+    },
+    ai_hints={
+        "width": "Output crop width in pixels (> 0). Must fit within the source frame.",
+        "height": "Output crop height in pixels (> 0). Must fit within the source frame.",
+        "x": "Left edge of the crop rectangle in pixels (0 = left edge of frame).",
+        "y": "Top edge of the crop rectangle in pixels (0 = top edge of frame).",
+        "aspect_policy": "Use 'clamp' (default) — FFmpeg silently clamps out-of-bounds regions.",
+    },
+    preview_fn=_crop_preview,
+    build_fn=_build_crop,
+    ai_summary="Crop a clip to a pixel-coordinate rectangle; x/y/width/height; clamped by FFmpeg.",
+    example_prompt="Crop the video to a 1280x720 region starting at (100, 50).",
+)
+
+
 def create_default_registry() -> EffectRegistry:
     """Create a registry with all built-in effects registered.
 
@@ -3244,4 +3327,5 @@ def create_default_registry() -> EffectRegistry:
     registry.register("hue_rotation", HUE_ROTATION)
     registry.register("subtitle_script", SUBTITLE_SCRIPT)
     registry.register("burned_subtitle", BURNED_SUBTITLE_BUILDER)
+    registry.register("crop", CROP_EFFECT)
     return registry

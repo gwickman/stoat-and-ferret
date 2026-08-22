@@ -5014,3 +5014,9 @@ class BurnedSubtitleBuilder:
 
     @staticmethod
     def build(spec: BurnedSubtitleSpec) -> str: ...
+
+class CropBuilder:
+    """Pixel-coordinate crop filter builder. build() emits crop=w:h:x:y."""
+
+    def __new__(cls, w: int, h: int, x: int, y: int) -> CropBuilder: ...
+    def build(self) -> str: ...

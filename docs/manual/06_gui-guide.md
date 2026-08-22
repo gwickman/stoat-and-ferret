@@ -126,8 +126,8 @@ Choose which clip to work with. The selector shows clips from your project with 
 
 ### Effect Catalog
 
-<!-- effects-count: 40 -->
-Browse all 40 available effects:
+<!-- effects-count: 41 -->
+Browse all 41 available effects:
 
 | Effect | Description |
 |--------|-------------|

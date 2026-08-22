@@ -94,6 +94,7 @@ EXPECTED_EFFECT_TYPES = {
     "hue_rotation",
     "subtitle_script",
     "burned_subtitle",
+    "crop",
 }
 
 # ---- Registry unit tests ----

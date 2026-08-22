@@ -82,6 +82,7 @@ try:
         CompositionClip,
         ConcentricRingsGenerator,
         ConvolutionReverbBuilder,
+        CropBuilder,
         CurveKind,
         CurvesBuilder,
         DeesserBuilder,
@@ -264,6 +265,7 @@ except ImportError:
     MultiTrackAudioMixer = _not_built  # type: ignore[misc,assignment]
     NoiseGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
     ConvolutionReverbBuilder = _not_built  # type: ignore[misc,assignment]
+    CropBuilder = _not_built  # type: ignore[misc,assignment]
     BlurBuilder = _not_built  # type: ignore[misc,assignment]
     GenericProceduralImageBuilder = _not_built  # type: ignore[misc,assignment]
     GradientGeneratorBuilder = _not_built  # type: ignore[misc,assignment]
@@ -425,6 +427,7 @@ __all__ = [
     "SpiralGenerator",
     # Video effect builders
     "BlurBuilder",
+    "CropBuilder",
     "ChromaticAberrationBuilder",
     "CurvesBuilder",
     "GradientGeneratorBuilder",
