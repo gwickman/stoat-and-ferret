@@ -16,7 +16,7 @@ The implementation combines a Python/FastAPI orchestration layer, a Rust/PyO3 me
 
 - Index local video files with FFmpeg probing, metadata extraction, thumbnails, waveform data, and optional proxy generation.
 - Manage projects, clips, tracks, markers, transitions, project versions, subtitle assets, TTS cues, and delivery profiles.
-- Apply a built-in effect registry of 40 FFmpeg-backed effects, including text, speed, fades, transitions, audio repair, mastering, panning, reverb, freeze frame, blur, sharpen, opacity, scale, keying, LUTs, lens effects, generators, zoom/pan, curves, vignette, hue rotation, and subtitles.
+- Apply a built-in effect registry of 41 FFmpeg-backed effects, including text, speed, fades, transitions, audio repair, mastering, panning, reverb, freeze frame, blur, sharpen, opacity, scale, keying, LUTs, lens effects, generators, zoom/pan, curves, vignette, hue rotation, and subtitles.
 - Render projects through a queued render API with status polling, cancellation, retry, frame previews, render evidence, encoder discovery, batch rendering, and WebSocket progress events.
 - Run post-render QC checks for loudness, true peak, clipping, silence, loop seams, tone presence, ducking, section arc, A/V sync, decode integrity, and chapters.
 - Serve a React GUI with dashboard, library, projects, effects, timeline, preview, and render pages.
