@@ -20,7 +20,7 @@ When a change matches one of the triggers below, the corresponding smoke test up
 | Timeline clip CRUD endpoint changes (PUT/POST/PATCH/DELETE) | Update `test_timeline.py` assertions and conftest helper |
 | Filesystem endpoint changes (`/api/v1/filesystem/`) | Update `test_filesystem.py` assertions |
 | Video detail/thumbnail/delete endpoint changes | Update `test_library.py` (video detail, thumbnail, delete tests) |
-| Version restore endpoint changes (`/versions/{id}/restore`) | Update `test_versions.py` and `create_version_repo()` factory |
+| Version restore endpoint changes (`/versions/{id}/restore`) | Update `test_versions.py`, `test_uc_media_restore_roundtrip.py`, and `create_version_repo()` factory |
 | Composition preset schema changes | Update `test_compose.py` assertions |
 | Audio mix endpoint changes | Update `test_audio.py` assertions |
 | Batch endpoint changes | Update `test_batch.py` assertions |
@@ -139,6 +139,23 @@ UAT journey scripts locate GUI elements using `data-testid` selectors (e.g., `pa
 - Changes to effect parameter schemas (renamed params, new required params)
 - Changes to the Timeline Track entity structure
 - Changes to API endpoint paths used by the seed script
+
+## Restore Test Group Maintenance
+
+The restore contract test group (`test_uc_media_restore_roundtrip.py`, `test_versions.py`) exercises
+the full round-trip via ASGI test client. Keep these in sync with the restore endpoint contract:
+
+- **If `RestoreResponse` fields change** (`restored_version`, `new_version`, `message`) — update
+  assertions in both `test_uc_media_restore_roundtrip.py` and `test_versions.py`.
+- **If the restore endpoint path changes** — update all restore `POST` calls in the smoke and
+  acceptance test files, and update the endpoint coverage map in `03-test-cases.md`.
+- **If the version repository changes** (e.g., snapshot schema, `create_version_repo()` factory) —
+  update `test_versions.py` factory helpers and re-run the acceptance test locally before pushing.
+- **Smoke coverage:** `tests/smoke/test_versions.py` — unconditional CI lane, no FFmpeg required.
+- **UAT coverage:** Journey 717 (`scripts/uat_journey_717.py`) — browser-driven, requires live server
+  with GUI Restore button. Run with `python scripts/uat_runner.py --headless`.
+
+---
 
 ## Deferred Post-Merge Tests
 

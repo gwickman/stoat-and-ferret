@@ -801,6 +801,30 @@ If journey 201 fails, journeys 202 and 203 are automatically skipped. Journey 20
 
 ---
 
+## Restore Contract Test Group (`tests/acceptance/test_uc_media_restore_roundtrip.py`, `tests/test_api/test_versions.py`, BL-799, v135)
+
+Validates the branch (a) live-restore contract: after calling
+`POST /projects/{id}/versions/{version}/restore`, the live project timeline (tracks and clips)
+equals the saved snapshot identified by `version`.
+
+**No `STOAT_TEST_FFMPEG` required** — restore operates on timeline data structures, not media
+encode/decode.
+
+| Test Function | File | What It Tests |
+|---------------|------|---------------|
+| `test_uc_media_restore_roundtrip` | `tests/acceptance/test_uc_media_restore_roundtrip.py` | Full round-trip: create project → add clips → save version → add clip → restore → assert live timeline equals snapshot |
+| `test_version_restore` | `tests/smoke/test_versions.py` | POST version restore with repo factory helper returns 200 and correct `restored_version` / `new_version` fields |
+| `test_version_restore_not_found` | `tests/smoke/test_versions.py` | POST restore for nonexistent version returns 404 |
+| `test_version_restore_nonexistent_project` | `tests/smoke/test_versions.py` | POST restore for nonexistent project returns 404 |
+
+**CI lane:** Unconditional unit lane — restore is a pure database/repository operation.
+
+**UAT coverage:** Journey 717 (`scripts/uat_journey_717.py`) drives the same round-trip through
+the browser GUI and the Restore button added in Feature 004 (BL-799). It is run via
+`python scripts/uat_runner.py --headless` against a live server.
+
+---
+
 ## Preview HLS FFmpeg Integration Tests (`tests/preview/test_preview_hls_ffmpeg.py`, BL-837, v135)
 
 Real-FFmpeg behavioral tests for `HLSGenerator.generate()`. These tests require `STOAT_TEST_FFMPEG=1` and a real FFmpeg binary on PATH — they are skipped in the standard unit CI lane and run only in the `ffmpeg-tests` lane.
