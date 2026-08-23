@@ -117,6 +117,23 @@ Constraints: respect §0 safety, capture a reproducer, attach evidence per the s
 
 Hit a handful of mutating endpoints with deliberately malformed payloads and rate each error body for self-correctability. Endpoint choice, malformation choice, and rubric shape are up to the chatbot; pick what surfaces signal.
 
+### Version restore roundtrip
+
+Verify the branch (a) live-restore contract via chatbot API calls:
+
+1. Create a project via `POST /api/v1/projects`.
+2. Add two or more clips via `POST /api/v1/projects/{id}/clips`.
+3. Save a version via `POST /api/v1/projects/{id}/versions` and record `version_number`.
+4. Add another clip to the live timeline (modifying live state after the snapshot).
+5. Restore the saved version via `POST /api/v1/projects/{id}/versions/{version}/restore`.
+6. Assert the live timeline (`GET /api/v1/projects/{id}/clips`) reflects the restored snapshot:
+   clip count and clip IDs match those present at the time of `version_number`.
+7. Confirm the response includes `restored_version` == the saved version number and a new
+   `new_version` field greater than `restored_version`.
+
+**Pass criterion:** Live clip list after restore equals saved snapshot; `new_version` > `restored_version`.
+**Fail criterion:** Clip list unchanged after restore, or `restored_version` / `new_version` absent from response.
+
 ---
 
 ## Working with open backlog items
