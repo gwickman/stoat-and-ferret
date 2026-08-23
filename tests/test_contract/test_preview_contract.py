@@ -70,6 +70,9 @@ class TestHLSGenerationContract:
             segment_duration=2.0,
         )
 
+        # scale=160:120 has no labeled terminal outputs — -map must NOT be emitted (DC-1, BL-837)
+        assert "-map" not in args
+
         real = RealFFmpegExecutor()
         result = real.run(args, timeout=60)
         assert result.returncode == 0, f"HLS with filter failed: {result.stderr}"

@@ -66,6 +66,59 @@ class TestBuildHlsArgs:
         idx = args.index("-filter_complex")
         assert args[idx + 1] == "scale=640:360"
 
+    def test_args_with_outv_label_emits_map_outv(self, tmp_path: Path) -> None:
+        """build_hls_args emits -map [outv] when filter_complex contains [outv] (BL-837)."""
+        args = build_hls_args(
+            input_paths=["/media/video.mp4"],
+            output_dir=tmp_path,
+            filter_complex="[0:v]scale=640:360[outv]",
+            segment_duration=2.0,
+        )
+
+        assert "-map" in args
+        assert "[outv]" in args
+        map_idx = args.index("-map")
+        assert args[map_idx + 1] == "[outv]"
+
+    def test_args_with_outv_and_outa_labels_emits_both_maps(self, tmp_path: Path) -> None:
+        """build_hls_args emits -map [outv] and -map [outa] for multi-clip graphs (BL-837)."""
+        args = build_hls_args(
+            input_paths=["/clip_a.mp4", "/clip_b.mp4"],
+            output_dir=tmp_path,
+            filter_complex="[0:v][1:v]concat=n=2:v=1:a=0[outv];[0:a][1:a]concat=n=2:v=0:a=1[outa]",
+            segment_duration=2.0,
+        )
+
+        assert "-map" in args
+        assert "[outv]" in args
+        assert "[outa]" in args
+        map_indices = [i for i, v in enumerate(args) if v == "-map"]
+        assert len(map_indices) == 2
+        assert args[map_indices[0] + 1] == "[outv]"
+        assert args[map_indices[1] + 1] == "[outa]"
+
+    def test_no_map_when_filter_complex_has_no_labels(self, tmp_path: Path) -> None:
+        """build_hls_args does not emit -map when filter_complex has no labeled outputs (BL-837)."""
+        args = build_hls_args(
+            input_paths=["/media/video.mp4"],
+            output_dir=tmp_path,
+            filter_complex="scale=640:360",
+            segment_duration=2.0,
+        )
+
+        assert "-map" not in args
+
+    def test_no_map_when_filter_complex_is_none(self, tmp_path: Path) -> None:
+        """build_hls_args does not emit -map when filter_complex is None (BL-837)."""
+        args = build_hls_args(
+            input_paths=["/media/video.mp4"],
+            output_dir=tmp_path,
+            filter_complex=None,
+            segment_duration=2.0,
+        )
+
+        assert "-map" not in args
+
     def test_no_filter_complex_when_none(self, tmp_path: Path) -> None:
         """Build args omits -filter_complex when None."""
         args = build_hls_args(

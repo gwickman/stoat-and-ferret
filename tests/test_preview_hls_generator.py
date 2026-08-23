@@ -94,3 +94,53 @@ class TestBuildHlsArgs:
         i_indices = [i for i, v in enumerate(args) if v == "-i"]
         assert all(i < ss_idx for i in i_indices)
         assert args[ss_idx + 1] == "3.5"
+
+    def test_labeled_outv_emits_map_flag(self, tmp_path: Path) -> None:
+        """build_hls_args emits -map [outv] for a filter_complex with [outv] label (BL-837)."""
+        args = build_hls_args(
+            input_paths=["a.mp4"],
+            output_dir=tmp_path,
+            filter_complex="[0:v]scale=160:90[outv]",
+            segment_duration=2.0,
+        )
+        assert "-map" in args
+        assert "[outv]" in args
+        map_idx = args.index("-map")
+        assert args[map_idx + 1] == "[outv]"
+
+    def test_labeled_outv_outa_emits_both_map_flags(self, tmp_path: Path) -> None:
+        """build_hls_args emits -map [outv] and -map [outa] for multi-label filter (BL-837)."""
+        args = build_hls_args(
+            input_paths=["a.mp4", "b.mp4"],
+            output_dir=tmp_path,
+            filter_complex="[0:v][1:v]xfade=offset=3[outv];[0:a][1:a]acrossfade=d=1[outa]",
+            segment_duration=2.0,
+        )
+        assert "-map" in args
+        map_indices = [i for i, v in enumerate(args) if v == "-map"]
+        assert len(map_indices) == 2
+        assert args[map_indices[0] + 1] == "[outv]"
+        assert args[map_indices[1] + 1] == "[outa]"
+
+    def test_no_map_for_none_filter_complex(self, tmp_path: Path) -> None:
+        """build_hls_args emits no -map when filter_complex is None (BL-837)."""
+        args = build_hls_args(
+            input_paths=["a.mp4"],
+            output_dir=tmp_path,
+            filter_complex=None,
+            segment_duration=2.0,
+        )
+        assert "-map" not in args
+
+    def test_seek_path_with_labeled_filter_emits_map(self, tmp_path: Path) -> None:
+        """build_hls_args with start_offset_s and labeled filter emits -map (BL-837 AC-6)."""
+        args = build_hls_args(
+            input_paths=["a.mp4"],
+            output_dir=tmp_path,
+            filter_complex="[0:v]scale=160:90[outv]",
+            segment_duration=2.0,
+            start_offset_s=5.0,
+        )
+        assert "-ss" in args
+        assert "-map" in args
+        assert "[outv]" in args
