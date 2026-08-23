@@ -73,7 +73,7 @@ def _make_clip(
 
 
 @_FFMPEG_SKIP
-@pytest.mark.skip(reason="BL-836: _capture_seek(**kwargs) receives a positional arg from AsyncMock — fix deferred to v137")
+@pytest.mark.skip(reason="BL-836: mock signature mismatch, fix deferred to v137")
 @pytest.mark.asyncio
 async def test_seek_position_forwarded_through_manager_to_generator(tmp_path: Path) -> None:
     """Seek with position=5.0 forwards position to manager.seek and start_offset_s to generator.
