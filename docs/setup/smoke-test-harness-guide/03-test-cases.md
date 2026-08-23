@@ -798,3 +798,26 @@ For full journey details (step-by-step breakdowns, prerequisites, troubleshootin
 ```
 
 If journey 201 fails, journeys 202 and 203 are automatically skipped. Journey 204 always runs.
+
+---
+
+## Preview HLS FFmpeg Integration Tests (`tests/preview/test_preview_hls_ffmpeg.py`, BL-837, v135)
+
+Real-FFmpeg behavioral tests for `HLSGenerator.generate()`. These tests require `STOAT_TEST_FFMPEG=1` and a real FFmpeg binary on PATH — they are skipped in the standard unit CI lane and run only in the `ffmpeg-tests` lane.
+
+**Gate:** `STOAT_TEST_FFMPEG=1` — see `tests/effects/test_voice_repair_ffmpeg.py` for the same pattern.
+
+**deferred_post_merge:** These tests are marked `deferred_post_merge` in their module docstring. They were deferred from BL-837 Feature 001 (PR #1017) and discharged in Feature 002 (PR v135). They run on every future CI pass that touches the preview subsystem.
+
+| Test Function | What It Tests | Graph Type |
+|---------------|--------------|------------|
+| `test_hls_single_clip_map` | Single-clip scale (`[outv]` only): `HLSGenerator.generate()` exits 0, produces `manifest.m3u8`, emits >=1 `.ts` segment | Single-clip scale |
+| `test_hls_multi_clip_concat_map` | Multi-clip concat (`[outv][outa]`): same exit 0 + manifest + segment assertions | Multi-clip concat |
+| `test_hls_multi_clip_xfade_map` | Multi-clip xfade+acrossfade (`[outv][outa]`): same exit 0 + manifest + segment assertions | Multi-clip xfade |
+
+**Purpose:** Closes the runtime-proof gap for BL-837. Before these tests, the `-map` fix in `build_hls_args()` was verified only at the unit/command-builder level (PR #1017). These tests call `HLSGenerator.generate()` with real FFmpeg against synthetic video+audio files (lavfi `color` + `sine` sources), confirming all three `filter_complex` graph types produce valid HLS output after the fix.
+
+**How to run locally:**
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/preview/test_preview_hls_ffmpeg.py -x -q
+```
