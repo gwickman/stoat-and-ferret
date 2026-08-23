@@ -83,6 +83,10 @@ def build_hls_args(
 
     if filter_complex:
         args.extend(["-filter_complex", filter_complex])
+        if "[outv]" in filter_complex:
+            args.extend(["-map", "[outv]"])
+        if "[outa]" in filter_complex:
+            args.extend(["-map", "[outa]"])
 
     args.extend(
         [
