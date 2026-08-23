@@ -1849,16 +1849,31 @@ POST /projects/{project_id}/versions
 POST /projects/{project_id}/versions/{version}/restore
 ```
 
+Replaces the live project timeline (tracks and clips) from the saved snapshot identified by
+`version`. The endpoint implements branch (a) live-restore: the current live timeline is
+overwritten atomically from the snapshot, and a new post-restore snapshot is created to record
+the restored state. The original snapshot row is preserved (non-destructive history).
+
 **Response:** `200 OK`
 ```json
 {
   "restored_version": 3,
-  "new_version": 6,
-  "message": "Restored version 3 as new version 6"
+  "new_version": 7,
+  "message": "Restored version 3. Live timeline replaced from snapshot; new version 7 created."
 }
 ```
 
-**Note:** Restore is non-destructive — creates a new version with the old version's data rather than overwriting history.
+Fields:
+- `restored_version` — the version number of the snapshot that was applied to the live timeline.
+- `new_version` — the new snapshot version created to record the post-restore live state.
+- `message` — human-readable confirmation string.
+
+**Errors:**
+- `404 Not Found` — Project or version does not exist.
+- `409 Conflict` — Restore rejected (e.g., concurrent modification guard). Retry is safe.
+
+**Note:** Restore is non-destructive — the original snapshot history is preserved. The live
+timeline is replaced, not the version history.
 
 ---
 
