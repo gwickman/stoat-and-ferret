@@ -140,6 +140,25 @@ UAT journey scripts locate GUI elements using `data-testid` selectors (e.g., `pa
 - Changes to the Timeline Track entity structure
 - Changes to API endpoint paths used by the seed script
 
+## Deferred Post-Merge Tests
+
+Some test modules are marked `deferred_post_merge` in their module docstring. These tests require environment gates (e.g., `STOAT_TEST_FFMPEG=1`) that are not set in the standard unit CI lane; they run only in specialised CI lanes (e.g., `ffmpeg-tests`) that set the gate.
+
+**Convention:** A `deferred_post_merge` module-level docstring signals that:
+1. The tests were deferred from an earlier feature/PR for operational reasons (typically: the fix and its acceptance tests live in separate PRs, or the test requires a CI lane that was not available at the time of the primary PR).
+2. The tests are **not** skipped permanently — they discharge on the next CI pass that includes the gating lane.
+3. Downstream features must not omit the gate: they should read `EXPECTED_TESTS_FILE` or `baseline-failures.txt` to understand pre-existing skip counts before asserting test counts.
+
+**Current deferred_post_merge modules:**
+
+| Module | Gate | CI Lane | Reason |
+|--------|------|---------|--------|
+| `tests/preview/test_preview_hls_ffmpeg.py` | `STOAT_TEST_FFMPEG=1` | `ffmpeg-tests` | BL-837 real-FFmpeg acceptance tests deferred from PR #1017 (v135 Feature 001); discharged in v135 Feature 002 |
+
+When the gating lane runs and all deferred tests pass, update `baseline-failures.txt` to reflect the new baseline (if the lane is authoritative for the baseline).
+
+---
+
 ### Keeping `docs/manual/uat-testing.md` Up to Date
 
 The UAT manual at `docs/manual/uat-testing.md` is the developer-facing reference for running and interpreting UAT tests. It must be updated whenever:

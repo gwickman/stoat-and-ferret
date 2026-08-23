@@ -4,6 +4,23 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v134 — Preview Fidelity (2026-08-22)
+
+1 theme, 2 features, PRs #1012–#1016.
+
+### Theme: preview-fidelity
+
+- BL-797: `feat(preview): build full composition graph for multi-clip previews` —
+  preview generation now builds the complete multi-clip composition graph instead of
+  previewing only the first clip, achieving parity with the render path (PR #1012)
+- BL-798: `feat(preview): forward seek position to FFmpeg -ss flag` — seek position from
+  the preview request is now forwarded to FFmpeg's `-ss` flag (PR #1013)
+- Add multi-clip preview and seek-position smoke tests to the smoke test harness (PR #1014)
+- Document multi-clip preview and seek-position smoke tests in the harness guide (PR #1015)
+- Document `j_preview_parity` and `j_preview_seek` UAT journeys (PR #1016)
+
+---
+
 ## v133 — Effect Fail-Closed + Crop Effect + Audio Routing (2026-08-22)
 
 2 themes, 6 features, PRs #1005–#1010.

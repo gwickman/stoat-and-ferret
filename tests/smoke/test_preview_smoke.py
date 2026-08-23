@@ -64,9 +64,9 @@ async def test_preview_lifecycle_smoke(
         await asyncio.sleep(1.0)
 
     assert final_status is not None, "No status received from preview endpoint"
-    # Accept any known status — the invariant is no server error (4xx/5xx) during polling
-    assert final_status in terminal_statuses | {"initializing", "generating"}, (
-        f"Unexpected final status: {final_status!r}"
+    assert final_status == "ready", f"Expected status 'ready' after fix, got: {final_status!r}"
+    assert body.get("manifest_url") is not None, (
+        "Expected non-null manifest_url when status is 'ready'"
     )
 
 
