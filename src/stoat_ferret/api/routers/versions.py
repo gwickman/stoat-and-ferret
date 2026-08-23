@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from stoat_ferret.api.routers.timeline import _build_timeline_response, _get_clips_by_track
+from stoat_ferret.api.schemas.timeline import TimelineResponse
 from stoat_ferret.api.schemas.version import (
     RestoreResponse,
     VersionCreateRequest,
@@ -19,6 +21,7 @@ from stoat_ferret.api.schemas.version import (
 )
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
+from stoat_ferret.db.models import Clip, Track
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
@@ -30,6 +33,7 @@ from stoat_ferret.db.timeline_repository import (
 from stoat_ferret.db.version_repository import (
     AsyncSQLiteVersionRepository,
     AsyncVersionRepository,
+    compute_checksum,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["versions"])
@@ -218,17 +222,21 @@ async def restore_version(
     version: int,
     project_repo: ProjectRepoDep,
     version_repo: VersionRepoDep,
+    timeline_repo: TimelineRepoDep,
+    clip_repo: ClipRepoDep,
 ) -> RestoreResponse:
-    """Restore a previous project version, creating a new version.
+    """Restore a previous project version to the live timeline, creating a new version.
 
-    Non-destructive: restoring version N creates a new version containing
-    the restored data.
+    Replaces the current live timeline with the data from the specified version,
+    then saves a new version snapshot of the restored state.
 
     Args:
         project_id: The unique project identifier.
         version: The version number to restore from.
         project_repo: Project repository dependency.
         version_repo: Version repository dependency.
+        timeline_repo: Timeline repository dependency.
+        clip_repo: Clip repository dependency.
 
     Returns:
         Restore confirmation with source and new version numbers.
@@ -243,19 +251,63 @@ async def restore_version(
             detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
         )
 
-    try:
-        new_record = await version_repo.restore(project_id, version)
-    except ValueError:
+    source = await version_repo.get_version(project_id, version)
+    if source is None or compute_checksum(source.timeline_json) != source.checksum:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "code": "PROJECT_VERSION_NOT_FOUND",
                 "message": f"Version {version} not found for project {project_id}",
             },
-        ) from None
+        )
+
+    timeline = TimelineResponse.model_validate(json.loads(source.timeline_json))
+
+    live_tracks = await timeline_repo.get_tracks_by_project(project_id)
+    for track in live_tracks:
+        clips = await timeline_repo.get_clips_by_track(track.id)
+        for clip in clips:
+            await clip_repo.delete(clip.id)
+        await timeline_repo.delete_track(track.id)
+
+    for tr in timeline.tracks:
+        restored_track = Track(
+            id=tr.id,
+            project_id=project_id,
+            track_type=tr.track_type,
+            label=tr.label,
+            z_index=tr.z_index,
+            muted=tr.muted,
+            locked=tr.locked,
+            kind=tr.kind,
+            volume_envelope=tr.volume_envelope,
+            weight=tr.weight,
+        )
+        await timeline_repo.create_track(restored_track)
+        for cl in tr.clips:
+            restored_clip = Clip(
+                id=cl.id,
+                project_id=project_id,
+                source_video_id=cl.source_video_id,
+                in_point=cl.in_point,
+                out_point=cl.out_point,
+                timeline_position=0,
+                clip_type=cl.clip_type,
+                track_id=cl.track_id,
+                timeline_start=cl.timeline_start,
+                timeline_end=cl.timeline_end,
+                generator_params=None,
+                effects=None,
+                source_asset_id=None,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            await clip_repo.add(restored_clip)
+
+    new_record = await version_repo.save(project_id, source.timeline_json)
 
     return RestoreResponse(
         restored_version=version,
         new_version=new_record.version_number,
-        message=f"Restored version {version} as version {new_record.version_number}",
+        message="Version restored to live timeline.",
     )
