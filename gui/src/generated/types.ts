@@ -19,6 +19,7 @@ export type TimelineClip = components['schemas']['TimelineClipResponse']
 // API-derived response types
 export type TimelineResponse = components['schemas']['TimelineResponse']
 export type LayoutPresetListResponse = components['schemas']['LayoutPresetListResponse']
+export type VersionResponse = components['schemas']['VersionResponse']
 
 // Proxy types
 export type ProxyStatus = components['schemas']['ProxyStatus']

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Clip, Project } from '../generated/types'
+import type { Clip, Project, VersionResponse } from '../generated/types'
 import { fetchClips } from '../hooks/useProjects'
 import { useClipStore } from '../stores/clipStore'
 import ClipFormModal from './ClipFormModal'
@@ -21,6 +21,10 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
   const [clips, setClips] = useState<Clip[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [versions, setVersions] = useState<VersionResponse[]>([])
+  const [versionsError, setVersionsError] = useState<string | null>(null)
+  const [restoring, setRestoring] = useState<number | null>(null)
 
   // Clip form modal state
   const [showClipForm, setShowClipForm] = useState(false)
@@ -51,6 +55,42 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
   useEffect(() => {
     loadClips()
   }, [loadClips])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const resp = await fetch(`/api/v1/projects/${project.id}/versions`)
+        if (!resp.ok) return
+        const data = (await resp.json()) as { versions: VersionResponse[] }
+        setVersions(data.versions ?? [])
+      } catch {
+        // non-critical; show empty panel
+      }
+    })()
+  }, [project.id])
+
+  const handleRestore = useCallback(
+    async (version: number) => {
+      setRestoring(version)
+      setVersionsError(null)
+      try {
+        const resp = await fetch(
+          `/api/v1/projects/${project.id}/versions/${version}/restore`,
+          { method: 'POST' },
+        )
+        if (!resp.ok) {
+          setVersionsError(`Restore failed (HTTP ${resp.status}). Please try again.`)
+          return
+        }
+        loadClips()
+      } catch {
+        setVersionsError('Restore failed. Please try again.')
+      } finally {
+        setRestoring(null)
+      }
+    },
+    [project.id, loadClips],
+  )
 
   const handleAddClip = () => {
     setEditingClip(undefined)
@@ -222,6 +262,41 @@ export default function ProjectDetails({ project, onBack, onDelete }: Readonly<P
           </table>
         </div>
       )}
+
+      <div className="mt-6" data-testid="versions-section">
+        <h3 className="text-lg font-medium text-gray-200">Versions</h3>
+        {versionsError && (
+          <p className="mt-1 text-sm text-red-400" data-testid="versions-error">
+            {versionsError}
+          </p>
+        )}
+        {versions.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-500">No saved versions.</p>
+        ) : (
+          <ul className="mt-2 space-y-1" data-testid="versions-list">
+            {versions.map((v) => (
+              <li
+                key={v.version_number}
+                className="flex items-center justify-between rounded border border-gray-700 px-3 py-2"
+                data-testid={`version-row-${v.version_number}`}
+              >
+                <span className="text-sm text-gray-300">
+                  v{v.version_number} — {v.created_at}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleRestore(v.version_number)}
+                  disabled={restoring === v.version_number}
+                  className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+                  data-testid={`btn-restore-${v.version_number}`}
+                >
+                  {restoring === v.version_number ? 'Restoring...' : 'Restore'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {showClipForm && (
         <ClipFormModal
