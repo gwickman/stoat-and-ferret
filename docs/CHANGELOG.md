@@ -4,6 +4,30 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v135 — HLS Map Hotfix + Version Restore (2026-08-23)
+
+2 themes, 2 features, PRs #1017–#1021.
+
+### Theme 1: hls-map-hotfix
+
+- BL-837: `fix(preview): emit -map flags for labeled filter_complex outputs to fix 100% HLS crash` —
+  `build_hls_args()` in `hls_generator.py` now emits explicit `-map` flags for every labeled
+  `filter_complex` output; fixes a regression introduced in v134 that caused 100% of preview
+  sessions to crash for both single-clip and multi-clip timelines (PRs #1017–#1018)
+
+### Theme 2: version-restore
+
+- BL-799: `feat(versions): live restore from snapshot` — new `POST /versions/{id}/restore`
+  endpoint rolls back the live timeline to a saved version snapshot; GUI Restore button added
+  to ProjectDetails Versions panel; acceptance test and UAT journey 717 added (PRs #1019–#1021)
+
+### Quality
+
+- Preview HLS subsystem covered by real-FFmpeg test (`tests/preview/test_preview_hls_ffmpeg.py`)
+- 3918 pytest tests passing; ruff, mypy clean; cargo clippy clean
+
+---
+
 ## v134 — Preview Fidelity (2026-08-22)
 
 1 theme, 2 features, PRs #1012–#1016.

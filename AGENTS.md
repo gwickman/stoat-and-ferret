@@ -209,6 +209,18 @@ ffmpeg -f lavfi -i sine=frequency=440 -f lavfi -i sine=frequency=880 \
 Do **not** use `aevalsrc=...:c=stereo` — on some static FFmpeg builds this produces mono output.
 The `amerge` pattern is verified 2-channel. (Motivating incident: BL-758/v118-hotfix-1 AC-4.)
 
+### Preview/HLS Subsystem Change Rule
+
+Before merging any PR that touches `hls_generator.py`, `build_composition_graph`, or any
+preview/render argument builder, verify that the `ffmpeg-tests` CI lane includes at least one
+test calling the real FFmpeg executor for that subsystem. If no such test exists, create one in
+the same PR.
+
+**Why:** v134 introduced a `-map` regression in `build_hls_args()` that was invisible to
+golden-argv comparison tests. The regression caused 100% of preview sessions to crash in
+production until v135 fixed it. A real-FFmpeg test (`tests/preview/test_preview_hls_ffmpeg.py`)
+would have caught it before merge. (LRN-1056, BL-837)
+
 ### Frontend (TypeScript, Vitest)
 
 ```bash
@@ -575,6 +587,10 @@ Before creating a PR, confirm each item that applies to your change:
 - **Route/model changed?** — Did you modify a FastAPI route decorator, Pydantic model, or response
   schema? If yes, regenerate `gui/openapi.json` and `gui/src/generated/api-types.ts` (same commands
   as API field changed above).
+- **Handler docstring changed?** — Did you modify a FastAPI route handler's docstring? If yes,
+  regenerate `gui/openapi.json` and `gui/src/generated/api-types.ts` (same commands as API field
+  changed above). FastAPI includes handler docstrings in the OpenAPI spec; a changed docstring
+  updates `gui/openapi.json` and will fail `test_c4_yaml_drift` if regeneration is skipped.
 - **New .py file added?** — Did you create any new Python file (including empty `__init__.py`)? If yes, ensure every new file begins with the SPDX header:
   ```python
   # SPDX-License-Identifier: AGPL-3.0-or-later
