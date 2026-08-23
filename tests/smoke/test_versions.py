@@ -77,7 +77,7 @@ async def test_version_list_nonexistent_project(smoke_client: httpx.AsyncClient)
 
 
 async def test_version_restore(smoke_client: httpx.AsyncClient) -> None:
-    """POST restore returns 200 with restored_version and new_version fields."""
+    """POST restore returns 200 and replaces live timeline with saved snapshot."""
     client = smoke_client
 
     # Create a project
@@ -88,11 +88,8 @@ async def test_version_restore(smoke_client: httpx.AsyncClient) -> None:
     assert resp.status_code == 201
     project_id = resp.json()["id"]
 
-    # Create a version via POST endpoint
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/versions",
-        json={"timeline_json": '{"timeline": "test"}'},
-    )
+    # Snapshot version 1 via auto-snapshot (empty timeline)
+    resp = await client.post(f"/api/v1/projects/{project_id}/versions")
     assert resp.status_code == 201
 
     # Restore version 1
@@ -104,6 +101,11 @@ async def test_version_restore(smoke_client: httpx.AsyncClient) -> None:
     assert body["restored_version"] == 1
     assert body["new_version"] == 2
     assert "message" in body
+
+    # Live timeline reflects the restored snapshot (empty)
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    assert resp.json()["tracks"] == []
 
 
 async def test_version_restore_not_found(smoke_client: httpx.AsyncClient) -> None:
@@ -217,7 +219,7 @@ async def test_version_save_no_body_list_restore_round_trip(
     assert body["versions"][0]["version_number"] == 1
     assert body["versions"][0]["checksum"] == snapshot["checksum"]
 
-    # Step 3 — Restore: non-destructive restore creates a new version
+    # Step 3 — Restore: live-restore creates a new version and replaces live timeline
     resp = await client.post(
         f"/api/v1/projects/{project_id}/versions/{snapshot['version_number']}/restore"
     )
@@ -225,6 +227,11 @@ async def test_version_save_no_body_list_restore_round_trip(
     restore_body = resp.json()
     assert restore_body["restored_version"] == 1
     assert restore_body["new_version"] == 2
+
+    # Live timeline reflects the restored snapshot (empty)
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    assert resp.json()["tracks"] == []
 
     # Confirm two versions exist after restore
     resp = await client.get(f"/api/v1/projects/{project_id}/versions")

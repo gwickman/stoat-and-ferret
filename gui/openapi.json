@@ -4999,7 +4999,7 @@
           "versions"
         ],
         "summary": "Restore Version",
-        "description": "Restore a previous project version, creating a new version.\n\nNon-destructive: restoring version N creates a new version containing\nthe restored data.\n\nArgs:\n    project_id: The unique project identifier.\n    version: The version number to restore from.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n\nReturns:\n    Restore confirmation with source and new version numbers.\n\nRaises:\n    HTTPException: 404 if project or version not found.",
+        "description": "Restore a previous project version to the live timeline, creating a new version.\n\nReplaces the current live timeline with the data from the specified version,\nthen saves a new version snapshot of the restored state.\n\nArgs:\n    project_id: The unique project identifier.\n    version: The version number to restore from.\n    project_repo: Project repository dependency.\n    version_repo: Version repository dependency.\n    timeline_repo: Timeline repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    Restore confirmation with source and new version numbers.\n\nRaises:\n    HTTPException: 404 if project or version not found.",
         "operationId": "restore_version_api_v1_projects__project_id__versions__version__restore_post",
         "parameters": [
           {

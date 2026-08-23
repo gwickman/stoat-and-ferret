@@ -2070,7 +2070,7 @@ export interface paths {
          *         200 with status "seeking".
          *
          *     Raises:
-         *         HTTPException: 404 if session not found.
+         *         HTTPException: 404 if session not found, 422 if composition cannot be built.
          */
         post: operations["seek_preview_api_v1_preview__session_id__seek_post"];
         delete?: never;
@@ -2943,16 +2943,18 @@ export interface paths {
         put?: never;
         /**
          * Restore Version
-         * @description Restore a previous project version, creating a new version.
+         * @description Restore a previous project version to the live timeline, creating a new version.
          *
-         *     Non-destructive: restoring version N creates a new version containing
-         *     the restored data.
+         *     Replaces the current live timeline with the data from the specified version,
+         *     then saves a new version snapshot of the restored state.
          *
          *     Args:
          *         project_id: The unique project identifier.
          *         version: The version number to restore from.
          *         project_repo: Project repository dependency.
          *         version_repo: Version repository dependency.
+         *         timeline_repo: Timeline repository dependency.
+         *         clip_repo: Clip repository dependency.
          *
          *     Returns:
          *         Restore confirmation with source and new version numbers.

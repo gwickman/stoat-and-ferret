@@ -11,8 +11,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from stoat_ferret.api.settings import get_settings
-from stoat_ferret.db.models import Project
+from stoat_ferret.db.models import Project, Track
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 
 
@@ -172,19 +173,69 @@ def test_list_versions_project_not_found(client: TestClient) -> None:
 async def test_restore_version(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
-    version_repository: AsyncInMemoryVersionRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
 ) -> None:
-    """Restore creates a new version from old state."""
+    """Restore replaces live timeline with the saved snapshot."""
     project_id = await _seed_project(project_repository)
-    await version_repository.save(project_id, '{"clips": [1]}')
-    await version_repository.save(project_id, '{"clips": [1, 2]}')
 
+    # Snapshot version 1 — empty timeline
+    resp = client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+
+    # Add a track to the live timeline
+    track = Track(id="track-snap1", project_id=project_id, track_type="video", label="Track A")
+    await timeline_repository.create_track(track)
+
+    # Snapshot version 2 — has track-snap1
+    resp = client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+
+    # Restore version 1 (empty timeline)
     response = client.post(f"/api/v1/projects/{project_id}/versions/1/restore")
     assert response.status_code == 200
     data = response.json()
     assert data["restored_version"] == 1
     assert data["new_version"] == 3
     assert "message" in data
+
+    # Live timeline should be empty (restored from version 1 snapshot)
+    tracks = await timeline_repository.get_tracks_by_project(project_id)
+    assert tracks == []
+
+
+@pytest.mark.api
+async def test_restore_version_modifies_live_timeline(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+) -> None:
+    """Restore replaces live tracks with those from the saved snapshot."""
+    project_id = await _seed_project(project_repository)
+
+    # Add track-a, snapshot version 1
+    track_a = Track(id="track-a", project_id=project_id, track_type="video", label="Track A")
+    await timeline_repository.create_track(track_a)
+    resp = client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+
+    # Remove track-a, add track-b, snapshot version 2
+    await timeline_repository.delete_track("track-a")
+    track_b = Track(id="track-b", project_id=project_id, track_type="audio", label="Track B")
+    await timeline_repository.create_track(track_b)
+    resp = client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+
+    # Restore version 1 — live timeline should revert to track-a only
+    response = client.post(f"/api/v1/projects/{project_id}/versions/1/restore")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["restored_version"] == 1
+    assert data["new_version"] == 3
+
+    tracks = await timeline_repository.get_tracks_by_project(project_id)
+    track_ids = {t.id for t in tracks}
+    assert "track-a" in track_ids
+    assert "track-b" not in track_ids
 
 
 @pytest.mark.api
