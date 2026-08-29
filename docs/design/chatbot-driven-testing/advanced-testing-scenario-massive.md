@@ -280,6 +280,16 @@ This matters because past rounds had "the chatbot says X happened" but no machin
 
 Eight tiers, ~80 scenarios. Tiers run roughly in order but are independent — a tier C failure does not block tier E.
 
+### Goal 5: Media round-trip correctness
+
+This is the media round-trip correctness scenario, mirroring Goal 5 from the adaptive spec (`advanced-testing-scenario.md`).
+
+Seed → build a project with (a) a non-zero `in_point` clip, (b) a second clip, (c) a saved transition (using `POST /effects/transition`), (d) source audio → submit a real-mode render → decode output and verify frame ranges (`assert_inpoint_identity`), audio presence (`assert_stream_inventory`), transition seam (`assert_transition_reference`), and cadence (`assert_frame_rate`) against project intent via the oracle at `tests/render_oracle.py`.
+
+Round grounding: this goal re-checks confirmed render-correctness gaps — in-point identity (BL-790), audio presence (BL-791), transition seam (BL-792), frame rate cadence (BL-793) — until fixed and guards against regression thereafter.
+
+This goal applies within **Tier B (cross-subsystem flows)** — run it as a distinct scenario between B3 and B4.
+
 ### Tier A — Capability validation (deep, single-subsystem)
 
 Each Tier A scenario takes one subsystem and exercises it exhaustively against its own documented surface.
