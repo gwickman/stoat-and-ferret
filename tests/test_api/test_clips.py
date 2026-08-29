@@ -1046,3 +1046,162 @@ async def test_get_clip_allow_header(
     assert "GET" in allow
     assert "PATCH" in allow
     assert "DELETE" in allow
+
+
+@pytest.mark.api
+async def test_clip_timeline_propagation_all_types(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+    asset_repository: InMemoryAssetRepository,
+) -> None:
+    """POST /clips propagates timeline_start/timeline_end for all clip types (BL-831)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    # File clip
+    video = make_test_video()
+    await video_repository.add(video)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "file",
+            "source_video_id": video.id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["timeline_start"] == 0.0
+    assert data["timeline_end"] == 5.0
+
+    # Generator clip
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "generator",
+            "generator_params": {"type": "color"},
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["timeline_start"] == 0.0
+    assert data["timeline_end"] == 5.0
+
+    # Image clip
+    now_iso = now.isoformat()
+    asset = AssetRecord(
+        id="asset-img-1",
+        original_filename="test.png",
+        content_hash="ab12cd34" * 8,
+        mime_type="image/png",
+        kind="image",
+        size_bytes=1024,
+        file_path="/tmp/test.png",
+        deleted_at=None,
+        created_at=now_iso,
+        updated_at=now_iso,
+    )
+    await asset_repository.insert(asset)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "image",
+            "source_asset_id": "asset-img-1",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["timeline_start"] == 0.0
+    assert data["timeline_end"] == 5.0
+
+
+@pytest.mark.api
+async def test_clip_timeline_invalid_bounds_file(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """POST /clips with file clip and timeline_end <= timeline_start returns 422 (BL-831)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "file",
+            "source_video_id": "any-video",
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 5.0,
+            "timeline_end": 3.0,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.api
+async def test_clip_timeline_invalid_bounds_generator(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+) -> None:
+    """POST /clips with generator clip and timeline_end <= timeline_start returns 422 (BL-831)."""
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id="proj-1",
+        name="Test",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/clips",
+        json={
+            "clip_type": "generator",
+            "generator_params": {"type": "color"},
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 5.0,
+            "timeline_end": 3.0,
+        },
+    )
+    assert response.status_code == 422

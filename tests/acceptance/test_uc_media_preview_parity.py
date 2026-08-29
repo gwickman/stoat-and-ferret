@@ -24,7 +24,7 @@ import pytest
 from stoat_ferret.api.app import create_app
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
-from stoat_ferret.db.models import Clip, PreviewQuality, PreviewSession, PreviewStatus, Video
+from stoat_ferret.db.models import PreviewQuality, PreviewSession, PreviewStatus, Video
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.preview.manager import PreviewManager
 from tests.test_api.conftest import InMemoryAssetRepository
@@ -81,24 +81,6 @@ def _make_video(vid_id: str, path: str) -> Video:
         created_at=now,
         updated_at=now,
         audio_codec=None,
-    )
-
-
-def _make_clip(
-    clip_id: str, project_id: str, vid_id: str, timeline_start: float, timeline_end: float
-) -> Clip:
-    now = datetime.now(timezone.utc)
-    return Clip(
-        id=clip_id,
-        project_id=project_id,
-        source_video_id=vid_id,
-        in_point=0,
-        out_point=60,
-        timeline_position=int(timeline_start * 30),
-        timeline_start=timeline_start,
-        timeline_end=timeline_end,
-        created_at=now,
-        updated_at=now,
     )
 
 
@@ -171,12 +153,33 @@ async def test_preview_start_receives_multiple_inputs(tmp_path: Path) -> None:
         assert proj_resp.status_code == 201, proj_resp.text
         project_id = proj_resp.json()["id"]
 
-        # Seed clips directly: the HTTP clip creation endpoint does not set
-        # timeline_start/timeline_end for file clips; preview requires them.
-        clip_a = _make_clip("clip-a", project_id, "vid-a", 0.0, 2.0)
-        clip_b = _make_clip("clip-b", project_id, "vid-b", 2.0, 4.0)
-        await clip_repo.add(clip_a)
-        await clip_repo.add(clip_b)
+        # Create clips via HTTP API — BL-831 fix propagates timeline_start/timeline_end
+        clip_a_resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "clip_type": "file",
+                "source_video_id": "vid-a",
+                "in_point": 0,
+                "out_point": 60,
+                "timeline_position": 0,
+                "timeline_start": 0.0,
+                "timeline_end": 2.0,
+            },
+        )
+        assert clip_a_resp.status_code == 201, clip_a_resp.text
+        clip_b_resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "clip_type": "file",
+                "source_video_id": "vid-b",
+                "in_point": 0,
+                "out_point": 60,
+                "timeline_position": 60,
+                "timeline_start": 2.0,
+                "timeline_end": 4.0,
+            },
+        )
+        assert clip_b_resp.status_code == 201, clip_b_resp.text
 
         with patch("stoat_ferret.api.routers.preview.shutil.which", return_value="/usr/bin/ffmpeg"):
             start_resp = await client.post(f"/api/v1/projects/{project_id}/preview/start")
