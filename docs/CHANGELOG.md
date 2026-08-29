@@ -4,9 +4,9 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## v136 — API Contract Fixes (2026-08-29)
+## v136 — API Contract Fixes + Clip Split Preservation (2026-08-29)
 
-1 theme, 2 features, PRs #1023–#1024.
+2 themes, 4 features, PRs #1023–#1027.
 
 ### Theme 1: api-contract-fixes
 
@@ -16,6 +16,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - BL-831: `fix(clips): propagate timeline_start/timeline_end for file and generator clip types` —
   `POST /clips` now propagates `timeline_start` and `timeline_end` for file and generator clip
   types; these fields were previously silently dropped (PR #1024)
+
+### Theme 2: split-preservation-and-media-testing
+
+- BL-800: `feat(clips): policy-driven effects preserve/remap on split with migration_report` —
+  `POST /projects/{id}/clips/{id}/split` now accepts an explicit `split_policy` parameter
+  (`copy_full_stack` | `remap_windowed_effects` | `drop_with_warning`); children retain
+  parent effects by default and the response includes a `migration_report` describing what
+  was copied, remapped, or dropped (PR #1025)
+- BL-801: `docs(chatbot-testing): add media round-trip correctness goal and promote oracle references` —
+  A media round-trip correctness goal was added to the adaptive and massive chatbot-testing
+  specs; `example-workflow.md` §8/§8.2 checks promoted to the shared render-output oracle
+  (PR #1026)
 
 ---
 
