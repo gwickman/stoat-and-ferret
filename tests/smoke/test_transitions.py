@@ -124,6 +124,61 @@ async def test_transition_delete(
 
 
 @pytest.mark.usefixtures("videos_dir")
+async def test_smoke_transition_endpoint(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """Regression guard: POST /effects/transition with transition_type='fade' returns 200 or 201.
+
+    Guards BL-846 fix (registry.get replaced by TransitionType.from_str).
+    """
+    client = smoke_client
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=2")
+    videos = resp.json()["videos"]
+    assert len(videos) >= 2
+    vid1_id = videos[0]["id"]
+    vid2_id = videos[1]["id"]
+
+    project, clip_responses = await create_project_with_clips(
+        client,
+        project_name="Transition Endpoint Smoke",
+        video_ids=[vid1_id, vid2_id],
+        clips=[
+            {
+                "source_video_id": vid1_id,
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 0,
+            },
+            {
+                "source_video_id": vid2_id,
+                "in_point": 0,
+                "out_point": 100,
+                "timeline_position": 100,
+            },
+        ],
+    )
+    project_id = project["id"]
+    clip1_id = clip_responses[0]["id"]
+    clip2_id = clip_responses[1]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip1_id,
+            "target_clip_id": clip2_id,
+            "transition_type": "fade",
+            "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
+        },
+    )
+    assert resp.status_code in (200, 201), (
+        f"Expected 200 or 201 from transition endpoint, got {resp.status_code}: {resp.text}"
+    )
+
+
+@pytest.mark.usefixtures("videos_dir")
 async def test_effects_router_transition_create_then_delete(
     smoke_client: httpx.AsyncClient,
     videos_dir: Path,

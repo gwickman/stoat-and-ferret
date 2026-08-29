@@ -276,3 +276,5 @@ async def test_smoke_split_clip(
     assert "clip_b" in body
     assert body["clip_a"]["out_point"] == mid_frame
     assert body["clip_b"]["in_point"] == mid_frame
+    assert "migration_report" in body, "ClipSplitResponse must contain migration_report field"
+    assert isinstance(body["migration_report"], list)
