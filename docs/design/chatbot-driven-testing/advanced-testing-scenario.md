@@ -51,7 +51,13 @@ The round must answer these questions. Scenario selection serves them, not the r
 5. Where are the cracks in areas prior rounds did not probe — pick one focus and find out.
 6. Are mutating-endpoint error messages still agent-actionable?
 
-Goals 1–4 are the regression-detector floor. Goal 5 is the chatbot's own contribution beyond canned coverage. Goal 6 is the recurring ergonomics watch.
+Goals 1–4 are the regression-detector floor. Goal 5 re-checks a specific verified class (media round-trip correctness) and is the chatbot's own contribution beyond canned coverage. Goal 6 is the recurring ergonomics watch.
+
+### Goal 5: Media round-trip correctness
+
+Seed → build a project with (a) a non-zero `in_point` clip, (b) a second clip, (c) a saved transition (using `POST /effects/transition`), (d) source audio → submit a real-mode render → decode output and verify frame ranges (`assert_inpoint_identity`), audio presence (`assert_stream_inventory`), transition seam (`assert_transition_reference`), and cadence (`assert_frame_rate`) against project intent via the oracle at `tests/render_oracle.py`.
+
+Round grounding: this goal re-checks confirmed render-correctness gaps — in-point identity (BL-790), audio presence (BL-791), transition seam (BL-792), frame rate cadence (BL-793) — until fixed and guards against regression thereafter.
 
 ---
 
