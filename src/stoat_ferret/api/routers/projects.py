@@ -388,6 +388,8 @@ async def add_clip(
             in_point=request.in_point,
             out_point=request.out_point,
             timeline_position=request.timeline_position,
+            timeline_start=request.timeline_start,
+            timeline_end=request.timeline_end,
             created_at=now,
             updated_at=now,
         )
@@ -450,6 +452,8 @@ async def add_clip(
             in_point=request.in_point,
             out_point=request.out_point,
             timeline_position=request.timeline_position,
+            timeline_start=request.timeline_start,
+            timeline_end=request.timeline_end,
             created_at=now,
             updated_at=now,
         )

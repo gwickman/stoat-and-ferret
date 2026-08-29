@@ -39,6 +39,12 @@ class ClipCreate(BaseModel):
             raise ValueError("generator_params must be null for file clips")
         if self.source_asset_id is not None:
             raise ValueError("source_asset_id must be null for file clips")
+        if (
+            self.timeline_end is not None
+            and self.timeline_start is not None
+            and self.timeline_end <= self.timeline_start
+        ):
+            raise ValueError("timeline_end must be greater than timeline_start")
 
     def _validate_generator_clip(self) -> None:
         """Validate generator-clip specific constraints."""
@@ -48,6 +54,12 @@ class ClipCreate(BaseModel):
             raise ValueError("source_video_id must be null for generator clips")
         if self.source_asset_id is not None:
             raise ValueError("source_asset_id must be null for generator clips")
+        if (
+            self.timeline_end is not None
+            and self.timeline_start is not None
+            and self.timeline_end <= self.timeline_start
+        ):
+            raise ValueError("timeline_end must be greater than timeline_start")
 
     def _validate_image_clip(self) -> None:
         """Validate image-clip specific constraints."""
