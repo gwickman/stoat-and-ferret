@@ -159,51 +159,76 @@ If render succeeds, the chatbot verifies output quality across five categories.
 If render fails, the chatbot verifies that failure is visible through API/UI, the error message
 is captured, and whether a retry path is appropriate.
 
+Use the shared render-output oracle at `tests/render_oracle.py` for media correctness assertions
+(§8.1, §8.2). Import oracle functions directly rather than reimplementing ad-hoc ffprobe or SSIM
+logic inline — doing so would create a second divergent verifier.
+
 #### 8.1 File Integrity
 
-Check that the output file exists, is non-zero in size, and contains a valid codec:
+Check that the output file exists, is non-zero in size, and verify stream presence via the
+render-output oracle:
 
 ```bash
 # File exists and is non-empty
 test -s output.mp4 && echo "OK" || echo "MISSING OR EMPTY"
-
-# Validate container and codec via ffprobe
-ffprobe -v error -select_streams v:0 \
-  -show_entries stream=codec_name,width,height,r_frame_rate \
-  -of default=noprint_wrappers=1 output.mp4
 ```
-
-Expected: `codec_name=h264` (or the requested encoder), valid dimensions, non-zero frame rate.
-A zero-byte file or `Invalid data found` from ffprobe indicates an FFmpeg failure even if the
-job status shows `completed`.
-
-#### 8.2 SSIM Analysis
-
-Compute the Structural Similarity Index (SSIM) between expected and actual frames. The threshold
-for pixel-accurate effects is ≥ 0.99.
 
 ```python
-import subprocess, tempfile, os
+import asyncio
 from pathlib import Path
-from skimage import io as skio
-from skimage.metrics import structural_similarity
+from tests.render_oracle import assert_stream_inventory
 
-def extract_frame(video_path: str, timestamp_s: float, out_path: str) -> None:
-    subprocess.run(
-        ["ffmpeg", "-ss", str(timestamp_s), "-i", video_path,
-         "-frames:v", "1", "-y", out_path],
-        check=True, capture_output=True,
-    )
-
-def compute_ssim(img_a: str, img_b: str) -> float:
-    a = skio.imread(img_a, as_gray=True)
-    b = skio.imread(img_b, as_gray=True)
-    score, _ = structural_similarity(a, b, full=True)
-    return score
-
-ssim = compute_ssim("expected_frame.png", "actual_frame.png")
-assert ssim >= 0.99, f"SSIM too low: {ssim:.4f} — effect may not be applied"
+# Verify video and audio streams present
+asyncio.run(assert_stream_inventory(Path("output.mp4"), video=True, audio=True))
 ```
+
+A zero-byte file or an `AssertionError` from `assert_stream_inventory` indicates an FFmpeg
+failure even if the job status shows `completed`.
+
+#### 8.2 SSIM and A/V Alignment
+
+Use the render-output oracle to verify seam frame order (at a transition point `seam_t`) and
+audio/video duration alignment:
+
+```python
+import asyncio
+from pathlib import Path
+from tests.render_oracle import assert_seam_frame_order, assert_av_duration_alignment
+
+output = Path("output.mp4")
+pre_source = Path("clip1.mp4")
+post_source = Path("clip2.mp4")
+
+# Verify A/V duration alignment (within 100 ms)
+asyncio.run(assert_av_duration_alignment(output))
+
+# Verify transition seam frame order at seam_t seconds
+seam_t = 3.0  # seconds — adjust to the actual transition point
+assert_seam_frame_order(output, seam_t, pre_source, pre_t=1.0, post_source=post_source, post_t=0.5)
+```
+
+The `assert_seam_frame_order` threshold is ≥ 0.99 by default. See `tests/render_oracle.py`
+for the full parameter contract.
+
+#### 8.2a Evidence Packet (media_verdict)
+
+After oracle assertions complete, record the outcomes in the scenario's evidence packet:
+
+```json
+{
+  "scenario_id": "B-media-round-trip-correctness",
+  "oracle_assertions": ["assert_stream_inventory", "assert_av_duration_alignment", "assert_seam_frame_order"],
+  "oracle_results": {
+    "assert_stream_inventory": "PASS",
+    "assert_av_duration_alignment": "PASS",
+    "assert_seam_frame_order": "PASS"
+  },
+  "operation_receipt_id": "render-job-uuid"
+}
+```
+
+Save this as `media_verdict.json` alongside `findings.md` in the scenario's evidence folder.
+`operation_receipt_id` is the render job UUID returned by `POST /api/v1/render`.
 
 #### 8.3 Effect Detection
 
