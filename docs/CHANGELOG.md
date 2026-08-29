@@ -4,6 +4,21 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v136 — API Contract Fixes (2026-08-29)
+
+1 theme, 2 features, PRs #1023–#1024.
+
+### Theme 1: api-contract-fixes
+
+- BL-846: `fix(effects): use TransitionType.from_str() in POST /effects/transition` —
+  `POST /effects/transition` now uses `TransitionType.from_str()` instead of `registry.get()`
+  to parse the transition type string, correcting the API contract for transition type lookup (PR #1023)
+- BL-831: `fix(clips): propagate timeline_start/timeline_end for file and generator clip types` —
+  `POST /clips` now propagates `timeline_start` and `timeline_end` for file and generator clip
+  types; these fields were previously silently dropped (PR #1024)
+
+---
+
 ## v135 — HLS Map Hotfix + Version Restore (2026-08-23)
 
 2 themes, 2 features, PRs #1017–#1021.
