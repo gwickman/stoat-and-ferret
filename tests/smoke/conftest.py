@@ -36,7 +36,7 @@ SAMPLE_EFFECT_DEFS = [
 
 # Transitions: (source_clip_index, target_clip_index, transition_type, parameters)
 SAMPLE_TRANSITION_DEFS = [
-    (1, 2, "xfade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
+    (1, 2, "fade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
 ]
 
 EXPECTED_VIDEOS: dict[str, dict[str, Any]] = {

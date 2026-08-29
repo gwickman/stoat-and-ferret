@@ -60,7 +60,7 @@ EFFECT_DEFS = [
 
 # Transitions: (source_clip_index, target_clip_index, transition_type, parameters)
 TRANSITION_DEFS = [
-    (1, 2, "xfade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
+    (1, 2, "fade", {"transition": "fade", "duration": 1.0, "offset": 0.0}),
 ]
 
 # Required top-level fields in render_plan JSON (mirrors worker.py contract)

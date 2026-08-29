@@ -2104,7 +2104,7 @@
           "effects"
         ],
         "summary": "Apply Transition",
-        "description": "Apply a transition between two adjacent clips.\n\nValidates that both clips exist and are adjacent in the project timeline,\ngenerates the FFmpeg filter string via the effect registry, and stores\nthe transition in the project model.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Transition request with source/target clips, type, and parameters.\n    registry: Effect registry dependency.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The applied transition with generated filter string.\n\nRaises:\n    HTTPException: 404 if project or clips not found, 400 if clips not adjacent\n        or transition type unknown or parameters invalid.",
+        "description": "Apply a transition between two adjacent clips.\n\nValidates that both clips exist and are adjacent in the project timeline,\ngenerates the FFmpeg filter string via TransitionType.from_str(), and stores\nthe transition in the project model.\n\nArgs:\n    project_id: The unique project identifier.\n    request: Transition request with source/target clips, type, and parameters.\n    project_repo: Project repository dependency.\n    clip_repo: Clip repository dependency.\n\nReturns:\n    The applied transition with generated filter string.\n\nRaises:\n    HTTPException: 404 if project or clips not found, 400 if clips not adjacent\n        or transition type unknown.",
         "operationId": "apply_transition_api_v1_projects__project_id__effects_transition_post",
         "parameters": [
           {
