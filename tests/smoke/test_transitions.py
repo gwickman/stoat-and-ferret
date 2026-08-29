@@ -68,7 +68,7 @@ async def test_uc07_fade_transition(
         json={
             "source_clip_id": clip1_id,
             "target_clip_id": clip2_id,
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {
                 "transition": "fade",
                 "duration": 1.0,
@@ -170,7 +170,7 @@ async def test_effects_router_transition_create_then_delete(
         json={
             "source_clip_id": clip1_id,
             "target_clip_id": clip2_id,
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {
                 "transition": "fade",
                 "duration": 1.0,

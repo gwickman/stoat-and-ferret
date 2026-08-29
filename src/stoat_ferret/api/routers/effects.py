@@ -39,7 +39,7 @@ from stoat_ferret.db.project_repository import (
 from stoat_ferret.effects.definitions import EffectDefinition, create_default_registry
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.ffmpeg.executor import FFmpegExecutor, RealFFmpegExecutor
-from stoat_ferret_core import parameter_schemas_from_dict
+from stoat_ferret_core import TransitionType, XfadeBuilder, parameter_schemas_from_dict
 
 logger = structlog.get_logger(__name__)
 
@@ -742,20 +742,18 @@ async def delete_clip_effect(
 async def apply_transition(
     project_id: str,
     request: TransitionRequest,
-    registry: RegistryDep,
     project_repo: ProjectRepoDep,
     clip_repo: ClipRepoDep,
 ) -> EffectTransitionResponse:
     """Apply a transition between two adjacent clips.
 
     Validates that both clips exist and are adjacent in the project timeline,
-    generates the FFmpeg filter string via the effect registry, and stores
+    generates the FFmpeg filter string via TransitionType.from_str(), and stores
     the transition in the project model.
 
     Args:
         project_id: The unique project identifier.
         request: Transition request with source/target clips, type, and parameters.
-        registry: Effect registry dependency.
         project_repo: Project repository dependency.
         clip_repo: Clip repository dependency.
 
@@ -764,7 +762,7 @@ async def apply_transition(
 
     Raises:
         HTTPException: 404 if project or clips not found, 400 if clips not adjacent
-            or transition type unknown or parameters invalid.
+            or transition type unknown.
     """
     # Validate project exists
     project = await project_repo.get(project_id)
@@ -824,41 +822,21 @@ async def apply_transition(
             },
         )
 
-    # Validate transition type via registry
-    definition = registry.get(request.transition_type)
-    if definition is None:
+    try:
+        transition_type = TransitionType.from_str(request.transition_type)
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "code": "EFFECT_NOT_FOUND",
                 "message": f"Unknown transition type: {request.transition_type}",
             },
-        )
-
-    # Validate parameters against JSON schema
-    validation_errors = registry.validate(request.transition_type, request.parameters)
-    if validation_errors:
-        messages = [f"{e.path}: {e.message}" if e.path else e.message for e in validation_errors]
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_EFFECT_PARAMS",
-                "message": "; ".join(messages),
-                "errors": [{"path": e.path, "message": e.message} for e in validation_errors],
-            },
-        )
-
-    # Generate filter string via registered build function
-    try:
-        filter_string = definition.build_fn(request.parameters)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "INVALID_EFFECT_PARAMS",
-                "message": str(e),
-            },
         ) from None
+
+    duration = float(request.parameters.get("duration", 1.0))
+    offset = float(request.parameters.get("offset", 0.0))
+    # informational only; preview/render recompute from clip positions
+    filter_string = str(XfadeBuilder(transition_type, duration, offset).build())
 
     # Store transition in project model
     transition_id = str(uuid.uuid4())
