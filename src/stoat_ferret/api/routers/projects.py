@@ -594,6 +594,44 @@ async def split_clip(
     now = datetime.now(timezone.utc)
     clip_a_duration_frames = body.split_frame - clip.in_point
 
+    effects_source = clip.effects or []
+    migration_report: list[dict[str, object]] = []
+    if body.split_policy == "copy_full_stack":
+        child_effects = effects_source
+        for e in effects_source:
+            migration_report.append(
+                {
+                    "effect_type": e.get("effect_type", "unknown"),
+                    "disposition": "copied",
+                    "target": "both",
+                }
+            )
+    elif body.split_policy == "remap_windowed_effects":
+        # No in_frame/out_frame metadata exists in current effects — fall back to copy_full_stack
+        child_effects = effects_source
+        for e in effects_source:
+            migration_report.append(
+                {
+                    "effect_type": e.get("effect_type", "unknown"),
+                    "disposition": "copied",
+                    "target": "both",
+                }
+            )
+        if effects_source:
+            migration_report.append(
+                {"effect_type": "remap_note", "disposition": "copied", "target": "both"}
+            )
+    else:  # drop_with_warning
+        child_effects = []
+        for e in effects_source:
+            migration_report.append(
+                {
+                    "effect_type": e.get("effect_type", "unknown"),
+                    "disposition": "dropped",
+                    "target": "both",
+                }
+            )
+
     clip_a = Clip(
         id=Clip.new_id(),
         project_id=project_id,
@@ -605,7 +643,7 @@ async def split_clip(
         timeline_position=clip.timeline_position,
         timeline_start=clip.timeline_start,
         timeline_end=split_time_s,
-        effects=[],
+        effects=child_effects,
         created_at=now,
         updated_at=now,
     )
@@ -621,7 +659,7 @@ async def split_clip(
         timeline_position=clip.timeline_position + clip_a_duration_frames,
         timeline_start=split_time_s,
         timeline_end=clip.timeline_end,
-        effects=[],
+        effects=child_effects,
         created_at=now,
         updated_at=now,
     )
@@ -631,6 +669,7 @@ async def split_clip(
     return ClipSplitResponse(
         clip_a=ClipResponse.model_validate(clip_a),
         clip_b=ClipResponse.model_validate(clip_b),
+        migration_report=migration_report,
     )
 
 

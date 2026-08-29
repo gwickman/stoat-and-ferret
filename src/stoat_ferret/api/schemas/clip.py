@@ -147,6 +147,16 @@ class ClipSplitRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     split_frame: int
+    split_policy: str = "copy_full_stack"
+
+    @field_validator("split_policy")
+    @classmethod
+    def validate_split_policy(cls, v: str) -> str:
+        """Validate split_policy is one of the accepted values."""
+        accepted = {"copy_full_stack", "remap_windowed_effects", "drop_with_warning"}
+        if v not in accepted:
+            raise ValueError(f"split_policy must be one of: {', '.join(sorted(accepted))}")
+        return v
 
 
 class ClipSplitResponse(BaseModel):
@@ -154,3 +164,4 @@ class ClipSplitResponse(BaseModel):
 
     clip_a: ClipResponse
     clip_b: ClipResponse
+    migration_report: list[dict[str, Any]] = Field(default_factory=list)
