@@ -5925,6 +5925,11 @@
           "split_frame": {
             "type": "integer",
             "title": "Split Frame"
+          },
+          "split_policy": {
+            "type": "string",
+            "title": "Split Policy",
+            "default": "copy_full_stack"
           }
         },
         "additionalProperties": false,
@@ -5942,6 +5947,14 @@
           },
           "clip_b": {
             "$ref": "#/components/schemas/ClipResponse"
+          },
+          "migration_report": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Migration Report"
           }
         },
         "type": "object",

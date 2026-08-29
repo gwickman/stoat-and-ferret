@@ -183,10 +183,10 @@ def test_split_clip_timeline_none_propagation() -> None:
 
 
 @pytest.mark.api
-def test_split_clip_effects_empty() -> None:
-    """FR-003-AC-1: Both resulting clips have empty effects lists."""
-    existing_effects: list[Any] = [{"effect_type": "reverse", "filter_string": "reverse"}]
-    clip = _make_clip(effects=existing_effects)
+def test_split_clip_effects_preserve() -> None:
+    """FR-005-AC-1/FR-002-AC-1: Default copy_full_stack preserves parent effects."""
+    parent_effects: list[Any] = [{"effect_type": "reverse", "filter_string": "reverse"}]
+    clip = _make_clip(effects=parent_effects)
     client, _, _ = _make_client(clip=clip)
 
     with client:
@@ -196,8 +196,122 @@ def test_split_clip_effects_empty() -> None:
         )
     assert resp.status_code == 200
     data = resp.json()
+    assert data["clip_a"]["effects"] == parent_effects
+    assert data["clip_b"]["effects"] == parent_effects
+    report = data["migration_report"]
+    assert len(report) == 1
+    assert report[0]["effect_type"] == "reverse"
+    assert report[0]["disposition"] == "copied"
+    assert report[0]["target"] == "both"
+
+
+@pytest.mark.api
+def test_split_clip_drop_with_warning_policy() -> None:
+    """FR-002-AC-3: drop_with_warning produces empty effects on both children."""
+    parent_effects: list[Any] = [{"effect_type": "reverse", "filter_string": "reverse"}]
+    clip = _make_clip(effects=parent_effects)
+    client, _, _ = _make_client(clip=clip)
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 50, "split_policy": "drop_with_warning"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
     assert data["clip_a"]["effects"] == []
     assert data["clip_b"]["effects"] == []
+    report = data["migration_report"]
+    assert len(report) == 1
+    assert report[0]["disposition"] == "dropped"
+    assert report[0]["effect_type"] == "reverse"
+
+
+@pytest.mark.api
+def test_split_clip_remap_policy_falls_back_to_copy() -> None:
+    """FR-002-AC-2: remap_windowed_effects falls back to copy_full_stack (no frame metadata)."""
+    parent_effects: list[Any] = [{"effect_type": "reverse", "filter_string": "reverse"}]
+    clip = _make_clip(effects=parent_effects)
+    client, _, _ = _make_client(clip=clip)
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 50, "split_policy": "remap_windowed_effects"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["clip_a"]["effects"] == parent_effects
+    assert data["clip_b"]["effects"] == parent_effects
+    report = data["migration_report"]
+    # Fallback adds a remap_note entry in addition to the copied effect entry
+    dispositions = [e["disposition"] for e in report]
+    assert "copied" in dispositions
+    remap_notes = [e for e in report if e["effect_type"] == "remap_note"]
+    assert len(remap_notes) == 1
+
+
+@pytest.mark.api
+def test_split_clip_invalid_policy() -> None:
+    """FR-002-AC-4: Invalid split_policy returns 422 naming the field."""
+    client, _, _ = _make_client()
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 50, "split_policy": "not_a_real_policy"},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.api
+def test_split_clip_no_effects_empty_report() -> None:
+    """FR-002-AC-5: Clip with effects=None produces migration_report=[]."""
+    clip = _make_clip(effects=None)
+    client, _, _ = _make_client(clip=clip)
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 50},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["migration_report"] == []
+
+
+@pytest.mark.api
+def test_split_clip_effects_rollback() -> None:
+    """FR-004-AC-2: If split_atomic fails with effects-populated clips, original clip is intact."""
+    from unittest.mock import AsyncMock
+
+    parent_effects: list[Any] = [{"effect_type": "reverse", "filter_string": "reverse"}]
+    clip = _make_clip(effects=parent_effects)
+
+    project_repo = AsyncInMemoryProjectRepository()
+    clip_repo = AsyncInMemoryClipRepository()
+    project_repo.seed([_make_project()])
+    clip_repo.seed([clip])
+
+    clip_repo.split_atomic = AsyncMock(side_effect=ValueError("simulated atomic failure"))
+
+    app = create_app(
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+    )
+    client = TestClient(app, raise_server_exceptions=False)
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 50},
+        )
+    assert resp.status_code == 500
+
+    # Original clip is still present — the failed atomic operation must not have deleted it
+    stored = _get(clip_repo.get(_CLIP_ID))
+    assert stored is not None
+    assert stored.id == _CLIP_ID
 
 
 @pytest.mark.api

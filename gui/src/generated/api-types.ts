@@ -1149,13 +1149,12 @@ export interface paths {
          * @description Apply a transition between two adjacent clips.
          *
          *     Validates that both clips exist and are adjacent in the project timeline,
-         *     generates the FFmpeg filter string via the effect registry, and stores
+         *     generates the FFmpeg filter string via TransitionType.from_str(), and stores
          *     the transition in the project model.
          *
          *     Args:
          *         project_id: The unique project identifier.
          *         request: Transition request with source/target clips, type, and parameters.
-         *         registry: Effect registry dependency.
          *         project_repo: Project repository dependency.
          *         clip_repo: Clip repository dependency.
          *
@@ -1164,7 +1163,7 @@ export interface paths {
          *
          *     Raises:
          *         HTTPException: 404 if project or clips not found, 400 if clips not adjacent
-         *             or transition type unknown or parameters invalid.
+         *             or transition type unknown.
          */
         post: operations["apply_transition_api_v1_projects__project_id__effects_transition_post"];
         delete?: never;
@@ -3501,6 +3500,11 @@ export interface components {
         ClipSplitRequest: {
             /** Split Frame */
             split_frame: number;
+            /**
+             * Split Policy
+             * @default copy_full_stack
+             */
+            split_policy: string;
         };
         /**
          * ClipSplitResponse
@@ -3509,6 +3513,10 @@ export interface components {
         ClipSplitResponse: {
             clip_a: components["schemas"]["ClipResponse"];
             clip_b: components["schemas"]["ClipResponse"];
+            /** Migration Report */
+            migration_report?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * ClipUpdate
