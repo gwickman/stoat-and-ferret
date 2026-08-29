@@ -1282,7 +1282,7 @@ async def test_transition_adjacent_clips_succeeds(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[1],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1292,8 +1292,62 @@ async def test_transition_adjacent_clips_succeeds(
     assert len(data["id"]) > 0
     assert data["source_clip_id"] == clip_ids[0]
     assert data["target_clip_id"] == clip_ids[1]
-    assert data["transition_type"] == "xfade"
+    assert data["transition_type"] == "fade"
     assert "filter_string" in data
+    assert len(data["filter_string"]) > 0
+
+
+@pytest.mark.api
+async def test_transition_valid_xfade_type_returns_201(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with transition_type 'fade' returns 201 (BL-846-AC-1)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0},
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["transition_type"] == "fade"
+    assert len(data["filter_string"]) > 0
+
+
+@pytest.mark.api
+async def test_transition_wipeleft_returns_201(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with transition_type 'wipeleft' returns 201 (BL-846-AC-2)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "wipeleft",
+            "parameters": {"duration": 0.5},
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["transition_type"] == "wipeleft"
     assert len(data["filter_string"]) > 0
 
 
@@ -1315,7 +1369,7 @@ async def test_transition_non_adjacent_clips_returns_400(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[2],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1341,7 +1395,7 @@ async def test_transition_same_clip_returns_400(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[0],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1373,7 +1427,7 @@ async def test_transition_empty_timeline_returns_400(
         json={
             "source_clip_id": "clip-x",
             "target_clip_id": "clip-y",
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1399,7 +1453,7 @@ async def test_transition_nonexistent_clip_returns_404(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": "nonexistent",
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1418,7 +1472,7 @@ def test_transition_nonexistent_project_returns_404(
         json={
             "source_clip_id": "clip-a",
             "target_clip_id": "clip-b",
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1457,30 +1511,30 @@ async def test_transition_unknown_type_returns_400(
 
 
 @pytest.mark.api
-async def test_transition_invalid_params_returns_400(
+async def test_transition_valid_type_empty_params_returns_201(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
     clip_repository: AsyncInMemoryClipRepository,
     video_repository: AsyncInMemoryVideoRepository,
 ) -> None:
-    """POST /effects/transition returns 400 for invalid parameters."""
+    """POST /effects/transition with empty parameters returns 201 (no param validation)."""
     project_id, clip_ids = await _seed_project_with_clips(
         project_repository, clip_repository, video_repository
     )
 
-    # xfade requires transition, duration, offset
     response = client.post(
         f"/api/v1/projects/{project_id}/effects/transition",
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[1],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {},
         },
     )
-    assert response.status_code == 400
+    assert response.status_code == 201
     data = response.json()
-    assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+    assert data["transition_type"] == "fade"
+    assert len(data["filter_string"]) > 0
 
 
 # ---- Transition storage tests ----
@@ -1503,7 +1557,7 @@ async def test_transition_stored_in_project(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[1],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1515,7 +1569,7 @@ async def test_transition_stored_in_project(
     t = updated_project.transitions[0]
     assert t["source_clip_id"] == clip_ids[0]
     assert t["target_clip_id"] == clip_ids[1]
-    assert t["transition_type"] == "xfade"
+    assert t["transition_type"] == "fade"
     assert "filter_string" in t
     assert len(t["filter_string"]) > 0
 
@@ -1537,7 +1591,7 @@ async def test_transition_persists_after_retrieval(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[1],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1571,7 +1625,7 @@ async def test_transition_response_includes_filter_string(
         json={
             "source_clip_id": clip_ids[0],
             "target_clip_id": clip_ids[1],
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1579,7 +1633,7 @@ async def test_transition_response_includes_filter_string(
     data = response.json()
     assert "filter_string" in data
     assert "xfade" in data["filter_string"]
-    assert data["transition_type"] == "xfade"
+    assert data["transition_type"] == "fade"
     assert data["parameters"]["transition"] == "fade"
 
 
@@ -1642,7 +1696,7 @@ async def test_transition_black_box_full_flow(
         json={
             "source_clip_id": "bb-clip-1",
             "target_clip_id": "bb-clip-2",
-            "transition_type": "xfade",
+            "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
@@ -1654,7 +1708,7 @@ async def test_transition_black_box_full_flow(
     assert len(data["id"]) > 0
     assert data["source_clip_id"] == "bb-clip-1"
     assert data["target_clip_id"] == "bb-clip-2"
-    assert data["transition_type"] == "xfade"
+    assert data["transition_type"] == "fade"
     assert "xfade" in data["filter_string"]
     assert data["parameters"]["transition"] == "fade"
     assert data["parameters"]["duration"] == 1.0

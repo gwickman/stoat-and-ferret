@@ -132,3 +132,30 @@ async def test_hls_multi_clip_xfade_map(tmp_path: Path) -> None:
 
     assert (output_dir / "manifest.m3u8").exists()
     assert any(f.suffix == ".ts" for f in output_dir.iterdir())
+
+
+@_requires_ffmpeg
+async def test_hls_wipeleft_transition(tmp_path: Path) -> None:
+    """wipeleft xfade transition generates valid HLS without FFmpeg error (BL-846-AC-5)."""
+    src1 = tmp_path / "wipeleft1.mp4"
+    src2 = tmp_path / "wipeleft2.mp4"
+    _make_clip(src1, duration=4.0)
+    _make_clip(src2, duration=4.0)
+
+    clips = [
+        CompositionClip(0, 0.0, 3.0, 0, 0),
+        CompositionClip(1, 2.5, 5.0, 0, 0),
+    ]
+    transitions = [TransitionSpec(TransitionType.Wipeleft, 0.5, 0.0)]
+    graph = build_composition_graph(clips, transitions, None, None, 320, 240)
+
+    executor = RealAsyncFFmpegExecutor()
+    generator = HLSGenerator(async_executor=executor, output_base_dir=str(tmp_path / "hls"))
+    output_dir = await generator.generate(
+        session_id="test-wipeleft",
+        input_paths=[str(src1), str(src2)],
+        filter_graph=graph,
+    )
+
+    assert (output_dir / "manifest.m3u8").exists()
+    assert any(f.suffix == ".ts" for f in output_dir.iterdir())
