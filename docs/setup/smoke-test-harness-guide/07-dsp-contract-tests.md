@@ -88,13 +88,15 @@ Discharge command:
 STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_effects.py -k "smoke_reverse or smoke_variable_speed or smoke_framerate_convert or smoke_freeze_frame" -v
 ```
 
-### Split Endpoint (v080)
+### Split Endpoint (v080, updated v136)
 
 The split endpoint smoke test does NOT require FFmpeg — it is pure database arithmetic:
 
 ```bash
 uv run pytest tests/smoke/test_clip_workflow.py::test_smoke_split_clip -v
 ```
+
+**v136 update (BL-800):** The test now asserts that the split response includes a `migration_report: list` field. This field carries the effects preserve/remap policy log — an empty list when the clip has no effects, a populated list when effects are copied or remapped to the resulting clips. Any split response missing `migration_report` causes the test to fail.
 
 ### STOAT_REVERSE_MAX_DURATION_S Discharge
 
@@ -194,3 +196,48 @@ installed.
 **When to extend:** Add parameter-variant cases (non-zero offsets, different dimensions, or
 `aspect_policy` variants) when the `CropBuilder` parameter schema changes, or add similar
 argv-only coverage for any new shape-based effect that follows the same dispatch pattern.
+
+## v136 Smoke Test Guards
+
+v136 (Theme 02) adds two new smoke tests and extends one existing test in the standard API smoke suite. None require `STOAT_TEST_FFMPEG=1`.
+
+### Transition endpoint guard (`test_smoke_transition_endpoint`)
+
+**File:** `tests/smoke/test_transitions.py`
+
+**What it tests:** `POST /projects/{id}/effects/transition` with `transition_type: "fade"` returns 200 or 201. Guards the BL-846 fix (`registry.get` replaced by `TransitionType.from_str` so that named transition types resolve correctly instead of raising a 500 on valid input).
+
+**Not FFmpeg-gated:** The test exercises the API routing and parameter validation path only — no FFmpeg binary is invoked.
+
+**Run command:**
+
+```bash
+uv run pytest tests/smoke/test_transitions.py::test_smoke_transition_endpoint -v --no-cov
+```
+
+**When to extend:** Add variants for other `transition_type` values (e.g., `wipe`, `slide`) if new type strings are registered in the transition registry.
+
+### Clip timeline propagation guard (`test_smoke_clip_timeline_propagation`)
+
+**File:** `tests/smoke/test_clips_smoke.py`
+
+**What it tests:** `POST /projects/{id}/clips` with `clip_type: "file"`, `timeline_start: 0.0`, and `timeline_end: 5.0` returns 201 and echoes both timeline fields in the response body. Guards the BL-831 fix (the `file` and `generator` clip branches in the clip handler now pass `timeline_start`/`timeline_end` to the `Clip` constructor instead of silently dropping them).
+
+**Not FFmpeg-gated:** Pure API round-trip check — no FFmpeg binary invoked.
+
+**Run command:**
+
+```bash
+uv run pytest tests/smoke/test_clips_smoke.py::test_smoke_clip_timeline_propagation -v --no-cov
+```
+
+**When to extend:** Add a `generator` clip variant when generator-type clips with timeline fields are exercised by a new feature, or add assertions for `timeline_start`/`timeline_end` propagation on PATCH.
+
+### Run all v136 smoke guards together
+
+```bash
+uv run pytest tests/smoke/test_clip_workflow.py::test_smoke_split_clip \
+              tests/smoke/test_transitions.py::test_smoke_transition_endpoint \
+              tests/smoke/test_clips_smoke.py::test_smoke_clip_timeline_propagation \
+              -v --no-cov
+```
