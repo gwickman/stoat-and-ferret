@@ -190,7 +190,16 @@ def assert_inpoint_identity(
         )
     if check_end:
         output_duration = source_end - source_start
-        end_ssim = compute_ssim(output, output_duration - margin_s, source, source_end - margin_s)
+        # Offset by SSIM comparison window (0.3s) so the full window fits within the file.
+        # Without the offset, compute_ssim at output_duration - margin_s reads past EOF,
+        # which reduces the effective comparison frame count and degrades SSIM reliability.
+        _comparison_window = 0.3
+        end_ssim = compute_ssim(
+            output,
+            output_duration - margin_s - _comparison_window,
+            source,
+            source_end - margin_s - _comparison_window,
+        )
         assert end_ssim >= threshold, (
             f"in-point end-boundary SSIM {end_ssim:.4f} < threshold {threshold}"
         )
@@ -204,12 +213,19 @@ def assert_seam_frame_order(
     post_source: Path,
     post_t: float,
     threshold: float = 0.99,
+    delta: float = 0.05,
 ) -> None:
-    """Assert transition seam frame order via SSIM at ±50ms around the seam point.
+    """Assert transition seam frame order via SSIM at ±delta around the seam point.
 
-    Checks that frame at seam_t - 0.05 matches pre_source at pre_t, and frame at
-    seam_t + 0.05 matches post_source at post_t.
-    Raises ValueError when seam_t + 0.05 exceeds file duration or threshold is invalid.
+    Checks that frame at seam_t - delta matches pre_source at pre_t, and frame at
+    seam_t + delta matches post_source at post_t.
+
+    delta controls how far from the seam the SSIM check is taken (default 0.05s = 50ms).
+    Use a larger delta (e.g. 0.3) when the render output has filter-complex seeking
+    constraints that make very short windows (default 20ms) unreliable; pre_t and post_t
+    must be updated to match the output time at seam_t ± delta.
+
+    Raises ValueError when seam_t + delta exceeds file duration or threshold is invalid.
     """
     if not 0 <= threshold <= 1:
         raise ValueError("threshold must be in [0, 1]")
@@ -231,11 +247,11 @@ def assert_seam_frame_order(
         raise RuntimeError(f"ffprobe failed for {output}: {r.stderr[-400:]}")
     data = json.loads(r.stdout)
     file_duration = float(data["format"]["duration"])
-    if seam_t + 0.05 > file_duration:
+    if seam_t + delta > file_duration:
         raise ValueError(f"seam_t {seam_t} exceeds file duration {file_duration}")
-    pre_ssim = compute_ssim(output, seam_t - 0.05, pre_source, pre_t, duration=0.02)
+    pre_ssim = compute_ssim(output, seam_t - delta, pre_source, pre_t, duration=0.02)
     assert pre_ssim >= threshold, f"pre-seam SSIM {pre_ssim:.4f} < threshold {threshold}"
-    post_ssim = compute_ssim(output, seam_t + 0.05, post_source, post_t, duration=0.02)
+    post_ssim = compute_ssim(output, seam_t + delta, post_source, post_t, duration=0.02)
     assert post_ssim >= threshold, f"post-seam SSIM {post_ssim:.4f} < threshold {threshold}"
 
 

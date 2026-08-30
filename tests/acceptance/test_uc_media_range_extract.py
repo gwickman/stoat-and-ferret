@@ -326,15 +326,18 @@ async def test_uc_media_multiclip_range_extract(tmp_path: Path) -> None:
         source_end=5.0,
         threshold=0.9,
     )
-    # Seam at 2.0s: pre-seam (t=1.95) from source[1.95], post-seam (t=2.05) from source[3.05]
+    # Seam at 2.0s; use delta=0.3 to avoid the ±50ms tight window that can return 0
+    # frames from filter-complex renders. pre_t/post_t match output times at seam_t±delta.
+    # output[1.7] = clip_a source[1.7]; output[2.3] = clip_b source[3.0+0.3=3.3].
     assert_seam_frame_order(
         out,
         seam_t=2.0,
         pre_source=src,
-        pre_t=1.95,
+        pre_t=1.7,
         post_source=src,
-        post_t=3.05,
+        post_t=3.3,
         threshold=0.5,
+        delta=0.3,
     )
     await assert_stream_inventory(out, video=True, audio=False)
     await assert_frame_count(out, expected_frames=120, tolerance=2)
