@@ -163,8 +163,8 @@ async def test_preview_start_after_transition_returns_202() -> None:
         tr_resp = await client.post(
             f"/api/v1/projects/{project_id}/effects/transition",
             json={
-                "clip_a_id": clip_a_id,
-                "clip_b_id": clip_b_id,
+                "source_clip_id": clip_a_id,
+                "target_clip_id": clip_b_id,
                 "transition_type": "fade",
                 "parameters": {"duration": 0.5},
             },
