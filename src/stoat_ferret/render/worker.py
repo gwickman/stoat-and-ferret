@@ -347,6 +347,45 @@ async def _resolve_clip_source(
         return vid.path, vid.audio_codec, vid.frame_rate
 
 
+def _dispatch_render_effect(
+    defn: Any,
+    effect_data: dict[str, Any],
+    clip: Clip,
+    render_effects: list[Any],
+    audio_filter_chains: list[str],
+) -> None:
+    """Route one resolved effect to render_effects or audio_filter_chains."""
+    from stoat_ferret_core import RenderEffect
+
+    effect_type = effect_data.get("effect_type", "")
+    try:
+        filter_str = defn.build_fn(effect_data.get("parameters", {}))
+    except Exception as exc:
+        raise CommandBuildError(
+            f"Effect {effect_type!r} on clip {clip.id!r} build failed: {exc}"
+        ) from exc
+    window = effect_data.get("window")
+    if defn.stream_kind == "a":
+        audio_filter_chains.append(filter_str)
+        if window:
+            logger.warning(
+                "audio_effect_windowed_skipped",
+                effect_type=effect_type,
+                clip_id=clip.id,
+            )
+    elif window:
+        render_effects.append(
+            RenderEffect.windowed_custom(
+                filter_str,
+                window["start_s"],
+                window["end_s"],
+                defn.timeline_t_capable,
+            )
+        )
+    else:
+        render_effects.append(RenderEffect.custom(filter_str))
+
+
 def _build_clip_render_effects(
     clip: Clip,
     effect_registry: EffectRegistry | None,
@@ -368,33 +407,7 @@ def _build_clip_render_effects(
             defn = effect_registry.get(effect_type)
             if defn is None:
                 raise CommandBuildError(f"Unknown effect type {effect_type!r} on clip {clip.id!r}")
-            else:
-                try:
-                    filter_str = defn.build_fn(effect_data.get("parameters", {}))
-                except Exception as exc:
-                    raise CommandBuildError(
-                        f"Effect {effect_type!r} on clip {clip.id!r} build failed: {exc}"
-                    ) from exc
-                window = effect_data.get("window")
-                if defn.stream_kind == "a":
-                    audio_filter_chains.append(filter_str)
-                    if window:
-                        logger.warning(
-                            "audio_effect_windowed_skipped",
-                            effect_type=effect_type,
-                            clip_id=clip.id,
-                        )
-                elif window:
-                    render_effects.append(
-                        RenderEffect.windowed_custom(
-                            filter_str,
-                            window["start_s"],
-                            window["end_s"],
-                            defn.timeline_t_capable,
-                        )
-                    )
-                else:
-                    render_effects.append(RenderEffect.custom(filter_str))
+            _dispatch_render_effect(defn, effect_data, clip, render_effects, audio_filter_chains)
     if not render_effects:
         render_effects.append(RenderEffect.none())
     return render_effects, audio_filter_chains
