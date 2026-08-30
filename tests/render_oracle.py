@@ -315,7 +315,7 @@ async def assert_audio_band_window(
     t_end: float,
     expected_bands_hz: list[int],
     absent_bands_hz: list[int],
-    threshold_db: float = -20.0,
+    threshold_db: float = -25.0,
 ) -> None:
     """Assert frequency band energy within a time window.
 
@@ -323,8 +323,9 @@ async def assert_audio_band_window(
     (band is present). For each frequency in absent_bands_hz: measured mean_volume must be
     below threshold_db (band is absent). Calls _measure_band_db_windowed via asyncio.to_thread.
 
-    Default threshold -20 dBFS discriminates present tones (~-3 dBFS) from absent-band
-    harmonic bleed introduced by AAC encoding (~-25 to -35 dBFS).
+    Default threshold -25 dBFS sits between the present-band level (~-21 dBFS, set by the
+    FFmpeg sine source default amplitude of 0.125) and the adjacent-octave rejection floor of
+    the 1-octave BPF (~-28 dBFS for 1-octave-apart frequencies), giving ~4 dB margin each side.
     """
     for freq in expected_bands_hz:
         level = await asyncio.to_thread(_measure_band_db_windowed, path, freq, t_start, t_end)
