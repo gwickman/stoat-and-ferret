@@ -2143,6 +2143,41 @@ class TestGoldenArgv:
         assert "audio effects" in str(exc_info.value)
         assert "no audio stream" in str(exc_info.value)
 
+    @pytest.mark.asyncio
+    async def test_buildfn_exception_wraps_as_command_build_error(self) -> None:
+        """build_fn raising ValueError is re-raised as CommandBuildError (BL-828 AC-1/AC-2).
+
+        Supplies a known effect whose build_fn raises ValueError("bad param") and asserts
+        that CommandBuildError propagates (not raw ValueError), with the original exception
+        chained as __cause__, and the error message naming the effect type and clip id.
+        """
+
+        def _bad_build_fn(params: dict) -> str:
+            raise ValueError("bad param")
+
+        bad_effect = dataclasses.replace(VOLUME, build_fn=_bad_build_fn)
+
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        clip = _g_make_clip(
+            "clip-bad-effect",
+            "vid-1",
+            effects=[{"effect_type": "bad-effect", "parameters": {}}],
+        )
+        reg = EffectRegistry()
+        reg.register("bad-effect", bad_effect)
+
+        with pytest.raises(CommandBuildError) as exc_info:
+            await build_command_for_job(
+                _g_make_job(_g_make_plan()),
+                _g_clip_repo(clip),
+                _g_video_repo(vid),
+                effect_registry=reg,
+            )
+
+        assert isinstance(exc_info.value.__cause__, ValueError)
+        assert "bad-effect" in str(exc_info.value)
+        assert "clip-bad-effect" in str(exc_info.value)
+
 
 # ---------------------------------------------------------------------------
 # Unit tests for transition shape guard (BL-816)

@@ -369,7 +369,12 @@ def _build_clip_render_effects(
             if defn is None:
                 raise CommandBuildError(f"Unknown effect type {effect_type!r} on clip {clip.id!r}")
             else:
-                filter_str = defn.build_fn(effect_data.get("parameters", {}))
+                try:
+                    filter_str = defn.build_fn(effect_data.get("parameters", {}))
+                except Exception as exc:
+                    raise CommandBuildError(
+                        f"Effect {effect_type!r} on clip {clip.id!r} build failed: {exc}"
+                    ) from exc
                 window = effect_data.get("window")
                 if defn.stream_kind == "a":
                     audio_filter_chains.append(filter_str)
