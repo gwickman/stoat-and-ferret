@@ -15,6 +15,7 @@ Scenario identifier: UC-MEDIA-MULTICLIP-TRANSITIONS
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -98,6 +99,8 @@ async def run_uc_media_multiclip_transitions(base_url: str) -> dict[str, Any]:
                     "in_point": 0,
                     "out_point": min(150, video.get("duration_frames", 150)),
                     "timeline_position": i * 150,
+                    "timeline_start": i * 5.0,
+                    "timeline_end": (i + 1) * 5.0,
                 },
             )
             if clip_resp.status_code not in (200, 201):
@@ -113,18 +116,16 @@ async def run_uc_media_multiclip_transitions(base_url: str) -> dict[str, Any]:
             clip_ids.append(clip_resp.json()["id"])
 
         clip_a_id = clip_ids[0]
+        clip_b_id = clip_ids[1]
 
         # Save wipeleft/0.35 transition between clip_a and clip_b
         tr_resp = await client.post(
-            f"/api/v1/projects/{project_id}/transitions",
+            f"/api/v1/projects/{project_id}/timeline/transitions",
             json={
-                "transitions": [
-                    {
-                        "clip_a_id": clip_a_id,
-                        "transition_type": "wipeleft",
-                        "duration": 0.35,
-                    }
-                ]
+                "clip_a_id": clip_a_id,
+                "clip_b_id": clip_b_id,
+                "transition_type": "wipeleft",
+                "duration": 0.35,
             },
         )
         if tr_resp.status_code not in (200, 201, 204):
@@ -143,7 +144,7 @@ async def run_uc_media_multiclip_transitions(base_url: str) -> dict[str, Any]:
             "/api/v1/render",
             json={
                 "project_id": project_id,
-                "render_plan": {
+                "render_plan": json.dumps({
                     "total_duration": 9.65,
                     "settings": {
                         "output_format": "mp4",
@@ -153,7 +154,7 @@ async def run_uc_media_multiclip_transitions(base_url: str) -> dict[str, Any]:
                         "quality_preset": "standard",
                         "fps": 30.0,
                     },
-                },
+                }),
             },
         )
         if render_resp.status_code not in (200, 201, 202):
@@ -247,7 +248,7 @@ async def test_uc_media_multiclip_transitions_scenario() -> None:
         assert proj_resp.status_code == 201, f"project creation failed: {proj_resp.text}"
         project_id: str = proj_resp.json()["id"]
 
-        # Add two clips
+        # Add two clips with timeline_start/timeline_end for adjacency check
         clip_ids: list[str] = []
         for i, vid_id in enumerate(["vid-tr-1", "vid-tr-2"]):
             clip_resp = await client.post(
@@ -257,24 +258,24 @@ async def test_uc_media_multiclip_transitions_scenario() -> None:
                     "in_point": 0,
                     "out_point": 150,
                     "timeline_position": i * 150,
+                    "timeline_start": i * 5.0,
+                    "timeline_end": (i + 1) * 5.0,
                 },
             )
             assert clip_resp.status_code == 201, f"clip {i} creation failed: {clip_resp.text}"
             clip_ids.append(clip_resp.json()["id"])
 
         clip_a_id = clip_ids[0]
+        clip_b_id = clip_ids[1]
 
-        # Save wipeleft/0.35 transition
+        # Save wipeleft/0.35 transition: flat body to /timeline/transitions
         tr_resp = await client.post(
-            f"/api/v1/projects/{project_id}/transitions",
+            f"/api/v1/projects/{project_id}/timeline/transitions",
             json={
-                "transitions": [
-                    {
-                        "clip_a_id": clip_a_id,
-                        "transition_type": "wipeleft",
-                        "duration": 0.35,
-                    }
-                ]
+                "clip_a_id": clip_a_id,
+                "clip_b_id": clip_b_id,
+                "transition_type": "wipeleft",
+                "duration": 0.35,
             },
         )
         assert tr_resp.status_code in (200, 201, 204), f"save transitions failed: {tr_resp.text}"
@@ -284,3 +285,25 @@ async def test_uc_media_multiclip_transitions_scenario() -> None:
         assert clips_resp.status_code == 200
         clips = clips_resp.json()
         assert len(clips) == 2, f"expected 2 clips, got {len(clips)}"
+
+        # Submit multi-clip render and assert accepted
+        render_resp = await client.post(
+            "/api/v1/render",
+            json={
+                "project_id": project_id,
+                "render_plan": json.dumps({
+                    "total_duration": 9.65,
+                    "settings": {
+                        "codec": "libx264",
+                        "fps": 30.0,
+                        "width": 320,
+                        "height": 240,
+                        "quality_preset": "standard",
+                    },
+                }),
+            },
+        )
+        assert render_resp.status_code == 201, (
+            f"render submit failed: {render_resp.status_code} {render_resp.text}"
+        )
+        assert render_resp.json().get("id"), "render response missing job id"
