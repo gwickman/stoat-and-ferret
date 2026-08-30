@@ -338,6 +338,7 @@ async def test_uc_media_multiclip_range_extract(tmp_path: Path) -> None:
         post_t=3.3,
         threshold=0.5,
         delta=0.3,
+        ssim_duration=0.1,
     )
     await assert_stream_inventory(out, video=True, audio=False)
     await assert_frame_count(out, expected_frames=120, tolerance=2)

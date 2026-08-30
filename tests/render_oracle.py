@@ -214,6 +214,7 @@ def assert_seam_frame_order(
     post_t: float,
     threshold: float = 0.99,
     delta: float = 0.05,
+    ssim_duration: float = 0.02,
 ) -> None:
     """Assert transition seam frame order via SSIM at ±delta around the seam point.
 
@@ -221,8 +222,9 @@ def assert_seam_frame_order(
     seam_t + delta matches post_source at post_t.
 
     delta controls how far from the seam the SSIM check is taken (default 0.05s = 50ms).
-    Use a larger delta (e.g. 0.3) when the render output has filter-complex seeking
-    constraints that make very short windows (default 20ms) unreliable; pre_t and post_t
+    ssim_duration controls the comparison window length (default 0.02s = ~0.6 frames at 30fps).
+    Use a larger delta (e.g. 0.3) and ssim_duration (e.g. 0.1) when the render output has
+    filter-complex seeking constraints that make very tight windows unreliable; pre_t and post_t
     must be updated to match the output time at seam_t ± delta.
 
     Raises ValueError when seam_t + delta exceeds file duration or threshold is invalid.
@@ -249,9 +251,9 @@ def assert_seam_frame_order(
     file_duration = float(data["format"]["duration"])
     if seam_t + delta > file_duration:
         raise ValueError(f"seam_t {seam_t} exceeds file duration {file_duration}")
-    pre_ssim = compute_ssim(output, seam_t - delta, pre_source, pre_t, duration=0.02)
+    pre_ssim = compute_ssim(output, seam_t - delta, pre_source, pre_t, duration=ssim_duration)
     assert pre_ssim >= threshold, f"pre-seam SSIM {pre_ssim:.4f} < threshold {threshold}"
-    post_ssim = compute_ssim(output, seam_t + delta, post_source, post_t, duration=0.02)
+    post_ssim = compute_ssim(output, seam_t + delta, post_source, post_t, duration=ssim_duration)
     assert post_ssim >= threshold, f"post-seam SSIM {post_ssim:.4f} < threshold {threshold}"
 
 
