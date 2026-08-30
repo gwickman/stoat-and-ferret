@@ -1,5 +1,36 @@
 # STATUS.md
 
+## v137 — Transition Regression Fixes, Worker Hardening, Test Harness Quality, CI/Doc Hygiene
+
+**Delivered:** 2026-08-30
+**PRs:** #1030–#1056 (27 PRs) + commit f35d7b20
+**Features:** 26 across 4 themes
+
+### Highlights
+
+- **Theme 1 — transition-regression-fixes:** Unified GUI transition vocabulary and callers; fixed preview KeyError on transition lookup; restored transition-400 endpoint behavior; unified adjacency check logic; updated smoke tests to cover new transition surface — BL-779, BL-780, BL-781, BL-782, BL-783 — PRs #1030–#1034
+- **Theme 2 — worker-hardening:** Added transition shape guard (rejects malformed transition payloads); clamped oversized transition durations; wrapped build_fn exceptions for structured error propagation; reduced cyclomatic complexity in clip input list assembly, clip render effects dispatch, and audio acrossfade chain — BL-784, BL-785, BL-786, BL-787, BL-788, BL-790 — PRs #1035–#1040
+- **Theme 3 — test-harness-quality:** Fixed preview seek mock (BL-836); repaired UAT journey registration (BL-812); hardened in-point oracle boundary conditions; hardened audio oracle; added crop golden-argv oracle; fixed golden-argv subtitle case sensitivity; added registry completeness guard; scaffolded chatbot scenario tests; fixed Windows asyncio teardown; isolated diagnostic fixtures — BL-836, BL-812, BL-813, BL-815, BL-816, BL-817, BL-829, BL-818, BL-819, BL-820 — PRs #1041–#1051, commit f35d7b20
+- **Theme 4 — ci-doc-hygiene:** Pinned AnimMouse/setup-ffmpeg@v1 to SHA at all 7 CI sites; added route-inventory gate to test_doc_truth; updated stale effect counts to 41 in ARCHITECTURE.md; fixed API doc residuals from PR #984; added split-preserves sub-scenario to Goal 5 (BL-852) — BL-803, BL-805, BL-806, BL-809, BL-852 — PRs #1052–#1056
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| transition-regression-fixes | BL-779, BL-780, BL-781, BL-782, BL-783 | #1030–#1034 | merged |
+| worker-hardening | BL-784, BL-785, BL-786, BL-787, BL-788, BL-790 | #1035–#1040 | merged |
+| test-harness-quality | BL-836, BL-812, BL-813, BL-815, BL-816, BL-817, BL-829, BL-818, BL-819, BL-820 | #1041–#1051, f35d7b20 | merged |
+| ci-doc-hygiene | BL-803, BL-805, BL-806, BL-809, BL-852 | #1052–#1056 | merged |
+
+### AC Status
+
+- 4 themes, 26 features; all features complete and merged to main
+- 0 carry-forwards; 0 deferred ACs
+
+### User Actions Required
+
+None required. v137 is complete.
+
 ## v126 — CI/Sonar Hygiene (BL-782/783/784/785/786)
 
 **Delivered:** 2026-08-13
