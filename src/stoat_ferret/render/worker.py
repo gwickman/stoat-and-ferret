@@ -634,6 +634,28 @@ def _get_transition_duration(
     return t.duration_secs if t is not None else 1.0
 
 
+def _build_audio_input_label(
+    i: int,
+    audio_set: set[int],
+    filters: list[list[str]],
+    clip_durations_mc: list[float],
+    parts: list[str],
+) -> str:
+    """Return the filter-graph label for input i, appending any filter segment to parts."""
+    if i in audio_set:
+        clip_filters = filters[i] if i < len(filters) else []
+        if clip_filters:
+            joined = ",".join(clip_filters)
+            eff_label = f"[a{i}_eff]"
+            parts.append(f"[{i}:a]{joined}{eff_label}")
+            return eff_label
+        return f"[{i}:a]"
+    dur = clip_durations_mc[i]
+    src_label = f"[a{i}_silent]"
+    parts.append(f"anullsrc=r=48000:cl=stereo:d={dur}{src_label}")
+    return src_label
+
+
 def _build_audio_acrossfade_chain(
     audio_input_indices_mc: list[int],
     all_input_count: int,
@@ -655,22 +677,10 @@ def _build_audio_acrossfade_chain(
     audio_set = set(audio_input_indices_mc)
     filters: list[list[str]] = per_clip_audio_filters or [[] for _ in range(all_input_count)]
     parts: list[str] = []
-    labels: list[str] = []
-    for i in range(all_input_count):
-        if i in audio_set:
-            clip_filters = filters[i] if i < len(filters) else []
-            if clip_filters:
-                joined = ",".join(clip_filters)
-                eff_label = f"[a{i}_eff]"
-                parts.append(f"[{i}:a]{joined}{eff_label}")
-                labels.append(eff_label)
-            else:
-                labels.append(f"[{i}:a]")
-        else:
-            dur = clip_durations_mc[i]
-            src_label = f"[a{i}_silent]"
-            parts.append(f"anullsrc=r=48000:cl=stereo:d={dur}{src_label}")
-            labels.append(src_label)
+    labels = [
+        _build_audio_input_label(i, audio_set, filters, clip_durations_mc, parts)
+        for i in range(all_input_count)
+    ]
     current = labels[0]
     for k in range(1, all_input_count):
         t = _get_transition_duration(cwe_list, k, clip_transition_durations)
