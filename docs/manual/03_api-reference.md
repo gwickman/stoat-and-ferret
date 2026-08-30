@@ -1169,7 +1169,7 @@ Apply a transition between two adjacent clips in the project timeline. The sourc
 |-------|------|----------|-------------|
 | `source_clip_id` | string | Yes | ID of the first (outgoing) clip |
 | `target_clip_id` | string | Yes | ID of the second (incoming) clip |
-| `transition_type` | string | Yes | Transition effect key (e.g., `xfade`, `acrossfade`) |
+| `transition_type` | string | Yes | Transition style name (e.g., `fade`, `wipeleft`, `dissolve`) |
 | `parameters` | object | Yes | Transition parameters |
 
 **Response (201 Created):**
@@ -1178,7 +1178,7 @@ Apply a transition between two adjacent clips in the project timeline. The sourc
 {
   "source_clip_id": "clip-001",
   "target_clip_id": "clip-002",
-  "transition_type": "xfade",
+  "transition_type": "fade",
   "parameters": {"transition": "fade", "duration": 1.0, "offset": 4.0},
   "filter_string": "xfade=transition=fade:duration=1.0:offset=4.0"
 }
@@ -1190,7 +1190,7 @@ Apply a transition between two adjacent clips in the project timeline. The sourc
 - 400 `SAME_CLIP` -- Source and target are the same clip
 - 400 `EMPTY_TIMELINE` -- Project has no clips
 - 400 `NOT_ADJACENT` -- Clips are not adjacent in the timeline
-- 400 `EFFECT_NOT_FOUND` -- Unknown transition type
+- 400 `EFFECT_NOT_FOUND` -- Unknown transition style name (use `fade`, `wipeleft`, or `dissolve`)
 - 400 `INVALID_EFFECT_PARAMS` -- Parameters fail schema validation
 
 **Example:**
@@ -1201,8 +1201,8 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/effects/transitio
   -d '{
     "source_clip_id": "clip-001",
     "target_clip_id": "clip-002",
-    "transition_type": "xfade",
-    "parameters": {"transition": "fade", "duration": 1.0, "offset": 4.0}
+    "transition_type": "fade",
+    "parameters": {"duration": 1.0}
   }'
 ```
 

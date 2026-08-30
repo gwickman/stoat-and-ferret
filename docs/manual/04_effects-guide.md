@@ -257,10 +257,14 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -d '{
     "source_clip_id": "clip-001",
     "target_clip_id": "clip-002",
-    "transition_type": "xfade",
-    "parameters": {"transition": "dissolve", "duration": 1.5, "offset": 4.0}
+    "transition_type": "dissolve",
+    "parameters": {"duration": 1.5}
   }'
 ```
+
+> **Vocabulary note (post-v136):** Use style names (`fade`, `wipeleft`, `dissolve`, etc.) as `transition_type`.
+> Registry keys such as `xfade` and `acrossfade` are no longer accepted and return 400 EFFECT_NOT_FOUND.
+> Audio crossfade (`acrossfade`) is not currently available via the transition endpoint.
 
 ---
 
@@ -280,6 +284,9 @@ Crossfade between two audio inputs with configurable fade curves. Uses FFmpeg's 
 **Curve types:** `tri` (linear), `qsin` (quarter sine), `hsin` (half sine), `esin` (exponential sine), `log`, `ipar`, `qua` (quadratic), `cub` (cubic), `squ` (square root), `cbr` (cubic root), `par` (parabola).
 
 **Example (applied as a transition between clips):**
+
+> **Note (post-v136):** The transition endpoint no longer accepts `acrossfade` as `transition_type`.
+> Audio crossfade is not available via the transition endpoint. Use video style names (`fade`, `wipeleft`, `dissolve`) instead.
 
 ```bash
 curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
@@ -371,8 +378,8 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -d '{
     "source_clip_id": "clip-001",
     "target_clip_id": "clip-002",
-    "transition_type": "xfade",
-    "parameters": {"transition": "fade", "duration": 1.0, "offset": 4.0}
+    "transition_type": "fade",
+    "parameters": {"duration": 1.0}
   }'
 ```
 
@@ -382,7 +389,7 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
 - Source must immediately precede target in timeline order (adjacency check)
 - The timeline must not be empty
 
-For video transitions, use `xfade`. For audio transitions, use `acrossfade`. Pair them together for a complete audio-visual crossfade.
+For transitions, use style names (`fade`, `wipeleft`, `dissolve`). Audio crossfade is not currently available via the transition endpoint.
 
 ## Freeze Frame
 
