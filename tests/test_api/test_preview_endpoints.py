@@ -240,6 +240,51 @@ class TestStartPreview:
         data = response.json()
         assert data["detail"]["code"] == "SESSION_LIMIT"
 
+    async def test_effects_shaped_transition_start_returns_202(
+        self,
+        client: TestClient,
+        project_repository: AsyncInMemoryProjectRepository,
+        clip_repository: AsyncInMemoryClipRepository,
+        video_repository: AsyncInMemoryVideoRepository,
+        mock_preview_manager: MagicMock,
+    ) -> None:
+        """start_preview returns 202 when project.transitions uses nested parameters shape (BL-848).
+
+        POST /effects/transition stores {parameters: {duration, offset}} (nested).
+        Before this fix, float(t['duration']) raised KeyError: 'duration'.
+        """
+        from stoat_ferret.db.models import Project
+
+        project_id = "proj-bl848-start"
+        now = datetime.now(timezone.utc)
+        project = Project(
+            id=project_id,
+            name="BL-848 start test",
+            output_width=1920,
+            output_height=1080,
+            output_fps=30,
+            transitions=[
+                {
+                    "id": "tr-01",
+                    "source_clip_id": "clip-a",
+                    "target_clip_id": "clip-b",
+                    "transition_type": "fade",
+                    "parameters": {"duration": 0.5, "offset": 0.0},
+                    "filter_string": "xfade=transition=fade:duration=0.5:offset=1.5",
+                }
+            ],
+            created_at=now,
+            updated_at=now,
+        )
+        await project_repository.add(project)
+        await _seed_clip(clip_repository, video_repository, project_id)
+
+        session = _make_session(project_id=project_id, status=PreviewStatus.GENERATING)
+        mock_preview_manager.start.return_value = session
+
+        response = client.post(f"/api/v1/projects/{project_id}/preview/start")
+        assert response.status_code == 202, response.text
+
 
 # ---------- GET /preview/{session_id} ----------
 
@@ -406,6 +451,63 @@ class TestSeekPreview:
         detail = response.json()["detail"]
         assert detail["code"] == "INVALID_STATE_TRANSITION"
         assert "message" in detail
+
+    async def test_effects_shaped_transition_seek_returns_200(
+        self,
+        client: TestClient,
+        project_repository: AsyncInMemoryProjectRepository,
+        clip_repository: AsyncInMemoryClipRepository,
+        video_repository: AsyncInMemoryVideoRepository,
+        mock_preview_manager: MagicMock,
+    ) -> None:
+        """seek_preview returns 200 when project.transitions uses nested parameters shape (BL-848).
+
+        POST /effects/transition stores {parameters: {duration, offset}} (nested).
+        Before this fix, float(t['duration']) raised KeyError: 'duration'.
+        """
+        from stoat_ferret.db.models import Project
+
+        project_id = "proj-bl848-seek"
+        now = datetime.now(timezone.utc)
+        project = Project(
+            id=project_id,
+            name="BL-848 seek test",
+            output_width=1920,
+            output_height=1080,
+            output_fps=30,
+            transitions=[
+                {
+                    "id": "tr-01",
+                    "source_clip_id": "clip-a",
+                    "target_clip_id": "clip-b",
+                    "transition_type": "fade",
+                    "parameters": {"duration": 0.5, "offset": 0.0},
+                    "filter_string": "xfade=transition=fade:duration=0.5:offset=1.5",
+                }
+            ],
+            created_at=now,
+            updated_at=now,
+        )
+        await project_repository.add(project)
+        await _seed_clip(clip_repository, video_repository, project_id)
+
+        session = _make_session(
+            session_id="seek-bl848-session",
+            project_id=project_id,
+            status=PreviewStatus.READY,
+        )
+        mock_preview_manager.get_status.return_value = session
+        mock_preview_manager.seek.return_value = _make_session(
+            session_id="seek-bl848-session",
+            project_id=project_id,
+            status=PreviewStatus.SEEKING,
+        )
+
+        response = client.post(
+            "/api/v1/preview/seek-bl848-session/seek",
+            json={"position": 1.0},
+        )
+        assert response.status_code == 200, response.text
 
 
 # ---------- DELETE /preview/{session_id} ----------
