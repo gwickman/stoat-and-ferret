@@ -28,7 +28,7 @@ from stoat_ferret.effects.definitions import CROP_EFFECT
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import build_command_for_job
-from tests.render_oracle import assert_stream_inventory
+from tests.render_oracle import assert_crop_region, assert_stream_inventory
 
 STOAT_TEST_FFMPEG = os.environ.get("STOAT_TEST_FFMPEG", "0") == "1"
 
@@ -243,3 +243,5 @@ async def test_crop_effect_changes_output_dimensions(tmp_path: Path) -> None:
     out_w, out_h = _ffprobe_dimensions(out_path)
     assert out_w == _CROP_W, f"Expected output width={_CROP_W}, got {out_w}"
     assert out_h == _CROP_H, f"Expected output height={_CROP_H}, got {out_h}"
+
+    assert_crop_region(out_path, _CROP_X, _CROP_Y, _CROP_W, _CROP_H, fixture, t_frame=1.0)
