@@ -460,37 +460,8 @@ async def create_adjacent_clips_timeline(
     assert resp.status_code == 201
     clip_b_id = resp.json()["id"]
 
-    # PUT timeline with a video track
-    resp = await client.put(
-        f"/api/v1/projects/{project_id}/timeline",
-        json=[{"track_type": "video", "label": "V1"}],
-    )
-    assert resp.status_code == 200
-    track_id = resp.json()["tracks"][0]["id"]
-
-    # Add clip A: 0.0 - 5.0
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/timeline/clips",
-        json={
-            "clip_id": clip_a_id,
-            "track_id": track_id,
-            "timeline_start": 0.0,
-            "timeline_end": 5.0,
-        },
-    )
-    assert resp.status_code == 201
-
-    # Add clip B: 5.0 - 10.0 (adjacent: clip_a.timeline_end == clip_b.timeline_start)
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/timeline/clips",
-        json={
-            "clip_id": clip_b_id,
-            "track_id": track_id,
-            "timeline_start": 5.0,
-            "timeline_end": 10.0,
-        },
-    )
-    assert resp.status_code == 201
+    # Place clips A and B on a timeline track (0.0–5.0 and 5.0–10.0, adjacent)
+    track_id = await place_clips_on_timeline(client, project_id, clip_a_id, clip_b_id)
 
     # Verify adjacency via GET
     resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
