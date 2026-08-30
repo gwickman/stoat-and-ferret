@@ -2145,6 +2145,56 @@ class TestGoldenArgv:
 
 
 # ---------------------------------------------------------------------------
+# Unit tests for transition shape guard (BL-816)
+# ---------------------------------------------------------------------------
+
+
+class TestTransitionShapeGuard:
+    """Verify that effects-shaped transition entries are filtered from transition_lookup."""
+
+    @pytest.mark.asyncio
+    async def test_mixed_shape_transitions_no_keyerror(self) -> None:
+        """Mixed timeline + effects-shaped transitions: no KeyError; effects entry skipped (BL-816).
+
+        Seeds transitions_list with one timeline-shaped entry (clip_a_id) and one
+        effects-shaped entry (source_clip_id/target_clip_id). The effects-shaped entry
+        must be silently skipped; the timeline-shaped entry must still apply (wipeleft
+        transition appears in xfade filter_complex).
+        """
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-sg-a", "vid-1")
+        clip_b = _g_make_clip("clip-sg-b", "vid-2")
+
+        transitions = [
+            # Timeline-shaped: must be admitted to lookup
+            {"clip_a_id": "clip-sg-a", "transition_type": "wipeleft", "duration": 0.35},
+            # Effects-shaped: must be skipped (has source_clip_id instead of clip_a_id)
+            {
+                "id": "eff-trans-1",
+                "source_clip_id": "clip-sg-a",
+                "target_clip_id": "clip-sg-b",
+                "transition_type": "fade",
+                "parameters": {},
+                "filter_string": "xfade=transition=fade:duration=1:offset=29",
+            },
+        ]
+        job = _g_make_job(_g_make_plan(total_duration=29.65, transitions=transitions))
+
+        # Must not raise KeyError
+        result = await build_command_for_job(
+            job, _g_clip_repo(clip_a, clip_b), _g_video_repo(vid1, vid2)
+        )
+
+        # Timeline transition was admitted: wipeleft appears in filter_complex
+        fc = result[result.index("-filter_complex") + 1]
+        assert "xfade=transition=wipeleft:duration=0.35" in fc
+        # Effects-shaped entry was NOT admitted (fade from effects entry is absent)
+        # Verifying by ensuring "wipeleft" is the only xfade transition in the output
+        assert "xfade=transition=fade" not in fc
+
+
+# ---------------------------------------------------------------------------
 # Unit tests for _build_mc_subtitle_inputs helper (NFR-003)
 # ---------------------------------------------------------------------------
 
