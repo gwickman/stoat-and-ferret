@@ -363,6 +363,57 @@ async def test_assert_transition_reference_failing(tmp_path: Path) -> None:
         )
 
 
+@_FFMPEG_SKIP
+async def test_assert_transition_reference_wrong_type_same_duration(tmp_path: Path) -> None:
+    """Raises AssertionError when output and ref share duration but use different transition types.
+
+    output: wiperight/0.35; ref: wipeleft/0.35 — same duration, wrong type.
+    Boundary condition: the oracle must detect type mismatch even when durations match.
+    """
+    clip_a = tmp_path / "a.mp4"
+    clip_b = tmp_path / "b.mp4"
+    output = tmp_path / "output_wiperight.mp4"
+    ref = tmp_path / "ref_wipeleft.mp4"
+
+    _gen_lavfi_video(clip_a, "testsrc2=duration=2:size=320x240:rate=30")
+    _gen_lavfi_video(clip_b, "color=c=red:s=320x240:r=30:d=2")
+
+    # Same duration (0.35s), different transition types
+    _render_xfade(clip_a, clip_b, output, "wiperight", 0.35, 1.65)
+    _render_xfade(clip_a, clip_b, ref, "wipeleft", 0.35, 1.65)
+
+    with pytest.raises(AssertionError):
+        assert_transition_reference(
+            output, seam_t=1.65, transition_type="wipeleft", duration_secs=0.35, ref=ref
+        )
+
+
+@_FFMPEG_SKIP
+async def test_assert_transition_reference_correct_type_wrong_duration(tmp_path: Path) -> None:
+    """Raises AssertionError when transition type matches but duration differs.
+
+    output: wipeleft/1.0 (longer); ref: wipeleft/0.35 (shorter) — same type, wrong duration.
+    Boundary condition: the oracle must detect duration mismatch independently of type.
+    """
+    clip_a = tmp_path / "a.mp4"
+    clip_b = tmp_path / "b.mp4"
+    output = tmp_path / "output_wipeleft_long.mp4"
+    ref = tmp_path / "ref_wipeleft_short.mp4"
+
+    _gen_lavfi_video(clip_a, "testsrc2=duration=3:size=320x240:rate=30")
+    _gen_lavfi_video(clip_b, "color=c=red:s=320x240:r=30:d=3")
+
+    # Same type (wipeleft), different durations — offset chosen so both transitions fit
+    _render_xfade(clip_a, clip_b, output, "wipeleft", 1.0, 2.0)
+    _render_xfade(clip_a, clip_b, ref, "wipeleft", 0.35, 2.0)
+
+    # Comparing against ref's 0.35s window; output has a different transition shape there
+    with pytest.raises(AssertionError):
+        assert_transition_reference(
+            output, seam_t=2.0, transition_type="wipeleft", duration_secs=0.35, ref=ref
+        )
+
+
 # ---------------------------------------------------------------------------
 # No-FFmpeg tests (always run)
 # ---------------------------------------------------------------------------

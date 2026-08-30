@@ -26,6 +26,7 @@ from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, R
 from stoat_ferret.render.worker import build_command_for_job
 from tests.render_oracle import (
     assert_frame_count,
+    assert_frame_rate,
     assert_inpoint_identity,
     assert_stream_inventory,
 )
@@ -37,6 +38,7 @@ _FFMPEG_SKIP = pytest.mark.skipif(
 )
 
 _PROJECT_ID = "proj-range-extract-001"
+_PROJECT_ID_MC = "proj-range-extract-mc-001"
 
 
 def _gen_lavfi_video(path: Path, lavfi_expr: str, timeout: int = 60) -> None:
@@ -162,7 +164,15 @@ async def test_uc_media_range_extract_nonzero_inpoint(tmp_path: Path) -> None:
     assert out.stat().st_size > 0, "Output file must be non-empty"
 
     # output_t=3.0s is the midpoint of the 6s output (= source midpoint at (3.0+9.0)/2 = 6.0s)
-    assert_inpoint_identity(out, output_t=3.0, source=src, source_start=3.0, source_end=9.0)
+    assert_inpoint_identity(
+        out,
+        output_t=3.0,
+        source=src,
+        source_start=3.0,
+        source_end=9.0,
+        check_start=True,
+        check_end=True,
+    )
     await assert_stream_inventory(out, video=True, audio=False)
     await assert_frame_count(out, expected_frames=180, tolerance=2)
 
@@ -209,3 +219,181 @@ async def test_uc_media_range_extract_mismatched_fps(tmp_path: Path) -> None:
         out, output_t=2.0, source=src, source_start=2.0, source_end=6.0, threshold=0.95
     )
     await assert_stream_inventory(out, video=True, audio=False)
+
+
+def _make_mc_job(output_path: str, total_duration: float) -> RenderJob:
+    """RenderJob for multi-clip range-extract test (project=_PROJECT_ID_MC)."""
+    now = datetime.now(timezone.utc)
+    plan = json.dumps(
+        {
+            "total_duration": total_duration,
+            "settings": {
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 320,
+                "height": 240,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    return RenderJob(
+        id="job-mc-range-001",
+        project_id=_PROJECT_ID_MC,
+        status=RenderStatus.RUNNING,
+        output_path=output_path,
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=plan,
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
+    )
+
+
+@_FFMPEG_SKIP
+async def test_uc_media_multiclip_range_extract(tmp_path: Path) -> None:
+    """Two-clip render where clip_b has non-zero in_point; asserts correct source range (BL-813).
+
+    Source: testsrc2=size=320x240:rate=30:duration=10 (time-varying, 300 frames).
+    clip_a: in_point=0, out_point=60 → 2.0s (source 0–2s).
+    clip_b: in_point=90 (3.0s), out_point=150 (5.0s) → 2.0s (source 3–5s).
+    Render uses xfade(transition=fade, duration=1, offset=1): total output 3.0s (2+2-1), 90 frames.
+    Oracle: assert_frame_count (90 frames); assert_inpoint_identity for clip_b at output_t=2.5
+    (pure-clip_b zone t=2–3s → source_t=4.5s); assert_stream_inventory(video=True, audio=False).
+    """
+    src = tmp_path / "src_testsrc2.mp4"
+    out = tmp_path / "output_mc.mp4"
+
+    _gen_lavfi_video(src, "testsrc2=size=320x240:rate=30:duration=10")
+
+    video = _make_video("vid-mc-001", str(src))
+    now = datetime.now(timezone.utc)
+    clip_a = Clip(
+        id="clip-mc-a",
+        project_id=_PROJECT_ID_MC,
+        source_video_id="vid-mc-001",
+        in_point=0,
+        out_point=60,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+        clip_type="file",
+        effects=None,
+        source_asset_id=None,
+        generator_params=None,
+    )
+    clip_b = Clip(
+        id="clip-mc-b",
+        project_id=_PROJECT_ID_MC,
+        source_video_id="vid-mc-001",
+        in_point=90,
+        out_point=150,
+        timeline_position=60,
+        created_at=now,
+        updated_at=now,
+        clip_type="file",
+        effects=None,
+        source_asset_id=None,
+        generator_params=None,
+    )
+
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip_a, clip_b])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    # total = clip_a(2.0s) + clip_b(2.0s) = 4.0s (no audio acrossfade: video-only)
+    job = _make_mc_job(str(out), total_duration=4.0)
+    cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+    r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
+    assert r.returncode == 0, f"Render failed (exit {r.returncode}):\n{r.stderr.decode()[-800:]}"
+    assert out.exists(), "Output file must exist"
+    assert out.stat().st_size > 0, "Output file must be non-empty"
+
+    # Pure clip_b zone: output t=2.0–3.0s corresponds to source t=4.0–5.0s.
+    # output_t=2.5 (midpoint) → source_t=(4.0+5.0)/2=4.5.
+    assert_inpoint_identity(
+        out,
+        output_t=2.5,
+        source=src,
+        source_start=4.0,
+        source_end=5.0,
+        threshold=0.9,
+    )
+    await assert_stream_inventory(out, video=True, audio=False)
+    # xfade(duration=1, offset=1): total = clip_a(2s) + clip_b(2s) - xfade(1s) = 3.0s = 90 frames
+    await assert_frame_count(out, expected_frames=90, tolerance=2)
+
+
+@_FFMPEG_SKIP
+async def test_uc_media_range_extract_24fps_60fps_output(tmp_path: Path) -> None:
+    """24fps source with non-zero in_point rendered at 60fps (BL-813 FR-007).
+
+    Source: testsrc2=size=320x240:rate=24:duration=10 (time-varying, 240 frames).
+    Clip: in_point=48 (2.0s at 24fps), out_point=144 (6.0s at 24fps) → 4.0s output.
+    Render plan: fps=60.0 — output cadence differs from source fps.
+    Oracle: assert_inpoint_identity at midpoint; assert_frame_rate(60, 1).
+    """
+    src = tmp_path / "src_24fps.mp4"
+    out = tmp_path / "output_60fps.mp4"
+
+    _gen_lavfi_video(src, "testsrc2=size=320x240:rate=24:duration=10")
+
+    video = dataclasses.replace(
+        _make_video("vid-60fps-001", str(src)),
+        frame_rate_numerator=24,
+        frame_rate_denominator=1,
+        duration_frames=240,
+    )
+    clip = _make_clip("clip-60fps-001", "vid-60fps-001", in_point=48, out_point=144)
+
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=video)
+
+    # total_duration = (144 - 48) / 24 = 4.0s; render at 60fps
+    now = datetime.now(timezone.utc)
+    plan_60fps = json.dumps(
+        {
+            "total_duration": 4.0,
+            "settings": {
+                "codec": "libx264",
+                "fps": 60.0,
+                "width": 320,
+                "height": 240,
+                "quality_preset": "standard",
+            },
+        }
+    )
+    job = RenderJob(
+        id="job-60fps-001",
+        project_id=_PROJECT_ID,
+        status=RenderStatus.RUNNING,
+        output_path=str(out),
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=plan_60fps,
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
+    )
+    cmd = await build_command_for_job(job, clip_repo, video_repo)
+
+    r = subprocess.run(cmd, capture_output=True, timeout=120)  # noqa: ASYNC221
+    assert r.returncode == 0, f"Render failed (exit {r.returncode}):\n{r.stderr.decode()[-800:]}"
+    assert out.exists(), "Output file must exist"
+    assert out.stat().st_size > 0, "Output file must be non-empty"
+
+    # output_t=2.0s is the midpoint of the 4s output (source midpoint at (2.0+6.0)/2=4.0s)
+    assert_inpoint_identity(
+        out, output_t=2.0, source=src, source_start=2.0, source_end=6.0, threshold=0.9
+    )
+    await assert_frame_rate(out, expected_num=60, expected_den=1)
