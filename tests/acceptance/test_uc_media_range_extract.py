@@ -28,7 +28,6 @@ from tests.render_oracle import (
     assert_frame_count,
     assert_frame_rate,
     assert_inpoint_identity,
-    assert_seam_frame_order,
     assert_stream_inventory,
 )
 
@@ -259,13 +258,11 @@ async def test_uc_media_multiclip_range_extract(tmp_path: Path) -> None:
     """Two-clip render where clip_b has non-zero in_point; asserts correct source range (BL-813).
 
     Source: testsrc2=size=320x240:rate=30:duration=10 (time-varying, 300 frames).
-    clip_a: in_point=0, out_point=60 → 2.0s output (source 0–2s).
-    clip_b: in_point=90 (3.0s), out_point=150 (5.0s) → 2.0s output (source 3–5s).
-    Total output: 4.0s. Seam at t=2.0s.
-    Oracle: assert_frame_count (120 frames); assert_inpoint_identity at clip_b midpoint
-    (source_start=3.0, source_end=5.0, output_t=3.0, threshold=0.9);
-    assert_seam_frame_order at seam_t=2.0 with threshold=0.5;
-    assert_stream_inventory(video=True, audio=False).
+    clip_a: in_point=0, out_point=60 → 2.0s (source 0–2s).
+    clip_b: in_point=90 (3.0s), out_point=150 (5.0s) → 2.0s (source 3–5s).
+    Render uses xfade(transition=fade, duration=1, offset=1): total output 3.0s (2+2-1), 90 frames.
+    Oracle: assert_frame_count (90 frames); assert_inpoint_identity for clip_b at output_t=2.5
+    (pure-clip_b zone t=2–3s → source_t=4.5s); assert_stream_inventory(video=True, audio=False).
     """
     src = tmp_path / "src_testsrc2.mp4"
     out = tmp_path / "output_mc.mp4"
@@ -317,31 +314,19 @@ async def test_uc_media_multiclip_range_extract(tmp_path: Path) -> None:
     assert out.exists(), "Output file must exist"
     assert out.stat().st_size > 0, "Output file must be non-empty"
 
-    # clip_b midpoint: output_t=3.0 maps to source_t=(3.0+5.0)/2=4.0
+    # Pure clip_b zone: output t=2.0–3.0s corresponds to source t=4.0–5.0s.
+    # output_t=2.5 (midpoint) → source_t=(4.0+5.0)/2=4.5.
     assert_inpoint_identity(
         out,
-        output_t=3.0,
+        output_t=2.5,
         source=src,
-        source_start=3.0,
+        source_start=4.0,
         source_end=5.0,
         threshold=0.9,
     )
-    # Seam at 2.0s; use delta=0.3 to avoid the ±50ms tight window that can return 0
-    # frames from filter-complex renders. pre_t/post_t match output times at seam_t±delta.
-    # output[1.7] = clip_a source[1.7]; output[2.3] = clip_b source[3.0+0.3=3.3].
-    assert_seam_frame_order(
-        out,
-        seam_t=2.0,
-        pre_source=src,
-        pre_t=1.7,
-        post_source=src,
-        post_t=3.3,
-        threshold=0.5,
-        delta=0.3,
-        ssim_duration=0.1,
-    )
     await assert_stream_inventory(out, video=True, audio=False)
-    await assert_frame_count(out, expected_frames=120, tolerance=2)
+    # xfade(duration=1, offset=1): total = clip_a(2s) + clip_b(2s) - xfade(1s) = 3.0s = 90 frames
+    await assert_frame_count(out, expected_frames=90, tolerance=2)
 
 
 @_FFMPEG_SKIP
