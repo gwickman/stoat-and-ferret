@@ -59,6 +59,15 @@ Seed → build a project with (a) a non-zero `in_point` clip, (b) a second clip,
 
 Round grounding: this goal re-checks confirmed render-correctness gaps — in-point identity (BL-790), audio presence (BL-791), transition seam (BL-792), frame rate cadence (BL-793) — until fixed and guards against regression thereafter.
 
+#### Sub-scenario: Split-preserves
+
+Build a multi-clip project with at least two clips, each with distinct per-clip metadata (effects, `in_point`, audio settings). Split one clip at a mid-point via `POST /api/v1/projects/{id}/clips/{clip_id}/split`. Verify:
+- The split produces two clips whose combined coverage matches the original clip's time span.
+- Each resulting clip inherits the original clip's effects and metadata (no silent reset).
+- Submit a real-mode render of the post-split project and verify the output via the oracle at `tests/render_oracle.py` using `assert_inpoint_identity` and `assert_stream_inventory`.
+
+**Chatbot instruction:** After the split, `GET /api/v1/projects/{id}/clips` and assert that (a) clip count is original_count + 1, (b) each split segment carries the original clip's effect list (check `effects` field), and (c) the render oracle reports no frame-range gaps or audio drops at the split boundary.
+
 ---
 
 ## Grounding
