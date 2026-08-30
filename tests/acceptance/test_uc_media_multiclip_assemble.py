@@ -26,6 +26,7 @@ from stoat_ferret.db.models import Clip, Video
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import build_command_for_job
 from tests.render_oracle import (
+    assert_audio_band_window,
     assert_av_duration_alignment,
     assert_stream_inventory,
     assert_transition_reference,
@@ -41,11 +42,11 @@ _FFMPEG_SKIP = pytest.mark.skipif(
 _PROJECT_ID = "proj-multiclip-audio-001"
 
 
-def _make_audio_video_fixture(path: Path, duration: int = 5) -> Path:
+def _make_audio_video_fixture(path: Path, duration: int = 5, freq_hz: int = 440) -> Path:
     """Generate an audio+video MP4 using the amerge stereo pattern from AGENTS.md.
 
-    Uses two independent sine sources (440Hz, 880Hz) merged to stereo with amerge=inputs=2.
-    This guarantees 2-channel output on all FFmpeg builds (unlike aevalsrc:c=stereo).
+    Merges two sine sources at freq_hz to stereo with amerge=inputs=2, guaranteeing a
+    2-channel output (distinct per-clip frequencies give the bandpass oracle distinct targets).
     """
     result = subprocess.run(
         [
@@ -58,11 +59,11 @@ def _make_audio_video_fixture(path: Path, duration: int = 5) -> Path:
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency=440:duration={duration}",
+            f"sine=frequency={freq_hz}:duration={duration}",
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency=880:duration={duration}",
+            f"sine=frequency={freq_hz}:duration={duration}",
             "-filter_complex",
             "amerge=inputs=2",
             "-ac",
@@ -180,17 +181,17 @@ def _make_video_repo(*videos: Video) -> AsyncMock:
 
 @_FFMPEG_SKIP
 async def test_uc_media_multiclip_assemble_audio(tmp_path: Path) -> None:
-    """Multi-clip render produces sequenced source audio: stream present, A/V aligned (BL-791 AC-3).
+    """Multi-clip render sequences distinct per-clip audio: stream present, bands correct (BL-815).
 
     Steps:
-    1. Generate two 5s audio+video fixtures via amerge stereo pattern.
-    2. Build the FFmpeg command via build_command_for_job (multi-clip path activated
-       by two clips -> acrossfade chain in filter_complex).
+    1. Generate clip A (440Hz) and clip B (880Hz) — distinct per-clip frequencies.
+    2. Build FFmpeg command via build_command_for_job (2-clip acrossfade path).
     3. Execute the command.
-    4. Oracle asserts: audio stream present + A/V duration within 100ms.
+    4. Oracle asserts: stream inventory, A/V alignment, per-window band presence/absence,
+       total duration within 150ms tolerance.
     """
-    clip_a_path = _make_audio_video_fixture(tmp_path / "clip_a.mp4", duration=5)
-    clip_b_path = _make_audio_video_fixture(tmp_path / "clip_b.mp4", duration=5)
+    clip_a_path = _make_audio_video_fixture(tmp_path / "clip_a.mp4", duration=5, freq_hz=440)
+    clip_b_path = _make_audio_video_fixture(tmp_path / "clip_b.mp4", duration=5, freq_hz=880)
     out_path = tmp_path / "output.mp4"
 
     vid_a = _make_video("vid-a", str(clip_a_path))
@@ -213,6 +214,28 @@ async def test_uc_media_multiclip_assemble_audio(tmp_path: Path) -> None:
 
     await assert_stream_inventory(out_path, video=True, audio=True)
     await assert_av_duration_alignment(out_path, max_delta_ms=100.0)
+
+    # Clip A (440Hz) window: 0.5–3s (stable midpoint, clear of 1s acrossfade at t=4s)
+    await assert_audio_band_window(
+        out_path, 0.5, 3.0, expected_bands_hz=[440], absent_bands_hz=[880]
+    )
+    # Clip B (880Hz) window: 6–8.5s (stable midpoint, clear of acrossfade and EOF)
+    await assert_audio_band_window(
+        out_path, 6.0, 8.5, expected_bands_hz=[880], absent_bands_hz=[440]
+    )
+
+    # Total duration: clip_a(5s) + clip_b(5s) - acrossfade(1s) = 9.0s, tolerance ±150ms
+    probe = subprocess.run(  # noqa: ASYNC221
+        ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(out_path)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert probe.returncode == 0, f"ffprobe failed: {probe.stderr[-400:]}"
+    actual_dur = float(json.loads(probe.stdout)["format"]["duration"])
+    assert abs(actual_dur - 9.0) <= 0.15, (
+        f"Total duration {actual_dur:.3f}s deviates from 9.0s by more than 150ms"
+    )
 
 
 def _render_xfade_ref(

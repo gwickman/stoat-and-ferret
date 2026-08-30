@@ -26,8 +26,13 @@ from playwright.async_api import Page, expect
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
 
 
-def _gen_audio_video_fixture(path: Path, duration: int = 5, timeout: int = 60) -> None:
-    """Generate an audio+video MP4 using the amerge stereo pattern from AGENTS.md."""
+def _gen_audio_video_fixture(
+    path: Path, duration: int = 5, freq_hz: int = 440, timeout: int = 60
+) -> None:
+    """Generate an audio+video MP4 using the amerge stereo pattern from AGENTS.md.
+
+    Uses freq_hz as both stereo channels so the bandpass oracle can distinguish clips.
+    """
     r = subprocess.run(  # noqa: ASYNC221
         [
             "ffmpeg",
@@ -38,11 +43,11 @@ def _gen_audio_video_fixture(path: Path, duration: int = 5, timeout: int = 60) -
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency=440:duration={duration}",
+            f"sine=frequency={freq_hz}:duration={duration}",
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency=880:duration={duration}",
+            f"sine=frequency={freq_hz}:duration={duration}",
             "-filter_complex",
             "amerge=inputs=2",
             "-ac",
@@ -100,8 +105,8 @@ async def run(page: Page, base_url: str) -> None:
             clip_a = tmp_path / "clip_a.mp4"
             clip_b = tmp_path / "clip_b.mp4"
 
-            _gen_audio_video_fixture(clip_a, duration=5)
-            _gen_audio_video_fixture(clip_b, duration=5)
+            _gen_audio_video_fixture(clip_a, duration=5, freq_hz=440)
+            _gen_audio_video_fixture(clip_b, duration=5, freq_hz=880)
 
             async with httpx.AsyncClient(base_url=api_base, timeout=60.0) as client:
                 # Scan source directory into the library
@@ -206,12 +211,22 @@ async def run(page: Page, base_url: str) -> None:
                 assert output_path.exists(), f"Render output not found at {output_path}"
 
                 from tests.render_oracle import (
+                    assert_audio_band_window,
                     assert_av_duration_alignment,
                     assert_stream_inventory,
                 )
 
                 await assert_stream_inventory(output_path, video=True, audio=True)
                 await assert_av_duration_alignment(output_path)
+
+                # Per-window band assertions at stable midpoints (clear of 1s acrossfade at t=4s)
+                # Clip A (440Hz): 0.5–3.0s window; Clip B (880Hz): 6.0–8.5s window
+                await assert_audio_band_window(
+                    output_path, 0.5, 3.0, expected_bands_hz=[440], absent_bands_hz=[880]
+                )
+                await assert_audio_band_window(
+                    output_path, 6.0, 8.5, expected_bands_hz=[880], absent_bands_hz=[440]
+                )
 
     # Navigate to render page for browser screenshot evidence (always runs)
     await page.goto(base_url + "render")
