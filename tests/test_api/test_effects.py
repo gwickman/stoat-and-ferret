@@ -1245,6 +1245,7 @@ async def _seed_project_with_clips(
     await project_repo.add(project)
 
     clip_ids: list[str] = []
+    clip_duration = 5.0
     for i in range(clip_count):
         video = make_test_video()
         await video_repo.add(video)
@@ -1258,6 +1259,9 @@ async def _seed_project_with_clips(
             timeline_position=i * 100,
             created_at=now,
             updated_at=now,
+            track_id="track-1",
+            timeline_start=i * clip_duration,
+            timeline_end=(i + 1) * clip_duration,
         )
         await clip_repo.add(clip)
         clip_ids.append(clip_id)
@@ -1371,6 +1375,88 @@ async def test_transition_non_adjacent_clips_returns_400(
             "target_clip_id": clip_ids[2],
             "transition_type": "fade",
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
+        },
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_ADJACENT"
+
+
+@pytest.mark.api
+@pytest.mark.parametrize(
+    "proj_id,b_track_id,b_start,scenario",
+    [
+        ("proj-cross-track", "track-2", 5.0, "cross-track"),
+        ("proj-gap", "track-1", 7.0, "gap"),
+    ],
+)
+async def test_transition_not_adjacent_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+    proj_id: str,
+    b_track_id: str,
+    b_start: float,
+    scenario: str,
+) -> None:
+    """POST /effects/transition returns 400 NOT_ADJACENT for non-adjacent clip pairs.
+
+    Verifies BL-854-AC-2: cross-track clips and gap-separated clips are rejected.
+    """
+    now = datetime.now(timezone.utc)
+    project = Project(
+        id=proj_id,
+        name=f"Non-Adjacent Test ({scenario})",
+        output_width=1920,
+        output_height=1080,
+        output_fps=30,
+        created_at=now,
+        updated_at=now,
+    )
+    await project_repository.add(project)
+
+    video_a = make_test_video()
+    await video_repository.add(video_a)
+    clip_a = Clip(
+        id=f"{proj_id}-clip-a",
+        project_id=proj_id,
+        source_video_id=video_a.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=0,
+        created_at=now,
+        updated_at=now,
+        track_id="track-1",
+        timeline_start=0.0,
+        timeline_end=5.0,
+    )
+    await clip_repository.add(clip_a)
+
+    video_b = make_test_video()
+    await video_repository.add(video_b)
+    clip_b = Clip(
+        id=f"{proj_id}-clip-b",
+        project_id=proj_id,
+        source_video_id=video_b.id,
+        in_point=0,
+        out_point=100,
+        timeline_position=100,
+        created_at=now,
+        updated_at=now,
+        track_id=b_track_id,
+        timeline_start=b_start,
+        timeline_end=b_start + 5.0,
+    )
+    await clip_repository.add(clip_b)
+
+    response = client.post(
+        f"/api/v1/projects/{proj_id}/effects/transition",
+        json={
+            "source_clip_id": f"{proj_id}-clip-a",
+            "target_clip_id": f"{proj_id}-clip-b",
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0},
         },
     )
     assert response.status_code == 400
@@ -1728,6 +1814,9 @@ async def test_transition_black_box_full_flow(
         timeline_position=0,
         created_at=now,
         updated_at=now,
+        track_id="track-1",
+        timeline_start=0.0,
+        timeline_end=5.0,
     )
     clip2 = Clip(
         id="bb-clip-2",
@@ -1738,6 +1827,9 @@ async def test_transition_black_box_full_flow(
         timeline_position=150,
         created_at=now,
         updated_at=now,
+        track_id="track-1",
+        timeline_start=5.0,
+        timeline_end=12.0,
     )
     await clip_repository.add(clip1)
     await clip_repository.add(clip2)

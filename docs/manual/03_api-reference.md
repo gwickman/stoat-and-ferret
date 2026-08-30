@@ -1161,7 +1161,7 @@ curl -X DELETE http://localhost:8765/api/v1/projects/proj-xyz789/clips/clip-def4
 
 ### POST /api/v1/projects/{project_id}/effects/transition
 
-Apply a transition between two adjacent clips in the project timeline. The source clip must immediately precede the target clip in timeline order.
+Apply a transition between two adjacent clips in the project timeline. Adjacent means: same track, and the source clip's end position equals the target clip's start position (geometric adjacency). Cross-track clips or clips with a timeline gap return 400 `NOT_ADJACENT`.
 
 **Request Body:**
 
@@ -1205,6 +1205,48 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-xyz789/effects/transitio
     "parameters": {"duration": 1.0}
   }'
 ```
+
+---
+
+## Timeline Transitions
+
+Both `POST /effects/transition` and `POST /timeline/transitions` write to the same `project.transitions` store. They enforce an identical adjacency contract: clips must be on the same track and the first clip's end position must exactly equal the second clip's start position. Cross-track clips or clips with a timeline gap are rejected. Neither endpoint can be used interchangeably for cross-track transitions.
+
+### POST /api/v1/projects/{project_id}/timeline/transitions
+
+Apply a transition between two adjacent clips using the timeline endpoint. Returns composed timeline positions after the transition is factored in.
+
+**Adjacency Contract:** Same-track + geometric adjacency (clip_a.timeline_end == clip_b.timeline_start). This is the same rule enforced by `POST /effects/transition`.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `clip_a_id` | string | Yes | ID of the outgoing clip |
+| `clip_b_id` | string | Yes | ID of the incoming clip |
+| `transition_type` | string | Yes | Transition style name (e.g., `fade`, `wipeleft`, `dissolve`) |
+| `duration` | number | Yes | Transition duration in seconds |
+
+**Response (201 Created):**
+
+```json
+{
+  "id": "trans-001",
+  "transition_type": "fade",
+  "duration": 1.0,
+  "filter_string": "...",
+  "timeline_offset": -1.0,
+  "clips": [
+    {"input_index": 0, "timeline_start": 0.0, "timeline_end": 5.0},
+    {"input_index": 1, "timeline_start": 4.0, "timeline_end": 9.0}
+  ]
+}
+```
+
+**Errors:**
+
+- 404 `NOT_FOUND` -- Project or clip does not exist
+- 422 `CLIPS_NOT_ADJACENT` -- Clips are not on the same track or have a timeline gap
 
 ---
 

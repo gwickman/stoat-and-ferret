@@ -17,6 +17,7 @@ import pytest
 from tests.smoke.conftest import (
     create_adjacent_clips_timeline,
     create_project_with_clips,
+    place_clips_on_timeline,
     scan_videos_and_wait,
 )
 
@@ -61,6 +62,9 @@ async def test_uc07_fade_transition(
     project_id = project["id"]
     clip1_id = clip_responses[0]["id"]
     clip2_id = clip_responses[1]["id"]
+
+    # Add clips to a timeline track so the geometric adjacency check passes
+    await place_clips_on_timeline(client, project_id, clip1_id, clip2_id)
 
     # Apply fade transition between the two clips
     resp = await client.post(
@@ -164,6 +168,9 @@ async def test_smoke_transition_endpoint(
     clip1_id = clip_responses[0]["id"]
     clip2_id = clip_responses[1]["id"]
 
+    # Add clips to a timeline track so the geometric adjacency check passes
+    await place_clips_on_timeline(client, project_id, clip1_id, clip2_id)
+
     resp = await client.post(
         f"/api/v1/projects/{project_id}/effects/transition",
         json={
@@ -218,6 +225,9 @@ async def test_effects_router_transition_create_then_delete(
     project_id = project["id"]
     clip1_id = clip_responses[0]["id"]
     clip2_id = clip_responses[1]["id"]
+
+    # Add clips to a timeline track so the geometric adjacency check passes
+    await place_clips_on_timeline(client, project_id, clip1_id, clip2_id)
 
     # Create transition via effects router
     resp = await client.post(
