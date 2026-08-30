@@ -144,17 +144,19 @@ async def run_uc_media_multiclip_transitions(base_url: str) -> dict[str, Any]:
             "/api/v1/render",
             json={
                 "project_id": project_id,
-                "render_plan": json.dumps({
-                    "total_duration": 9.65,
-                    "settings": {
-                        "output_format": "mp4",
-                        "width": 320,
-                        "height": 240,
-                        "codec": "libx264",
-                        "quality_preset": "standard",
-                        "fps": 30.0,
-                    },
-                }),
+                "render_plan": json.dumps(
+                    {
+                        "total_duration": 9.65,
+                        "settings": {
+                            "output_format": "mp4",
+                            "width": 320,
+                            "height": 240,
+                            "codec": "libx264",
+                            "quality_preset": "standard",
+                            "fps": 30.0,
+                        },
+                    }
+                ),
             },
         )
         if render_resp.status_code not in (200, 201, 202):
@@ -291,16 +293,18 @@ async def test_uc_media_multiclip_transitions_scenario() -> None:
             "/api/v1/render",
             json={
                 "project_id": project_id,
-                "render_plan": json.dumps({
-                    "total_duration": 9.65,
-                    "settings": {
-                        "codec": "libx264",
-                        "fps": 30.0,
-                        "width": 320,
-                        "height": 240,
-                        "quality_preset": "standard",
-                    },
-                }),
+                "render_plan": json.dumps(
+                    {
+                        "total_duration": 9.65,
+                        "settings": {
+                            "codec": "libx264",
+                            "fps": 30.0,
+                            "width": 320,
+                            "height": 240,
+                            "quality_preset": "standard",
+                        },
+                    }
+                ),
             },
         )
         assert render_resp.status_code == 201, (
