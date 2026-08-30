@@ -544,6 +544,40 @@ async def sample_project(
         assert resp.status_code == 201
         effects_applied.append(resp.json())
 
+    # Add transition clips to a timeline track so geometric adjacency check passes.
+    # Clip indices 1 and 2 (SAMPLE_TRANSITION_DEFS) are used; compute positions from
+    # timeline_position (frames) and clip durations at 30fps.
+    # Clip 1: tl_pos=300, in=90, out=540 → start=10.0s, end=25.0s
+    # Clip 2: tl_pos=750, in=30, out=360 → start=25.0s, end=36.0s (adjacent)
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    timeline_track_id = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_ids[1],
+            "track_id": timeline_track_id,
+            "timeline_start": 10.0,
+            "timeline_end": 25.0,
+        },
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_ids[2],
+            "track_id": timeline_track_id,
+            "timeline_start": 25.0,
+            "timeline_end": 36.0,
+        },
+    )
+    assert resp.status_code == 201
+
     # Apply transitions
     transitions_applied = []
     for src_idx, tgt_idx, trans_type, params in SAMPLE_TRANSITION_DEFS:

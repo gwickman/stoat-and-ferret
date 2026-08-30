@@ -12,9 +12,9 @@ def _check_clip_adjacency(clip_a: Clip, clip_b: Clip, all_clips: Sequence[Clip])
 
     Geometric rule: same track_id, clip_a.timeline_end == clip_b.timeline_start.
     Assumes clip_a precedes clip_b on the timeline.
+    track_id=None is treated as a "default/unassigned" track; two clips both
+    with track_id=None are considered on the same track.
     """
-    if clip_a.track_id is None or clip_b.track_id is None:
-        return False
     if clip_a.track_id != clip_b.track_id:
         return False
     if clip_a.timeline_end is None or clip_b.timeline_start is None:

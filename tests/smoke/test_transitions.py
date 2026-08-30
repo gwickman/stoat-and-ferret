@@ -62,6 +62,36 @@ async def test_uc07_fade_transition(
     clip1_id = clip_responses[0]["id"]
     clip2_id = clip_responses[1]["id"]
 
+    # Add clips to a timeline track so the geometric adjacency check passes
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip1_id,
+            "track_id": track_id,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip2_id,
+            "track_id": track_id,
+            "timeline_start": 5.0,
+            "timeline_end": 10.0,
+        },
+    )
+    assert resp.status_code == 201
+
     # Apply fade transition between the two clips
     resp = await client.post(
         f"/api/v1/projects/{project_id}/effects/transition",
@@ -164,6 +194,36 @@ async def test_smoke_transition_endpoint(
     clip1_id = clip_responses[0]["id"]
     clip2_id = clip_responses[1]["id"]
 
+    # Add clips to a timeline track so the geometric adjacency check passes
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip1_id,
+            "track_id": track_id,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip2_id,
+            "track_id": track_id,
+            "timeline_start": 5.0,
+            "timeline_end": 10.0,
+        },
+    )
+    assert resp.status_code == 201
+
     resp = await client.post(
         f"/api/v1/projects/{project_id}/effects/transition",
         json={
@@ -218,6 +278,36 @@ async def test_effects_router_transition_create_then_delete(
     project_id = project["id"]
     clip1_id = clip_responses[0]["id"]
     clip2_id = clip_responses[1]["id"]
+
+    # Add clips to a timeline track so the geometric adjacency check passes
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip1_id,
+            "track_id": track_id,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip2_id,
+            "track_id": track_id,
+            "timeline_start": 5.0,
+            "timeline_end": 10.0,
+        },
+    )
+    assert resp.status_code == 201
 
     # Create transition via effects router
     resp = await client.post(
