@@ -1117,6 +1117,82 @@ async def test_post_transition_clip_not_found(
     assert data["detail"]["code"] == "NOT_FOUND"
 
 
+@pytest.mark.api
+async def test_post_transition_duration_equals_clip_a_returns_422(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition rejects duration == clip_a effective duration with DURATION_TOO_LARGE."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    # clip_a in _setup_adjacent_clips has timeline_start=0.0, timeline_end=5.0 (effective_dur=5.0)
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 5.0,
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "DURATION_TOO_LARGE"
+    assert data["detail"]["max_duration"] == pytest.approx(4.999)
+    assert data["detail"]["received"] == 5.0
+
+
+@pytest.mark.api
+async def test_post_transition_duration_exceeds_clip_a_returns_422(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition rejects duration > clip_a effective duration with DURATION_TOO_LARGE."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 6.0,
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "DURATION_TOO_LARGE"
+    assert data["detail"]["received"] == 6.0
+
+
+@pytest.mark.api
+async def test_post_transition_valid_duration_unaffected(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    timeline_repository: AsyncInMemoryTimelineRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+) -> None:
+    """POST transition with valid duration < clip_a effective duration returns 201."""
+    await _setup_adjacent_clips(project_repository, timeline_repository, clip_repository)
+
+    response = client.post(
+        "/api/v1/projects/proj-1/timeline/transitions",
+        json={
+            "clip_a_id": "clip-a",
+            "clip_b_id": "clip-b",
+            "transition_type": "fade",
+            "duration": 4.999,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["duration"] == pytest.approx(4.999)
+
+
 # ---------------------------------------------------------------------------
 # DELETE /projects/{project_id}/timeline/transitions/{transition_id}
 # ---------------------------------------------------------------------------

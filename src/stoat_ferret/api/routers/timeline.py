@@ -655,6 +655,23 @@ async def add_transition(
     b_start: float = ordered_b.timeline_start
     b_end: float = ordered_b.timeline_end
 
+    # Reject transition duration >= clip_a effective duration (BL-817)
+    clip_a_effective_dur = a_end - a_start
+    if request.duration >= clip_a_effective_dur:
+        max_duration = clip_a_effective_dur - 0.001
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "DURATION_TOO_LARGE",
+                "max_duration": max_duration,
+                "received": request.duration,
+                "message": (
+                    f"Transition duration must be less than clip_a effective duration. "
+                    f"Maximum allowed: {max_duration:.3f}s"
+                ),
+            },
+        )
+
     # Construct Rust types and call calculate_composition_positions
     comp_clip_a = CompositionClip(0, a_start, a_end, 0, 0)
     comp_clip_b = CompositionClip(1, b_start, b_end, 0, 0)
