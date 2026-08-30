@@ -341,6 +341,63 @@ async def assert_audio_band_window(
         )
 
 
+def assert_crop_region(
+    path: Path,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    source_path: Path,
+    t_frame: float,
+    ssim_threshold: float = 0.9,
+) -> None:
+    """Assert that the output frame matches the expected source region via SSIM.
+
+    Extracts source region [x:x+w, y:y+h] at t_frame from source_path and compares
+    it against the output frame at t_frame using ffmpeg's ssim filter.
+    Requires a time-varying source (e.g. testsrc2) so a wrong x/y offset fails.
+
+    Raises:
+        AssertionError: If SSIM < ssim_threshold or ffmpeg fails.
+        RuntimeError: If SSIM cannot be parsed from ffmpeg output.
+    """
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-ss",
+            str(t_frame),
+            "-t",
+            "0.3",
+            "-i",
+            str(source_path),
+            "-ss",
+            str(t_frame),
+            "-t",
+            "0.3",
+            "-i",
+            str(path),
+            "-filter_complex",
+            f"[0:v]crop={w}:{h}:{x}:{y}[cropped];[cropped][1:v]ssim=f=-",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    m = re.search(r"All:(\d+\.\d+)", r.stderr)
+    if not m:
+        raise RuntimeError(
+            f"Could not parse SSIM from ffmpeg output for crop region check:\n{r.stderr[-600:]}"
+        )
+    ssim = float(m.group(1))
+    assert ssim >= ssim_threshold, (
+        f"crop region SSIM {ssim:.4f} < threshold {ssim_threshold} "
+        f"(x={x}, y={y}, w={w}, h={h}, t={t_frame})"
+    )
+
+
 def assert_transition_reference(
     output: Path,
     seam_t: float,

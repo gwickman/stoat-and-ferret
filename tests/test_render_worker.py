@@ -26,7 +26,7 @@ import pytest
 from stoat_ferret.api.schemas.render import SoftSubtitleSpec
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import TIME_STRETCH, VOLUME
+from stoat_ferret.effects.definitions import CROP_EFFECT, TIME_STRETCH, VOLUME
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import (
@@ -2142,6 +2142,54 @@ class TestGoldenArgv:
         assert "clip-sc-no-audio" in str(exc_info.value)
         assert "audio effects" in str(exc_info.value)
         assert "no audio stream" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_golden_sc_crop(self) -> None:
+        """Single file clip with crop effect -> crop=640:360:100:50 in filter_complex (BL-830 AC-1)."""  # noqa: E501
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        clip = _g_make_clip(
+            "clip-sc-crop",
+            "vid-1",
+            effects=[
+                {
+                    "effect_type": "crop",
+                    "parameters": {"width": 640, "height": 360, "x": 100, "y": 50},
+                }
+            ],
+        )
+        reg = EffectRegistry()
+        reg.register("crop", CROP_EFFECT)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()),
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+            effect_registry=reg,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]crop=640:360:100:50[ev0];[ev0]format=yuv420p[final]",
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
 
     @pytest.mark.asyncio
     async def test_buildfn_exception_wraps_as_command_build_error(self) -> None:
