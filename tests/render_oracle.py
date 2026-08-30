@@ -13,6 +13,7 @@ import subprocess
 from pathlib import Path
 
 from stoat_ferret.ffmpeg.probe import ffprobe_video
+from tests.helpers.audio_helpers import _measure_band_db_windowed
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
 
@@ -306,6 +307,38 @@ def assert_audio_rms_changed(
         f"audio RMS delta {delta:.2f} dB < threshold {min_delta_db} dB "
         f"(measured={measured_db:.2f} dB, baseline={baseline_db:.2f} dB)"
     )
+
+
+async def assert_audio_band_window(
+    path: Path,
+    t_start: float,
+    t_end: float,
+    expected_bands_hz: list[int],
+    absent_bands_hz: list[int],
+    threshold_db: float = -25.0,
+) -> None:
+    """Assert frequency band energy within a time window.
+
+    For each frequency in expected_bands_hz: measured mean_volume must exceed threshold_db
+    (band is present). For each frequency in absent_bands_hz: measured mean_volume must be
+    below threshold_db (band is absent). Calls _measure_band_db_windowed via asyncio.to_thread.
+
+    Default threshold -25 dBFS sits between the present-band level (~-21 dBFS, set by the
+    FFmpeg sine source default amplitude of 0.125) and the adjacent-octave rejection floor of
+    the 1-octave BPF (~-28 dBFS for 1-octave-apart frequencies), giving ~4 dB margin each side.
+    """
+    for freq in expected_bands_hz:
+        level = await asyncio.to_thread(_measure_band_db_windowed, path, freq, t_start, t_end)
+        assert level > threshold_db, (
+            f"expected {freq}Hz band present (>{threshold_db}dB) "
+            f"at [{t_start},{t_end}]s in {path}, got {level:.1f}dB"
+        )
+    for freq in absent_bands_hz:
+        level = await asyncio.to_thread(_measure_band_db_windowed, path, freq, t_start, t_end)
+        assert level < threshold_db, (
+            f"expected {freq}Hz band absent (<{threshold_db}dB) "
+            f"at [{t_start},{t_end}]s in {path}, got {level:.1f}dB"
+        )
 
 
 def assert_transition_reference(
