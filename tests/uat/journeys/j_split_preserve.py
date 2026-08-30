@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""UAT Journey 714 — Split Preserve: clip split retains effects with migration_report.
+"""UAT Journey 721 — Split Preserve: clip split retains effects with migration_report.
 
 Exercises:
   1. Project creation via HTTP API
