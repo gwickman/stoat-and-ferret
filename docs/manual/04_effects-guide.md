@@ -285,6 +285,9 @@ Crossfade between two audio inputs with configurable fade curves. Uses FFmpeg's 
 
 **Example (applied as a transition between clips):**
 
+> **Note (post-v136):** The transition endpoint no longer accepts `acrossfade` as `transition_type`.
+> Audio crossfade is not available via the transition endpoint. Use video style names (`fade`, `wipeleft`, `dissolve`) instead.
+
 ```bash
 curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -H "Content-Type: application/json" \
@@ -386,7 +389,7 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
 - Source must immediately precede target in timeline order (adjacency check)
 - The timeline must not be empty
 
-For video transitions, use `xfade`. For audio transitions, use `acrossfade`. Pair them together for a complete audio-visual crossfade.
+For transitions, use style names (`fade`, `wipeleft`, `dissolve`). Audio crossfade is not currently available via the transition endpoint.
 
 ## Freeze Frame
 
