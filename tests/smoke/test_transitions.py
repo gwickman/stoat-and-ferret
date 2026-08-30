@@ -132,7 +132,7 @@ async def test_smoke_transition_endpoint(
     smoke_client: httpx.AsyncClient,
     videos_dir: Path,
 ) -> None:
-    """Regression guard: POST /effects/transition with transition_type='fade' returns 200 or 201.
+    """Regression guard: POST /effects/transition with transition_type='fade' returns 201.
 
     Guards BL-846 fix (registry.get replaced by TransitionType.from_str).
     """
@@ -180,8 +180,8 @@ async def test_smoke_transition_endpoint(
             "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         },
     )
-    assert resp.status_code in (200, 201), (
-        f"Expected 200 or 201 from transition endpoint, got {resp.status_code}: {resp.text}"
+    assert resp.status_code == 201, (
+        f"Expected 201 from transition endpoint, got {resp.status_code}: {resp.text}"
     )
 
 
@@ -253,3 +253,27 @@ async def test_effects_router_transition_create_then_delete(
         f"/api/v1/projects/{project_id}/timeline/transitions/{transition_id}",
     )
     assert resp.status_code == 200
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_transition_malformed_duration(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /effects/transition with non-numeric duration returns 400 (BL-853 FR-003)."""
+    client = smoke_client
+    setup = await create_adjacent_clips_timeline(client, videos_dir)
+    project_id = setup["project_id"]
+    clip_a_id = setup["clip_a_id"]
+    clip_b_id = setup["clip_b_id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_a_id,
+            "target_clip_id": clip_b_id,
+            "transition_type": "fade",
+            "parameters": {"duration": "abc"},
+        },
+    )
+    assert resp.status_code == 400
