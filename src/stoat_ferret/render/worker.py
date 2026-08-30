@@ -510,7 +510,11 @@ async def _build_clip_input_list(
     from stoat_ferret_core import ClipWithEffects, RenderTransition
 
     transitions_list: list[dict[str, Any]] = ctx.settings.get("transitions", [])
-    transition_lookup: dict[str, dict[str, Any]] = {t["clip_a_id"]: t for t in transitions_list}
+    timeline_transitions = [t for t in transitions_list if "clip_a_id" in t]
+    skipped = [t for t in transitions_list if "clip_a_id" not in t]
+    for t in skipped:
+        logger.warning("transition_shape_skipped", entry=t)
+    transition_lookup: dict[str, dict[str, Any]] = {t["clip_a_id"]: t for t in timeline_transitions}
 
     cwe_list: list[Any] = []
     clip_durations_mc: list[float] = []
