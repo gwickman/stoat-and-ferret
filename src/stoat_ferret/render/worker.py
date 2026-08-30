@@ -488,6 +488,35 @@ class _RenderCommandContext:
     effect_registry: EffectRegistry | None
 
 
+def _compute_clip_duration_and_in_point(
+    clip: Clip,
+    framerate_mc: float,
+    fps_mc: float,
+) -> tuple[float, float]:
+    """Return (duration_secs, in_point_secs) for a single clip."""
+    if clip.clip_type == "image":
+        start = clip.timeline_start or 0.0
+        end = clip.timeline_end or 0.0
+        return end - start, 0.0
+    if clip.clip_type == "generator":
+        return (clip.out_point - clip.in_point) / fps_mc, 0.0
+    # file clip: effective duration from source framerate; in_point as seek offset
+    return (clip.out_point - clip.in_point) / framerate_mc, clip.in_point / framerate_mc
+
+
+def _resolve_clip_outgoing_transition(
+    clip_id: str,
+    transition_lookup: dict[str, dict[str, Any]],
+) -> tuple[Any, float | None]:
+    """Return (RenderTransition or None, duration or None) for clip's outgoing seam."""
+    from stoat_ferret_core import RenderTransition
+
+    t = transition_lookup.get(clip_id)
+    if t is None:
+        return None, None
+    return RenderTransition(t["transition_type"], t["duration"]), t["duration"]
+
+
 async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
@@ -512,7 +541,7 @@ async def _build_clip_input_list(
     Also returns `per_clip_audio_filters` (one list[str] per clip) containing audio filter
     chain strings collected from effects with stream_kind="a".
     """
-    from stoat_ferret_core import ClipWithEffects, RenderTransition
+    from stoat_ferret_core import ClipWithEffects
 
     transitions_list: list[dict[str, Any]] = ctx.settings.get("transitions", [])
     timeline_transitions = [t for t in transitions_list if "clip_a_id" in t]
@@ -534,14 +563,10 @@ async def _build_clip_input_list(
         source_path_mc, clip_audio_codec, framerate_mc = await _resolve_clip_source(
             clip, ctx.job.project_id, ctx.video_repository, ctx.asset_repository, fps_mc
         )
-        if clip.clip_type == "image":
-            timeline_start_mc = clip.timeline_start or 0.0
-            timeline_end_mc = clip.timeline_end or 0.0
-            duration_secs = timeline_end_mc - timeline_start_mc
-        elif clip.clip_type == "generator":
-            duration_secs = (clip.out_point - clip.in_point) / fps_mc
-        else:  # file
-            duration_secs = (clip.out_point - clip.in_point) / framerate_mc
+        duration_secs, in_point_secs = _compute_clip_duration_and_in_point(
+            clip, framerate_mc, fps_mc
+        )
+        if clip.clip_type == "file":
             if source_audio_codec_mc is None and clip_audio_codec:
                 source_audio_codec_mc = clip_audio_codec
                 source_audio_input_idx_mc = i
@@ -550,19 +575,11 @@ async def _build_clip_input_list(
         if duration_secs <= 0:
             raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
         clip_durations_mc.append(duration_secs)
-        if clip.clip_type == "file":
-            in_point_secs_list.append(clip.in_point / framerate_mc)
-        else:
-            in_point_secs_list.append(0.0)  # image and generator clips: no source seek
+        in_point_secs_list.append(in_point_secs)
         render_effects, audio_filter_chains = _build_clip_render_effects(clip, ctx.effect_registry)
         per_clip_audio_filters.append(audio_filter_chains)
-        outgoing: Any = None
-        if clip.id in transition_lookup:
-            t = transition_lookup[clip.id]
-            outgoing = RenderTransition(t["transition_type"], t["duration"])
-            clip_transition_durations.append(t["duration"])
-        else:
-            clip_transition_durations.append(None)
+        outgoing, transition_dur = _resolve_clip_outgoing_transition(clip.id, transition_lookup)
+        clip_transition_durations.append(transition_dur)
         cwe_list.append(
             ClipWithEffects(
                 input_index=i,
