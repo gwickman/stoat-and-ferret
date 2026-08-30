@@ -75,8 +75,17 @@ JOURNEY_DEPS: dict[int, list[int]] = {
     708: [],
     709: [],
     710: [],
+    711: [],
+    712: [],
     713: [],
     714: [],
+    715: [],
+    716: [],
+    717: [],
+    718: [],
+    719: [],
+    720: [],
+    721: [],
 }
 
 # Human-readable journey names for screenshot directories and reports
@@ -107,8 +116,17 @@ JOURNEY_NAMES: dict[int, str] = {
     708: "r2-chroma-key",
     709: "r2-lens-distort",
     710: "r2-gradient-generator",
+    711: "in-point-trim",
+    712: "multi-clip-audio",
     713: "transitions-wiring",
-    714: "split-preserve",
+    714: "nondefault-fps",
+    715: "audio-effect-dispatch",
+    716: "unknown-effect-failclosed",
+    717: "crop",
+    718: "preview-parity",
+    719: "preview-seek",
+    720: "version-restore-roundtrip",
+    721: "split-preserve",
 }
 
 # Known benign console error patterns to exclude from reports
@@ -131,9 +149,16 @@ JOURNEY_MODULE_MAP: dict[int, str] = {
     708: "tests.uat.journeys.j_chroma_key",
     709: "tests.uat.journeys.j_lens_distort",
     710: "tests.uat.journeys.j_gradient_generator",
+    711: "tests.uat.journeys.j_in_point_trim",
     712: "tests.uat.journeys.j_multi_clip_audio",
     713: "tests.uat.journeys.j_transitions",
-    714: "tests.uat.journeys.j_split_preserve",
+    714: "tests.uat.journeys.j_nondefault_fps",
+    715: "tests.uat.journeys.j_audio_effect",
+    716: "tests.uat.journeys.j_unknown_effect_failclosed",
+    717: "tests.uat.journeys.j_crop",
+    718: "tests.uat.journeys.j_preview_parity",
+    719: "tests.uat.journeys.j_preview_seek",
+    721: "tests.uat.journeys.j_split_preserve",
 }
 
 KNOWN_FAILURES_REGISTRY = PROJECT_ROOT / "tests" / "fixtures" / "baseline-uat-failures.json"

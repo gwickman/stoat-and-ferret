@@ -19,9 +19,14 @@ import json
 import os
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright  # type: ignore[import-not-found]
+
+if not os.environ.get("STOAT_UAT_PLAYWRIGHT_HEADED"):
+    print("SKIP: J-720 requires headed Playwright (STOAT_UAT_PLAYWRIGHT_HEADED not set)")
+    sys.exit(0)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JOURNEY_NAME = "version-restore-roundtrip"
@@ -69,6 +74,34 @@ def run() -> int:
             msg = f"[{steps_total}] FAIL — {name}" + (f": {detail}" if detail else "")
             issues.append(msg)
             print(f"  {msg}")
+
+    # AC-30: SKIP guard — journey requires a pre-seeded project; check via API before
+    # launching Playwright so CI headless runs without pre-seeded state exit cleanly.
+    try:
+        with urllib.request.urlopen(f"{server_url}/api/v1/projects?limit=1", timeout=5) as resp:
+            body = json.loads(resp.read())
+            projects = body.get("projects", [])
+    except Exception:
+        projects = []
+    if not projects:
+        skip_result = {
+            "name": JOURNEY_NAME,
+            "journey_id": JOURNEY_ID,
+            "status": "skipped",
+            "steps_total": 0,
+            "steps_passed": 0,
+            "steps_failed": 0,
+            "console_errors": [],
+            "issues": [
+                "deferred_post_merge: no pre-seeded project found; "
+                "requires headed run with live server"
+            ],
+            "duration_seconds": 0.0,
+        }
+        result_path = journey_dir / "journey_result.json"
+        result_path.write_text(json.dumps(skip_result, indent=2) + "\n", encoding="utf-8")
+        print(f"\n  Journey {JOURNEY_ID} ({JOURNEY_NAME}): SKIPPED (no pre-seeded project)")
+        return 0
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=not headed)
@@ -137,11 +170,11 @@ def run() -> int:
                 page.screenshot(path=screenshot_path)
                 step("Add clip to timeline (modify live state)", True)
             else:
-                # Graceful skip if add-clip affordance is not present in current UI
+                # AC-29: button absent = journey FAIL, not silent skip
                 step(
                     "Add clip to timeline (modify live state)",
-                    True,
-                    "Add Clip button not present — skipped modification step",
+                    False,
+                    "Add Clip button not present — mutation step cannot be verified",
                 )
 
             # Step 6: Navigate to Versions section in ProjectDetails

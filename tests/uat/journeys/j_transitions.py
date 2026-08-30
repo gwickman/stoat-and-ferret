@@ -189,8 +189,9 @@ async def run(page: Page, base_url: str) -> None:
 
                 fps = 30
                 clip_frames = 5 * fps  # 150 frames = 5s
+                clip_dur_s = 5.0  # seconds per clip
 
-                # clip_a: full 5s at timeline position 0
+                # clip_a: full 5s at timeline_start=0.0, timeline_end=5.0
                 resp_a = await client.post(
                     f"/api/v1/projects/{project_id}/clips",
                     json={
@@ -198,6 +199,8 @@ async def run(page: Page, base_url: str) -> None:
                         "in_point": 0,
                         "out_point": clip_frames,
                         "timeline_position": 0,
+                        "timeline_start": 0.0,
+                        "timeline_end": clip_dur_s,
                     },
                 )
                 assert resp_a.status_code == 201, (
@@ -205,7 +208,7 @@ async def run(page: Page, base_url: str) -> None:
                 )
                 clip_a_id = resp_a.json()["id"]
 
-                # clip_b: full 5s, positioned after clip_a
+                # clip_b: full 5s, adjacent after clip_a
                 resp_b = await client.post(
                     f"/api/v1/projects/{project_id}/clips",
                     json={
@@ -213,23 +216,23 @@ async def run(page: Page, base_url: str) -> None:
                         "in_point": 0,
                         "out_point": clip_frames,
                         "timeline_position": clip_frames,
+                        "timeline_start": clip_dur_s,
+                        "timeline_end": clip_dur_s * 2,
                     },
                 )
                 assert resp_b.status_code == 201, (
                     f"Create clip_b failed: {resp_b.status_code} {resp_b.text}"
                 )
+                clip_b_id = resp_b.json()["id"]
 
-                # Save wipeleft/0.35 transition between clip_a and clip_b
+                # Save wipeleft/0.35 transition: flat body to /timeline/transitions
                 tr_resp = await client.post(
-                    f"/api/v1/projects/{project_id}/transitions",
+                    f"/api/v1/projects/{project_id}/timeline/transitions",
                     json={
-                        "transitions": [
-                            {
-                                "clip_a_id": clip_a_id,
-                                "transition_type": "wipeleft",
-                                "duration": 0.35,
-                            }
-                        ]
+                        "clip_a_id": clip_a_id,
+                        "clip_b_id": clip_b_id,
+                        "transition_type": "wipeleft",
+                        "duration": 0.35,
                     },
                 )
                 assert tr_resp.status_code in (200, 201, 204), (
@@ -253,7 +256,7 @@ async def run(page: Page, base_url: str) -> None:
                     "/api/v1/render",
                     json={"project_id": project_id, "render_plan": render_plan},
                 )
-                assert render_resp.status_code == 202, (
+                assert render_resp.status_code == 201, (
                     f"Render submit failed: {render_resp.status_code} {render_resp.text}"
                 )
                 job_id = render_resp.json()["id"]

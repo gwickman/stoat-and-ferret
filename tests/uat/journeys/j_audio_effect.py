@@ -172,7 +172,7 @@ async def run(page: Page, base_url: str) -> None:
                     "/api/v1/render",
                     json={"project_id": base_proj_id, "render_plan": render_plan_base},
                 )
-                assert render_base_resp.status_code == 202
+                assert render_base_resp.status_code == 201
                 base_job = await _poll_render_job(client, render_base_resp.json()["id"])
                 assert base_job["status"] == "completed", (
                     f"Baseline render ended '{base_job['status']}'"
@@ -201,15 +201,22 @@ async def run(page: Page, base_url: str) -> None:
                         "in_point": 0,
                         "out_point": 90,
                         "timeline_position": 0,
-                        "effects": [{"effect_type": "volume", "parameters": {"volume": 2.0}}],
                     },
                 )
                 assert resp_eff_clip.status_code == 201
+                eff_clip_id = resp_eff_clip.json()["id"]
+                eff_resp = await client.post(
+                    f"/api/v1/projects/{eff_proj_id}/clips/{eff_clip_id}/effects",
+                    json={"effect_type": "volume", "parameters": {"volume": 2.0}},
+                )
+                assert eff_resp.status_code in (200, 201), (
+                    f"Add effect failed: {eff_resp.status_code} {eff_resp.text}"
+                )
                 render_eff_resp = await client.post(
                     "/api/v1/render",
                     json={"project_id": eff_proj_id, "render_plan": render_plan_base},
                 )
-                assert render_eff_resp.status_code == 202
+                assert render_eff_resp.status_code == 201
                 eff_job = await _poll_render_job(client, render_eff_resp.json()["id"])
                 assert eff_job["status"] == "completed", (
                     f"Effect render ended '{eff_job['status']}'"

@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+from urllib.parse import urlparse
 
 import httpx
+from playwright.async_api import Page, expect
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
 
@@ -68,7 +70,25 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
                 "note": "FFmpeg not available — skipping live preview seek",
             }
 
-        # Step 2: Start preview
+        # Step 2: Seed a placed clip so preview/start has something to render
+        videos_resp = await client.get("/api/v1/videos?limit=10")
+        if videos_resp.status_code == 200:
+            clips_videos = videos_resp.json().get("videos", [])
+            if clips_videos:
+                vid = clips_videos[0]
+                await client.post(
+                    f"/api/v1/projects/{project_id}/clips",
+                    json={
+                        "source_video_id": vid["id"],
+                        "in_point": 0,
+                        "out_point": min(300, vid.get("duration_frames", 300)),
+                        "timeline_position": 0,
+                        "timeline_start": 0.0,
+                        "timeline_end": 10.0,
+                    },
+                )
+
+        # Step 3: Start preview
         start_resp = await client.post(f"/api/v1/projects/{project_id}/preview/start")
         if start_resp.status_code != 202:
             return {
@@ -123,3 +143,14 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
             "seek_status": seek_status,
             "status": "success",
         }
+
+
+async def run(page: Page, base_url: str) -> None:
+    """Entry point for uat_runner dispatch (module.run(page, base_url))."""
+    parsed = urlparse(base_url)
+    api_base = f"{parsed.scheme}://{parsed.netloc}"
+    await run_journey(api_base, ffmpeg_available=bool(STOAT_TEST_FFMPEG))
+    await page.goto(base_url + "render")
+    await page.wait_for_load_state("networkidle")
+    await expect(page.locator("[data-testid='render-page']")).to_be_visible()
+    await page.screenshot(path="j_preview_seek.png")

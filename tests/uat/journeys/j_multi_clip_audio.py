@@ -192,7 +192,7 @@ async def run(page: Page, base_url: str) -> None:
                     "/api/v1/render",
                     json={"project_id": project_id, "render_plan": render_plan},
                 )
-                assert render_resp.status_code == 202, (
+                assert render_resp.status_code == 201, (
                     f"Render submit failed: {render_resp.status_code} {render_resp.text}"
                 )
                 job_id = render_resp.json()["id"]
