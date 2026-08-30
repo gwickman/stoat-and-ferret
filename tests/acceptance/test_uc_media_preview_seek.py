@@ -73,7 +73,6 @@ def _make_clip(
 
 
 @_FFMPEG_SKIP
-@pytest.mark.skip(reason="BL-836: mock signature mismatch, fix deferred to v137")
 @pytest.mark.asyncio
 async def test_seek_position_forwarded_through_manager_to_generator(tmp_path: Path) -> None:
     """Seek with position=5.0 forwards position to manager.seek and start_offset_s to generator.
@@ -108,7 +107,7 @@ async def test_seek_position_forwarded_through_manager_to_generator(tmp_path: Pa
     async def _capture_get_status(session_id: str) -> PreviewSession:
         return seek_session
 
-    async def _capture_seek(**kwargs: object) -> PreviewSession:
+    async def _capture_seek(session_id: str, **kwargs: object) -> PreviewSession:
         captured_seek.update(kwargs)
         return PreviewSession(
             id="sess-seek-001",
