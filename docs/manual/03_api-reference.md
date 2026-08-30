@@ -1191,7 +1191,7 @@ Apply a transition between two adjacent clips in the project timeline. The sourc
 - 400 `EMPTY_TIMELINE` -- Project has no clips
 - 400 `NOT_ADJACENT` -- Clips are not adjacent in the timeline
 - 400 `EFFECT_NOT_FOUND` -- Unknown transition style name (use `fade`, `wipeleft`, or `dissolve`)
-- 400 `INVALID_EFFECT_PARAMS` -- Parameters fail schema validation
+- 400 `INVALID_EFFECT_PARAMS` -- `duration` or `offset` is non-numeric, or `duration` is not greater than 0
 
 **Example:**
 
