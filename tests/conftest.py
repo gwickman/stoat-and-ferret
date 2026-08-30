@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
+import faulthandler
+import os
 import re as _re
 import shutil
 import subprocess
 import sys
+import threading
 from collections.abc import Generator
 from pathlib import Path
 
@@ -208,6 +211,42 @@ def project_factory() -> ProjectFactory:
         A new ProjectFactory instance ready for chaining.
     """
     return ProjectFactory()
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: object) -> None:
+    """Start a daemon watchdog thread to catch asyncio teardown hangs (BL-819).
+
+    On Windows + Python 3.11 + ProactorEventLoop, the asyncio event loop can
+    deadlock during IOCP teardown when background tasks from lifespan fixtures
+    are not fully cancelled before the loop closes. The hang blocks the runner
+    until the CI job timeout (120s). This watchdog fires after 60s, dumps all
+    thread stacks for diagnosis, then force-exits so CI fails fast with
+    actionable output instead of a silent timeout.
+    """
+    _WATCHDOG_TIMEOUT = 60
+    main_thread = threading.main_thread()
+
+    def _watchdog() -> None:
+        main_thread.join(timeout=_WATCHDOG_TIMEOUT)
+        if main_thread.is_alive():
+            print(
+                f"\n[asyncio-teardown-watchdog] HANG DETECTED: pytest teardown did not "
+                f"complete within {_WATCHDOG_TIMEOUT}s. "
+                f"This is likely the Windows ProactorEventLoop asyncio bug (BL-819). "
+                f"Dumping all thread stacks:",
+                file=sys.stderr,
+                flush=True,
+            )
+            faulthandler.dump_traceback(file=sys.stderr, all_threads=True)
+            sys.stderr.flush()
+            os._exit(1)
+
+    watchdog = threading.Thread(
+        target=_watchdog,
+        name="asyncio-teardown-watchdog",
+        daemon=True,
+    )
+    watchdog.start()
 
 
 def pytest_collection_finish(session: pytest.Session) -> None:
