@@ -161,10 +161,21 @@ def assert_inpoint_identity(
     source_start: float,
     source_end: float,
     threshold: float = 0.99,
+    check_start: bool = False,
+    check_end: bool = False,
+    margin_s: float = 0.1,
 ) -> None:
     """Assert in-point source-range identity via SSIM at the range midpoint.
 
     Computes source_t = (source_start + source_end) / 2 and checks SSIM >= threshold.
+
+    Optional boundary checks (require a time-varying fixture such as testsrc2 to be
+    meaningful — a static/solid-colour fixture cannot distinguish wrong-start from
+    correct-start boundary SSIM):
+    - check_start: asserts SSIM at output_t=margin_s vs source_t=source_start+margin_s.
+    - check_end: asserts SSIM at output_t=output_duration-margin_s vs source_t=source_end-margin_s.
+      output_duration is inferred from output_t for the end check via source range length.
+
     Raises ValueError for threshold outside (0, 1]; AssertionError when SSIM is below threshold.
     """
     if not 0 < threshold <= 1:
@@ -172,6 +183,17 @@ def assert_inpoint_identity(
     source_t = (source_start + source_end) / 2
     ssim = compute_ssim(output, output_t, source, source_t)
     assert ssim >= threshold, f"in-point SSIM {ssim:.4f} < threshold {threshold}"
+    if check_start:
+        start_ssim = compute_ssim(output, margin_s, source, source_start + margin_s)
+        assert start_ssim >= threshold, (
+            f"in-point start-boundary SSIM {start_ssim:.4f} < threshold {threshold}"
+        )
+    if check_end:
+        output_duration = source_end - source_start
+        end_ssim = compute_ssim(output, output_duration - margin_s, source, source_end - margin_s)
+        assert end_ssim >= threshold, (
+            f"in-point end-boundary SSIM {end_ssim:.4f} < threshold {threshold}"
+        )
 
 
 def assert_seam_frame_order(
