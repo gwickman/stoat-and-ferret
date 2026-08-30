@@ -586,6 +586,14 @@ Prior to BL-505, `POST /render` rejected multi-clip projects with HTTP 422 `MULT
 
 ---
 
+## CI-Automated UAT Items
+
+The following UAT scenarios are covered by the CI pipeline and do not require manual discharge:
+
+| Journey | CI Coverage |
+|---------|-------------|
+| J-MULTICL-02 (frame content and structural verification) | `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render/test_multi_clip_integration.py::test_multi_clip_render_ssim_proof -v` (ffmpeg-tests CI lane) |
+
 ## Deferred UAT Items (v087)
 
 The following UAT scenarios require a Windows headed environment or FFmpeg and are deferred to the post-v087 discharge window:
@@ -593,6 +601,5 @@ The following UAT scenarios require a Windows headed environment or FFmpeg and a
 | Journey | Reason | Discharge Procedure |
 |---------|--------|---------------------|
 | J-EVIDENCE-04 (GUI evidence inspector) | Requires Windows headed browser | Manual UAT on Windows post-release |
-| J-MULTICL-02 (frame content and structural verification) | Automated via ffmpeg-tests CI lane | `STOAT_TEST_FFMPEG=1 uv run pytest tests/test_render/test_multi_clip_integration.py::test_multi_clip_render_ssim_proof -v` |
 | J-PREFLIGHT-03 (zero-byte output detection) | Requires FFmpeg + controlled corrupted input | `STOAT_TEST_FFMPEG=1` with truncated source file |
 | J-EVIDENCE-02 (full evidence with real FFmpeg) | Requires FFmpeg for completed render | `STOAT_TEST_FFMPEG=1` smoke run post-release |
