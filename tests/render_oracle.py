@@ -315,13 +315,16 @@ async def assert_audio_band_window(
     t_end: float,
     expected_bands_hz: list[int],
     absent_bands_hz: list[int],
-    threshold_db: float = -40.0,
+    threshold_db: float = -20.0,
 ) -> None:
     """Assert frequency band energy within a time window.
 
     For each frequency in expected_bands_hz: measured mean_volume must exceed threshold_db
     (band is present). For each frequency in absent_bands_hz: measured mean_volume must be
     below threshold_db (band is absent). Calls _measure_band_db_windowed via asyncio.to_thread.
+
+    Default threshold -20 dBFS discriminates present tones (~-3 dBFS) from absent-band
+    harmonic bleed introduced by AAC encoding (~-25 to -35 dBFS).
     """
     for freq in expected_bands_hz:
         level = await asyncio.to_thread(_measure_band_db_windowed, path, freq, t_start, t_end)
