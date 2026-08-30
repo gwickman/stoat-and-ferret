@@ -257,10 +257,14 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -d '{
     "source_clip_id": "clip-001",
     "target_clip_id": "clip-002",
-    "transition_type": "xfade",
-    "parameters": {"transition": "dissolve", "duration": 1.5, "offset": 4.0}
+    "transition_type": "dissolve",
+    "parameters": {"duration": 1.5}
   }'
 ```
+
+> **Vocabulary note (post-v136):** Use style names (`fade`, `wipeleft`, `dissolve`, etc.) as `transition_type`.
+> Registry keys such as `xfade` and `acrossfade` are no longer accepted and return 400 EFFECT_NOT_FOUND.
+> Audio crossfade (`acrossfade`) is not currently available via the transition endpoint.
 
 ---
 
@@ -371,8 +375,8 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -d '{
     "source_clip_id": "clip-001",
     "target_clip_id": "clip-002",
-    "transition_type": "xfade",
-    "parameters": {"transition": "fade", "duration": 1.0, "offset": 4.0}
+    "transition_type": "fade",
+    "parameters": {"duration": 1.0}
   }'
 ```
 

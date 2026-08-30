@@ -1175,13 +1175,13 @@ def test_transition_request_schema_roundtrip() -> None:
     data = {
         "source_clip_id": "clip-a",
         "target_clip_id": "clip-b",
-        "transition_type": "xfade",
+        "transition_type": "fade",
         "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
     }
     req = TransitionRequest(**data)
     assert req.source_clip_id == "clip-a"
     assert req.target_clip_id == "clip-b"
-    assert req.transition_type == "xfade"
+    assert req.transition_type == "fade"
     assert req.parameters["transition"] == "fade"
 
     # Round-trip via dict
@@ -1199,7 +1199,7 @@ def test_transition_response_schema_roundtrip() -> None:
         "id": "test-uuid-123",
         "source_clip_id": "clip-a",
         "target_clip_id": "clip-b",
-        "transition_type": "xfade",
+        "transition_type": "fade",
         "parameters": {"transition": "fade", "duration": 1.0, "offset": 0.0},
         "filter_string": "xfade=transition=fade:duration=1:offset=0",
     }

@@ -30,6 +30,7 @@ const mockClips: Clip[] = [
   },
 ]
 
+// These effects provide parameter schemas via ai_hints.transition for the panel's schema lookup
 const mockTransitionEffects: Effect[] = [
   {
     effect_type: 'xfade',
@@ -49,17 +50,17 @@ const mockTransitionEffects: Effect[] = [
     automatable_parameters: [],
   },
   {
-    effect_type: 'acrossfade',
-    name: 'Crossfade (Audio)',
-    description: 'Audio crossfade transition',
+    effect_type: 'wipeleft_effect',
+    name: 'Wipe Left',
+    description: 'Wipe left transition',
     parameter_schema: {
       type: 'object',
       properties: {
         duration: { type: 'number', minimum: 0, maximum: 10, default: 1 },
       },
     },
-    ai_hints: { transition: 'acrossfade' },
-    filter_preview: 'acrossfade=d=1',
+    ai_hints: { transition: 'wipeleft' },
+    filter_preview: 'xfade=transition=wipeleft',
     parameters: [],
     ai_summary: '',
     example_prompt: '',
@@ -114,24 +115,32 @@ describe('TransitionPanel', () => {
     expect(screen.getByText('Select Clip Pair')).toBeDefined()
   })
 
-  it('shows transition type catalog', () => {
+  it('shows transition type catalog with style names', () => {
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
     expect(screen.getByTestId('transition-catalog')).toBeDefined()
-    expect(screen.getByTestId('transition-type-xfade')).toBeDefined()
-    expect(screen.getByTestId('transition-type-acrossfade')).toBeDefined()
+    expect(screen.getByTestId('transition-type-fade')).toBeDefined()
+    expect(screen.getByTestId('transition-type-wipeleft')).toBeDefined()
+    expect(screen.getByTestId('transition-type-dissolve')).toBeDefined()
   })
 
-  it('does not show non-transition effects in catalog', () => {
+  it('does not show non-style-name buttons in catalog', () => {
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
+    // Registry keys must not appear; only style names are shown
+    expect(screen.queryByTestId('transition-type-xfade')).toBeNull()
+    expect(screen.queryByTestId('transition-type-acrossfade')).toBeNull()
     expect(screen.queryByTestId('transition-type-text_overlay')).toBeNull()
+    // Style names must appear
+    expect(screen.getByTestId('transition-type-fade')).toBeDefined()
+    expect(screen.getByTestId('transition-type-wipeleft')).toBeDefined()
+    expect(screen.getByTestId('transition-type-dissolve')).toBeDefined()
   })
 
   it('selects a transition type and shows parameter form', () => {
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
-    fireEvent.click(screen.getByTestId('transition-type-xfade'))
+    fireEvent.click(screen.getByTestId('transition-type-fade'))
 
     // Parameter form should be rendered
     expect(screen.getByTestId('effect-parameter-form')).toBeDefined()
@@ -144,7 +153,7 @@ describe('TransitionPanel', () => {
 
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
-    fireEvent.click(screen.getByTestId('transition-type-xfade'))
+    fireEvent.click(screen.getByTestId('transition-type-fade'))
 
     expect(screen.getByTestId('apply-transition-btn')).toBeDefined()
   })
@@ -155,7 +164,7 @@ describe('TransitionPanel', () => {
 
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
-    fireEvent.click(screen.getByTestId('transition-type-xfade'))
+    fireEvent.click(screen.getByTestId('transition-type-fade'))
 
     expect(screen.queryByTestId('apply-transition-btn')).toBeNull()
   })
@@ -172,7 +181,7 @@ describe('TransitionPanel', () => {
 
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
-    fireEvent.click(screen.getByTestId('transition-type-xfade'))
+    fireEvent.click(screen.getByTestId('transition-type-fade'))
     fireEvent.click(screen.getByTestId('apply-transition-btn'))
 
     await waitFor(() => {
@@ -200,7 +209,7 @@ describe('TransitionPanel', () => {
 
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
-    fireEvent.click(screen.getByTestId('transition-type-xfade'))
+    fireEvent.click(screen.getByTestId('transition-type-fade'))
     fireEvent.click(screen.getByTestId('apply-transition-btn'))
 
     await waitFor(() => {
@@ -218,9 +227,9 @@ describe('TransitionPanel', () => {
     expect(screen.getByTestId('reset-pair-btn')).toBeDefined()
   })
 
-  it('shows empty message when no transition effects available', () => {
+  it('always shows style-name buttons regardless of effects catalog content', () => {
     mockUseEffects.mockReturnValue({
-      effects: [mockAllEffects[0]], // only text_overlay
+      effects: [], // empty catalog — style-name buttons still rendered
       loading: false,
       error: null,
       refetch: vi.fn(),
@@ -228,6 +237,8 @@ describe('TransitionPanel', () => {
 
     render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
 
-    expect(screen.getByTestId('transition-catalog-empty')).toBeDefined()
+    expect(screen.getByTestId('transition-type-fade')).toBeDefined()
+    expect(screen.getByTestId('transition-type-wipeleft')).toBeDefined()
+    expect(screen.getByTestId('transition-type-dissolve')).toBeDefined()
   })
 })
