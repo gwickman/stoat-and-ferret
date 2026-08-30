@@ -303,14 +303,15 @@ async def start_preview(
         )
 
     raw_transitions: list[dict[str, object]] = project.transitions or []
-    transitions: list[TransitionSpec] = [
-        TransitionSpec(
-            TransitionType.from_str(str(t["transition_type"])),
-            float(t["duration"]),  # type: ignore[arg-type]
-            0.0,
+    transitions: list[TransitionSpec] = []
+    for t in raw_transitions:
+        params = t.get("parameters")
+        params_dict: dict[str, object] = params if isinstance(params, dict) else {}
+        duration = float(params_dict.get("duration", t.get("duration", 1.0)))  # type: ignore[arg-type]
+        offset = float(params_dict.get("offset", t.get("offset", 0.0)))  # type: ignore[arg-type]
+        transitions.append(
+            TransitionSpec(TransitionType.from_str(str(t["transition_type"])), duration, offset)
         )
-        for t in raw_transitions
-    ]
 
     filter_graph = build_composition_graph(
         comp_clips, transitions, None, None, project.output_width, project.output_height
@@ -472,14 +473,15 @@ async def seek_preview(
         output_width = project.output_width
         output_height = project.output_height
 
-    transitions: list[TransitionSpec] = [
-        TransitionSpec(
-            TransitionType.from_str(str(t["transition_type"])),
-            float(t["duration"]),  # type: ignore[arg-type]
-            0.0,
+    transitions: list[TransitionSpec] = []
+    for t in raw_transitions:
+        params = t.get("parameters")
+        params_dict: dict[str, object] = params if isinstance(params, dict) else {}
+        duration = float(params_dict.get("duration", t.get("duration", 1.0)))  # type: ignore[arg-type]
+        offset = float(params_dict.get("offset", t.get("offset", 0.0)))  # type: ignore[arg-type]
+        transitions.append(
+            TransitionSpec(TransitionType.from_str(str(t["transition_type"])), duration, offset)
         )
-        for t in raw_transitions
-    ]
 
     filter_graph = build_composition_graph(
         comp_clips, transitions, None, None, output_width, output_height
