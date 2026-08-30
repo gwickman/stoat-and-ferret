@@ -96,7 +96,7 @@ async def run(page: Page, base_url: str) -> None:
         )
         project_id: str = proj_resp.json()["id"]
 
-        # Add clip with an unknown effect type
+        # Add clip (no inline effects — two-step creation required)
         clip_resp = await client.post(
             f"/api/v1/projects/{project_id}/clips",
             json={
@@ -104,11 +104,20 @@ async def run(page: Page, base_url: str) -> None:
                 "in_point": 0,
                 "out_point": min(90, duration_frames),
                 "timeline_position": 0,
-                "effects": [{"effect_type": "totally_unknown_effect_xyz", "parameters": {}}],
             },
         )
         assert clip_resp.status_code == 201, (
             f"Clip creation failed: {clip_resp.status_code} {clip_resp.text}"
+        )
+        clip_id: str = clip_resp.json()["id"]
+
+        # Attach unknown effect via dedicated endpoint (two-step)
+        eff_resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+            json={"effect_type": "totally_unknown_effect_xyz", "parameters": {}},
+        )
+        assert eff_resp.status_code in (200, 201), (
+            f"Add effect failed: {eff_resp.status_code} {eff_resp.text}"
         )
 
         # Submit render — expect the job to fail (fail-closed contract)
@@ -116,7 +125,7 @@ async def run(page: Page, base_url: str) -> None:
             "/api/v1/render",
             json={"project_id": project_id, "render_plan": render_plan},
         )
-        assert render_resp.status_code in (202, 200), (
+        assert render_resp.status_code == 201, (
             f"Render submit failed: {render_resp.status_code} {render_resp.text}"
         )
         job_id: str = render_resp.json()["id"]
@@ -126,6 +135,9 @@ async def run(page: Page, base_url: str) -> None:
         assert final_job["status"] == "failed", (
             f"Expected render to fail (fail-closed) but got "
             f"status={final_job['status']!r}; unknown effect must not produce silent success"
+        )
+        assert final_job.get("error_message"), (
+            "Render job failed but error_message is absent; fail-closed must set error_message"
         )
 
     # Navigate to render page for browser screenshot evidence
