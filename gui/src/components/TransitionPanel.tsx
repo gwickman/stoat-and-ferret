@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { Clip, Effect } from '../generated/types'
-import { deriveCategory, useEffects } from '../hooks/useEffects'
+import type { Clip } from '../generated/types'
+import { useEffects } from '../hooks/useEffects'
 import type { ParameterSchema } from '../stores/effectFormStore'
 import { useEffectFormStore } from '../stores/effectFormStore'
 import { useTransitionStore } from '../stores/transitionStore'
 import ClipSelector from './ClipSelector'
 import EffectParameterForm from './EffectParameterForm'
+
+// Style names sent to POST /effects/transition (TransitionType.from_str() vocabulary)
+const TRANSITION_STYLE_NAMES = ['fade', 'wipeleft', 'dissolve'] as const
 
 interface TransitionPanelProps {
   readonly projectId: string
@@ -30,11 +33,17 @@ export default function TransitionPanel({ projectId, clips }: Readonly<Transitio
   const [submitStatus, setSubmitStatus] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Filter to transition-category effects only
-  const transitionEffects = useMemo(
-    () => effects.filter((e) => deriveCategory(e.effect_type) === 'transition' || e.effect_type === 'acrossfade'),
-    [effects],
-  )
+  // Map style names to parameter schemas via ai_hints.transition on registry effects
+  const schemaByStyleName = useMemo(() => {
+    const map: Record<string, ParameterSchema | undefined> = {}
+    for (const e of effects) {
+      const hint = (e.ai_hints as Record<string, unknown>)?.transition
+      if (typeof hint === 'string' && e.parameter_schema) {
+        map[hint] = e.parameter_schema as unknown as ParameterSchema
+      }
+    }
+    return map
+  }, [effects])
 
   const handleSelectPair = useCallback(
     (clipId: string, role: 'from' | 'to') => {
@@ -47,15 +56,18 @@ export default function TransitionPanel({ projectId, clips }: Readonly<Transitio
     [selectSource, selectTarget],
   )
 
-  const handleSelectTransition = useCallback(
-    (effect: Effect) => {
-      setSelectedTransitionType(effect.effect_type)
+  const handleSelectStyle = useCallback(
+    (styleName: string) => {
+      setSelectedTransitionType(styleName)
       setSubmitStatus(null)
-      if (effect.parameter_schema) {
-        setSchema(effect.parameter_schema as unknown as ParameterSchema)
+      const schema = schemaByStyleName[styleName]
+      if (schema) {
+        setSchema(schema)
+      } else {
+        resetForm()
       }
     },
-    [setSchema],
+    [schemaByStyleName, setSchema, resetForm],
   )
 
   const handleReset = useCallback(() => {
@@ -130,33 +142,26 @@ export default function TransitionPanel({ projectId, clips }: Readonly<Transitio
       {/* Transition type catalog */}
       <div data-testid="transition-catalog" className="mb-4">
         <h3 className="mb-2 text-lg font-semibold text-white">Transition Type</h3>
-        {transitionEffects.length === 0 ? (
-          <p className="text-sm text-gray-400" data-testid="transition-catalog-empty">
-            No transition types available.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {transitionEffects.map((effect) => {
-              const isSelected = selectedTransitionType === effect.effect_type
-              return (
-                <button
-                  key={effect.effect_type}
-                  type="button"
-                  data-testid={`transition-type-${effect.effect_type}`}
-                  onClick={() => handleSelectTransition(effect)}
-                  className={`rounded border px-3 py-2 text-sm transition-colors ${
-                    isSelected
-                      ? 'border-purple-500 bg-purple-900/50 text-purple-300'
-                      : 'border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500'
-                  }`}
-                >
-                  <span className="font-medium">{effect.name}</span>
-                  <span className="ml-2 text-xs text-gray-400">{effect.description}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {TRANSITION_STYLE_NAMES.map((styleName) => {
+            const isSelected = selectedTransitionType === styleName
+            return (
+              <button
+                key={styleName}
+                type="button"
+                data-testid={`transition-type-${styleName}`}
+                onClick={() => handleSelectStyle(styleName)}
+                className={`rounded border px-3 py-2 text-sm capitalize transition-colors ${
+                  isSelected
+                    ? 'border-purple-500 bg-purple-900/50 text-purple-300'
+                    : 'border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500'
+                }`}
+              >
+                {styleName}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Parameter form */}
