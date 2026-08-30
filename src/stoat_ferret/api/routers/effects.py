@@ -833,8 +833,25 @@ async def apply_transition(
             },
         ) from None
 
-    duration = float(request.parameters.get("duration", 1.0))
-    offset = float(request.parameters.get("offset", 0.0))
+    try:
+        duration = float(request.parameters.get("duration", 1.0))
+        offset = float(request.parameters.get("offset", 0.0))
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "duration and offset must be numeric values",
+            },
+        ) from exc
+    if duration <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "duration must be greater than 0",
+            },
+        )
     # informational only; preview/render recompute from clip positions
     filter_string = str(XfadeBuilder(transition_type, duration, offset).build())
 
