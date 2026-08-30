@@ -24,6 +24,10 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright  # type: ignore[import-not-found]
 
+if not os.environ.get("STOAT_UAT_PLAYWRIGHT_HEADED"):
+    print("SKIP: J-720 requires headed Playwright (STOAT_UAT_PLAYWRIGHT_HEADED not set)")
+    sys.exit(0)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JOURNEY_NAME = "version-restore-roundtrip"
 JOURNEY_ID = 717
