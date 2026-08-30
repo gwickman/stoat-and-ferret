@@ -814,7 +814,7 @@ async def apply_transition(
     # Adjacency check: geometric rule (same track, clip_a ends where clip_b starts)
     clip_a_obj = clips[clip_index[request.source_clip_id]]
     clip_b_obj = clips[clip_index[request.target_clip_id]]
-    if not _check_clip_adjacency(clip_a_obj, clip_b_obj, clips):
+    if not _check_clip_adjacency(clip_a_obj, clip_b_obj):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={

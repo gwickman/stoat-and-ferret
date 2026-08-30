@@ -636,7 +636,7 @@ async def add_transition(
     ):
         ordered_a, ordered_b = ordered_b, ordered_a
 
-    if not _check_clip_adjacency(ordered_a, ordered_b, [clip_a, clip_b]):
+    if not _check_clip_adjacency(ordered_a, ordered_b):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
