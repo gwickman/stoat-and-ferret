@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+from urllib.parse import urlparse
 
 import httpx
+from playwright.async_api import Page, expect
 
 STOAT_TEST_FFMPEG = os.getenv("STOAT_TEST_FFMPEG", "")
 
@@ -73,8 +75,8 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
                 "project_id": project_id,
             }
 
-        # Step 3: Add two clips
-        for i, (video, t_start, _t_end) in enumerate(
+        # Step 3: Add two clips with timeline_start/timeline_end for preview/start
+        for i, (video, t_start, t_end) in enumerate(
             [(videos[0], 0.0, 2.0), (videos[1], 2.0, 4.0)]
         ):
             cr = await client.post(
@@ -84,6 +86,8 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
                     "in_point": 0,
                     "out_point": min(60, video.get("duration_frames", 60)),
                     "timeline_position": int(t_start * 30),
+                    "timeline_start": t_start,
+                    "timeline_end": t_end,
                 },
             )
             if cr.status_code not in (200, 201):
@@ -149,3 +153,14 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
             "project_id": project_id,
             "session_id": session_id,
         }
+
+
+async def run(page: Page, base_url: str) -> None:
+    """Runner entry point: preview parity UAT journey with browser screenshot."""
+    parsed = urlparse(base_url)
+    api_base = f"{parsed.scheme}://{parsed.netloc}"
+    await run_journey(api_base, ffmpeg_available=bool(STOAT_TEST_FFMPEG))
+    await page.goto(base_url + "render")
+    await page.wait_for_load_state("networkidle")
+    await expect(page.locator("[data-testid='render-page']")).to_be_visible()
+    await page.screenshot(path="j_preview_parity.png")
