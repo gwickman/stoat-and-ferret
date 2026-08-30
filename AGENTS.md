@@ -705,6 +705,67 @@ document is committed to main before the downstream feature begins execution.
 
 ---
 
+## Windows asyncio Teardown Flake (BL-819)
+
+**Status: accepted intermittent failure — watchdog guard in place**
+
+On `windows-latest` with Python 3.11, the `smoke-tests` CI job intermittently hangs
+during asyncio teardown. The hang surfaces as the job hitting the 120-second
+`--timeout` instead of exiting cleanly.
+
+### Root Cause
+
+The `smoke_client` fixture in `tests/smoke/conftest.py` runs the full app lifespan
+(`async with lifespan(app)`) inside each test. The lifespan starts background async
+workers (job queue, render sweeper, etc.). On Windows + Python 3.11, the
+`ProactorEventLoop` teardown (IOCP completion port cleanup) can deadlock when any of
+these background tasks are not fully cancelled before `loop.close()` is called.
+`pytest-asyncio` in `auto` mode triggers this teardown path at session end. The hang
+is intermittent because it depends on task scheduling timing.
+
+**Prior occurrences:**
+- BL-366 (v065): fixed one hang in synthetic monitoring (a specific task that was not
+  cancelled before teardown). The ambient hang from the smoke-client lifespan pattern
+  persisted.
+- v132 PR #1001: `smoke-tests (windows-latest)` auto-rerun due to teardown hang.
+- v132 PR #1002: `smoke-tests (windows-latest)` manual cancel + retrigger.
+
+### Watchdog Guard
+
+`tests/conftest.py` (`pytest_sessionfinish`) starts a daemon watchdog thread.
+If pytest teardown does not complete within 60 seconds after the session ends,
+the watchdog:
+1. Dumps all thread stacks via `faulthandler.dump_traceback` to stderr
+2. Calls `os._exit(1)` to bypass the stuck event loop and terminate immediately
+
+This fails fast with a diagnostic traceback instead of hitting the 120s job timeout.
+
+### If You See the Watchdog Fire in CI
+
+The stderr output starts with: `[asyncio-teardown-watchdog] HANG DETECTED`
+
+1. Check the stack dump for which task is stuck (look for asyncio `_wait_for_tstate_lock`
+   or ProactorEventLoop `_loop_self_reading` callbacks).
+2. Re-trigger the job — the hang is intermittent and usually clears on rerun.
+3. If it fires consistently (≥3 consecutive runs), file a new BL item for investigation.
+   The watchdog output provides the thread stack evidence needed for root-cause analysis.
+
+### Re-trigger Instructions
+
+A `smoke-tests (windows-latest)` failure caused by this flake is safe to re-trigger:
+```bash
+gh run rerun <run-id> --failed
+```
+
+A PR blocked ONLY by `smoke-tests (windows-latest)` asyncio teardown (watchdog
+message present in logs) or `SonarCloud Code Analysis`, with ALL other checks green,
+may be admin-merged:
+```bash
+gh pr merge <N> --squash --admin --delete-branch
+```
+
+---
+
 ## Windows CI Timing
 
 Timer-sensitive tests (NFR-002 response-time, active-jobs polling) use platform-aware
