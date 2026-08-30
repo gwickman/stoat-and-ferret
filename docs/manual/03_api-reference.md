@@ -786,7 +786,7 @@ List all available effects with their metadata, JSON parameter schemas, AI hints
       "automatable_parameters": []
     }
   ],
-  "total": 17
+  "total": 40
 }
 ```
 
