@@ -95,7 +95,7 @@ Provides effect discovery, preview, application, update, deletion, and transitio
 - `async _get_thumbnail_service(request: Request) -> ThumbnailService` - Returns injected or freshly-created ThumbnailService
 
 #### Effects Discovery and Preview Endpoints
-- `async list_effects(registry: RegistryDep) -> EffectListResponse` - `GET /api/v1/effects` — lists all 17 built-in effects with parameter schemas, AI hints, filter preview strings, and automatable parameters
+- `async list_effects(registry: RegistryDep) -> EffectListResponse` - `GET /api/v1/effects` — lists all 41 built-in effects with parameter schemas, AI hints, filter preview strings, and automatable parameters
 - `async preview_effect(request: EffectPreviewRequest, registry: RegistryDep) -> EffectPreviewResponse` - `POST /api/v1/effects/preview` — validates parameters and returns generated FFmpeg filter string without applying
 - `async preview_effect_thumbnail(request: EffectThumbnailRequest, registry: RegistryDep, thumbnail_service: ThumbnailDep) -> FileResponse` - `POST /api/v1/effects/preview/thumbnail` — extracts first frame from video, applies effect, returns 320px-wide JPEG
 

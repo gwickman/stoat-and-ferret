@@ -9,12 +9,24 @@ from pathlib import Path
 from stoat_ferret.effects.definitions import create_default_registry
 
 EFFECT_DOCS = [
+    Path("docs/ARCHITECTURE.md"),
     Path("docs/manual/01_getting-started.md"),
     Path("docs/manual/03_api-reference.md"),
     Path("docs/manual/04_effects-guide.md"),
     Path("docs/manual/06_gui-guide.md"),
     Path("docs/manual/operator-guide.md"),
 ]
+
+# Docs intentionally excluded from effect-count gating with rationale.
+# C4 docs are auto-generated architecture artifacts; effect counts there are
+# derived summaries, not authoritative references, and are updated at C4 doc
+# regeneration time.
+_EFFECT_DOC_GAPS = {
+    "docs/C4-Documentation/": (
+        "Auto-generated architecture artifacts; effect counts are derived summaries,"
+        " not authoritative references. Updated at C4 doc regeneration time."
+    ),
+}
 
 # Docs gated for route-inventory drift. Add entries here when a manual doc
 # gains a route inventory section.
