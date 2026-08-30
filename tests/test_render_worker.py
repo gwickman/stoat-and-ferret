@@ -2192,6 +2192,77 @@ class TestGoldenArgv:
         ]
 
     @pytest.mark.asyncio
+    async def test_golden_case_10_multi_clip_tts_soft_subtitles(self) -> None:
+        """Two clips + TTS + soft-subtitles (no ffmetadata) -> subtitle at idx 3 (BL-804)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid3 = _g_make_video("vid-3", _G_VIDEO_PATH_3, audio_codec="aac")
+        clip_a = _g_make_clip("clip-10a", "vid-1")  # no audio
+        clip_b = _g_make_clip("clip-10b", "vid-3")  # audio_codec="aac"
+        subs = [{"source_asset_id": str(_G_SUB_UUID), "language": "en", "is_default": True}]
+        job = _g_make_job(_g_make_plan(soft_subtitles=subs))
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-10",
+                audio_path="/renders/tts-010.wav",
+                track_id="track-1",
+                start_s=10.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+
+        result = await build_command_for_job(
+            job,
+            _g_clip_repo(clip_a, clip_b),
+            _g_video_repo(vid1, vid3),
+            tts_inputs=tts_inputs,
+            asset_repository=_g_asset_repo(),
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip3.mp4",
+            "-i",
+            "/renders/tts-010.wav",
+            "-i",
+            "/assets/subs/en.srt",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final];"
+                "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
+                "[1:a]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-map",
+            "3:s",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "-c:s",
+            "mov_text",
+            "-metadata:s:s:0",
+            "language=eng",
+            "-disposition:s:0",
+            "default",
+            "/renders/golden.mp4",
+        ]
+
+    @pytest.mark.asyncio
     async def test_buildfn_exception_wraps_as_command_build_error(self) -> None:
         """build_fn raising ValueError is re-raised as CommandBuildError (BL-828 AC-1/AC-2).
 
