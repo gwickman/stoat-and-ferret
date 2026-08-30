@@ -76,9 +76,7 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
             }
 
         # Step 3: Add two clips with timeline_start/timeline_end for preview/start
-        for i, (video, t_start, t_end) in enumerate(
-            [(videos[0], 0.0, 2.0), (videos[1], 2.0, 4.0)]
-        ):
+        for i, (video, t_start, t_end) in enumerate([(videos[0], 0.0, 2.0), (videos[1], 2.0, 4.0)]):
             cr = await client.post(
                 f"/api/v1/projects/{project_id}/clips",
                 json={
