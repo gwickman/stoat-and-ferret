@@ -63,7 +63,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
@@ -253,7 +253,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
@@ -361,7 +361,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
@@ -415,7 +415,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
@@ -464,7 +464,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
@@ -588,7 +588,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
@@ -741,7 +741,7 @@ jobs:
             Windows) choco install ffmpeg --no-progress -y ;;
           esac
 
-      - uses: AnimMouse/setup-ffmpeg@v1
+      - uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
         if: runner.os == 'macOS'
 
       - name: Verify FFmpeg drawtext (macOS)
