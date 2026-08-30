@@ -317,6 +317,52 @@ async def scan_videos_and_wait(
     )
 
 
+async def place_clips_on_timeline(
+    client: httpx.AsyncClient,
+    project_id: str,
+    clip_a_id: str,
+    clip_b_id: str,
+    a_start: float = 0.0,
+    a_end: float = 5.0,
+    b_start: float = 5.0,
+    b_end: float = 10.0,
+) -> str:
+    """Create a timeline track and place two clips on it so they are geometrically adjacent.
+
+    Returns the track_id of the created track.
+    """
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id: str = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_a_id,
+            "track_id": track_id,
+            "timeline_start": a_start,
+            "timeline_end": a_end,
+        },
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": clip_b_id,
+            "track_id": track_id,
+            "timeline_start": b_start,
+            "timeline_end": b_end,
+        },
+    )
+    assert resp.status_code == 201
+
+    return track_id
+
+
 async def create_project_with_clips(
     client: httpx.AsyncClient,
     project_name: str,
@@ -544,39 +590,20 @@ async def sample_project(
         assert resp.status_code == 201
         effects_applied.append(resp.json())
 
-    # Add transition clips to a timeline track so geometric adjacency check passes.
-    # Clip indices 1 and 2 (SAMPLE_TRANSITION_DEFS) are used; compute positions from
-    # timeline_position (frames) and clip durations at 30fps.
+    # Add transition clips (indices 1 and 2) to a timeline track so the geometric
+    # adjacency check passes. Positions derived from timeline_position/duration at 30fps:
     # Clip 1: tl_pos=300, in=90, out=540 → start=10.0s, end=25.0s
     # Clip 2: tl_pos=750, in=30, out=360 → start=25.0s, end=36.0s (adjacent)
-    resp = await client.put(
-        f"/api/v1/projects/{project_id}/timeline",
-        json=[{"track_type": "video", "label": "V1"}],
+    await place_clips_on_timeline(
+        client,
+        project_id,
+        clip_ids[1],
+        clip_ids[2],
+        a_start=10.0,
+        a_end=25.0,
+        b_start=25.0,
+        b_end=36.0,
     )
-    assert resp.status_code == 200
-    timeline_track_id = resp.json()["tracks"][0]["id"]
-
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/timeline/clips",
-        json={
-            "clip_id": clip_ids[1],
-            "track_id": timeline_track_id,
-            "timeline_start": 10.0,
-            "timeline_end": 25.0,
-        },
-    )
-    assert resp.status_code == 201
-
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/timeline/clips",
-        json={
-            "clip_id": clip_ids[2],
-            "track_id": timeline_track_id,
-            "timeline_start": 25.0,
-            "timeline_end": 36.0,
-        },
-    )
-    assert resp.status_code == 201
 
     # Apply transitions
     transitions_applied = []
