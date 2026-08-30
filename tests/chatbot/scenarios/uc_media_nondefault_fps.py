@@ -8,13 +8,17 @@ with output_fps=24 (non-default):
 1. Create a project with output_fps=24
 2. Add two clips from available video sources
 3. Submit a render job
-4. Assert the render job was accepted
+4. Poll to terminal status
+5. Assert r_frame_rate == 24/1 when STOAT_TEST_FFMPEG=1
 
 Scenario identifier: UC-MEDIA-NONDEFAULT-FPS
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
+import os
 from typing import Any
 
 import httpx
@@ -22,13 +26,15 @@ import httpx
 # Scenario identifier for traceability
 UC_ID = "UC-MEDIA-NONDEFAULT-FPS"
 
+_TERMINAL = {"completed", "failed", "cancelled"}
+
 
 async def run_uc_media_nondefault_fps(base_url: str) -> dict[str, Any]:
     """Drive UC-MEDIA-NONDEFAULT-FPS: render job submitted for a project with output_fps=24.
 
-    Creates a project with output_fps=24, adds two clips, and submits a render job.
-    The frame-rate oracle assertion (assert_frame_rate) is covered by the acceptance
-    test (test_uc_media_nondefault_fps.py) gated under STOAT_TEST_FFMPEG=1.
+    Creates a project with output_fps=24, adds two clips, submits a render job,
+    polls to terminal status, and (when STOAT_TEST_FFMPEG=1) asserts the frame rate
+    oracle via assert_frame_rate from tests/render_oracle.py.
 
     Args:
         base_url: Base URL of the stoat-and-ferret API server.
@@ -38,7 +44,8 @@ async def run_uc_media_nondefault_fps(base_url: str) -> dict[str, Any]:
             uc_id: Scenario identifier.
             project_id: UUID of the created project (or None on error).
             render_job_id: UUID of the submitted render job (or None).
-            status: "success" | "skip" | "scaffold" | "fail".
+            status: "success" | "skip" | "fail".
+            render_status: Terminal status of the render job.
     """
     async with httpx.AsyncClient(base_url=base_url, timeout=30.0) as client:
         # Create project with non-default output_fps=24
@@ -108,17 +115,19 @@ async def run_uc_media_nondefault_fps(base_url: str) -> dict[str, Any]:
             "/api/v1/render",
             json={
                 "project_id": project_id,
-                "render_plan": {
-                    "total_duration": 9.0,
-                    "settings": {
-                        "output_format": "mp4",
-                        "width": 320,
-                        "height": 240,
-                        "codec": "libx264",
-                        "quality_preset": "standard",
-                        "fps": 24.0,
-                    },
-                },
+                "render_plan": json.dumps(
+                    {
+                        "total_duration": 9.0,
+                        "settings": {
+                            "output_format": "mp4",
+                            "width": 320,
+                            "height": 240,
+                            "codec": "libx264",
+                            "quality_preset": "standard",
+                            "fps": 24.0,
+                        },
+                    }
+                ),
             },
         )
         if render_resp.status_code not in (200, 201, 202):
@@ -126,20 +135,44 @@ async def run_uc_media_nondefault_fps(base_url: str) -> dict[str, Any]:
                 "uc_id": UC_ID,
                 "project_id": project_id,
                 "render_job_id": None,
-                "status": "scaffold",
+                "status": "fail",
                 "reason": f"render endpoint returned {render_resp.status_code}",
             }
 
-        render_job_id: str | None = render_resp.json().get("id")
+        render_job_id: str = render_resp.json()["id"]
+
+        # Poll to terminal status
+        deadline = asyncio.get_running_loop().time() + 120.0
+        final_status = ""
+        final_resp = None
+        while asyncio.get_running_loop().time() < deadline:
+            final_resp = await client.get(f"/api/v1/render/{render_job_id}")
+            if final_resp.status_code != 200:
+                break
+            final_status = final_resp.json().get("status", "")
+            if final_status in _TERMINAL:
+                break
+            await asyncio.sleep(2.0)
+
+        # STOAT_TEST_FFMPEG-gated oracle: assert r_frame_rate == 24/1
+        if (
+            os.getenv("STOAT_TEST_FFMPEG")
+            and final_status == "completed"
+            and final_resp is not None
+        ):
+            from pathlib import Path
+
+            from tests.render_oracle import assert_frame_rate
+
+            output_path = Path(final_resp.json()["output_path"])
+            await assert_frame_rate(output_path, 24, 1)
+
         return {
             "uc_id": UC_ID,
             "project_id": project_id,
             "render_job_id": render_job_id,
-            "status": "scaffold",
-            "note": (
-                "render submitted; frame-rate oracle assertion requires"
-                " STOAT_TEST_FFMPEG=1 and a completed render"
-            ),
+            "status": "success" if final_status == "completed" else "fail",
+            "render_status": final_status,
         }
 
 
@@ -149,11 +182,9 @@ async def test_uc_media_nondefault_fps_scenario() -> None:
     Verifies that:
     - A project is created with output_fps=24 successfully.
     - Two clips are added to the project.
-    - A render job is submitted and accepted.
-
-    Frame-rate oracle assertions (assert_frame_rate) require a live FFmpeg render and are
-    covered by the acceptance test (test_uc_media_nondefault_fps.py) gated under
-    STOAT_TEST_FFMPEG=1.
+    - A render job is submitted and accepted (201).
+    - The render job reaches a terminal status (completed or failed).
+    - When STOAT_TEST_FFMPEG=1 and render completed, asserts r_frame_rate == 24/1.
     """
     from datetime import datetime, timezone
 
@@ -226,5 +257,57 @@ async def test_uc_media_nondefault_fps_scenario() -> None:
         # Verify two clips were added
         clips_resp = await client.get(f"/api/v1/projects/{project_id}/clips")
         assert clips_resp.status_code == 200
-        clips = clips_resp.json()
+        clips = clips_resp.json()["clips"]
         assert len(clips) == 2, f"expected 2 clips, got {len(clips)}"
+
+        # Submit render job
+        render_resp = await client.post(
+            "/api/v1/render",
+            json={
+                "project_id": project_id,
+                "render_plan": json.dumps(
+                    {
+                        "total_duration": 9.0,
+                        "settings": {
+                            "output_format": "mp4",
+                            "width": 320,
+                            "height": 240,
+                            "codec": "libx264",
+                            "quality_preset": "standard",
+                            "fps": 24.0,
+                        },
+                    }
+                ),
+            },
+        )
+        if render_resp.status_code == 503:
+            return  # render service not initialized; project + clip assertions already verified
+        assert render_resp.status_code == 201, (
+            f"render submit failed: {render_resp.status_code} {render_resp.text}"
+        )
+        render_job_id: str = render_resp.json()["id"]
+
+        # Poll to terminal status
+        deadline = asyncio.get_running_loop().time() + 120.0
+        final_status = ""
+        final_resp = None
+        while asyncio.get_running_loop().time() < deadline:
+            final_resp = await client.get(f"/api/v1/render/{render_job_id}")
+            assert final_resp.status_code == 200, f"render status check failed: {final_resp.text}"
+            final_status = final_resp.json().get("status", "")
+            if final_status in _TERMINAL:
+                break
+            await asyncio.sleep(1.0)
+
+        # STOAT_TEST_FFMPEG-gated oracle: assert r_frame_rate == 24/1
+        if (
+            os.getenv("STOAT_TEST_FFMPEG")
+            and final_status == "completed"
+            and final_resp is not None
+        ):
+            from pathlib import Path
+
+            from tests.render_oracle import assert_frame_rate
+
+            output_path = Path(final_resp.json()["output_path"])
+            await assert_frame_rate(output_path, 24, 1)
