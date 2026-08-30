@@ -39,6 +39,8 @@ stoat-and-ferret is an AI-driven video editor built on a **hybrid Python/Rust ar
 └─────────────────────────────────────────────────────────┘
 ```
 
+<!-- route-count: 83 -->
+
 ## Tech Stack
 
 | Layer | Technology | Purpose |
