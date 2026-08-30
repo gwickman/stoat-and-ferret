@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from prometheus_client import Counter
 
+from stoat_ferret.api._adjacency import _check_clip_adjacency
 from stoat_ferret.api.schemas.clip import ClipEffectsResponse
 from stoat_ferret.api.schemas.effect import (
     EffectApplyRequest,
@@ -810,10 +811,10 @@ async def apply_transition(
             },
         )
 
-    # Adjacency check: source must immediately precede target in timeline order
-    source_idx = clip_index[request.source_clip_id]
-    target_idx = clip_index[request.target_clip_id]
-    if target_idx != source_idx + 1:
+    # Adjacency check: geometric rule (same track, clip_a ends where clip_b starts)
+    clip_a_obj = clips[clip_index[request.source_clip_id]]
+    clip_b_obj = clips[clip_index[request.target_clip_id]]
+    if not _check_clip_adjacency(clip_a_obj, clip_b_obj, clips):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={

@@ -12,6 +12,7 @@ from typing import Annotated, Any
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
+from stoat_ferret.api._adjacency import _check_clip_adjacency
 from stoat_ferret.api.schemas.timeline import (
     AdjustedClipPosition,
     TimelineClipCreate,
@@ -626,49 +627,33 @@ async def add_transition(
             detail={"code": "NOT_FOUND", "message": f"Clip {request.clip_b_id} not found"},
         )
 
-    # Validate adjacency: same track, clip_a ends where clip_b starts (or overlaps)
-    if clip_a.track_id is None or clip_b.track_id is None or clip_a.track_id != clip_b.track_id:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "CLIPS_NOT_ADJACENT",
-                "message": "Clips must be on the same track to apply a transition",
-            },
-        )
-
+    # Determine canonical order (earlier clip first) for adjacency check
+    ordered_a, ordered_b = clip_a, clip_b
     if (
-        clip_a.timeline_end is None
-        or clip_b.timeline_start is None
-        or clip_a.timeline_start is None
-        or clip_b.timeline_end is None
+        ordered_a.timeline_start is not None
+        and ordered_b.timeline_start is not None
+        and ordered_a.timeline_start > ordered_b.timeline_start
     ):
+        ordered_a, ordered_b = ordered_b, ordered_a
+
+    if not _check_clip_adjacency(ordered_a, ordered_b, [clip_a, clip_b]):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "CLIPS_NOT_ADJACENT",
-                "message": "Clips must have timeline positions to apply a transition",
+                "message": "Clips must be on the same track and adjacent in the timeline",
             },
         )
 
-    # Narrow types after None check above
-    a_start: float = clip_a.timeline_start
-    a_end: float = clip_a.timeline_end
-    b_start: float = clip_b.timeline_start
-    b_end: float = clip_b.timeline_end
-
-    # Ensure clip_a comes before clip_b; swap if needed
-    if a_start > b_start:
-        clip_a, clip_b = clip_b, clip_a
-        a_start, a_end, b_start, b_end = b_start, b_end, a_start, a_end
-
-    if a_end != b_start:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "CLIPS_NOT_ADJACENT",
-                "message": "Clips must be adjacent (clip_a must end where clip_b starts)",
-            },
-        )
+    # Adjacency check guarantees non-None track and timeline positions
+    assert ordered_a.timeline_start is not None
+    assert ordered_a.timeline_end is not None
+    assert ordered_b.timeline_start is not None
+    assert ordered_b.timeline_end is not None
+    a_start: float = ordered_a.timeline_start
+    a_end: float = ordered_a.timeline_end
+    b_start: float = ordered_b.timeline_start
+    b_end: float = ordered_b.timeline_end
 
     # Construct Rust types and call calculate_composition_positions
     comp_clip_a = CompositionClip(0, a_start, a_end, 0, 0)
