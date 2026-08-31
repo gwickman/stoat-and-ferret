@@ -4,6 +4,60 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v137 — Transition Regression Fixes + Worker Hardening + Test Harness Quality + CI/Doc Hygiene (2026-08-31)
+
+4 themes, 26 features, PRs #1030–#1056.
+
+### Theme 1: transition-regression-fixes
+
+- BL-848: `fix(gui): restore correct transition vocabulary in TransitionPanel.tsx` —
+  GUI now uses style names throughout; xfade input vocabulary purged from docs (PR #1030)
+- BL-848: `fix(preview): tolerate nested/flat transition storage in preview.py` —
+  eliminates 100%-crash KeyError caused by mixed-shape transition entries (PR #1031)
+- BL-848: `fix(effects): restore 400 INVALID_EFFECT_PARAMS path for malformed duration/offset` —
+  effects.py validates duration and offset; non-numeric and ≤0 duration correctly return 400 (PR #1032)
+- BL-848: `refactor(adjacency): extract shared geometric helper to _adjacency.py` —
+  unifies two conflicting adjacency checks at both transition endpoints (PR #1033)
+- BL-848: `test(smoke): tighten smoke contract guard; add malformed-duration + preview cases` (PR #1034)
+
+### Theme 2: worker-hardening
+
+- BL-816: `fix(worker): add transition shape guard at worker.py:513 to prevent KeyError on mixed-shape input` (PR #1035)
+- BL-817: `fix(timeline): reject oversized transition duration with HTTP 422 at API save time` (PR #1036)
+- BL-828: `fix(worker): wrap build_fn PyValueError as structured CommandBuildError with chained cause` (PR #1037)
+- BL-810: `refactor(worker): extract _compute_clip_duration_and_in_point helpers; CC 22→15` (PR #1038)
+- BL-821: `refactor(worker): extract _dispatch_render_effect helper; CC 20→≤6` (PR #1039)
+- BL-822: `refactor(worker): extract _build_audio_input_label helper; CC 18→≤10` (PR #1040)
+
+### Theme 3: test-harness-quality
+
+- BL-836: `fix(tests): fix _capture_seek positional signature; remove @pytest.mark.skip blocking since v135` (PR #1041)
+- BL-812: `fix(uat): register 11 missing journeys (J-711–J-721); add bidirectional registration guard` (PRs #1042, #1043)
+- BL-813: `feat(tests): add check_start/check_end boundary params to assert_inpoint_identity; new multiclip acceptance tests` (PR #1045)
+- BL-815: `feat(tests): add assert_audio_band_window oracle; 3-clip and sandwich acceptance tests` (PR #1046)
+- BL-830: `feat(tests): add test_golden_sc_crop to TestGoldenArgv; add assert_crop_region oracle` (PR #1047)
+- BL-804: `feat(tests): add 23rd golden-argv case: 2-clip + TTS + soft subtitle` (PR #1048)
+- BL-829: `feat(tests): add MUST_BE_AUDIO frozenset regression guard; tighten registry audio completeness test` (PR #1049)
+- BL-818: `fix(tests): fix render_plan serialization, polling loops, effect routing, oracle calls in chatbot scenarios` (PR #1050)
+- BL-819: `feat(tests): add 60s asyncio teardown watchdog in conftest.pytest_sessionfinish; document flake policy in AGENTS.md` (PR #1051)
+- BL-820: `fix(tests): move diagnostic fixture capture to tmp_path to prevent committed-fixture mutation` (commit f35d7b20)
+
+### Theme 4: ci-doc-hygiene
+
+- BL-803: `fix(ci): pin all AnimMouse/setup-ffmpeg@v1 mutable tags to full 40-char SHA; close SonarCloud S7637` (PR #1052)
+- BL-805: `feat(ci): add route-inventory gate test_route_inventory_matches_architecture; embed route-count marker in ARCHITECTURE.md` (PR #1053)
+- BL-806: `fix(docs): correct effect count to 41 across ARCHITECTURE.md, test_doc_truth.py, and all 8 C4 docs` (PR #1054)
+- BL-809: `fix(docs): fix API reference total (17→40); move J-MULTICL-02 to CI-Automated UAT section` (PR #1055)
+- BL-852: `docs(scenario): add split-preserves sub-scenario to Goal 5 with oracle references` (PR #1056)
+
+### Quality
+
+- 3920 pytest tests passing; ruff, mypy clean; cargo clippy clean
+- 23 golden-argv cases all byte-identical
+- Windows asyncio teardown watchdog in place (BL-819); CI supply-chain SHA-pinned (BL-803)
+
+---
+
 ## v136 — API Contract Fixes + Clip Split Preservation (2026-08-29)
 
 2 themes, 4 features, PRs #1023–#1027.
