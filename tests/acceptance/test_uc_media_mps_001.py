@@ -274,7 +274,6 @@ def _evaluate_oc_outcomes(qc_report: dict[str, Any]) -> dict[str, bool]:
 
 
 class TestUCMediaMPS001Acceptance:
-    @pytest.mark.skip(reason=_RENDER_SKIP_REASON)
     async def test_acceptance_render_produces_qc_report(
         self, acceptance_client: httpx.AsyncClient
     ) -> None:
@@ -283,7 +282,6 @@ class TestUCMediaMPS001Acceptance:
         assert "overall_verdict" in qc_report
         assert "checks" in qc_report
 
-    @pytest.mark.skip(reason=_RENDER_SKIP_REASON)
     async def test_at_least_14_oc_outcomes_pass(self, acceptance_client: httpx.AsyncClient) -> None:
         """≥14 of 17 UC-MEDIA-MPS-001 outcomes pass after QC-gated render.
 
@@ -303,7 +301,6 @@ class TestUCMediaMPS001Acceptance:
             f"see {tier2_checklist}"
         )
 
-    @pytest.mark.skip(reason=_RENDER_SKIP_REASON)
     @pytest.mark.parametrize("oc", list(OC_TO_QC_CHECK.keys()))
     async def test_machine_verifiable_oc_pass_fail_detail(
         self, acceptance_client: httpx.AsyncClient, oc: str

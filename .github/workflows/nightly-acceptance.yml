@@ -1,0 +1,45 @@
+name: Nightly Acceptance Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly-acceptance:
+    name: Render-intensive UC-MEDIA-MPS-001 acceptance tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install FFmpeg
+        uses: AnimMouse/setup-ffmpeg@2afa535ca6e6bc550066c82457d987656876d248 # v1
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/stoat_ferret_core
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Build Rust extension
+        run: uv run maturin develop
+
+      - name: Run render-intensive acceptance tests
+        env:
+          STOAT_TEST_FFMPEG: "1"
+        run: uv run pytest tests/acceptance/test_uc_media_mps_001.py --no-cov --timeout=600 -v
