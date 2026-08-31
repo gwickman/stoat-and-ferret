@@ -854,7 +854,13 @@ async def apply_transition(
             },
         )
     # informational only; preview/render recompute from clip positions
-    filter_string = str(XfadeBuilder(transition_type, duration, offset).build())
+    try:
+        filter_string = str(XfadeBuilder(transition_type, duration, offset).build())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_EFFECT_PARAMS", "message": str(exc)},
+        ) from exc
 
     # Store transition in project model
     transition_id = str(uuid.uuid4())
