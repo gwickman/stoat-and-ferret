@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
@@ -543,6 +543,48 @@ async def update_clip(
     return ClipResponse.model_validate(clip)
 
 
+def _migrate_effects_for_split(
+    effects_source: list[dict[str, Any]], split_policy: str
+) -> tuple[list[dict[str, Any]], list[dict[str, object]]]:
+    migration_report: list[dict[str, object]] = []
+    if split_policy == "copy_full_stack":
+        child_effects = effects_source
+        for e in effects_source:
+            migration_report.append(
+                {
+                    "effect_type": e.get("effect_type", "unknown"),
+                    "disposition": "copied",
+                    "target": "both",
+                }
+            )
+    elif split_policy == "remap_windowed_effects":
+        # No in_frame/out_frame metadata exists in current effects — fall back to copy_full_stack
+        child_effects = effects_source
+        for e in effects_source:
+            migration_report.append(
+                {
+                    "effect_type": e.get("effect_type", "unknown"),
+                    "disposition": "copied",
+                    "target": "both",
+                }
+            )
+        if effects_source:
+            migration_report.append(
+                {"effect_type": "remap_note", "disposition": "copied", "target": "both"}
+            )
+    else:  # drop_with_warning
+        child_effects = []
+        for e in effects_source:
+            migration_report.append(
+                {
+                    "effect_type": e.get("effect_type", "unknown"),
+                    "disposition": "dropped",
+                    "target": "both",
+                }
+            )
+    return child_effects, migration_report
+
+
 @router.post("/{project_id}/clips/{clip_id}/split")
 async def split_clip(
     project_id: str,
@@ -595,42 +637,7 @@ async def split_clip(
     clip_a_duration_frames = body.split_frame - clip.in_point
 
     effects_source = clip.effects or []
-    migration_report: list[dict[str, object]] = []
-    if body.split_policy == "copy_full_stack":
-        child_effects = effects_source
-        for e in effects_source:
-            migration_report.append(
-                {
-                    "effect_type": e.get("effect_type", "unknown"),
-                    "disposition": "copied",
-                    "target": "both",
-                }
-            )
-    elif body.split_policy == "remap_windowed_effects":
-        # No in_frame/out_frame metadata exists in current effects — fall back to copy_full_stack
-        child_effects = effects_source
-        for e in effects_source:
-            migration_report.append(
-                {
-                    "effect_type": e.get("effect_type", "unknown"),
-                    "disposition": "copied",
-                    "target": "both",
-                }
-            )
-        if effects_source:
-            migration_report.append(
-                {"effect_type": "remap_note", "disposition": "copied", "target": "both"}
-            )
-    else:  # drop_with_warning
-        child_effects = []
-        for e in effects_source:
-            migration_report.append(
-                {
-                    "effect_type": e.get("effect_type", "unknown"),
-                    "disposition": "dropped",
-                    "target": "both",
-                }
-            )
+    child_effects, migration_report = _migrate_effects_for_split(effects_source, body.split_policy)
 
     clip_a = Clip(
         id=Clip.new_id(),
