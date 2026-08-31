@@ -52,16 +52,6 @@ pytestmark = pytest.mark.skipif(
     reason="requires FFmpeg (STOAT_TEST_FFMPEG=1)",
 )
 
-# Reason applied to all render-intensive acceptance tests.
-# Each test submits a real FFmpeg render (~5+ min on ubuntu-latest CI).
-# 14 render tests × ~5 min = ~70 min exceeds the 40-min ffmpeg-tests budget.
-# BL-785 follow-up: add a dedicated nightly/on-demand CI job before un-skipping.
-_RENDER_SKIP_REASON = (
-    "render-intensive: each test submits a real FFmpeg render (~5+ min on ubuntu-latest). "
-    "14 render tests × ~5 min ≈ 70 min exceeds the 40-min ffmpeg-tests CI budget (BL-785). "
-    "Un-skip once a dedicated nightly/on-demand CI job is in place."
-)
-
 
 @pytest_asyncio.fixture
 async def acceptance_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None]:

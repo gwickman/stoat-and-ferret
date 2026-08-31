@@ -4,6 +4,34 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v138 — Correctness Hotfixes + Documentation Truth + CI Infrastructure (2026-08-31)
+
+3 themes, 6 features, PRs #1057–#1062.
+
+### Theme 1: correctness-hotfixes
+
+- BL-861: `fix(effects): map XfadeBuilder out-of-range/NaN duration to 400 INVALID_EFFECT_PARAMS` —
+  XfadeBuilder now returns 400 INVALID_EFFECT_PARAMS for duration > 60.0 or NaN (PR #1057)
+- BL-864: `fix(uat): correct j_crop render assertion 202->201 and fix ClipCreate effects-in-body violation` —
+  j_crop journey fixed to assert 201 Created; ClipCreate effects-in-body violation corrected (PR #1058)
+
+### Theme 2: documentation-truth
+
+- BL-858: `docs(effects): replace stale acrossfade/xfade transition_type examples with valid style names` —
+  transition_type examples updated to use valid style names throughout (PR #1059)
+- BL-859: `docs(uat): correct J-716 row to reflect creation-time 400 EFFECT_NOT_FOUND assertion` —
+  J-716 UAT documentation corrected to reflect actual 400 EFFECT_NOT_FOUND behavior at creation time (PR #1060)
+
+### Theme 3: ci-infrastructure-and-code-quality
+
+- BL-856: `refactor(projects): extract _migrate_effects_for_split to reduce split_clip CC 17->~8` —
+  split_clip cognitive complexity reduced from 17 to ~8 via helper extraction (PR #1061)
+- BL-802: `ci: add nightly acceptance lane for 14 render-intensive UC-MEDIA-MPS-001 tests` —
+  dedicated nightly CI job at 02:00 UTC for 14 render-intensive acceptance tests; excluded from
+  ffmpeg-tests 40-min budget (PR #1062)
+
+---
+
 ## v137 — Transition Regression Fixes + Worker Hardening + Test Harness Quality + CI/Doc Hygiene (2026-08-31)
 
 4 themes, 26 features, PRs #1030–#1056.
