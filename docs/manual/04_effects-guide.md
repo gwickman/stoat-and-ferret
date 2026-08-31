@@ -294,8 +294,8 @@ curl -X POST http://localhost:8765/api/v1/projects/proj-1/effects/transition \
   -d '{
     "source_clip_id": "clip-001",
     "target_clip_id": "clip-002",
-    "transition_type": "acrossfade",
-    "parameters": {"duration": 2.0, "curve1": "qsin", "curve2": "qsin"}
+    "transition_type": "fade",
+    "parameters": {"duration": 2.0}
   }'
 ```
 
