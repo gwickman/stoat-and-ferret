@@ -176,26 +176,29 @@ async def run(page: Page, base_url: str) -> None:
                         "in_point": 0,
                         "out_point": 90,
                         "timeline_position": 0,
-                        "effects": [
-                            {
-                                "effect_type": "crop",
-                                "parameters": {
-                                    "width": _CROP_W,
-                                    "height": _CROP_H,
-                                    "x": _CROP_X,
-                                    "y": _CROP_Y,
-                                },
-                            }
-                        ],
                     },
                 )
                 assert clip_resp.status_code == 201
+                clip_id: str = clip_resp.json()["id"]
+                effect_resp = await client.post(
+                    f"/api/v1/projects/{proj_id}/clips/{clip_id}/effects",
+                    json={
+                        "effect_type": "crop",
+                        "parameters": {
+                            "width": _CROP_W,
+                            "height": _CROP_H,
+                            "x": _CROP_X,
+                            "y": _CROP_Y,
+                        },
+                    },
+                )
+                assert effect_resp.status_code == 201
 
                 render_resp = await client.post(
                     "/api/v1/render",
                     json={"project_id": proj_id, "render_plan": render_plan},
                 )
-                assert render_resp.status_code == 202
+                assert render_resp.status_code == 201
                 job = await _poll_render_job(client, render_resp.json()["id"])
                 assert job["status"] == "completed", f"Crop render ended '{job['status']}'"
 
