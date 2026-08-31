@@ -187,6 +187,20 @@ To run gated tests locally:
 STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov -v
 ```
 
+#### Nightly Acceptance Lane
+
+A separate `.github/workflows/nightly-acceptance.yml` workflow runs the 14 render-intensive
+UC-MEDIA-MPS-001 acceptance tests that are excluded from the 40-minute `ffmpeg-tests` budget
+(BL-802). The workflow is triggered by `schedule` (nightly cron at 02:00 UTC) and
+`workflow_dispatch` (on-demand). It is **not** in `ci-status.needs` — schedule/dispatch jobs
+do not run on PRs; adding it would create an always-failing PR gate.
+
+```bash
+# Trigger on-demand:
+gh workflow run nightly-acceptance.yml
+gh run list --workflow=nightly-acceptance.yml
+```
+
 **Empty-commit discharge note:** The `ffmpeg-tests` CI job uses a paths-filter and skips when
 no code changes are detected. Empty tracking commits (discharge-confirmation push with no new
 source code) always trigger this skip — `ci-status` still passes. For discharge-only features,

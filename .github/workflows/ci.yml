@@ -441,7 +441,7 @@ jobs:
         run: uv run maturin develop
 
       - name: Run STOAT_TEST_FFMPEG gated suite
-        run: STOAT_TEST_FFMPEG=1 uv run pytest tests/ --no-cov --timeout=120 -v
+        run: STOAT_TEST_FFMPEG=1 uv run pytest tests/ --ignore=tests/acceptance --no-cov --timeout=120 -v
 
   uat:
     needs: [changes]

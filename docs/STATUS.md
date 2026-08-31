@@ -1,5 +1,13 @@
 # STATUS.md
 
+## v138 — CI Infrastructure, Code Quality, and Acceptance Harness
+
+**In progress:** 2026-08-31
+
+### Highlights (partial)
+
+- **Theme 3 — ci-infrastructure-and-code-quality:** Added dedicated nightly acceptance lane (BL-802); 14 render-intensive UC-MEDIA-MPS-001 tests un-skipped and moved to `.github/workflows/nightly-acceptance.yml` (nightly cron + workflow_dispatch, `ubuntu-latest`, 90-min timeout) — PR pending
+
 ## v137 — Transition Regression Fixes, Worker Hardening, Test Harness Quality, CI/Doc Hygiene
 
 **Delivered:** 2026-08-30
