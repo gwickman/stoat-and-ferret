@@ -171,8 +171,8 @@ for i in range(len(clip_ids) - 1):
     client.post(f"/api/v1/projects/{project_id}/effects/transition", json={
         "source_clip_id": clip_ids[i],
         "target_clip_id": clip_ids[i + 1],
-        "transition_type": "xfade",
-        "parameters": {"transition": "fade", "duration": 1.0, "offset": 4.0},
+        "transition_type": "fade",
+        "parameters": {"duration": 1.0, "offset": 4.0},
     })
 
 # Step 11: Preview an effect before applying
@@ -228,7 +228,7 @@ An AI agent can translate natural language editing instructions into API calls. 
 | "Speed up the second clip to 2x" | `POST .../clips/{clip_id}/effects` with `speed_control, factor: 2.0` |
 | "Fade in from black over 2 seconds" | `POST .../clips/{clip_id}/effects` with `video_fade, fade_type: in, duration: 2.0` |
 | "Add a title saying 'Chapter 1'" | `POST .../clips/{clip_id}/effects` with `text_overlay, text: "Chapter 1"` |
-| "Cross-dissolve between clips" | `POST .../effects/transition` with `xfade, transition: dissolve` |
+| "Cross-dissolve between clips" | `POST .../effects/transition` with `transition_type: dissolve` |
 | "Lower the background music" | `POST .../clips/{clip_id}/effects` with `volume, volume: 0.3` |
 | "Make it half speed" | `POST .../clips/{clip_id}/effects` with `speed_control, factor: 0.5` |
 | "Fade the audio out at the end" | `POST .../clips/{clip_id}/effects` with `audio_fade, fade_type: out` |
