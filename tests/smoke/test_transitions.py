@@ -9,6 +9,8 @@ the Rust PyO3 xfade filter builder through the full API stack.
 
 from __future__ import annotations
 
+import json
+import math
 from pathlib import Path
 
 import httpx
@@ -277,3 +279,55 @@ async def test_smoke_transition_malformed_duration(
         },
     )
     assert resp.status_code == 400
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_transition_duration_out_of_range(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /effects/transition with duration=60.1 returns 400 INVALID_EFFECT_PARAMS (BL-861)."""
+    client = smoke_client
+    setup = await create_adjacent_clips_timeline(client, videos_dir)
+    project_id = setup["project_id"]
+    clip_a_id = setup["clip_a_id"]
+    clip_b_id = setup["clip_b_id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_a_id,
+            "target_clip_id": clip_b_id,
+            "transition_type": "fade",
+            "parameters": {"duration": 60.1},
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_transition_duration_nan(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /effects/transition with NaN duration returns 400 INVALID_EFFECT_PARAMS (BL-861)."""
+    client = smoke_client
+    setup = await create_adjacent_clips_timeline(client, videos_dir)
+    project_id = setup["project_id"]
+    clip_a_id = setup["clip_a_id"]
+    clip_b_id = setup["clip_b_id"]
+
+    payload = {
+        "source_clip_id": clip_a_id,
+        "target_clip_id": clip_b_id,
+        "transition_type": "fade",
+        "parameters": {"duration": math.nan},
+    }
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        content=json.dumps(payload, allow_nan=True).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["code"] == "INVALID_EFFECT_PARAMS"

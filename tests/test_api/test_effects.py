@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -1669,6 +1671,59 @@ async def test_transition_negative_duration_returns_400(
             "transition_type": "fade",
             "parameters": {"duration": -1.0},
         },
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+
+
+@pytest.mark.api
+async def test_transition_duration_out_of_range_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with duration=60.1 returns 400 INVALID_EFFECT_PARAMS (BL-861)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 60.1},
+        },
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+
+
+@pytest.mark.api
+async def test_transition_duration_nan_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with NaN duration returns 400 INVALID_EFFECT_PARAMS (BL-861)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+    payload = {
+        "source_clip_id": clip_ids[0],
+        "target_clip_id": clip_ids[1],
+        "transition_type": "fade",
+        "parameters": {"duration": math.nan},
+    }
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        content=json.dumps(payload, allow_nan=True).encode(),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 400
     data = response.json()
