@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""UAT Journey 717: Version restore round-trip (BL-799).
+"""UAT Journey 720: Version restore round-trip (BL-799).
 
 Validates that a user can save a project version, modify the live timeline, then
 restore the saved version via the GUI and observe the timeline revert to the saved
@@ -30,7 +30,7 @@ if not os.environ.get("STOAT_UAT_PLAYWRIGHT_HEADED"):
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JOURNEY_NAME = "version-restore-roundtrip"
-JOURNEY_ID = 717
+JOURNEY_ID = 720
 JOURNEY_TIMEOUT: int = 300  # seconds
 
 
