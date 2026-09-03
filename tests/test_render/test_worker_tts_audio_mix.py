@@ -777,16 +777,18 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
         output_path=_OUTPUT_PATH,
         output_format=OutputFormat.MP4,
         quality_preset=QualityPreset.STANDARD,
-        render_plan=json.dumps({
-            "total_duration": 4.0,
-            "settings": {
-                "codec": "libx264",
-                "fps": 30.0,
-                "width": 1920,
-                "height": 1080,
-                "quality_preset": "standard",
-            },
-        }),
+        render_plan=json.dumps(
+            {
+                "total_duration": 4.0,
+                "settings": {
+                    "codec": "libx264",
+                    "fps": 30.0,
+                    "width": 1920,
+                    "height": 1080,
+                    "quality_preset": "standard",
+                },
+            }
+        ),
         progress=0.0,
         error_message=None,
         retry_count=0,
