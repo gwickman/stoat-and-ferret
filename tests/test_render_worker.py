@@ -1477,7 +1477,7 @@ class TestGoldenArgv:
 
     @pytest.mark.asyncio
     async def test_golden_case_5_multi_clip_tts_later_audio(self) -> None:
-        """Two clips, second has audio + TTS -> amix with source_audio_input_idx offset."""
+        """Clip 0 video-only + TTS -> acrossfade with anullsrc amixed with TTS (BL-814)."""
         vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
         vid3 = _g_make_video("vid-3", _G_VIDEO_PATH_3, audio_codec="aac")
         clip_a = _g_make_clip("clip-5a", "vid-1")  # no audio
@@ -1516,7 +1516,8 @@ class TestGoldenArgv:
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
-                "[1:a]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1[src_aout_pre];"
+                "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                 "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
             ),
             "-map",
@@ -2193,7 +2194,7 @@ class TestGoldenArgv:
 
     @pytest.mark.asyncio
     async def test_golden_case_10_multi_clip_tts_soft_subtitles(self) -> None:
-        """Two clips + TTS + soft-subtitles (no ffmetadata) -> subtitle at idx 3 (BL-804)."""
+        """Clip 0 video-only + TTS + soft-subs -> acrossfade + subtitle at idx 3 (BL-804)."""
         vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
         vid3 = _g_make_video("vid-3", _G_VIDEO_PATH_3, audio_codec="aac")
         clip_a = _g_make_clip("clip-10a", "vid-1")  # no audio
@@ -2236,7 +2237,8 @@ class TestGoldenArgv:
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
-                "[1:a]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1[src_aout_pre];"
+                "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                 "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
             ),
             "-map",
@@ -2261,6 +2263,213 @@ class TestGoldenArgv:
             "default",
             "/renders/golden.mp4",
         ]
+
+    @pytest.mark.asyncio
+    async def test_golden_case_multi_clip_audio_tts(self) -> None:
+        """Two audio clips + TTS -> acrossfade [src_aout_pre] amixed with TTS (BL-814-AC-1)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2, audio_codec="aac")
+        clip_a = _g_make_clip("clip-mc-tts-a", "vid-1")
+        clip_b = _g_make_clip("clip-mc-tts-b", "vid-2")
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-mt",
+                audio_path="/renders/tts-mt.wav",
+                track_id="track-1",
+                start_s=10.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()),
+            _g_clip_repo(clip_a, clip_b),
+            _g_video_repo(vid1, vid2),
+            tts_inputs=tts_inputs,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-i",
+            "/renders/tts-mt.wav",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final];"
+                "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
+                "[0:a][1:a]acrossfade=d=1[src_aout_pre];"
+                "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+        fc = result[result.index("-filter_complex") + 1]
+        assert "[src_aout_pre]" in fc
+        assert "[src_norm]" in fc
+        assert "amix=inputs=2" in fc
+        assert "[0:a][1:a]acrossfade" in fc
+
+    @pytest.mark.asyncio
+    async def test_golden_case_sc_tts_audio_effect(self) -> None:
+        """Single clip + volume effect + TTS -> effects applied before TTS amix (BL-814-AC-7)."""
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        clip = _g_make_clip(
+            "clip-sc-tts-eff",
+            "vid-1",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 2.0}}],
+        )
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-sc",
+                audio_path="/renders/tts-sc.wav",
+                track_id="track-1",
+                start_s=5.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+        reg = EffectRegistry()
+        reg.register("volume", VOLUME)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()),
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+            tts_inputs=tts_inputs,
+            effect_registry=reg,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/renders/tts-sc.wav",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];"
+                "[1:a]adelay=5000|5000,aformat=channel_layouts=stereo[tts0];"
+                "[0:a]volume=volume=2[0a_eff];"
+                "[0a_eff]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+        fc = result[result.index("-filter_complex") + 1]
+        assert "[0a_eff]" in fc
+        assert "volume=volume=2" in fc
+        assert "amix=inputs=2" in fc
+
+    @pytest.mark.asyncio
+    async def test_golden_case_multi_clip_tts_audio_effects(self) -> None:
+        """Two audio clips + effects + TTS -> effects in acrossfade before amix (BL-814-AC-8)."""
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1, audio_codec="aac")
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2, audio_codec="aac")
+        clip_a = _g_make_clip(
+            "clip-mce-a",
+            "vid-1",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 2.0}}],
+        )
+        clip_b = _g_make_clip(
+            "clip-mce-b",
+            "vid-2",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 0.5}}],
+        )
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-mce",
+                audio_path="/renders/tts-mce.wav",
+                track_id="track-1",
+                start_s=5.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+        reg = EffectRegistry()
+        reg.register("volume", VOLUME)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan(total_duration=60.0)),
+            _g_clip_repo(clip_a, clip_b),
+            _g_video_repo(vid1, vid2),
+            tts_inputs=tts_inputs,
+            effect_registry=reg,
+        )
+
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            "/media/clip2.mp4",
+            "-i",
+            "/renders/tts-mce.wav",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[1:v]fps=30,settb=1/30[v1];"
+                "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
+                "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
+                "[xf0]format=yuv420p[final];"
+                "[2:a]adelay=5000|5000,aformat=channel_layouts=stereo[tts0];"
+                "[0:a]volume=volume=2[a0_eff];[1:a]volume=volume=0.5[a1_eff];"
+                "[a0_eff][a1_eff]acrossfade=d=1[src_aout_pre];"
+                "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+        fc = result[result.index("-filter_complex") + 1]
+        assert "[src_aout_pre]" in fc
+        assert "volume=volume=2" in fc
+        assert "volume=volume=0.5" in fc
+        assert "amix=inputs=2" in fc
 
     @pytest.mark.asyncio
     async def test_buildfn_exception_wraps_as_command_build_error(self) -> None:
