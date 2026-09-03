@@ -926,3 +926,60 @@ async def test_hue_rotation_preview_generation(
         json={"effect_type": "hue_rotation", "parameters": {"h_expr": "PI/4"}},
     )
     assert resp.status_code == 201
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_transition_offset_out_of_range(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /effects/transition with offset=-1.0 returns 400 INVALID_EFFECT_PARAMS (BL-867)."""
+    client = smoke_client
+    await scan_videos_and_wait(client, videos_dir)
+
+    resp = await client.get("/api/v1/videos?limit=1")
+    video_id = resp.json()["videos"][0]["id"]
+
+    resp = await client.post("/api/v1/projects", json={"name": "Transition Offset Smoke"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert resp.status_code == 201
+    clip1_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 100,
+            "timeline_start": 5.0,
+            "timeline_end": 10.0,
+        },
+    )
+    assert resp.status_code == 201
+    clip2_id = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip1_id,
+            "target_clip_id": clip2_id,
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0, "offset": -1.0},
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["code"] == "INVALID_EFFECT_PARAMS"

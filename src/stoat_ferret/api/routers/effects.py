@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import math
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -851,6 +852,14 @@ async def apply_transition(
             detail={
                 "code": "INVALID_EFFECT_PARAMS",
                 "message": "duration must be greater than 0",
+            },
+        )
+    if math.isnan(offset) or math.isinf(offset) or offset < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "offset must be a non-negative finite number",
             },
         )
     # informational only; preview/render recompute from clip positions
