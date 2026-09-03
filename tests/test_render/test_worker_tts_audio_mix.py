@@ -712,11 +712,12 @@ def _gen_video_with_sine_audio(path: Path, freq: int) -> None:
 @_FFMPEG_SKIP
 @pytest.mark.asyncio
 async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
-    """BL-683-AC-2: TTS + source audio both survive amix (two-band energy proof).
+    """BL-683-AC-2 / BL-814: TTS + source audio both survive amix (two-band energy proof).
 
-    Multi-clip render: clip 0 video-only, clip 1 video + 100Hz source audio.
-    TTS cue at 3000Hz. Confirms both frequency bands exceed -40 dBFS in the
-    rendered output, proving amix does not silence either stream.
+    Multi-clip render: clip 0 video-only (0-2s), clip 1 video + 100Hz source audio (2-4s).
+    TTS cue at 3000Hz from t=0. After BL-814, audio is properly sequenced via acrossfade
+    chain: clip 1's 100Hz starts at t=2s, not t=0. Verifies each band exceeds -40 dBFS
+    in its own window: TTS at 0.2-1.0s, 100Hz source at 2.2-2.8s.
     """
     src0 = tmp_path / "clip0_silent.mp4"
     src1 = tmp_path / "clip1_100hz.mp4"
@@ -729,9 +730,31 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
         "vid-band0": _make_video("vid-band0", str(src0), audio_codec=None),
         "vid-band1": _make_video("vid-band1", str(src1), audio_codec="aac"),
     }
+    # 2-second clips (out_point=60 at 30fps): clip 0 at t=0, clip 1 starts at t=2s.
+    # Both clips fit within the 4s render window, so clip 1's audio is in the output.
     clips = [
-        _make_clip("clip-band0", "vid-band0", timeline_position=0),
-        _make_clip("clip-band1", "vid-band1", timeline_position=300),
+        Clip(
+            id="clip-band0",
+            project_id=_PROJECT_ID,
+            source_video_id="vid-band0",
+            in_point=0,
+            out_point=60,
+            timeline_position=0,
+            created_at=_NOW,
+            updated_at=_NOW,
+            effects=None,
+        ),
+        Clip(
+            id="clip-band1",
+            project_id=_PROJECT_ID,
+            source_video_id="vid-band1",
+            in_point=0,
+            out_point=60,
+            timeline_position=60,
+            created_at=_NOW,
+            updated_at=_NOW,
+            effects=None,
+        ),
     ]
     clip_repo = AsyncMock()
     clip_repo.list_by_project = AsyncMock(return_value=clips)
@@ -746,8 +769,35 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
         weight=1.0,
         volume_envelope=None,
     )
+    # 4-second render: clip 0 (0-2s) + clip 1 (2-4s) — both within the window.
+    job = RenderJob(
+        id="job-tts-amix-001",
+        project_id=_PROJECT_ID,
+        status=RenderStatus.RUNNING,
+        output_path=_OUTPUT_PATH,
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=json.dumps(
+            {
+                "total_duration": 4.0,
+                "settings": {
+                    "codec": "libx264",
+                    "fps": 30.0,
+                    "width": 1920,
+                    "height": 1080,
+                    "quality_preset": "standard",
+                },
+            }
+        ),
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=_NOW,
+        updated_at=_NOW,
+        completed_at=None,
+    )
     out = tmp_path / "two_band_output.mp4"
-    cmd = await build_command_for_job(_make_job(), clip_repo, video_repo, tts_inputs=[tts_input])
+    cmd = await build_command_for_job(job, clip_repo, video_repo, tts_inputs=[tts_input])
     cmd[-1] = str(out)
 
     rc = _run_ffmpeg(cmd)
@@ -755,18 +805,19 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
     assert out.exists(), "Output file missing or empty"
     assert out.stat().st_size > 0, "Output file missing or empty"
 
-    # Both bands should be present simultaneously: source audio (100Hz) and TTS (3000Hz)
-    # are both active from the audio timeline start (FFmpeg does not delay src audio).
-    db_100hz = _measure_band_db_windowed(out, 100, 0.5, 1.5)
-    db_3khz = _measure_band_db_windowed(out, 3000, 0.5, 1.5)
+    # After BL-814: each band is measured in its own window.
+    # 3kHz TTS: active 0-2s (TTS WAV), measured at 0.2-1.0s (before acrossfade crossfade).
+    # 100Hz source: active 2-3s after acrossfade, measured at 2.2-2.8s (pure clip-1 zone).
+    db_3khz = _measure_band_db_windowed(out, 3000, 0.2, 1.0)
+    db_100hz = _measure_band_db_windowed(out, 100, 2.2, 2.8)
 
-    assert db_100hz > -40.0, (
-        f"100Hz band (source audio from clip 1) not present: {db_100hz:.1f} dBFS "
-        f"(expected >-40.0 dBFS) — source audio may have been dropped by amix"
-    )
     assert db_3khz > -40.0, (
         f"3kHz band (TTS) not present: {db_3khz:.1f} dBFS "
         f"(expected >-40.0 dBFS) — TTS audio may have been dropped by amix"
+    )
+    assert db_100hz > -40.0, (
+        f"100Hz band (source audio from clip 1) not present: {db_100hz:.1f} dBFS "
+        f"(expected >-40.0 dBFS) — source audio may have been dropped by acrossfade/amix"
     )
 
 
