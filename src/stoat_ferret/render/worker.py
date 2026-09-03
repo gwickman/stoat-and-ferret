@@ -686,7 +686,7 @@ def _build_audio_acrossfade_chain(
         t = _get_transition_duration(cwe_list, k, clip_transition_durations)
         d_str = str(int(t)) if t == int(t) else str(t)
         intermediate = f"[xa{k - 1}]" if k < all_input_count - 1 else _LABEL_AOUT
-        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}{intermediate}")
+        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}:o=0{intermediate}")
         current = intermediate
     return ";".join(parts)
 
@@ -709,10 +709,20 @@ def _assemble_multi_tts_filter(
         tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base)
         combined_filter = filter_complex_str + ";" + tts_filter_seg
         if source_audio_codec_mc is not None:
-            src_a = f"[{source_audio_input_idx_mc}:a]"
+            audio_chain = _build_audio_acrossfade_chain(
+                audio_input_indices_mc,
+                len(clip_durations_mc),
+                clip_durations_mc,
+                cwe_list,
+                clip_transition_durations,
+                per_clip_audio_filters,
+            )
+            assert audio_chain is not None
+            src_chain = audio_chain.replace("[aout]", "[src_aout_pre]")
             mix_seg = (
-                f"{src_a}aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+                f"{src_chain};"
+                f"[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                f"[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
             )
             combined_filter_with_mix = combined_filter + ";" + mix_seg
             cmd.extend(
@@ -950,10 +960,18 @@ def _assemble_sc_filter_translator(
         tts_filter_seg, tts_audio_label = _build_tts_audio_filter(tts_inputs, tts_base_single)
         combined_sc = filter_complex_sc + ";" + tts_filter_seg
         if source_audio_codec is not None:
-            mix_seg = (
-                f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm]"
-                f";[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
-            )
+            if audio_filter_chains_sc:
+                joined = ",".join(audio_filter_chains_sc)
+                mix_seg = (
+                    f"[0:a]{joined}[0a_eff];"
+                    f"[0a_eff]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                    f"[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+                )
+            else:
+                mix_seg = (
+                    f"[0:a]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                    f"[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+                )
             combined_sc_with_mix = combined_sc + ";" + mix_seg
             cmd.extend(
                 [
