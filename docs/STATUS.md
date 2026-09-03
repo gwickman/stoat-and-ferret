@@ -1,12 +1,44 @@
 # STATUS.md
 
+## v139 — TTS Audio Render Correctness + API/CI Hardening
+
+**Delivered:** 2026-09-03
+**PRs:** #1063–#1066 (4 PRs)
+**Features:** 5 across 2 themes
+**Tests:** 4120 collected (+9 vs baseline 4111; 0 regressions)
+
+### Highlights
+
+- **Theme 1 — tts-audio-render-correctness:** Fixed two BL-814 residuals in `worker.py`: `_assemble_multi_tts_filter` now builds the full acrossfade chain for all clips before TTS amix (was: bare first-clip reference, silently dropping all other clips); `_assemble_sc_filter_translator` now applies `audio_filter_chains_sc` before normalization and amix when TTS is present (was: effects silently bypassed). New acceptance tests with STOAT_TEST_FFMPEG gate verify band-level RMS correctness — BL-814 (ACs 1–9) — PR #1063
+- **Theme 2 — api-infrastructure-hardening:** Added `math.isnan/math.isinf/offset<0` guard to `POST /effects/transition` before `XfadeBuilder` call, mirroring BL-861 duration guard (BL-867, PR #1064); corrected stale J-716 render-worker prose in `docs/manual/uat-testing.md`, fixed `JOURNEY_ID=717→720` in `scripts/uat_journey_720.py`, and added dimension-(d) JOURNEY_ID==filename guard to `tests/test_uat_registration.py` (BL-868, PR #1065); SHA-pinned three mutable action refs in `nightly-acceptance.yml` and added `# NOSONAR S8541` to `uv sync --locked` (BL-865, BL-866, PR #1066)
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| tts-audio-render-correctness | BL-814 (ACs 1–9) | #1063 | merged |
+| api-infrastructure-hardening | BL-867, BL-868, BL-865, BL-866 | #1064–#1066 | merged |
+
+### AC Status
+
+- 2 themes, 5 features; all features complete and merged to main
+- BL-865-AC-6 and BL-866-AC-3 (Sonar rescan): deferred to next sweep, `blocking_if_unverified: false`
+
+### User Actions Required
+
+None required. v139 is complete.
+
+---
+
 ## v138 — CI Infrastructure, Code Quality, and Acceptance Harness
 
-**In progress:** 2026-08-31
+**Delivered:** 2026-08-31
+**PRs:** #1057–#1062 (6 PRs)
+**Features:** 6 across 3 themes (partial — 20/24 ACs)
 
 ### Highlights (partial)
 
-- **Theme 3 — ci-infrastructure-and-code-quality:** Added dedicated nightly acceptance lane (BL-802); 14 render-intensive UC-MEDIA-MPS-001 tests un-skipped and moved to `.github/workflows/nightly-acceptance.yml` (nightly cron + workflow_dispatch, `ubuntu-latest`, 90-min timeout) — PR pending
+- **Theme 3 — ci-infrastructure-and-code-quality:** Added dedicated nightly acceptance lane (BL-802); 14 render-intensive UC-MEDIA-MPS-001 tests un-skipped and moved to `.github/workflows/nightly-acceptance.yml` (nightly cron + workflow_dispatch, `ubuntu-latest`, 90-min timeout) — PR #1062; AC-3/AC-4 (nightly run verification) deferred to future version
 
 ## v137 — Transition Regression Fixes, Worker Hardening, Test Harness Quality, CI/Doc Hygiene
 
