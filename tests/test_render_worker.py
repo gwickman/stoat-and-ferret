@@ -1516,7 +1516,7 @@ class TestGoldenArgv:
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
-                "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1[src_aout_pre];"
+                "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1:o=0[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                 "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
             ),
@@ -1880,7 +1880,7 @@ class TestGoldenArgv:
                 "[v0]fps=30,settb=1/30[pv0];[v1]fps=30,settb=1/30[pn1];"
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
-                "[0:a][1:a]acrossfade=d=1[aout]"
+                "[0:a][1:a]acrossfade=d=1:o=0[aout]"
             ),
             "-map",
             "[final]",
@@ -1897,7 +1897,7 @@ class TestGoldenArgv:
             "/renders/golden.mp4",
         ]
         # FR-007-AC-1: acrossfade with d=1 (not d=1.0) and -map [aout] present; -an absent
-        assert "acrossfade=d=1[aout]" in result[result.index("-filter_complex") + 1]
+        assert "acrossfade=d=1:o=0[aout]" in result[result.index("-filter_complex") + 1]
         assert "-map" in result
         assert "[aout]" in result
         assert "-an" not in result
@@ -1920,7 +1920,7 @@ class TestGoldenArgv:
 
         fc = result[result.index("-filter_complex") + 1]
         assert "xfade=transition=wipeleft:duration=0.35:offset=29.65" in fc
-        assert "acrossfade=d=0.35[aout]" in fc
+        assert "acrossfade=d=0.35:o=0[aout]" in fc
         assert "-an" not in result
 
     @pytest.mark.asyncio
@@ -2054,7 +2054,7 @@ class TestGoldenArgv:
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
                 "[0:a]volume=volume=2[a0_eff];[1:a]volume=volume=2[a1_eff];"
-                "[a0_eff][a1_eff]acrossfade=d=1[aout]"
+                "[a0_eff][a1_eff]acrossfade=d=1:o=0[aout]"
             ),
             "-map",
             "[final]",
@@ -2237,7 +2237,7 @@ class TestGoldenArgv:
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
-                "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1[src_aout_pre];"
+                "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1:o=0[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                 "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
             ),
@@ -2304,7 +2304,7 @@ class TestGoldenArgv:
                 "[pv0][pn1]xfade=transition=fade:duration=1:offset=29[xf0];"
                 "[xf0]format=yuv420p[final];"
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
-                "[0:a][1:a]acrossfade=d=1[src_aout_pre];"
+                "[0:a][1:a]acrossfade=d=1:o=0[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                 "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
             ),
@@ -2447,7 +2447,7 @@ class TestGoldenArgv:
                 "[xf0]format=yuv420p[final];"
                 "[2:a]adelay=5000|5000,aformat=channel_layouts=stereo[tts0];"
                 "[0:a]volume=volume=2[a0_eff];[1:a]volume=volume=0.5[a1_eff];"
-                "[a0_eff][a1_eff]acrossfade=d=1[src_aout_pre];"
+                "[a0_eff][a1_eff]acrossfade=d=1:o=0[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                 "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
             ),

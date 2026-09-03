@@ -686,7 +686,7 @@ def _build_audio_acrossfade_chain(
         t = _get_transition_duration(cwe_list, k, clip_transition_durations)
         d_str = str(int(t)) if t == int(t) else str(t)
         intermediate = f"[xa{k - 1}]" if k < all_input_count - 1 else _LABEL_AOUT
-        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}{intermediate}")
+        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}:o=0{intermediate}")
         current = intermediate
     return ";".join(parts)
 
