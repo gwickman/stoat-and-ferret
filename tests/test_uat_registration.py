@@ -116,3 +116,21 @@ def test_dimension_c_doc_truth_matches_module_map() -> None:
         + "\n".join(mismatches)
         + "\nUpdate uat-testing.md or JOURNEY_MODULE_MAP to agree."
     )
+
+
+def test_journey_id_matches_filename() -> None:
+    """(d) Every scripts/uat_journey_N.py has JOURNEY_ID == N."""
+    import re
+    from pathlib import Path
+
+    scripts_dir = Path("scripts")
+    for path in sorted(scripts_dir.glob("uat_journey_*.py")):
+        m = re.search(r"uat_journey_(\d+)\.py", path.name)
+        assert m, f"Unexpected filename: {path.name}"
+        expected_id = int(m.group(1))
+        content = path.read_text()
+        id_match = re.search(r"JOURNEY_ID\s*=\s*(\d+)", content)
+        assert id_match, f"No JOURNEY_ID constant in {path.name}"
+        assert int(id_match.group(1)) == expected_id, (
+            f"{path.name}: JOURNEY_ID={id_match.group(1)} but filename says {expected_id}"
+        )
