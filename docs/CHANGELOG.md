@@ -4,6 +4,20 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v139 — 2026-09-03
+
+### Theme 1: TTS Audio Render Correctness
+
+- **BL-814** — Fixed multi-clip TTS filter label collision causing FFmpeg filter-graph errors and single-clip TTS audio effect bypass (PR #1063)
+
+### Theme 2: API Infrastructure Hardening
+
+- **BL-867** — Added non-finite float validation at POST /effects/transition endpoint; NaN/Inf offset values now return HTTP 400 (PR #1064)
+- **BL-868** — Corrected J-716 UAT journey prose and fixed JOURNEY_ID constant mismatch (717→720) in `uat_journey_720.py` (PR #1065)
+- **BL-865/866** — SHA-pinned 3 mutable GitHub Actions refs in `nightly-acceptance.yml`; added NOSONAR S8541 annotation (PR #1066)
+
+---
+
 ## v138 — Correctness Hotfixes + Documentation Truth + CI Infrastructure (2026-08-31)
 
 3 themes, 6 features, PRs #1057–#1062.
