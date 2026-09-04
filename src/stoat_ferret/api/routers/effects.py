@@ -862,6 +862,14 @@ async def apply_transition(
                 "message": "offset must be a non-negative finite number",
             },
         )
+    if offset >= duration:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_EFFECT_PARAMS",
+                "message": "offset must be less than duration",
+            },
+        )
     # informational only; preview/render recompute from clip positions
     try:
         filter_string = str(XfadeBuilder(transition_type, duration, offset).build())
