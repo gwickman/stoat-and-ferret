@@ -241,3 +241,35 @@ uv run pytest tests/smoke/test_clip_workflow.py::test_smoke_split_clip \
               tests/smoke/test_clips_smoke.py::test_smoke_clip_timeline_propagation \
               -v --no-cov
 ```
+
+## A/V Duration Alignment Testing
+
+Use `assert_av_duration_alignment(path, max_delta_ms)` from `tests/render_oracle.py`
+to verify that audio and video durations match within a tolerance after a multi-clip render.
+
+**When to use**: Any multi-clip render that changes acrossfade parameters (e.g. `o=` value,
+transition duration, overlap model). Golden-argv byte-identity alone is insufficient for
+A/V alignment correctness — the v139 acrossfade `o=0` regression (BL-871, LRN-1083) proved
+this: the argv was byte-identical but audio outlasted video by 1s per transition.
+
+**Function signature**:
+
+```python
+async def assert_av_duration_alignment(path: Path, max_delta_ms: float = 100.0) -> None
+```
+
+**STOAT_TEST_FFMPEG=1 gate**: Always gate these tests with `STOAT_TEST_FFMPEG`:
+
+```python
+@pytest.mark.skipif(not os.environ.get("STOAT_TEST_FFMPEG"), reason="STOAT_TEST_FFMPEG not set")
+async def test_av_alignment(...):
+    await assert_av_duration_alignment(out_path, max_delta_ms=150)
+```
+
+**SKIP not FAIL**: The test must SKIP (not FAIL) when `STOAT_TEST_FFMPEG` is unset.
+
+**Tolerance**: Use `max_delta_ms=150` for the standard acrossfade case. The function's
+default is 100ms; 150ms accommodates the pre-existing ~31ms AAC encoder Windows artifact
+measured in v139 testing.
+
+**Motivating incident**: BL-871 (v140). See LRN-1083 for the full post-orch analysis.
