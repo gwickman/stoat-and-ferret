@@ -29,7 +29,12 @@ import pytest
 
 from stoat_ferret.db.clip_repository import AsyncSQLiteClipRepository
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import EffectDefinition, create_default_registry
+from stoat_ferret.effects.definitions import (
+    CONVOLUTION_REVERB,
+    VOLUME,
+    EffectDefinition,
+    create_default_registry,
+)
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.render_repository import AsyncSQLiteRenderRepository
@@ -1157,4 +1162,141 @@ async def test_crop_effect_filter_complex_smoke() -> None:
     filter_complex = cmd[fc_idx + 1]
     assert "crop=" in filter_complex, (
         f"Expected 'crop=' in filter_complex for crop effect; got: {filter_complex!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Smoke tests for CommandBuildError paths (BL-826, BL-873, BL-827 AC-6)
+# Run without STOAT_TEST_FFMPEG=1 — tests command building only, no FFmpeg.
+# ---------------------------------------------------------------------------
+
+_SMOKE_CBE_MC_PLAN = json.dumps(
+    {
+        "total_duration": 9.0,
+        "settings": {
+            "output_format": "mp4",
+            "codec": "libx264",
+            "fps": 30.0,
+            "width": 320,
+            "height": 240,
+            "quality_preset": "standard",
+        },
+    }
+)
+
+_SMOKE_CBE_SC_PLAN = json.dumps(
+    {
+        "total_duration": 5.0,
+        "settings": {
+            "output_format": "mp4",
+            "codec": "libx264",
+            "fps": 30.0,
+            "width": 320,
+            "height": 240,
+            "quality_preset": "standard",
+        },
+    }
+)
+
+
+async def _run_smoke_cbe(
+    clips: list,
+    vid_map: dict,
+    plan: str,
+    job_id: str,
+    effect_key: str,
+    effect_def: EffectDefinition,
+    *,
+    tts_inputs: list | None = None,
+    match: str | None = None,
+) -> None:
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: vid_map.get(vid_id))
+    reg = EffectRegistry()
+    reg.register(effect_key, effect_def)
+    job = _cmd_make_job(plan, job_id=job_id)
+    cm = (
+        pytest.raises(CommandBuildError, match=match) if match else pytest.raises(CommandBuildError)
+    )
+    with cm:
+        await build_command_for_job(
+            job, clip_repo, video_repo, tts_inputs=tts_inputs, effect_registry=reg
+        )
+
+
+async def test_smoke_mc_video_only_audio_effect_raises() -> None:
+    """Smoke: MC video-only clip A + audio effect raises CommandBuildError (BL-826)."""
+    clip_a = _cmd_make_clip(
+        "smk-826-a",
+        "smk-vid-826-a",
+        0,
+        effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+    )
+    clip_b = _cmd_make_clip("smk-826-b", "smk-vid-826-b", 300)
+    vid_a = _cmd_make_video("smk-vid-826-a", "/tmp/smk_826_a.mp4", audio_codec=None)
+    vid_b = _cmd_make_video("smk-vid-826-b", "/tmp/smk_826_b.mp4")
+    await _run_smoke_cbe(
+        [clip_a, clip_b],
+        {"smk-vid-826-a": vid_a, "smk-vid-826-b": vid_b},
+        _SMOKE_CBE_MC_PLAN,
+        "job-smk-826",
+        "volume",
+        VOLUME,
+    )
+
+
+async def test_smoke_sc_tts_video_only_audio_effect_raises() -> None:
+    """Smoke: SC TTS + video-only + audio effect raises CommandBuildError (BL-873)."""
+    clip = _cmd_make_clip(
+        "smk-873",
+        "smk-vid-873",
+        0,
+        effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+    )
+    vid = _cmd_make_video("smk-vid-873", "/tmp/smk_873.mp4", audio_codec=None)
+    tts_inputs = [
+        TtsCueAudioInput(
+            cue_id="smk-cue-873",
+            audio_path="/tmp/smk_873.wav",
+            track_id="track-1",
+            start_s=0.0,
+            weight=1.0,
+            volume_envelope=None,
+        )
+    ]
+    await _run_smoke_cbe(
+        [clip],
+        {"smk-vid-873": vid},
+        _SMOKE_CBE_SC_PLAN,
+        "job-smk-873",
+        "volume",
+        VOLUME,
+        tts_inputs=tts_inputs,
+    )
+
+
+async def test_smoke_convolution_reverb_raises() -> None:
+    """Smoke: convolution_reverb raises CommandBuildError at build time (BL-827 AC-6)."""
+    clip = _cmd_make_clip(
+        "smk-827",
+        "smk-vid-827",
+        0,
+        effects=[
+            {
+                "effect_type": "convolution_reverb",
+                "parameters": {"ir_name": "hall_small", "mix": 0.4},
+            }
+        ],
+    )
+    vid = _cmd_make_video("smk-vid-827", "/tmp/smk_827.mp4")
+    await _run_smoke_cbe(
+        [clip],
+        {"smk-vid-827": vid},
+        _SMOKE_CBE_SC_PLAN,
+        "job-smk-827",
+        "convolution_reverb",
+        CONVOLUTION_REVERB,
+        match="convolution_reverb requires IR WAV",
     )

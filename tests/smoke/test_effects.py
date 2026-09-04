@@ -336,6 +336,50 @@ async def _setup_project_with_clip(
     return project_id, clip_id
 
 
+async def _setup_two_clip_project(
+    client: httpx.AsyncClient,
+    videos_dir: Path,
+    project_name: str,
+) -> tuple[str, str, str]:
+    """Scan videos, create a project, and add two sequential clips (0–5s, 5–10s).
+
+    Returns (project_id, clip1_id, clip2_id).
+    """
+    await scan_videos_and_wait(client, videos_dir)
+    resp = await client.get("/api/v1/videos?limit=1")
+    video_id = resp.json()["videos"][0]["id"]
+    resp = await client.post("/api/v1/projects", json={"name": project_name})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 0,
+            "timeline_start": 0.0,
+            "timeline_end": 5.0,
+        },
+    )
+    assert resp.status_code == 201
+    clip1_id = resp.json()["id"]
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video_id,
+            "in_point": 0,
+            "out_point": 100,
+            "timeline_position": 100,
+            "timeline_start": 5.0,
+            "timeline_end": 10.0,
+        },
+    )
+    assert resp.status_code == 201
+    clip2_id = resp.json()["id"]
+    return project_id, clip1_id, clip2_id
+
+
 @pytest.mark.usefixtures("videos_dir")
 @pytest.mark.parametrize(
     ("effect_type", "parameters", "filter_keyword"),
@@ -934,51 +978,39 @@ async def test_smoke_transition_offset_out_of_range(
     videos_dir: Path,
 ) -> None:
     """POST /effects/transition with offset=-1.0 returns 400 INVALID_EFFECT_PARAMS (BL-867)."""
-    client = smoke_client
-    await scan_videos_and_wait(client, videos_dir)
-
-    resp = await client.get("/api/v1/videos?limit=1")
-    video_id = resp.json()["videos"][0]["id"]
-
-    resp = await client.post("/api/v1/projects", json={"name": "Transition Offset Smoke"})
-    assert resp.status_code == 201
-    project_id = resp.json()["id"]
-
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/clips",
-        json={
-            "source_video_id": video_id,
-            "in_point": 0,
-            "out_point": 100,
-            "timeline_position": 0,
-            "timeline_start": 0.0,
-            "timeline_end": 5.0,
-        },
+    project_id, clip1_id, clip2_id = await _setup_two_clip_project(
+        smoke_client, videos_dir, "Transition Offset Smoke"
     )
-    assert resp.status_code == 201
-    clip1_id = resp.json()["id"]
-
-    resp = await client.post(
-        f"/api/v1/projects/{project_id}/clips",
-        json={
-            "source_video_id": video_id,
-            "in_point": 0,
-            "out_point": 100,
-            "timeline_position": 100,
-            "timeline_start": 5.0,
-            "timeline_end": 10.0,
-        },
-    )
-    assert resp.status_code == 201
-    clip2_id = resp.json()["id"]
-
-    resp = await client.post(
+    resp = await smoke_client.post(
         f"/api/v1/projects/{project_id}/effects/transition",
         json={
             "source_clip_id": clip1_id,
             "target_clip_id": clip2_id,
             "transition_type": "fade",
             "parameters": {"duration": 1.0, "offset": -1.0},
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+
+
+@pytest.mark.usefixtures("videos_dir")
+async def test_smoke_transition_offset_exceeds_duration_returns_400(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """POST /effects/transition with offset >= duration returns 400 (BL-872)."""
+    project_id, clip1_id, clip2_id = await _setup_two_clip_project(
+        smoke_client, videos_dir, "Transition Offset Exceeds Duration"
+    )
+    # offset=1.0 == duration=1.0 → guard fires (offset >= duration)
+    resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip1_id,
+            "target_clip_id": clip2_id,
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0, "offset": 1.0},
         },
     )
     assert resp.status_code == 400
