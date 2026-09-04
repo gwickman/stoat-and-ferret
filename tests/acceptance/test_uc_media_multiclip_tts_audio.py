@@ -28,7 +28,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import VOLUME
+from stoat_ferret.effects.definitions import CONVOLUTION_REVERB, VOLUME
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import CommandBuildError, TtsCueAudioInput, build_command_for_job
@@ -503,6 +503,47 @@ async def test_sc_tts_video_only_audio_effect_raises(tmp_path: Path) -> None:
             _make_clip_repo(clip),
             _make_video_repo(vid),
             tts_inputs=tts_inputs,
+            effect_registry=reg,
+        )
+
+    assert not out_path.exists(), "Output file must not be produced before CommandBuildError"
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_convolution_reverb_fail_closed(tmp_path: Path) -> None:
+    """convolution_reverb raises CommandBuildError at build time (BL-827 AC-6 / FR-001-AC-3).
+
+    Applies convolution_reverb to a clip with audio and asserts that a structured
+    CommandBuildError is raised before any output file is produced. The IR WAV is
+    not wired as a second -i input in the current render path, so the guard prevents
+    a guaranteed FFmpeg runtime crash.
+    """
+    clip_path = _make_audio_video_fixture(tmp_path / "clip.mp4", duration=5, freq_hz=440)
+    out_path = tmp_path / "output.mp4"
+
+    vid = _make_video("vid-reverb", str(clip_path))
+    clip = _make_clip(
+        "clip-reverb",
+        "vid-reverb",
+        _PROJECT_ID_SC,
+        effects=[
+            {
+                "effect_type": "convolution_reverb",
+                "parameters": {"ir_name": "hall_small", "mix": 0.4},
+            }
+        ],
+    )
+
+    job = _make_render_job(_PROJECT_ID_SC, str(out_path), total_duration=5.0)
+    reg = EffectRegistry()
+    reg.register("convolution_reverb", CONVOLUTION_REVERB)
+
+    with pytest.raises(CommandBuildError, match="convolution_reverb requires IR WAV"):
+        await build_command_for_job(
+            job,
+            _make_clip_repo(clip),
+            _make_video_repo(vid),
             effect_registry=reg,
         )
 

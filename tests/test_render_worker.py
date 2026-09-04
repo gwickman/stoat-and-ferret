@@ -26,7 +26,7 @@ import pytest
 from stoat_ferret.api.schemas.render import SoftSubtitleSpec
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import CROP_EFFECT, TIME_STRETCH, VOLUME
+from stoat_ferret.effects.definitions import CONVOLUTION_REVERB, CROP_EFFECT, TIME_STRETCH, VOLUME
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import (
@@ -2206,6 +2206,35 @@ class TestGoldenArgv:
                 job,
                 _g_clip_repo(clip_a, clip_b),
                 _g_video_repo(vid_a, vid_b),
+                effect_registry=reg,
+            )
+
+    @pytest.mark.asyncio
+    async def test_golden_sc_convolution_reverb(self) -> None:
+        """convolution_reverb raises CommandBuildError at build time (BL-827 AC-6).
+
+        The IR WAV is never wired as a second -i input in the current render path;
+        fail-close prevents the guaranteed FFmpeg runtime crash.
+        """
+        vid = _g_make_video("vid-reverb", _G_VIDEO_PATH_1, audio_codec="aac")
+        clip = _g_make_clip(
+            "clip-sc-reverb",
+            "vid-reverb",
+            effects=[
+                {
+                    "effect_type": "convolution_reverb",
+                    "parameters": {"ir_name": "hall_small", "mix": 0.4},
+                }
+            ],
+        )
+        reg = EffectRegistry()
+        reg.register("convolution_reverb", CONVOLUTION_REVERB)
+
+        with pytest.raises(CommandBuildError, match="convolution_reverb requires IR WAV"):
+            await build_command_for_job(
+                _g_make_job(_g_make_plan()),
+                _g_clip_repo(clip),
+                _g_video_repo(vid),
                 effect_registry=reg,
             )
 

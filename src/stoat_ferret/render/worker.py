@@ -404,6 +404,10 @@ def _build_clip_render_effects(
     if effect_registry and clip.effects:
         for effect_data in clip.effects:
             effect_type = effect_data.get("effect_type", "")
+            if effect_type == "convolution_reverb":
+                raise CommandBuildError(
+                    "convolution_reverb requires IR WAV -i input; not yet supported"
+                )
             defn = effect_registry.get(effect_type)
             if defn is None:
                 raise CommandBuildError(f"Unknown effect type {effect_type!r} on clip {clip.id!r}")
