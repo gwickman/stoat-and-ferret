@@ -1807,6 +1807,80 @@ async def test_transition_offset_nonfinite_returns_400(
     assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
 
 
+@pytest.mark.api
+async def test_transition_offset_exceeds_duration_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with offset > duration returns 400 (BL-872)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0, "offset": 2.0},
+        },
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+
+
+@pytest.mark.api
+async def test_transition_offset_at_boundary_valid(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with offset = duration - 0.001 returns 201 (BL-872-AC-2)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0, "offset": 0.999},
+        },
+    )
+    assert response.status_code == 201
+
+
+@pytest.mark.api
+async def test_transition_offset_zero_valid(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """POST /effects/transition with offset = 0.0 returns 201 (BL-872-AC-3 regression guard)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 1.0, "offset": 0.0},
+        },
+    )
+    assert response.status_code == 201
+
+
 # ---- Transition storage tests ----
 
 
