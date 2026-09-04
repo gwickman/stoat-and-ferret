@@ -119,7 +119,7 @@ def test_dimension_c_doc_truth_matches_module_map() -> None:
 
 
 def test_journey_id_matches_filename() -> None:
-    """(d) Every scripts/uat_journey_N.py has JOURNEY_ID == N."""
+    """(d) Every scripts/uat_journey_N.py has JOURNEY_ID == N and run() docstring matches."""
     import re
     from pathlib import Path
 
@@ -134,3 +134,14 @@ def test_journey_id_matches_filename() -> None:
         assert int(id_match.group(1)) == expected_id, (
             f"{path.name}: JOURNEY_ID={id_match.group(1)} but filename says {expected_id}"
         )
+        # AC-4 (BL-874): run() docstring must also reference the correct journey number
+        run_doc_match = re.search(
+            r"def run\(\)[^:]*:\s*\"\"\"[^\n]*journey\s+(\d+)",
+            content,
+            re.IGNORECASE,
+        )
+        if run_doc_match is not None:
+            assert int(run_doc_match.group(1)) == expected_id, (
+                f"{path.name}: run() docstring references journey "
+                f"{run_doc_match.group(1)} but filename says {expected_id}"
+            )
