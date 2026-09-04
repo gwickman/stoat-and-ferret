@@ -35,7 +35,7 @@ JOURNEY_TIMEOUT: int = 300  # seconds
 
 
 def run() -> int:
-    """Execute journey 717: version restore round-trip.
+    """Execute journey 720: version restore round-trip.
 
     Steps:
     1. Navigate to the Projects page and open the first project.
