@@ -989,6 +989,10 @@ def _assemble_sc_filter_translator(
                 ]
             )
         else:
+            if audio_filter_chains_sc:
+                raise CommandBuildError(
+                    f"Clip {first_clip.id!r} has audio effects but no audio stream"
+                )
             cmd.extend(
                 [
                     "-filter_complex",

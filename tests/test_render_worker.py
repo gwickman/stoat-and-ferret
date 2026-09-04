@@ -2145,6 +2145,42 @@ class TestGoldenArgv:
         assert "no audio stream" in str(exc_info.value)
 
     @pytest.mark.asyncio
+    async def test_golden_sc_tts_video_only_audio_effect_raises(self) -> None:
+        """Single-clip TTS + video-only + audio effect raises CommandBuildError (BL-873 AC-2).
+
+        Verifies the TTS branch of _assemble_sc_filter_translator fails closed when
+        source_audio_codec is None and audio_filter_chains_sc is non-empty, matching the
+        non-TTS guard at worker.py:~1003 (BL-824 pattern).
+        """
+        vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)  # audio_codec=None (video-only)
+        clip = _g_make_clip(
+            "clip-sc-tts-no-audio",
+            "vid-1",
+            effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+        )
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-tts-1",
+                audio_path="/renders/tts-001.wav",
+                track_id="track-1",
+                start_s=0.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+        reg = EffectRegistry()
+        reg.register("volume", VOLUME)
+
+        with pytest.raises(CommandBuildError, match="has audio effects but no audio stream"):
+            await build_command_for_job(
+                _g_make_job(_g_make_plan()),
+                _g_clip_repo(clip),
+                _g_video_repo(vid),
+                tts_inputs=tts_inputs,
+                effect_registry=reg,
+            )
+
+    @pytest.mark.asyncio
     async def test_golden_mc_audio_effect_on_video_only_raises(self) -> None:
         """Multi-clip: audio effect on video-only clip A raises CommandBuildError (BL-826 AC-2).
 
