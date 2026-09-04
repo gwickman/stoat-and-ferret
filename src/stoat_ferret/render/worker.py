@@ -676,6 +676,11 @@ def _build_audio_acrossfade_chain(
         return None
     audio_set = set(audio_input_indices_mc)
     filters: list[list[str]] = per_clip_audio_filters or [[] for _ in range(all_input_count)]
+    for i in range(all_input_count):
+        if i not in audio_set and filters[i]:
+            raise CommandBuildError(
+                f"clip at index {i} has audio effects but no audio stream (video-only clip)"
+            )
     parts: list[str] = []
     labels = [
         _build_audio_input_label(i, audio_set, filters, clip_durations_mc, parts)
@@ -686,7 +691,7 @@ def _build_audio_acrossfade_chain(
         t = _get_transition_duration(cwe_list, k, clip_transition_durations)
         d_str = str(int(t)) if t == int(t) else str(t)
         intermediate = f"[xa{k - 1}]" if k < all_input_count - 1 else _LABEL_AOUT
-        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}:o=0{intermediate}")
+        parts.append(f"{current}{labels[k]}acrossfade=d={d_str}{intermediate}")
         current = intermediate
     return ";".join(parts)
 
