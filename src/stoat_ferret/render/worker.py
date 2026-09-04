@@ -538,7 +538,6 @@ async def _build_clip_input_list(
     list[Any],
     list[float],
     str | None,
-    int,
     list[float],
     list[int],
     list[float | None],
@@ -568,7 +567,6 @@ async def _build_clip_input_list(
     clip_transition_durations: list[float | None] = []
     per_clip_audio_filters: list[list[str]] = []
     source_audio_codec_mc: str | None = None
-    source_audio_input_idx_mc: int = 0
     in_point_secs_list: list[float] = []
     audio_input_indices_mc: list[int] = []
 
@@ -582,7 +580,6 @@ async def _build_clip_input_list(
         if clip.clip_type == "file":
             if source_audio_codec_mc is None and clip_audio_codec:
                 source_audio_codec_mc = clip_audio_codec
-                source_audio_input_idx_mc = i
             if clip_audio_codec is not None:
                 audio_input_indices_mc.append(i)
         if duration_secs <= 0:
@@ -607,7 +604,6 @@ async def _build_clip_input_list(
         cwe_list,
         clip_durations_mc,
         source_audio_codec_mc,
-        source_audio_input_idx_mc,
         in_point_secs_list,
         audio_input_indices_mc,
         clip_transition_durations,
@@ -702,7 +698,6 @@ def _assemble_multi_tts_filter(
     tts_base: int,
     filter_complex_str: str,
     source_audio_codec_mc: str | None,
-    source_audio_input_idx_mc: int,
     audio_input_indices_mc: list[int],
     clip_durations_mc: list[float],
     cwe_list: list[Any],
@@ -839,7 +834,6 @@ async def _build_multi_clip_command(
         cwe_list,
         clip_durations_mc,
         source_audio_codec_mc,
-        source_audio_input_idx_mc,
         in_point_secs_list,
         audio_input_indices_mc,
         clip_transition_durations,
@@ -869,7 +863,6 @@ async def _build_multi_clip_command(
         tts_base,
         filter_complex_str,
         source_audio_codec_mc,
-        source_audio_input_idx_mc,
         audio_input_indices_mc,
         clip_durations_mc,
         cwe_list,
