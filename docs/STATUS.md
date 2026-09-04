@@ -1,5 +1,37 @@
 # STATUS.md
 
+## v140 — Audio Render Correctness + Effect Command Hardening
+
+**Delivered:** 2026-09-04
+**PRs:** #1067–#1076 (10 PRs)
+**Features:** 9 across 3 themes
+
+### Highlights
+
+- **Theme 1 — render-worker-audio-correctness:** Fixed BL-871 A/V desync by dropping `:o=0` from `acrossfade`, restoring FFmpeg's default 1-sample overlap and eliminating the 1s-per-transition audio tail on multi-clip renders; added MC video-only fail-close guard (BL-826) — PR #1067; fail-closed single-clip TTS audio-effect on video-only clips (BL-873) with acceptance test — PRs #1068, #1069; removed dead `source_audio_input_idx_mc` thread-index field end-to-end (BL-870) — PR #1070
+- **Theme 2 — effect-command-hardening:** Fail-closed `convolution_reverb` at build time via `CommandBuildError` (BL-827 AC-6) — PR #1071; added worker-layer guard that fails closed on oversized transition duration (BL-862) — PR #1072; rejected positive out-of-range transition offset at the API layer with HTTP 400 (BL-872) — PR #1073
+- **Theme 3 — quality-and-docs:** Added `CommandBuildError` + offset-boundary smoke tests covering BL-826/827/872/873 — PR #1074; added `assert_av_duration_alignment` guide section to the smoke-test harness doc — PR #1075; corrected `uat_journey_720.py` `run()` docstring and `uat-testing.md` endpoint reference (BL-874) — PR #1076
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| render-worker-audio-correctness | BL-871, BL-826, BL-873, BL-870 | #1067–#1070 | merged |
+| effect-command-hardening | BL-827, BL-862, BL-872 | #1071–#1073 | merged |
+| quality-and-docs | BL-826, BL-827, BL-872, BL-873, BL-874 | #1074–#1076 | merged |
+
+### AC Status
+
+- 3 themes, 9 features; all features complete and merged to main
+- 37 source ACs across 8 BL items; all covered at feature level
+- BL-827: AC-6 fail-close delivered; full convolution reverb IR wiring deferred to a future version
+
+### User Actions Required
+
+None required. v140 is complete.
+
+---
+
 ## v139 — TTS Audio Render Correctness + API/CI Hardening
 
 **Delivered:** 2026-09-03
