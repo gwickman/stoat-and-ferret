@@ -4,6 +4,31 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v140 — 2026-09-04
+
+3 themes, 9 features, PRs #1067–#1076. Test results: 3943 passed, 190 skipped, 0 failed (ZERO regression).
+
+### Theme 1: render-worker-audio-correctness
+
+- **BL-871** — Fixed A/V desync on multi-clip renders by dropping `:o=0` from acrossfade, restoring FFmpeg's default 1-sample overlap and eliminating 1s-per-transition audio tail (PR #1067)
+- **BL-826** — Added MC video-only fail-close guard in render worker (PR #1067)
+- **BL-873** — Fail-closed single-clip TTS audio-effect on video-only clips with acceptance test (PRs #1068, #1069)
+- **BL-870** — Removed dead `source_audio_input_idx_mc` thread-index field end-to-end (PR #1070)
+
+### Theme 2: effect-command-hardening
+
+- **BL-827-AC6** — Fail-closed `convolution_reverb` at build time via `CommandBuildError` (PR #1071)
+- **BL-862** — Added worker-layer guard that fails closed on oversized transition duration (PR #1072)
+- **BL-872** — Rejected positive out-of-range transition offset at API layer with HTTP 400 (PR #1073)
+
+### Theme 3: quality-and-docs
+
+- **BL-826/827/872/873** — Added `CommandBuildError` + offset-boundary smoke tests (PR #1074)
+- **Harness guide** — Added `assert_av_duration_alignment` guide section to smoke-test harness doc (PR #1075)
+- **BL-874** — Corrected `uat_journey_720.py` `run()` docstring and `uat-testing.md` endpoint reference (PR #1076)
+
+---
+
 ## v139 — 2026-09-03
 
 ### Theme 1: TTS Audio Render Correctness
