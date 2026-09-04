@@ -1205,7 +1205,7 @@ async def _run_smoke_cbe(
     plan: str,
     job_id: str,
     effect_key: str,
-    effect_def: "EffectDefinition",
+    effect_def: EffectDefinition,
     *,
     tts_inputs: list | None = None,
     match: str | None = None,
@@ -1218,9 +1218,7 @@ async def _run_smoke_cbe(
     reg.register(effect_key, effect_def)
     job = _cmd_make_job(plan, job_id=job_id)
     cm = (
-        pytest.raises(CommandBuildError, match=match)
-        if match
-        else pytest.raises(CommandBuildError)
+        pytest.raises(CommandBuildError, match=match) if match else pytest.raises(CommandBuildError)
     )
     with cm:
         await build_command_for_job(
