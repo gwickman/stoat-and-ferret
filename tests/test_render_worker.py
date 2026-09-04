@@ -2239,6 +2239,27 @@ class TestGoldenArgv:
             )
 
     @pytest.mark.asyncio
+    async def test_golden_mc_oversized_transition_raises(self) -> None:
+        """Multi-clip: oversized transition duration raises CommandBuildError (BL-862 AC-4).
+
+        Clip A has 30s duration (out_point=900 at 30fps); transition duration is 30.0s
+        (== clip duration). Guard fires in _build_clip_input_list, preventing a negative
+        xfade offset from reaching RenderGraphTranslator.
+        """
+        vid1 = _g_make_video("vid-1", _G_VIDEO_PATH_1)
+        vid2 = _g_make_video("vid-2", _G_VIDEO_PATH_2)
+        clip_a = _g_make_clip("clip-ot-a", "vid-1")  # out_point=900, in_point=0 -> 30.0s
+        clip_b = _g_make_clip("clip-ot-b", "vid-2")
+        transitions = [{"clip_a_id": "clip-ot-a", "transition_type": "fade", "duration": 30.0}]
+
+        with pytest.raises(CommandBuildError, match="transition duration"):
+            await build_command_for_job(
+                _g_make_job(_g_make_plan(transitions=transitions)),
+                _g_clip_repo(clip_a, clip_b),
+                _g_video_repo(vid1, vid2),
+            )
+
+    @pytest.mark.asyncio
     async def test_golden_sc_crop(self) -> None:
         """Single file clip with crop effect -> crop=640:360:100:50 in filter_complex (BL-830 AC-1)."""  # noqa: E501
         vid = _g_make_video("vid-1", _G_VIDEO_PATH_1)
