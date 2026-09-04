@@ -594,6 +594,11 @@ async def _build_clip_input_list(
         per_clip_audio_filters.append(audio_filter_chains)
         outgoing, transition_dur = _resolve_clip_outgoing_transition(clip.id, transition_lookup)
         clip_transition_durations.append(transition_dur)
+        if transition_dur is not None and transition_dur >= duration_secs:
+            raise CommandBuildError(
+                f"Clip {clip.id} outgoing transition duration {transition_dur}s "
+                f">= clip duration {duration_secs}s"
+            )
         cwe_list.append(
             ClipWithEffects(
                 input_index=i,

@@ -548,3 +548,65 @@ async def test_convolution_reverb_fail_closed(tmp_path: Path) -> None:
         )
 
     assert not out_path.exists(), "Output file must not be produced before CommandBuildError"
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_mc_oversized_transition_raises(tmp_path: Path) -> None:
+    """Multi-clip: oversized transition duration raises CommandBuildError (BL-862 AC-2).
+
+    Clip A is a 5-second clip; the transition duration is 5.0s (== clip duration).
+    Guard fires in _build_clip_input_list before RenderTransition is constructed,
+    preventing a negative xfade offset from reaching FFmpeg.
+    """
+    clip_a_path = _make_audio_video_fixture(tmp_path / "clip_a.mp4", duration=5, freq_hz=440)
+    clip_b_path = _make_audio_video_fixture(tmp_path / "clip_b.mp4", duration=5, freq_hz=880)
+    out_path = tmp_path / "output.mp4"
+
+    # duration_frames=150, frame_rate=30 -> 5.0s; transition_dur=5.0 >= 5.0 -> guard fires
+    vid_a = _make_video("vid-ot-a", str(clip_a_path), duration_frames=150)
+    vid_b = _make_video("vid-ot-b", str(clip_b_path), duration_frames=150)
+    clip_a = _make_clip("clip-ot-a", "vid-ot-a", "proj-ot-001", out_point=150)
+    clip_b = _make_clip("clip-ot-b", "vid-ot-b", "proj-ot-001", out_point=150)
+
+    plan = json.dumps(
+        {
+            "total_duration": 5.0,
+            "settings": {
+                "output_format": "mp4",
+                "codec": "libx264",
+                "fps": 30.0,
+                "width": 320,
+                "height": 240,
+                "quality_preset": "standard",
+                "transitions": [
+                    {"clip_a_id": "clip-ot-a", "transition_type": "fade", "duration": 5.0}
+                ],
+            },
+        }
+    )
+    now = datetime.now(timezone.utc)
+    job = RenderJob(
+        id="job-ot-001",
+        project_id="proj-ot-001",
+        status=RenderStatus.RUNNING,
+        output_path=str(out_path),
+        output_format=OutputFormat.MP4,
+        quality_preset=QualityPreset.STANDARD,
+        render_plan=plan,
+        progress=0.0,
+        error_message=None,
+        retry_count=0,
+        created_at=now,
+        updated_at=now,
+        completed_at=None,
+    )
+
+    with pytest.raises(CommandBuildError, match="transition duration"):
+        await build_command_for_job(
+            job,
+            _make_clip_repo(clip_a, clip_b),
+            _make_video_repo(vid_a, vid_b),
+        )
+
+    assert not out_path.exists(), "Output file must not be produced before CommandBuildError"
