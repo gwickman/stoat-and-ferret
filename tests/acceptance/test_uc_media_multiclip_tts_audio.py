@@ -461,3 +461,49 @@ async def test_mc_video_only_audio_effect_raises(tmp_path: Path) -> None:
         )
 
     assert not out_path.exists(), "Output file must not be produced before CommandBuildError"
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_sc_tts_video_only_audio_effect_raises(tmp_path: Path) -> None:
+    """Single-clip TTS + video-only + audio effect raises CommandBuildError (BL-873 AC-4).
+
+    Clip is video-only (audio_codec=None) with a volume audio effect and a TTS input.
+    Asserts CommandBuildError is raised before any output file is produced — consistent
+    with the BL-824 non-TTS single-clip guard.
+    """
+    clip_path = _make_audio_video_fixture(tmp_path / "clip.mp4", duration=5, freq_hz=440)
+    tts_path = _make_tts_wav_fixture(tmp_path / "tts.wav", duration=1.0)
+    out_path = tmp_path / "output.mp4"
+
+    vid = _make_video("vid-sc-tts-vo", str(clip_path), audio_codec=None)
+    clip = _make_clip(
+        "clip-sc-tts-vo",
+        "vid-sc-tts-vo",
+        _PROJECT_ID_SC,
+        effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+    )
+    tts_inputs = [
+        TtsCueAudioInput(
+            cue_id="cue-sc-tts-vo",
+            audio_path=str(tts_path),
+            track_id="track-1",
+            start_s=0.0,
+            weight=1.0,
+            volume_envelope=None,
+        )
+    ]
+    job = _make_render_job(_PROJECT_ID_SC, str(out_path), total_duration=5.0)
+    reg = EffectRegistry()
+    reg.register("volume", VOLUME)
+
+    with pytest.raises(CommandBuildError, match="has audio effects but no audio stream"):
+        await build_command_for_job(
+            job,
+            _make_clip_repo(clip),
+            _make_video_repo(vid),
+            tts_inputs=tts_inputs,
+            effect_registry=reg,
+        )
+
+    assert not out_path.exists(), "Output file must not be produced before CommandBuildError"
