@@ -1199,13 +1199,37 @@ _SMOKE_CBE_SC_PLAN = json.dumps(
 )
 
 
-async def test_smoke_mc_video_only_audio_effect_raises() -> None:
-    """Smoke: MC video-only clip A + audio effect raises CommandBuildError (BL-826).
+async def _run_smoke_cbe(
+    clips: list,
+    vid_map: dict,
+    plan: str,
+    job_id: str,
+    effect_key: str,
+    effect_def: "EffectDefinition",
+    *,
+    tts_inputs: list | None = None,
+    match: str | None = None,
+) -> None:
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=clips)
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(side_effect=lambda vid_id: vid_map.get(vid_id))
+    reg = EffectRegistry()
+    reg.register(effect_key, effect_def)
+    job = _cmd_make_job(plan, job_id=job_id)
+    cm = (
+        pytest.raises(CommandBuildError, match=match)
+        if match
+        else pytest.raises(CommandBuildError)
+    )
+    with cm:
+        await build_command_for_job(
+            job, clip_repo, video_repo, tts_inputs=tts_inputs, effect_registry=reg
+        )
 
-    No FFmpeg execution — verifies the command builder guard fires before output.
-    Non-gated complement to test_mc_video_only_audio_effect_raises in the
-    acceptance suite (tests/acceptance/test_uc_media_multiclip_tts_audio.py).
-    """
+
+async def test_smoke_mc_video_only_audio_effect_raises() -> None:
+    """Smoke: MC video-only clip A + audio effect raises CommandBuildError (BL-826)."""
     clip_a = _cmd_make_clip(
         "smk-826-a",
         "smk-vid-826-a",
@@ -1215,28 +1239,18 @@ async def test_smoke_mc_video_only_audio_effect_raises() -> None:
     clip_b = _cmd_make_clip("smk-826-b", "smk-vid-826-b", 300)
     vid_a = _cmd_make_video("smk-vid-826-a", "/tmp/smk_826_a.mp4", audio_codec=None)
     vid_b = _cmd_make_video("smk-vid-826-b", "/tmp/smk_826_b.mp4")
-
-    clip_repo = AsyncMock()
-    clip_repo.list_by_project = AsyncMock(return_value=[clip_a, clip_b])
-    vid_map = {"smk-vid-826-a": vid_a, "smk-vid-826-b": vid_b}
-    video_repo = AsyncMock()
-    video_repo.get = AsyncMock(side_effect=lambda vid_id: vid_map.get(vid_id))
-
-    reg = EffectRegistry()
-    reg.register("volume", VOLUME)
-    job = _cmd_make_job(_SMOKE_CBE_MC_PLAN, job_id="job-smk-826")
-
-    with pytest.raises(CommandBuildError):
-        await build_command_for_job(job, clip_repo, video_repo, effect_registry=reg)
+    await _run_smoke_cbe(
+        [clip_a, clip_b],
+        {"smk-vid-826-a": vid_a, "smk-vid-826-b": vid_b},
+        _SMOKE_CBE_MC_PLAN,
+        "job-smk-826",
+        "volume",
+        VOLUME,
+    )
 
 
 async def test_smoke_sc_tts_video_only_audio_effect_raises() -> None:
-    """Smoke: SC TTS + video-only + audio effect raises CommandBuildError (BL-873).
-
-    No FFmpeg execution — verifies the guard fires before output.
-    Non-gated complement to test_sc_tts_video_only_audio_effect_raises in the
-    acceptance suite (tests/acceptance/test_uc_media_multiclip_tts_audio.py).
-    """
+    """Smoke: SC TTS + video-only + audio effect raises CommandBuildError (BL-873)."""
     clip = _cmd_make_clip(
         "smk-873",
         "smk-vid-873",
@@ -1244,11 +1258,6 @@ async def test_smoke_sc_tts_video_only_audio_effect_raises() -> None:
         effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
     )
     vid = _cmd_make_video("smk-vid-873", "/tmp/smk_873.mp4", audio_codec=None)
-    clip_repo = AsyncMock()
-    clip_repo.list_by_project = AsyncMock(return_value=[clip])
-    video_repo = AsyncMock()
-    video_repo.get = AsyncMock(return_value=vid)
-
     tts_inputs = [
         TtsCueAudioInput(
             cue_id="smk-cue-873",
@@ -1259,23 +1268,19 @@ async def test_smoke_sc_tts_video_only_audio_effect_raises() -> None:
             volume_envelope=None,
         )
     ]
-    reg = EffectRegistry()
-    reg.register("volume", VOLUME)
-    job = _cmd_make_job(_SMOKE_CBE_SC_PLAN, job_id="job-smk-873")
-
-    with pytest.raises(CommandBuildError):
-        await build_command_for_job(
-            job, clip_repo, video_repo, tts_inputs=tts_inputs, effect_registry=reg
-        )
+    await _run_smoke_cbe(
+        [clip],
+        {"smk-vid-873": vid},
+        _SMOKE_CBE_SC_PLAN,
+        "job-smk-873",
+        "volume",
+        VOLUME,
+        tts_inputs=tts_inputs,
+    )
 
 
 async def test_smoke_convolution_reverb_raises() -> None:
-    """Smoke: convolution_reverb raises CommandBuildError at build time (BL-827 AC-6).
-
-    No FFmpeg execution — verifies the fail-closed guard fires before output.
-    Non-gated complement to test_convolution_reverb_fail_closed in the
-    acceptance suite (tests/acceptance/test_uc_media_multiclip_tts_audio.py).
-    """
+    """Smoke: convolution_reverb raises CommandBuildError at build time (BL-827 AC-6)."""
     clip = _cmd_make_clip(
         "smk-827",
         "smk-vid-827",
@@ -1288,14 +1293,12 @@ async def test_smoke_convolution_reverb_raises() -> None:
         ],
     )
     vid = _cmd_make_video("smk-vid-827", "/tmp/smk_827.mp4")
-    clip_repo = AsyncMock()
-    clip_repo.list_by_project = AsyncMock(return_value=[clip])
-    video_repo = AsyncMock()
-    video_repo.get = AsyncMock(return_value=vid)
-
-    reg = EffectRegistry()
-    reg.register("convolution_reverb", CONVOLUTION_REVERB)
-    job = _cmd_make_job(_SMOKE_CBE_SC_PLAN, job_id="job-smk-827")
-
-    with pytest.raises(CommandBuildError, match="convolution_reverb requires IR WAV"):
-        await build_command_for_job(job, clip_repo, video_repo, effect_registry=reg)
+    await _run_smoke_cbe(
+        [clip],
+        {"smk-vid-827": vid},
+        _SMOKE_CBE_SC_PLAN,
+        "job-smk-827",
+        "convolution_reverb",
+        CONVOLUTION_REVERB,
+        match="convolution_reverb requires IR WAV",
+    )
