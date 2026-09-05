@@ -149,7 +149,9 @@ async def run(page: Page, base_url: str) -> None:
     """Entry point for uat_runner dispatch (module.run(page, base_url))."""
     parsed = urlparse(base_url)
     api_base = f"{parsed.scheme}://{parsed.netloc}"
-    await run_journey(api_base, ffmpeg_available=bool(STOAT_TEST_FFMPEG))
+    result = await run_journey(api_base, ffmpeg_available=bool(STOAT_TEST_FFMPEG))
+    if result.get("status") not in ("success", "skip", "scaffold"):
+        raise AssertionError(f"Journey failed: {result}")
     await page.goto(base_url + "render")
     await page.wait_for_load_state("networkidle")
     await expect(page.locator("[data-testid='render-page']")).to_be_visible()
