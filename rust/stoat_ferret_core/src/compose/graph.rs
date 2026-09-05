@@ -294,6 +294,11 @@ fn build_xfade_graph(clips: &[CompositionClip], transitions: &[TransitionSpec]) 
     // Track accumulated output duration for xfade offset calculation
     let mut accumulated_duration = adjusted[0].duration();
 
+    // Number of pairs actually processed: limited by transitions available.
+    // The last processed pair always emits [outv]/[outa] regardless of whether
+    // the loop exits early due to a transition shortage (partial-transition topology).
+    let n_pairs = transitions.len().min(clips.len() - 1);
+
     for i in 0..clips.len() - 1 {
         // No transition available for this pair — stop chaining
         if i >= transitions.len() {
@@ -319,7 +324,7 @@ fn build_xfade_graph(clips: &[CompositionClip], transitions: &[TransitionSpec]) 
         } else {
             format!("xv{}", i - 1)
         };
-        let video_out = if i == clips.len() - 2 {
+        let video_out = if i == n_pairs - 1 {
             "outv".to_string()
         } else {
             format!("xv{i}")
@@ -344,7 +349,7 @@ fn build_xfade_graph(clips: &[CompositionClip], transitions: &[TransitionSpec]) 
         } else {
             format!("xa{}", i - 1)
         };
-        let audio_out = if i == clips.len() - 2 {
+        let audio_out = if i == n_pairs - 1 {
             "outa".to_string()
         } else {
             format!("xa{i}")
@@ -661,6 +666,33 @@ mod tests {
         assert!(s.contains("a=1"), "Should have 1 audio stream: {s}");
         assert!(s.contains("[outv]"), "Should output video: {s}");
         assert!(s.contains("[outa]"), "Should output audio: {s}");
+    }
+
+    // -- Partial-transition topology (BL-843) --
+
+    #[test]
+    fn three_clips_one_transition_emits_outv_outa() {
+        // 3 clips, 1 transition: loop breaks early at i=1; the last
+        // completed pair (i=0) must emit [outv]/[outa], not [xv0]/[xa0].
+        let clips = vec![
+            make_clip(0, 0.0, 3.0),
+            make_clip(1, 2.0, 5.0),
+            make_clip(2, 5.0, 8.0),
+        ];
+        let transitions = vec![make_transition(1.0)];
+        let graph =
+            build_composition_graph(&clips, &transitions, None, None, 320, 240, None).unwrap();
+        let s = graph.to_string();
+        assert!(s.contains("[outv]"), "Must contain [outv]: {s}");
+        assert!(s.contains("[outa]"), "Must contain [outa]: {s}");
+        assert!(
+            !s.contains("[xv0]"),
+            "Must not contain intermediate [xv0]: {s}"
+        );
+        assert!(
+            !s.contains("[xa0]"),
+            "Must not contain intermediate [xa0]: {s}"
+        );
     }
 
     // -- Two clips with transition (xfade + acrossfade) --
