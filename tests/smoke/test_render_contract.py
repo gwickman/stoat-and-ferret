@@ -1307,3 +1307,58 @@ async def test_smoke_convolution_reverb_ir_wiring() -> None:
     assert "[0:a][1:a]afir=" in cmd[fc_idx + 1], (
         f"Expected two-pad afir in filter_complex: {cmd[fc_idx + 1]!r}"
     )
+
+
+async def test_smoke_mc_all_video_only_audio_effect_non_tts_raises() -> None:
+    """Smoke: MC all-video-only clips with audio effect raises CommandBuildError (BL-879)."""
+    clip_a = _cmd_make_clip(
+        "smk-879-a",
+        "smk-vid-879-a",
+        0,
+        effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+    )
+    clip_b = _cmd_make_clip("smk-879-b", "smk-vid-879-b", 300)
+    vid_a = _cmd_make_video("smk-vid-879-a", "/tmp/smk_879_a.mp4", audio_codec=None)
+    vid_b = _cmd_make_video("smk-vid-879-b", "/tmp/smk_879_b.mp4", audio_codec=None)
+    await _run_smoke_cbe(
+        [clip_a, clip_b],
+        {"smk-vid-879-a": vid_a, "smk-vid-879-b": vid_b},
+        _SMOKE_CBE_MC_PLAN,
+        "job-smk-879-nontts",
+        "volume",
+        VOLUME,
+        match="ALL_VIDEO_NO_AUDIO",
+    )
+
+
+async def test_smoke_mc_all_video_only_audio_effect_tts_raises() -> None:
+    """Smoke: MC all-video-only + TTS + audio effect raises CommandBuildError (BL-879)."""
+    clip_a = _cmd_make_clip(
+        "smk-879-tts-a",
+        "smk-vid-879-tts-a",
+        0,
+        effects=[{"effect_type": "volume", "parameters": {"volume": 1.5}}],
+    )
+    clip_b = _cmd_make_clip("smk-879-tts-b", "smk-vid-879-tts-b", 300)
+    vid_a = _cmd_make_video("smk-vid-879-tts-a", "/tmp/smk_879_tts_a.mp4", audio_codec=None)
+    vid_b = _cmd_make_video("smk-vid-879-tts-b", "/tmp/smk_879_tts_b.mp4", audio_codec=None)
+    tts_inputs = [
+        TtsCueAudioInput(
+            cue_id="smk-cue-879",
+            audio_path="/tmp/smk_879.wav",
+            track_id="track-1",
+            start_s=0.0,
+            weight=1.0,
+            volume_envelope=None,
+        )
+    ]
+    await _run_smoke_cbe(
+        [clip_a, clip_b],
+        {"smk-vid-879-tts-a": vid_a, "smk-vid-879-tts-b": vid_b},
+        _SMOKE_CBE_MC_PLAN,
+        "job-smk-879-tts",
+        "volume",
+        VOLUME,
+        tts_inputs=tts_inputs,
+        match="ALL_VIDEO_NO_AUDIO",
+    )
