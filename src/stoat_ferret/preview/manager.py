@@ -290,6 +290,7 @@ class PreviewManager:
         filter_complex_str: str | None = None,
         in_point_secs: list[float] | None = None,
         output_fps: float | None = None,
+        clip_types: list[str] | None = None,
         duration_us: int | None = None,
         quality_level: PreviewQuality = PreviewQuality.MEDIUM,
     ) -> PreviewSession:
@@ -307,6 +308,7 @@ class PreviewManager:
                 Takes precedence over filter_graph when provided.
             in_point_secs: Per-clip source seek offsets in seconds (FR-001).
             output_fps: Project output fps; forwarded to HLS generator (FR-002).
+            clip_types: Per-clip type strings forwarded to HLS generator.
             duration_us: Total duration in microseconds for progress.
             quality_level: Quality level for the preview.
 
@@ -373,6 +375,7 @@ class PreviewManager:
                 filter_complex_str=filter_complex_str,
                 in_point_secs=in_point_secs,
                 output_fps=output_fps,
+                clip_types=clip_types,
                 duration_us=duration_us,
                 cancel_event=cancel_event,
             )
@@ -390,6 +393,7 @@ class PreviewManager:
         filter_complex_str: str | None = None,
         in_point_secs: list[float] | None = None,
         output_fps: float | None = None,
+        clip_types: list[str] | None = None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
     ) -> None:
@@ -402,6 +406,7 @@ class PreviewManager:
             filter_complex_str: Pre-built filter_complex string; takes precedence.
             in_point_secs: Per-clip source seek offsets in seconds.
             output_fps: Project output fps.
+            clip_types: Per-clip type strings forwarded to HLS generator.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
         """
@@ -415,6 +420,7 @@ class PreviewManager:
                 filter_complex_str=filter_complex_str,
                 in_point_secs=in_point_secs,
                 output_fps=output_fps,
+                clip_types=clip_types,
                 duration_us=duration_us,
                 progress_callback=progress_callback,
                 cancel_event=cancel_event,
@@ -490,6 +496,7 @@ class PreviewManager:
         filter_complex_str: str | None = None,
         in_point_secs: list[float] | None = None,
         output_fps: float | None = None,
+        clip_types: list[str] | None = None,
         duration_us: int | None = None,
         position: float | None = None,
     ) -> PreviewSession:
@@ -507,6 +514,7 @@ class PreviewManager:
             filter_complex_str: Pre-built filter_complex string; takes precedence.
             in_point_secs: Per-clip source seek offsets in seconds.
             output_fps: Project output fps.
+            clip_types: Per-clip type strings forwarded to HLS generator.
             duration_us: Duration in microseconds for progress.
             position: Seek position in seconds; None or 0.0 starts from beginning.
 
@@ -581,6 +589,7 @@ class PreviewManager:
                     filter_complex_str=filter_complex_str,
                     in_point_secs=in_point_secs,
                     output_fps=output_fps,
+                    clip_types=clip_types,
                     duration_us=duration_us,
                     cancel_event=new_cancel,
                     position=position,
@@ -599,6 +608,7 @@ class PreviewManager:
         filter_complex_str: str | None = None,
         in_point_secs: list[float] | None = None,
         output_fps: float | None = None,
+        clip_types: list[str] | None = None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
         position: float | None = None,
@@ -612,6 +622,7 @@ class PreviewManager:
             filter_complex_str: Pre-built filter_complex string; takes precedence.
             in_point_secs: Per-clip source seek offsets in seconds.
             output_fps: Project output fps.
+            clip_types: Per-clip type strings forwarded to HLS generator.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
             position: Seek position in seconds; None or 0.0 starts from beginning.
@@ -626,6 +637,7 @@ class PreviewManager:
                 filter_complex_str=filter_complex_str,
                 in_point_secs=in_point_secs,
                 output_fps=output_fps,
+                clip_types=clip_types,
                 duration_us=duration_us,
                 start_offset_s=position,
                 progress_callback=progress_callback,

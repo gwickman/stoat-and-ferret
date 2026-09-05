@@ -60,6 +60,7 @@ def build_hls_args(
     start_offset_s: float | None = None,
     in_point_secs: list[float] | None = None,
     output_fps: float | None = None,
+    clip_types: list[str] | None = None,
 ) -> list[str]:
     """Build FFmpeg arguments for HLS VOD segment generation.
 
@@ -72,6 +73,9 @@ def build_hls_args(
         in_point_secs: Per-clip source seek offsets in seconds (FR-001). When
             index i > 0, ``-ss in_point_secs[i]`` is prepended before ``-i``.
         output_fps: Project output frame rate; emits ``-r`` when provided (FR-002).
+        clip_types: Per-clip type strings. ``"generator"`` emits ``-f lavfi``
+            before ``-i``; ``"image"`` emits ``-loop 1``; others use plain ``-i``.
+            Defaults to plain ``-i`` for all inputs when ``None``.
 
     Returns:
         List of FFmpeg arguments (excluding the ffmpeg command itself).
@@ -81,9 +85,15 @@ def build_hls_args(
 
     args: list[str] = []
     for i, path in enumerate(input_paths):
+        clip_type = (clip_types[i] if clip_types and i < len(clip_types) else None) or "file"
         if in_point_secs and i < len(in_point_secs) and in_point_secs[i] > 0:
             args.extend(["-ss", str(in_point_secs[i])])
-        args.extend(["-i", path])
+        if clip_type == "generator":
+            args.extend(["-f", "lavfi", "-i", path])
+        elif clip_type == "image":
+            args.extend(["-loop", "1", "-i", path])
+        else:
+            args.extend(["-i", path])
 
     if output_fps is not None and output_fps > 0:
         args.extend(["-r", str(output_fps)])
@@ -209,6 +219,7 @@ class HLSGenerator:
         start_offset_s: float | None = None,
         in_point_secs: list[float] | None = None,
         output_fps: float | None = None,
+        clip_types: list[str] | None = None,
         progress_callback: Callable[[float], Awaitable[None]] | None = None,
         cancel_event: asyncio.Event | None = None,
     ) -> Path:
@@ -224,6 +235,7 @@ class HLSGenerator:
             start_offset_s: Output-side seek offset in seconds; None starts from beginning.
             in_point_secs: Per-clip source seek offsets in seconds (FR-001).
             output_fps: Project output fps; emits ``-r`` when provided (FR-002).
+            clip_types: Per-clip type strings forwarded to ``build_hls_args``.
             progress_callback: Optional async callback receiving progress (0.0-1.0).
             cancel_event: Optional event for cooperative cancellation.
 
@@ -251,6 +263,7 @@ class HLSGenerator:
             start_offset_s=start_offset_s,
             in_point_secs=in_point_secs,
             output_fps=output_fps,
+            clip_types=clip_types,
         )
 
         logger.info(

@@ -59,6 +59,42 @@ def _make_clip(path: Path, duration: float = 3.0) -> None:
     )
 
 
+def test_hls_args_generator_clip_prefixes_lavfi(tmp_path: Path) -> None:
+    """build_hls_args with clip_types=['generator'] emits -f lavfi before -i (FR-007-AC-1)."""
+    from stoat_ferret.preview.hls_generator import build_hls_args
+
+    lavfi = "color=c=red:s=320x240:r=25:d=3"
+    args = build_hls_args(
+        input_paths=[lavfi],
+        output_dir=tmp_path,
+        filter_complex=None,
+        segment_duration=2.0,
+        clip_types=["generator"],
+    )
+    i_idx = args.index("-i")
+    assert args[i_idx - 2] == "-f", "expected -f flag two positions before -i"
+    assert args[i_idx - 1] == "lavfi", "expected lavfi value before -i"
+    assert args[i_idx + 1] == lavfi, "expected lavfi string as -i value"
+
+
+def test_hls_args_image_clip_prefixes_loop(tmp_path: Path) -> None:
+    """build_hls_args with clip_types=['image'] emits -loop 1 before -i (FR-007-AC-1)."""
+    from stoat_ferret.preview.hls_generator import build_hls_args
+
+    img_path = "/assets/still.png"
+    args = build_hls_args(
+        input_paths=[img_path],
+        output_dir=tmp_path,
+        filter_complex=None,
+        segment_duration=2.0,
+        clip_types=["image"],
+    )
+    i_idx = args.index("-i")
+    assert args[i_idx - 2] == "-loop", "expected -loop flag two positions before -i"
+    assert args[i_idx - 1] == "1", "expected 1 value before -i"
+    assert args[i_idx + 1] == img_path, "expected image path as -i value"
+
+
 @_requires_ffmpeg
 async def test_hls_single_clip_map(tmp_path: Path) -> None:
     """Single-clip scale graph ([outv] only): exit 0, manifest.m3u8, >=1 .ts segment."""
