@@ -545,6 +545,20 @@ def _resolve_clip_outgoing_transition(
     return RenderTransition(t["transition_type"], t["duration"]), t["duration"]
 
 
+def _validate_clip_build_params(
+    clip_id: str,
+    duration_secs: float,
+    transition_dur: float | None,
+) -> None:
+    if duration_secs <= 0:
+        raise CommandBuildError(f"Clip {clip_id} has zero or negative duration")
+    if transition_dur is not None and transition_dur >= duration_secs:
+        raise CommandBuildError(
+            f"Clip {clip_id} outgoing transition duration {transition_dur}s "
+            f">= clip duration {duration_secs}s"
+        )
+
+
 async def _build_clip_input_list(
     ctx: _RenderCommandContext,
     clips: list[Clip],
@@ -597,8 +611,8 @@ async def _build_clip_input_list(
                 source_audio_codec_mc = clip_audio_codec
             if clip_audio_codec is not None:
                 audio_input_indices_mc.append(i)
-        if duration_secs <= 0:
-            raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
+        outgoing, transition_dur = _resolve_clip_outgoing_transition(clip.id, transition_lookup)
+        _validate_clip_build_params(clip.id, duration_secs, transition_dur)
         clip_durations_mc.append(duration_secs)
         in_point_secs_list.append(in_point_secs)
         extra_inputs = _collect_clip_extra_inputs(clip, ctx.effect_registry)
@@ -608,13 +622,7 @@ async def _build_clip_input_list(
             )
         render_effects, audio_filter_chains = _build_clip_render_effects(clip, ctx.effect_registry)
         per_clip_audio_filters.append(audio_filter_chains)
-        outgoing, transition_dur = _resolve_clip_outgoing_transition(clip.id, transition_lookup)
         clip_transition_durations.append(transition_dur)
-        if transition_dur is not None and transition_dur >= duration_secs:
-            raise CommandBuildError(
-                f"Clip {clip.id} outgoing transition duration {transition_dur}s "
-                f">= clip duration {duration_secs}s"
-            )
         cwe_list.append(
             ClipWithEffects(
                 input_index=i,
