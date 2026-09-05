@@ -694,6 +694,11 @@ def _build_audio_acrossfade_chain(
     chains, emits [i:a]<joined_chain>[a{i}_eff] and uses [a{i}_eff] as the input.
     """
     if not audio_input_indices_mc:
+        if per_clip_audio_filters and any(per_clip_audio_filters):
+            idx = next(i for i, f in enumerate(per_clip_audio_filters) if f)
+            raise CommandBuildError(
+                f"ALL_VIDEO_NO_AUDIO: clip {idx} has audio effects but no audio stream"
+            )
         return None
     audio_set = set(audio_input_indices_mc)
     filters: list[list[str]] = per_clip_audio_filters or [[] for _ in range(all_input_count)]
@@ -761,6 +766,11 @@ def _assemble_multi_tts_filter(
                 ]
             )
         else:
+            if per_clip_audio_filters and any(per_clip_audio_filters):
+                idx = next(i for i, f in enumerate(per_clip_audio_filters) if f)
+                raise CommandBuildError(
+                    f"ALL_VIDEO_NO_AUDIO: clip {idx} has audio effects but no audio stream"
+                )
             cmd.extend(
                 [
                     "-filter_complex",
@@ -786,6 +796,11 @@ def _assemble_multi_tts_filter(
             combined = filter_complex_str + ";" + audio_chain
             cmd.extend(["-filter_complex", combined, "-map", _LABEL_FINAL, "-map", _LABEL_AOUT])
         else:
+            if per_clip_audio_filters and any(per_clip_audio_filters):
+                idx = next(i for i, f in enumerate(per_clip_audio_filters) if f)
+                raise CommandBuildError(
+                    f"ALL_VIDEO_NO_AUDIO: clip {idx} has audio effects but no audio stream"
+                )
             cmd.extend(["-filter_complex", filter_complex_str, "-map", _LABEL_FINAL, "-an"])
 
 
