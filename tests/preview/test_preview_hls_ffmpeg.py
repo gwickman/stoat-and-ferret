@@ -95,6 +95,26 @@ def test_hls_args_image_clip_prefixes_loop(tmp_path: Path) -> None:
     assert args[i_idx + 1] == img_path, "expected image path as -i value"
 
 
+def test_hls_args_none_clip_types_backward_compatible(tmp_path: Path) -> None:
+    """build_hls_args with clip_types=None emits plain -i with no -f or -loop (FR-003-AC-1)."""
+    from stoat_ferret.preview.hls_generator import build_hls_args
+
+    vid_path = "/path/to/video.mp4"
+    args = build_hls_args(
+        input_paths=[vid_path],
+        output_dir=tmp_path,
+        filter_complex=None,
+        segment_duration=2.0,
+        clip_types=None,
+    )
+    assert "-loop" not in args
+    assert "-i" in args
+    i_idx = args.index("-i")
+    assert args[i_idx + 1] == vid_path
+    # -f lavfi must not appear as a clip-type prefix; -f hls may still appear as output format
+    assert "lavfi" not in args
+
+
 @_requires_ffmpeg
 async def test_hls_single_clip_map(tmp_path: Path) -> None:
     """Single-clip scale graph ([outv] only): exit 0, manifest.m3u8, >=1 .ts segment."""
