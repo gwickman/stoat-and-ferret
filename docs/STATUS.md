@@ -1,5 +1,40 @@
 # STATUS.md
 
+## v141 — Preview/Render Fidelity + Effect Ops Quality + Infra
+
+**Delivered:** 2026-09-05
+**PRs:** #1078–#1093 (16 PRs)
+**Features:** 16 across 5 themes
+
+### Highlights
+
+- **Theme 1 — rust-preview-core (PRs #1078, #1079):** Core Rust preview pipeline correctness fixes (BL-838, BL-839, BL-843, BL-845)
+- **Theme 2 — preview-render-parity (PRs #1080, #1081):** Preview/render parity contract enforcement; J-preview parity UAT coverage (BL-850, BL-851, BL-857, BL-860)
+- **Theme 3 — render-worker-correctness (PRs #1082, #1083, #1084, #1085):** Render worker correctness hardening; split-clip remap/window intersection fixes (BL-863, BL-869, BL-875, BL-876)
+- **Theme 4 — preview-session-ui (PRs #1086, #1087, #1088, #1089):** Preview session UI fixes; BL-848 round-trip gating; PreviewManager mock cleanup (BL-827, BL-858, BL-860)
+- **Theme 5 — effect-ops-quality-infra (PRs #1090, #1091, #1092, #1093):** Effect aliasing fix + window intersection in split_clip; clip_types unit tests; harness v141 pattern docs; j_preview_parity UAT parity contract (BL-850, BL-869, BL-879, BL-880)
+
+### Theme Summary
+
+| Theme | PRs | Status |
+|-------|-----|--------|
+| rust-preview-core | #1078, #1079 | merged |
+| preview-render-parity | #1080, #1081 | merged |
+| render-worker-correctness | #1082, #1083, #1084, #1085 | merged |
+| preview-session-ui | #1086, #1087, #1088, #1089 | merged |
+| effect-ops-quality-infra | #1090, #1091, #1092, #1093 | merged |
+
+### AC Status
+
+- 5 themes, 16 features; all features complete and merged to main
+- BL-827 IR wiring (AC-1/2/3/4): deferred from v140, addressed in this version per plan
+
+### User Actions Required
+
+None required. v141 is complete.
+
+---
+
 ## v140 — Audio Render Correctness + Effect Command Hardening
 
 **Delivered:** 2026-09-04
