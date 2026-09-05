@@ -118,6 +118,40 @@ def test_dimension_c_doc_truth_matches_module_map() -> None:
     )
 
 
+async def test_j_preview_seek_run_raises_on_journey_failure() -> None:
+    """run() in j_preview_seek raises AssertionError when run_journey returns a failure dict (BL-863)."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    import tests.uat.journeys.j_preview_seek as j_seek
+
+    failure: dict[str, object] = {"status": "fail", "error": "step 2 failed"}
+    mock_page = MagicMock()
+    with patch.object(j_seek, "run_journey", new=AsyncMock(return_value=failure)):
+        try:
+            await j_seek.run(mock_page, "http://localhost:8765/")
+        except AssertionError as exc:
+            assert "Journey failed" in str(exc)
+        else:
+            raise AssertionError("Expected run() to raise AssertionError on journey failure")
+
+
+async def test_j_preview_parity_run_raises_on_journey_failure() -> None:
+    """run() in j_preview_parity raises AssertionError when run_journey returns a failure dict (BL-863)."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    import tests.uat.journeys.j_preview_parity as j_parity
+
+    failure: dict[str, object] = {"status": "fail", "step": "start_preview", "detail": "503"}
+    mock_page = MagicMock()
+    with patch.object(j_parity, "run_journey", new=AsyncMock(return_value=failure)):
+        try:
+            await j_parity.run(mock_page, "http://localhost:8765/")
+        except AssertionError as exc:
+            assert "Journey failed" in str(exc)
+        else:
+            raise AssertionError("Expected run() to raise AssertionError on journey failure")
+
+
 def test_journey_id_matches_filename() -> None:
     """(d) Every scripts/uat_journey_N.py has JOURNEY_ID == N and run() docstring matches."""
     import re
