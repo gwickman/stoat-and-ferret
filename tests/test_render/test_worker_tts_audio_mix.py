@@ -144,7 +144,7 @@ async def test_multi_clip_tts_with_source_audio_uses_amix() -> None:
     )
 
     cmd_str = " ".join(cmd)
-    assert "amix=inputs=2:duration=longest" in cmd_str
+    assert "amix=inputs=2:duration=shortest" in cmd_str
     assert "[aout]" in cmd_str
 
     # AC-4: single audio map — no bare -map 0:a alongside tts map (parallel-stream antipattern)
@@ -202,7 +202,7 @@ async def test_multi_clip_tts_later_clip_audio_uses_amix() -> None:
 
     cmd_str = " ".join(cmd)
     # Source audio from clip 1 (input index 1) must be amixed with TTS, not dropped.
-    assert "amix=inputs=2:duration=longest" in cmd_str
+    assert "amix=inputs=2:duration=shortest" in cmd_str
     assert "[aout]" in cmd_str
     # Amix must reference input 1's audio stream, not the no-audio input 0.
     assert "[1:a]" in cmd_str

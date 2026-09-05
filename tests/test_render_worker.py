@@ -1456,8 +1456,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-filter_complex",
@@ -1509,8 +1513,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip3.mp4",
             "-i",
@@ -1524,7 +1532,7 @@ class TestGoldenArgv:
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
                 "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
-                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+                "[src_norm][tts0]amix=inputs=2:duration=shortest[aout]"
             ),
             "-map",
             "[final]",
@@ -1561,8 +1569,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-i",
@@ -1616,8 +1628,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-filter_complex",
@@ -1834,6 +1850,8 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
             "-ss",
@@ -1876,8 +1894,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-filter_complex",
@@ -1948,8 +1970,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-filter_complex",
@@ -2049,8 +2075,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-filter_complex",
@@ -2371,8 +2401,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip3.mp4",
             "-i",
@@ -2388,7 +2422,7 @@ class TestGoldenArgv:
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
                 "anullsrc=r=48000:cl=stereo:d=30.0[a0_silent];[a0_silent][1:a]acrossfade=d=1[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
-                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+                "[src_norm][tts0]amix=inputs=2:duration=shortest[aout]"
             ),
             "-map",
             "[final]",
@@ -2440,8 +2474,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-i",
@@ -2455,7 +2493,7 @@ class TestGoldenArgv:
                 "[2:a]adelay=10000|10000,aformat=channel_layouts=stereo[tts0];"
                 "[0:a][1:a]acrossfade=d=1[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
-                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+                "[src_norm][tts0]amix=inputs=2:duration=shortest[aout]"
             ),
             "-map",
             "[final]",
@@ -2582,8 +2620,12 @@ class TestGoldenArgv:
 
         assert result == [
             "ffmpeg",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip1.mp4",
+            "-t",
+            "30.0",
             "-i",
             "/media/clip2.mp4",
             "-i",
@@ -2598,7 +2640,7 @@ class TestGoldenArgv:
                 "[0:a]volume=volume=2[a0_eff];[1:a]volume=volume=0.5[a1_eff];"
                 "[a0_eff][a1_eff]acrossfade=d=1[src_aout_pre];"
                 "[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
-                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+                "[src_norm][tts0]amix=inputs=2:duration=shortest[aout]"
             ),
             "-map",
             "[final]",
