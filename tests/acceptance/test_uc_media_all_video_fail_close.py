@@ -176,12 +176,8 @@ async def test_all_video_only_multi_clip_audio_effect_raises() -> None:
         assert "ALL_VIDEO_NO_AUDIO" in error_msg, (
             f"Error must contain 'ALL_VIDEO_NO_AUDIO': {error_msg!r}"
         )
-        assert "audio effects" in error_msg, (
-            f"Error must mention audio effects: {error_msg!r}"
-        )
-        assert "no audio stream" in error_msg, (
-            f"Error must mention no audio stream: {error_msg!r}"
-        )
+        assert "audio effects" in error_msg, f"Error must mention audio effects: {error_msg!r}"
+        assert "no audio stream" in error_msg, f"Error must mention no audio stream: {error_msg!r}"
 
         # Guard fires BEFORE FFmpeg: output file must not exist
         assert not output_path.exists(), (
