@@ -308,12 +308,7 @@ async def start_preview(
     raw_transitions: list[dict[str, object]] = project.transitions or []
     transition_lookup = resolve_transitions_by_clip_a_id(raw_transitions)
 
-    placeable = [
-        c
-        for c in clips
-        if c.timeline_start is not None
-        and c.timeline_end is not None
-    ]
+    placeable = [c for c in clips if c.timeline_start is not None and c.timeline_end is not None]
 
     for i, clip in enumerate(placeable):
         duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
@@ -549,10 +544,7 @@ async def seek_preview(
     in_point_secs_list_seek: list[float] = []
 
     placeable_seek = [
-        c
-        for c in clips
-        if c.timeline_start is not None
-        and c.timeline_end is not None
+        c for c in clips if c.timeline_start is not None and c.timeline_end is not None
     ]
 
     for i, clip in enumerate(placeable_seek):

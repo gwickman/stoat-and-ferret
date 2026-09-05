@@ -138,6 +138,4 @@ async def test_generator_only_preview_starts_and_reaches_ready(tmp_path: Path) -
             for f in hls_dir.iterdir()
             if f.suffix == ".ts"
         ]
-        assert len(ts_files) >= 1, (
-            f"Expected at least one .ts segment, found {ts_files!r}"
-        )
+        assert len(ts_files) >= 1, f"Expected at least one .ts segment, found {ts_files!r}"
