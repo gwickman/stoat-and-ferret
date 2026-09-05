@@ -135,6 +135,41 @@ async def test_hls_multi_clip_xfade_map(tmp_path: Path) -> None:
 
 
 @_requires_ffmpeg
+async def test_hls_partial_transition_xfade(tmp_path: Path) -> None:
+    """3-clip timeline with 1 transition (partial): exit 0, manifest.m3u8, >=1 .ts (BL-843-AC-2).
+
+    Red-then-green: without the fix, build_xfade_graph emits [xv0]/[xa0] instead of
+    [outv]/[outa], causing FFmpeg to crash with an unconnected-filter error.
+    """
+    src1 = tmp_path / "partial1.mp4"
+    src2 = tmp_path / "partial2.mp4"
+    src3 = tmp_path / "partial3.mp4"
+    _make_clip(src1, duration=3.0)
+    _make_clip(src2, duration=3.0)
+    _make_clip(src3, duration=3.0)
+
+    # 3 clips, only 1 transition (between clip1 and clip2; clip3 has no transition)
+    clips = [
+        CompositionClip(0, 0.0, 2.0, 0, 0),
+        CompositionClip(1, 1.5, 3.5, 0, 0),
+        CompositionClip(2, 3.5, 6.5, 0, 0),
+    ]
+    transitions = [TransitionSpec(TransitionType.Fade, 0.5, 0.0)]
+    graph = build_composition_graph(clips, transitions, None, None, 320, 240)
+
+    executor = RealAsyncFFmpegExecutor()
+    generator = HLSGenerator(async_executor=executor, output_base_dir=str(tmp_path / "hls"))
+    output_dir = await generator.generate(
+        session_id="test-partial-xfade",
+        input_paths=[str(src1), str(src2), str(src3)],
+        filter_graph=graph,
+    )
+
+    assert (output_dir / "manifest.m3u8").exists()
+    assert any(f.suffix == ".ts" for f in output_dir.iterdir())
+
+
+@_requires_ffmpeg
 async def test_hls_wipeleft_transition(tmp_path: Path) -> None:
     """wipeleft xfade transition generates valid HLS without FFmpeg error (BL-846-AC-5)."""
     src1 = tmp_path / "wipeleft1.mp4"
