@@ -49,6 +49,26 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 
+def resolve_transitions_by_clip_a_id(
+    raw_transitions: list[dict[str, object]],
+) -> dict[str, dict[str, object]]:
+    """Return transitions keyed by the outgoing clip's ID.
+
+    Handles both storage formats:
+    - Timeline endpoint: ``clip_a_id`` key
+    - Effects endpoint: ``source_clip_id`` key
+
+    Skips entries with neither key (positional legacy entries).
+    Mirrors the render worker's ``clip_a_id`` lookup pattern.
+    """
+    result: dict[str, dict[str, object]] = {}
+    for t in raw_transitions:
+        clip_a_id = t.get("clip_a_id") or t.get("source_clip_id")
+        if clip_a_id is not None:
+            result[str(clip_a_id)] = t
+    return result
+
+
 class PreviewManagerError(Exception):
     """Base error for preview manager operations."""
 
@@ -267,6 +287,9 @@ class PreviewManager:
         input_path: str = "",
         input_paths: list[str] | None = None,
         filter_graph: FilterGraph | None = None,
+        filter_complex_str: str | None = None,
+        in_point_secs: list[float] | None = None,
+        output_fps: float | None = None,
         duration_us: int | None = None,
         quality_level: PreviewQuality = PreviewQuality.MEDIUM,
     ) -> PreviewSession:
@@ -280,6 +303,10 @@ class PreviewManager:
             input_path: Path to a single source media file (legacy, kept for backward compat).
             input_paths: Paths to all source media files for multi-clip composition.
             filter_graph: Optional FilterGraph for preview simplification.
+            filter_complex_str: Pre-built filter_complex string from RenderGraphTranslator.
+                Takes precedence over filter_graph when provided.
+            in_point_secs: Per-clip source seek offsets in seconds (FR-001).
+            output_fps: Project output fps; forwarded to HLS generator (FR-002).
             duration_us: Total duration in microseconds for progress.
             quality_level: Quality level for the preview.
 
@@ -343,6 +370,9 @@ class PreviewManager:
                 session_id=session.id,
                 input_paths=resolved,
                 filter_graph=filter_graph,
+                filter_complex_str=filter_complex_str,
+                in_point_secs=in_point_secs,
+                output_fps=output_fps,
                 duration_us=duration_us,
                 cancel_event=cancel_event,
             )
@@ -357,6 +387,9 @@ class PreviewManager:
         session_id: str,
         input_paths: list[str],
         filter_graph: FilterGraph | None,
+        filter_complex_str: str | None = None,
+        in_point_secs: list[float] | None = None,
+        output_fps: float | None = None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
     ) -> None:
@@ -366,6 +399,9 @@ class PreviewManager:
             session_id: The session to generate for.
             input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object.
+            filter_complex_str: Pre-built filter_complex string; takes precedence.
+            in_point_secs: Per-clip source seek offsets in seconds.
+            output_fps: Project output fps.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
         """
@@ -376,6 +412,9 @@ class PreviewManager:
                 session_id=session_id,
                 input_paths=input_paths,
                 filter_graph=filter_graph,
+                filter_complex_str=filter_complex_str,
+                in_point_secs=in_point_secs,
+                output_fps=output_fps,
                 duration_us=duration_us,
                 progress_callback=progress_callback,
                 cancel_event=cancel_event,
@@ -448,6 +487,9 @@ class PreviewManager:
         input_path: str = "",  # deprecated — use input_paths
         input_paths: list[str] | None = None,
         filter_graph: FilterGraph | None = None,
+        filter_complex_str: str | None = None,
+        in_point_secs: list[float] | None = None,
+        output_fps: float | None = None,
         duration_us: int | None = None,
         position: float | None = None,
     ) -> PreviewSession:
@@ -462,6 +504,9 @@ class PreviewManager:
             input_path: Path to a single source media file (legacy, kept for backward compat).
             input_paths: Paths to all source media files for multi-clip composition.
             filter_graph: Optional FilterGraph for preview simplification.
+            filter_complex_str: Pre-built filter_complex string; takes precedence.
+            in_point_secs: Per-clip source seek offsets in seconds.
+            output_fps: Project output fps.
             duration_us: Duration in microseconds for progress.
             position: Seek position in seconds; None or 0.0 starts from beginning.
 
@@ -533,6 +578,9 @@ class PreviewManager:
                     session_id=session_id,
                     input_paths=resolved,
                     filter_graph=filter_graph,
+                    filter_complex_str=filter_complex_str,
+                    in_point_secs=in_point_secs,
+                    output_fps=output_fps,
                     duration_us=duration_us,
                     cancel_event=new_cancel,
                     position=position,
@@ -548,6 +596,9 @@ class PreviewManager:
         session_id: str,
         input_paths: list[str],
         filter_graph: FilterGraph | None,
+        filter_complex_str: str | None = None,
+        in_point_secs: list[float] | None = None,
+        output_fps: float | None = None,
         duration_us: int | None,
         cancel_event: asyncio.Event,
         position: float | None = None,
@@ -558,6 +609,9 @@ class PreviewManager:
             session_id: The session to generate for.
             input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object.
+            filter_complex_str: Pre-built filter_complex string; takes precedence.
+            in_point_secs: Per-clip source seek offsets in seconds.
+            output_fps: Project output fps.
             duration_us: Duration in microseconds for progress.
             cancel_event: Event for cooperative cancellation.
             position: Seek position in seconds; None or 0.0 starts from beginning.
@@ -569,6 +623,9 @@ class PreviewManager:
                 session_id=session_id,
                 input_paths=input_paths,
                 filter_graph=filter_graph,
+                filter_complex_str=filter_complex_str,
+                in_point_secs=in_point_secs,
+                output_fps=output_fps,
                 duration_us=duration_us,
                 start_offset_s=position,
                 progress_callback=progress_callback,

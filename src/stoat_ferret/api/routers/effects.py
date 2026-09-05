@@ -870,6 +870,21 @@ async def apply_transition(
                 "message": "offset must be less than duration",
             },
         )
+    clip_a_effective_dur = (clip_a_obj.timeline_end or 0.0) - (clip_a_obj.timeline_start or 0.0)
+    if duration >= clip_a_effective_dur:
+        max_duration = clip_a_effective_dur - 0.001
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "DURATION_TOO_LARGE",
+                "max_duration": max_duration,
+                "received": duration,
+                "message": (
+                    f"Transition duration must be less than clip_a effective duration. "
+                    f"Maximum allowed: {max_duration:.3f}s"
+                ),
+            },
+        )
     # informational only; preview/render recompute from clip positions
     try:
         filter_string = str(XfadeBuilder(transition_type, duration, offset).build())

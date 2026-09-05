@@ -58,6 +58,8 @@ def build_hls_args(
     filter_complex: str | None,
     segment_duration: float,
     start_offset_s: float | None = None,
+    in_point_secs: list[float] | None = None,
+    output_fps: float | None = None,
 ) -> list[str]:
     """Build FFmpeg arguments for HLS VOD segment generation.
 
@@ -67,6 +69,9 @@ def build_hls_args(
         filter_complex: Optional simplified filter graph string.
         segment_duration: Target segment duration in seconds.
         start_offset_s: Output-side seek offset in seconds; omitted when None or 0.
+        in_point_secs: Per-clip source seek offsets in seconds (FR-001). When
+            index i > 0, ``-ss in_point_secs[i]`` is prepended before ``-i``.
+        output_fps: Project output frame rate; emits ``-r`` when provided (FR-002).
 
     Returns:
         List of FFmpeg arguments (excluding the ffmpeg command itself).
@@ -75,18 +80,28 @@ def build_hls_args(
     segment_pattern = str(output_dir / SEGMENT_FILENAME_PATTERN)
 
     args: list[str] = []
-    for path in input_paths:
+    for i, path in enumerate(input_paths):
+        if in_point_secs and i < len(in_point_secs) and in_point_secs[i] > 0:
+            args.extend(["-ss", str(in_point_secs[i])])
         args.extend(["-i", path])
+
+    if output_fps is not None and output_fps > 0:
+        args.extend(["-r", str(output_fps)])
 
     if start_offset_s is not None and start_offset_s > 0:
         args.extend(["-ss", str(start_offset_s)])
 
     if filter_complex:
         args.extend(["-filter_complex", filter_complex])
+        # [outv] — build_composition_graph path; [final] — RenderGraphTranslator path
         if "[outv]" in filter_complex:
             args.extend(["-map", "[outv]"])
+        elif "[final]" in filter_complex:
+            args.extend(["-map", "[final]"])
         if "[outa]" in filter_complex:
             args.extend(["-map", "[outa]"])
+        elif "[final]" in filter_complex:
+            args.extend(["-an"])
 
     args.extend(
         [
@@ -189,8 +204,11 @@ class HLSGenerator:
         session_id: str,
         input_paths: list[str],
         filter_graph: FilterGraph | None = None,
+        filter_complex_str: str | None = None,
         duration_us: int | None = None,
         start_offset_s: float | None = None,
+        in_point_secs: list[float] | None = None,
+        output_fps: float | None = None,
         progress_callback: Callable[[float], Awaitable[None]] | None = None,
         cancel_event: asyncio.Event | None = None,
     ) -> Path:
@@ -200,8 +218,12 @@ class HLSGenerator:
             session_id: Unique session identifier for output directory.
             input_paths: Paths to the source media files.
             filter_graph: Optional FilterGraph object to simplify for preview.
+            filter_complex_str: Pre-built filter_complex string (from RenderGraphTranslator).
+                When provided, takes precedence over filter_graph and skips simplification.
             duration_us: Total duration in microseconds for progress calculation.
             start_offset_s: Output-side seek offset in seconds; None starts from beginning.
+            in_point_secs: Per-clip source seek offsets in seconds (FR-001).
+            output_fps: Project output fps; emits ``-r`` when provided (FR-002).
             progress_callback: Optional async callback receiving progress (0.0-1.0).
             cancel_event: Optional event for cooperative cancellation.
 
@@ -215,14 +237,20 @@ class HLSGenerator:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         segment_duration = get_segment_duration()
-        simplified_filter = simplify_filter_for_preview(filter_graph)
+        resolved_filter: str | None
+        if filter_complex_str is not None:
+            resolved_filter = filter_complex_str
+        else:
+            resolved_filter = simplify_filter_for_preview(filter_graph)
 
         args = build_hls_args(
             input_paths=input_paths,
             output_dir=output_dir,
-            filter_complex=simplified_filter,
+            filter_complex=resolved_filter,
             segment_duration=segment_duration,
             start_offset_s=start_offset_s,
+            in_point_secs=in_point_secs,
+            output_fps=output_fps,
         )
 
         logger.info(

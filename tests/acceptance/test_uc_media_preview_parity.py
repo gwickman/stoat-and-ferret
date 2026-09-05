@@ -188,3 +188,169 @@ async def test_preview_start_receives_multiple_inputs(tmp_path: Path) -> None:
     assert len(captured_input_paths) == 2, (
         f"expected 2 input paths for 2-clip project, got {captured_input_paths!r}"
     )
+
+
+# ---- BL-838 AC-6: Preview/render SSIM parity (oracle-verified) ----
+
+
+def _make_colored_clip_parity(path: Path, color: str, duration: float = 3.0, fps: int = 30) -> Path:
+    """Generate a solid-color clip for parity testing."""
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c={color}:s=320x240:r={fps}:d={duration}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
+        ],
+        capture_output=True,
+        timeout=60,
+    )
+    if r.returncode != 0:
+        msg = r.stderr.decode()[-400:]
+        raise RuntimeError(f"ffmpeg fixture generation failed ({color}): {msg}")
+    return path
+
+
+def _make_parity_reference_render(
+    clip1: Path,
+    clip2: Path,
+    out: Path,
+    filter_complex_str: str,
+    clip1_in_point: float,
+    output_fps: float,
+) -> None:
+    """Produce a reference render with the same FFmpeg parameters as the preview path."""
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            str(clip1_in_point),
+            "-i",
+            str(clip1),
+            "-i",
+            str(clip2),
+            "-r",
+            str(int(output_fps)),
+            "-filter_complex",
+            filter_complex_str,
+            "-map",
+            "[final]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            str(out),
+        ],
+        capture_output=True,
+        timeout=120,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"Reference render failed: {r.stderr.decode()[-600:]}")
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_preview_render_parity_multiclip_ssim(tmp_path: Path) -> None:
+    """Preview and reference render agree (SSIM >= 0.90) for a multi-clip project with
+    non-zero in_point, non-default fps, and a visible effect on clip 2 (BL-838-AC-6).
+
+    Test matrix:
+    - Clip 1 (red): in_point=0.5s (source seek), duration=2.0s on timeline, no effects
+    - Clip 2 (green): in_point=0.0s, duration=2.0s on timeline, hue-shift effect
+    - output_fps=24 (non-default)
+    """
+    import asyncio
+
+    from stoat_ferret.ffmpeg.async_executor import RealAsyncFFmpegExecutor
+    from stoat_ferret.preview.hls_generator import HLSGenerator
+    from stoat_ferret_core import ClipWithEffects, RenderEffect, RenderGraphTranslator
+    from tests.preview_oracle import _compute_ssim_hls_vs_file, materialize_preview_session
+
+    OUTPUT_FPS = 24.0
+    CLIP_FPS = 30
+    CLIP1_SOURCE_DUR = 3.0
+    CLIP2_SOURCE_DUR = 3.0
+    CLIP1_IN_POINT = 0.5  # skip first 0.5s of clip1
+    CLIP1_TIMELINE_DUR = 2.0
+    CLIP2_TIMELINE_DUR = 2.0
+
+    clip1_path = _make_colored_clip_parity(
+        tmp_path / "clip1.mp4", "red", CLIP1_SOURCE_DUR, CLIP_FPS
+    )
+    clip2_path = _make_colored_clip_parity(
+        tmp_path / "clip2.mp4", "green", CLIP2_SOURCE_DUR, CLIP_FPS
+    )
+
+    # Build ClipWithEffects: clip1 (no effect, has in_point), clip2 (hue-shift effect)
+    cwe_list = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=CLIP1_TIMELINE_DUR,
+            framerate=float(CLIP_FPS),
+            source_path=str(clip1_path),
+            effects=[RenderEffect.none()],
+            outgoing_transition=None,
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=CLIP2_TIMELINE_DUR,
+            framerate=float(CLIP_FPS),
+            source_path=str(clip2_path),
+            effects=[RenderEffect.custom("hue=h=60")],
+            outgoing_transition=None,
+        ),
+    ]
+
+    translator = RenderGraphTranslator()
+    filter_complex_str, _ = translator.translate(cwe_list, OUTPUT_FPS)
+
+    # Reference render: same filter_complex, same in_point for clip1
+    render_path = tmp_path / "render.mp4"
+    _make_parity_reference_render(
+        clip1_path, clip2_path, render_path, filter_complex_str, CLIP1_IN_POINT, OUTPUT_FPS
+    )
+    assert render_path.exists()
+
+    # Preview: same filter_complex and per-clip args via HLSGenerator
+    session_id = "parity-ssim-001"
+    hls_base = tmp_path / "hls"
+    executor = RealAsyncFFmpegExecutor()
+    generator = HLSGenerator(async_executor=executor, output_base_dir=str(hls_base))
+    output_dir = await generator.generate(
+        session_id=session_id,
+        input_paths=[str(clip1_path), str(clip2_path)],
+        filter_complex_str=filter_complex_str,
+        in_point_secs=[CLIP1_IN_POINT, 0.0],
+        output_fps=OUTPUT_FPS,
+    )
+    assert (output_dir / "manifest.m3u8").exists(), "HLS manifest must exist"
+    assert any(f.suffix == ".ts" for f in output_dir.iterdir()), ">=1 .ts segment must exist"
+
+    session = await materialize_preview_session(session_id, output_dir)
+    manifest_path = session["manifest_path"]
+
+    # Compare at t=0.7 (within clip1 range) and t=2.3 (within clip2 range)
+    for t in [0.7, 2.3]:
+        ssim = await asyncio.to_thread(
+            _compute_ssim_hls_vs_file,
+            manifest_path,
+            t,
+            render_path,
+            t,
+        )
+        assert ssim >= 0.90, (
+            f"SSIM at t={t}s = {ssim:.4f} < 0.90 — preview/render parity failure (BL-838-AC-6)"
+        )
