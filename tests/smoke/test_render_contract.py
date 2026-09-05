@@ -33,6 +33,7 @@ from stoat_ferret.effects.definitions import (
     CONVOLUTION_REVERB,
     VOLUME,
     EffectDefinition,
+    _resolve_ir_path,
     create_default_registry,
 )
 from stoat_ferret.effects.registry import EffectRegistry
@@ -1277,8 +1278,8 @@ async def test_smoke_sc_tts_video_only_audio_effect_raises() -> None:
     )
 
 
-async def test_smoke_convolution_reverb_raises() -> None:
-    """Smoke: convolution_reverb raises CommandBuildError at build time (BL-827 AC-6)."""
+async def test_smoke_convolution_reverb_ir_wiring() -> None:
+    """Smoke: convolution_reverb command includes IR WAV as stream 1 (BL-827)."""
     clip = _cmd_make_clip(
         "smk-827",
         "smk-vid-827",
@@ -1291,12 +1292,18 @@ async def test_smoke_convolution_reverb_raises() -> None:
         ],
     )
     vid = _cmd_make_video("smk-vid-827", "/tmp/smk_827.mp4")
-    await _run_smoke_cbe(
-        [clip],
-        {"smk-vid-827": vid},
-        _SMOKE_CBE_SC_PLAN,
-        "job-smk-827",
-        "convolution_reverb",
-        CONVOLUTION_REVERB,
-        match="convolution_reverb requires IR WAV",
+    clip_repo = AsyncMock()
+    clip_repo.list_by_project = AsyncMock(return_value=[clip])
+    video_repo = AsyncMock()
+    video_repo.get = AsyncMock(return_value=vid)
+    reg = EffectRegistry()
+    reg.register("convolution_reverb", CONVOLUTION_REVERB)
+    job = _cmd_make_job(_SMOKE_CBE_SC_PLAN, job_id="job-smk-827")
+    cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=reg)
+    ir_path = str(_resolve_ir_path("hall_small"))
+    assert ir_path in cmd, f"Expected IR WAV path {ir_path!r} in command {cmd}"
+    fc_idx = cmd.index("-filter_complex") if "-filter_complex" in cmd else -1
+    assert fc_idx != -1, "Expected -filter_complex in command"
+    assert "[0:a][1:a]afir=" in cmd[fc_idx + 1], (
+        f"Expected two-pad afir in filter_complex: {cmd[fc_idx + 1]!r}"
     )

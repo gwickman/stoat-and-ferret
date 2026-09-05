@@ -114,6 +114,7 @@ class EffectDefinition:
     timeline_t_capable: bool = False
     requires_path_escape: bool = False
     value_kind_per_option: dict[str, str] = field(default_factory=dict)
+    extra_ffmpeg_inputs_fn: Callable[[dict[str, Any]], list[str]] | None = None
 
 
 def _text_overlay_preview() -> str:
@@ -1576,6 +1577,11 @@ def _convolution_reverb_preview() -> str:
     return str(ConvolutionReverbBuilder("hall_small", 0.5).build())
 
 
+def _convolution_reverb_extra_inputs(effect_params: dict[str, Any]) -> list[str]:
+    ir_name = str(effect_params.get("ir_name", "hall_small"))
+    return [str(_resolve_ir_path(ir_name))]
+
+
 CONVOLUTION_REVERB = EffectDefinition(
     name="convolution_reverb",
     description=(
@@ -1608,6 +1614,7 @@ CONVOLUTION_REVERB = EffectDefinition(
     },
     preview_fn=_convolution_reverb_preview,
     build_fn=_build_convolution_reverb,
+    extra_ffmpeg_inputs_fn=_convolution_reverb_extra_inputs,
     ai_summary=(
         "Add convolution reverb to audio using a bundled impulse response preset. "
         "Supports hall, room, and plate presets with adjustable wet/dry mix."

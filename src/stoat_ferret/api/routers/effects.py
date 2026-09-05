@@ -514,6 +514,25 @@ async def apply_effect_to_clip(
                 },
             )
 
+    # IR asset availability check (BL-827 AC-7): effects that require extra FFmpeg inputs
+    # (e.g. convolution_reverb) must have all asset files present at apply time.
+    if definition.extra_ffmpeg_inputs_fn is not None:
+        from pathlib import Path
+
+        missing = [
+            p
+            for p in definition.extra_ffmpeg_inputs_fn(request.parameters)
+            if not Path(p).is_file()
+        ]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "MISSING_IR_ASSET",
+                    "missing_paths": missing,
+                },
+            )
+
     # Validate parameters against JSON schema (envelopes bypass JSON schema).
     compiled_expression = _validate_params_helper(registry, request.effect_type, request.parameters)
     # Generate filter string via registered build function.
