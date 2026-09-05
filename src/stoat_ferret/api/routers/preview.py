@@ -40,17 +40,42 @@ from stoat_ferret.preview.manager import (
     SessionExpiredError,
     SessionLimitError,
     SessionNotFoundError,
+    resolve_transitions_by_clip_a_id,
 )
 from stoat_ferret_core import (
-    CompositionClip,
-    TransitionSpec,
-    TransitionType,
-    build_composition_graph,
+    ClipWithEffects,
+    RenderEffect,
+    RenderGraphTranslator,
+    RenderTransition,
 )
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["preview"])
+
+
+def _build_preview_render_effects(
+    clip: object, effect_registry: object | None
+) -> list[RenderEffect]:
+    """Build RenderEffect list for a clip in preview mode.
+
+    Wraps the render worker helper to gracefully skip effects that cannot be
+    applied in preview context (e.g. convolution_reverb, unknown types).
+    Returns [RenderEffect.none()] when no applicable effects are found.
+    """
+    try:
+        from stoat_ferret.render.worker import _build_clip_render_effects
+
+        video_effects, _ = _build_clip_render_effects(clip, effect_registry)  # type: ignore[arg-type]
+        return video_effects
+    except Exception as exc:
+        logger.warning(
+            "preview_clip_effect_skipped",
+            clip_id=getattr(clip, "id", "?"),
+            reason=str(exc),
+        )
+        return [RenderEffect.none()]
+
 
 # HLS media types
 HLS_MANIFEST_CONTENT_TYPE = "application/vnd.apple.mpegurl"
@@ -270,16 +295,26 @@ async def start_preview(
     }
     quality = quality_map.get(quality_str, PreviewQuality.MEDIUM)
 
-    # Build full multi-clip composition graph (mirrors render path)
+    # Build multi-clip composition via shared RenderGraphTranslator path (BL-838 AC-8).
     video_repo = getattr(request.app.state, "video_repository", None)
-    comp_clips: list[CompositionClip] = []
+    effect_registry = getattr(request.app.state, "effect_registry", None)
+    cwe_list: list[ClipWithEffects] = []
     input_paths: list[str] = []
+    in_point_secs_list: list[float] = []
+    output_fps = float(project.output_fps or 30)
 
-    for _i, clip in enumerate(clips):
-        if clip.timeline_start is None or clip.timeline_end is None:
-            continue
-        if clip.source_video_id is None:
-            continue
+    raw_transitions: list[dict[str, object]] = project.transitions or []
+    transition_lookup = resolve_transitions_by_clip_a_id(raw_transitions)
+
+    placeable = [
+        c
+        for c in clips
+        if c.timeline_start is not None
+        and c.timeline_end is not None
+        and c.source_video_id is not None
+    ]
+
+    for i, clip in enumerate(placeable):
         video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
         if video is None:
             raise HTTPException(
@@ -289,11 +324,42 @@ async def start_preview(
                     "message": f"Source video for clip {clip.id} not found",
                 },
             )
+        framerate = float(video.frame_rate or output_fps)
+        in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
+        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
+        in_point_secs_list.append(in_point)
         input_paths.append(video.path)
-        idx = len(comp_clips)
-        comp_clips.append(CompositionClip(idx, clip.timeline_start, clip.timeline_end, 0, 0))
 
-    if not comp_clips:
+        render_effects = _build_preview_render_effects(clip, effect_registry)
+
+        t_data = transition_lookup.get(clip.id)
+        outgoing: RenderTransition | None = None
+        if t_data is not None and i < len(placeable) - 1:
+            t_params = t_data.get("parameters")
+            t_params_dict: dict[str, object] = t_params if isinstance(t_params, dict) else {}
+            t_dur = float(t_params_dict.get("duration", t_data.get("duration", 1.0)))  # type: ignore[arg-type]
+            if t_dur > 0:
+                try:
+                    outgoing = RenderTransition(str(t_data["transition_type"]), t_dur)
+                except ValueError:
+                    logger.warning(
+                        "preview_transition_skipped",
+                        clip_id=clip.id,
+                        transition_type=t_data.get("transition_type"),
+                    )
+
+        cwe_list.append(
+            ClipWithEffects(
+                input_index=i,
+                duration_secs=duration,
+                framerate=framerate,
+                source_path=video.path,
+                effects=render_effects,
+                outgoing_transition=outgoing,
+            )
+        )
+
+    if not cwe_list:
         raise HTTPException(
             status_code=422,
             detail={
@@ -302,26 +368,16 @@ async def start_preview(
             },
         )
 
-    raw_transitions: list[dict[str, object]] = project.transitions or []
-    transitions: list[TransitionSpec] = []
-    for t in raw_transitions:
-        params = t.get("parameters")
-        params_dict: dict[str, object] = params if isinstance(params, dict) else {}
-        duration = float(params_dict.get("duration", t.get("duration", 1.0)))  # type: ignore[arg-type]
-        offset = float(params_dict.get("offset", t.get("offset", 0.0)))  # type: ignore[arg-type]
-        transitions.append(
-            TransitionSpec(TransitionType.from_str(str(t["transition_type"])), duration, offset)
-        )
-
-    filter_graph = build_composition_graph(
-        comp_clips, transitions, None, None, project.output_width, project.output_height
-    )
+    translator = RenderGraphTranslator()
+    filter_complex_str, _ = translator.translate(cwe_list, output_fps)
 
     try:
         session = await manager.start(
             project_id=project_id,
             input_paths=input_paths,
-            filter_graph=filter_graph,
+            filter_complex_str=filter_complex_str,
+            in_point_secs=in_point_secs_list,
+            output_fps=output_fps,
             quality_level=quality,
         )
     except SessionLimitError:
@@ -434,14 +490,31 @@ async def seek_preview(
     clips = await clip_repo.list_by_project(project_id)
 
     video_repo = getattr(request.app.state, "video_repository", None)
-    comp_clips: list[CompositionClip] = []
-    input_paths: list[str] = []
+    effect_registry = getattr(request.app.state, "effect_registry", None)
 
-    for clip in clips:
-        if clip.timeline_start is None or clip.timeline_end is None:
-            continue
-        if clip.source_video_id is None:
-            continue
+    project = await project_repo.get(project_id)
+    seek_output_fps = 30.0
+    if project is not None:
+        seek_output_fps = float(project.output_fps or 30)
+
+    raw_transitions_seek: list[dict[str, object]] = []
+    if project is not None:
+        raw_transitions_seek = project.transitions or []
+    transition_lookup_seek = resolve_transitions_by_clip_a_id(raw_transitions_seek)
+
+    cwe_list_seek: list[ClipWithEffects] = []
+    input_paths: list[str] = []
+    in_point_secs_list_seek: list[float] = []
+
+    placeable_seek = [
+        c
+        for c in clips
+        if c.timeline_start is not None
+        and c.timeline_end is not None
+        and c.source_video_id is not None
+    ]
+
+    for i, clip in enumerate(placeable_seek):
         video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
         if video is None:
             raise HTTPException(
@@ -451,11 +524,42 @@ async def seek_preview(
                     "message": f"Source video for clip {clip.id} not found",
                 },
             )
+        framerate = float(video.frame_rate or seek_output_fps)
+        in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
+        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
+        in_point_secs_list_seek.append(in_point)
         input_paths.append(video.path)
-        idx = len(comp_clips)
-        comp_clips.append(CompositionClip(idx, clip.timeline_start, clip.timeline_end, 0, 0))
 
-    if not comp_clips:
+        render_effects = _build_preview_render_effects(clip, effect_registry)
+
+        t_data = transition_lookup_seek.get(clip.id)
+        outgoing_seek: RenderTransition | None = None
+        if t_data is not None and i < len(placeable_seek) - 1:
+            t_params = t_data.get("parameters")
+            t_params_dict_seek: dict[str, object] = t_params if isinstance(t_params, dict) else {}
+            t_dur = float(t_params_dict_seek.get("duration", t_data.get("duration", 1.0)))  # type: ignore[arg-type]
+            if t_dur > 0:
+                try:
+                    outgoing_seek = RenderTransition(str(t_data["transition_type"]), t_dur)
+                except ValueError:
+                    logger.warning(
+                        "preview_transition_skipped",
+                        clip_id=clip.id,
+                        transition_type=t_data.get("transition_type"),
+                    )
+
+        cwe_list_seek.append(
+            ClipWithEffects(
+                input_index=i,
+                duration_secs=duration,
+                framerate=framerate,
+                source_path=video.path,
+                effects=render_effects,
+                outgoing_transition=outgoing_seek,
+            )
+        )
+
+    if not cwe_list_seek:
         raise HTTPException(
             status_code=422,
             detail={
@@ -464,34 +568,16 @@ async def seek_preview(
             },
         )
 
-    project = await project_repo.get(project_id)
-    raw_transitions: list[dict[str, object]] = []
-    output_width = 1920
-    output_height = 1080
-    if project is not None:
-        raw_transitions = project.transitions or []
-        output_width = project.output_width
-        output_height = project.output_height
-
-    transitions: list[TransitionSpec] = []
-    for t in raw_transitions:
-        params = t.get("parameters")
-        params_dict: dict[str, object] = params if isinstance(params, dict) else {}
-        duration = float(params_dict.get("duration", t.get("duration", 1.0)))  # type: ignore[arg-type]
-        offset = float(params_dict.get("offset", t.get("offset", 0.0)))  # type: ignore[arg-type]
-        transitions.append(
-            TransitionSpec(TransitionType.from_str(str(t["transition_type"])), duration, offset)
-        )
-
-    filter_graph = build_composition_graph(
-        comp_clips, transitions, None, None, output_width, output_height
-    )
+    translator_seek = RenderGraphTranslator()
+    filter_complex_str_seek, _ = translator_seek.translate(cwe_list_seek, seek_output_fps)
 
     try:
         session = await manager.seek(
             session_id,
             input_paths=input_paths,
-            filter_graph=filter_graph,
+            filter_complex_str=filter_complex_str_seek,
+            in_point_secs=in_point_secs_list_seek,
+            output_fps=seek_output_fps,
             position=body.position,
         )
     except (SessionNotFoundError, SessionExpiredError):

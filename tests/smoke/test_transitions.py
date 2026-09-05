@@ -286,7 +286,7 @@ async def test_smoke_transition_duration_out_of_range(
     smoke_client: httpx.AsyncClient,
     videos_dir: Path,
 ) -> None:
-    """POST /effects/transition with duration=60.1 returns 400 INVALID_EFFECT_PARAMS (BL-861)."""
+    """POST /effects/transition with duration=60.1 returns 400 (BL-861, BL-880)."""
     client = smoke_client
     setup = await create_adjacent_clips_timeline(client, videos_dir)
     project_id = setup["project_id"]
@@ -303,7 +303,7 @@ async def test_smoke_transition_duration_out_of_range(
         },
     )
     assert resp.status_code == 400
-    assert resp.json()["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+    assert resp.json()["detail"]["code"] in ("INVALID_EFFECT_PARAMS", "DURATION_TOO_LARGE")
 
 
 @pytest.mark.usefixtures("videos_dir")

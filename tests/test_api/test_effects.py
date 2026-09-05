@@ -1684,7 +1684,11 @@ async def test_transition_duration_out_of_range_returns_400(
     clip_repository: AsyncInMemoryClipRepository,
     video_repository: AsyncInMemoryVideoRepository,
 ) -> None:
-    """POST /effects/transition with duration=60.1 returns 400 INVALID_EFFECT_PARAMS (BL-861)."""
+    """POST /effects/transition with duration=60.1 returns 400 (BL-861).
+
+    With BL-880 guard: 60.1s >= 5.0s clip_a duration → DURATION_TOO_LARGE fires before
+    XfadeBuilder. Both DURATION_TOO_LARGE and INVALID_EFFECT_PARAMS are valid 400 rejections.
+    """
     project_id, clip_ids = await _seed_project_with_clips(
         project_repository, clip_repository, video_repository
     )
@@ -1700,7 +1704,7 @@ async def test_transition_duration_out_of_range_returns_400(
     )
     assert response.status_code == 400
     data = response.json()
-    assert data["detail"]["code"] == "INVALID_EFFECT_PARAMS"
+    assert data["detail"]["code"] in ("INVALID_EFFECT_PARAMS", "DURATION_TOO_LARGE")
 
 
 @pytest.mark.api
@@ -2820,3 +2824,63 @@ def test_multiband_compressor_definition_registered() -> None:
     assert "asplit" in preview, f"Preview missing asplit: {preview}"
     assert "acompressor" in preview, f"Preview missing acompressor: {preview}"
     assert "amix" in preview, f"Preview missing amix: {preview}"
+
+
+# ---- DURATION_TOO_LARGE guard tests (BL-880) ----
+
+
+@pytest.mark.api
+async def test_transition_duration_too_large_returns_400(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """duration >= clip_a effective duration returns 400 DURATION_TOO_LARGE (BL-880-AC-1)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    # clip_duration is 5.0s; sending duration=5.0 (equal) must be rejected
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 5.0, "offset": 0.0},
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "DURATION_TOO_LARGE"
+    assert detail["received"] == 5.0
+    assert detail["max_duration"] < 5.0
+
+
+@pytest.mark.api
+async def test_transition_duration_just_under_clip_returns_201(
+    client: TestClient,
+    project_repository: AsyncInMemoryProjectRepository,
+    clip_repository: AsyncInMemoryClipRepository,
+    video_repository: AsyncInMemoryVideoRepository,
+) -> None:
+    """duration just under clip_a effective duration returns 201 (BL-880-AC-2)."""
+    project_id, clip_ids = await _seed_project_with_clips(
+        project_repository, clip_repository, video_repository
+    )
+
+    # clip_duration is 5.0s; sending duration=4.999 (just under) must be accepted
+    response = client.post(
+        f"/api/v1/projects/{project_id}/effects/transition",
+        json={
+            "source_clip_id": clip_ids[0],
+            "target_clip_id": clip_ids[1],
+            "transition_type": "fade",
+            "parameters": {"duration": 4.999, "offset": 0.0},
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["source_clip_id"] == clip_ids[0]
+    assert data["transition_type"] == "fade"
