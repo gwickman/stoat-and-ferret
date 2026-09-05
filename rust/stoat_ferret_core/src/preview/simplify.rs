@@ -53,6 +53,14 @@ pub fn simplify_filter_chain(chain: &FilterChain, quality: PreviewQuality) -> Fi
                     simplified = simplified.filter(filter.clone());
                 }
             }
+            // Preserve input/output labels — stored strings include brackets (e.g. "[0:v]");
+            // strip them before calling .input()/.output() which re-adds brackets.
+            for label in chain.inputs() {
+                simplified = simplified.input(label.trim_matches(|c: char| c == '[' || c == ']'));
+            }
+            for label in chain.outputs() {
+                simplified = simplified.output(label.trim_matches(|c: char| c == '[' || c == ']'));
+            }
             simplified
         }
     }
@@ -231,6 +239,57 @@ mod tests {
 
         let result = simplify_filter_chain(&chain, PreviewQuality::Draft);
         assert_eq!(result.filter_count(), 0);
+    }
+
+    #[test]
+    fn test_simplify_preserves_labels_at_draft() {
+        // BL-845-AC-1: simplify_filter_chain preserves input/output label vectors at Draft quality.
+        // Red-then-green: before the fix, simplified chain had empty inputs/outputs.
+        let chain = FilterChain::new()
+            .input("0:v")
+            .input("0:a")
+            .filter(Filter::new("scale"))
+            .filter(Filter::new("hue")) // expensive — removed
+            .output("outv")
+            .output("outa");
+
+        let result = simplify_filter_chain(&chain, PreviewQuality::Draft);
+
+        // Only the cheap filter remains
+        assert_eq!(result.filter_count(), 1);
+        assert_eq!(result.filters()[0].name(), "scale");
+
+        // Input and output labels are identical to the original
+        assert_eq!(result.inputs(), chain.inputs());
+        assert_eq!(result.outputs(), chain.outputs());
+    }
+
+    #[test]
+    fn test_simplify_preserves_labels_at_medium() {
+        let chain = FilterChain::new()
+            .input("0:v")
+            .filter(Filter::new("format"))
+            .filter(Filter::new("eq")) // expensive — removed
+            .output("outv");
+
+        let result = simplify_filter_chain(&chain, PreviewQuality::Medium);
+
+        assert_eq!(result.filter_count(), 1);
+        assert_eq!(result.inputs(), chain.inputs());
+        assert_eq!(result.outputs(), chain.outputs());
+    }
+
+    #[test]
+    fn test_simplify_high_still_clones_labels() {
+        // High quality returns a clone — labels must survive the clone path too (regression guard).
+        let chain = FilterChain::new()
+            .input("0:v")
+            .filter(Filter::new("scale"))
+            .output("outv");
+
+        let result = simplify_filter_chain(&chain, PreviewQuality::High);
+        assert_eq!(result.inputs(), chain.inputs());
+        assert_eq!(result.outputs(), chain.outputs());
     }
 }
 

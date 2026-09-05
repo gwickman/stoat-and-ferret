@@ -170,6 +170,50 @@ async def test_hls_partial_transition_xfade(tmp_path: Path) -> None:
 
 
 @_requires_ffmpeg
+async def test_draft_quality_simplify_hls(tmp_path: Path) -> None:
+    """Draft-quality simplify_filter_graph preserves labels so FFmpeg gets valid -map (BL-845-AC-2).
+
+    Red-then-green: before the fix, simplify_filter_chain drops input/output labels at Draft
+    quality, so filter_complex lacks [outv]/[outa] and build_hls_args emits no -map, causing
+    FFmpeg to fail with an unconnected-filter error.
+    """
+    from stoat_ferret.preview.hls_generator import build_hls_args, get_segment_duration
+    from stoat_ferret_core import PreviewQuality, simplify_filter_graph
+
+    src1 = tmp_path / "draft1.mp4"
+    src2 = tmp_path / "draft2.mp4"
+    _make_clip(src1, duration=2.0)
+    _make_clip(src2, duration=2.0)
+
+    clips = [
+        CompositionClip(0, 0.0, 2.0, 0, 0),
+        CompositionClip(1, 2.0, 4.0, 0, 0),
+    ]
+    graph = build_composition_graph(clips, [], None, None, 320, 240)
+
+    # Explicitly apply Draft simplification — bypasses cost-based auto-selection so the
+    # label-preservation fix is exercised regardless of the graph's computed cost.
+    simplified = simplify_filter_graph(graph, PreviewQuality.Draft)
+    filter_complex = str(simplified)
+
+    output_dir = tmp_path / "hls_draft"
+    output_dir.mkdir()
+    args = build_hls_args(
+        input_paths=[str(src1), str(src2)],
+        output_dir=output_dir,
+        filter_complex=filter_complex,
+        segment_duration=get_segment_duration(),
+    )
+
+    executor = RealAsyncFFmpegExecutor()
+    result = await executor.run(args)
+    assert result.returncode == 0, f"FFmpeg failed: {result.stderr.decode(errors='replace')[:300]}"
+
+    assert (output_dir / "manifest.m3u8").exists()
+    assert any(f.suffix == ".ts" for f in output_dir.iterdir())
+
+
+@_requires_ffmpeg
 async def test_hls_wipeleft_transition(tmp_path: Path) -> None:
     """wipeleft xfade transition generates valid HLS without FFmpeg error (BL-846-AC-5)."""
     src1 = tmp_path / "wipeleft1.mp4"

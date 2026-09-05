@@ -546,6 +546,18 @@ impl FilterChain {
     pub fn filter_count(&self) -> usize {
         self.filters.len()
     }
+
+    /// Returns a slice of the input labels (each already bracket-wrapped, e.g. `"[0:v]"`).
+    #[must_use]
+    pub fn inputs(&self) -> &[String] {
+        &self.inputs
+    }
+
+    /// Returns a slice of the output labels (each already bracket-wrapped, e.g. `"[outv]"`).
+    #[must_use]
+    pub fn outputs(&self) -> &[String] {
+        &self.outputs
+    }
 }
 
 impl fmt::Display for FilterChain {
