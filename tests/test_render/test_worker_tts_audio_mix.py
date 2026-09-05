@@ -380,14 +380,14 @@ def _gen_video_with_48k_stereo_audio(path: Path) -> None:
         raise RuntimeError(r.stderr.decode()[-500:])
 
 
-def _gen_wav(path: Path, freq: int = 880) -> None:
+def _gen_wav(path: Path, freq: int = 880, duration: int = 2) -> None:
     r = subprocess.run(
         [
             "ffmpeg",
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency={freq}:duration=2",
+            f"sine=frequency={freq}:duration={duration}",
             "-ar",
             "48000",
             "-ac",
@@ -724,7 +724,9 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
     tts_wav = tmp_path / "tts_3000hz.wav"
     _gen_silent_video(src0)
     _gen_video_with_sine_audio(src1, freq=100)
-    _gen_wav(tts_wav, freq=3000)
+    # TTS must be longer than the source audio chain (~3s) so amix=duration=shortest
+    # does not cut the output before the 100Hz window at 2.2-2.8s.
+    _gen_wav(tts_wav, freq=3000, duration=4)
 
     videos = {
         "vid-band0": _make_video("vid-band0", str(src0), audio_codec=None),
