@@ -297,38 +297,72 @@ async def start_preview(
 
     # Build multi-clip composition via shared RenderGraphTranslator path (BL-838 AC-8).
     video_repo = getattr(request.app.state, "video_repository", None)
+    asset_repo = getattr(request.app.state, "asset_repository", None)
     effect_registry = getattr(request.app.state, "effect_registry", None)
     cwe_list: list[ClipWithEffects] = []
     input_paths: list[str] = []
+    clip_types: list[str] = []
     in_point_secs_list: list[float] = []
     output_fps = float(project.output_fps or 30)
 
     raw_transitions: list[dict[str, object]] = project.transitions or []
     transition_lookup = resolve_transitions_by_clip_a_id(raw_transitions)
 
-    placeable = [
-        c
-        for c in clips
-        if c.timeline_start is not None
-        and c.timeline_end is not None
-        and c.source_video_id is not None
-    ]
+    placeable = [c for c in clips if c.timeline_start is not None and c.timeline_end is not None]
 
     for i, clip in enumerate(placeable):
-        video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
-        if video is None:
+        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
+
+        if clip.source_video_id is not None:
+            video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
+            if video is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "MISSING_VIDEO",
+                        "message": f"Source video for clip {clip.id} not found",
+                    },
+                )
+            framerate = float(video.frame_rate or output_fps)
+            in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
+            in_point_secs_list.append(in_point)
+            input_paths.append(video.path)
+            clip_types.append("file")
+            source_path = video.path
+        elif clip.clip_type == "generator":
+            lavfi_string = (clip.generator_params or {}).get("lavfi_string")
+            if not lavfi_string:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "GENERATOR_MISSING_SOURCE"},
+                )
+            in_point_secs_list.append(0.0)
+            input_paths.append(str(lavfi_string))
+            clip_types.append("generator")
+            source_path = str(lavfi_string)
+            framerate = output_fps
+        elif clip.clip_type == "image":
+            if asset_repo is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "NO_ASSET_REPO"},
+                )
+            asset = await asset_repo.get_by_id(clip.source_asset_id or "")
+            if asset is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "MISSING_ASSET"},
+                )
+            in_point_secs_list.append(0.0)
+            input_paths.append(str(asset.file_path))
+            clip_types.append("image")
+            source_path = str(asset.file_path)
+            framerate = output_fps
+        else:
             raise HTTPException(
                 status_code=422,
-                detail={
-                    "code": "MISSING_VIDEO",
-                    "message": f"Source video for clip {clip.id} not found",
-                },
+                detail={"code": "UNKNOWN_CLIP_TYPE"},
             )
-        framerate = float(video.frame_rate or output_fps)
-        in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
-        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
-        in_point_secs_list.append(in_point)
-        input_paths.append(video.path)
 
         render_effects = _build_preview_render_effects(clip, effect_registry)
 
@@ -353,7 +387,7 @@ async def start_preview(
                 input_index=i,
                 duration_secs=duration,
                 framerate=framerate,
-                source_path=video.path,
+                source_path=source_path,
                 effects=render_effects,
                 outgoing_transition=outgoing,
             )
@@ -378,6 +412,7 @@ async def start_preview(
             filter_complex_str=filter_complex_str,
             in_point_secs=in_point_secs_list,
             output_fps=output_fps,
+            clip_types=clip_types,
             quality_level=quality,
         )
     except SessionLimitError:
@@ -490,6 +525,7 @@ async def seek_preview(
     clips = await clip_repo.list_by_project(project_id)
 
     video_repo = getattr(request.app.state, "video_repository", None)
+    asset_repo = getattr(request.app.state, "asset_repository", None)
     effect_registry = getattr(request.app.state, "effect_registry", None)
 
     project = await project_repo.get(project_id)
@@ -504,31 +540,66 @@ async def seek_preview(
 
     cwe_list_seek: list[ClipWithEffects] = []
     input_paths: list[str] = []
+    clip_types_seek: list[str] = []
     in_point_secs_list_seek: list[float] = []
 
     placeable_seek = [
-        c
-        for c in clips
-        if c.timeline_start is not None
-        and c.timeline_end is not None
-        and c.source_video_id is not None
+        c for c in clips if c.timeline_start is not None and c.timeline_end is not None
     ]
 
     for i, clip in enumerate(placeable_seek):
-        video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
-        if video is None:
+        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
+
+        if clip.source_video_id is not None:
+            video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
+            if video is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "MISSING_VIDEO",
+                        "message": f"Source video for clip {clip.id} not found",
+                    },
+                )
+            framerate = float(video.frame_rate or seek_output_fps)
+            in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
+            in_point_secs_list_seek.append(in_point)
+            input_paths.append(video.path)
+            clip_types_seek.append("file")
+            source_path_seek = video.path
+        elif clip.clip_type == "generator":
+            lavfi_string = (clip.generator_params or {}).get("lavfi_string")
+            if not lavfi_string:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "GENERATOR_MISSING_SOURCE"},
+                )
+            in_point_secs_list_seek.append(0.0)
+            input_paths.append(str(lavfi_string))
+            clip_types_seek.append("generator")
+            source_path_seek = str(lavfi_string)
+            framerate = seek_output_fps
+        elif clip.clip_type == "image":
+            if asset_repo is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "NO_ASSET_REPO"},
+                )
+            asset = await asset_repo.get_by_id(clip.source_asset_id or "")
+            if asset is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "MISSING_ASSET"},
+                )
+            in_point_secs_list_seek.append(0.0)
+            input_paths.append(str(asset.file_path))
+            clip_types_seek.append("image")
+            source_path_seek = str(asset.file_path)
+            framerate = seek_output_fps
+        else:
             raise HTTPException(
                 status_code=422,
-                detail={
-                    "code": "MISSING_VIDEO",
-                    "message": f"Source video for clip {clip.id} not found",
-                },
+                detail={"code": "UNKNOWN_CLIP_TYPE"},
             )
-        framerate = float(video.frame_rate or seek_output_fps)
-        in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
-        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
-        in_point_secs_list_seek.append(in_point)
-        input_paths.append(video.path)
 
         render_effects = _build_preview_render_effects(clip, effect_registry)
 
@@ -553,7 +624,7 @@ async def seek_preview(
                 input_index=i,
                 duration_secs=duration,
                 framerate=framerate,
-                source_path=video.path,
+                source_path=source_path_seek,
                 effects=render_effects,
                 outgoing_transition=outgoing_seek,
             )
@@ -578,6 +649,7 @@ async def seek_preview(
             filter_complex_str=filter_complex_str_seek,
             in_point_secs=in_point_secs_list_seek,
             output_fps=seek_output_fps,
+            clip_types=clip_types_seek,
             position=body.position,
         )
     except (SessionNotFoundError, SessionExpiredError):
