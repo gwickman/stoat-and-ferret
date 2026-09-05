@@ -40,9 +40,10 @@ const mockTransitionEffects: Effect[] = [
       type: 'object',
       properties: {
         duration: { type: 'number', minimum: 0, maximum: 10, default: 1, description: 'Duration in seconds' },
+        offset: { type: 'number', minimum: 0, maximum: 5, default: 0, description: 'Offset in seconds' },
       },
     },
-    ai_hints: { transition: 'fade' },
+    ai_hints: { transition: 'Effect type: fade, wipeleft, dissolve, circleopen, etc.' },
     filter_preview: 'xfade=transition=fade',
     parameters: [],
     ai_summary: '',
@@ -240,5 +241,15 @@ describe('TransitionPanel', () => {
     expect(screen.getByTestId('transition-type-fade')).toBeDefined()
     expect(screen.getByTestId('transition-type-wipeleft')).toBeDefined()
     expect(screen.getByTestId('transition-type-dissolve')).toBeDefined()
+  })
+
+  it('renders parameter form with realistic ai_hints.transition value', () => {
+    render(<TransitionPanel projectId="proj-1" clips={mockClips} />)
+
+    fireEvent.click(screen.getByTestId('transition-type-fade'))
+
+    expect(screen.getByTestId('effect-parameter-form')).toBeDefined()
+    expect(screen.getByTestId('input-duration')).toBeDefined()
+    expect(screen.getByTestId('input-offset')).toBeDefined()
   })
 })

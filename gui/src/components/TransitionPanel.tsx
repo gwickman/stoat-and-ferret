@@ -33,14 +33,18 @@ export default function TransitionPanel({ projectId, clips }: Readonly<Transitio
   const [submitStatus, setSubmitStatus] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Map style names to parameter schemas via ai_hints.transition on registry effects
+  // Find the XFADE effect by ai_hints.transition presence, then map all style names to its schema
   const schemaByStyleName = useMemo(() => {
+    const xfadeEffect = effects.find(
+      (e) =>
+        typeof (e.ai_hints as Record<string, unknown>)?.transition === 'string' &&
+        ((e.ai_hints as Record<string, unknown>).transition as string).length > 0,
+    )
+    if (!xfadeEffect?.parameter_schema) return {}
+    const schema = xfadeEffect.parameter_schema as unknown as ParameterSchema
     const map: Record<string, ParameterSchema | undefined> = {}
-    for (const e of effects) {
-      const hint = (e.ai_hints as Record<string, unknown>)?.transition
-      if (typeof hint === 'string' && e.parameter_schema) {
-        map[hint] = e.parameter_schema as unknown as ParameterSchema
-      }
+    for (const styleName of TRANSITION_STYLE_NAMES) {
+      map[styleName] = schema
     }
     return map
   }, [effects])
