@@ -258,6 +258,172 @@ STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/ -k test_concurrent_renders_have_d
 
 ---
 
+## v141 Test Patterns
+
+Four new test APIs were introduced in v141. Document them here so future versions do not need to rediscover the patterns.
+
+---
+
+### `build_hls_args` `clip_types` parameter (FR-001)
+
+`build_hls_args` in `src/stoat_ferret/preview/hls_generator.py` accepts an optional `clip_types: list[str] | None` parameter that controls per-clip FFmpeg input flags.
+
+| Value | FFmpeg flags emitted | When to use |
+|---|---|---|
+| `"generator"` | `-f lavfi -i <path>` | Lavfi source (e.g. `color=`, `sine=`) |
+| `"image"` | `-loop 1 -i <path>` | Still image that must loop to fill clip duration |
+| `"file"` or `None` | `-i <path>` | Standard video/audio file |
+
+`clip_types` is positional: index `i` maps to input `i`. Pass `None` for the pre-v141 behaviour (plain `-i` for all inputs).
+
+```python
+# tests/preview/test_preview_hls_ffmpeg.py
+
+from stoat_ferret.preview.hls_generator import build_hls_args
+
+# Generator clip (lavfi)
+args = build_hls_args(
+    input_paths=["color=c=red:s=320x240:r=25:d=3"],
+    output_dir=tmp_path,
+    filter_complex=None,
+    segment_duration=2.0,
+    clip_types=["generator"],
+)
+i_idx = args.index("-i")
+assert args[i_idx - 2] == "-f" and args[i_idx - 1] == "lavfi"
+
+# Image clip
+args = build_hls_args(
+    input_paths=["/assets/still.png"],
+    output_dir=tmp_path,
+    filter_complex=None,
+    segment_duration=2.0,
+    clip_types=["image"],
+)
+assert args[args.index("-i") - 2] == "-loop"
+
+# Backward-compatible (no clip_types)
+args = build_hls_args(
+    input_paths=["/path/to/video.mp4"],
+    output_dir=tmp_path,
+    filter_complex=None,
+    segment_duration=2.0,
+    clip_types=None,
+)
+assert "-loop" not in args
+assert "-i" in args
+```
+
+---
+
+### `ALL_VIDEO_NO_AUDIO` fail-close pattern (FR-002)
+
+When a multi-clip render plan contains clips that are **all video-only** (no audio stream) but one or more clips carry audio effects, `build_command_for_job` raises `CommandBuildError` with the message prefix `ALL_VIDEO_NO_AUDIO`.
+
+This is raised in `src/stoat_ferret/render/worker.py` inside `_build_audio_acrossfade_chain` and `_assemble_multi_tts_filter` when `per_clip_audio_filters` contains at least one non-null entry but no audio input indices are available.
+
+**Smoke test pattern** (`tests/smoke/test_render_contract.py`):
+
+```python
+import pytest
+from stoat_ferret.render.worker import CommandBuildError, build_command_for_job
+
+with pytest.raises(CommandBuildError, match="ALL_VIDEO_NO_AUDIO"):
+    await build_command_for_job(
+        job, clip_repo, video_repo, effect_registry=reg
+    )
+```
+
+Use `match="ALL_VIDEO_NO_AUDIO"` to assert the specific fail-close contract, not just any `CommandBuildError`. The same error fires when TTS cue inputs are present alongside video-only clips:
+
+```python
+with pytest.raises(CommandBuildError, match="ALL_VIDEO_NO_AUDIO"):
+    await build_command_for_job(
+        job, clip_repo, video_repo,
+        tts_inputs=tts_inputs, effect_registry=reg,
+    )
+```
+
+---
+
+### `assert_av_duration_alignment` oracle (FR-003)
+
+`assert_av_duration_alignment` in `tests/render_oracle.py` is the canonical oracle for A/V duration alignment in acceptance tests. It runs `ffprobe` on the rendered output and asserts that the audio and video stream durations agree within a millisecond threshold.
+
+**Signature:**
+
+```python
+async def assert_av_duration_alignment(path: Path, max_delta_ms: float = 100.0) -> None:
+```
+
+- Raises `AssertionError` if `|audio_duration - video_duration| * 1000 > max_delta_ms`.
+- Raises `AssertionError` if the file lacks an audio or video stream.
+- Raises `ValueError` for non-positive `max_delta_ms`.
+
+**Standard import and call** (acceptance tests, 150 ms budget for multi-clip TTS/acrossfade renders):
+
+```python
+from tests.render_oracle import assert_av_duration_alignment, assert_stream_inventory
+
+await assert_stream_inventory(out_path, video=True, audio=True)
+await assert_av_duration_alignment(out_path, max_delta_ms=150.0)
+```
+
+Always call `assert_stream_inventory` first to ensure both streams are present before measuring the delta. Use 150 ms for renders that include acrossfade transitions or TTS cue mixing. Use 100 ms for simpler single-transition cases.
+
+---
+
+### `extra_ffmpeg_inputs_fn` extension point (FR-004)
+
+`EffectDefinition` in `src/stoat_ferret/effects/definitions.py` exposes an optional callable field:
+
+```python
+extra_ffmpeg_inputs_fn: Callable[[dict[str, Any]], list[str]] | None = None
+```
+
+Implement this when an effect's FFmpeg filter requires additional `-i` inputs beyond the clip's own media (e.g., an IR WAV file for convolution reverb). The worker collects these paths and inserts them as extra `-i` flags **before** `-filter_complex` in the final command.
+
+**Worker integration** (`src/stoat_ferret/render/worker.py`):
+
+```python
+if defn is not None and defn.extra_ffmpeg_inputs_fn is not None:
+    paths.extend(defn.extra_ffmpeg_inputs_fn(effect_data.get("parameters", {})))
+```
+
+**CONVOLUTION_REVERB example** (`src/stoat_ferret/effects/definitions.py`):
+
+```python
+def _convolution_reverb_extra_inputs(effect_params: dict[str, Any]) -> list[str]:
+    ir_name = str(effect_params.get("ir_name", "hall_small"))
+    return [str(_resolve_ir_path(ir_name))]
+
+CONVOLUTION_REVERB = EffectDefinition(
+    name="convolution_reverb",
+    ...
+    extra_ffmpeg_inputs_fn=_convolution_reverb_extra_inputs,
+    stream_kind="a",
+)
+```
+
+The returned path (e.g. `hall_small.wav`) becomes a second `-i` input; the filter references it as `[1:a]` in the `afir` pad: `[0:a][1:a]afir=...`.
+
+**Smoke test verification** (`tests/smoke/test_render_contract.py`):
+
+```python
+reg = EffectRegistry()
+reg.register("convolution_reverb", CONVOLUTION_REVERB)
+cmd = await build_command_for_job(job, clip_repo, video_repo, effect_registry=reg)
+
+ir_path = str(_resolve_ir_path("hall_small"))
+assert ir_path in cmd
+fc_idx = cmd.index("-filter_complex")
+assert "[0:a][1:a]afir=" in cmd[fc_idx + 1]
+```
+
+The API router (`src/stoat_ferret/api/routers/effects.py`) also calls `extra_ffmpeg_inputs_fn` at apply time to validate that all required asset files exist on disk before accepting the effect.
+
+---
+
 ## Frontend Tests (Vitest)
 
 Frontend tests live in `gui/` and are separate from the Python smoke suite. They use Vitest with a jsdom environment configured in `gui/vitest.config.ts`.
