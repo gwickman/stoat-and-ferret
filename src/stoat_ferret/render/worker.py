@@ -1183,9 +1183,7 @@ async def _build_single_clip_command(
     # TTS audio inputs: must follow other -i flags, before output options
     tts_base_single: int = 0
     if ctx.tts_inputs:
-        tts_base_single = _append_sc_tts_inputs(
-            cmd, ctx.tts_inputs, ctx.ffmetadata_path, extra_cnt
-        )
+        tts_base_single = _append_sc_tts_inputs(cmd, ctx.tts_inputs, ctx.ffmetadata_path, extra_cnt)
 
     # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
     # subtitle_base = 1 (source) + extra_cnt + ffmetadata_offset + tts_count
