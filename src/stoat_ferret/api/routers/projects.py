@@ -543,12 +543,31 @@ async def update_clip(
     return ClipResponse.model_validate(clip)
 
 
+def _intersect_window(
+    effect: dict[str, Any], clip_start: float, clip_end: float
+) -> dict[str, Any] | None:
+    window = effect.get("window", {})
+    w_start: float = window.get("start_s", clip_start)
+    w_end: float = window.get("end_s", clip_end)
+    i_start = max(w_start, clip_start)
+    i_end = min(w_end, clip_end)
+    if i_start >= i_end:
+        return None
+    return {**effect, "window": {**window, "start_s": i_start, "end_s": i_end}}
+
+
 def _migrate_effects_for_split(
-    effects_source: list[dict[str, Any]], split_policy: str
-) -> tuple[list[dict[str, Any]], list[dict[str, object]]]:
+    effects_source: list[dict[str, Any]],
+    split_policy: str,
+    clip_a_start: float | None = None,
+    clip_a_end: float | None = None,
+    clip_b_start: float | None = None,
+    clip_b_end: float | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, object]]]:
     migration_report: list[dict[str, object]] = []
     if split_policy == "copy_full_stack":
-        child_effects = effects_source
+        clip_a_effects = list(effects_source)
+        clip_b_effects = list(effects_source)
         for e in effects_source:
             migration_report.append(
                 {
@@ -558,22 +577,39 @@ def _migrate_effects_for_split(
                 }
             )
     elif split_policy == "remap_windowed_effects":
-        # No in_frame/out_frame metadata exists in current effects — fall back to copy_full_stack
-        child_effects = effects_source
-        for e in effects_source:
-            migration_report.append(
-                {
-                    "effect_type": e.get("effect_type", "unknown"),
-                    "disposition": "copied",
-                    "target": "both",
-                }
-            )
-        if effects_source:
-            migration_report.append(
-                {"effect_type": "remap_note", "disposition": "copied", "target": "both"}
-            )
+        if clip_a_start is None or clip_a_end is None or clip_b_start is None or clip_b_end is None:
+            # No timeline metadata — fall back to copy_full_stack
+            clip_a_effects = list(effects_source)
+            clip_b_effects = list(effects_source)
+            for e in effects_source:
+                migration_report.append(
+                    {
+                        "effect_type": e.get("effect_type", "unknown"),
+                        "disposition": "copied",
+                        "target": "both",
+                    }
+                )
+            if effects_source:
+                migration_report.append(
+                    {"effect_type": "remap_note", "disposition": "copied", "target": "both"}
+                )
+        else:
+            clip_a_effects = []
+            clip_b_effects = []
+            for e in effects_source:
+                clipped_a = _intersect_window(e, clip_a_start, clip_a_end)
+                if clipped_a is None:
+                    migration_report.append({"disposition": "dropped", "effect_id": e.get("id")})
+                else:
+                    clip_a_effects.append(clipped_a)
+                clipped_b = _intersect_window(e, clip_b_start, clip_b_end)
+                if clipped_b is None:
+                    migration_report.append({"disposition": "dropped", "effect_id": e.get("id")})
+                else:
+                    clip_b_effects.append(clipped_b)
     else:  # drop_with_warning
-        child_effects = []
+        clip_a_effects = []
+        clip_b_effects = []
         for e in effects_source:
             migration_report.append(
                 {
@@ -582,7 +618,7 @@ def _migrate_effects_for_split(
                     "target": "both",
                 }
             )
-    return child_effects, migration_report
+    return clip_a_effects, clip_b_effects, migration_report
 
 
 @router.post("/{project_id}/clips/{clip_id}/split")
@@ -637,7 +673,14 @@ async def split_clip(
     clip_a_duration_frames = body.split_frame - clip.in_point
 
     effects_source = clip.effects or []
-    child_effects, migration_report = _migrate_effects_for_split(effects_source, body.split_policy)
+    clip_a_effects, clip_b_effects, migration_report = _migrate_effects_for_split(
+        effects_source,
+        body.split_policy,
+        clip_a_start=clip.timeline_start,
+        clip_a_end=split_time_s,
+        clip_b_start=split_time_s,
+        clip_b_end=clip.timeline_end,
+    )
 
     clip_a = Clip(
         id=Clip.new_id(),
@@ -650,7 +693,7 @@ async def split_clip(
         timeline_position=clip.timeline_position,
         timeline_start=clip.timeline_start,
         timeline_end=split_time_s,
-        effects=child_effects,
+        effects=clip_a_effects,
         created_at=now,
         updated_at=now,
     )
@@ -666,7 +709,7 @@ async def split_clip(
         timeline_position=clip.timeline_position + clip_a_duration_frames,
         timeline_start=split_time_s,
         timeline_end=clip.timeline_end,
-        effects=child_effects,
+        effects=clip_b_effects,
         created_at=now,
         updated_at=now,
     )

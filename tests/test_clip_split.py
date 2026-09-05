@@ -483,3 +483,86 @@ def test_split_clip_new_ids_assigned() -> None:
     assert data["clip_a"]["id"] != _CLIP_ID
     assert data["clip_b"]["id"] != _CLIP_ID
     assert data["clip_a"]["id"] != data["clip_b"]["id"]
+
+
+@pytest.mark.api
+def test_split_clip_remap_clips_out_of_range_window() -> None:
+    """FR-002-AC-1 (BL-850-AC-2): remap_windowed_effects clips partial-overlap window and drops
+    out-of-range effects.
+
+    Parent: 300-frame clip at 30fps (0-10s), windowed effect [0s, 2s].
+    Split at frame 75 (2.5s):
+    - clip_a [0s, 2.5s]: effect window clipped to [0s, 2.5s].
+    - clip_b [2.5s, 10s]: effect entirely before 2.5s, dropped.
+    """
+    effect: dict[str, Any] = {
+        "effect_type": "color_grade",
+        "id": "eff-1",
+        "window": {"start_s": 0.0, "end_s": 2.0},
+    }
+    clip = _make_clip(
+        in_point=0,
+        out_point=300,
+        timeline_start=0.0,
+        timeline_end=10.0,
+        effects=[effect],
+    )
+    project = _make_project(output_fps=30)
+    client, _, _ = _make_client(clip=clip, project=project)
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 75, "split_policy": "remap_windowed_effects"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    clip_a_effects = data["clip_a"]["effects"]
+    assert len(clip_a_effects) == 1
+    # Effect [0s, 2s] is fully contained in clip_a [0s, 2.5s]; intersection = [0s, 2s]
+    assert clip_a_effects[0]["window"]["start_s"] == pytest.approx(0.0)
+    assert clip_a_effects[0]["window"]["end_s"] == pytest.approx(2.0)
+
+    clip_b_effects = data["clip_b"]["effects"]
+    assert len(clip_b_effects) == 0
+
+    report = data["migration_report"]
+    dropped = [e for e in report if e.get("disposition") == "dropped"]
+    assert len(dropped) >= 1
+
+
+def test_split_clip_effects_not_aliased() -> None:
+    """FR-005-AC-1 / FR-008-AC-1 (BL-869-AC-1/AC-4/AC-5): _migrate_effects_for_split returns
+    independent lists.
+
+    Under copy_full_stack: id(clip_a_effects) != id(clip_b_effects); mutating one leaves the other
+    unchanged.
+    """
+    from stoat_ferret.api.routers.projects import _migrate_effects_for_split
+
+    effects: list[Any] = [{"effect_type": "reverse", "filter_string": "reverse"}]
+    clip_a_effects, clip_b_effects, _ = _migrate_effects_for_split(effects, "copy_full_stack")
+
+    assert id(clip_a_effects) != id(clip_b_effects)
+    clip_a_effects.append({"effect_type": "added"})
+    assert len(clip_b_effects) == 1
+
+
+def test_split_clip_remap_effects_not_aliased() -> None:
+    """FR-006-AC-1 (BL-869-AC-2): remap_windowed_effects also returns independent lists."""
+    from stoat_ferret.api.routers.projects import _migrate_effects_for_split
+
+    effects: list[Any] = [{"effect_type": "color_grade", "window": {"start_s": 0.0, "end_s": 5.0}}]
+    clip_a_effects, clip_b_effects, _ = _migrate_effects_for_split(
+        effects,
+        "remap_windowed_effects",
+        clip_a_start=0.0,
+        clip_a_end=2.5,
+        clip_b_start=2.5,
+        clip_b_end=10.0,
+    )
+
+    assert id(clip_a_effects) != id(clip_b_effects)
+    clip_a_effects.append({"effect_type": "added"})
+    assert len(clip_b_effects) == 1
