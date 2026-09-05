@@ -26,7 +26,13 @@ import pytest
 from stoat_ferret.api.schemas.render import SoftSubtitleSpec
 from stoat_ferret.db.markers_repository import Marker
 from stoat_ferret.db.models import Clip, Video
-from stoat_ferret.effects.definitions import CONVOLUTION_REVERB, CROP_EFFECT, TIME_STRETCH, VOLUME
+from stoat_ferret.effects.definitions import (
+    CONVOLUTION_REVERB,
+    CROP_EFFECT,
+    TIME_STRETCH,
+    VOLUME,
+    _resolve_ir_path,
+)
 from stoat_ferret.effects.registry import EffectRegistry
 from stoat_ferret.render.models import OutputFormat, QualityPreset, RenderJob, RenderStatus
 from stoat_ferret.render.worker import (
@@ -2211,10 +2217,11 @@ class TestGoldenArgv:
 
     @pytest.mark.asyncio
     async def test_golden_sc_convolution_reverb(self) -> None:
-        """convolution_reverb raises CommandBuildError at build time (BL-827 AC-6).
+        """Single clip with convolution_reverb -> IR WAV as second -i, two-pad afir (BL-827).
 
-        The IR WAV is never wired as a second -i input in the current render path;
-        fail-close prevents the guaranteed FFmpeg runtime crash.
+        Verifies the full golden argv including:
+        - IR WAV inserted as stream 1 after the main clip
+        - Two-pad afir filter [0:a][1:a]afir=dry=1:wet=0.4[aout]
         """
         vid = _g_make_video("vid-reverb", _G_VIDEO_PATH_1, audio_codec="aac")
         clip = _g_make_clip(
@@ -2230,13 +2237,40 @@ class TestGoldenArgv:
         reg = EffectRegistry()
         reg.register("convolution_reverb", CONVOLUTION_REVERB)
 
-        with pytest.raises(CommandBuildError, match="convolution_reverb requires IR WAV"):
-            await build_command_for_job(
-                _g_make_job(_g_make_plan()),
-                _g_clip_repo(clip),
-                _g_video_repo(vid),
-                effect_registry=reg,
-            )
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()),
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+            effect_registry=reg,
+        )
+
+        ir_path = str(_resolve_ir_path("hall_small"))
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            ir_path,
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];[0:a][1:a]afir=dry=1:wet=0.4[aout]",
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
 
     @pytest.mark.asyncio
     async def test_golden_mc_oversized_transition_raises(self) -> None:

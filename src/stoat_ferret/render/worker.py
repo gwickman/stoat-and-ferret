@@ -404,10 +404,6 @@ def _build_clip_render_effects(
     if effect_registry and clip.effects:
         for effect_data in clip.effects:
             effect_type = effect_data.get("effect_type", "")
-            if effect_type == "convolution_reverb":
-                raise CommandBuildError(
-                    "convolution_reverb requires IR WAV -i input; not yet supported"
-                )
             defn = effect_registry.get(effect_type)
             if defn is None:
                 raise CommandBuildError(f"Unknown effect type {effect_type!r} on clip {clip.id!r}")
@@ -415,6 +411,21 @@ def _build_clip_render_effects(
     if not render_effects:
         render_effects.append(RenderEffect.none())
     return render_effects, audio_filter_chains
+
+
+def _collect_clip_extra_inputs(
+    clip: Clip,
+    effect_registry: EffectRegistry | None,
+) -> list[str]:
+    """Return extra FFmpeg -i input paths needed by effects on this clip."""
+    paths: list[str] = []
+    if effect_registry and clip.effects:
+        for effect_data in clip.effects:
+            effect_type = effect_data.get("effect_type", "")
+            defn = effect_registry.get(effect_type)
+            if defn is not None and defn.extra_ffmpeg_inputs_fn is not None:
+                paths.extend(defn.extra_ffmpeg_inputs_fn(effect_data.get("parameters", {})))
+    return paths
 
 
 async def build_command_for_job(
@@ -590,6 +601,11 @@ async def _build_clip_input_list(
             raise CommandBuildError(f"Clip {clip.id} has zero or negative duration")
         clip_durations_mc.append(duration_secs)
         in_point_secs_list.append(in_point_secs)
+        extra_inputs = _collect_clip_extra_inputs(clip, ctx.effect_registry)
+        if extra_inputs:
+            raise CommandBuildError(
+                f"Clip {clip.id!r}: multi-clip convolution_reverb is not yet supported"
+            )
         render_effects, audio_filter_chains = _build_clip_render_effects(clip, ctx.effect_registry)
         per_clip_audio_filters.append(audio_filter_chains)
         outgoing, transition_dur = _resolve_clip_outgoing_transition(clip.id, transition_lookup)
@@ -926,9 +942,11 @@ def _add_sc_subtitle_stream_maps(
     use_translator_sc: bool,
     source_audio_codec: str | None,
     ffmetadata_path: str | None,
+    extra_input_count: int = 0,
 ) -> None:
     """Append -map flags for soft subtitle streams and explicit video/audio maps when needed."""
-    subtitle_base = 1 + (1 if ffmetadata_path else 0) + (len(tts_inputs) if tts_inputs else 0)
+    tts_cnt = len(tts_inputs) if tts_inputs else 0
+    subtitle_base = 1 + extra_input_count + (1 if ffmetadata_path else 0) + tts_cnt
     if not tts_inputs and not use_translator_sc:
         cmd.extend(["-map", "0:v"])
         if source_audio_codec is not None:
@@ -947,6 +965,7 @@ def _assemble_sc_filter_translator(
     fps: float,
     effect_registry: EffectRegistry | None,
     input_path: str,
+    extra_cnt: int = 0,
 ) -> None:
     """Assemble filter_complex and -map flags for the single-clip translator path."""
     from stoat_ferret_core import ClipWithEffects, RenderGraphTranslator
@@ -1009,7 +1028,8 @@ def _assemble_sc_filter_translator(
         if not source_audio_codec:
             raise CommandBuildError(f"Clip {first_clip.id!r} has audio effects but no audio stream")
         joined = ",".join(audio_filter_chains_sc)
-        audio_seg = f"[0:a]{joined}{_LABEL_AOUT}"
+        extra_pads = "".join(f"[{i + 1}:a]" for i in range(extra_cnt))
+        audio_seg = f"[0:a]{extra_pads}{joined}{_LABEL_AOUT}"
         combined_sc = filter_complex_sc + ";" + audio_seg
         cmd.extend(["-filter_complex", combined_sc, "-map", _LABEL_FINAL, "-map", _LABEL_AOUT])
     else:
@@ -1105,9 +1125,10 @@ def _append_sc_tts_inputs(
     cmd: list[str],
     tts_inputs: list[TtsCueAudioInput],
     ffmetadata_path: str | None,
+    extra_input_count: int = 0,
 ) -> int:
     """Append TTS audio -i inputs to cmd and return tts_base_single stream index."""
-    tts_base = 1 + (1 if ffmetadata_path else 0)
+    tts_base = 1 + extra_input_count + (1 if ffmetadata_path else 0)
     for inp in tts_inputs:
         cmd.extend(["-i", inp.audio_path])
     return tts_base
@@ -1149,6 +1170,12 @@ async def _build_single_clip_command(
     # --- Assemble FFmpeg command ---
     cmd = _build_sc_cmd_init(first_clip, input_path)
 
+    # Extra -i inputs (e.g. IR WAV for convolution_reverb): inserted right after main clip.
+    extra_inputs = _collect_clip_extra_inputs(first_clip, ctx.effect_registry)
+    for extra_path in extra_inputs:
+        cmd.extend(["-i", extra_path])
+    extra_cnt = len(extra_inputs)
+
     # Second input: ffmetadata file for chapter embedding (must precede output options)
     if ctx.ffmetadata_path:
         cmd.extend(["-i", ctx.ffmetadata_path])
@@ -1156,10 +1183,12 @@ async def _build_single_clip_command(
     # TTS audio inputs: must follow other -i flags, before output options
     tts_base_single: int = 0
     if ctx.tts_inputs:
-        tts_base_single = _append_sc_tts_inputs(cmd, ctx.tts_inputs, ctx.ffmetadata_path)
+        tts_base_single = _append_sc_tts_inputs(
+            cmd, ctx.tts_inputs, ctx.ffmetadata_path, extra_cnt
+        )
 
     # Soft subtitle inputs: appended LAST in -i chain (Risk 005 stream-index safety)
-    # subtitle_base = 1 (source) + ffmetadata_offset + tts_count
+    # subtitle_base = 1 (source) + extra_cnt + ffmetadata_offset + tts_count
     if ctx.render_settings.soft_subtitles:
         await _build_sc_subtitle_inputs(cmd, ctx)
 
@@ -1179,6 +1208,7 @@ async def _build_single_clip_command(
             fps,
             ctx.effect_registry,
             input_path,
+            extra_cnt,
         )
     elif ctx.tts_inputs:
         _assemble_sc_filter_tts_only(
@@ -1203,6 +1233,7 @@ async def _build_single_clip_command(
             use_translator_sc,
             source_audio_codec,
             ctx.ffmetadata_path,
+            extra_cnt,
         )
 
     # Video codec
