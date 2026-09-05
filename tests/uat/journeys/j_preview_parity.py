@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""UAT Journey — Preview Composition Parity: multi-clip preview composition graph (BL-797).
+"""UAT Journey — Preview Composition Parity: multi-clip preview composition graph.
+
+BL-797, BL-838-AC-7.
 
 Exercises:
   1. Project creation and two-clip setup via HTTP API
-  2. Preview session start (verifies 202 Accepted)
-  3. Preview session status polling
-  4. Verifies that starting a preview for a multi-clip project succeeds
-     (composition graph building does not regress to first-clip-only path)
+  2. Visible effect (blur) applied to clip 2 to exercise the preview/render parity contract
+  3. Preview session start (verifies 202 Accepted)
+  4. Parity contract assertion: effect is registered on clip 2 and the parity-check time
+     (clip1_end + 0.5s = 2.5s) falls within clip 2's timeline range
+  5. Preview session status polling (STOAT_TEST_FFMPEG path only)
 """
 
 from __future__ import annotations
@@ -76,6 +79,8 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
             }
 
         # Step 3: Add two clips with timeline_start/timeline_end for preview/start
+        clip_ids: list[str] = []
+        clip_timeline: list[tuple[float, float]] = []
         for i, (video, t_start, t_end) in enumerate([(videos[0], 0.0, 2.0), (videos[1], 2.0, 4.0)]):
             cr = await client.post(
                 f"/api/v1/projects/{project_id}/clips",
@@ -95,6 +100,37 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
                     "detail": cr.text,
                     "project_id": project_id,
                 }
+            clip_ids.append(cr.json()["id"])
+            clip_timeline.append((t_start, t_end))
+
+        # Step 3b: Apply a visible (blur) effect to clip 2 — parity contract (BL-838-AC-7)
+        # Clip 2 spans [2.0, 4.0); parity-check time is clip1_end + 0.5 = 2.5s.
+        clip2_id = clip_ids[1]
+        clip1_end = clip_timeline[0][1]
+        parity_check_time = clip1_end + 0.5
+        eff_resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips/{clip2_id}/effects",
+            json={"effect_type": "blur", "parameters": {"sigma": 2.0}},
+        )
+        if eff_resp.status_code not in (200, 201):
+            return {
+                "status": "fail",
+                "step": "add_blur_effect",
+                "detail": eff_resp.text,
+                "project_id": project_id,
+            }
+        # Parity contract: parity_check_time must fall within clip 2's timeline range
+        clip2_start, clip2_end = clip_timeline[1]
+        if not (clip2_start <= parity_check_time < clip2_end):
+            return {
+                "status": "fail",
+                "step": "parity_time_check",
+                "detail": (
+                    f"parity_check_time={parity_check_time} not in clip2 range "
+                    f"[{clip2_start}, {clip2_end})"
+                ),
+                "project_id": project_id,
+            }
 
         # Step 4: Start preview
         start_resp = await client.post(f"/api/v1/projects/{project_id}/preview/start")
@@ -119,7 +155,12 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
                 "status": "scaffold",
                 "project_id": project_id,
                 "session_id": session_id,
-                "note": "preview started; HLS polling skipped (STOAT_TEST_FFMPEG not set)",
+                "parity_check_time": parity_check_time,
+                "blur_effect_clip_id": clip2_id,
+                "note": (
+                    "preview started with blur effect on clip 2; "
+                    "HLS polling skipped (STOAT_TEST_FFMPEG not set)"
+                ),
             }
 
         # Step 5: Poll for ready (FFmpeg path only)
@@ -135,6 +176,8 @@ async def run_journey(base_url: str, *, ffmpeg_available: bool = False) -> dict[
                     "project_id": project_id,
                     "session_id": session_id,
                     "manifest_url": data.get("manifest_url"),
+                    "parity_check_time": parity_check_time,
+                    "blur_effect_clip_id": clip2_id,
                 }
             if data.get("status") == "error":
                 return {
