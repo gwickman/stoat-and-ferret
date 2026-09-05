@@ -752,7 +752,7 @@ def _assemble_multi_tts_filter(
             mix_seg = (
                 f"{src_chain};"
                 f"[src_aout_pre]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
-                f"[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
+                f"[src_norm]{tts_audio_label}amix=inputs=2:duration=shortest{_LABEL_AOUT}"
             )
             combined_filter_with_mix = combined_filter + ";" + mix_seg
             cmd.extend(
@@ -823,7 +823,7 @@ def _build_mc_clip_input_args(
             if in_pt_secs > 0:
                 cmd.extend(["-ss", str(in_pt_secs), "-t", str(dur), "-i", path])
             else:
-                cmd.extend(["-i", path])
+                cmd.extend(["-t", str(dur), "-i", path])
 
 
 def _build_mc_tts_inputs(

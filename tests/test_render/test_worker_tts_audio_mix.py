@@ -144,7 +144,7 @@ async def test_multi_clip_tts_with_source_audio_uses_amix() -> None:
     )
 
     cmd_str = " ".join(cmd)
-    assert "amix=inputs=2:duration=longest" in cmd_str
+    assert "amix=inputs=2:duration=shortest" in cmd_str
     assert "[aout]" in cmd_str
 
     # AC-4: single audio map — no bare -map 0:a alongside tts map (parallel-stream antipattern)
@@ -202,7 +202,7 @@ async def test_multi_clip_tts_later_clip_audio_uses_amix() -> None:
 
     cmd_str = " ".join(cmd)
     # Source audio from clip 1 (input index 1) must be amixed with TTS, not dropped.
-    assert "amix=inputs=2:duration=longest" in cmd_str
+    assert "amix=inputs=2:duration=shortest" in cmd_str
     assert "[aout]" in cmd_str
     # Amix must reference input 1's audio stream, not the no-audio input 0.
     assert "[1:a]" in cmd_str
@@ -380,14 +380,14 @@ def _gen_video_with_48k_stereo_audio(path: Path) -> None:
         raise RuntimeError(r.stderr.decode()[-500:])
 
 
-def _gen_wav(path: Path, freq: int = 880) -> None:
+def _gen_wav(path: Path, freq: int = 880, duration: int = 2) -> None:
     r = subprocess.run(
         [
             "ffmpeg",
             "-f",
             "lavfi",
             "-i",
-            f"sine=frequency={freq}:duration=2",
+            f"sine=frequency={freq}:duration={duration}",
             "-ar",
             "48000",
             "-ac",
@@ -724,7 +724,9 @@ async def test_tts_source_two_band_amix_survival(tmp_path: Path) -> None:
     tts_wav = tmp_path / "tts_3000hz.wav"
     _gen_silent_video(src0)
     _gen_video_with_sine_audio(src1, freq=100)
-    _gen_wav(tts_wav, freq=3000)
+    # TTS must be longer than the source audio chain (~3s) so amix=duration=shortest
+    # does not cut the output before the 100Hz window at 2.2-2.8s.
+    _gen_wav(tts_wav, freq=3000, duration=4)
 
     videos = {
         "vid-band0": _make_video("vid-band0", str(src0), audio_codec=None),
