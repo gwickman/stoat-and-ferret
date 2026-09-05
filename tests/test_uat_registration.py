@@ -121,6 +121,7 @@ def test_dimension_c_doc_truth_matches_module_map() -> None:
 async def test_j_preview_seek_run_raises_on_journey_failure() -> None:
     """j_preview_seek run() raises AssertionError on failure dict (BL-863)."""
     import pytest
+
     pytest.importorskip("playwright")
     from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -140,6 +141,7 @@ async def test_j_preview_seek_run_raises_on_journey_failure() -> None:
 async def test_j_preview_parity_run_raises_on_journey_failure() -> None:
     """j_preview_parity run() raises AssertionError on failure dict (BL-863)."""
     import pytest
+
     pytest.importorskip("playwright")
     from unittest.mock import AsyncMock, MagicMock, patch
 
