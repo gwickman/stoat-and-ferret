@@ -17,12 +17,16 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
 from stoat_ferret.api.app import create_app
+from stoat_ferret.api.websocket.manager import ConnectionManager
 from stoat_ferret.db.async_repository import AsyncInMemoryVideoRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.models import PreviewQuality, PreviewSession, PreviewStatus, Video
+from stoat_ferret.db.preview_repository import InMemoryPreviewRepository
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
+from stoat_ferret.preview.hls_generator import HLSGenerator
 from stoat_ferret.preview.manager import PreviewManager
 from tests.test_api.conftest import InMemoryAssetRepository
 
@@ -56,13 +60,118 @@ def _make_video(vid_id: str, path: str) -> Video:
     )
 
 
+@pytest.mark.asyncio
+async def test_transition_preview_http_contract() -> None:
+    """HTTP-contract assertions run in standard CI without STOAT_TEST_FFMPEG.
+
+    POST /effects/transition → 201, POST /preview/start (with saved transition) → 202.
+    PreviewManager is real; only the HLS spawn (generator.generate) is intercepted,
+    so the real router code that reads t["parameters"]["duration"] is exercised.
+
+    Regression guard: preview.py must read t["parameters"]["duration"], not t["duration"].
+    This assertion fails if preview.py is reverted to the top-level read.
+    """
+    video_repo = AsyncInMemoryVideoRepository()
+    project_repo = AsyncInMemoryProjectRepository()
+    clip_repo = AsyncInMemoryClipRepository()
+
+    video_a = _make_video("vid-tr-a", "/fake/clip_a.mp4")
+    video_b = _make_video("vid-tr-b", "/fake/clip_b.mp4")
+    await video_repo.add(video_a)
+    await video_repo.add(video_b)
+
+    # Real PreviewManager with HLS generator mocked at spawn level — not at router dispatch level.
+    preview_repo = InMemoryPreviewRepository()
+    mock_ws = MagicMock(spec=ConnectionManager)
+    mock_ws.broadcast = AsyncMock(return_value=None)
+    mock_generator = MagicMock(spec=HLSGenerator)
+    mock_generator.generate = AsyncMock(
+        side_effect=RuntimeError("HLS spawn skipped in HTTP-contract lane")
+    )
+    preview_manager = PreviewManager(
+        repository=preview_repo,
+        generator=mock_generator,
+        ws_manager=mock_ws,
+    )
+
+    app = create_app(
+        video_repository=video_repo,
+        project_repository=project_repo,
+        clip_repository=clip_repo,
+        preview_manager=preview_manager,
+        asset_repository=InMemoryAssetRepository(),
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        proj_resp = await client.post(
+            "/api/v1/projects",
+            json={
+                "name": "transition-preview-http-contract-test",
+                "output_width": _SOURCE_W,
+                "output_height": _SOURCE_H,
+                "output_fps": 30,
+            },
+        )
+        assert proj_resp.status_code == 201, proj_resp.text
+        project_id = proj_resp.json()["id"]
+
+        clip_a_resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "clip_type": "file",
+                "source_video_id": "vid-tr-a",
+                "in_point": 0,
+                "out_point": 60,
+                "timeline_position": 0,
+                "timeline_start": 0.0,
+                "timeline_end": 2.0,
+            },
+        )
+        assert clip_a_resp.status_code == 201, clip_a_resp.text
+        clip_a_id = clip_a_resp.json()["id"]
+
+        clip_b_resp = await client.post(
+            f"/api/v1/projects/{project_id}/clips",
+            json={
+                "clip_type": "file",
+                "source_video_id": "vid-tr-b",
+                "in_point": 0,
+                "out_point": 60,
+                "timeline_position": 60,
+                "timeline_start": 2.0,
+                "timeline_end": 4.0,
+            },
+        )
+        assert clip_b_resp.status_code == 201, clip_b_resp.text
+        clip_b_id = clip_b_resp.json()["id"]
+
+        # POST /effects/transition — stores nested parameters shape that triggered BL-848
+        tr_resp = await client.post(
+            f"/api/v1/projects/{project_id}/effects/transition",
+            json={
+                "source_clip_id": clip_a_id,
+                "target_clip_id": clip_b_id,
+                "transition_type": "fade",
+                "parameters": {"duration": 0.5},
+            },
+        )
+        assert tr_resp.status_code == 201, tr_resp.text
+
+        # Regression guard: preview.py must read t["parameters"]["duration"], not t["duration"]
+        # This assertion fails if preview.py is reverted to the top-level read
+        start_resp = await client.post(f"/api/v1/projects/{project_id}/preview/start")
+
+    assert start_resp.status_code == 202, start_resp.text
+    assert start_resp.json().get("session_id") is not None
+
+
 @_FFMPEG_SKIP
 @pytest.mark.asyncio
-async def test_preview_start_after_transition_returns_202() -> None:
-    """POST /preview/start returns 202 after a transition is saved via /effects/transition.
+async def test_transition_preview_ffmpeg_round_trip() -> None:
+    """FFmpeg-gated round-trip: preview reaches ready state with a non-null manifest_url.
 
-    Verifies BL-848: preview.py used float(t['duration']) which KeyErrors on the nested
-    parameters shape that /effects/transition stores.  With the fix, 202 is returned.
+    Verifies FR-003-AC-1: when STOAT_TEST_FFMPEG=1, the full preview session lifecycle
+    (poll to status=ready, assert manifest_url non-null) succeeds after a saved transition.
     """
     video_repo = AsyncInMemoryVideoRepository()
     project_repo = AsyncInMemoryProjectRepository()
@@ -113,8 +222,6 @@ async def test_preview_start_after_transition_returns_202() -> None:
         preview_manager=mock_manager,
         asset_repository=InMemoryAssetRepository(),
     )
-
-    from httpx import ASGITransport, AsyncClient
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         proj_resp = await client.post(
