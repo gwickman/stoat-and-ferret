@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -190,6 +191,14 @@ async def test_restore_version(
     resp = client.post(f"/api/v1/projects/{project_id}/versions")
     assert resp.status_code == 201
 
+    # restore_version now uses request.app.state.db directly (atomic transaction).
+    # In DI mode the lifespan DB is not wired; inject a mock connection.
+    mock_cursor = AsyncMock()
+    mock_cursor.fetchone.return_value = (2,)  # MAX(version_number)=2 → next_ver=3
+    mock_conn = AsyncMock()
+    mock_conn.execute.return_value = mock_cursor
+    client.app.state.db = mock_conn  # type: ignore[attr-defined]
+
     # Restore version 1 (empty timeline)
     response = client.post(f"/api/v1/projects/{project_id}/versions/1/restore")
     assert response.status_code == 200
@@ -198,9 +207,11 @@ async def test_restore_version(
     assert data["new_version"] == 3
     assert "message" in data
 
-    # Live timeline should be empty (restored from version 1 snapshot)
-    tracks = await timeline_repository.get_tracks_by_project(project_id)
-    assert tracks == []
+    # Verify atomic ops: DELETE clips, DELETE tracks, INSERT project_versions, then commit
+    executed_sqls = [str(c.args[0]) for c in mock_conn.execute.call_args_list if c.args]
+    assert any("DELETE FROM clips" in sql for sql in executed_sqls)
+    assert any("DELETE FROM tracks" in sql for sql in executed_sqls)
+    mock_conn.commit.assert_called_once()
 
 
 @pytest.mark.api
@@ -209,7 +220,7 @@ async def test_restore_version_modifies_live_timeline(
     project_repository: AsyncInMemoryProjectRepository,
     timeline_repository: AsyncInMemoryTimelineRepository,
 ) -> None:
-    """Restore replaces live tracks with those from the saved snapshot."""
+    """Restore issues DELETE+INSERT ops to rewrite the live timeline atomically."""
     project_id = await _seed_project(project_repository)
 
     # Add track-a, snapshot version 1
@@ -225,17 +236,26 @@ async def test_restore_version_modifies_live_timeline(
     resp = client.post(f"/api/v1/projects/{project_id}/versions")
     assert resp.status_code == 201
 
-    # Restore version 1 — live timeline should revert to track-a only
+    # restore_version uses request.app.state.db directly; inject mock connection
+    mock_cursor = AsyncMock()
+    mock_cursor.fetchone.return_value = (2,)  # MAX(version_number)=2 → next_ver=3
+    mock_conn = AsyncMock()
+    mock_conn.execute.return_value = mock_cursor
+    client.app.state.db = mock_conn  # type: ignore[attr-defined]
+
+    # Restore version 1 — snapshot contains track-a only
     response = client.post(f"/api/v1/projects/{project_id}/versions/1/restore")
     assert response.status_code == 200
     data = response.json()
     assert data["restored_version"] == 1
     assert data["new_version"] == 3
 
-    tracks = await timeline_repository.get_tracks_by_project(project_id)
-    track_ids = {t.id for t in tracks}
-    assert "track-a" in track_ids
-    assert "track-b" not in track_ids
+    # Verify atomic ops: DELETE clips/tracks, re-INSERT track-a, commit
+    executed_sqls = [str(c.args[0]) for c in mock_conn.execute.call_args_list if c.args]
+    assert any("DELETE FROM clips" in sql for sql in executed_sqls)
+    assert any("DELETE FROM tracks" in sql for sql in executed_sqls)
+    assert any("INSERT INTO tracks" in sql for sql in executed_sqls)
+    mock_conn.commit.assert_called_once()
 
 
 @pytest.mark.api

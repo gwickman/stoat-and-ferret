@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timezone
 from typing import Annotated
 
+import aiosqlite
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from stoat_ferret.api.routers.timeline import _build_timeline_response, _get_clips_by_track
@@ -21,7 +22,6 @@ from stoat_ferret.api.schemas.version import (
 )
 from stoat_ferret.api.settings import get_settings
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
-from stoat_ferret.db.models import Clip, Track
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
@@ -37,6 +37,100 @@ from stoat_ferret.db.version_repository import (
 )
 
 router = APIRouter(prefix="/api/v1", tags=["versions"])
+
+
+async def _restore_timeline_atomic(
+    conn: aiosqlite.Connection,
+    project_id: str,
+    snapshot_timeline: TimelineResponse,
+    timeline_json: str,
+) -> int:
+    """Restore all timeline DB ops in a single transaction; return the new version number.
+
+    Uses direct conn.execute() only — no repo methods (each repo method commits internally,
+    which would break the single-transaction guarantee). Follows the split_atomic pattern
+    from clip_repository.py:203-241.
+    """
+    cursor = await conn.execute(
+        "SELECT MAX(version_number) FROM project_versions WHERE project_id = ?",
+        (project_id,),
+    )
+    row = await cursor.fetchone()
+    next_ver = 1 if (row is None or row[0] is None) else row[0] + 1
+    checksum = compute_checksum(timeline_json)
+    now = datetime.now(timezone.utc)
+
+    try:
+        await conn.execute("DELETE FROM clips WHERE project_id = ?", (project_id,))
+        await conn.execute("DELETE FROM tracks WHERE project_id = ?", (project_id,))
+        for tr in snapshot_timeline.tracks:
+            await conn.execute(
+                """
+                INSERT INTO tracks (
+                    id, project_id, track_type, label, z_index, muted, locked,
+                    kind, volume_envelope, weight
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tr.id,
+                    project_id,
+                    tr.track_type,
+                    tr.label,
+                    tr.z_index,
+                    int(tr.muted),
+                    int(tr.locked),
+                    tr.kind,
+                    tr.volume_envelope,
+                    tr.weight,
+                ),
+            )
+            for cl in tr.clips:
+                effects_json = json.dumps(cl.effects) if cl.effects is not None else None
+                gen_json = (
+                    json.dumps(cl.generator_params) if cl.generator_params is not None else None
+                )
+                await conn.execute(
+                    """
+                    INSERT INTO clips (
+                        id, project_id, source_video_id, in_point, out_point,
+                        timeline_position, effects_json, created_at, updated_at,
+                        track_id, timeline_start, timeline_end,
+                        clip_type, generator_params, source_asset_id
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        cl.id,
+                        project_id,
+                        cl.source_video_id,
+                        cl.in_point,
+                        cl.out_point,
+                        0,
+                        effects_json,
+                        now.isoformat(),
+                        now.isoformat(),
+                        cl.track_id,
+                        cl.timeline_start,
+                        cl.timeline_end,
+                        cl.clip_type,
+                        gen_json,
+                        cl.source_asset_id,
+                    ),
+                )
+        await conn.execute(
+            """
+            INSERT INTO project_versions
+                (project_id, version_number, timeline_json, checksum, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (project_id, next_ver, timeline_json, checksum, now.isoformat()),
+        )
+        await conn.commit()
+    except Exception:
+        await conn.rollback()
+        raise
+    return next_ver
 
 
 def get_project_repository(request: Request) -> AsyncProjectRepository:
@@ -220,23 +314,22 @@ async def create_version(
 async def restore_version(
     project_id: str,
     version: int,
+    request: Request,
     project_repo: ProjectRepoDep,
     version_repo: VersionRepoDep,
-    timeline_repo: TimelineRepoDep,
-    clip_repo: ClipRepoDep,
 ) -> RestoreResponse:
     """Restore a previous project version to the live timeline, creating a new version.
 
-    Replaces the current live timeline with the data from the specified version,
-    then saves a new version snapshot of the restored state.
+    Replaces the current live timeline with the data from the specified version
+    in a single atomic transaction, then saves a new version snapshot of the
+    restored state.
 
     Args:
         project_id: The unique project identifier.
         version: The version number to restore from.
+        request: FastAPI request (provides raw DB connection for atomic restore).
         project_repo: Project repository dependency.
         version_repo: Version repository dependency.
-        timeline_repo: Timeline repository dependency.
-        clip_repo: Clip repository dependency.
 
     Returns:
         Restore confirmation with source and new version numbers.
@@ -262,52 +355,11 @@ async def restore_version(
         )
 
     timeline = TimelineResponse.model_validate(json.loads(source.timeline_json))
-
-    live_tracks = await timeline_repo.get_tracks_by_project(project_id)
-    for track in live_tracks:
-        clips = await timeline_repo.get_clips_by_track(track.id)
-        for clip in clips:
-            await clip_repo.delete(clip.id)
-        await timeline_repo.delete_track(track.id)
-
-    for tr in timeline.tracks:
-        restored_track = Track(
-            id=tr.id,
-            project_id=project_id,
-            track_type=tr.track_type,
-            label=tr.label,
-            z_index=tr.z_index,
-            muted=tr.muted,
-            locked=tr.locked,
-            kind=tr.kind,
-            volume_envelope=tr.volume_envelope,
-            weight=tr.weight,
-        )
-        await timeline_repo.create_track(restored_track)
-        for cl in tr.clips:
-            restored_clip = Clip(
-                id=cl.id,
-                project_id=project_id,
-                source_video_id=cl.source_video_id,
-                in_point=cl.in_point,
-                out_point=cl.out_point,
-                timeline_position=0,
-                clip_type=cl.clip_type,
-                track_id=cl.track_id,
-                timeline_start=cl.timeline_start,
-                timeline_end=cl.timeline_end,
-                generator_params=cl.generator_params,
-                effects=cl.effects,
-                source_asset_id=cl.source_asset_id,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-            await clip_repo.add(restored_clip)
-
-    new_record = await version_repo.save(project_id, source.timeline_json)
+    conn = request.app.state.db
+    new_version = await _restore_timeline_atomic(conn, project_id, timeline, source.timeline_json)
 
     return RestoreResponse(
         restored_version=version,
-        new_version=new_record.version_number,
+        new_version=new_version,
         message="Version restored to live timeline.",
     )
