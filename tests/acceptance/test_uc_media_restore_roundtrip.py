@@ -11,7 +11,10 @@ clip count, IDs). No FFmpeg required; exercised via ASGITransport (API/DB layer 
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncGenerator
+from typing import Any
 
+import aiosqlite
 import httpx
 import pytest
 
@@ -20,12 +23,8 @@ from stoat_ferret.api.settings import get_settings
 
 
 @pytest.fixture
-async def client(tmp_path: object) -> httpx.AsyncClient:
-    """Isolated ASGI test client backed by a fresh SQLite database.
-
-    Follows the same pattern as tests/smoke/conftest.py::smoke_client but is
-    local to this acceptance test to avoid a cross-package fixture dependency.
-    """
+async def _base_app_client(tmp_path: object) -> AsyncGenerator[Any, None]:
+    """Internal: yields (app, client) sharing a fresh SQLite database."""
     from pathlib import Path
 
     base = Path(str(tmp_path))
@@ -46,7 +45,7 @@ async def client(tmp_path: object) -> httpx.AsyncClient:
             base_url="http://testserver",
         ) as c,
     ):
-        yield c  # type: ignore[misc]
+        yield app, c
 
     if orig_db is None:
         os.environ.pop("STOAT_DATABASE_PATH", None)
@@ -59,6 +58,17 @@ async def client(tmp_path: object) -> httpx.AsyncClient:
         os.environ["STOAT_THUMBNAIL_DIR"] = orig_thumb
 
     get_settings.cache_clear()
+
+
+@pytest.fixture
+async def client(_base_app_client: Any) -> AsyncGenerator[httpx.AsyncClient, None]:
+    """Isolated ASGI test client backed by a fresh SQLite database.
+
+    Follows the same pattern as tests/smoke/conftest.py::smoke_client but is
+    local to this acceptance test to avoid a cross-package fixture dependency.
+    """
+    _, c = _base_app_client
+    yield c
 
 
 async def test_uc_media_restore_roundtrip(client: httpx.AsyncClient) -> None:
@@ -207,4 +217,166 @@ async def test_uc_media_restore_roundtrip(client: httpx.AsyncClient) -> None:
     new_version = restore_body["new_version"]
     assert new_version in version_numbers, (
         f"New version {new_version} not found in version list {version_numbers}"
+    )
+
+
+async def test_restore_is_atomic_on_failure(_base_app_client: Any) -> None:
+    """Injected DB failure during restore leaves timeline unchanged (BL-844-AC-3).
+
+    Monkeypatches app.state.db.execute so it raises aiosqlite.OperationalError on
+    the second execute call (after the first DELETE FROM clips succeeds in-memory
+    but before commit), then asserts the original timeline is still intact.
+    """
+    app, client = _base_app_client
+
+    # Setup: create project + track + clip + saved version
+    resp = await client.post("/api/v1/projects", json={"name": "Atomic Failure Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id: str = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "clip_type": "generator",
+            "generator_params": {"type": "tone", "frequency": 440.0, "duration": 2.0},
+            "in_point": 0,
+            "out_point": 60,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    clip_id: str = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={"clip_id": clip_id, "track_id": track_id, "timeline_start": 0.0, "timeline_end": 2.0},
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+    saved_version: int = resp.json()["version_number"]
+
+    # Capture original timeline state
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    original_clip_ids = {c["id"] for t in resp.json()["tracks"] for c in t["clips"]}
+
+    # Inject failure: raise when the DELETE FROM tracks SQL runs inside _restore_timeline_atomic.
+    # This simulates a mid-transaction failure after clips have been deleted but before tracks
+    # are deleted — the subsequent rollback must restore the original state.
+    real_execute = app.state.db.execute
+
+    async def failing_execute(sql: str, *args: Any, **kwargs: Any) -> Any:
+        if "DELETE FROM tracks" in sql:
+            raise aiosqlite.OperationalError("injected failure")
+        return await real_execute(sql, *args, **kwargs)
+
+    app.state.db.execute = failing_execute
+    restore_failed = False
+    try:
+        resp = await client.post(f"/api/v1/projects/{project_id}/versions/{saved_version}/restore")
+        restore_failed = resp.status_code >= 500
+    except Exception:
+        restore_failed = True
+    finally:
+        app.state.db.execute = real_execute
+
+    assert restore_failed, "Expected restore to fail (500 or exception) after DB injection"
+
+    # Timeline must be unchanged: same clips present
+    resp = await client.get(f"/api/v1/projects/{project_id}/timeline")
+    assert resp.status_code == 200
+    post_failure_clip_ids = {c["id"] for t in resp.json()["tracks"] for c in t["clips"]}
+    assert post_failure_clip_ids == original_clip_ids, (
+        f"Timeline changed after failed restore: {post_failure_clip_ids} != {original_clip_ids}"
+    )
+
+
+async def test_restore_removes_unplaced_clips(client: httpx.AsyncClient) -> None:
+    """Restore eliminates unplaced (track_id=None) clips that exist before restore (BL-844-AC-4).
+
+    Creates an unplaced clip after saving a version, then restores the version and
+    asserts the unplaced clip is no longer returned by GET /projects/{id}/clips.
+    """
+    # Setup: create project + track + placed clip + save version
+    resp = await client.post("/api/v1/projects", json={"name": "Unplaced Clips Project"})
+    assert resp.status_code == 201
+    project_id = resp.json()["id"]
+
+    resp = await client.put(
+        f"/api/v1/projects/{project_id}/timeline",
+        json=[{"track_type": "video", "label": "V1"}],
+    )
+    assert resp.status_code == 200
+    track_id: str = resp.json()["tracks"][0]["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "clip_type": "generator",
+            "generator_params": {"type": "tone", "frequency": 440.0, "duration": 2.0},
+            "in_point": 0,
+            "out_point": 60,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    placed_clip_id: str = resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/timeline/clips",
+        json={
+            "clip_id": placed_clip_id,
+            "track_id": track_id,
+            "timeline_start": 0.0,
+            "timeline_end": 2.0,
+        },
+    )
+    assert resp.status_code == 201
+
+    resp = await client.post(f"/api/v1/projects/{project_id}/versions")
+    assert resp.status_code == 201
+    saved_version: int = resp.json()["version_number"]
+
+    # Add an unplaced clip (not placed on any track)
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "clip_type": "generator",
+            "generator_params": {"type": "tone", "frequency": 880.0, "duration": 1.0},
+            "in_point": 0,
+            "out_point": 30,
+            "timeline_position": 0,
+        },
+    )
+    assert resp.status_code == 201
+    unplaced_clip_id: str = resp.json()["id"]
+
+    # Verify unplaced clip is visible before restore
+    resp = await client.get(f"/api/v1/projects/{project_id}/clips")
+    assert resp.status_code == 200
+    clip_ids_before = {c["id"] for c in resp.json()["clips"]}
+    assert unplaced_clip_id in clip_ids_before, "Unplaced clip must be present before restore"
+
+    # Restore the version
+    resp = await client.post(f"/api/v1/projects/{project_id}/versions/{saved_version}/restore")
+    assert resp.status_code == 200
+
+    # Unplaced clip must be gone after restore
+    resp = await client.get(f"/api/v1/projects/{project_id}/clips")
+    assert resp.status_code == 200
+    clip_ids_after = {c["id"] for c in resp.json()["clips"]}
+    assert unplaced_clip_id not in clip_ids_after, (
+        f"Unplaced clip {unplaced_clip_id} still present after restore: {clip_ids_after}"
+    )
+    assert placed_clip_id in clip_ids_after, (
+        f"Placed clip {placed_clip_id} missing after restore: {clip_ids_after}"
     )
