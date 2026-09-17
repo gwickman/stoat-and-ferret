@@ -71,9 +71,7 @@ async def run(page: Page, base_url: str, output_dir: Path | None = None) -> None
     await shot("02_project_open.png")
 
     # Step 3: locate a generator clip
-    gen_clips = page.locator(
-        "[data-testid='clip-type-generator'], [data-clip-type='generator']"
-    )
+    gen_clips = page.locator("[data-testid='clip-type-generator'], [data-clip-type='generator']")
     if await gen_clips.count() == 0:
         return  # no generator clip to test against — skip
     first_gen = gen_clips.first
@@ -83,9 +81,7 @@ async def run(page: Page, base_url: str, output_dir: Path | None = None) -> None
     await shot("03_generator_clip_located.png")
 
     # Step 4: save a version via GUI
-    save_btn = page.locator(
-        "[data-testid='save-version-button'], button:has-text('Save Version')"
-    )
+    save_btn = page.locator("[data-testid='save-version-button'], button:has-text('Save Version')")
     if await save_btn.count() == 0:
         raise AssertionError("Save Version button not found — GUI contract broken")
     await save_btn.first.click()
@@ -117,9 +113,7 @@ async def run(page: Page, base_url: str, output_dir: Path | None = None) -> None
     await page.wait_for_timeout(1000)
     await shot("06_versions_section.png")
 
-    restore_btn = page.locator(
-        "[data-testid='restore-version-button'], button:has-text('Restore')"
-    )
+    restore_btn = page.locator("[data-testid='restore-version-button'], button:has-text('Restore')")
     if await restore_btn.count() == 0:
         raise AssertionError("Restore button not found in Versions section — GUI contract broken")
     await restore_btn.first.click()
@@ -134,9 +128,7 @@ async def run(page: Page, base_url: str, output_dir: Path | None = None) -> None
         await clips_tab.first.click()
         await page.wait_for_timeout(800)
 
-    restored_gen = page.locator(
-        "[data-testid='clip-type-generator'], [data-clip-type='generator']"
-    )
+    restored_gen = page.locator("[data-testid='clip-type-generator'], [data-clip-type='generator']")
     await shot("08_timeline_after_restore.png")
 
     restored_count = await restored_gen.count()
