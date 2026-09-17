@@ -4,6 +4,22 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v142 — 2026-09-17
+
+2 themes, 5 features, PRs #1094–#1097. Test results: 3960 passed, 201 skipped, 0 failed (ZERO regression).
+
+### Theme 1: restore-hardening
+
+- **BL-842** — `restore_version` now preserves `generator_params`, `effects`, and `source_asset_id` for all clip types; `TimelineResponse` clip schema extended and restore path reads snapshot field values instead of hard-coding `None` (PR #1094)
+- **BL-844** — `restore_version` is now atomic via a single SQLite transaction with rollback on failure; unplaced clips removed project-wide on restore (PR #1095)
+- Smoke assertions added for restored metadata and unplaced clip removal (PR #1096)
+
+### Theme 2: documentation-refresh
+
+- **BL-881** — C4 preview/effects docs refreshed for v141 API drift: multi-input preview API (8 new params across `build_hls_args`, `HLSGenerator.generate`, `PreviewManager.start/seek`) and 18-field `EffectDefinition` documented; NFR-001 drift scan clean (PR #1097)
+
+---
+
 ## v141 — 2026-09-05
 
 5 themes, 16 features, PRs #1080–#1093.
