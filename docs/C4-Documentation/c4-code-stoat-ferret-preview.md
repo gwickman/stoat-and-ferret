@@ -15,36 +15,36 @@
 
 - `CacheEntry`
   - Description: In-memory metadata for a cached preview session with LRU tracking
-  - Location: cache.py:30-37
+  - Location: cache.py:34
   - Attributes: session_id (str), size_bytes (int), last_accessed (datetime), expires_at (datetime)
 
 - `CacheStatus`
   - Description: Snapshot of current preview cache state including usage and active sessions
-  - Location: cache.py:40-47
+  - Location: cache.py:44
   - Attributes: used_bytes (int), max_bytes (int), usage_percent (float), active_sessions (list[str])
 
 ### Exception Classes
 
 - `PreviewManagerError` - Base exception for preview manager operations
-  - Location: manager.py:48-49
+  - Location: manager.py:72
 
 - `SessionLimitError(PreviewManagerError)` - Raised when concurrent session limit is reached
-  - Location: manager.py:52-53
+  - Location: manager.py:76
 
 - `SessionNotFoundError(PreviewManagerError)` - Raised when session is not found
-  - Location: manager.py:56-57
+  - Location: manager.py:80
 
 - `SessionExpiredError(PreviewManagerError)` - Raised when accessing an expired session
-  - Location: manager.py:60-61
+  - Location: manager.py:84
 
 - `InvalidTransitionError(PreviewManagerError)` - Raised on invalid state transition
-  - Location: manager.py:64-65
+  - Location: manager.py:88
 
 ### Classes
 
 - `PreviewCache`
   - Description: LRU+TTL cache manager for preview sessions with background cleanup task. Enforces size limits via eviction and TTL-based expiry.
-  - Location: cache.py:50-351
+  - Location: cache.py:53
   - Key Methods:
     - `async register(session_id: str, expires_at: datetime) -> None` - Register session with LRU eviction
     - `async touch(session_id: str) -> None` - Update last_accessed and check TTL
@@ -59,18 +59,23 @@
 
 - `HLSGenerator`
   - Description: Generates HLS VOD segments from project timelines using FFmpeg with filter simplification and progress callbacks
-  - Location: hls_generator.py:135-276
+  - Location: hls_generator.py:172
   - Methods:
     - `__init__(*, async_executor: AsyncFFmpegExecutor, output_base_dir: str | None = None) -> None`
-    - `async generate(*, session_id: str, input_path: str, filter_graph: FilterGraph | None = None, duration_us: int | None = None, progress_callback: Callable[[float], Awaitable[None]] | None = None, cancel_event: asyncio.Event | None = None) -> Path`
+    - `async generate(*, session_id: str, input_paths: list[str], filter_graph: FilterGraph | None = None, filter_complex_str: str | None = None, duration_us: int | None = None, start_offset_s: float | None = None, in_point_secs: list[float] | None = None, output_fps: float | None = None, clip_types: list[str] | None = None, progress_callback: Callable[[float], Awaitable[None]] | None = None, cancel_event: asyncio.Event | None = None) -> Path`
+      - Location: hls_generator.py:211
+      - Note: `filter_complex_str` (supplied by `RenderGraphTranslator`) takes precedence over `filter_graph` when both are provided.
   - Dependencies: FFmpeg executor, Rust bindings for filter simplification, metrics
 
 - `PreviewManager`
   - Description: Orchestrates preview session lifecycle with state machine, concurrent limits, seek regeneration, cancellation, and WebSocket event broadcasting
-  - Location: manager.py:68-708
+  - Location: manager.py:92
   - Key Methods:
-    - `async start(*, project_id: str, input_path: str, filter_graph: FilterGraph | None = None, duration_us: int | None = None, quality_level: PreviewQuality = PreviewQuality.MEDIUM) -> PreviewSession` - Start new session
-    - `async seek(session_id: str, *, input_path: str, filter_graph: FilterGraph | None = None, duration_us: int | None = None) -> PreviewSession` - Seek and regenerate segments
+    - `async start(*, project_id: str, input_paths: list[str] | None = None, filter_graph: FilterGraph | None = None, filter_complex_str: str | None = None, in_point_secs: list[float] | None = None, output_fps: float | None = None, clip_types: list[str] | None = None, duration_us: int | None = None, quality_level: PreviewQuality = PreviewQuality.MEDIUM) -> PreviewSession`
+      - Location: manager.py:283
+      - Note: `input_path` (deprecated compat, default `""`) is still accepted; use `input_paths` instead. `filter_complex_str` takes precedence over `filter_graph` when both are provided.
+      - (replaces: Start new session)
+    - `async seek(session_id: str, *, input_paths: list[str] | None = None, filter_graph: FilterGraph | None = None, filter_complex_str: str | None = None, in_point_secs: list[float] | None = None, output_fps: float | None = None, clip_types: list[str] | None = None, duration_us: int | None = None, position: float | None = None) -> PreviewSession` - Seek and regenerate segments (`input_path` deprecated compat param also accepted)
     - `async stop(session_id: str) -> None` - Stop session and cleanup
     - `async get_status(session_id: str) -> PreviewSession` - Get session status with expiry check
     - `async cancel_all() -> int` - Cancel all active sessions for graceful shutdown
@@ -89,23 +94,23 @@
 ### Module-Level Functions
 
 - `get_segment_duration() -> float`
-  - Location: hls_generator.py:41-48
+  - Location: hls_generator.py:45
   - Description: Get configured preview segment duration from settings
 
-- `build_hls_args(input_path: str, output_dir: Path, filter_complex: str | None, segment_duration: float) -> list[str]`
-  - Location: hls_generator.py:51-98
-  - Description: Build FFmpeg arguments for HLS VOD segment generation
+- `build_hls_args(input_paths: list[str], output_dir: Path, filter_complex: str | None, segment_duration: float, start_offset_s: float | None = None, in_point_secs: list[float] | None = None, output_fps: float | None = None, clip_types: list[str] | None = None) -> list[str]`
+  - Location: hls_generator.py:55
+  - Description: Build FFmpeg arguments for HLS VOD segment generation. `input_paths` provides one `-i` entry per clip. A `clip_types` entry of `"generator"` emits `-f lavfi` before `-i` instead of a plain file input; `"image"` emits `-loop 1`.
 
 - `simplify_filter_for_preview(filter_graph: FilterGraph | None) -> str | None`
-  - Location: hls_generator.py:101-132
+  - Location: hls_generator.py:138
   - Description: Apply Rust filter simplification for preview quality based on estimated cost
 
 - `_cleanup_session_dir(output_dir: Path) -> None`
-  - Location: hls_generator.py:268-276
+  - Location: hls_generator.py:327
   - Description: Remove session output directory and all contents
 
 - `_calculate_dir_size(path: Path) -> int`
-  - Location: cache.py:336-351
+  - Location: cache.py:339
   - Description: Calculate total size of a directory recursively in bytes
 
 ## Dependencies

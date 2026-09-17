@@ -14,7 +14,12 @@
 ### Effect Definitions (definitions.py)
 
 **Dataclass:**
-- `EffectDefinition`: frozen dataclass with name, description, parameter_schema (dict), ai_hints (dict), preview_fn (Callable[[], str]), build_fn (Callable[[dict], str]); plus 7 routing-metadata fields: stream_kind (str), arity (int), chain_safe (bool), timebase_mutating (bool), timeline_t_capable (bool), requires_path_escape (bool), value_kind_per_option (dict[str, str])
+- `EffectDefinition`: frozen dataclass with 18 fields:
+  - Core fields: `name (str)`, `description (str)`, `parameter_schema (dict[str, object])`, `ai_hints (dict[str, str])`, `preview_fn (Callable[[], str])`, `build_fn (Callable[[dict[str, Any]], str])`
+  - AI-discovery fields: `ai_summary (str)` — LLM-friendly one-sentence description; `example_prompt (str)` — example natural-language prompt
+  - Automation fields: `automatable (frozenset[str])` — set of parameter names that can be automated; `automation_filter_template (str | None)` — filter template string for automation
+  - Routing-metadata fields: `stream_kind (str)`, `arity (int)`, `chain_safe (bool)`, `timebase_mutating (bool)`, `timeline_t_capable (bool)`, `requires_path_escape (bool)`, `value_kind_per_option (dict[str, str])`
+  - Extra-inputs hook: `extra_ffmpeg_inputs_fn (Callable[[dict[str, Any]], list[str]] | None)` — when set, the effect declares additional FFmpeg `-i` inputs; `CONVOLUTION_REVERB` uses this to provide its impulse-response WAV file as an extra input
 
 **Built-in Effect Definitions:**
 - `TEXT_OVERLAY`: text overlays with font size, color, position, margin, font parameters
@@ -95,6 +100,11 @@ classDiagram
             +ai_hints: dict
             +preview_fn: Callable
             +build_fn: Callable
+            +ai_summary: str
+            +example_prompt: str
+            +automatable: frozenset[str]
+            +automation_filter_template: str | None
+            +extra_ffmpeg_inputs_fn: Callable | None
         }
         class EffectRegistry {
             -_effects: dict
