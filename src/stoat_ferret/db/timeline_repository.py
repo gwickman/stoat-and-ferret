@@ -93,6 +93,14 @@ class AsyncTimelineRepository(Protocol):
         """
         ...
 
+    async def delete_all_tracks_by_project(self, project_id: str) -> None:
+        """Delete all tracks for a project (non-atomic convenience method).
+
+        Args:
+            project_id: The project whose tracks to delete.
+        """
+        ...
+
     async def count_tracks(self, project_id: str) -> int:
         """Return the number of tracks in a project.
 
@@ -200,6 +208,11 @@ class AsyncSQLiteTimelineRepository:
         cursor = await self._conn.execute("DELETE FROM tracks WHERE id = ?", (track_id,))
         await self._conn.commit()
         return cursor.rowcount > 0
+
+    async def delete_all_tracks_by_project(self, project_id: str) -> None:
+        """Delete all tracks for a project."""
+        await self._conn.execute("DELETE FROM tracks WHERE project_id = ?", (project_id,))
+        await self._conn.commit()
 
     async def get_clips_by_track(self, track_id: str) -> list[Clip]:
         """Get clips assigned to a track, ordered by timeline_start."""
@@ -321,6 +334,10 @@ class AsyncInMemoryTimelineRepository:
             return False
         del self._tracks[track_id]
         return True
+
+    async def delete_all_tracks_by_project(self, project_id: str) -> None:
+        """Delete all tracks for a project."""
+        self._tracks = {k: v for k, v in self._tracks.items() if v.project_id != project_id}
 
     async def get_clips_by_track(self, track_id: str) -> list[Clip]:
         """Get clips assigned to a track, ordered by timeline_start."""

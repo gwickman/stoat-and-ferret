@@ -100,6 +100,14 @@ class AsyncClipRepository(Protocol):
         """
         ...
 
+    async def delete_all_by_project(self, project_id: str) -> None:
+        """Delete all clips for a project (non-atomic convenience method).
+
+        Args:
+            project_id: The project whose clips to delete.
+        """
+        ...
+
 
 class AsyncSQLiteClipRepository:
     """Async SQLite implementation of the ClipRepository protocol."""
@@ -199,6 +207,11 @@ class AsyncSQLiteClipRepository:
         cursor = await self._conn.execute("DELETE FROM clips WHERE id = ?", (id,))
         await self._conn.commit()
         return cursor.rowcount > 0
+
+    async def delete_all_by_project(self, project_id: str) -> None:
+        """Delete all clips for a project."""
+        await self._conn.execute("DELETE FROM clips WHERE project_id = ?", (project_id,))
+        await self._conn.commit()
 
     async def split_atomic(self, clip_a: Clip, clip_b: Clip, original_id: str) -> tuple[Clip, Clip]:
         """Create clip_a and clip_b and delete original in a single atomic transaction."""
@@ -323,6 +336,10 @@ class AsyncInMemoryClipRepository:
         self._clips[clip_b.id] = copy.deepcopy(clip_b)
         del self._clips[original_id]
         return copy.deepcopy(clip_a), copy.deepcopy(clip_b)
+
+    async def delete_all_by_project(self, project_id: str) -> None:
+        """Delete all clips for a project."""
+        self._clips = {k: v for k, v in self._clips.items() if v.project_id != project_id}
 
     def seed(self, clips: list[Clip]) -> None:
         """Populate the repository with initial test data.
