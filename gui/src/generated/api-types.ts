@@ -5110,6 +5110,16 @@ export interface components {
             in_point: number;
             /** Out Point */
             out_point: number;
+            /** Generator Params */
+            generator_params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Effects */
+            effects?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Source Asset Id */
+            source_asset_id?: string | null;
         };
         /**
          * TimelineClipUpdate

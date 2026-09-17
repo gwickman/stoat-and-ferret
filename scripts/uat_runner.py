@@ -158,6 +158,7 @@ JOURNEY_MODULE_MAP: dict[int, str] = {
     717: "tests.uat.journeys.j_crop",
     718: "tests.uat.journeys.j_preview_parity",
     719: "tests.uat.journeys.j_preview_seek",
+    720: "tests.uat.journeys.j_version_restore",
     721: "tests.uat.journeys.j_split_preserve",
 }
 
