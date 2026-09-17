@@ -182,6 +182,13 @@ silent schema regressions from reaching `main` undetected.
 | `test_multi_clip_preview_start` (`tests/smoke/test_preview.py`) | unconditional smoke lane | Calls `POST /api/v1/projects/{project_id}/preview/start` with a 2-clip project and asserts HTTP 202 with a valid `session_id`. No `STOAT_TEST_FFMPEG` gate — smoke tests run in FFmpeg-capable environments as a precondition. Covers BL-797 (multi-clip composition graph for preview). |
 | `test_seek_position_returns_200` (`tests/smoke/test_preview_endpoints.py`) | unconditional smoke lane | Calls `POST /api/v1/preview/{session_id}/seek` with `{"position": 3.0}` and asserts HTTP 200. No `STOAT_TEST_FFMPEG` gate. Covers BL-798 (seek-position forwarding to FFmpeg `-ss` flag). |
 
+### Phase 19 — v142 Restore Metadata and Unplaced Clip Smoke Tests (BL-842, BL-844)
+
+| Test function | Coverage tier | Note |
+|--------------|---------------|------|
+| `test_restore_preserves_clip_metadata_smoke` (`tests/smoke/test_versions.py`) | unconditional smoke lane | Creates a generator clip with `generator_params`, saves version 1, mutates the live timeline by adding a second clip with different params, restores version 1, and asserts the original clip's `generator_params` are non-null and match the saved snapshot value. Covers BL-842 (restore must preserve clip metadata). |
+| `test_restore_removes_unplaced_clips_smoke` (`tests/smoke/test_versions.py`) | unconditional smoke lane | Creates an unplaced clip (not placed on any track), saves version 1, confirms the clip is visible via `GET /clips` before restore, restores version 1, and asserts the unplaced clip is absent from `GET /clips` after restore. Covers BL-844 (restore must remove clips not present in the snapshot). |
+
 ## Contract Test Key Files
 
 ### Contract Tests (v033)

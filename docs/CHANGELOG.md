@@ -4,6 +4,43 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v141 — 2026-09-05
+
+5 themes, 16 features, PRs #1080–#1093.
+
+### Theme 1: rust-preview-core
+
+- **BL-843** — Fixed partial-transition xfade preview crash edge-case (missing xfade node on clipped transition boundaries)
+- **BL-845** — Fixed Medium/Draft simplify label-drop preview crash (label omitted from filter graph output map)
+
+### Theme 2: preview-render-parity
+
+- **BL-839** — Added preview media oracle with SSIM-based frame comparison (`materialize_preview_session`, `decode_preview_frame`, `compare_preview_render`); acceptance test confirms SSIM ≥ 0.90 (PR #1080)
+- **BL-838** — Closed 6 preview/render composition parity gaps via shared `RenderGraphTranslator` path; SSIM parity acceptance test green (PR #1081)
+- **BL-880** — Added `DURATION_TOO_LARGE` guard to `/effects/transition` endpoint (PR #1081)
+
+### Theme 3: render-worker-correctness
+
+- **BL-827** — Wired IR WAV as proper second `-i` input with `[0:a][1:a]afir=dry=1:wet=0.4[aout]` for convolution reverb; added HTTP 422 `MISSING_IR_ASSET` guard (PR #1082)
+- **BL-879** — Added `CommandBuildError` fail-close at 3 worker.py guard sites for all-video-only multi-clip renders with audio effects (PR #1083)
+- **BL-875** — Added `-t dur` trim for zero-in-point clips; capped TTS audio with `amix=duration=shortest` to prevent audio outlasting video (PR #1084)
+- **BL-876** — Extracted `_validate_clip_build_params` to reduce `_build_clip_input_list` cyclomatic complexity 16→14; 30/30 golden cases byte-identical (PR #1085)
+
+### Theme 4: preview-session-ui
+
+- **BL-851** — Fixed generator/image clip type HTTP 422 errors; both clip types now produce valid HLS previews via lavfi synthetic inputs (PR #1086)
+- **BL-857** — Fixed TransitionPanel rendering empty parameter form by keying schema lookup on field presence instead of value (PR #1087)
+- **BL-863** — Fixed silent UAT journey failures: `run()` now raises `AssertionError` on genuine failures instead of returning a dict (PR #1088)
+- **BL-860** — Restructured over-gated round-trip acceptance test to run HTTP contract assertions in standard CI without `STOAT_TEST_FFMPEG` (PR #1089)
+
+### Theme 5: effect-ops-quality-infra
+
+- **BL-850** — Fixed effect aliasing and window intersection in `split_clip` `remap_windowed_effects` (PR #1090)
+- **BL-869** — Fixed split list aliasing in split clip effect remapping (PR #1090)
+- Smoke tests, smoke harness guide, and UAT journey updated to cover corrected split_clip behavior (PRs #1091–#1093)
+
+---
+
 ## v140 — 2026-09-04
 
 3 themes, 9 features, PRs #1067–#1076. Test results: 3943 passed, 190 skipped, 0 failed (ZERO regression).
