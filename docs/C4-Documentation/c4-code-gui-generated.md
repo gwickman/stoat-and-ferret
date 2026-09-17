@@ -81,6 +81,9 @@ Convenience type aliases re-exporting schema types from the OpenAPI definition:
 - `timeline_start: number` - Position on timeline
 - `created_at: string` - ISO 8601 timestamp
 - `updated_at: string` - ISO 8601 timestamp
+- `generator_params?: object | null` - Synthesis parameters (e.g. lavfi_string) for generator clips; null for file/image clips
+- `effects?: object[] | null` - Applied effect definitions; null for non-effect clips
+- `source_asset_id?: string | null` - Asset reference for image clips; null for file/generator clips
 
 ### Effect Schemas
 

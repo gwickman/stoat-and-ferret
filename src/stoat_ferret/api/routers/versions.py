@@ -296,9 +296,9 @@ async def restore_version(
                 track_id=cl.track_id,
                 timeline_start=cl.timeline_start,
                 timeline_end=cl.timeline_end,
-                generator_params=None,
-                effects=None,
-                source_asset_id=None,
+                generator_params=cl.generator_params,
+                effects=cl.effects,
+                source_asset_id=cl.source_asset_id,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             )
