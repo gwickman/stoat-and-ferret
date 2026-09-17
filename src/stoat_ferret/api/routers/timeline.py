@@ -196,6 +196,9 @@ async def _get_clips_by_track(
             timeline_end=clip.timeline_end,
             in_point=clip.in_point,
             out_point=clip.out_point,
+            generator_params=clip.generator_params,
+            effects=clip.effects,
+            source_asset_id=clip.source_asset_id,
         )
         result.setdefault(clip.track_id, []).append(resp)
     # Sort clips within each track by timeline_start
@@ -406,6 +409,9 @@ async def add_timeline_clip(
         timeline_end=clip.timeline_end,
         in_point=clip.in_point,
         out_point=clip.out_point,
+        generator_params=clip.generator_params,
+        effects=clip.effects,
+        source_asset_id=clip.source_asset_id,
     )
     await _broadcast(
         http_request, EventType.TIMELINE_UPDATED, {"project_id": project_id, "clip_id": clip.id}
@@ -501,6 +507,9 @@ async def update_timeline_clip(
         timeline_end=clip.timeline_end,
         in_point=clip.in_point,
         out_point=clip.out_point,
+        generator_params=clip.generator_params,
+        effects=clip.effects,
+        source_asset_id=clip.source_asset_id,
     )
     await _broadcast(
         http_request, EventType.TIMELINE_UPDATED, {"project_id": project_id, "clip_id": clip_id}

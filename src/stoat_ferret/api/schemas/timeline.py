@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -114,6 +114,9 @@ class TimelineClipResponse(BaseModel):
     timeline_end: float | None
     in_point: int
     out_point: int
+    generator_params: dict[str, Any] | None = None
+    effects: list[dict[str, Any]] | None = None
+    source_asset_id: str | None = None
 
 
 class TransitionCreate(BaseModel):
