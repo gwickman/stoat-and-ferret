@@ -4,6 +4,39 @@ All notable changes to stoat-and-ferret will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v143 — 2026-09-18
+
+5 themes, 12 features, PRs #1100–#1111. Test results: 3975 passed, 205 skipped, 0 failed (ZERO regression).
+
+### Theme 1: test-infrastructure
+
+- **BL-891** — Added `db_mock` fixture using real `aiosqlite.connect(":memory:")` to `tests/test_api/conftest.py`; restore tests rewritten with behavioral assertions against FK-constrained schema (PR #1100)
+- **BL-892** — Replaced `yield c` with `return c` in restore roundtrip acceptance fixture; SonarCloud S9100 resolved (PR #1101)
+
+### Theme 2: effects-render-correctness
+
+- **BL-827** — Wired IR WAV as second FFmpeg input with `[0:a][1:a]afir=dry=1:wet=0.4[aout]` in TTS audio-filter branch; API preview surface now returns `acopy` for convolution reverb; real-FFmpeg acceptance test confirms crash-free render (PR #1102)
+- **BL-850 AC-5** — Remapped `_intersect_window` results to clip-local coordinates at both call sites in `projects.py`; STOAT_TEST_FFMPEG acceptance test confirms effect renders at correct position within child clip (PR #1103)
+
+### Theme 3: preview-quality-observability
+
+- **BL-887** — `build_hls_args` now accepts `clip_durations` and emits `-t` per file/image input; `"cut"` transition type produces hard-cut concat filter for no-transition seams (PR #1104)
+- **BL-888** — FFmpeg stderr captured as 50-line tail with `"[... N lines truncated ...]"` marker; raw `[:500]` byte-slice removed from `hls_generator.py` (PR #1105)
+- **BL-889** — `logger.warning(...)` emitted before `CommandBuildError` raise for multi-clip convolution_reverb fail-close, making the failure observable in logs before render-time (PR #1106)
+- **BL-890** — Broad `except Exception` in `_build_preview_render_effects` narrowed to `(CommandBuildError, KeyError, ValueError, AttributeError)`; unexpected exceptions now propagate (PR #1107)
+
+### Theme 4: preview-sonar-code-quality
+
+- **BL-832/BL-833** — Extracted `_build_preview_composition` helper from `start_preview` and `seek_preview`; both methods dropped below cyclomatic complexity threshold (PR #1108)
+- **BL-835** — Eliminated duplicate `input_paths` null guards in `manager.py` via early-assignment `input_paths = input_paths or []` (PR #1109)
+
+### Theme 5: smoke-coverage-documentation
+
+- Added STOAT_TEST_FFMPEG-gated smoke entries for convolution reverb TTS render path (BL-827) and HLS hard-cut two-clip preview (BL-887) (PR #1110)
+- Added Phase 18 section to smoke harness guide covering both new entries; README status marker updated to v143 (PR #1111)
+
+---
+
 ## v142 — 2026-09-17
 
 2 themes, 5 features, PRs #1094–#1097. Test results: 3960 passed, 201 skipped, 0 failed (ZERO regression).
