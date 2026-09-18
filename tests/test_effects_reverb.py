@@ -56,7 +56,7 @@ def test_effect_definition_build_fn() -> None:
 
 def test_effect_definition_preview_fn() -> None:
     result = CONVOLUTION_REVERB.preview_fn()
-    assert result.startswith("afir=")
+    assert result == "acopy"
 
 
 def test_effect_definition_schema_has_required_fields() -> None:

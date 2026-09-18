@@ -1011,8 +1011,11 @@ def _assemble_sc_filter_translator(
         if source_audio_codec is not None:
             if audio_filter_chains_sc:
                 joined = ",".join(audio_filter_chains_sc)
+                # extra_pads: IR WAV (and any other extra -i) must be referenced by the
+                # filter chain so afir= gets the two pads it requires (BL-827-AC-8).
+                extra_pads = "".join(f"[{i + 1}:a]" for i in range(extra_cnt))
                 mix_seg = (
-                    f"[0:a]{joined}[0a_eff];"
+                    f"[0:a]{extra_pads}{joined}[0a_eff];"
                     f"[0a_eff]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
                     f"[src_norm]{tts_audio_label}amix=inputs=2:duration=longest{_LABEL_AOUT}"
                 )

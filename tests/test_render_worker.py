@@ -2303,6 +2303,86 @@ class TestGoldenArgv:
         ]
 
     @pytest.mark.asyncio
+    async def test_golden_sc_convolution_reverb_tts(self) -> None:
+        """Single clip + TTS + convolution_reverb -> two-pad afir chain (BL-827-AC-8).
+
+        Stream ordering: [0] main clip, [1] IR WAV, [2] TTS audio.
+        The afir filter must reference both [0:a] and [1:a] so FFmpeg gets the required
+        two input pads; without the fix the chain is one-pad and FFmpeg fails.
+        """
+        vid = _g_make_video("vid-reverb-tts", _G_VIDEO_PATH_1, audio_codec="aac")
+        clip = _g_make_clip(
+            "clip-sc-reverb-tts",
+            "vid-reverb-tts",
+            effects=[
+                {
+                    "effect_type": "convolution_reverb",
+                    "parameters": {"ir_name": "hall_small", "mix": 0.4},
+                }
+            ],
+        )
+        tts_inputs = [
+            TtsCueAudioInput(
+                cue_id="cue-reverb-tts",
+                audio_path="/renders/tts-reverb.wav",
+                track_id="track-1",
+                start_s=5.0,
+                weight=1.0,
+                volume_envelope=None,
+            )
+        ]
+        reg = EffectRegistry()
+        reg.register("convolution_reverb", CONVOLUTION_REVERB)
+
+        result = await build_command_for_job(
+            _g_make_job(_g_make_plan()),
+            _g_clip_repo(clip),
+            _g_video_repo(vid),
+            tts_inputs=tts_inputs,
+            effect_registry=reg,
+        )
+
+        ir_path = str(_resolve_ir_path("hall_small"))
+        assert result == [
+            "ffmpeg",
+            "-i",
+            "/media/clip1.mp4",
+            "-i",
+            ir_path,
+            "-i",
+            "/renders/tts-reverb.wav",
+            "-ss",
+            "0.0",
+            "-t",
+            "30.0",
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];"
+                "[2:a]adelay=5000|5000,aformat=channel_layouts=stereo[tts0];"
+                "[0:a][1:a]afir=dry=1:wet=0.4[0a_eff];"
+                "[0a_eff]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "23",
+            "-r",
+            "30.0",
+            "-progress",
+            "pipe:1",
+            "/renders/golden.mp4",
+        ]
+        fc = result[result.index("-filter_complex") + 1]
+        assert "[0:a][1:a]afir=" in fc, "afir must reference two pads"
+        assert "[tts0]" in fc
+        assert "amix=inputs=2" in fc
+
+    @pytest.mark.asyncio
     async def test_golden_mc_oversized_transition_raises(self) -> None:
         """Multi-clip: oversized transition duration raises CommandBuildError (BL-862 AC-4).
 
