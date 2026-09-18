@@ -314,3 +314,178 @@ class TestUCMediaMPS001Acceptance:
         total = len(OC_TO_QC_CHECK) + len(OC_HUMAN_ONLY)
         # 12 machine-verifiable (OC-6 added by BL-627) + 5 human-only (OC-15 added by BL-627)
         assert total == 17  # 12 machine + 5 human-only
+
+
+# ---------------------------------------------------------------------------
+# Standalone FFmpeg acceptance tests for convolution_reverb (BL-827)
+# Both are gated by the module-level STOAT_TEST_FFMPEG pytestmark.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_reverb_render_produces_audio_stream(tmp_path: Path) -> None:
+    """FR-004-AC-1: convolution_reverb render completes with audio stream present.
+
+    Builds two-pad afir (IR WAV at stream 1) and verifies the output has both
+    video and audio (no crash, no silent output).
+    """
+    import subprocess
+
+    from stoat_ferret.effects.definitions import _resolve_ir_path
+    from stoat_ferret_core import ConvolutionReverbBuilder
+    from tests.render_oracle import assert_stream_inventory
+
+    src_path = tmp_path / "src.mp4"
+    result = await asyncio.to_thread(
+        subprocess.run,
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=duration=2:size=320x240:rate=30",
+            "-f",
+            "lavfi",
+            "-i",
+            "anoisesrc=duration=2:amplitude=0.1:r=48000",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(src_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"source creation failed: {result.stderr[-400:]}"
+
+    ir_path = str(_resolve_ir_path("hall_small"))
+    afir_filter = str(ConvolutionReverbBuilder("hall_small", 0.4).build())
+    out_path = tmp_path / "out.mp4"
+
+    result = await asyncio.to_thread(
+        subprocess.run,
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(src_path),
+            "-i",
+            ir_path,
+            "-filter_complex",
+            (f"[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];[0:a][1:a]{afir_filter}[aout]"),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            str(out_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"reverb render failed: {result.stderr[-500:]}"
+    await assert_stream_inventory(out_path, video=True, audio=True)
+
+
+@pytest.mark.asyncio
+async def test_reverb_tts_render_produces_audio_stream(tmp_path: Path) -> None:
+    """FR-008-AC-2: TTS+reverb single-clip render completes with audio stream present.
+
+    Verifies the two-pad afir chain is assembled before the TTS amix:
+    stream ordering [0] main clip, [1] IR WAV, [2] TTS audio.
+    """
+    import subprocess
+
+    from stoat_ferret.effects.definitions import _resolve_ir_path
+    from stoat_ferret_core import ConvolutionReverbBuilder
+    from tests.render_oracle import assert_stream_inventory
+
+    src_path = tmp_path / "src.mp4"
+    result = await asyncio.to_thread(
+        subprocess.run,
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=duration=3:size=320x240:rate=30",
+            "-f",
+            "lavfi",
+            "-i",
+            "anoisesrc=duration=3:amplitude=0.1:r=48000",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(src_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"source creation failed: {result.stderr[-400:]}"
+
+    tts_path = tmp_path / "tts.wav"
+    result = await asyncio.to_thread(
+        subprocess.run,
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "anoisesrc=duration=2:amplitude=0.05:r=48000",
+            "-ac",
+            "2",
+            str(tts_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"TTS wav creation failed: {result.stderr[-400:]}"
+
+    ir_path = str(_resolve_ir_path("hall_small"))
+    afir_filter = str(ConvolutionReverbBuilder("hall_small", 0.4).build())
+    out_path = tmp_path / "out.mp4"
+
+    result = await asyncio.to_thread(
+        subprocess.run,
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(src_path),
+            "-i",
+            ir_path,
+            "-i",
+            str(tts_path),
+            "-filter_complex",
+            (
+                "[0:v]fps=30,settb=1/30[v0];[v0]format=yuv420p[final];"
+                "[2:a]adelay=1000|1000,aformat=channel_layouts=stereo[tts0];"
+                f"[0:a][1:a]{afir_filter}[0a_eff];"
+                "[0a_eff]aformat=channel_layouts=stereo,aresample=48000[src_norm];"
+                "[src_norm][tts0]amix=inputs=2:duration=longest[aout]"
+            ),
+            "-map",
+            "[final]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            str(out_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"TTS+reverb render failed: {result.stderr[-500:]}"
+    await assert_stream_inventory(out_path, video=True, audio=True)

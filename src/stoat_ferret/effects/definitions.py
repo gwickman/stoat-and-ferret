@@ -1574,7 +1574,9 @@ def _build_convolution_reverb(parameters: dict[str, Any]) -> str:
 
 
 def _convolution_reverb_preview() -> str:
-    return str(ConvolutionReverbBuilder("hall_small", 0.5).build())
+    # IR WAV is not available in the API preview context; return acopy so the
+    # preview pipeline can pass through audio without an unrenderable afir= string.
+    return "acopy"
 
 
 def _convolution_reverb_extra_inputs(effect_params: dict[str, Any]) -> list[str]:
