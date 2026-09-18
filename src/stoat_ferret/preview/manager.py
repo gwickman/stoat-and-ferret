@@ -48,6 +48,33 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
+# Maximum number of lines to include in logged stderr output.
+# When exceeded, the first and last (PREVIEW_STDERR_MAX_LINES // 2) lines are
+# shown with a truncation marker so real errors near the tail are visible.
+PREVIEW_STDERR_MAX_LINES = 50
+
+
+def _truncate_stderr(lines: list[str], max_lines: int = PREVIEW_STDERR_MAX_LINES) -> str:
+    """Return stderr as a string, truncating the middle when line count exceeds max_lines.
+
+    Keeps the first and last (max_lines // 2) lines so FFmpeg version banners
+    near the top do not crowd out actual error lines near the tail.
+
+    Args:
+        lines: Individual stderr lines.
+        max_lines: Maximum total lines before truncation is applied.
+
+    Returns:
+        Joined string, with a truncation marker when lines > max_lines.
+    """
+    if len(lines) <= max_lines:
+        return "\n".join(lines)
+    half = max_lines // 2
+    head = lines[:half]
+    tail = lines[-half:]
+    omitted = len(lines) - max_lines
+    return "\n".join(head) + f"\n[... {omitted} lines truncated ...]\n" + "\n".join(tail)
+
 
 def resolve_transitions_by_clip_a_id(
     raw_transitions: list[dict[str, object]],
@@ -471,15 +498,16 @@ class PreviewManager:
             if session is None:
                 return
 
-            error_msg = str(exc)[:500]
-            session.error_message = error_msg
+            full_error = str(exc)
+            session.error_message = full_error
+            log_error = _truncate_stderr(full_error.splitlines())
             with contextlib.suppress(InvalidTransitionError):
                 await self._transition(session, PreviewStatus.ERROR)
-            await self._broadcast_event(EventType.PREVIEW_ERROR, session.id, error=error_msg)
+            await self._broadcast_event(EventType.PREVIEW_ERROR, session.id, error=log_error)
             logger.error(
                 "preview_generation_failed",
                 session_id=session_id,
-                error=error_msg,
+                error=log_error,
                 correlation_id=get_correlation_id(),
             )
         finally:
@@ -666,15 +694,16 @@ class PreviewManager:
             if session is None:
                 return
 
-            error_msg = str(exc)[:500]
-            session.error_message = error_msg
+            full_error = str(exc)
+            session.error_message = full_error
+            log_error = _truncate_stderr(full_error.splitlines())
             with contextlib.suppress(InvalidTransitionError):
                 await self._transition(session, PreviewStatus.ERROR)
-            await self._broadcast_event(EventType.PREVIEW_ERROR, session.id, error=error_msg)
+            await self._broadcast_event(EventType.PREVIEW_ERROR, session.id, error=log_error)
             logger.error(
                 "preview_seek_generation_failed",
                 session_id=session_id,
-                error=error_msg,
+                error=log_error,
                 correlation_id=get_correlation_id(),
             )
         finally:
