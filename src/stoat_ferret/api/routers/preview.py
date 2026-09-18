@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -28,7 +29,7 @@ from stoat_ferret.api.schemas.preview import (
     PreviewStopResponse,
 )
 from stoat_ferret.db.clip_repository import AsyncClipRepository, AsyncSQLiteClipRepository
-from stoat_ferret.db.models import PreviewQuality
+from stoat_ferret.db.models import Clip, PreviewQuality, Project
 from stoat_ferret.db.project_repository import (
     AsyncProjectRepository,
     AsyncSQLiteProjectRepository,
@@ -174,6 +175,153 @@ def _check_ffmpeg_available() -> None:
         )
 
 
+async def _build_preview_composition(
+    clips: list[Clip],
+    project: Project | None,
+    *,
+    video_repo: Any,
+    asset_repo: Any,
+    effect_registry: Any,
+    cut_fallback: bool = False,
+) -> tuple[list[str], list[str], list[float], str, float]:
+    """Build the clip composition for a preview session.
+
+    Iterates over the project's timeline clips, resolves source paths, per-clip
+    in-points, and effect/transition data, then translates the result through
+    RenderGraphTranslator to produce the filter_complex string.
+
+    Args:
+        clips: All clips for the project (non-placeable ones are silently skipped).
+        project: Project record used for output_fps and stored transitions; None
+            defaults to 30 fps with no transitions.
+        video_repo: Repository for video asset lookups.
+        asset_repo: Repository for image asset lookups.
+        effect_registry: Effect registry passed to clip effect builders.
+        cut_fallback: When True, clips with no stored transition get an explicit
+            ``RenderTransition("cut", 0.0)`` (used by start_preview so the preview
+            does not fall back to the implicit fade).
+
+    Returns:
+        Tuple of (input_paths, clip_types, in_point_secs, filter_complex_str, output_fps).
+
+    Raises:
+        HTTPException: 422 if no placeable clips found or required assets are missing.
+        CommandBuildError, KeyError, ValueError, AttributeError: Propagated from effect
+            resolution helpers.
+    """
+    output_fps = float(project.output_fps or 30) if project is not None else 30.0
+    raw_transitions: list[dict[str, object]] = (
+        (project.transitions or []) if project is not None else []
+    )
+    transition_lookup = resolve_transitions_by_clip_a_id(raw_transitions)
+
+    cwe_list: list[ClipWithEffects] = []
+    input_paths: list[str] = []
+    clip_types: list[str] = []
+    in_point_secs_list: list[float] = []
+
+    placeable = [c for c in clips if c.timeline_start is not None and c.timeline_end is not None]
+
+    for i, clip in enumerate(placeable):
+        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
+
+        if clip.source_video_id is not None:
+            video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
+            if video is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "MISSING_VIDEO",
+                        "message": f"Source video for clip {clip.id} not found",
+                    },
+                )
+            framerate = float(video.frame_rate or output_fps)
+            in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
+            in_point_secs_list.append(in_point)
+            input_paths.append(video.path)
+            clip_types.append("file")
+            source_path = video.path
+        elif clip.clip_type == "generator":
+            lavfi_string = (clip.generator_params or {}).get("lavfi_string")
+            if not lavfi_string:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "GENERATOR_MISSING_SOURCE"},
+                )
+            in_point_secs_list.append(0.0)
+            input_paths.append(str(lavfi_string))
+            clip_types.append("generator")
+            source_path = str(lavfi_string)
+            framerate = output_fps
+        elif clip.clip_type == "image":
+            if asset_repo is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "NO_ASSET_REPO"},
+                )
+            asset = await asset_repo.get_by_id(clip.source_asset_id or "")
+            if asset is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "MISSING_ASSET"},
+                )
+            in_point_secs_list.append(0.0)
+            input_paths.append(str(asset.file_path))
+            clip_types.append("image")
+            source_path = str(asset.file_path)
+            framerate = output_fps
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "UNKNOWN_CLIP_TYPE"},
+            )
+
+        render_effects = _build_preview_render_effects(clip, effect_registry)
+
+        t_data = transition_lookup.get(clip.id)
+        outgoing: RenderTransition | None = None
+        if t_data is not None and i < len(placeable) - 1:
+            t_params = t_data.get("parameters")
+            t_params_dict: dict[str, object] = t_params if isinstance(t_params, dict) else {}
+            t_dur = float(t_params_dict.get("duration", t_data.get("duration", 1.0)))  # type: ignore[arg-type]
+            if t_dur > 0:
+                try:
+                    outgoing = RenderTransition(str(t_data["transition_type"]), t_dur)
+                except ValueError:
+                    logger.warning(
+                        "preview_transition_skipped",
+                        clip_id=clip.id,
+                        transition_type=t_data.get("transition_type"),
+                    )
+        elif cut_fallback and t_data is None and i < len(placeable) - 1:
+            # No stored transition → hard cut in preview (avoids implicit fade fallback).
+            outgoing = RenderTransition("cut", 0.0)
+
+        cwe_list.append(
+            ClipWithEffects(
+                input_index=i,
+                duration_secs=duration,
+                framerate=framerate,
+                source_path=source_path,
+                effects=render_effects,
+                outgoing_transition=outgoing,
+            )
+        )
+
+    if not cwe_list:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "NO_PLACEABLE_CLIPS",
+                "message": "No placeable clips found on the timeline",
+            },
+        )
+
+    translator = RenderGraphTranslator()
+    filter_complex_str, _ = translator.translate(cwe_list, output_fps)
+    return input_paths, clip_types, in_point_secs_list, filter_complex_str, output_fps
+
+
 # ---------- Endpoints ----------
 
 
@@ -271,7 +419,6 @@ async def start_preview(
     project_repo = _get_project_repository(request)
     clip_repo = _get_clip_repository(request)
 
-    # Verify project exists
     project = await project_repo.get(project_id)
     if project is None:
         raise HTTPException(
@@ -279,7 +426,6 @@ async def start_preview(
             detail={"code": "NOT_FOUND", "message": f"Project {project_id} not found"},
         )
 
-    # Check for empty timeline
     clips = await clip_repo.list_by_project(project_id)
     if not clips:
         raise HTTPException(
@@ -287,7 +433,6 @@ async def start_preview(
             detail={"code": "EMPTY_TIMELINE", "message": "Project has no clips on the timeline"},
         )
 
-    # Determine quality level
     quality_str = body.quality if body else "medium"
     quality_map = {
         "low": PreviewQuality.LOW,
@@ -296,118 +441,24 @@ async def start_preview(
     }
     quality = quality_map.get(quality_str, PreviewQuality.MEDIUM)
 
-    # Build multi-clip composition via shared RenderGraphTranslator path (BL-838 AC-8).
     video_repo = getattr(request.app.state, "video_repository", None)
     asset_repo = getattr(request.app.state, "asset_repository", None)
     effect_registry = getattr(request.app.state, "effect_registry", None)
-    cwe_list: list[ClipWithEffects] = []
-    input_paths: list[str] = []
-    clip_types: list[str] = []
-    in_point_secs_list: list[float] = []
-    output_fps = float(project.output_fps or 30)
 
-    raw_transitions: list[dict[str, object]] = project.transitions or []
-    transition_lookup = resolve_transitions_by_clip_a_id(raw_transitions)
-
-    placeable = [c for c in clips if c.timeline_start is not None and c.timeline_end is not None]
-
-    for i, clip in enumerate(placeable):
-        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
-
-        if clip.source_video_id is not None:
-            video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
-            if video is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={
-                        "code": "MISSING_VIDEO",
-                        "message": f"Source video for clip {clip.id} not found",
-                    },
-                )
-            framerate = float(video.frame_rate or output_fps)
-            in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
-            in_point_secs_list.append(in_point)
-            input_paths.append(video.path)
-            clip_types.append("file")
-            source_path = video.path
-        elif clip.clip_type == "generator":
-            lavfi_string = (clip.generator_params or {}).get("lavfi_string")
-            if not lavfi_string:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "GENERATOR_MISSING_SOURCE"},
-                )
-            in_point_secs_list.append(0.0)
-            input_paths.append(str(lavfi_string))
-            clip_types.append("generator")
-            source_path = str(lavfi_string)
-            framerate = output_fps
-        elif clip.clip_type == "image":
-            if asset_repo is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "NO_ASSET_REPO"},
-                )
-            asset = await asset_repo.get_by_id(clip.source_asset_id or "")
-            if asset is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "MISSING_ASSET"},
-                )
-            in_point_secs_list.append(0.0)
-            input_paths.append(str(asset.file_path))
-            clip_types.append("image")
-            source_path = str(asset.file_path)
-            framerate = output_fps
-        else:
-            raise HTTPException(
-                status_code=422,
-                detail={"code": "UNKNOWN_CLIP_TYPE"},
-            )
-
-        render_effects = _build_preview_render_effects(clip, effect_registry)
-
-        t_data = transition_lookup.get(clip.id)
-        outgoing: RenderTransition | None = None
-        if t_data is not None and i < len(placeable) - 1:
-            t_params = t_data.get("parameters")
-            t_params_dict: dict[str, object] = t_params if isinstance(t_params, dict) else {}
-            t_dur = float(t_params_dict.get("duration", t_data.get("duration", 1.0)))  # type: ignore[arg-type]
-            if t_dur > 0:
-                try:
-                    outgoing = RenderTransition(str(t_data["transition_type"]), t_dur)
-                except ValueError:
-                    logger.warning(
-                        "preview_transition_skipped",
-                        clip_id=clip.id,
-                        transition_type=t_data.get("transition_type"),
-                    )
-        elif t_data is None and i < len(placeable) - 1:
-            # No stored transition → hard cut in preview (avoids implicit fade fallback).
-            outgoing = RenderTransition("cut", 0.0)
-
-        cwe_list.append(
-            ClipWithEffects(
-                input_index=i,
-                duration_secs=duration,
-                framerate=framerate,
-                source_path=source_path,
-                effects=render_effects,
-                outgoing_transition=outgoing,
-            )
-        )
-
-    if not cwe_list:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "NO_PLACEABLE_CLIPS",
-                "message": "No placeable clips found on the timeline",
-            },
-        )
-
-    translator = RenderGraphTranslator()
-    filter_complex_str, _ = translator.translate(cwe_list, output_fps)
+    (
+        input_paths,
+        clip_types,
+        in_point_secs_list,
+        filter_complex_str,
+        output_fps,
+    ) = await _build_preview_composition(
+        clips,
+        project,
+        video_repo=video_repo,
+        asset_repo=asset_repo,
+        effect_registry=effect_registry,
+        cut_fallback=True,
+    )
 
     try:
         session = await manager.start(
@@ -527,133 +578,34 @@ async def seek_preview(
     # Clip set is re-derived from live DB; a seek after clip modifications will reflect
     # the modified composition, not the original.
     clips = await clip_repo.list_by_project(project_id)
+    project = await project_repo.get(project_id)
 
     video_repo = getattr(request.app.state, "video_repository", None)
     asset_repo = getattr(request.app.state, "asset_repository", None)
     effect_registry = getattr(request.app.state, "effect_registry", None)
 
-    project = await project_repo.get(project_id)
-    seek_output_fps = 30.0
-    if project is not None:
-        seek_output_fps = float(project.output_fps or 30)
-
-    raw_transitions_seek: list[dict[str, object]] = []
-    if project is not None:
-        raw_transitions_seek = project.transitions or []
-    transition_lookup_seek = resolve_transitions_by_clip_a_id(raw_transitions_seek)
-
-    cwe_list_seek: list[ClipWithEffects] = []
-    input_paths: list[str] = []
-    clip_types_seek: list[str] = []
-    in_point_secs_list_seek: list[float] = []
-
-    placeable_seek = [
-        c for c in clips if c.timeline_start is not None and c.timeline_end is not None
-    ]
-
-    for i, clip in enumerate(placeable_seek):
-        duration = float(clip.timeline_end or 0.0) - float(clip.timeline_start or 0.0)
-
-        if clip.source_video_id is not None:
-            video = await video_repo.get(clip.source_video_id) if video_repo is not None else None
-            if video is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={
-                        "code": "MISSING_VIDEO",
-                        "message": f"Source video for clip {clip.id} not found",
-                    },
-                )
-            framerate = float(video.frame_rate or seek_output_fps)
-            in_point = float(clip.in_point or 0.0) / framerate if clip.clip_type == "file" else 0.0
-            in_point_secs_list_seek.append(in_point)
-            input_paths.append(video.path)
-            clip_types_seek.append("file")
-            source_path_seek = video.path
-        elif clip.clip_type == "generator":
-            lavfi_string = (clip.generator_params or {}).get("lavfi_string")
-            if not lavfi_string:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "GENERATOR_MISSING_SOURCE"},
-                )
-            in_point_secs_list_seek.append(0.0)
-            input_paths.append(str(lavfi_string))
-            clip_types_seek.append("generator")
-            source_path_seek = str(lavfi_string)
-            framerate = seek_output_fps
-        elif clip.clip_type == "image":
-            if asset_repo is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "NO_ASSET_REPO"},
-                )
-            asset = await asset_repo.get_by_id(clip.source_asset_id or "")
-            if asset is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "MISSING_ASSET"},
-                )
-            in_point_secs_list_seek.append(0.0)
-            input_paths.append(str(asset.file_path))
-            clip_types_seek.append("image")
-            source_path_seek = str(asset.file_path)
-            framerate = seek_output_fps
-        else:
-            raise HTTPException(
-                status_code=422,
-                detail={"code": "UNKNOWN_CLIP_TYPE"},
-            )
-
-        render_effects = _build_preview_render_effects(clip, effect_registry)
-
-        t_data = transition_lookup_seek.get(clip.id)
-        outgoing_seek: RenderTransition | None = None
-        if t_data is not None and i < len(placeable_seek) - 1:
-            t_params = t_data.get("parameters")
-            t_params_dict_seek: dict[str, object] = t_params if isinstance(t_params, dict) else {}
-            t_dur = float(t_params_dict_seek.get("duration", t_data.get("duration", 1.0)))  # type: ignore[arg-type]
-            if t_dur > 0:
-                try:
-                    outgoing_seek = RenderTransition(str(t_data["transition_type"]), t_dur)
-                except ValueError:
-                    logger.warning(
-                        "preview_transition_skipped",
-                        clip_id=clip.id,
-                        transition_type=t_data.get("transition_type"),
-                    )
-
-        cwe_list_seek.append(
-            ClipWithEffects(
-                input_index=i,
-                duration_secs=duration,
-                framerate=framerate,
-                source_path=source_path_seek,
-                effects=render_effects,
-                outgoing_transition=outgoing_seek,
-            )
-        )
-
-    if not cwe_list_seek:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "NO_PLACEABLE_CLIPS",
-                "message": "No placeable clips found on the timeline",
-            },
-        )
-
-    translator_seek = RenderGraphTranslator()
-    filter_complex_str_seek, _ = translator_seek.translate(cwe_list_seek, seek_output_fps)
+    (
+        input_paths,
+        clip_types,
+        in_point_secs_list,
+        filter_complex_str,
+        output_fps,
+    ) = await _build_preview_composition(
+        clips,
+        project,
+        video_repo=video_repo,
+        asset_repo=asset_repo,
+        effect_registry=effect_registry,
+    )
 
     try:
         session = await manager.seek(
             session_id,
             input_paths=input_paths,
-            filter_complex_str=filter_complex_str_seek,
-            in_point_secs=in_point_secs_list_seek,
-            output_fps=seek_output_fps,
-            clip_types=clip_types_seek,
+            filter_complex_str=filter_complex_str,
+            in_point_secs=in_point_secs_list,
+            output_fps=output_fps,
+            clip_types=clip_types,
             position=body.position,
         )
     except (SessionNotFoundError, SessionExpiredError):
