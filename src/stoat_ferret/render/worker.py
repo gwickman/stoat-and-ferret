@@ -617,6 +617,11 @@ async def _build_clip_input_list(
         in_point_secs_list.append(in_point_secs)
         extra_inputs = _collect_clip_extra_inputs(clip, ctx.effect_registry)
         if extra_inputs:
+            logger.warning(
+                "multi-clip convolution_reverb is not supported; failing closed",
+                clip_count=len(clips),
+                effect="convolution_reverb",
+            )
             raise CommandBuildError(
                 f"Clip {clip.id!r}: multi-clip convolution_reverb is not yet supported"
             )
