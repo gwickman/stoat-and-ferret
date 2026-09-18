@@ -312,7 +312,7 @@ class HLSGenerator:
         # Handle failure
         if result.returncode != 0:
             _cleanup_session_dir(output_dir)
-            error_msg = result.stderr.decode("utf-8", errors="replace")[:500]
+            error_msg = result.stderr.decode("utf-8", errors="replace")
             logger.error(
                 "hls_generation_failed",
                 session_id=session_id,
