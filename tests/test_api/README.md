@@ -25,8 +25,31 @@ Key rules:
 - **Pass `video_repository=AsyncInMemoryVideoRepository()` (or another repo) to
   trigger DI mode**, which sets `app.state._deps_injected = True` and skips the
   lifespan DB setup entirely.
-- **Patch raw-DB helpers** (e.g. `_validate_voice_track`) that access
-  `request.app.state.db` — unavailable in DI mode — using `AsyncMock`.
+- **Use `db_mock` (default) for routers that read `request.app.state.db` directly.**
+  The `db_mock` fixture (in `tests/test_api/conftest.py`) opens a real in-memory
+  aiosqlite connection, creates the full schema, and sets `app.state.db` so the router
+  executes real SQL. Assert observable DB state (rows read back from `db_mock`) instead
+  of SQL execution patterns:
+
+  ```python
+  async def test_restore(
+      client: TestClient,
+      db_mock: aiosqlite.Connection,
+  ) -> None:
+      # db_mock sets app.state.db automatically.
+      # FK enforcement is ON — seed parent rows before the router INSERTs:
+      await db_mock.execute("INSERT INTO projects (id, ...) VALUES (?, ...)", (...,))
+      await db_mock.commit()
+      response = client.post("/api/v1/projects/proj-1/versions/1/restore")
+      cursor = await db_mock.execute("SELECT id FROM tracks WHERE project_id = ?", ("proj-1",))
+      rows = await cursor.fetchall()
+      assert rows == []  # behavioral assertion on real DB state
+  ```
+
+- **`AsyncMock` patching — exception case only.** Use `AsyncMock` for `request.app.state.db`
+  only when behavioral verification is not required — for example, when testing that a router
+  raises the correct HTTP status on a DB error (where you need the mock to raise an exception,
+  not return real rows). Do not use `AsyncMock` to assert SQL substring patterns.
 - **Set `_settings` manually** inside the `with TestClient(app) as c:` block
   when the router reads `request.app.state._settings` (e.g. TTS voices).
 - Each test file covers: create (201), list (200), get by id (200), get 404,
