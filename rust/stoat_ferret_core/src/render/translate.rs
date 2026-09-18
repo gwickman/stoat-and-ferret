@@ -600,7 +600,7 @@ impl RenderGraphTranslator {
                 let is_cut = clips[k - 1]
                     .outgoing_transition
                     .as_ref()
-                    .map_or(false, |t| t.transition_type == "cut");
+                    .is_some_and(|t| t.transition_type == "cut");
 
                 if is_cut {
                     parts.push(format!(
