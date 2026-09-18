@@ -1,5 +1,42 @@
 # STATUS.md
 
+## v143 — Preview Quality + Effects Residuals
+
+**Delivered:** 2026-09-18
+**PRs:** #1100–#1111 (12 PRs)
+**Features:** 12 across 5 themes
+**Tests:** 4180 collected
+
+### Highlights
+
+- **Theme 1 — test-infrastructure (PRs #1100, #1101):** DI-mode app.state.db fixture for test isolation (BL-891); sonar S9100 yield-in-finally fix in restore roundtrip fixture (BL-892)
+- **Theme 2 — effects-render-correctness (PRs #1102, #1103):** IR WAV two-pad afir chain wired in TTS render path + acopy passthrough in preview (BL-827); clip-local coordinate remap applied at all `_intersect_window` call sites (BL-850 AC-5)
+- **Theme 3 — preview-quality-observability (PRs #1104–#1107):** Per-input `-t` duration bound + hard-cut xfade support (BL-887); FFmpeg stderr truncated at 50 lines to prevent log flooding (BL-888); multi-clip convolution_reverb warning log (BL-889); narrowed broad exception handlers in preview (BL-890)
+- **Theme 4 — preview-sonar-code-quality (PRs #1108, #1109):** Extracted `_build_preview_composition` helper to reduce cyclomatic complexity (BL-832, BL-833); consolidated input_paths null guard to single entry check (BL-835)
+- **Theme 5 — smoke-coverage-documentation (PRs #1110, #1111):** Smoke entries for reverb TTS path and HLS hard-cut (BL-827, BL-887); harness guide updated with Phase 18 entries
+
+### Theme Summary
+
+| Theme | BL Items | PRs | Status |
+|-------|----------|-----|--------|
+| test-infrastructure | BL-891, BL-892 | #1100, #1101 | merged |
+| effects-render-correctness | BL-827, BL-850 AC-5 | #1102, #1103 | merged |
+| preview-quality-observability | BL-887, BL-888, BL-889, BL-890 | #1104–#1107 | merged |
+| preview-sonar-code-quality | BL-832, BL-833, BL-835 | #1108, #1109 | merged |
+| smoke-coverage-documentation | BL-827, BL-887 | #1110, #1111 | merged |
+
+### AC Status
+
+- 5 themes, 12 features; all features complete and merged to main
+- BL-827: two-pad afir chain delivered in TTS render path + acopy in preview
+- BL-850 AC-5: clip-local coordinate remap delivered at all `_intersect_window` call sites
+
+### User Actions Required
+
+None required. v143 is complete.
+
+---
+
 ## v141 — Preview/Render Fidelity + Effect Ops Quality + Infra
 
 **Delivered:** 2026-09-05
