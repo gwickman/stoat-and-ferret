@@ -6,11 +6,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from stoat_ferret.api.routers.preview import _build_preview_composition
 from stoat_ferret.db.models import Clip, Project
-from stoat_ferret.preview.manager import PREVIEW_STDERR_MAX_LINES, _truncate_stderr
+from stoat_ferret.db.preview_repository import InMemoryPreviewRepository
+from stoat_ferret.preview.manager import PREVIEW_STDERR_MAX_LINES, PreviewManager, _truncate_stderr
 
 
 def test_truncate_stderr_above_cap() -> None:
@@ -109,3 +110,31 @@ async def test_build_preview_composition_single_file_clip() -> None:
     assert in_point_secs[0] == 0.0
     assert isinstance(filter_complex_str, str)
     assert output_fps == 30.0
+
+
+# ---------- input_paths None normalisation (BL-835-AC-3) ----------
+
+
+async def test_input_paths_none_treated_as_empty() -> None:
+    """start() with input_paths=None and no input_path resolves to [] — same as input_paths=[]."""
+    mock_ws = MagicMock()
+    mock_ws.broadcast = AsyncMock(return_value=None)
+
+    manager = PreviewManager(
+        repository=InMemoryPreviewRepository(),
+        generator=MagicMock(),
+        ws_manager=mock_ws,
+        max_sessions=5,
+        session_ttl_seconds=300,
+        output_base_dir="/tmp/preview_test",
+    )
+
+    run_mock = AsyncMock()
+    with patch.object(manager, "_run_generation", run_mock):
+        await manager.start(project_id="proj-1", input_paths=None, input_path="")
+        none_paths = run_mock.call_args.kwargs["input_paths"]
+        run_mock.reset_mock()
+        await manager.start(project_id="proj-1", input_paths=[])
+        empty_paths = run_mock.call_args.kwargs["input_paths"]
+
+    assert none_paths == empty_paths == []

@@ -345,7 +345,9 @@ class PreviewManager:
         Raises:
             SessionLimitError: If the concurrent session limit is reached.
         """
-        resolved = input_paths if input_paths is not None else ([input_path] if input_path else [])
+        if input_paths is None:
+            input_paths = [input_path] if input_path else []
+        resolved = input_paths
         # Enforce concurrent session limit
         count = await self._repository.count()
         if count >= self._max_sessions:
@@ -554,7 +556,9 @@ class PreviewManager:
             SessionExpiredError: If the session has expired.
             InvalidTransitionError: If the session is not in a seekable state.
         """
-        resolved = input_paths if input_paths is not None else ([input_path] if input_path else [])
+        if input_paths is None:
+            input_paths = [input_path] if input_path else []
+        resolved = input_paths
         logger.info(
             "preview_seek_requested",
             session_id=session_id,
