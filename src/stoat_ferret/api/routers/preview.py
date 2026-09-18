@@ -381,6 +381,9 @@ async def start_preview(
                         clip_id=clip.id,
                         transition_type=t_data.get("transition_type"),
                     )
+        elif t_data is None and i < len(placeable) - 1:
+            # No stored transition → hard cut in preview (avoids implicit fade fallback).
+            outgoing = RenderTransition("cut", 0.0)
 
         cwe_list.append(
             ClipWithEffects(
