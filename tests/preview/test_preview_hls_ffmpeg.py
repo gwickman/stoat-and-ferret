@@ -269,6 +269,202 @@ async def test_draft_quality_simplify_hls(tmp_path: Path) -> None:
     assert any(f.suffix == ".ts" for f in output_dir.iterdir())
 
 
+def test_build_hls_args_with_clip_durations(tmp_path: Path) -> None:
+    """build_hls_args emits -t before -i when clip_durations provided (BL-887-AC-1)."""
+    from stoat_ferret.preview.hls_generator import build_hls_args
+
+    args = build_hls_args(
+        input_paths=["/a.mp4", "/b.mp4"],
+        output_dir=tmp_path,
+        filter_complex=None,
+        segment_duration=2.0,
+        clip_durations=[10.0, 8.5],
+    )
+    # Find first -t / -i pair
+    t_indices = [i for i, a in enumerate(args) if a == "-t"]
+    assert len(t_indices) == 2, f"expected 2 -t flags, got {len(t_indices)}"
+    assert args[t_indices[0]] == "-t"
+    assert args[t_indices[0] + 1] == "10.0"
+    assert args[t_indices[0] + 2] == "-i"
+    assert args[t_indices[0] + 3] == "/a.mp4"
+    assert args[t_indices[1]] == "-t"
+    assert args[t_indices[1] + 1] == "8.5"
+    assert args[t_indices[1] + 2] == "-i"
+    assert args[t_indices[1] + 3] == "/b.mp4"
+
+
+def test_build_hls_args_none_durations_unchanged(tmp_path: Path) -> None:
+    """build_hls_args with clip_durations=None emits no -t flags (BL-887-AC-4 regression guard)."""
+    from stoat_ferret.preview.hls_generator import build_hls_args
+
+    args = build_hls_args(
+        input_paths=["/a.mp4", "/b.mp4"],
+        output_dir=tmp_path,
+        filter_complex=None,
+        segment_duration=2.0,
+        clip_durations=None,
+    )
+    assert "-t" not in args, "no -t flags expected when clip_durations=None"
+
+
+def test_hard_cut_no_xfade(tmp_path: Path) -> None:
+    """Explicit 'cut' transition between clips emits concat, not xfade (BL-887-AC-2)."""
+    from stoat_ferret_core import (
+        ClipWithEffects,
+        RenderEffect,
+        RenderGraphTranslator,
+        RenderTransition,
+    )
+
+    cwe_list = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=3.0,
+            framerate=25.0,
+            source_path="/clip1.mp4",
+            effects=[RenderEffect.none()],
+            outgoing_transition=RenderTransition("cut", 0.0),
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=3.0,
+            framerate=25.0,
+            source_path="/clip2.mp4",
+            effects=[RenderEffect.none()],
+            outgoing_transition=None,
+        ),
+    ]
+    translator = RenderGraphTranslator()
+    filter_complex_str, _ = translator.translate(cwe_list, 25.0)
+
+    assert "xfade" not in filter_complex_str, (
+        f"hard cut must not emit xfade: {filter_complex_str!r}"
+    )
+    assert "concat" in filter_complex_str, f"hard cut must emit concat: {filter_complex_str!r}"
+
+
+@_requires_ffmpeg
+@pytest.mark.asyncio
+async def test_parity_hardcut_acceptance(tmp_path: Path) -> None:
+    """Two-clip hard-cut: clip_durations trims source, no-transition seam is concat (BL-887-AC-3).
+
+    Exercises both FR-001 (clip_durations -t bounds) and FR-002 (concat instead of xfade).
+    Asserts HLS generates without FFmpeg error, video stream present, and SSIM >= 0.90
+    between preview and a reference render built from the same filter_complex.
+    """
+    import asyncio
+
+    from stoat_ferret.ffmpeg.async_executor import RealAsyncFFmpegExecutor
+    from stoat_ferret.preview.hls_generator import build_hls_args, get_segment_duration
+    from stoat_ferret_core import (
+        ClipWithEffects,
+        RenderEffect,
+        RenderGraphTranslator,
+        RenderTransition,
+    )
+    from tests.preview_oracle import _compute_ssim_hls_vs_file, materialize_preview_session
+    from tests.render_oracle import assert_stream_inventory
+
+    CLIP1_SOURCE_DUR = 6.0
+    CLIP2_SOURCE_DUR = 5.0
+    CLIP1_TIMELINE_DUR = 3.0
+    CLIP2_TIMELINE_DUR = 2.0
+    CLIP_FPS = 25
+    OUTPUT_FPS = 25.0
+
+    clip1_path = tmp_path / "clip1.mp4"
+    clip2_path = tmp_path / "clip2.mp4"
+    _make_clip(clip1_path, duration=CLIP1_SOURCE_DUR)
+    _make_clip(clip2_path, duration=CLIP2_SOURCE_DUR)
+
+    # Clip 1 has "cut" outgoing transition — no stored transition in project data.
+    cwe_list = [
+        ClipWithEffects(
+            input_index=0,
+            duration_secs=CLIP1_TIMELINE_DUR,
+            framerate=float(CLIP_FPS),
+            source_path=str(clip1_path),
+            effects=[RenderEffect.none()],
+            outgoing_transition=RenderTransition("cut", 0.0),
+        ),
+        ClipWithEffects(
+            input_index=1,
+            duration_secs=CLIP2_TIMELINE_DUR,
+            framerate=float(CLIP_FPS),
+            source_path=str(clip2_path),
+            effects=[RenderEffect.none()],
+            outgoing_transition=None,
+        ),
+    ]
+    translator = RenderGraphTranslator()
+    filter_complex_str, _ = translator.translate(cwe_list, OUTPUT_FPS)
+
+    assert "xfade" not in filter_complex_str, "hard cut must not emit xfade in acceptance path"
+
+    # Reference render: same filter_complex + per-input -t bounds
+    render_path = tmp_path / "render.mp4"
+    await asyncio.to_thread(
+        subprocess.run,
+        [
+            "ffmpeg",
+            "-t",
+            str(CLIP1_TIMELINE_DUR),
+            "-i",
+            str(clip1_path),
+            "-t",
+            str(CLIP2_TIMELINE_DUR),
+            "-i",
+            str(clip2_path),
+            "-filter_complex",
+            filter_complex_str,
+            "-map",
+            "[final]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-an",
+            "-y",
+            str(render_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+    # HLS preview: same filter_complex + clip_durations
+    hls_dir = tmp_path / "hls"
+    hls_dir.mkdir()
+    args = build_hls_args(
+        input_paths=[str(clip1_path), str(clip2_path)],
+        output_dir=hls_dir,
+        filter_complex=filter_complex_str,
+        segment_duration=get_segment_duration(),
+        clip_durations=[CLIP1_TIMELINE_DUR, CLIP2_TIMELINE_DUR],
+    )
+    executor = RealAsyncFFmpegExecutor()
+    result = await executor.run(args)
+    assert result.returncode == 0, (
+        f"FFmpeg preview failed: {result.stderr.decode(errors='replace')[:300]}"
+    )
+
+    manifest = hls_dir / "manifest.m3u8"
+    assert manifest.exists(), "manifest.m3u8 must exist"
+    assert any(f.suffix == ".ts" for f in hls_dir.iterdir()), ">=1 .ts segment required"
+
+    await assert_stream_inventory(manifest, video=True, audio=False)
+
+    session_id = "hardcut-acceptance-001"
+    session = await materialize_preview_session(session_id, hls_dir)
+    ssim = await asyncio.to_thread(
+        _compute_ssim_hls_vs_file,
+        session["manifest_path"],
+        0.5,
+        render_path,
+        0.5,
+    )
+    assert ssim >= 0.90, f"SSIM at t=0.5s = {ssim:.4f} < 0.90 (preview/render parity failure)"
+
+
 @_requires_ffmpeg
 async def test_hls_wipeleft_transition(tmp_path: Path) -> None:
     """wipeleft xfade transition generates valid HLS without FFmpeg error (BL-846-AC-5)."""

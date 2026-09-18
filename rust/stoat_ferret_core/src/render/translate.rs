@@ -77,6 +77,7 @@ const VALID_XFADE_TRANSITIONS: &[&str] = &[
     "revealright",
     "revealup",
     "revealdown",
+    "cut",
 ];
 
 // ---------------------------------------------------------------------------
@@ -185,7 +186,8 @@ impl RenderTransition {
     ///     ValueError: If duration_secs is not > 0 or transition_type is unknown.
     #[new]
     fn py_new(transition_type: String, duration_secs: f64) -> PyResult<Self> {
-        if duration_secs <= 0.0 {
+        // "cut" has no meaningful duration; all other types require duration > 0.
+        if duration_secs <= 0.0 && transition_type != "cut" {
             return Err(PyValueError::new_err(format!(
                 "duration_secs must be > 0, got {duration_secs}"
             )));
@@ -520,7 +522,7 @@ impl RenderGraphTranslator {
                 return Err(TranslateError::InvalidSourcePath(i));
             }
             if let Some(t) = &clip.outgoing_transition {
-                if t.duration_secs <= 0.0 {
+                if t.duration_secs <= 0.0 && t.transition_type != "cut" {
                     return Err(TranslateError::InvalidTransitionDuration(i));
                 }
                 if !VALID_XFADE_TRANSITIONS.contains(&t.transition_type.as_str()) {
@@ -593,20 +595,32 @@ impl RenderGraphTranslator {
                 ));
                 parts.push(format!("{next_label}fps={fps},settb=1/{fps}{pinned_next}"));
 
-                // Determine xfade parameters from outgoing_transition (clip k-1).
-                let (transition_type, duration) = if let Some(t) = &clips[k - 1].outgoing_transition
-                {
-                    (t.transition_type.as_str(), t.duration_secs)
-                } else {
-                    ("fade", 1.0)
-                };
+                // Explicit "cut" → hard concat (no overlap); None falls back to fade/1s for
+                // render-path compat; any other named type → xfade.
+                let is_cut = clips[k - 1]
+                    .outgoing_transition
+                    .as_ref()
+                    .map_or(false, |t| t.transition_type == "cut");
 
-                // offset = cumulative output duration before this transition.
-                let offset = accumulated - duration;
-                parts.push(format!(
-                    "{pinned_current}{pinned_next}xfade=transition={transition_type}:duration={duration}:offset={offset}{xf_label}"
-                ));
-                accumulated = accumulated - duration + clips[k].duration_secs;
+                if is_cut {
+                    parts.push(format!(
+                        "{pinned_current}{pinned_next}concat=n=2:v=1:a=0{xf_label}"
+                    ));
+                    accumulated += clips[k].duration_secs;
+                } else {
+                    let (transition_type, duration) =
+                        if let Some(t) = &clips[k - 1].outgoing_transition {
+                            (t.transition_type.as_str(), t.duration_secs)
+                        } else {
+                            ("fade", 1.0)
+                        };
+                    // offset = cumulative output duration before this transition.
+                    let offset = accumulated - duration;
+                    parts.push(format!(
+                        "{pinned_current}{pinned_next}xfade=transition={transition_type}:duration={duration}:offset={offset}{xf_label}"
+                    ));
+                    accumulated = accumulated - duration + clips[k].duration_secs;
+                }
                 current_label = xf_label;
             }
             parts.push(format!("{current_label}format=yuv420p[final]"));
@@ -822,6 +836,34 @@ mod tests {
         assert!(
             effect_pos < xfade_pos,
             "effect sub-chain (pos {effect_pos}) should appear before xfade (pos {xfade_pos})"
+        );
+    }
+
+    #[test]
+    fn test_cut_transition_emits_concat() {
+        // Explicit "cut" transition → concat filter, no xfade.
+        let clips = vec![
+            ClipWithEffects {
+                input_index: 0,
+                duration_secs: 3.0,
+                framerate: 30.0,
+                source_path: "/a.mp4".to_string(),
+                effects: vec![],
+                outgoing_transition: Some(RenderTransition {
+                    transition_type: "cut".to_string(),
+                    duration_secs: 0.0,
+                }),
+            },
+            clip(1, 3.0, 30.0, "/b.mp4"),
+        ];
+        let (result, _) = RenderGraphTranslator.translate(clips, 30.0).unwrap();
+        assert!(
+            result.contains("concat"),
+            "cut transition must produce concat filter, got: {result}"
+        );
+        assert!(
+            !result.contains("xfade"),
+            "cut transition must not produce xfade filter, got: {result}"
         );
     }
 
