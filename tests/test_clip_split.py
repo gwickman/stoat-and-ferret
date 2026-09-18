@@ -532,6 +532,54 @@ def test_split_clip_remap_clips_out_of_range_window() -> None:
     assert len(dropped) >= 1
 
 
+@pytest.mark.api
+def test_split_clip_remap_partial_overlap_window_remapped_to_child_local() -> None:
+    """FR-001-AC-3 (BL-850-AC-5): partial-overlap window is remapped to clip-local coords.
+
+    Parent: 150-frame clip at 30fps (0-5s), windowed effect [2s, 4s].
+    Split at frame 90 (3.0s):
+    - clip_a [0s, 3s]: effect clipped to [2s, 3s], remapped to [2s, 3s] (clip_a_start=0).
+    - clip_b [3s, 5s]: effect clipped to [3s, 4s], remapped to child-local [0s, 1s].
+    """
+    effect: dict[str, Any] = {
+        "effect_type": "volume",
+        "id": "eff-partial-1",
+        "filter_string": "volume=3.0",
+        "window": {"start_s": 2.0, "end_s": 4.0},
+    }
+    clip = _make_clip(
+        in_point=0,
+        out_point=150,
+        timeline_start=0.0,
+        timeline_end=5.0,
+        effects=[effect],
+    )
+    project = _make_project(output_fps=30)
+    client, _, _ = _make_client(clip=clip, project=project)
+
+    with client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{_CLIP_ID}/split",
+            json={"split_frame": 90, "split_policy": "remap_windowed_effects"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    clip_a_effects = data["clip_a"]["effects"]
+    assert len(clip_a_effects) == 1
+    # Effect [2s, 4s] overlaps clip_a [0s, 3s]; intersection [2s, 3s].
+    # clip_a_start=0 → child-local is unchanged: [2s, 3s].
+    assert clip_a_effects[0]["window"]["start_s"] == pytest.approx(2.0)
+    assert clip_a_effects[0]["window"]["end_s"] == pytest.approx(3.0)
+
+    clip_b_effects = data["clip_b"]["effects"]
+    assert len(clip_b_effects) == 1
+    # Effect [2s, 4s] overlaps clip_b [3s, 5s]; intersection [3s, 4s].
+    # clip_b_start=3.0 → child-local: [3-3, 4-3] = [0s, 1s].
+    assert clip_b_effects[0]["window"]["start_s"] == pytest.approx(0.0)
+    assert clip_b_effects[0]["window"]["end_s"] == pytest.approx(1.0)
+
+
 def test_split_clip_effects_not_aliased() -> None:
     """FR-005-AC-1 / FR-008-AC-1 (BL-869-AC-1/AC-4/AC-5): _migrate_effects_for_split returns
     independent lists.

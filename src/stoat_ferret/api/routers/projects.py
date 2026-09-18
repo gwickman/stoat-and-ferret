@@ -601,11 +601,29 @@ def _migrate_effects_for_split(
                 if clipped_a is None:
                     migration_report.append({"disposition": "dropped", "effect_id": e.get("id")})
                 else:
+                    w = clipped_a["window"]
+                    clipped_a = {
+                        **clipped_a,
+                        "window": {
+                            **w,
+                            "start_s": w["start_s"] - clip_a_start,
+                            "end_s": w["end_s"] - clip_a_start,
+                        },
+                    }
                     clip_a_effects.append(clipped_a)
                 clipped_b = _intersect_window(e, clip_b_start, clip_b_end)
                 if clipped_b is None:
                     migration_report.append({"disposition": "dropped", "effect_id": e.get("id")})
                 else:
+                    w = clipped_b["window"]
+                    clipped_b = {
+                        **clipped_b,
+                        "window": {
+                            **w,
+                            "start_s": w["start_s"] - clip_b_start,
+                            "end_s": w["end_s"] - clip_b_start,
+                        },
+                    }
                     clip_b_effects.append(clipped_b)
     else:  # drop_with_warning
         clip_a_effects = []

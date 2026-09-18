@@ -275,3 +275,108 @@ async def test_split_remap_effect_not_visible_in_out_of_range_child(tmp_path: Pa
 
     # clip_b.effects == [] (verified above) so its render matches the no-effect baseline;
     # the sensitivity check confirms this test would catch a regression where the effect leaks.
+
+
+@_FFMPEG_SKIP
+@pytest.mark.asyncio
+async def test_split_partial_overlap_effect_correct_position_in_child(tmp_path: Path) -> None:
+    """BL-850-AC-5 (FR-002-AC-3): partial-overlap window remapped to child-local coords renders ok.
+
+    Scenario:
+    - 5s clip (150 frames @ 30fps), VOLUME 3x effect windowed at [2s, 4s] (absolute).
+    - Split at frame 90 (3.0s) with remap_windowed_effects.
+    - clip_b covers [3s, 5s]; effect clipped to [3s, 4s], remapped to child-local [0s, 1s].
+    - Render clip_b with the remapped effect; confirm audio RMS differs from a no-effect baseline,
+      proving the effect IS applied (at the first second of the 2s clip).
+    """
+    fixture = _make_av_fixture(tmp_path / "fixture_partial.mp4", duration=5)
+    vid_id = "vid-split-partial-001"
+    vid = _make_video(vid_id, str(fixture), duration_frames=150)
+
+    volume_effect = {
+        "effect_type": "volume",
+        "id": "eff-vol-partial",
+        "filter_string": "volume=3.0",
+        "window": {"start_s": 2.0, "end_s": 4.0},
+    }
+    parent_clip_id = "clip-split-partial-parent"
+
+    project = Project(
+        id=_PROJECT_ID,
+        name="Split Effects Acceptance",
+        output_width=320,
+        output_height=240,
+        output_fps=30,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    parent_clip = Clip(
+        id=parent_clip_id,
+        project_id=_PROJECT_ID,
+        source_video_id=vid_id,
+        in_point=0,
+        out_point=150,
+        timeline_position=0,
+        timeline_start=0.0,
+        timeline_end=5.0,
+        effects=[volume_effect],
+        created_at=_now(),
+        updated_at=_now(),
+    )
+
+    project_repo = AsyncInMemoryProjectRepository()
+    clip_repo = AsyncInMemoryClipRepository()
+    project_repo.seed([project])
+    clip_repo.seed([parent_clip])
+
+    app = create_app(project_repository=project_repo, clip_repository=clip_repo)
+    with TestClient(app) as client:
+        resp = client.post(
+            f"/api/v1/projects/{_PROJECT_ID}/clips/{parent_clip_id}/split",
+            json={"split_frame": 90, "split_policy": "remap_windowed_effects"},
+        )
+
+    assert resp.status_code == 200, f"split failed: {resp.text}"
+    data = resp.json()
+
+    # clip_b must carry the effect remapped to child-local [0s, 1s]
+    clip_b_effects = data["clip_b"]["effects"]
+    assert len(clip_b_effects) == 1, f"clip_b should have 1 effect, got: {clip_b_effects}"
+    assert clip_b_effects[0]["window"]["start_s"] == pytest.approx(0.0)
+    assert clip_b_effects[0]["window"]["end_s"] == pytest.approx(1.0)
+
+    # Render clip_b (in_point=90, out_point=150 = 2.0s) with remapped effect [0s, 1s]
+    clip_b_with_eff = _make_clip(
+        "clip-b-partial-eff",
+        vid_id,
+        in_point=90,
+        out_point=150,
+        effects=clip_b_effects,
+    )
+    out_with_eff = tmp_path / "clip_b_partial_with_eff.mp4"
+    plan = _make_render_plan(total_duration=2.0)
+    job_with_eff = _make_job("job-b-partial-eff", plan, str(out_with_eff))
+
+    cmd_with_eff = await build_command_for_job(
+        job_with_eff, _make_clip_repo(clip_b_with_eff), _make_video_repo(vid)
+    )
+    r = await asyncio.to_thread(subprocess.run, cmd_with_eff, capture_output=True, timeout=120)
+    assert r.returncode == 0, f"ffmpeg (partial-eff) failed: {r.stderr.decode()[-800:]}"
+    rms_with_eff = await measure_audio_rms_db(out_with_eff)
+
+    # Render clip_b without any effect (baseline)
+    clip_b_no_eff = _make_clip(
+        "clip-b-partial-no-eff", vid_id, in_point=90, out_point=150, effects=[]
+    )
+    out_no_eff = tmp_path / "clip_b_partial_no_eff.mp4"
+    job_no_eff = _make_job("job-b-partial-no-eff", plan, str(out_no_eff))
+
+    cmd_no_eff = await build_command_for_job(
+        job_no_eff, _make_clip_repo(clip_b_no_eff), _make_video_repo(vid)
+    )
+    r = await asyncio.to_thread(subprocess.run, cmd_no_eff, capture_output=True, timeout=120)
+    assert r.returncode == 0, f"ffmpeg (partial-no-eff) failed: {r.stderr.decode()[-800:]}"
+    rms_baseline = await measure_audio_rms_db(out_no_eff)
+
+    # volume=3.0 at [0s, 1s] of a 2s clip must raise RMS vs baseline
+    assert_audio_rms_changed(rms_with_eff, rms_baseline, min_delta_db=2.0)
