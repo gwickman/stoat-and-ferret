@@ -89,14 +89,18 @@ async def test_build_preview_composition_single_file_clip() -> None:
     video_repo = MagicMock()
     video_repo.get = AsyncMock(return_value=video_stub)
 
-    input_paths, clip_types, in_point_secs, filter_complex_str, output_fps = (
-        await _build_preview_composition(
-            [clip],
-            project,
-            video_repo=video_repo,
-            asset_repo=None,
-            effect_registry=None,
-        )
+    (
+        input_paths,
+        clip_types,
+        in_point_secs,
+        filter_complex_str,
+        output_fps,
+    ) = await _build_preview_composition(
+        [clip],
+        project,
+        video_repo=video_repo,
+        asset_repo=None,
+        effect_registry=None,
     )
 
     assert input_paths == ["/videos/test.mp4"]
