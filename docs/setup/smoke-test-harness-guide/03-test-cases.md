@@ -845,3 +845,23 @@ Real-FFmpeg behavioral tests for `HLSGenerator.generate()`. These tests require 
 ```bash
 STOAT_TEST_FFMPEG=1 uv run pytest tests/preview/test_preview_hls_ffmpeg.py -x -q
 ```
+
+---
+
+## Phase 18 — v143 Reverb TTS and HLS Hard-Cut Smoke Tests (BL-827/BL-887)
+
+Two new `STOAT_TEST_FFMPEG=1`-gated smoke tests added in v143 to close coverage gaps for convolution_reverb TTS rendering (BL-827) and HLS hard-cut two-clip preview (BL-887).
+
+| Test Function | File | What It Tests | Gate |
+|---------------|------|---------------|------|
+| `test_convolution_reverb_single_clip_render_produces_audio_stream` | `tests/smoke/test_render_contract.py` | Single-clip render with `convolution_reverb` effect completes and output carries an audio stream (BL-827/F003) | `STOAT_TEST_FFMPEG=1` |
+| `test_hls_hardcut_two_clip_no_transition_preview` | `tests/smoke/test_preview_smoke.py` | Two-clip project with no transition generates HLS playlist, reaches `ready` status, and returns a non-null `manifest_url` (BL-887/F005) | `STOAT_TEST_FFMPEG=1` |
+
+**CI lane:** Both tests require `STOAT_TEST_FFMPEG=1` — skipped in the standard unconditional unit lane, run in the `ffmpeg-tests` lane.
+
+**How to run locally:**
+```bash
+STOAT_TEST_FFMPEG=1 uv run pytest tests/smoke/test_render_contract.py::test_convolution_reverb_single_clip_render_produces_audio_stream tests/smoke/test_preview_smoke.py::test_hls_hardcut_two_clip_no_transition_preview -x -q
+```
+
+**Last updated:** v143 / 2026-09-18
