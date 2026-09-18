@@ -1362,3 +1362,74 @@ async def test_smoke_mc_all_video_only_audio_effect_tts_raises() -> None:
         tts_inputs=tts_inputs,
         match="ALL_VIDEO_NO_AUDIO",
     )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("STOAT_TEST_FFMPEG"),
+    reason="requires FFmpeg",
+)
+@requires_ffmpeg
+async def test_convolution_reverb_single_clip_render_produces_audio_stream(
+    smoke_client: httpx.AsyncClient,
+    videos_dir: Path,
+) -> None:
+    """FR-001-AC-1: convolution_reverb single-clip render completes with audio stream (BL-827/F003).
+
+    Scans a real video with audio, creates a single-clip project, applies
+    convolution_reverb (ir_name="hall_small", mix=0.4) via the effects API,
+    submits a real render, polls until terminal, and asserts the output file
+    is non-empty and the stream inventory contains audio.
+    """
+    from tests.render_oracle import assert_stream_inventory
+
+    await scan_videos_and_wait(smoke_client, videos_dir)
+
+    videos_resp = await smoke_client.get("/api/v1/videos?limit=1")
+    assert videos_resp.status_code == 200
+    videos = videos_resp.json()["videos"]
+    assert len(videos) >= 1, "Need at least 1 scanned video"
+    video = videos[0]
+
+    proj_resp = await smoke_client.post(
+        "/api/v1/projects", json={"name": "Reverb Single-Clip Smoke"}
+    )
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    clip_resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips",
+        json={
+            "source_video_id": video["id"],
+            "in_point": 0,
+            "out_point": min(video.get("duration_frames", 90), 90),
+            "timeline_position": 0,
+        },
+    )
+    assert clip_resp.status_code == 201
+    clip_id = clip_resp.json()["id"]
+
+    eff_resp = await smoke_client.post(
+        f"/api/v1/projects/{project_id}/clips/{clip_id}/effects",
+        json={
+            "effect_type": "convolution_reverb",
+            "parameters": {"ir_name": "hall_small", "mix": 0.4},
+        },
+    )
+    assert eff_resp.status_code == 201, f"convolution_reverb effect apply failed: {eff_resp.text}"
+
+    render_plan = json.dumps({"total_duration": 3.0, "settings": {}})
+    resp = await smoke_client.post(
+        "/api/v1/render",
+        json={"project_id": project_id, "render_plan": render_plan},
+    )
+    assert resp.status_code == 201
+    job_id = resp.json()["id"]
+
+    final = await poll_job_until_terminal(smoke_client, job_id, timeout=120.0)
+    assert final["status"] == "completed", (
+        f"Expected render to complete, got status={final['status']!r}: {final.get('error_message')}"
+    )
+    out_path = Path(final["output_path"])
+    assert out_path.exists(), f"Expected output file to exist at {out_path}"
+    assert out_path.stat().st_size > 0, f"Expected non-empty output file at {out_path}"
+    await assert_stream_inventory(out_path, video=True, audio=True)
