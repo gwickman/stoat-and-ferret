@@ -61,14 +61,14 @@ async def _base_app_client(tmp_path: object) -> AsyncGenerator[Any, None]:
 
 
 @pytest.fixture
-async def client(_base_app_client: Any) -> AsyncGenerator[httpx.AsyncClient, None]:
+async def client(_base_app_client: Any) -> httpx.AsyncClient:
     """Isolated ASGI test client backed by a fresh SQLite database.
 
     Follows the same pattern as tests/smoke/conftest.py::smoke_client but is
     local to this acceptance test to avoid a cross-package fixture dependency.
     """
     _, c = _base_app_client
-    yield c
+    return c
 
 
 async def test_uc_media_restore_roundtrip(client: httpx.AsyncClient) -> None:
