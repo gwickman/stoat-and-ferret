@@ -62,7 +62,7 @@ Smoke tests close this gap at the API level. UAT journeys extend coverage to the
 
 ## Current Status
 
-Tier 1 (core API smoke tests) is **implemented** as of v014. Tier 2 (expanded API coverage) is **implemented** as of v019. Tier 3 (UAT journeys) is **implemented** as of v022, with all 4 journeys (J201–J204) passing in both headed and headless modes.
+Tier 1 (core API smoke tests) is **implemented** as of v014. Tier 2 (expanded API coverage) is **implemented** as of v019. Tier 3 (UAT journeys) is **implemented** as of v022, with all 4 journeys (J201–J204) passing in both headed and headless modes. Two new `STOAT_TEST_FFMPEG=1`-gated smoke entries were added in v143: convolution_reverb TTS render (BL-827/F003) and HLS hard-cut two-clip preview (BL-887/F005) — see `03-test-cases.md` Phase 18.
 
 ## Files in This Folder
 
