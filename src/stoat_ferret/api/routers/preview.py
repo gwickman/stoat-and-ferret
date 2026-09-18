@@ -42,6 +42,7 @@ from stoat_ferret.preview.manager import (
     SessionNotFoundError,
     resolve_transitions_by_clip_a_id,
 )
+from stoat_ferret.render.worker import CommandBuildError
 from stoat_ferret_core import (
     ClipWithEffects,
     RenderEffect,
@@ -68,7 +69,7 @@ def _build_preview_render_effects(
 
         video_effects, _ = _build_clip_render_effects(clip, effect_registry)  # type: ignore[arg-type]
         return video_effects
-    except Exception as exc:
+    except (CommandBuildError, KeyError, ValueError, AttributeError) as exc:
         logger.warning(
             "preview_clip_effect_skipped",
             clip_id=getattr(clip, "id", "?"),

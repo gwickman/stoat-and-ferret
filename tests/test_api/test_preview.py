@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Grant Wickman
 
-"""Tests for preview-quality observability: reverb multi-clip warning (BL-889)."""
+"""Tests for preview-quality observability: reverb multi-clip warning (BL-889) and exception narrowing (BL-890)."""  # noqa: E501
 
 from __future__ import annotations
 
@@ -193,3 +193,51 @@ async def test_reverb_single_clip_no_warning() -> None:
     assert (
         "multi-clip convolution_reverb is not supported; failing closed" not in warning_event_names
     )
+
+
+# ---------------------------------------------------------------------------
+# BL-890: preview exception narrowing tests
+# ---------------------------------------------------------------------------
+
+
+def test_unexpected_exception_propagates() -> None:
+    """BL-890-AC-1/AC-2: RuntimeError propagates out of _build_preview_render_effects."""
+    from unittest.mock import MagicMock, patch
+
+    from stoat_ferret.api.routers.preview import _build_preview_render_effects
+
+    clip = MagicMock()
+    clip.id = "clip-exc-test"
+    effect_registry = MagicMock()
+
+    # Patch at the source since _build_preview_render_effects does a local import
+    with (
+        patch(
+            "stoat_ferret.render.worker._build_clip_render_effects",
+            side_effect=RuntimeError("unexpected internal error"),
+        ),
+        pytest.raises(RuntimeError, match="unexpected internal error"),
+    ):
+        _build_preview_render_effects(clip, effect_registry)
+
+
+def test_command_build_error_still_graceful() -> None:
+    """BL-890-AC-2: CommandBuildError (preview-unsupported effect) is still gracefully skipped."""
+    from unittest.mock import MagicMock, patch
+
+    from stoat_ferret.api.routers.preview import _build_preview_render_effects
+    from stoat_ferret.render.worker import CommandBuildError
+
+    clip = MagicMock()
+    clip.id = "clip-cbe-test"
+    effect_registry = MagicMock()
+
+    # Patch at the source since _build_preview_render_effects does a local import
+    with patch(
+        "stoat_ferret.render.worker._build_clip_render_effects",
+        side_effect=CommandBuildError("multi-clip convolution_reverb is not yet supported"),
+    ):
+        result = _build_preview_render_effects(clip, effect_registry)
+
+    # Should return [RenderEffect.none()] gracefully — not propagate
+    assert len(result) == 1
