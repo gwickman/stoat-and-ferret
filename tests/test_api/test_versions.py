@@ -6,8 +6,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock
 
+import aiosqlite
 import pytest
 from fastapi.testclient import TestClient
 
@@ -16,6 +16,20 @@ from stoat_ferret.db.models import Project, Track
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
+
+
+async def _seed_project_in_db(db: aiosqlite.Connection, project_id: str) -> None:
+    """Insert project row into aiosqlite so FK constraints pass in restore tests."""
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        """
+        INSERT INTO projects
+            (id, name, output_width, output_height, output_fps, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (project_id, "Version Test", 1920, 1080, 30, now.isoformat(), now.isoformat()),
+    )
+    await db.commit()
 
 
 async def _seed_project(repo: AsyncInMemoryProjectRepository) -> str:
@@ -175,9 +189,11 @@ async def test_restore_version(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
     timeline_repository: AsyncInMemoryTimelineRepository,
+    db_mock: aiosqlite.Connection,
 ) -> None:
     """Restore replaces live timeline with the saved snapshot."""
     project_id = await _seed_project(project_repository)
+    await _seed_project_in_db(db_mock, project_id)
 
     # Snapshot version 1 — empty timeline
     resp = client.post(f"/api/v1/projects/{project_id}/versions")
@@ -191,27 +207,25 @@ async def test_restore_version(
     resp = client.post(f"/api/v1/projects/{project_id}/versions")
     assert resp.status_code == 201
 
-    # restore_version now uses request.app.state.db directly (atomic transaction).
-    # In DI mode the lifespan DB is not wired; inject a mock connection.
-    mock_cursor = AsyncMock()
-    mock_cursor.fetchone.return_value = (2,)  # MAX(version_number)=2 → next_ver=3
-    mock_conn = AsyncMock()
-    mock_conn.execute.return_value = mock_cursor
-    client.app.state.db = mock_conn  # type: ignore[attr-defined]
-
-    # Restore version 1 (empty timeline)
+    # Restore version 1 (empty timeline) — db_mock provides app.state.db for the atomic helper
     response = client.post(f"/api/v1/projects/{project_id}/versions/1/restore")
     assert response.status_code == 200
     data = response.json()
     assert data["restored_version"] == 1
-    assert data["new_version"] == 3
+    assert data["new_version"] == 1  # first version written to aiosqlite in this test
     assert "message" in data
 
-    # Verify atomic ops: DELETE clips, DELETE tracks, INSERT project_versions, then commit
-    executed_sqls = [str(c.args[0]) for c in mock_conn.execute.call_args_list if c.args]
-    assert any("DELETE FROM clips" in sql for sql in executed_sqls)
-    assert any("DELETE FROM tracks" in sql for sql in executed_sqls)
-    mock_conn.commit.assert_called_once()
+    # Behavioral: tracks table must be empty (version 1 had empty timeline)
+    cursor = await db_mock.execute("SELECT id FROM tracks WHERE project_id = ?", (project_id,))
+    rows = await cursor.fetchall()
+    assert rows == [], f"Expected no tracks after restoring empty version 1, got {rows}"
+
+    # Behavioral: restore recorded a new version row in aiosqlite
+    cursor = await db_mock.execute(
+        "SELECT version_number FROM project_versions WHERE project_id = ?", (project_id,)
+    )
+    ver_rows = await cursor.fetchall()
+    assert len(ver_rows) == 1, f"Expected 1 version in DB after restore, got {ver_rows}"
 
 
 @pytest.mark.api
@@ -219,9 +233,11 @@ async def test_restore_version_modifies_live_timeline(
     client: TestClient,
     project_repository: AsyncInMemoryProjectRepository,
     timeline_repository: AsyncInMemoryTimelineRepository,
+    db_mock: aiosqlite.Connection,
 ) -> None:
-    """Restore issues DELETE+INSERT ops to rewrite the live timeline atomically."""
+    """Restore rewrites the live timeline with the snapshot's tracks."""
     project_id = await _seed_project(project_repository)
+    await _seed_project_in_db(db_mock, project_id)
 
     # Add track-a, snapshot version 1
     track_a = Track(id="track-a", project_id=project_id, track_type="video", label="Track A")
@@ -236,26 +252,19 @@ async def test_restore_version_modifies_live_timeline(
     resp = client.post(f"/api/v1/projects/{project_id}/versions")
     assert resp.status_code == 201
 
-    # restore_version uses request.app.state.db directly; inject mock connection
-    mock_cursor = AsyncMock()
-    mock_cursor.fetchone.return_value = (2,)  # MAX(version_number)=2 → next_ver=3
-    mock_conn = AsyncMock()
-    mock_conn.execute.return_value = mock_cursor
-    client.app.state.db = mock_conn  # type: ignore[attr-defined]
-
     # Restore version 1 — snapshot contains track-a only
     response = client.post(f"/api/v1/projects/{project_id}/versions/1/restore")
     assert response.status_code == 200
     data = response.json()
     assert data["restored_version"] == 1
-    assert data["new_version"] == 3
+    assert data["new_version"] == 1  # first version written to aiosqlite in this test
 
-    # Verify atomic ops: DELETE clips/tracks, re-INSERT track-a, commit
-    executed_sqls = [str(c.args[0]) for c in mock_conn.execute.call_args_list if c.args]
-    assert any("DELETE FROM clips" in sql for sql in executed_sqls)
-    assert any("DELETE FROM tracks" in sql for sql in executed_sqls)
-    assert any("INSERT INTO tracks" in sql for sql in executed_sqls)
-    mock_conn.commit.assert_called_once()
+    # Behavioral: only track-a should be in the DB after restoring version 1
+    cursor = await db_mock.execute("SELECT id FROM tracks WHERE project_id = ?", (project_id,))
+    rows = await cursor.fetchall()
+    track_ids = {r[0] for r in rows}
+    assert "track-a" in track_ids, f"Expected track-a after restore, got: {track_ids}"
+    assert "track-b" not in track_ids, f"track-b must be absent after restore, got: {track_ids}"
 
 
 @pytest.mark.api

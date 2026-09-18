@@ -5,11 +5,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
 from typing import Any
 
+import aiosqlite
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -21,6 +23,7 @@ from stoat_ferret.db.batch_repository import InMemoryBatchRepository
 from stoat_ferret.db.clip_repository import AsyncInMemoryClipRepository
 from stoat_ferret.db.project_repository import AsyncInMemoryProjectRepository
 from stoat_ferret.db.proxy_repository import InMemoryProxyRepository
+from stoat_ferret.db.schema import create_tables_async
 from stoat_ferret.db.timeline_repository import AsyncInMemoryTimelineRepository
 from stoat_ferret.db.version_repository import AsyncInMemoryVersionRepository
 from stoat_ferret.jobs.queue import InMemoryJobQueue
@@ -367,3 +370,24 @@ def api_factory(
         An ApiFactory for creating test data via HTTP.
     """
     return ApiFactory(client, video_repository)
+
+
+@pytest_asyncio.fixture
+async def db_mock(app: FastAPI) -> AsyncGenerator[aiosqlite.Connection, None]:
+    """Supply a real aiosqlite in-memory connection at app.state.db for DI-mode tests.
+
+    Use for routers that read request.app.state.db directly (e.g. restore_version in
+    versions.py). Function-scoped so each test gets an isolated schema with no data.
+    FK enforcement is ON — seed parent rows (e.g. projects) before the router writes FKs.
+
+    Args:
+        app: FastAPI application fixture.
+
+    Yields:
+        Real aiosqlite connection with full schema and FK enforcement.
+    """
+    conn = await aiosqlite.connect(":memory:")
+    await create_tables_async(conn)
+    app.state.db = conn
+    yield conn
+    await conn.close()
